@@ -1,3 +1,10 @@
+envVarGroups:
+  - name: gestionstagiaires-cnaps-monitor-secrets
+    envVars:
+      # One shared value authenticates the worker against the web service.
+      - key: CNAPS_MONITOR_TOKEN
+        sync: false
+
 services:
   - type: web
     name: gestionstagiaires
@@ -6,6 +13,7 @@ services:
     dockerContext: .
     healthCheckPath: /healthz
     envVars:
+      - fromGroup: gestionstagiaires-cnaps-monitor-secrets
       - key: QONTO_LOGIN
         sync: false
       - key: QONTO_SECRET_KEY
@@ -16,6 +24,59 @@ services:
         value: INTEGRALE ACADEMY
       - key: QONTO_API_BASE_URL
         value: https://thirdparty.qonto.com
+      - key: QONTO_OAUTH_REDIRECT_URI
+        value: https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback
+      - key: QONTO_OAUTH_CLIENT_ID
+        sync: false
+      - key: QONTO_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: QONTO_OAUTH_ENV
+        value: production
+      - key: QONTO_WEBHOOK_SECRET
+        sync: false
+      - key: QONTO_WEBHOOK_CALLBACK_URL
+        value: https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto
       - key: PUBLIC_STUDENT_PORTAL_BASE
         value: https://gestionstagiaires-r5no.onrender.com
-
+      - key: CNAPSV3_API_TOKEN
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+  - type: cron
+    name: gestionstagiaires-convocation-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Hourly execution lets due reminders go out promptly; the app enforces
+    # the 08:00-20:00 Europe/Paris window (including daylight-saving time).
+    schedule: "0 * * * *"
+    dockerCommand: python scripts/run_convocation_reminders.py
+    envVars:
+      - key: CONVOCATION_REMINDERS_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/convocation-signature-reminders
+      - key: CRON_SECRET
+        sync: false
+  - type: cron
+    name: gestionstagiaires-cash-payment-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "0 6 * * *"
+    dockerCommand: python scripts/run_cash_payment_reminders.py
+    envVars:
+      - key: CASH_PAYMENT_REMINDERS_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/cash-payment-reminders
+      - key: CRON_SECRET
+        sync: false
+  - type: worker
+    name: gestionstagiaires-cnaps-monitor
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: python scripts/run_cnaps_monitor_worker.py
+    envVars:
+      - fromGroup: gestionstagiaires-cnaps-monitor-secrets
+      - key: CNAPS_MONITOR_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/jobs/cnaps-public-annuaire-monitor
+      - key: CNAPS_MONITOR_INTERVAL_SECONDS
+        value: 900

@@ -69,10 +69,10 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("SEUIL", html)
         self.assertIn("APRES", html)
         self.assertNotIn("AVANT", html)
-        self.assertIn("SIGNEE", html)
+        self.assertNotIn("SIGNEE", html)
         self.assertIn("Les VAE sont incluses à partir du statut", html)
 
-    def test_convention_status_signed_without_signature_evidence_is_not_displayed_as_signed(self):
+    def test_convention_signed_in_public_journey_is_excluded_without_signature_evidence(self):
         fake_data = {
             "sessions": [
                 {
@@ -104,11 +104,30 @@ class AdminSessionsConventionsTests(unittest.TestCase):
             response = self.client.get("/admin/sessions/conventions")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(captured["rows"][0]["trainee_id"], "T-DIRTY")
-        self.assertEqual(captured["rows"][0]["status_key"], "not_generated")
-        self.assertEqual(captured["rows"][0]["status_label"], "Non générée")
+        self.assertEqual(captured["rows"], [])
 
-    def test_legacy_signed_checkbox_keeps_trainee_visible_as_signed(self):
+    def test_fiche_button_links_to_trainee_summary(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "date_start": "2026-09-01",
+                "trainees": [{
+                    "id": "T-SUMMARY",
+                    "last_name": "RECAP",
+                    "first_name": "Rania",
+                }],
+            }]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('href="/admin/sessions/S-APS/stagiaires/T-SUMMARY/summary">Fiche</a>', html)
+
+    def test_legacy_signed_convention_is_excluded_when_public_journey_shows_signed(self):
         fake_data = {
             "sessions": [
                 {
@@ -135,8 +154,59 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("LEGACY", html)
-        self.assertIn("Signée", html)
+        self.assertNotIn("LEGACY", html)
+
+    def test_signed_conventions_created_since_july_15_are_included_in_tracking(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [
+                    {
+                        "id": "T-SIGNED-BEFORE",
+                        "last_name": "SIGNATURE-AVANT",
+                        "first_name": "Samira",
+                        "convention_signature": {
+                            "status": "signed",
+                            "created_at": "2026-07-14T23:59:59Z",
+                        },
+                    },
+                    {
+                        "id": "T-SIGNED-FROM",
+                        "last_name": "SIGNATURE-DEPUIS",
+                        "first_name": "Sonia",
+                        "convention_signature": {
+                            "status": "signed",
+                            "created_at": "2026-07-15T00:00:00Z",
+                        },
+                    },
+                    {
+                        "id": "T-APS-SIGNED-FROM",
+                        "last_name": "APS-DEPUIS",
+                        "first_name": "Sofia",
+                        "convention_status": "signed",
+                        "convention_aps_generated_at": "2026-07-15T12:00:00Z",
+                        "convention_aps_pdf_path": "convention.pdf",
+                    },
+                    {
+                        "id": "T-PENDING",
+                        "last_name": "PENDING",
+                        "first_name": "Paul",
+                        "convention_signature": {"status": "ongoing"},
+                    },
+                ],
+            }]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertNotIn("SIGNATURE-AVANT", html)
+        self.assertIn("SIGNATURE-DEPUIS", html)
+        self.assertIn("APS-DEPUIS", html)
+        self.assertIn("PENDING", html)
 
     def test_conventions_use_vae_label_and_action_dates_to_apply_threshold(self):
         fake_data = {
@@ -250,6 +320,32 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn('id="sidebarConventionsSignedBadge"', html)
         self.assertIn('id="sidebarToolsConventionsSignedBadge"', html)
 
+    def test_non_signed_conventions_from_past_sessions_are_displayed(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-PAST",
+                    "training_type": "APS",
+                    "date_start": "2026-06-01",
+                    "date_end": "2026-06-15",
+                    "trainees": [
+                        {
+                            "id": "T-PAST-UNSIGNED",
+                            "last_name": "NON-SIGNEE",
+                            "first_name": "Nora",
+                            "convention_status": "signing",
+                        },
+                    ],
+                },
+            ],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions?status=signing")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("NON-SIGNEE", response.get_data(as_text=True))
+
     def test_signed_conventions_unseen_api_and_page_acknowledgement(self):
         fake_data = {
             "sessions": [
@@ -267,7 +363,11 @@ class AdminSessionsConventionsTests(unittest.TestCase):
                             "convention_status": "signed",
                             "convention_aps_status": "signed",
                             "convention_aps_pdf_path": "unsigned.pdf",
-                            "convention_signature": {"status": "done", "signed_at": "2026-07-16T10:00:00Z"},
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-16T09:00:00Z",
+                                "signed_at": "2026-07-16T10:00:00Z",
+                            },
                         }
                     ],
                 }
@@ -304,7 +404,11 @@ class AdminSessionsConventionsTests(unittest.TestCase):
                             "convention_status": "signed",
                             "convention_aps_status": "signed",
                             "convention_aps_pdf_path": "unsigned.pdf",
-                            "convention_signature": {"status": "done", "signed_at": "2026-07-16T10:00:00Z"},
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-16T09:00:00Z",
+                                "signed_at": "2026-07-16T10:00:00Z",
+                            },
                         }
                     ],
                 }
@@ -328,6 +432,135 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertTrue(fake_data["sessions"][0]["trainees"][0]["printed"])
         self.assertNotIn("convention_signed_seen_at", fake_data["sessions"][0]["trainees"][0])
         self.assertEqual(api_after_print_response.get_json()["count"], 0)
+
+    def test_signed_conventions_badge_counts_recent_conventions_in_older_sessions(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-LONG-RUNNING",
+                    "name": "Formation annuelle",
+                    "training_type": "DESP",
+                    "date_start": "2026-01-01",
+                    "date_end": "2026-12-31",
+                    "trainees": [
+                        {
+                            "id": "T-RECENT-1",
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-27T13:27:00Z",
+                                "signed_at": "2026-07-27T13:38:00Z",
+                            },
+                        },
+                        {
+                            "id": "T-RECENT-2",
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-27T14:43:00Z",
+                                "signed_at": "2026-07-27T14:54:00Z",
+                            },
+                        },
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/api/conventions_signed_unseen")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["count"], 2)
+        self.assertEqual(
+            {item["trainee_id"] for item in response.get_json()["items"]},
+            {"T-RECENT-1", "T-RECENT-2"},
+        )
+
+
+    def test_print_button_is_highlighted_only_for_unprinted_signed_conventions(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [
+                    {
+                        "id": "T-SIGNED-UNPRINTED",
+                        "last_name": "SIGNED-UNPRINTED",
+                        "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"},
+                    },
+                    {
+                        "id": "T-SIGNED-PRINTED",
+                        "last_name": "SIGNED-PRINTED",
+                        "printed": True,
+                        "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"},
+                    },
+                    {"id": "T-UNSIGNED", "last_name": "UNSIGNED", "convention_status": "signing"},
+                ],
+            }],
+        }
+        captured = {}
+
+        def fake_render_template(template_name, **context):
+            captured.update(context)
+            return "OK"
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "render_template", side_effect=fake_render_template):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        rows_by_id = {row["trainee_id"]: row for row in captured["rows"]}
+        self.assertTrue(rows_by_id["T-SIGNED-UNPRINTED"]["needs_printing"])
+        self.assertFalse(rows_by_id["T-SIGNED-PRINTED"]["needs_printing"])
+        self.assertFalse(rows_by_id["T-UNSIGNED"]["needs_printing"])
+        self.assertEqual(captured["stats"]["to_print"], 1)
+
+    def test_conventions_can_filter_signed_conventions_to_print(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [
+                    {"id": "T-TO-PRINT", "last_name": "A-IMPRIMER", "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"}},
+                    {"id": "T-PRINTED", "last_name": "DEJA-IMPRIMEE", "printed": True, "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"}},
+                ],
+            }],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions?status=to_print")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("A-IMPRIMER", html)
+        self.assertNotIn("DEJA-IMPRIMEE", html)
+        self.assertIn("À imprimer", html)
+        self.assertIn("has-print-pending", html)
+        self.assertIn("convPrintKpiPulse", html)
+        self.assertNotIn('content:"Filtre actif"', html)
+        self.assertLess(html.index("À imprimer"), html.index("Total"))
+        self.assertNotIn("<span>Documents</span>", html)
+
+    def test_empty_print_kpi_is_disabled_and_has_no_filter_link(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [{
+                    "id": "T-PRINTED",
+                    "last_name": "DEJA-IMPRIMEE",
+                    "printed": True,
+                    "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"},
+                }],
+            }],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('class="conv-kpi is-disabled" aria-disabled="true"', html)
+        self.assertIn("aucune convention à imprimer", html)
+        self.assertNotIn('href="/admin/sessions/conventions?status=to_print"', html)
 
 
 if __name__ == "__main__":

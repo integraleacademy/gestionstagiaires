@@ -25,6 +25,8 @@
   .qonto-secure-list{margin:12px 0 0;padding-left:20px;color:#475569;}
   .qonto-oauth-box{margin-top:18px;padding:16px;border:1px solid #bfdbfe;border-radius:16px;background:#eff6ff;}
   .qonto-oauth-box strong{color:#1d4ed8;}
+  .qonto-sync-grid{display:grid;grid-template-columns:minmax(150px,1fr) minmax(220px,2fr);gap:10px 16px;margin-top:14px;align-items:start;}
+  .qonto-sync-grid dt{font-weight:800;color:#334155;}.qonto-sync-grid dd{margin:0;color:#475569;word-break:break-word;}
   @media(max-width:840px){.qonto-settings-head{flex-direction:column}.qonto-settings-body{grid-template-columns:1fr;padding:18px}.qonto-title h1{font-size:24px}}
 </style>
 
@@ -57,11 +59,13 @@
     <section class="qonto-panel" aria-labelledby="qontoStatusTitle">
       <h2 id="qontoStatusTitle" style="margin-top:0;">Statut Qonto</h2>
       <div class="qonto-status-line">
-        <span id="qontoBadge" class="qonto-badge {{ 'connected' if connected else 'disconnected' }}">{{ '✅ Connecté' if connected else '⚪ Non connecté' }}</span>
+        <span id="qontoBadge" class="qonto-badge {{ 'connected' if connected else 'disconnected' }}">Connexion Qonto : {{ 'connectée' if connected else 'non connectée' }}</span>
         <span id="qontoMessage" class="qonto-message">{{ message }}</span>
+        <span id="qontoWebhookActivation" class="qonto-muted">Activation du webhook : non vérifiée</span>
       </div>
       <div class="qonto-muted">Dernier test réussi : <strong id="qontoLastSuccess">{{ last_success_fr or 'Aucun test réussi pour le moment' }}</strong></div>
       <div id="qontoSuccess" class="qonto-success" role="status" aria-live="polite"></div>
+      <div id="qontoSyncNotice" class="qonto-success" role="status" aria-live="polite"></div>
       <div id="qontoError" class="qonto-error" role="alert" aria-live="assertive"></div>
       <div class="qonto-actions">
         <button type="button" id="qontoTestBtn" class="btn btn-primary">Tester la connexion Qonto</button>
@@ -81,10 +85,32 @@
       <p class="qonto-muted">Les identifiants Qonto restent uniquement dans les variables d’environnement Render et les appels API sont effectués côté backend.</p>
       <ul class="qonto-secure-list">
         <li>Aucun secret Qonto dans le JavaScript frontend.</li>
-        <li>Le Bearer OAuth est utilisé uniquement pour les routes SEPA Direct Debit.</li>
+        <li>Le Bearer OAuth de production est utilisé pour les routes SEPA et les souscriptions webhook ; aucune API Key n’est envoyée aux webhooks.</li>
         <li>Les détails techniques restent dans les logs serveur masqués.</li>
       </ul>
     </aside>
+    <section class="qonto-panel" aria-labelledby="qontoSyncTitle" style="grid-column:1/-1;">
+      <h2 id="qontoSyncTitle" style="margin-top:0;">État de la synchronisation Qonto</h2>
+      <p class="qonto-muted">Le webhook est le mécanisme principal. La vérification ne révèle jamais de secret.</p>
+      <dl class="qonto-sync-grid">
+        <dt>Configuration présente</dt><dd id="webhookConfigurationStatus">Vérification…</dd>
+        <dt>Connexion API Key fonctionnelle</dt><dd id="webhookApiStatus">Vérification…</dd>
+        <dt>Connexion OAuth fonctionnelle</dt><dd id="webhookOauthStatus">Vérification…</dd>
+        <dt>Scope webhook autorisé</dt><dd id="webhookScopeStatus">Vérification…</dd>
+        <dt>Secret webhook configuré</dt><dd id="webhookSecretStatus">Vérification…</dd>
+        <dt>URL de callback</dt><dd id="webhookCallback">—</dd>
+        <dt>Souscription Qonto trouvée</dt><dd id="webhookSubscription">—</dd>
+        <dt>Identifiant de souscription</dt><dd id="webhookSubscriptionId">—</dd>
+        <dt>Événements souscrits</dt><dd id="webhookEvents">—</dd>
+        <dt>Événements manquants</dt><dd id="webhookMissingEvents">—</dd>
+        <dt>Dernier webhook reçu</dt><dd id="webhookLastReceived">—</dd>
+        <dt>Type du dernier événement</dt><dd id="webhookLastEvent">—</dd>
+        <dt>Résultat du dernier traitement</dt><dd id="webhookLastResult">—</dd>
+        <dt>Dernière erreur</dt><dd id="webhookLastError">—</dd>
+      </dl>
+      <div class="qonto-actions"><button type="button" id="qontoWebhookEnsureBtn" class="btn btn-primary">Vérifier et activer le webhook Qonto</button></div>
+      <p class="qonto-muted">Test de production : cliquez sur ce bouton, effectuez un paiement test dans Qonto, puis actualisez cette page. Le dernier webhook doit passer à <strong>updated</strong> et la facture doit être mise à jour sans utiliser « Synchronisation Qonto ».</p>
+    </section>
   </div>
 </div>
 
@@ -96,11 +122,48 @@
   const success = document.getElementById('qontoSuccess');
   const error = document.getElementById('qontoError');
   const lastSuccess = document.getElementById('qontoLastSuccess');
+  const webhookEnsureBtn = document.getElementById('qontoWebhookEnsureBtn');
+
+  function setText(id, value){ const node=document.getElementById(id); if(node) node.textContent=value || '—'; }
+  let lastWebhookReceivedAt = '';
+  let webhookPollTimer;
+  function webhookTime(iso){
+    const date = new Date(iso); return Number.isNaN(date.getTime()) ? iso : date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  }
+  function showWebhookNotice(receivedAt){
+    const notice=document.getElementById('qontoSyncNotice'); if(!notice) return;
+    notice.textContent=`Synchronisation Qonto reçue à ${webhookTime(receivedAt)}`;
+    notice.style.display='block'; window.setTimeout(()=>{notice.style.display='none';}, 5000);
+  }
+  async function refreshWebhookStatus(){
+    try {
+      const res=await fetch('/api/admin/qonto/webhook-status',{headers:{'Accept':'application/json'},cache:'no-store'});
+      const p=await res.json(); if(!res.ok || !p.ok) throw new Error('Statut indisponible');
+      setText('webhookConfigurationStatus',p.connection_api_key_ok?'✅ Oui':'⚪ Non');
+      setText('webhookApiStatus',p.connection_api_key_ok?'✅ Configurée localement':'⚪ Non configurée');
+      setText('webhookOauthStatus',p.oauth_ok?'✅ Active':'⚪ Inactive');
+      setText('webhookScopeStatus',p.webhook_scope_ok?'✅ Oui':'⚪ Non');
+      setText('webhookSecretStatus',p.webhook_secret_configured?'✅ Oui':'⚠️ Non');
+      setText('webhookCallback',p.callback_url); setText('webhookSubscription',p.subscription_found?'✅ Oui':'⚪ Non');
+      setText('webhookSubscriptionId',p.subscription_id); setText('webhookEvents',(p.subscribed_events||[]).join(', '));
+      setText('webhookMissingEvents',(p.missing_events||[]).join(', ') || 'Aucun');
+      setText('webhookLastReceived',p.last_webhook_received_at); setText('webhookLastEvent',p.last_event_type);
+      setText('webhookLastResult',p.last_processing_result); setText('webhookLastError',p.last_error);
+      if(lastWebhookReceivedAt && p.last_webhook_received_at && p.last_webhook_received_at !== lastWebhookReceivedAt) showWebhookNotice(p.last_webhook_received_at);
+      lastWebhookReceivedAt=p.last_webhook_received_at || lastWebhookReceivedAt;
+    } catch(e) { /* Keep the last successful values visible and retry below. */ }
+  }
+  function scheduleWebhookPoll(immediate=false){
+    window.clearTimeout(webhookPollTimer);
+    if(immediate) refreshWebhookStatus();
+    webhookPollTimer=window.setTimeout(async ()=>{await refreshWebhookStatus(); scheduleWebhookPoll();}, document.hidden ? 30000 : 5000);
+  }
+  document.addEventListener('visibilitychange',()=>scheduleWebhookPoll(!document.hidden));
 
   function setFeedback(payload){
     const connected = Boolean(payload && payload.connected);
     badge.className = 'qonto-badge ' + (connected ? 'connected' : 'disconnected');
-    badge.textContent = connected ? '✅ Connecté' : '⚪ Non connecté';
+    badge.textContent = connected ? 'Connexion Qonto : connectée' : 'Connexion Qonto : non connectée';
     message.textContent = (payload && payload.message) || 'Statut Qonto indisponible';
     success.style.display = connected ? 'block' : 'none';
     error.style.display = connected ? 'none' : 'block';
@@ -115,7 +178,10 @@
     try {
       const res = await fetch('/api/qonto/oauth/status', {headers:{'Accept':'application/json'}});
       const payload = await res.json();
-      oauthMessage.textContent = payload.message || (payload.connected ? 'OAuth Qonto : connecté production' : 'OAuth Qonto : non connecté');
+      const hasWebhookScope = (payload.scopes || []).includes('webhook');
+      oauthMessage.textContent = !hasWebhookScope && payload.connected
+        ? 'La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto.'
+        : (payload.message || (payload.connected ? 'OAuth Qonto : connecté production' : 'OAuth Qonto : non connecté'));
       oauthMessage.style.color = payload.connected ? '#166534' : (payload.incompatible ? '#b45309' : '#991b1b');
       oauthMessage.style.fontWeight = '800';
     } catch (e) {
@@ -140,7 +206,17 @@
       btn.textContent = originalText;
     }
   });
+  webhookEnsureBtn.addEventListener('click', async function(){
+    webhookEnsureBtn.disabled=true; const original=webhookEnsureBtn.textContent; webhookEnsureBtn.textContent='Vérification…';
+    try { const res=await fetch('/api/admin/qonto/webhook-subscription/ensure',{method:'POST',headers:{'Accept':'application/json'}}); const p=await res.json();
+      if(!res.ok || !p.ok) throw new Error(p.error||'Activation impossible');
+      document.getElementById('qontoWebhookActivation').textContent='Activation du webhook : active';
+      success.style.display='block'; success.textContent=p.created?'Souscription webhook Qonto créée.':(p.updated?'Souscription webhook Qonto complétée.':'Souscription webhook Qonto déjà valide.');
+    } catch(e) { const detail=e.message||'Activation webhook impossible.'; document.getElementById('qontoWebhookActivation').textContent=`Activation du webhook : erreur ${detail.match(/HTTP \d+/)?.[0]||''}`.trim(); error.style.display='block'; error.textContent=detail; }
+    finally { webhookEnsureBtn.disabled=false; webhookEnsureBtn.textContent=original; await refreshWebhookStatus(); }
+  });
   refreshOauthStatus();
+  scheduleWebhookPoll(true);
 })();
 </script>
 {% endblock %}

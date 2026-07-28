@@ -858,10 +858,11 @@
   {% for s in sessions %}
   {% set training_upper = (s.training_type or "")|upper %}
   {% set is_aps = training_upper.startswith("APS") %}
+  {% set is_desp = "DIRIGEANT" in training_upper or "DESP" in training_upper %}
   {% set is_vtc = "VTC" in training_upper %}
   {% set is_vae = "VAE" in training_upper %}
   {% set is_ssiap = "SSIAP" in training_upper %}
-  {% set is_dirigeant = training_upper.startswith("DIRIGEANT") %}
+  {% set is_dirigeant = is_desp %}
   {% set show_cnaps_metric = not (is_vtc or is_vae or is_ssiap or is_dirigeant) %}
   {% set elearning_done = s.public_logged_in_total or 0 %}
   {% set elearning_total = s.total or 0 %}
@@ -906,6 +907,18 @@
         <span class="session-date-row__icon" aria-hidden="true">🏫</span>
         <span class="session-date-row__label">Présentiel</span>
         <strong>{{ s.aps_in_person_start|frdate }} → {{ s.aps_in_person_end|frdate }}</strong>
+      </div>
+      {% endif %}
+      {% if is_desp %}
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">💻</span>
+        <span class="session-date-row__label">Distanciel</span>
+        <strong>{{ s.dirigeant_remote_start|frdate }} → {{ s.dirigeant_remote_end|frdate }}</strong>
+      </div>
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">🏫</span>
+        <span class="session-date-row__label">Présentiel</span>
+        <strong>{{ s.dirigeant_in_person_start|frdate }} → {{ s.dirigeant_in_person_end|frdate }}</strong>
       </div>
       {% endif %}
       {% if is_vtc %}
@@ -1025,19 +1038,19 @@
         </label>
 
         <label id="dirigeantInPersonStartField" style="display:none;">
-          <div class="label">Début présentiel</div>
+          <div class="label">Début présentiel DESP</div>
           <input id="dirigeantInPersonStart" type="date">
         </label>
         <label id="dirigeantInPersonEndField" style="display:none;">
-          <div class="label">Fin présentiel</div>
+          <div class="label">Fin présentiel DESP</div>
           <input id="dirigeantInPersonEnd" type="date">
         </label>
         <label id="dirigeantRemoteStartField" style="display:none;">
-          <div class="label">Début distanciel</div>
+          <div class="label">Début distanciel DESP</div>
           <input id="dirigeantRemoteStart" type="date">
         </label>
         <label id="dirigeantRemoteEndField" style="display:none;">
-          <div class="label">Fin distanciel</div>
+          <div class="label">Fin distanciel DESP</div>
           <input id="dirigeantRemoteEnd" type="date">
         </label>
 
@@ -1295,19 +1308,19 @@
         </label>
 
         <label id="editDirigeantInPersonStartField" style="display:none;">
-          <div class="label">Début présentiel</div>
+          <div class="label">Début présentiel DESP</div>
           <input id="editDirigeantInPersonStart" type="date">
         </label>
         <label id="editDirigeantInPersonEndField" style="display:none;">
-          <div class="label">Fin présentiel</div>
+          <div class="label">Fin présentiel DESP</div>
           <input id="editDirigeantInPersonEnd" type="date">
         </label>
         <label id="editDirigeantRemoteStartField" style="display:none;">
-          <div class="label">Début distanciel</div>
+          <div class="label">Début distanciel DESP</div>
           <input id="editDirigeantRemoteStart" type="date">
         </label>
         <label id="editDirigeantRemoteEndField" style="display:none;">
-          <div class="label">Fin distanciel</div>
+          <div class="label">Fin distanciel DESP</div>
           <input id="editDirigeantRemoteEnd" type="date">
         </label>
 
@@ -1408,7 +1421,7 @@
           <span id="cnapsImportFilesText" class="cnaps-file-text">Aucun fichier choisi</span>
         </div>
       </label>
-      <div class="hint" style="margin-top:8px;">Le système lit nom, prénom et numéro PRE/CAR dans les PDF puis cherche le stagiaire correspondant.</div>
+      <div class="hint" style="margin-top:8px;">Le système lit nom, prénom et numéro PRE/CAR dans les PDF puis cherche le stagiaire correspondant. Les imports PRE CNAPS sont associés uniquement aux formations APS et A3P.</div>
       <div id="cnapsImportStatus" class="muted" style="margin-top:10px;"></div>
       <div id="cnapsImportResults" class="cnaps-list" style="margin-top:12px;"></div>
     </div>
@@ -1974,6 +1987,11 @@
     };
   }
 
+  function isDespTraining(trainingType){
+    const type = (trainingType || "").toUpperCase();
+    return type.startsWith("DIRIGEANT") || type.includes("DESP");
+  }
+
   function toggleExamFields(){
     const type = (document.getElementById("sessionType")?.value || "").toUpperCase();
     const examDateField = document.getElementById("examDateField");
@@ -1984,12 +2002,12 @@
     const apsElearningField = document.getElementById("apsElearningField");
     const isVtc = type.includes("VTC");
     const isAps = type.startsWith("APS");
-    const isDirigeant = type.startsWith("DIRIGEANT");
+    const isDirigeant = isDespTraining(type);
 
     setDirigeantDateFieldsVisible("", isDirigeant);
     setFieldVisible("dateStartField", true);
     setFieldVisible("dateEndField", true);
-    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
+    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
@@ -2017,12 +2035,12 @@
     const apsElearningField = document.getElementById("editApsElearningField");
     const isVtc = type.includes("VTC");
     const isAps = type.startsWith("APS");
-    const isDirigeant = type.startsWith("DIRIGEANT");
+    const isDirigeant = isDespTraining(type);
 
     setDirigeantDateFieldsVisible("edit", isDirigeant);
     setFieldVisible("editDateStartField", true);
     setFieldVisible("editDateEndField", true);
-    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
+    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
@@ -2036,11 +2054,11 @@
   document.getElementById("btnCreateSession")?.addEventListener("click", async ()=>{
     const name = (document.getElementById("sessionName").value || "").trim();
     const training_type = (document.getElementById("sessionType").value || "").trim();
-    const isDirigeant = training_type.toUpperCase().startsWith("DIRIGEANT");
+    const isDirigeant = isDespTraining(training_type);
     const dirigeantDates = isDirigeant ? resolveDirigeantSessionDates("") : null;
     const date_start = dirigeantDates ? dirigeantDates.dateStart : (document.getElementById("dateStart").value || "").trim();
     const date_end = dirigeantDates ? dirigeantDates.dateEnd : (document.getElementById("dateEnd").value || "").trim();
-    const exam_date = isDirigeant ? "" : (document.getElementById("examDate").value || "").trim();
+    const exam_date = (document.getElementById("examDate").value || "").trim();
     const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
     const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
@@ -2135,9 +2153,9 @@
         method:"POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
-          date_start: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? resolveDirigeantSessionDates("edit").dateStart : (document.getElementById("editDateStart").value || "").trim(),
-          date_end: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? resolveDirigeantSessionDates("edit").dateEnd : (document.getElementById("editDateEnd").value || "").trim(),
-          exam_date: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? "" : (document.getElementById("editExamDate").value || "").trim(),
+          date_start: isDespTraining(document.getElementById("editSessionTrainingType").value) ? resolveDirigeantSessionDates("edit").dateStart : (document.getElementById("editDateStart").value || "").trim(),
+          date_end: isDespTraining(document.getElementById("editSessionTrainingType").value) ? resolveDirigeantSessionDates("edit").dateEnd : (document.getElementById("editDateEnd").value || "").trim(),
+          exam_date: (document.getElementById("editExamDate").value || "").trim(),
           exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
           practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),

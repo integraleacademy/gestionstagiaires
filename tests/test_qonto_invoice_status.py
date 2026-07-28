@@ -3,6 +3,7 @@ import hmac
 import json
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import app as gestion_app
@@ -71,6 +72,269 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(invoice["qonto_invoice_amount_paid"], 950.0)
         self.assertEqual(len(self.saved), 1)
 
+    def test_manual_sepa_sync_refreshes_signed_mandate_and_creates_installments(self):
+        line = {
+            "paymentMode": "sepa_direct_debit",
+            "qontoClientId": "client_123",
+            "qonto_direct_debit_mandate_id": "mandate_123",
+            "qonto_mandate_status": "pending",
+            "mandateStatus": "pending",
+            "sepa_payment_plan": {"installments": [{"index": 1, "amount": 100, "status": "pending"}]},
+        }
+        with patch.object(gestion_app, "list_qonto_direct_debit_mandates", return_value={
+            "direct_debit_mandates": [{"id": "mandate_123", "status": "signed", "signed_at": "2026-07-24T10:00:00Z"}]
+        }), patch.object(gestion_app, "ensure_qonto_sepa_installments_for_line", return_value={"created": 4}):
+            gestion_app._sync_qonto_direct_debit_line(line)
+
+        self.assertEqual(line["qonto_mandate_status"], "signed")
+        self.assertEqual(line["mandateStatus"], "signed")
+        self.assertEqual(line["qonto_mandate_signed_at"], "2026-07-24T10:00:00Z")
+
+    def test_sepa_installments_expose_due_dates_to_the_dashboard(self):
+        line = {
+            "paymentMode": "sepa_direct_debit",
+            "mandateStatus": "signed",
+            "qonto_direct_debit_mandate_id": "mandate_123",
+            "sepa_payment_plan": {
+                "installments": [
+                    {"index": 1, "amount": 582.5, "due_date": "2026-08-24", "status": "scheduled"},
+                ],
+            },
+        }
+
+        gestion_app._sync_sepa_aliases(line)
+
+        installment = line["directDebitInstallments"][0]
+        self.assertEqual(installment["date"], "2026-08-24")
+        self.assertEqual(installment["due_date"], "2026-08-24")
+        self.assertEqual(line["qontoPaymentGlobalStatus"], "Prélèvements programmés")
+
+    def test_sepa_setup_does_not_expose_installments_when_qonto_returns_no_mandate_id(self):
+        line = {"qontoClientId": "client_123", "qontoInvoiceId": "inv_123"}
+        payment_plan = {
+            "mode": "sepa_direct_debit",
+            "schedule": [{"date": "2026-08-12", "amount": 528}],
+            "installments": 1,
+        }
+
+        with patch.object(gestion_app, "_ensure_qonto_oauth_ready"), \
+             patch.object(gestion_app, "_active_qonto_mandate", return_value=None), \
+             patch.object(gestion_app, "create_qonto_direct_debit_mandate", return_value={}):
+            with self.assertRaisesRegex(RuntimeError, "aucun identifiant de mandat"):
+                gestion_app._setup_qonto_direct_debit_for_line(line, payment_plan)
+        self.assertNotIn("directDebitInstallments", line)
+        self.assertNotIn("sepa_payment_plan", line)
+
+    def test_failed_persisted_mandate_is_replaced_when_retrying(self):
+        line = {
+            "id": "line_1", "qontoClientId": "client_123",
+            "qonto_direct_debit_mandate_id": "failed_mandate",
+        }
+        payment_plan = {
+            "mode": "sepa_direct_debit", "installments": 1,
+            "schedule": [{"date": "2026-08-12", "amount": 528}],
+        }
+        with patch.object(gestion_app, "_ensure_qonto_oauth_ready"), \
+             patch.object(gestion_app, "_active_qonto_mandate", return_value=None), \
+             patch.object(gestion_app, "get_qonto_direct_debit_mandate", return_value={"direct_debit_mandate": {"id": "failed_mandate", "status": "failed"}}), \
+             patch.object(gestion_app, "create_qonto_direct_debit_mandate", return_value={"direct_debit_mandate": {"id": "new_mandate", "status": "pending_signature"}}) as create, \
+             patch.object(gestion_app, "ensure_qonto_sepa_installments_for_line"):
+            gestion_app._setup_qonto_direct_debit_for_line(line, payment_plan)
+
+        create.assert_called_once()
+        self.assertEqual(line["qonto_direct_debit_mandate_id"], "new_mandate")
+        self.assertEqual(line["qonto_mandate_status"], "pending")
+
+    def test_sepa_setup_keeps_qonto_rum_as_creation_proof(self):
+        line = {"id": "line_1", "qontoClientId": "client_123"}
+        payment_plan = {
+            "mode": "sepa_direct_debit", "installments": 1,
+            "schedule": [{"date": "2026-08-12", "amount": 528}],
+        }
+        created = {
+            "direct_debit_mandate": {
+                "id": "mandate_123", "status": "pending_signature",
+                "unique_mandate_reference": "RUM-QONTO-2026-001",
+            }
+        }
+        with patch.object(gestion_app, "_ensure_qonto_oauth_ready"), \
+             patch.object(gestion_app, "_active_qonto_mandate", return_value=None), \
+             patch.object(gestion_app, "create_qonto_direct_debit_mandate", return_value=created), \
+             patch.object(gestion_app, "ensure_qonto_sepa_installments_for_line"):
+            gestion_app._setup_qonto_direct_debit_for_line(line, payment_plan)
+
+        self.assertEqual(line["qonto_mandate_rum"], "RUM-QONTO-2026-001")
+
+    def test_pending_qonto_mandate_never_reports_programmed_debits(self):
+        line = {
+            "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "mandate_123",
+            "mandateStatus": "pending_signature",
+            "directDebitInstallments": [
+                {"index": 1, "amount": 528, "status": "scheduled"},
+            ],
+        }
+
+        self.assertEqual(
+            gestion_app._qonto_payment_global_status(line),
+            "Mandat à signer",
+        )
+
+    def test_pending_qonto_mandate_is_reused_instead_of_duplicated(self):
+        pending = {"id": "mandate_123", "status": "pending_signature"}
+        with patch.object(
+            gestion_app,
+            "list_qonto_direct_debit_mandates",
+            return_value={"direct_debit_mandates": [pending]},
+        ):
+            self.assertEqual(
+                gestion_app._active_qonto_mandate("client_123"),
+                pending,
+            )
+
+    def test_trainee_dashboard_supports_legacy_due_date_and_scheduled_mandates(self):
+        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+
+        self.assertIn("function installmentDate(installment)", template)
+        self.assertIn("installment?.date||installment?.due_date", template)
+        self.assertIn("Prélèvements programmés", template)
+        self.assertIn("function qontoScheduleState(lines)", template)
+        self.assertIn("✅ Mandat OK", template)
+        self.assertIn("✅ Échéancier OK", template)
+        self.assertIn("qonto_direct_debit_subscription_id", template)
+
+    def test_trainee_dashboard_hides_schedule_until_mandate_is_validated(self):
+        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+
+        self.assertIn("function lineHasValidatedMandate(line)", template)
+        self.assertIn(
+            "lineHasValidatedMandate(l)?(l.directDebitInstallments||[])",
+            template,
+        )
+        self.assertIn(
+            "l.paymentMode === 'sepa_direct_debit' && lineHasValidatedMandate(l)",
+            template,
+        )
+
+    def test_webhook_subscription_includes_sepa_events(self):
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "s" * 32}), patch.object(gestion_app, "_qonto_request", side_effect=[
+            {"webhook_subscriptions": []},
+            {"webhook_subscription": {"id": "hook_123"}},
+        ]) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+
+        self.assertTrue(result["created"])
+        self.assertEqual(request.call_args_list[1].args[2], {
+            "callback_url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto",
+            "types": gestion_app.QONTO_WEBHOOK_EVENT_TYPES,
+            "secret": "s" * 32,
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        })
+
+    def test_webhook_subscription_keeps_existing_valid_subscription(self):
+        existing = {"id": "sub_1", "url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto", "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "s" * 32}), patch.object(gestion_app, "_qonto_request", return_value={"webhook_subscriptions": [existing]}) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["created"])
+        self.assertFalse(result["updated"])
+        request.assert_called_once_with("GET", "/v2/webhook_subscriptions")
+
+    def test_webhook_subscription_repairs_incomplete_subscription_without_duplicate(self):
+        existing = {"id": "sub_1", "url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto", "event_types": ["v1/client-invoices"]}
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "s" * 32}), patch.object(gestion_app, "_qonto_request", side_effect=[{"webhook_subscriptions": [existing]}, {"webhook_subscription": {**existing, "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}}]) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+        self.assertTrue(result["updated"])
+        self.assertFalse(result["created"])
+        self.assertEqual(request.call_args_list[1].args[:2], ("PUT", "/v2/webhook_subscriptions/sub_1"))
+        self.assertEqual(request.call_args_list[1].args[2], {
+            "callback_url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto",
+            "types": gestion_app.QONTO_WEBHOOK_EVENT_TYPES,
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        })
+
+    def test_webhook_subscription_creates_only_when_absent(self):
+        created = {"id": "sub_new", "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "s" * 32}), patch.object(gestion_app, "_qonto_request", side_effect=[{"webhook_subscriptions": []}, {"webhook_subscription": created}]) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+        self.assertTrue(result["created"])
+        self.assertEqual(request.call_args_list[1].args[:2], ("POST", "/v2/webhook_subscriptions"))
+        self.assertEqual(request.call_args_list[1].args[2]["secret"], "s" * 32)
+        self.assertNotIn("webhook_subscription", request.call_args_list[1].args[2])
+
+
+    def test_webhook_creation_posts_flat_json_payload_without_params(self):
+        oauth_data = {"qonto_oauth": {"access_token": "webhook-token", "refresh_token": "refresh-token", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
+        response = Mock(ok=True, status_code=201, text='{"webhook_subscription": {"id": "sub_1"}}', headers={})
+        response.json.return_value = {"webhook_subscription": {"id": "sub_1"}}
+        payload = {
+            "callback_url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto",
+            "types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES),
+            "secret": "s" * 32,
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        }
+        with patch.dict(os.environ, {"QONTO_API_BASE_URL": "https://qonto.test"}, clear=False), \
+             patch.object(gestion_app, "load_data", return_value=oauth_data), \
+             patch.object(gestion_app.requests, "post", return_value=response) as post:
+            result = gestion_app._qonto_request("POST", "/v2/webhook_subscriptions", payload)
+
+        self.assertEqual(result, {"webhook_subscription": {"id": "sub_1"}})
+        post.assert_called_once()
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], "https://qonto.test/v2/webhook_subscriptions")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer webhook-token")
+        self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
+        self.assertEqual(kwargs["headers"]["Accept"], "application/json")
+        self.assertEqual(kwargs["json"], payload)
+        self.assertNotIn("params", kwargs)
+        self.assertNotIn("data", kwargs)
+        self.assertNotIn("webhook_subscription", kwargs["json"])
+        self.assertTrue(kwargs["json"]["secret"])
+        self.assertEqual(kwargs["json"]["types"], gestion_app.QONTO_WEBHOOK_EVENT_TYPES)
+
+    def test_webhook_subscription_requires_configured_secret(self):
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": ""}, clear=False):
+            with self.assertRaisesRegex(gestion_app.QontoConfigurationError, "QONTO_WEBHOOK_SECRET"):
+                gestion_app.ensure_qonto_webhook_subscription()
+
+    def test_webhook_without_secret_is_rejected_and_recorded(self):
+        client = gestion_app.app.test_client()
+        data = {"sessions": [], "billing_lines": []}
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "", "QONTO_WEBHOOK_SIGNATURE_SECRET": ""}, clear=False), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"):
+            response = client.post("/api/qonto/webhooks", json={"event": "v1/client-invoices", "data": {"id": "inv_1"}})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(data["qonto_webhook_history"][0]["result"], "rejected")
+
+    def test_webhook_records_last_reception(self):
+        client = gestion_app.app.test_client()
+        data = {"sessions": [], "billing_lines": []}
+        raw = b'{"event":"v1/client-invoices","data":{"id":"inv_1"}}'
+        secret = "history-secret"
+        signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"), patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_1", "status": "paid", "total_amount": 10, "amount_paid": 10}}):
+            response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
+        self.assertEqual(response.status_code, 200)
+        entry = data["qonto_webhook_history"][0]
+        self.assertEqual(entry["event"], "v1/client-invoices")
+        self.assertEqual(entry["resource_id"], "inv_1")
+        self.assertEqual(entry["result"], "ignored")
+
+    def test_mandate_webhook_accepts_singular_event_name(self):
+        secret = "webhook-secret"
+        body = {"event": "v2/sepa_direct_debit_mandate.signed", "data": {"id": "mandate_123", "status": "signed"}}
+        raw = json.dumps(body).encode("utf-8")
+        signature = "sha256=" + hmac.new(secret.encode("utf-8"), raw, hashlib.sha256).hexdigest()
+        client = gestion_app.app.test_client()
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), \
+             patch.object(gestion_app, "load_data", return_value={"sessions": [], "billing_lines": []}), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_apply_qonto_mandate_webhook", return_value=True) as apply:
+            response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["updated"])
+        apply.assert_called_once()
+
 
     def test_missing_qonto_billing_invoice_marks_line_to_control(self):
         data = {
@@ -90,12 +354,48 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertTrue(did_reset)
         self.assertIn("à contrôler", message)
         saved_line = gestion_app._find_billing_line(data, data["billing_lines"][0]["id"])
-        self.assertFalse(saved_line.get("qontoInvoiceId"))
-        self.assertFalse(saved_line.get("qontoInvoiceNumber"))
-        self.assertFalse(saved_line.get("invoiceGeneratedAt"))
+        self.assertEqual(saved_line.get("qontoInvoiceId"), "inv_deleted")
+        self.assertEqual(saved_line.get("qontoInvoiceNumber"), "F-2026-001-PROFORMA")
+        self.assertEqual(saved_line.get("invoiceGeneratedAt"), "2026-06-29T10:00:00Z")
         self.assertEqual(saved_line["invoiceStatus"], "control")
         self.assertEqual(saved_line["paymentStatus"], "control")
         self.assertIn("introuvable", saved_line.get("syncWarning", ""))
+
+    def test_missing_qonto_billing_invoice_recovers_final_invoice_by_number(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
+        data = {
+            "sessions": [{"id": "S1", "name": "APS NOVEMBRE 2026", "date_start": "2026-11-01", "date_end": "2026-11-05", "trainees": [{"id": "T1", "first_name": "Rafael", "last_name": "BONELLO-GUTIERREZ", "personal_amount": 1650}]}],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1", "sessionId": "S1", "financingType": "PERSONNEL", "financingRef": "legacy",
+                "amount": 1650, "invoiceStatus": "draft", "paymentStatus": "unpaid",
+                "qontoInvoiceId": "stale-draft-id", "qontoDraftId": "stale-draft-id",
+                "qontoInvoiceNumber": "FL-2026-315-PROFORMA",
+                "invoiceGeneratedAt": "2026-07-17T10:00:00Z",
+            }]
+        }
+        remote_final = {
+            "id": "final-invoice-id",
+            "number": "FL-2026-315",
+            "status": "sent",
+            "public_url": "https://qonto.test/final-invoice-id",
+        }
+        line = gestion_app._find_billing_line(data, line_id)
+        with patch.object(gestion_app, "get_qonto_invoice", side_effect=gestion_app.QontoNotFoundError("Qonto HTTP 404: not_found")), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", side_effect=[None, remote_final]) as lookup:
+            did_reset, message = gestion_app._sync_billing_line_with_qonto(data, line)
+
+        self.assertFalse(did_reset)
+        self.assertIn("retrouvée", message)
+        self.assertEqual(lookup.call_args_list[0].args[0], "FL-2026-315-PROFORMA")
+        self.assertEqual(lookup.call_args_list[1].args[0], "FL-2026-315")
+        saved_line = gestion_app._find_billing_line(data, line_id)
+        self.assertEqual(saved_line["qontoInvoiceId"], "final-invoice-id")
+        self.assertEqual(saved_line["qontoInvoiceNumber"], "FL-2026-315")
+        self.assertEqual(saved_line["invoiceStatus"], "sent")
+        self.assertEqual(saved_line["paymentStatus"], "unpaid")
+        self.assertEqual(saved_line["invoicePdfUrl"], "https://qonto.test/final-invoice-id")
+        self.assertFalse(saved_line.get("syncWarning"))
 
     def test_billing_lines_keep_direct_debit_schedule_from_persisted_line(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
@@ -188,9 +488,29 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         with open(template, encoding="utf-8") as fh:
             source = fh.read()
 
-        self.assertIn("const notGenerated=filtered.filter(l=>!hasInvoice(l)), total=notGenerated.reduce", source)
+        self.assertIn("const statLines=lines;const notGenerated=statLines.filter(l=>!hasInvoice(l)), total=notGenerated.reduce", source)
         self.assertIn("['Total à facturer',fmtMoney(total)]", source)
-        self.assertIn("['Montant non généré',fmtMoney(total)]", source)
+        self.assertNotIn("Montant non généré", source)
+        self.assertIn("['Cas spécifique',specificCases.length]", source)
+        self.assertIn("['Factures en attente de paiement',toPay.length]", source)
+        self.assertIn("['Factures payées',paid.length]", source)
+        self.assertIn("['Factures partiellement payées',partiallyPaid.length]", source)
+        self.assertLess(
+            source.index("['partially_paid','Factures partiellement payées'"),
+            source.index("['paid','Factures payées'"),
+        )
+        self.assertIn("['Factures annulées',cancelled.length]", source)
+        self.assertIn("['all','Tous les dossiers',statLines.length,fmtMoney(allAmount)]", source)
+        self.assertIn("['external_generated','Factures générées ailleurs',externalGenerated.length", source)
+        self.assertIn("if(nextFilter==='external_generated')$('invoiceFilter').value='external_generated'", source)
+        self.assertIn("filter==='all'||activeBillingStatFilter===filter", source)
+        self.assertIn("if(nextFilter==='partially_paid')$('paymentFilter').value='partially_paid'", source)
+        self.assertIn("if(nextFilter==='cancelled')$('invoiceFilter').value='cancelled'", source)
+        self.assertIn('<option value="paid_or_partially_paid">Payée ou partielle</option>', source)
+        self.assertIn("['Factures à contrôler',control.length]", source)
+        self.assertIn("['a_controler','to_control','needs_review','pending_review']", source)
+        self.assertIn("(!knownInvoiceStatuses.includes(invoiceStatus))", source)
+        self.assertIn("['canceled','void','voided']", source)
 
     def test_billing_invoice_download_streams_qonto_pdf_inline(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
@@ -386,6 +706,43 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(lines[0]["invoiceStatus"], "finalized")
         self.assertEqual(lines[0]["paymentStatus"], "unpaid")
 
+    def test_bulk_generate_finalized_refreshes_invoice_number_when_finalize_response_is_sparse(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
+        data = {
+            "sessions": [{
+                "id": "S1",
+                "name": "APS JUILLET 2026",
+                "training_type": "APS",
+                "date_start": "2026-07-01",
+                "date_end": "2026-07-05",
+                "trainees": [{"id": "T1", "first_name": "Alice", "last_name": "Dupont", "email": "alice@example.test", "personal_amount": 900, "address": "1 rue Test", "zip_code": "75001", "city": "Paris"}],
+            }],
+            "billing_lines": [],
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "get_qonto_invoice_iban", return_value="FR7612345678901234567890123"), \
+             patch.object(gestion_app, "search_qonto_client", return_value={"client": {"id": "client_123", "billing_address": {"street_address": "1 rue Test", "zip_code": "75001", "city": "Paris", "country_code": "FR"}}}), \
+             patch.object(gestion_app, "create_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "status": "draft"}}), \
+             patch.object(gestion_app, "finalize_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "status": "finalized"}}), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "number": "F-2026-123", "status": "finalized"}}), \
+             patch.object(gestion_app, "_setup_qonto_direct_debit_for_line"):
+            response = client.post("/api/admin/billing-lines/bulk-generate", json={"ids": [line_id], "finalize": True})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["created"][0]["qontoInvoiceNumber"], "F-2026-123")
+        self.assertEqual(payload["created"][0]["invoiceStatus"], "finalized")
+        saved_line = gestion_app._find_billing_line(data, line_id)
+        self.assertEqual(saved_line["qontoInvoiceNumber"], "F-2026-123")
+        self.assertTrue(saved_line.get("invoiceGeneratedAt"))
+
     def test_billing_qonto_generation_updates_existing_client_missing_billing_address(self):
         line = {
             "id": "bill_test",
@@ -461,6 +818,27 @@ class BillingStartDateFilterTests(unittest.TestCase):
 
         self.assertEqual({line["sessionId"] for line in lines}, {"S-JUNE", "S-FR"})
         self.assertTrue(all(line["dateStart"] >= "2026-06-01" for line in lines))
+
+    def test_billing_lines_include_vae_sessions_started_before_general_rollout(self):
+        sessions = [{
+            "id": "S-VAE",
+            "training_type": "DIRIGEANT VAE",
+            "date_start": "2026-05-01",
+            "date_end": "2026-05-30",
+            "trainees": [{
+                "id": "T-VAE",
+                "first_name": "Valerie",
+                "last_name": "A",
+                "personal_amount": 2640,
+            }],
+        }]
+
+        lines = gestion_app.buildBillingLinesFromSessions(sessions)
+
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]["sessionId"], "S-VAE")
+        self.assertEqual(lines[0]["financingType"], "PERSONNEL")
+        self.assertEqual(lines[0]["amount"], 2640)
 
 
 if __name__ == "__main__":

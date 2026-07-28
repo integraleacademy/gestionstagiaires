@@ -32,3 +32,17 @@ class AdminDirectDebitsSidebarTests(unittest.TestCase):
         self.assertIn('href="/admin/sessions/facturation"', html)
         self.assertIn('aria-label="CPF"', html)
         self.assertIn('>1</span>', html)
+
+    def test_rejected_installment_aliases_are_used_by_dashboard(self):
+        response = self.client.get("/admin/billing/direct-debits")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("'returned','refunded'", html)
+        self.assertIn("failureReason||it.status_reason||it.rejectReason", html)
+        self.assertIn("it.date||it.due_date", html)
+        # An installment rejection must take precedence over a stale paid
+        # status stored on the parent invoice.
+        rejected_check = html.index("if(failureReason||['reject'")
+        paid_check = html.index("if(['paid','settled'", rejected_check)
+        self.assertLess(rejected_check, paid_check)

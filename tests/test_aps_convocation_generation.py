@@ -11,6 +11,38 @@ import app
 
 
 class ApsConvocationGenerationTests(unittest.TestCase):
+    def test_yousign_request_retries_rate_limit_using_retry_after(self):
+        class FakeResponse:
+            def __init__(self, status_code, headers=None):
+                self.status_code = status_code
+                self.headers = headers or {}
+
+        limited = FakeResponse(429, {"Retry-After": "2"})
+        success = FakeResponse(200)
+        with mock.patch.object(app, "_yousign_base_url", return_value="https://api.yousign.test/v3"), \
+             mock.patch.object(app, "_yousign_headers", return_value={"Authorization": "Bearer test"}), \
+             mock.patch.object(app.requests, "request", side_effect=[limited, success]) as request_mock, \
+             mock.patch.object(app.time, "sleep") as sleep_mock:
+            response = app._yousign_request("GET", "/signature_requests/request-1")
+
+        self.assertIs(response, success)
+        self.assertEqual(request_mock.call_count, 2)
+        sleep_mock.assert_called_once_with(2.0)
+
+    def test_yousign_request_returns_clear_error_after_rate_limit_retries(self):
+        class FakeResponse:
+            status_code = 429
+            headers = {}
+
+        with mock.patch.object(app, "_yousign_base_url", return_value="https://api.yousign.test/v3"), \
+             mock.patch.object(app, "_yousign_headers", return_value={"Authorization": "Bearer test"}), \
+             mock.patch.object(app.requests, "request", return_value=FakeResponse()) as request_mock, \
+             mock.patch.object(app.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "Yousign limite temporairement les demandes"):
+                app._yousign_request("POST", "/signature_requests", json={})
+
+        self.assertEqual(request_mock.call_count, app.YOUSIGN_RATE_LIMIT_MAX_RETRIES + 1)
+
     def test_yousign_external_id_uses_allowed_characters_without_colons(self):
         external_id = app.make_yousign_external_id("2ebec35a:bad", "TRN-2E16579A/2026")
 
@@ -1010,6 +1042,40 @@ class AutomationPartnerModuleTests(unittest.TestCase):
 
 
 class ApsConvocationDueSendTests(unittest.TestCase):
+    def test_sent_convocation_is_resent_seven_days_before_training_only_once(self):
+        session = {
+            "id": "session-1", "training_type": "APS", "date_start": "2026-08-01", "trainees": []
+        }
+        trainee = {
+            "id": "trainee-1", "convocation_aps_sent_at": "2026-07-01T10:00:00Z"
+        }
+        session["trainees"] = [trainee]
+        data = {"sessions": [session]}
+
+        with mock.patch.object(app.datetime, "datetime", wraps=app.datetime.datetime) as fake_datetime, \
+             mock.patch.object(app, "_resend_convocation_before_training", return_value=True) as resend:
+            fake_datetime.utcnow.return_value = app.datetime.datetime(2026, 7, 25, 6, 0, 0)
+            first = app.run_training_convocation_reminders(data)
+            trainee["convocation_aps_reminder_sent_at"] = "2026-07-25T06:00:00Z"
+            second = app.run_training_convocation_reminders(data)
+
+        self.assertEqual(first, {"checked": 1, "sent": 1, "failed": 0})
+        self.assertEqual(second, {"checked": 0, "sent": 0, "failed": 0})
+        resend.assert_called_once_with(session, trainee, "session-1", "trainee-1")
+
+    def test_convocation_is_not_resent_before_seven_day_window(self):
+        session = {
+            "id": "session-1", "training_type": "APS", "date_start": "2026-08-02",
+            "trainees": [{"id": "trainee-1", "convocation_aps_sent_at": "2026-07-01T10:00:00Z"}],
+        }
+        with mock.patch.object(app.datetime, "datetime", wraps=app.datetime.datetime) as fake_datetime, \
+             mock.patch.object(app, "_resend_convocation_before_training") as resend:
+            fake_datetime.utcnow.return_value = app.datetime.datetime(2026, 7, 25, 6, 0, 0)
+            result = app.run_training_convocation_reminders({"sessions": [session]})
+
+        self.assertEqual(result, {"checked": 0, "sent": 0, "failed": 0})
+        resend.assert_not_called()
+
     def test_due_convention_signature_convocation_is_sent_without_in_memory_timer(self):
         session = {"id": "session-1", "training_type": "APS", "trainees": []}
         trainee = {

@@ -43,6 +43,14 @@ class QontoOauthTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/admin/reglages/qonto?oauth=config_missing")
 
+    def test_legacy_qonto_oauth_redirect_uri_is_replaced_with_production_uri(self):
+        self.assertEqual(
+            gestion_app._normalize_qonto_oauth_redirect_uri(
+                "https://gestionstagiaires-test-v2.onrender.com/api/qonto/oauth/callback"
+            ),
+            "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback",
+        )
+
     def test_oauth_status_does_not_expose_tokens(self):
         data = {"qonto_oauth": {"connected": True, "access_token": "access-secret", "refresh_token": "refresh-secret", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
         with patch.object(gestion_app, "load_data", return_value=data):
@@ -98,6 +106,23 @@ class QontoOauthTests(unittest.TestCase):
         self.assertEqual(headers["Authorization"], "Bearer new-token")
         self.assertNotIn("login:api-secret", headers.values())
         self.assertEqual(data["qonto_oauth"]["refresh_token"], "new-refresh")
+
+    def test_webhook_subscription_request_uses_oauth_bearer_never_api_key(self):
+        data = {"qonto_oauth": {"connected": True, "access_token": "webhook-token", "refresh_token": "refresh-token", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.dict(os.environ, {"QONTO_LOGIN": "login", "QONTO_SECRET_KEY": "api-secret"}, clear=False), \
+             patch.object(gestion_app.requests, "request") as req:
+            req.return_value.ok = True; req.return_value.status_code = 200; req.return_value.text = '{"webhook_subscriptions": []}'; req.return_value.headers = {}
+            gestion_app._qonto_request("GET", "/v2/webhook_subscriptions")
+        headers = req.call_args.kwargs["headers"]
+        self.assertEqual(headers["Authorization"], "Bearer webhook-token")
+        self.assertNotIn("login:api-secret", headers.values())
+
+    def test_webhook_subscription_rejects_token_without_webhook_scope(self):
+        data = {"qonto_oauth": {"connected": True, "access_token": "token", "refresh_token": "refresh", "expires_at": 9999999999, "scope": "sepa_direct_debit.read sepa_direct_debit.write", "environment": "production"}}
+        with patch.object(gestion_app, "load_data", return_value=data):
+            with self.assertRaisesRegex(gestion_app.QontoConfigurationError, "ne possède pas l’autorisation webhook"):
+                gestion_app._qonto_request("GET", "/v2/webhook_subscriptions")
 
 
     def test_invalid_grant_resets_oauth_tokens_and_asks_reconnect(self):

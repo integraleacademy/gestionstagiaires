@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ title or "Intégrale Connect • Gestion stagiaires" }}</title>
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260716-admin-notif-contrast')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260725-admin-trainee-saas')) }}">
 
   <meta name="apple-mobile-web-app-title" content="Intégrale Connect">
   <meta name="application-name" content="Intégrale Connect">
@@ -151,7 +151,7 @@
     ] %}
 
     {% set sidebar_cpf_item = {"label":"CPF","icon":"wallet","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests","admin_wedof"],"badge":wedof_new_requests_count if (wedof_new_requests_count or 0) > 0 else "","locked":not partner_has_module('cpf')} %}
-    {% set sidebar_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","children":[
+    {% set sidebar_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","badge_id":"sidebarCnapsBadge","children":[
       {"label":"DRACAR","icon":"external","href":"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil","endpoints":[],"locked":not partner_has_module('cnaps'),"external":True},
       {"label":"Import PRE CNAPS","icon":"file","action":"open-cnaps-import","endpoints":[],"locked":is_read_only or not partner_has_module('cnaps')},
       {"label":"Suivi CNAPS","icon":"shield","href":url_for('admin_cnaps_tracking'),"endpoints":["admin_cnaps_tracking"],"badge":"","badge_id":"sidebarCnapsTrackingBadge","locked":not partner_has_module('cnaps')},
@@ -169,7 +169,8 @@
       {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":not partner_has_module('billing')},
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}
-    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","badge_id":"sidebarToolsConventionsSignedBadge","children":sidebar_tools_children} %}
+    {% set sidebar_tools_notifications_count = sales_today_notification_count if (sales_today_notification_count or 0) > 0 else 0 %}
+    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":sidebar_tools_notifications_count if sidebar_tools_notifications_count > 0 else "","badge_id":"sidebarToolsConventionsSignedBadge","children":sidebar_tools_children} %}
     {% set settings_items = [
       {"label":"Aide et support","icon":"help","href":url_for('partner_help_support'),"endpoints":["partner_help_support"],"locked":False}
     ] %}
@@ -427,9 +428,9 @@
 
 
 
-    .convention-preview-backdrop{background:rgba(15,23,42,.68);backdrop-filter:blur(9px);padding:22px;}
-    .convention-preview-modal{width:min(1120px,96vw);height:min(88vh,860px);display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:26px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 30px 90px rgba(15,23,42,.36);}
-    .convention-preview-modal__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:20px 22px 16px;border-bottom:1px solid #e2e8f0;background:linear-gradient(135deg,#eff6ff,#ffffff 58%,#ecfeff);}
+    .convention-preview-backdrop{background:rgba(15,23,42,.68);backdrop-filter:blur(9px);padding:12px;}
+    .convention-preview-modal{width:min(1440px,calc(100vw - 24px));height:calc(100dvh - 24px);max-height:none;display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:26px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 30px 90px rgba(15,23,42,.36);}
+    .convention-preview-modal__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:16px 22px 12px;border-bottom:1px solid #e2e8f0;background:linear-gradient(135deg,#eff6ff,#ffffff 58%,#ecfeff);}
     .convention-preview-modal__kicker{margin-bottom:6px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
     .convention-preview-modal__head h2{margin:0;color:#0f172a;font-size:23px;line-height:1.2;font-weight:950;}
     .convention-preview-modal__head p{margin:7px 0 0;color:#64748b;font-size:14px;line-height:1.45;}
@@ -447,9 +448,9 @@
     .convention-preview-modal__loader-orb span{position:absolute;width:10px;height:10px;border-radius:999px;background:#fff;opacity:.35;animation:conventionPreviewPulse 1s infinite ease-in-out;}
     .convention-preview-modal__loader-orb span:nth-child(1){right:14px;top:17px;animation-delay:0s}.convention-preview-modal__loader-orb span:nth-child(2){right:14px;top:32px;animation-delay:.15s}.convention-preview-modal__loader-orb span:nth-child(3){right:14px;top:47px;animation-delay:.3s}
     @keyframes conventionPreviewPulse{0%,80%,100%{transform:scale(.72);opacity:.35}40%{transform:scale(1);opacity:1}}
-    .convention-preview-modal__actions{justify-content:flex-end;padding:16px 22px;background:#fff;}
+    .convention-preview-modal__actions{justify-content:flex-end;padding:12px 22px;background:#fff;}
     .convention-preview-modal__actions .btn{border-radius:999px;padding:12px 20px;font-weight:950;}
-    @media(max-width:700px){.convention-preview-backdrop{padding:10px}.convention-preview-modal{width:100%;height:92vh;border-radius:20px}.convention-preview-modal__head{padding:16px}.convention-preview-modal__head h2{font-size:20px}.convention-preview-modal__framewrap{padding:8px}.convention-preview-modal__actions{padding:12px 16px}.convention-preview-modal__actions .btn{width:100%;}}
+    @media(max-width:700px){.convention-preview-backdrop{padding:8px}.convention-preview-modal{width:100%;height:calc(100dvh - 16px);border-radius:20px}.convention-preview-modal__head{padding:14px 16px 10px}.convention-preview-modal__head h2{font-size:20px}.convention-preview-modal__framewrap{padding:8px}.convention-preview-modal__actions{padding:10px 16px}.convention-preview-modal__actions .btn{width:100%;}}
     .convention-result-backdrop{background:rgba(15,23,42,.58);backdrop-filter:blur(10px);}
     .convention-result-modal{position:relative;max-width:440px;border:0;border-radius:28px;overflow:hidden;text-align:center;padding:34px 30px 28px;box-shadow:0 28px 90px rgba(15,23,42,.34);background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);}
     .convention-result-modal__glow{position:absolute;inset:-90px -70px auto auto;width:220px;height:220px;border-radius:999px;background:radial-gradient(circle,rgba(34,197,94,.28),rgba(34,197,94,0) 68%);pointer-events:none;}
@@ -1202,28 +1203,32 @@
   })();
 
   (function initGlobalConventionsSignedBadge(){
-    const sidebarBadges = [
-      document.getElementById("sidebarConventionsSignedBadge"),
-      document.getElementById("sidebarToolsConventionsSignedBadge")
-    ].filter(Boolean);
-    if(!sidebarBadges.length) return;
+    const conventionsBadge = document.getElementById("sidebarConventionsSignedBadge");
+    const toolsBadge = document.getElementById("sidebarToolsConventionsSignedBadge");
+    const salesNotificationsTotal = Number({{ (sales_today_notification_count or 0)|tojson }});
+    if(!conventionsBadge && !toolsBadge) return;
+
+    function updateBadge(sidebarBadge, total, label){
+      if(!sidebarBadge) return;
+      sidebarBadge.textContent = String(total);
+      sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+      sidebarBadge.setAttribute("aria-label", label);
+    }
 
     async function refreshSidebarConventionsSignedBadge(){
       try{
         const response = await fetch("/api/conventions_signed_unseen", { headers: { "Accept": "application/json" } });
         const payload = await response.json();
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
-        const total = Number(payload.count || 0);
-        sidebarBadges.forEach((sidebarBadge) => {
-          sidebarBadge.textContent = String(total);
-          sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
-          sidebarBadge.setAttribute("aria-label", `${total} convention(s) signée(s) à consulter`);
-        });
+        const conventionsTotal = Number(payload.count || 0);
+        const toolsTotal = conventionsTotal + salesNotificationsTotal;
+        updateBadge(conventionsBadge, conventionsTotal, `${conventionsTotal} convention(s) signée(s) à consulter`);
+        updateBadge(toolsBadge, toolsTotal, `${toolsTotal} notification(s) dans les outils`);
       }catch(_error){
-        sidebarBadges.forEach((sidebarBadge) => {
+        [conventionsBadge, toolsBadge].filter(Boolean).forEach((sidebarBadge) => {
           sidebarBadge.textContent = "!";
           sidebarBadge.style.display = "inline-flex";
-          sidebarBadge.setAttribute("aria-label", "Impossible de charger les conventions signées");
+          sidebarBadge.setAttribute("aria-label", "Impossible de charger les notifications des outils");
         });
       }
     }
@@ -1237,14 +1242,19 @@
   })();
 
   (function initGlobalCnapsTrackingBadge(){
-    const sidebarBadge = document.getElementById("sidebarCnapsTrackingBadge");
-    if(!sidebarBadge) return;
+    const sidebarBadges = [
+      document.getElementById("sidebarCnapsBadge"),
+      document.getElementById("sidebarCnapsTrackingBadge")
+    ].filter(Boolean);
+    if(!sidebarBadges.length) return;
 
     function setCnapsTrackingBadge(count){
       const total = Number(count) || 0;
-      sidebarBadge.textContent = String(total);
-      sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
-      sidebarBadge.setAttribute("aria-label", `${total} changement(s) de statut CNAPS à consulter`);
+      sidebarBadges.forEach((sidebarBadge) => {
+        sidebarBadge.textContent = String(total);
+        sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+        sidebarBadge.setAttribute("aria-label", `${total} changement(s) de statut CNAPS à consulter`);
+      });
     }
 
     window.refreshSidebarCnapsTrackingBadge = async function refreshSidebarCnapsTrackingBadge(nextCount){
@@ -1258,9 +1268,11 @@
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
         setCnapsTrackingBadge(payload.count);
       }catch(_error){
-        sidebarBadge.textContent = "!";
-        sidebarBadge.style.display = "inline-flex";
-        sidebarBadge.setAttribute("aria-label", "Impossible de charger les changements de statut CNAPS");
+        sidebarBadges.forEach((sidebarBadge) => {
+          sidebarBadge.textContent = "!";
+          sidebarBadge.style.display = "inline-flex";
+          sidebarBadge.setAttribute("aria-label", "Impossible de charger les changements de statut CNAPS");
+        });
       }
     };
 

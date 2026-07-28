@@ -1689,6 +1689,64 @@ class CnapsTrackingTests(unittest.TestCase):
             gestion_app.os.environ["CNAPSV3_API_TOKEN"] = self.original_token
         gestion_app._cnapsv3_tracking_cache.update({"expires_at": 0.0, "rows": [], "error": None})
 
+    def test_status_change_email_displays_active_enrollment_with_french_dates(self):
+        data = {
+            "sessions": [{
+                "training_type": "APS",
+                "date_start": "2026-08-03",
+                "date_end": "2026-08-21",
+                "trainees": [{"first_name": "Jane", "last_name": "DOE"}],
+            }],
+        }
+
+        enrollments = gestion_app._cnaps_trainee_enrollments(
+            data, first_name="Jane", last_name="DOE", nub="1234567",
+        )
+        _, email_html = gestion_app.build_cnaps_status_change_email(
+            "Jane", "DOE", "1234567", "AP SH ACTIF", enrollments,
+        )
+
+        self.assertIn("/static/logo-integrale.png", email_html)
+        self.assertIn("Inscrit(e) en formation : OUI", email_html)
+        self.assertIn(gestion_app.formation_label("APS"), email_html)
+        self.assertIn("Du 03/08/2026 au 21/08/2026", email_html)
+        self.assertIn("Jane DOE", email_html)
+        self.assertIn("Stagiaire", email_html)
+        self.assertIn('align="center"', email_html)
+        self.assertIn('margin:0 auto 24px', email_html)
+        self.assertNotIn("Un dossier auparavant indiqué comme inconnu", email_html)
+
+    def test_status_change_email_displays_no_when_not_enrolled(self):
+        _, email_html = gestion_app.build_cnaps_status_change_email(
+            "Jane", "DOE", "1234567", "AP SH ACTIF",
+        )
+
+        self.assertIn("Inscrit(e) en formation : NON", email_html)
+
+    def test_status_change_notification_uses_trainee_first_name_when_tracking_row_omits_it(self):
+        data = {
+            "sessions": [{
+                "trainees": [{"first_name": "Jane", "last_name": "DOE", "nub": "1234567"}],
+            }],
+            "cnaps_status_change_notifications": {},
+        }
+        sent = []
+        original_email = gestion_app.brevo_send_email
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            notified = gestion_app._notify_cnaps_status_change(
+                data,
+                first_name="",
+                last_name="DOE",
+                nub="1234567",
+                result={"active_titles": [{"display_status": "AP SH ACTIF"}]},
+            )
+        finally:
+            gestion_app.brevo_send_email = original_email
+
+        self.assertTrue(notified)
+        self.assertIn("Jane DOE", sent[0][2])
+
     def test_tracking_requests_are_normalized_from_a_traiter_payload(self):
         calls = []
 
@@ -1714,22 +1772,36 @@ class CnapsTrackingTests(unittest.TestCase):
             {"last_name": "DUPONT", "first_name": "Clément", "nub": "NUB789", "cnaps_status": "TRANSMIS"},
         ])
 
-    def test_tracking_requests_keep_all_transmitted_rows_regardless_of_date(self):
+    def test_tracking_requests_keep_all_statuses_since_june_cutoff(self):
         def fake_get(url, headers, timeout):
             return DummyResponse(200, {
                 "requests": [
-                    {"nom": "KEEP", "prenom": "Since", "nub": "NUB1", "statut_cnaps": "Transmis", "created_at": "2026-07-15T00:00:00Z"},
-                    {"nom": "OLD", "prenom": "Before", "nub": "NUB2", "statut_cnaps": "TRANSMIS", "created_at": "2026-07-14T23:59:59Z"},
+                    {"nom": "KEEP", "prenom": "Since", "nub": "NUB1", "statut_cnaps": "Transmis", "created_at": "2026-06-01T00:00:00Z"},
+                    {"nom": "OLD", "prenom": "Before", "nub": "NUB2", "statut_cnaps": "TRANSMIS", "created_at": "2026-05-31T23:59:59Z"},
                     {"nom": "STATUS", "prenom": "Other", "nub": "NUB3", "statut_cnaps": "ACCEPTE", "created_at": "2026-07-16T00:00:00Z"},
                     {"nom": "MISSING", "prenom": "Date", "nub": "NUB4", "statut_cnaps": "TRANSMIS"},
-                    {"nom": "OLD", "prenom": "French", "nub": "NUB5", "statut_cnaps": "transmis", "date_creation": "01/07/2026"},
+                    {"nom": "FRENCH", "prenom": "Date", "nub": "NUB5", "statut_cnaps": "REFUSE", "date_creation": "01/06/2026"},
                 ]
             })
 
         rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
 
         self.assertIsNone(error)
-        self.assertEqual([row["last_name"] for row in rows], ["KEEP", "OLD", "MISSING", "OLD"])
+        self.assertEqual([row["last_name"] for row in rows], ["KEEP", "STATUS", "FRENCH"])
+
+    def test_tracking_requests_keep_every_status_since_june_cutoff(self):
+        def fake_get(url, headers, timeout):
+            return DummyResponse(200, {
+                "requests": [
+                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB1", "statut_cnaps": "Transmis au CNAPS", "created_at": "2026-06-01"},
+                    {"nom": "SMITH", "prenom": "John", "nub": "NUB2", "statut_cnaps": "Accepté", "created_at": "2026-06-02"},
+                ]
+            })
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+
+        self.assertIsNone(error)
+        self.assertEqual([row["last_name"] for row in rows], ["DOE", "SMITH"])
 
 
 
@@ -1835,8 +1907,97 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("data-delete-cnaps-row", html)
         self.assertIn("data-import-pre-cnaps-row", html)
         self.assertIn("IMPORT PRE CNAPS", html)
+        self.assertIn('data-cnaps-filter="enrolled"', html)
+        self.assertIn('data-cnaps-filter="not-enrolled"', html)
+        self.assertIn('data-cnaps-filter="nub-missing"', html)
+        self.assertIn('data-cnaps-filter="active"', html)
+        self.assertIn('data-cnaps-filter="in-progress"', html)
+        self.assertIn("Tous les dossiers", html)
+        self.assertIn("Inscrits en formation", html)
+        self.assertIn("Non inscrits en formation", html)
+        self.assertIn("NUB absent", html)
+        self.assertIn("Actifs", html)
+        self.assertIn("En cours", html)
+        self.assertIn('data-cnaps-filter="status-change"', html)
+        self.assertIn("Changements de statut", html)
+        self.assertIn('cnaps-stat--status-change is-disabled', html)
+        self.assertIn('data-cnaps-filter="status-change" aria-pressed="false" disabled aria-disabled="true"', html)
+        self.assertLess(html.index('data-cnaps-filter="status-change"'), html.index('data-cnaps-filter="all"'))
+        self.assertIn("rowMatchesCnapsFilter", html)
+        self.assertIn("updateCnapsStatusChangeTile", html)
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
+
+    def test_tracking_page_prioritizes_pending_status_changes_and_excludes_seen_ones(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"sessions": [], "cnaps_status_change_notifications": {
+            "PRIORITY|1234567": {"signature": "AP SH • ACTIF", "nub": "1234567"},
+            "SEEN|2345678": {"signature": "AP SH • ACTIF", "nub": "2345678", "reviewed_at": "2026-07-22T10:00:00+00:00"},
+        }}
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([
+            {"last_name": "ORDINARY", "first_name": "Olivia", "nub": "7654321", "cnaps_status": "TRANSMIS"},
+            {"last_name": "SEEN", "first_name": "Sam", "nub": "2345678", "cnaps_status": "ACCEPTE"},
+            {"last_name": "PRIORITY", "first_name": "Paul", "nub": "1234567", "cnaps_status": "ACCEPTE"},
+        ], None)
+        gestion_app.load_data = lambda *_, **__: data
+        gestion_app.save_data = lambda _data: None
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+            html = response.get_data(as_text=True)
+            mark_seen = client.post("/api/admin/cnaps-status-changes/toggle-reviewed", json={"last_name": "priority", "nub": "1234567"})
+            was_marked_seen = "reviewed_at" in data["cnaps_status_change_notifications"]["PRIORITY|1234567"]
+            mark_unseen = client.post("/api/admin/cnaps-status-changes/toggle-reviewed", json={"last_name": "priority", "nub": "1234567"})
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLess(html.index("PRIORITY"), html.index("ORDINARY"))
+        self.assertEqual(html.count('data-status-change="true"'), 1)
+        self.assertIn('data-status-change="false" data-last-name="SEEN"', html)
+        self.assertLess(html.index("ORDINARY"), html.index("SEEN"))
+        self.assertIn("data-toggle-cnaps-status-change", html)
+        self.assertIn("Changement notifié", html)
+        self.assertIn('data-status-change="true"', html)
+        self.assertEqual(mark_seen.get_json(), {"ok": True, "reviewed": True, "pending_status_changes_count": 0})
+        self.assertTrue(was_marked_seen)
+        self.assertEqual(mark_unseen.get_json(), {"ok": True, "reviewed": False, "pending_status_changes_count": 1})
+        self.assertNotIn("reviewed_at", data["cnaps_status_change_notifications"]["PRIORITY|1234567"])
+
+    def test_pending_badge_only_counts_changes_visible_in_tracking(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"sessions": [], "cnaps_status_change_notifications": {
+            "VISIBLE|1234567": {"signature": "AP SH • ACTIF", "nub": "1234567"},
+            "STALE|7654321": {"signature": "AP SH • ACTIF", "nub": "7654321"},
+        }}
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        original_load = gestion_app.load_data
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "VISIBLE", "first_name": "Vera", "nub": "1234567", "cnaps_status": "TRANSMIS",
+        }], None)
+        gestion_app.load_data = lambda *_, **__: data
+        try:
+            page = client.get("/admin/sessions/suivi-cnaps")
+            badge = client.get("/api/cnaps_status_changes/pending")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+            gestion_app.load_data = original_load
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('>1</div><div class="cnaps-stat__label">Changements de statut</div>', page.get_data(as_text=True))
+        self.assertEqual(badge.get_json(), {"ok": True, "count": 1})
 
     def test_tracking_page_forces_chiocca_ap_sh_active_by_name_and_nub(self):
         client = gestion_app.app.test_client()
@@ -1863,13 +2024,86 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn('normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"', html)
         self.assertIn('validite_titre:"ACTIF"', html)
 
+    def test_tracking_page_offers_manual_nub_entry_when_nub_is_missing(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DOE", "first_name": "Jane", "nub": "", "cnaps_status": "ACCEPTE",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        html = response.get_data(as_text=True)
+        self.assertIn("NUB absent", html)
+        self.assertIn('card-pro-result__chip is-nub-missing', html)
+        self.assertIn('background:#111827', html)
+        self.assertIn("data-edit-nub", html)
+        self.assertIn("/api/admin/cnaps-tracking/nub", html)
+
+    def test_tracking_page_treats_a_non_numeric_nub_as_missing(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DOE", "first_name": "Jane", "nub": "Dossier reçu via formulaire public", "cnaps_status": "ACCEPTE",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        html = response.get_data(as_text=True)
+        self.assertIn('const nubDigits=nub.replace(/\\D+/g,"");if(nubDigits.length!==7)', html)
+        self.assertIn('renderCardProFollowupResult(resultEl,null,"nub-missing")', html)
+
+    def test_manual_tracking_nub_is_saved_and_enriches_matching_row(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"sessions": []}
+        saved = []
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        try:
+            response = client.post("/api/admin/cnaps-tracking/nub", json={
+                "last_name": "Doe", "first_name": "Jane", "nub": "1234567",
+            })
+        finally:
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {"ok": True, "nub": "1234567"})
+        self.assertEqual(data["cnaps_tracking_manual_nubs"]["DOE|JANE"], "1234567")
+        self.assertTrue(saved)
+        rows = gestion_app.enrich_cnaps_tracking_rows_with_enrollment([{
+            "last_name": "Doe", "first_name": "Jane", "nub": "",
+        }], data)
+        self.assertEqual(rows[0]["nub"], "1234567")
+
     def test_cnaps_public_annuaire_notifies_when_unknown_becomes_active(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
             sess["admin_logged_in"] = True
             sess["admin_role"] = "admin"
 
-        data = {"cnaps_status_change_notifications": {}}
+        data = {
+            "cnaps_status_change_notifications": {},
+            "cnaps_public_annuaire_statuses": {"DOE|1234567": {"known": False, "signature": ""}},
+        }
         saved = []
         sent = []
         original_fetch = gestion_app.fetch_cnaps_public_annuaire
@@ -1900,6 +2134,124 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertTrue(saved)
         self.assertIn("DOE|1234567", data["cnaps_status_change_notifications"])
 
+    def test_cnaps_public_annuaire_active_titles_transition_sends_notification(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"cnaps_public_annuaire_statuses": {"DOE|1234567": {"known": False, "signature": ""}}}
+        sent = []
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        original_email = gestion_app.brevo_send_email
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {
+            "check_status": "success",
+            "active_titles": [{"display_status": "AP SH ACTIF", "label": "Surveillance humaine", "status": "ACTIF"}],
+            "results": [],
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: None
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567")
+        finally:
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+            gestion_app.brevo_send_email = original_email
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["notification_sent"])
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(response.get_json()["pending_status_changes_count"], 1)
+
+    def test_background_monitor_baselines_existing_status_without_notifying(self):
+        data = {"cnaps_public_annuaire_statuses": {}}
+        sent = []
+        original_tracking = gestion_app.fetch_cnapsv3_tracking_requests
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        original_email = gestion_app.brevo_send_email
+        original_delay = gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{"last_name": "DOE", "first_name": "Jane", "nub": "1234567"}], None)
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {"check_status": "success", "active_titles": [{"display_status": "AP SH ACTIF"}]}
+        gestion_app.load_data = lambda **kwargs: data
+        gestion_app.save_data = lambda payload: None
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = 0
+        try:
+            result = gestion_app.run_cnaps_public_annuaire_monitor()
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_tracking
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+            gestion_app.brevo_send_email = original_email
+            gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = original_delay
+
+        self.assertEqual(result, {"checked": 1, "notified": 0, "errors": 0})
+        self.assertEqual(sent, [])
+        self.assertEqual(
+            data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["signature"],
+            "AP SH ACTIF",
+        )
+
+    def test_public_annuaire_notifies_when_a_known_status_changes(self):
+        data = {
+            "cnaps_public_annuaire_statuses": {
+                "DOE|1234567": {"known": True, "signature": "AP SH ACTIF"},
+            },
+            "cnaps_status_change_notifications": {},
+        }
+        sent = []
+        original_email = gestion_app.brevo_send_email
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            notified = gestion_app._record_cnaps_public_annuaire_status(
+                data,
+                first_name="Jane",
+                last_name="DOE",
+                nub="1234567",
+                result={"check_status": "success", "active_titles": [{"display_status": "AP SH REFUSÉ"}]},
+            )
+        finally:
+            gestion_app.brevo_send_email = original_email
+
+        self.assertTrue(notified)
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(
+            data["cnaps_status_change_notifications"]["DOE|1234567"]["signature"],
+            "AP SH REFUSÉ",
+        )
+
+    def test_public_annuaire_empty_response_does_not_reset_known_status_or_resend(self):
+        data = {
+            "cnaps_public_annuaire_statuses": {
+                "DOE|1234567": {"known": True, "signature": "AP SH ACTIF", "checked_at": "2026-07-23T10:00:00+00:00"},
+            },
+            "cnaps_status_change_notifications": {
+                "DOE|1234567": {"signature": "AP SH ACTIF", "sent_at": "2026-07-23T10:00:00+00:00"},
+            },
+        }
+
+        empty_notified = gestion_app._record_cnaps_public_annuaire_status(
+            data, first_name="Jane", last_name="DOE", nub="1234567",
+            result={"check_status": "success", "active_titles": []},
+        )
+        known_notified = gestion_app._record_cnaps_public_annuaire_status(
+            data, first_name="Jane", last_name="DOE", nub="1234567",
+            result={"check_status": "success", "active_titles": [{"display_status": "AP SH ACTIF"}]},
+        )
+
+        self.assertFalse(empty_notified)
+        self.assertFalse(known_notified)
+        self.assertTrue(data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["known"])
+        self.assertEqual(data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["signature"], "AP SH ACTIF")
+        self.assertIn("last_empty_result_at", data["cnaps_public_annuaire_statuses"]["DOE|1234567"])
+
     def test_cnaps_public_annuaire_does_not_notify_duplicate_signature(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
@@ -1919,7 +2271,8 @@ class CnapsTrackingTests(unittest.TestCase):
             "results": [{"activite": "Autorisation préalable - Surveillance humaine ou gardiennage", "validite_titre": "ACTIF"}],
         }
         gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: self.fail("save_data should not be called for duplicate notification")
+        saved = []
+        gestion_app.save_data = lambda payload: saved.append(payload.copy())
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
         try:
             response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&previous_status=INCONNU")
@@ -1932,6 +2285,7 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.get_json()["notification_sent"])
         self.assertEqual(sent, [])
+        self.assertTrue(saved)
 
     def test_tracking_delete_persists_and_filters_refresh(self):
         client = gestion_app.app.test_client()

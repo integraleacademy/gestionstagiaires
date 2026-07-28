@@ -177,6 +177,42 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("/api/sessions/${encodeURIComponent(sessionId)}/stagiaires/${encodeURIComponent(traineeId)}/update", template)
         self.assertNotIn("/admin/sessions/${encodeURIComponent(sessionId)}/trainees/${encodeURIComponent(traineeId)}/update", template)
         self.assertIn("setFinanceSaveIndicator('Financement validé','saved')", template)
+        self.assertIn("computed.otherFundingPlanned", template)
+        self.assertIn("computed.otherFundingInvoiced", template)
+        self.assertIn("value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`", template)
+        self.assertIn("badge(otherFundingFact[0],otherFundingFact[1])", template)
+
+    def test_invoiced_card_identifies_qonto_and_external_invoice_origins(self):
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+
+        self.assertIn("function invoiceOriginBadges(lines)", template)
+        self.assertIn("badge('QONTO','black')", template)
+        self.assertIn("badge('Générée ailleurs','purple')", template)
+        self.assertIn("finance-badge--black", template)
+        self.assertIn("finance-badge--purple", template)
+        self.assertIn("invoiceOriginBadges(currentLines)", template)
+
+    def test_completed_invoice_generation_is_not_a_notification(self):
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+
+        self.assertIn("function renderAlerts(lines,c)", template)
+        self.assertNotIn("Toutes les factures à gérer ici sont générées.", template)
+
+    def test_quick_invoice_action_does_not_report_completion_with_an_amount_remaining(self):
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+
+        self.assertIn("const remainingToInvoice=Number(computeFinance(currentLines).resteAFacturer||0);", template)
+        self.assertIn("const hasUnrepresentedInvoice=remainingToInvoice>0.01;", template)
+        self.assertIn("⚠ Facture à générer : actualiser les financements", template)
 
 
 if __name__ == "__main__":

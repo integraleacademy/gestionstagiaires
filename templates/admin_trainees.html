@@ -173,6 +173,9 @@
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
     {% endif %}
     {% if is_a3p_header %}
+    {% if not is_read_only %}
+    <button class="btn btn-primary" id="btnA3pExamDossier" type="button">📁 Dossier examen</button>
+    {% endif %}
     <a class="btn btn-outline" id="btnTshirtList"
        href="{{ url_for('admin_tshirt_list', session_id=session.id, **request.args) }}"
        target="_blank" rel="noopener">👕 Liste t-shirts</a>
@@ -712,7 +715,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </button>
         </td>
         {% endif %}
-        {% if is_ssiap_session %}
+{% if is_ssiap_session %}
         {% set ssiap_exam_status = t.ssiap_exam_status or 'pending_results' %}
         <td class="col-ssiap-exam">
           <select class="sel ssiap-exam-select ssiap-exam-{{ ssiap_exam_status }}" data-field="ssiap_exam_status" {{ read_only_attr }}>
@@ -755,6 +758,50 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     </tbody>
   </table>
 </div>
+
+
+{% if is_a3p_header and not is_read_only %}
+<div class="modal-backdrop" id="a3pExamDossierModal" aria-hidden="true">
+  <div class="modal a3p-exam-modal" role="dialog" aria-modal="true" aria-labelledby="a3pExamDossierTitle">
+    <div class="a3p-exam-hero">
+      <span class="a3p-exam-icon">📁</span>
+      <div><div class="modal-title" id="a3pExamDossierTitle">Dossier examen A3P</div><p>Préparez en quelques clics les dossiers prêts à imprimer.</p></div>
+      <button class="icon-btn" type="button" data-close-modal="a3pExamDossierModal">✕</button>
+    </div>
+    <form id="a3pExamDossierForm">
+      <div class="modal-body">
+        <div class="a3p-exam-step"><span>1</span><div><strong>Calendrier</strong><small>Ces informations seront mémorisées pour la session.</small></div></div>
+        <div class="a3p-date-grid">
+          <label>Début de formation<input type="date" name="training_start_date" required></label>
+          <label>Fin de formation<input type="date" name="training_end_date" required></label>
+          <label>Date d’examen<input type="date" name="exam_date" required></label>
+          <label>Formation « équipier de première intervention »<input type="date" name="epi_training_date" required></label>
+        </div>
+        <div class="a3p-candidates-head">
+          <div class="a3p-exam-step"><span>2</span><div><strong>Candidats</strong><small><b id="a3pSelectedCount">{{ trainees|length }}</b> candidat(s) sélectionné(s)</small></div></div>
+          <button type="button" class="btn btn-outline" id="a3pToggleCandidates">Tout désélectionner</button>
+        </div>
+        <div class="a3p-candidate-list">
+          {% for trainee in trainees %}
+          <label class="a3p-candidate"><input type="checkbox" name="trainee_ids" value="{{ trainee.id }}" checked><span class="a3p-avatar">{{ (trainee.first_name or '?')[:1] }}{{ (trainee.last_name or '?')[:1] }}</span><span><b>{{ trainee.last_name }} {{ trainee.first_name }}</b><small>{{ trainee.email or 'Aucun e-mail renseigné' }}</small></span><i>✓</i></label>
+          {% endfor %}
+        </div>
+        <div class="a3p-previous" id="a3pPreviousGeneration" hidden><span>✓</span><div><b>Une génération est déjà disponible</b><small id="a3pPreviousMeta"></small></div><a class="btn btn-outline" href="{{ url_for('admin_download_a3p_exam_dossiers', session_id=session.id) }}">Retélécharger</a></div>
+      </div>
+      <div class="modal-foot"><button class="btn" type="button" data-close-modal="a3pExamDossierModal">Annuler</button><button class="btn btn-primary" type="submit">Générer les dossiers examen →</button></div>
+    </form>
+  </div>
+</div>
+<div class="modal-backdrop" id="a3pExamProgressModal" aria-hidden="true" data-static-backdrop>
+  <div class="modal a3p-progress-modal" role="dialog" aria-modal="true"><div class="modal-body">
+    <div class="a3p-loader"><span></span><span></span><span></span></div>
+    <p class="a3p-kicker">GÉNÉRATION SÉCURISÉE</p><h2 id="a3pProgressTitle">Dossiers d’examen en cours de création</h2>
+    <p id="a3pProgressText">Nous personnalisons chaque document et préparons votre archive.</p>
+    <div class="a3p-progress-track"><i id="a3pProgressBar"></i></div>
+    <div id="a3pProgressActions" hidden><a class="btn btn-primary" id="a3pDownloadButton" href="#">⬇ Télécharger les dossiers</a><button class="btn" type="button" data-close-modal="a3pExamProgressModal">Fermer</button></div>
+  </div></div>
+</div>
+{% endif %}
 
 
 {% if is_ssiap_session and not is_read_only %}
@@ -4090,5 +4137,46 @@ applyRowFilters();
 .finance-group-dashboard__amount{font-size:24px;line-height:1;font-weight:900;letter-spacing:-.03em;color:#0f172a;}
 @media (max-width: 620px){.finance-group-dashboard{display:flex;justify-content:space-between;width:100%;}.finance-group-dashboard__amount{font-size:22px;}}
 
+.a3p-exam-modal{max-width:820px;overflow:hidden;border:0;box-shadow:0 30px 80px rgba(15,23,42,.28)}
+.a3p-exam-hero{display:flex;gap:16px;align-items:center;padding:24px 26px;color:#fff;background:linear-gradient(125deg,#172554,#1d4ed8 62%,#38bdf8)}
+.a3p-exam-hero .modal-title{font-size:23px}.a3p-exam-hero p{margin:5px 0 0;color:#dbeafe}.a3p-exam-hero .icon-btn{margin-left:auto;color:#fff;border-color:rgba(255,255,255,.3)}
+.a3p-exam-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.16);font-size:26px}
+.a3p-exam-step{display:flex;align-items:center;gap:11px;margin:4px 0 14px}.a3p-exam-step>span{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#dbeafe;color:#1d4ed8;font-weight:900}.a3p-exam-step div{display:flex;flex-direction:column}.a3p-exam-step small,.a3p-candidate small,.a3p-previous small{color:#64748b;margin-top:2px}
+.a3p-date-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}.a3p-date-grid label{display:flex;flex-direction:column;gap:7px;color:#334155;font-size:13px;font-weight:800}.a3p-date-grid input{padding:12px;border:1px solid #dbe3ef;border-radius:11px;background:#f8fafc;font:inherit;color:#0f172a}
+.a3p-candidates-head{display:flex;justify-content:space-between;align-items:center}.a3p-candidate-list{display:grid;grid-template-columns:1fr 1fr;gap:9px;max-height:240px;overflow:auto;padding:3px}
+.a3p-candidate{display:flex;align-items:center;gap:11px;padding:11px;border:1px solid #e2e8f0;border-radius:13px;cursor:pointer}.a3p-candidate:has(input:checked){border-color:#93c5fd;background:#eff6ff}.a3p-candidate input{position:absolute;opacity:0}.a3p-candidate>span:nth-of-type(2){display:flex;flex:1;flex-direction:column}.a3p-candidate i{display:none;color:#2563eb;font-style:normal;font-weight:900}.a3p-candidate:has(input:checked) i{display:block}.a3p-avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#dbeafe;color:#1e40af;font-size:12px;font-weight:900;text-transform:uppercase}
+.a3p-previous{align-items:center;gap:12px;margin-top:18px;padding:13px 15px;border:1px solid #bbf7d0;border-radius:13px;background:#f0fdf4}.a3p-previous:not([hidden]){display:flex}.a3p-previous>span{color:#16a34a;font-size:20px}.a3p-previous>div{display:flex;flex:1;flex-direction:column}
+.a3p-progress-modal{max-width:570px;text-align:center;border:0}.a3p-progress-modal .modal-body{padding:42px}.a3p-kicker{font-size:11px;font-weight:900;letter-spacing:.16em;color:#2563eb}.a3p-loader{display:flex;justify-content:center;gap:7px}.a3p-loader span{width:13px;height:13px;border-radius:50%;background:#2563eb;animation:a3pPulse 1s infinite alternate}.a3p-loader span:nth-child(2){animation-delay:.2s}.a3p-loader span:nth-child(3){animation-delay:.4s}.a3p-progress-track{height:8px;margin:25px 0;background:#e2e8f0;border-radius:99px;overflow:hidden}.a3p-progress-track i{display:block;width:15%;height:100%;background:linear-gradient(90deg,#2563eb,#38bdf8);border-radius:inherit;transition:width .5s}.a3p-progress-modal.is-done .a3p-loader span{background:#22c55e;animation:none}.a3p-progress-modal.is-done .a3p-progress-track i{background:#22c55e}.a3p-progress-modal.is-error .a3p-loader span{background:#ef4444;animation:none}#a3pProgressActions:not([hidden]){display:flex;justify-content:center;gap:10px}
+@keyframes a3pPulse{to{opacity:.25;transform:translateY(-5px)}}
+@media(max-width:680px){.a3p-date-grid,.a3p-candidate-list{grid-template-columns:1fr}.a3p-candidates-head{align-items:flex-start;gap:8px}.a3p-progress-modal .modal-body{padding:28px 18px}}
+
 </style>
+{% if is_a3p_header and not is_read_only %}
+<script>
+(()=>{
+  const openButton=document.getElementById("btnA3pExamDossier"), modal=document.getElementById("a3pExamDossierModal"), form=document.getElementById("a3pExamDossierForm");
+  if(!openButton||!modal||!form)return;
+  const checks=()=>Array.from(form.querySelectorAll("input[name='trainee_ids']"));
+  const refreshCount=()=>{const selected=checks().filter(input=>input.checked).length;document.getElementById("a3pSelectedCount").textContent=selected;document.getElementById("a3pToggleCandidates").textContent=selected?"Tout désélectionner":"Tout sélectionner";};
+  checks().forEach(input=>input.addEventListener("change",refreshCount));
+  document.getElementById("a3pToggleCandidates").addEventListener("click",()=>{const select=!checks().some(input=>input.checked);checks().forEach(input=>input.checked=select);refreshCount();});
+  openButton.addEventListener("click",async()=>{
+    modal.classList.add("show");modal.setAttribute("aria-hidden","false");
+    try{const response=await fetch(`/api/admin/sessions/{{ session.id }}/a3p-exam-dossiers`),data=await response.json();if(!response.ok)throw new Error(data.message);
+      ["training_start_date","training_end_date","exam_date","epi_training_date"].forEach(name=>form.elements[name].value=data[name]||"");
+      if(data.selected_trainee_ids?.length){const selected=new Set(data.selected_trainee_ids.map(String));checks().forEach(input=>input.checked=selected.has(input.value));}
+      if(data.generation?.available){document.getElementById("a3pPreviousGeneration").hidden=false;document.getElementById("a3pPreviousMeta").textContent=`${data.generation.candidate_count} candidat(s) · prêt à retélécharger`;}
+      refreshCount();
+    }catch(error){console.error(error);}
+  });
+  form.addEventListener("submit",async event=>{event.preventDefault();const selected=checks().filter(input=>input.checked).map(input=>input.value);if(!selected.length){alert("Sélectionnez au moins un candidat.");return;}
+    modal.classList.remove("show");const progress=document.getElementById("a3pExamProgressModal"),box=progress.querySelector(".a3p-progress-modal"),bar=document.getElementById("a3pProgressBar");progress.classList.add("show");progress.setAttribute("aria-hidden","false");box.classList.remove("is-done","is-error");bar.style.width="18%";document.getElementById("a3pProgressActions").hidden=true;
+    const timer=setInterval(()=>{bar.style.width=Math.min(parseInt(bar.style.width||"18")+9,88)+"%";},500);
+    const payload={selected_trainee_ids:selected};["training_start_date","training_end_date","exam_date","epi_training_date"].forEach(name=>payload[name]=form.elements[name].value);
+    try{const response=await fetch(`/api/admin/sessions/{{ session.id }}/a3p-exam-dossiers/generate`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}),data=await response.json();if(!response.ok)throw new Error(data.message||"Génération impossible");clearInterval(timer);bar.style.width="100%";box.classList.add("is-done");document.getElementById("a3pProgressTitle").textContent="Vos dossiers d’examen sont prêts !";document.getElementById("a3pProgressText").textContent=`${data.candidate_count} dossier(s) individuel(s) et le PDF complet ont été créés.`;document.getElementById("a3pDownloadButton").href=data.download_url;document.getElementById("a3pProgressActions").hidden=false;
+    }catch(error){clearInterval(timer);box.classList.add("is-error");document.getElementById("a3pProgressTitle").textContent="La génération a échoué";document.getElementById("a3pProgressText").textContent=error.message;document.getElementById("a3pProgressActions").hidden=false;document.getElementById("a3pDownloadButton").style.display="none";}
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

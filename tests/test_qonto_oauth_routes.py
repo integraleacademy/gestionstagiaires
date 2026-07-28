@@ -18,7 +18,7 @@ class QontoOAuthRoutesTest(unittest.TestCase):
         response = self.client.get("/api/qonto/oauth/callback")
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "/admin/qonto?oauth=error")
+        self.assertEqual(response.headers["Location"], "https://gestionstagiaires-r5no.onrender.com/admin/qonto?oauth=error")
 
     def test_qonto_oauth_callback_exchanges_code_and_redirects_to_success(self):
         token_payload = {
@@ -35,7 +35,7 @@ class QontoOAuthRoutesTest(unittest.TestCase):
             response = self.client.get("/api/qonto/oauth/callback?code=abc123")
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "/admin/qonto?oauth=success")
+        self.assertEqual(response.headers["Location"], "https://gestionstagiaires-r5no.onrender.com/admin/qonto?oauth=success")
         exchange.assert_called_once()
         self.assertEqual(
             exchange.call_args.args[0]["redirect_uri"],

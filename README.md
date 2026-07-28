@@ -24,6 +24,8 @@ python app.py
 - `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
+- `CNAPS_MONITOR_TOKEN` (secret partagé entre le cron Render et le endpoint interne de suivi CNAPS)
+- `CNAPSV3_API_TOKEN` (obligatoire sur le service web pour que le suivi automatique lise les dossiers CNAPS)
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
 - `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
@@ -80,6 +82,22 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 > Sans les clés VAPID (`WEB_PUSH_VAPID_PUBLIC_KEY` / `WEB_PUSH_VAPID_PRIVATE_KEY`), le bouton restera désactivé côté interface.
 
 
+## Surveillance automatique des statuts CNAPS
+
+Le Blueprint Render déploie `gestionstagiaires-cnaps-monitor`, un worker permanent qui appelle toutes les 15 minutes le endpoint interne protégé `POST /internal/jobs/cnaps-public-annuaire-monitor`. La vérification et l’envoi des e-mails se font donc côté serveur, même si aucun administrateur n’ouvre le site.
+
+Sur Render, le groupe d’environnement partagé du Blueprint fournit automatiquement la même valeur secrète `CNAPS_MONITOR_TOKEN` au service web et au worker. Le service web doit également disposer de `CNAPSV3_API_TOKEN` et de la configuration Brevo habituelle. L’intervalle est configurable avec `CNAPS_MONITOR_INTERVAL_SECONDS` (900 secondes par défaut).
+
+### Configuration dans Render
+
+Lors de l’application du Blueprint, Render demande les trois secrets suivants :
+
+1. Dans le groupe partagé `gestionstagiaires-cnaps-monitor-secrets`, générer `CNAPS_MONITOR_TOKEN` avec une longue valeur aléatoire. Le Blueprint injecte automatiquement cette valeur identique dans le site et dans le worker ; il ne faut pas créer deux valeurs différentes.
+2. Sur le service web `gestionstagiaires`, renseigner `CNAPSV3_API_TOKEN` avec le jeton fourni par CNAPSV3.
+3. Sur ce même service web, renseigner `BREVO_API_KEY` pour permettre l’envoi des e-mails.
+
+Le worker n’a besoin ni du jeton CNAPSV3 ni de la clé Brevo : il réveille le endpoint protégé du service web, qui effectue le contrôle et l’envoi. Après configuration, redéployer le Blueprint et vérifier dans les logs de `gestionstagiaires-cnaps-monitor` qu’une réponse contenant `"ok": true` apparaît environ toutes les 15 minutes.
+
 ## Intégration cnapsv3 (sync ACCEPTÉ)
 
 Lorsqu'une entrée CNAPS PRE est enregistrée et devient visible dans `/admin/cnaps/import-pre/pending`, gestionstagiaires déclenche un `POST` vers:
@@ -97,3 +115,24 @@ Headers envoyés:
 - `Authorization: Bearer ${GESTIONSTAGIAIRE_SYNC_TOKEN}`
 
 En cas d'erreur réseau/timeout, l'appel est retenté automatiquement (3 tentatives, backoff 1s/2s/4s).
+
+## Webhook Qonto — factures clients
+
+Endpoint à déclarer côté Qonto : `https://<votre-domaine>/api/qonto/webhooks`.
+
+Configuration requise :
+
+- variable d'environnement `QONTO_WEBHOOK_SECRET` contenant le secret de signature du webhook ;
+- événement webhook `v1/client-invoices` pour les événements `created` et `updated` ;
+- scopes OAuth `webhook`, `client_invoices.read`, `sepa_direct_debit.read` et `sepa_direct_debit.write` (ainsi que les scopes facturation déjà déclarés) ; `webhook` est obligatoire pour consulter, créer et mettre à jour une souscription. L'application ne crée pas automatiquement de souscription webhook au démarrage.
+
+Le webhook ne stocke jamais le secret dans `data.json` et ne fait pas confiance au montant reçu dans le payload : il relit la facture Qonto puis met à jour les montants agrégés en centimes.
+
+### Activation et test en production
+
+1. Générez vous-même un secret de **32 à 128 caractères**, définissez-le dans Render sous `QONTO_WEBHOOK_SECRET`, puis redéployez. L'application envoie exactement cette valeur à Qonto lors de la création ou mise à jour de la souscription et ne l'affiche ni ne la journalise.
+2. Si la connexion OAuth a été faite avant l’ajout du scope `webhook`, cliquez sur **Réinitialiser connexion Qonto OAuth**, puis reconnectez Qonto pour donner le nouveau consentement. Un ancien jeton ne suffit pas à attester ce scope.
+3. Dans **Réglages > Qonto**, cliquez sur **Vérifier et activer le webhook Qonto**. L'application conserve une souscription canonique existante, complète ses événements si besoin et ne crée une souscription que si aucune n'est réutilisable.
+4. Effectuez un paiement de test. Actualisez la section **État de la synchronisation Qonto** : le dernier webhook doit indiquer une date, un type et le résultat `updated`. Vérifiez ensuite la facture dans l'administration sans cliquer sur « Synchronisation Qonto ».
+
+La synchronisation manuelle et la synchronisation à l'ouverture d'une fiche restent des mécanismes de récupération. Les événements attendus sont `v1/client-invoices`, `v1/sepa-direct-debit-mandates` et `v1/sepa-direct-debit-collections`.

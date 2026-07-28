@@ -145,6 +145,7 @@ class CnapsUnknownPageTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("CNAPS inconnu", html)
+        self.assertIn('id="sidebarCnapsBadge"', html)
         self.assertIn("MARTIN Alice", html)
         self.assertIn("alice@example.com", html)
         self.assertNotIn("BERNARD Claire", html)

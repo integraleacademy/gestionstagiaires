@@ -21,6 +21,7 @@ import logging
 import signal
 import atexit
 import sys
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 try:
     import resource
 except ImportError:
@@ -201,17 +202,17 @@ def api_qonto_oauth_callback():
     if error:
         message = error_description or error
         app.logger.warning("[QONTO OAUTH CALLBACK] provider error status=%s message=%s", error, _sanitize_qonto_error(message))
-        return redirect("/admin/qonto?oauth=error")
+        return redirect(_qonto_oauth_settings_redirect("error"))
 
     if not code:
         app.logger.warning("[QONTO OAUTH CALLBACK] missing authorization code")
-        return redirect("/admin/qonto?oauth=error")
+        return redirect(_qonto_oauth_settings_redirect("error"))
 
     state = request.args.get("state") or ""
     expected_state = session.pop("qonto_oauth_state", "")
     if expected_state and (not state or not hmac.compare_digest(state, expected_state)):
         app.logger.warning("[QONTO OAUTH CALLBACK] state mismatch has_state=%s", bool(state))
-        return redirect("/admin/qonto?oauth=error")
+        return redirect(_qonto_oauth_settings_redirect("error"))
 
     try:
         payload = _exchange_qonto_oauth_token({
@@ -231,12 +232,12 @@ def api_qonto_oauth_callback():
             payload.get("scope") or payload.get("scopes") or "",
         )
         _store_qonto_oauth_tokens(data, payload)
-        return redirect("/admin/qonto?oauth=success")
+        return redirect(_qonto_oauth_settings_redirect("success"))
     except QontoApiError as exc:
         app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=%s message=%s", getattr(exc, "status_code", "unknown"), _sanitize_qonto_error(str(exc)))
     except Exception as exc:
         app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=unknown message=%s", _sanitize_qonto_error(str(exc)))
-    return redirect("/admin/qonto?oauth=error")
+    return redirect(_qonto_oauth_settings_redirect("error"))
 
 
 @app.errorhandler(404)
@@ -370,15 +371,36 @@ QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.writ
 QONTO_OAUTH_ENVIRONMENT = "production"
 QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
+QONTO_OAUTH_PRODUCTION_REDIRECT_URI = "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback"
+QONTO_OAUTH_LEGACY_HOSTS = {"gestionstagiaires-test-v2.onrender.com"}
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL")
     or os.environ.get("PUBLIC_BASE_URL")
     or "https://gestionstagiaires-r5no.onrender.com"
 ).strip().rstrip("/")
+
+
+def _normalize_qonto_oauth_redirect_uri(value: str) -> str:
+    """Keep Qonto OAuth callbacks on the production application host.
+
+    The previous Render hostname must never be sent to Qonto: it would make
+    the provider return the administrator to the retired application.
+    """
+    raw = (value or "").strip().rstrip("/")
+    if not raw:
+        return QONTO_OAUTH_PRODUCTION_REDIRECT_URI
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if parsed.hostname in QONTO_OAUTH_LEGACY_HOSTS:
+        return QONTO_OAUTH_PRODUCTION_REDIRECT_URI
+    return raw
+
+
 QONTO_OAUTH_REDIRECT_URI = (
-    os.environ.get("QONTO_OAUTH_REDIRECT_URI")
-    or f"{APP_BASE_URL}/api/qonto/oauth/callback"
-).strip()
+    _normalize_qonto_oauth_redirect_uri(
+        os.environ.get("QONTO_OAUTH_REDIRECT_URI")
+        or f"{APP_BASE_URL}/api/qonto/oauth/callback"
+    )
+)
 
 
 
@@ -432,6 +454,12 @@ def _qonto_oauth_redirect_uri() -> str:
     # Qonto requires a byte-for-byte match with the redirect URI configured in
     # the Developer Portal and reused during the token exchange.
     return QONTO_OAUTH_REDIRECT_URI
+
+
+def _qonto_oauth_settings_redirect(outcome: str):
+    """Return administrators to the canonical host after an OAuth callback."""
+    callback = urlparse(_qonto_oauth_redirect_uri())
+    return f"{callback.scheme}://{callback.netloc}/admin/qonto?oauth={quote(outcome)}"
 
 
 def _qonto_oauth_is_configured() -> bool:
@@ -494,6 +522,16 @@ def _qonto_oauth_missing_scopes(data: Optional[Dict[str, Any]] = None) -> List[s
     return sorted(required - granted)
 
 
+def _qonto_oauth_has_scope(scope: str, data: Optional[Dict[str, Any]] = None) -> bool:
+    """Never infer a granted scope from the presence of an old OAuth token."""
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    raw = settings.get("scopes") or settings.get("scope") or []
+    granted = ({item.strip() for item in raw.replace(",", " ").split() if item.strip()}
+               if isinstance(raw, str) else {str(item).strip() for item in raw if str(item).strip()})
+    return scope in granted
+
+
 def _ensure_qonto_oauth_ready(data: Optional[Dict[str, Any]] = None) -> None:
     data = data or load_data()
     if not _qonto_oauth_connected(data):
@@ -540,7 +578,7 @@ def _qonto_is_configured() -> bool:
 
 def _sanitize_qonto_error(message: str) -> str:
     sanitized = str(message or "")
-    secrets_to_mask = [_qonto_login(), _qonto_secret_key(), _qonto_oauth_client_secret()]
+    secrets_to_mask = [_qonto_login(), _qonto_secret_key(), _qonto_oauth_client_secret(), _qonto_webhook_secret() if "_qonto_webhook_secret" in globals() else ""]
     if "load_data" in globals():
         try:
             data = load_data()
@@ -767,9 +805,19 @@ def _contains_invalid_qonto_search_marker(value: Any) -> bool:
 
 
 def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    if not _qonto_is_configured():
-        raise QontoConfigurationError("Qonto n’est pas connecté")
     endpoint = path if path.startswith("/") else f"/{path}"
+    is_webhook_endpoint = endpoint.startswith("/v2/webhook_subscriptions")
+    is_sepa_endpoint = endpoint.startswith("/v2/sepa/direct_debit")
+    # Qonto explicitly requires OAuth2 for webhook subscriptions.  Do not let
+    # the API-key fallback leak onto these endpoints (it returns HTTP 401).
+    if is_webhook_endpoint:
+        if not _qonto_oauth_connected():
+            raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
+        if not _qonto_oauth_has_scope("webhook"):
+            raise QontoConfigurationError("La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto.")
+        _ensure_qonto_oauth_ready()
+    elif not is_sepa_endpoint and not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
     cleaned_payload = cleanQontoPayload(payload) if payload is not None else None
     if _contains_invalid_qonto_search_marker(endpoint) or _contains_invalid_qonto_search_marker(params) or _contains_invalid_qonto_search_marker(cleaned_payload):
         app.logger.error("[QONTO] invalid client search blocked method=%s path=%s params=%s", method.upper(), endpoint, params)
@@ -781,12 +829,28 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         headers = get_qonto_headers()
         if cleaned_payload is not None:
             headers = {**headers, "Content-Type": "application/json"}
-        if endpoint.startswith("/v2/sepa/direct_debit"):
-            headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json"}
-        response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
+        if is_sepa_endpoint or is_webhook_endpoint:
+            headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json", "Accept": "application/json"}
+        # Webhook creation must use a JSON request body.  Keep this explicit so
+        # a generic-client argument mismatch cannot silently turn it into query
+        # parameters or an empty form body.
+        if is_webhook_endpoint and method.upper() == "POST":
+            app.logger.info(
+                "[QONTO] webhook_subscription_request method=%s url=%s payload_keys=%s callback_url=%s types=%s secret_present=%s content_type=%s",
+                method.upper(), called_url, sorted((cleaned_payload or {}).keys()),
+                (cleaned_payload or {}).get("callback_url"), (cleaned_payload or {}).get("types"),
+                bool((cleaned_payload or {}).get("secret")), headers.get("Content-Type"),
+            )
+            response = requests.post(url, json=cleaned_payload, headers=headers, timeout=20)
+        else:
+            response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
         raw_body = response.text or ""
         trace_id = _qonto_response_trace_id(response, raw_body)
-        app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, json.dumps(cleaned_payload, ensure_ascii=False) if cleaned_payload is not None else None, response.status_code, trace_id or "", raw_body[:4000])
+        log_payload = cleaned_payload
+        if is_webhook_endpoint and isinstance(cleaned_payload, dict) and "secret" in cleaned_payload:
+            log_payload = {**cleaned_payload, "secret": "***"}
+        safe_payload = _sanitize_qonto_error(json.dumps(log_payload, ensure_ascii=False)) if log_payload is not None else None
+        app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, safe_payload, response.status_code, trace_id or "", _sanitize_qonto_error(raw_body[:4000]))
         if not response.ok:
             if response.status_code == 404:
                 raise QontoNotFoundError(response.status_code, raw_body, trace_id)
@@ -1210,14 +1274,86 @@ def download_qonto_invoice_pdf(invoice_id: str, invoice_number: str = "") -> Tup
     return pdf_content, "application/pdf"
 
 
-def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
-    return _qonto_request("GET", "/v2/sepa/direct_debit_mandates", params={"client_id": client_id})
+def list_qonto_direct_debit_mandates(
+    client_id: str = "", page: int = 1, per_page: int = 100
+) -> Dict[str, Any]:
+    """List Qonto mandates, optionally restricted to a client."""
+    params: Dict[str, Any] = {"page": page, "per_page": per_page}
+    if client_id:
+        params["client_id"] = client_id
+    return _qonto_request("GET", "/v2/sepa/direct_debit_mandates", params=params)
+
+
+def _qonto_direct_debit_mandate_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    for key in ("direct_debit_mandates", "mandates", "items"):
+        if isinstance(response.get(key), list):
+            return [item for item in response[key] if isinstance(item, dict)]
+    return []
+
+
+def _qonto_mandate_rum(mandate: Dict[str, Any]) -> str:
+    """Return the RUM exposed by the different Qonto API response versions."""
+    for key in ("rum", "unique_mandate_reference", "mandate_reference", "reference"):
+        value = mandate.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def find_qonto_direct_debit_mandate_by_rum(rum: str) -> Optional[Dict[str, Any]]:
+    """Walk every Qonto result page and find a mandate by its exact RUM."""
+    page, per_page = 1, 100
+    while True:
+        response = list_qonto_direct_debit_mandates(page=page, per_page=per_page)
+        items = _qonto_direct_debit_mandate_items(response)
+        match = next((mandate for mandate in items if _qonto_mandate_rum(mandate) == rum), None)
+        if match is not None:
+            return match
+
+        meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+        next_page = meta.get("next_page") or meta.get("nextPage")
+        total_pages = meta.get("total_pages") or meta.get("totalPages")
+        if next_page:
+            try:
+                next_page_number = int(next_page)
+            except (TypeError, ValueError):
+                next_page_number = page + 1
+        elif total_pages:
+            try:
+                next_page_number = page + 1 if page < int(total_pages) else 0
+            except (TypeError, ValueError):
+                next_page_number = 0
+        else:
+            next_page_number = page + 1 if len(items) >= per_page else 0
+        if not next_page_number or next_page_number <= page:
+            return None
+        page = next_page_number
+
+
+def get_qonto_direct_debit_mandate(mandate_id: str) -> Dict[str, Any]:
+    """Fetch one mandate by its Qonto identifier."""
+    return _qonto_request("GET", f"/v2/sepa/direct_debit_mandates/{quote(str(mandate_id), safe='')}")
 
 def create_qonto_direct_debit_mandate(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/sepa/direct_debit_mandates", {"direct_debit_mandate": payload})
 
 def create_qonto_direct_debit_subscription(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/sepa/direct_debit_subscriptions", {"direct_debit_subscription": payload})
+
+def list_qonto_direct_debit_subscriptions(
+    mandate_id: str = "", page: int = 1, per_page: int = 100
+) -> Dict[str, Any]:
+    """List subscriptions attached to a mandate, including existing schedules."""
+    params: Dict[str, Any] = {"page": page, "per_page": per_page}
+    if mandate_id:
+        params["direct_debit_mandate_id"] = mandate_id
+    return _qonto_request("GET", "/v2/sepa/direct_debit_subscriptions", params=params)
+
+def _qonto_direct_debit_subscription_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    for key in ("direct_debit_subscriptions", "subscriptions", "items"):
+        if isinstance(response.get(key), list):
+            return [item for item in response[key] if isinstance(item, dict)]
+    return []
 
 def list_qonto_direct_debit_collections(subscription_id: str = "") -> Dict[str, Any]:
     params = {"direct_debit_subscription_id": subscription_id} if subscription_id else None
@@ -1230,7 +1366,202 @@ def _qonto_collection_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 def _qonto_webhook_secret() -> str:
-    return _qonto_secret(os.environ.get("QONTO_WEBHOOK_SECRET") or os.environ.get("QONTO_WEBHOOK_SIGNATURE_SECRET") or "")
+    return _qonto_secret(os.environ.get("QONTO_WEBHOOK_SECRET") or "")
+
+
+def _require_qonto_webhook_secret() -> str:
+    secret = _qonto_webhook_secret()
+    if not secret:
+        raise QontoConfigurationError("QONTO_WEBHOOK_SECRET est requis avant d’activer le webhook Qonto.")
+    if not 32 <= len(secret) <= 128:
+        raise QontoConfigurationError("QONTO_WEBHOOK_SECRET doit comporter entre 32 et 128 caractères.")
+    return secret
+
+
+def money_value_to_cents(value: Any) -> int:
+    if isinstance(value, dict):
+        value = value.get("value") if value.get("value") is not None else value.get("amount")
+    if value is None or value == "":
+        return 0
+    try:
+        decimal_value = Decimal(str(value).replace(",", ".").strip())
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ValueError("Montant Qonto invalide") from exc
+    return int((decimal_value * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def cents_to_money(cents: Any) -> float:
+    try:
+        return float((Decimal(int(cents or 0)) / Decimal("100")).quantize(Decimal("0.01")))
+    except Exception:
+        return 0.0
+
+
+
+def _cents_first_non_null(*values: Any) -> int:
+    for value in values:
+        if value is None or value == "":
+            continue
+        if isinstance(value, dict):
+            value = value.get("value") if value.get("value") is not None else value.get("amount")
+        try:
+            return int(Decimal(str(value).replace(",", ".").strip()).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ValueError("Montant Qonto invalide") from exc
+    return 0
+
+
+def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the single canonical Qonto invoice shape sent to the frontend."""
+    total_amount_cents = _cents_first_non_null(
+        invoice.get("qonto_total_amount_cents"),
+        invoice.get("total_amount_cents"),
+        invoice.get("qontoTotalAmountCents"),
+        invoice.get("totalAmountCents"),
+        money_value_to_cents(invoice.get("amountTTC") or invoice.get("amount") or 0) if invoice.get("amountTTC") is not None or invoice.get("amount") is not None else None,
+    )
+    paid_amount_cents = _cents_first_non_null(
+        invoice.get("qonto_amount_paid_cents"),
+        invoice.get("paid_amount_cents"),
+        invoice.get("qontoAmountPaidCents"),
+        invoice.get("paidAmountCents"),
+    )
+    remaining_amount_cents = max(total_amount_cents - paid_amount_cents, 0)
+    payment_percentage = 0 if total_amount_cents == 0 else float(min((Decimal(paid_amount_cents) / Decimal(total_amount_cents) * Decimal('100')), Decimal('100')).quantize(Decimal('0.01')))
+    raw_payment_status = invoice.get("qonto_payment_status") or invoice.get("payment_status") or invoice.get("qontoPaymentStatus") or invoice.get("paymentStatus")
+    if total_amount_cents > 0 and paid_amount_cents >= total_amount_cents:
+        payment_status = "paid"
+    elif paid_amount_cents > 0:
+        payment_status = "partially_paid"
+    else:
+        payment_status = str(raw_payment_status or "unpaid").lower()
+        if payment_status not in {"draft", "canceled", "cancelled"}:
+            payment_status = "unpaid"
+    out = {
+        "invoice_number": invoice.get("qontoInvoiceNumber") or invoice.get("invoice_number") or invoice.get("invoiceNumber") or invoice.get("number") or "",
+        "total_amount_cents": total_amount_cents,
+        "paid_amount_cents": paid_amount_cents,
+        "remaining_amount_cents": remaining_amount_cents,
+        "payment_percentage": payment_percentage,
+        "payment_status": payment_status,
+        "qonto_status": invoice.get("qonto_status") or invoice.get("qontoStatus") or invoice.get("invoiceStatus") or "",
+        "last_synced_at": invoice.get("qontoLastSyncedAt") or invoice.get("qonto_last_synced_at") or invoice.get("updatedAt") or "",
+    }
+    if invoice.get("qontoInvoiceId") or invoice.get("qontoDraftId"):
+        out["invoice_id"] = invoice.get("qontoInvoiceId") or invoice.get("qontoDraftId")
+    app.logger.info(
+        "QONTO_INVOICE_FRONTEND_SERIALIZED invoice_number=%s payment_status=%s qonto_amount_paid_cents=%s paid_amount_cents=%s qonto_total_amount_cents=%s total_amount_cents=%s qonto_remaining_amount_cents=%s remaining_amount_cents=%s",
+        out["invoice_number"], out["payment_status"], invoice.get("qonto_amount_paid_cents"), out["paid_amount_cents"], invoice.get("qonto_total_amount_cents"), out["total_amount_cents"], invoice.get("qonto_remaining_amount_cents"), out["remaining_amount_cents"]
+    )
+    return out
+
+
+def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -> int:
+    """Return the net amount actually kept for a SEPA invoice.
+
+    Qonto's client-invoice ``amount_paid`` is cumulative and can keep counting a
+    direct debit after the bank has returned it.  Collection statuses are the
+    source of truth for SEPA: only completed, non-returned collections are cash
+    that is still held.  We deliberately retain the invoice value until at
+    least one collection has reached a terminal state so pending legacy plans
+    do not erase a valid non-SEPA payment.
+    """
+    if invoice.get("paymentMode") != "sepa_direct_debit":
+        return fallback_cents
+    installments = _sepa_installments(invoice)
+    terminal = {"completed", "paid", "succeeded", "success", "failed", "returned", "rejected", "refunded"}
+    if not any(str(item.get("status") or "").lower() in terminal for item in installments):
+        return fallback_cents
+    paid = sum(
+        money_value_to_cents(item.get("amount") or 0)
+        for item in installments
+        if str(item.get("status") or "").lower() in {"completed", "paid", "succeeded", "success"}
+    )
+    return max(paid, 0)
+
+
+def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
+    serialized = serialize_qonto_invoice_for_frontend(invoice)
+    # ``control`` is a deliberate local safety state (for a missing or
+    # unverifiable remote invoice), not a Qonto payment state.  Do not erase it
+    # merely because the normalizer has no fresh remote payment amount.
+    if invoice.get("invoiceStatus") == "control" or invoice.get("paymentStatus") == "control":
+        serialized["payment_status"] = "control"
+    invoice["qonto_total_amount_cents"] = serialized["total_amount_cents"]
+    invoice["qonto_amount_paid_cents"] = serialized["paid_amount_cents"]
+    invoice["qonto_remaining_amount_cents"] = serialized["remaining_amount_cents"]
+    invoice["payment_percentage"] = serialized["payment_percentage"]
+    invoice["qonto_payment_status"] = serialized["payment_status"]
+    invoice["paymentStatus"] = serialized["payment_status"]
+
+def _qonto_money_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return value.get("value") if value.get("value") is not None else value.get("amount")
+    return value
+
+
+def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], local_invoice: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    if not isinstance(client_invoice, dict):
+        raise ValueError("Réponse Qonto invalide")
+    local_invoice = local_invoice or {}
+    total_source = _qonto_money_value(client_invoice.get("total_amount"))
+    if total_source is None and client_invoice.get("total_amount_cents") is not None:
+        total_cents = int(client_invoice.get("total_amount_cents") or 0)
+    elif total_source is not None:
+        total_cents = money_value_to_cents(total_source)
+    elif local_invoice.get("qonto_total_amount_cents") is not None:
+        total_cents = int(local_invoice.get("qonto_total_amount_cents") or 0)
+    elif local_invoice.get("qontoTotalAmountCents") is not None:
+        total_cents = int(local_invoice.get("qontoTotalAmountCents") or 0)
+    else:
+        total_cents = money_value_to_cents(local_invoice.get("amountTTC") or local_invoice.get("amount_ttc") or local_invoice.get("amount") or 0)
+    amount_paid = _qonto_money_value(client_invoice.get("amount_paid"))
+    if amount_paid is None:
+        amount_paid = _qonto_money_value(client_invoice.get("paid_amount"))
+    remaining_amount = _qonto_money_value(client_invoice.get("remaining_amount"))
+    if remaining_amount is None:
+        remaining_amount = _qonto_money_value(client_invoice.get("amount_due"))
+    if amount_paid is None and client_invoice.get("amount_paid_cents") is not None:
+        amount_paid_cents = int(client_invoice.get("amount_paid_cents") or 0)
+    elif amount_paid is None and client_invoice.get("paid_amount_cents") is not None:
+        amount_paid_cents = int(client_invoice.get("paid_amount_cents") or 0)
+    elif amount_paid is None and remaining_amount is not None:
+        amount_paid_cents = max(total_cents - money_value_to_cents(remaining_amount), 0)
+    elif amount_paid is None and client_invoice.get("remaining_amount_cents") is not None:
+        amount_paid_cents = max(total_cents - int(client_invoice.get("remaining_amount_cents") or 0), 0)
+    elif amount_paid is None and local_invoice.get("qonto_amount_paid_cents") is not None:
+        amount_paid_cents = int(local_invoice.get("qonto_amount_paid_cents") or 0)
+    elif amount_paid is None and local_invoice.get("qontoAmountPaidCents") is not None:
+        amount_paid_cents = int(local_invoice.get("qontoAmountPaidCents") or 0)
+    elif amount_paid is None and local_invoice.get("qontoInvoiceAmountPaid") is not None:
+        amount_paid_cents = money_value_to_cents(local_invoice.get("qontoInvoiceAmountPaid") or 0)
+    else:
+        amount_paid_cents = 0 if amount_paid is None else money_value_to_cents(amount_paid)
+    qonto_status = (client_invoice.get("status") or local_invoice.get("qonto_status") or local_invoice.get("qontoStatus") or local_invoice.get("qonto_invoice_status") or "").strip() or "unpaid"
+    if remaining_amount is not None:
+        remaining_cents = max(money_value_to_cents(remaining_amount), 0)
+    elif client_invoice.get("remaining_amount_cents") is not None:
+        remaining_cents = max(int(client_invoice.get("remaining_amount_cents") or 0), 0)
+    else:
+        remaining_cents = max(total_cents - amount_paid_cents, 0)
+    if qonto_status == "canceled":
+        payment_status = "canceled"
+    elif qonto_status == "draft":
+        payment_status = "draft"
+    elif total_cents > 0 and amount_paid_cents >= total_cents:
+        payment_status = "paid"
+    elif amount_paid_cents > 0:
+        payment_status = "partially_paid"
+    else:
+        payment_status = "unpaid"
+    return {
+        "qonto_status": qonto_status,
+        "qonto_total_amount_cents": total_cents,
+        "qonto_amount_paid_cents": amount_paid_cents,
+        "qonto_remaining_amount_cents": remaining_cents,
+        "qonto_payment_status": payment_status,
+        "qonto_paid_at": client_invoice.get("paid_at"),
+    }
 
 
 def _normalize_qonto_amount(value: Any) -> float:
@@ -1244,15 +1575,14 @@ def _qonto_invoice_payload(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _apply_qonto_invoice_status(inv: Dict[str, Any], invoice: Dict[str, Any]) -> None:
-    status = (invoice.get("status") or inv.get("qonto_invoice_status") or "").strip()
-    paid_at = invoice.get("paid_at") or inv.get("qonto_invoice_paid_at") or ""
-    amount_paid = invoice.get("amount_paid")
-    if amount_paid is None:
-        amount_paid = inv.get("qonto_invoice_amount_paid")
+    normalized = normalize_qonto_invoice_payment_data(invoice, inv)
+    status = normalized["qonto_status"]
+    paid_at = normalized.get("qonto_paid_at") or inv.get("qonto_invoice_paid_at") or ""
     if status:
         inv["qonto_invoice_status"] = status
     inv["qonto_invoice_paid_at"] = paid_at or ""
-    inv["qonto_invoice_amount_paid"] = _normalize_qonto_amount(amount_paid)
+    inv["qonto_invoice_amount_paid"] = cents_to_money(normalized["qonto_amount_paid_cents"])
+    inv.update(normalized)
     if invoice.get("id"):
         inv["qonto_invoice_id"] = invoice.get("id")
     if invoice.get("number") or invoice.get("invoice_number"):
@@ -1260,6 +1590,8 @@ def _apply_qonto_invoice_status(inv: Dict[str, Any], invoice: Dict[str, Any]) ->
     if invoice.get("public_url") or invoice.get("url"):
         inv["qonto_invoice_url"] = invoice.get("public_url") or invoice.get("url") or inv.get("qonto_invoice_url")
     inv["qonto_invoice_synced_at"] = _now_iso()
+    inv["qonto_last_synced_at"] = inv["qonto_invoice_synced_at"]
+    inv["qonto_sync_error"] = None
     inv["last_error"] = ""
 
 
@@ -1289,6 +1621,131 @@ def syncQontoInvoiceStatus(invoiceId: str) -> Optional[Dict[str, Any]]:
     save_data(data)
     return inv
 
+def _qonto_webhook_callback_url() -> str:
+    # Keep a single stable public target.  Qonto must be configured with this
+    # exact URL (the legacy /api/qonto/webhooks route remains an inbound alias).
+    return os.environ.get("QONTO_WEBHOOK_CALLBACK_URL", "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto").strip()
+
+
+QONTO_WEBHOOK_EVENT_TYPES = [
+    "v1/client-invoices",
+    "v1/sepa-direct-debit-mandates",
+    "v1/sepa-direct-debit-collections",
+]
+
+
+def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
+    """Create or repair the Qonto invoice and SEPA webhook subscription on demand.
+
+    This function is intentionally not called at startup so Render restarts never
+    create duplicate subscriptions.
+    """
+    callback_url = _qonto_webhook_callback_url()
+    webhook_secret = _require_qonto_webhook_secret()
+    configured_id = os.environ.get("QONTO_WEBHOOK_SUBSCRIPTION_ID", "").strip()
+    subscriptions_payload = _qonto_request("GET", "/v2/webhook_subscriptions")
+    subscriptions = subscriptions_payload.get("webhook_subscriptions") or subscriptions_payload.get("subscriptions") or []
+    subscriptions = subscriptions if isinstance(subscriptions, list) else []
+    configured = next((sub for sub in subscriptions if configured_id and str(sub.get("id")) == configured_id), None)
+    canonical = next((sub for sub in subscriptions if (sub.get("url") or sub.get("callback_url") or sub.get("target_url")) == callback_url), None)
+    reusable = canonical or configured or next(
+        (sub for sub in subscriptions if set(QONTO_WEBHOOK_EVENT_TYPES).issubset({str(t) for t in (sub.get("event_types") or sub.get("types") or [])})),
+        None,
+    )
+    if reusable:
+        types = {str(t) for t in (reusable.get("event_types") or reusable.get("types") or [])}
+        missing_events = [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in types]
+        current_url = reusable.get("url") or reusable.get("callback_url") or reusable.get("target_url")
+        if not missing_events and current_url == callback_url:
+            data = load_data(); _store_qonto_webhook_subscription(data, reusable); save_data(data)
+            return {"ok": True, "created": False, "updated": False, "subscription": reusable, "callback_url": callback_url}
+        # Repair the existing subscription instead of creating a second one.
+        subscription_id = str(reusable.get("id") or "").strip()
+        if not subscription_id:
+            raise RuntimeError("Souscription Qonto existante sans identifiant, mise à jour impossible")
+        payload = {
+            "callback_url": callback_url,
+            "types": list(dict.fromkeys([*(reusable.get("event_types") or reusable.get("types") or []), *QONTO_WEBHOOK_EVENT_TYPES])),
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        }
+        updated = _qonto_request("PUT", f"/v2/webhook_subscriptions/{quote(subscription_id, safe='')}", payload)
+        subscription = updated.get("webhook_subscription") or updated
+        data = load_data(); _store_qonto_webhook_subscription(data, subscription); save_data(data)
+        return {"ok": True, "created": False, "updated": True, "subscription": subscription, "callback_url": callback_url}
+    payload = {
+        "callback_url": callback_url,
+        "types": list(QONTO_WEBHOOK_EVENT_TYPES),
+        "secret": webhook_secret,
+        "description": "Synchronisation Qonto - Gestion stagiaires",
+    }
+    created = _qonto_request("POST", "/v2/webhook_subscriptions", payload)
+    subscription = created.get("webhook_subscription") or created
+    data = load_data(); _store_qonto_webhook_subscription(data, subscription); save_data(data)
+    return {"ok": True, "created": True, "updated": False, "subscription": subscription, "callback_url": callback_url}
+
+
+QONTO_WEBHOOK_HISTORY_LIMIT = 50
+
+
+def _qonto_webhook_resource_id(item: Dict[str, Any]) -> str:
+    return str(item.get("id") or item.get("qonto_invoice_id") or item.get("direct_debit_mandate_id") or item.get("direct_debit_collection_id") or "")
+
+
+def _record_qonto_webhook(data: Dict[str, Any], event: str, item: Dict[str, Any], result: str, error: str = "") -> None:
+    """Persist a small, secret-free delivery history for the admin diagnostics."""
+    entries = data.setdefault("qonto_webhook_history", [])
+    if not isinstance(entries, list):
+        entries = []
+        data["qonto_webhook_history"] = entries
+    entries.insert(0, {"received_at": _now_iso(), "event": str(event or "unknown"), "resource_id": _qonto_webhook_resource_id(item), "result": result, "error": _sanitize_qonto_error(error)[:500] if error else ""})
+    del entries[QONTO_WEBHOOK_HISTORY_LIMIT:]
+
+
+def _store_qonto_webhook_subscription(data: Dict[str, Any], subscription: Dict[str, Any]) -> None:
+    """Keep a non-sensitive local snapshot for status polling."""
+    if not isinstance(subscription, dict):
+        return
+    data["qonto_webhook_subscription"] = {
+        "id": str(subscription.get("id") or ""),
+        "event_types": [str(value) for value in (subscription.get("event_types") or subscription.get("types") or [])],
+        "callback_url": str(subscription.get("url") or subscription.get("callback_url") or subscription.get("target_url") or ""),
+        "updated_at": _now_iso(),
+    }
+
+
+def qonto_webhook_status() -> Dict[str, Any]:
+    """Return the locally persisted webhook state; never contacts Qonto."""
+    data = load_data()
+    history = data.get("qonto_webhook_history") if isinstance(data.get("qonto_webhook_history"), list) else []
+    snapshot = data.get("qonto_webhook_subscription") if isinstance(data.get("qonto_webhook_subscription"), dict) else {}
+    last = history[0] if history else {}
+    subscribed_events = [str(value) for value in snapshot.get("event_types", [])]
+    missing_events = [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in subscribed_events]
+    connection_api_key_ok = bool(_qonto_is_configured())
+    oauth_ok = _qonto_oauth_connected(data)
+    webhook_scope_ok = oauth_ok and _qonto_oauth_has_scope("webhook", data)
+    return {
+        # Explicit public names used by the polling client.
+        "connection_api_key_ok": connection_api_key_ok,
+        "oauth_ok": oauth_ok,
+        "webhook_scope_ok": webhook_scope_ok,
+        "webhook_secret_configured": bool(_qonto_webhook_secret()),
+        "subscription_found": bool(snapshot.get("id")),
+        "subscription_id": str(snapshot.get("id") or ""),
+        "subscribed_events": subscribed_events,
+        "missing_events": missing_events,
+        "last_webhook_received_at": last.get("received_at") or "",
+        "last_event_type": last.get("event") or "",
+        "last_processing_result": last.get("result") or "",
+        "last_error": last.get("error") or "",
+        "callback_url": snapshot.get("callback_url") or _qonto_webhook_callback_url(),
+        # Compatibility names for the existing settings view.
+        "configuration_present": connection_api_key_ok, "api_connected": connection_api_key_ok,
+        "oauth_connected": oauth_ok, "webhook_scope_authorized": webhook_scope_ok,
+        "event_types": subscribed_events, "last_received_at": last.get("received_at") or "",
+        "last_event": last.get("event") or "", "last_result": last.get("result") or "",
+    }
+
 
 def _verify_qonto_webhook_signature(raw_body: bytes) -> bool:
     secret = _qonto_webhook_secret()
@@ -1301,9 +1758,26 @@ def _verify_qonto_webhook_signature(raw_body: bytes) -> bool:
             signatures.append(value)
     if not signatures:
         return False
+    candidates = set()
+    now = int(time.time())
+    for sig in signatures:
+        match = re.search(r"(?:^|,)t=(\d+),v1=([0-9a-fA-F]+)", sig)
+        if match:
+            timestamp = int(match.group(1))
+            if abs(now - timestamp) > 300:
+                continue
+            signed = f"{timestamp}.".encode("utf-8") + raw_body
+            candidates.add(hmac.new(secret.encode("utf-8"), signed, hashlib.sha256).hexdigest())
     digest = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
-    candidates = {digest, f"sha256={digest}"}
-    return any(hmac.compare_digest(sig.strip().strip('"').strip("'"), candidate) for sig in signatures for candidate in candidates)
+    candidates.update({digest, f"sha256={digest}"})
+    provided = []
+    for sig in signatures:
+        clean = sig.strip().strip('"').strip("'")
+        provided.append(clean)
+        match = re.search(r"(?:^|,)t=\d+,v1=([0-9a-fA-F]+)", clean)
+        if match:
+            provided.append(match.group(1))
+    return any(hmac.compare_digest(sig, candidate) for sig in provided for candidate in candidates)
 
 
 def mark_qonto_invoice_as_paid(invoice_id: str):
@@ -3503,13 +3977,7 @@ def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
 
 
 
-CNAPSV3_TRACKING_ALLOWED_STATUS = "TRANSMIS"
-
-
-def _normalize_cnapsv3_tracking_status(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+CNAPSV3_TRACKING_MIN_CREATED_DATE = datetime.date(2026, 6, 1)
 
 
 def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
@@ -3529,8 +3997,23 @@ def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
     return None
 
 
-def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any], status: str) -> bool:
-    return _normalize_cnapsv3_tracking_status(status) == CNAPSV3_TRACKING_ALLOWED_STATUS
+def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any]) -> bool:
+    """Keep every CNAPSV3 dossier created on or after the tracking cutoff."""
+    created_raw = _cnapsv3_tracking_value(item, (
+        "created_at",
+        "createdAt",
+        "date_creation",
+        "dateCreation",
+        "created_date",
+        "date_depot",
+        "dateDepot",
+        "submitted_at",
+        "submittedAt",
+        "transmitted_at",
+        "transmittedAt",
+    ))
+    created_date = _parse_cnapsv3_tracking_date(created_raw)
+    return bool(created_date and created_date >= CNAPSV3_TRACKING_MIN_CREATED_DATE)
 
 
 CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
@@ -3645,7 +4128,7 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
         status = _cnapsv3_tracking_value(item, ("statut_cnaps", "cnaps_status", "status", "statut"))
         if not any((last_name, first_name, nub, status)):
             continue
-        if not _cnapsv3_tracking_request_matches_scope(item, status):
+        if not _cnapsv3_tracking_request_matches_scope(item):
             continue
         rows.append({
             "last_name": last_name,
@@ -4531,6 +5014,8 @@ def _is_blocked_email_recipient(email: str) -> bool:
 
 CNAPS_STATUS_CHANGE_NOTIFICATION_TO = "cassandre@integraleacademy.com"
 CNAPS_STATUS_CHANGE_NOTIFICATION_CC = ["elsa@integraleacademy.com", "clement@integraleacademy.com"]
+CNAPS_MONITOR_TOKEN = os.environ.get("CNAPS_MONITOR_TOKEN", "").strip()
+CNAPS_MONITOR_REQUEST_DELAY_SECONDS = max(0.0, float(os.environ.get("CNAPS_MONITOR_REQUEST_DELAY_SECONDS", "1")))
 
 def _cnaps_status_change_key(last_name: str, nub: str) -> str:
     normalized_name = unicodedata.normalize("NFD", str(last_name or ""))
@@ -4540,12 +5025,23 @@ def _cnaps_status_change_key(last_name: str, nub: str) -> str:
     return f"{normalized_name}|{normalized_nub}"
 
 def _cnaps_result_signature(result: Dict[str, Any]) -> str:
-    rows = result.get("results") if isinstance(result.get("results"), list) else [result]
+    active_titles = result.get("active_titles")
+    if isinstance(active_titles, list):
+        rows = active_titles
+    else:
+        rows = result.get("results") if isinstance(result.get("results"), list) else [result]
     parts = []
     for row in rows:
         if not isinstance(row, dict):
             continue
-        values = [str(row.get(key) or "").strip() for key in ("activite", "validite_titre", "date_validite_titre")]
+        values = [
+            str(row.get(key) or "").strip()
+            for key in (
+                "display_status", "label", "activity", "activite", "typeActivite",
+                "status", "validity", "validite_titre", "agrementStatutEs",
+                "date_fin_validite", "valid_until", "date_validite_titre", "dateFinValidite",
+            )
+        ]
         parts.append(" • ".join(value for value in values if value))
     return " || ".join(part for part in parts if part).strip()
 
@@ -4564,6 +5060,23 @@ def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
     )
 
 
+def _annotate_cnaps_tracking_status_changes(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Flag tracking rows that have generated a CNAPS status-change notification.
+
+    Only outstanding notifications are kept at the top of the tracking screen.
+    A notification marked as seen remains visible on its dossier for context,
+    but is no longer a status change to be handled.
+    """
+    notifications = data.get("cnaps_status_change_notifications") or {}
+    if not isinstance(notifications, dict):
+        notifications = {}
+    for row in rows:
+        notification = notifications.get(_cnaps_status_change_key(row.get("last_name"), row.get("nub")))
+        row["status_change_notified"] = isinstance(notification, dict)
+        row["status_change_reviewed"] = bool(notification.get("reviewed_at")) if isinstance(notification, dict) else False
+    return sorted(rows, key=lambda row: not (row["status_change_notified"] and not row["status_change_reviewed"]))
+
+
 def _mark_cnaps_status_change_imported(data: Dict[str, Any], *, last_name: str, nub: str) -> bool:
     key = _cnaps_status_change_key(last_name, nub)
     notifications = data.get("cnaps_status_change_notifications")
@@ -4576,28 +5089,122 @@ def _mark_cnaps_status_change_imported(data: Dict[str, Any], *, last_name: str, 
     item["reviewed_reason"] = "import_pre_cnaps"
     return True
 
-def build_cnaps_status_change_email(first_name: str, last_name: str, nub: str, new_status: str) -> Tuple[str, str]:
+def _cnaps_trainee_enrollments(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str) -> List[Dict[str, str]]:
+    """Return the sessions in which the CNAPS dossier holder is enrolled."""
+    normalized_nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
+    normalized_first_name = _normalized_token(first_name)
+    normalized_last_name = _normalized_token(last_name)
+    enrollments: List[Dict[str, str]] = []
+
+    for session_obj in data.get("sessions", []) or []:
+        if not isinstance(session_obj, dict) or bool(session_obj.get("archived")) or _is_wedof_leads_session(session_obj):
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            trainee_nub = re.sub(
+                r"\D+", "", str(
+                    trainee.get("nub")
+                    or trainee.get("cnaps_nub")
+                    or trainee.get("cnaps_tracking_nub")
+                    or extract_nub_from_pre_car(str(trainee.get("pre_number") or ""))
+                    or ""
+                ),
+            )[-7:]
+            matches_nub = bool(normalized_nub and trainee_nub == normalized_nub)
+            matches_name = (
+                bool(normalized_first_name and normalized_last_name)
+                and _normalized_token(trainee.get("first_name")) == normalized_first_name
+                and _normalized_token(trainee.get("last_name")) == normalized_last_name
+            )
+            if not (matches_nub or matches_name):
+                continue
+            enrollments.append({
+                "formation": formation_label(_session_get(session_obj, "training_type", "")) or "Formation non renseignée",
+                "date_start": fr_date(_session_get(session_obj, "date_start", "")),
+                "date_end": fr_date(_session_get(session_obj, "date_end", "")),
+            })
+            break
+    return enrollments
+
+
+def _cnaps_trainee_first_name(data: Dict[str, Any], *, last_name: str, nub: str) -> str:
+    """Find a missing first name from an active trainee record when possible."""
+    normalized_nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
+    normalized_last_name = _normalized_token(last_name)
+    if not normalized_nub and not normalized_last_name:
+        return ""
+
+    for session_obj in data.get("sessions", []) or []:
+        if not isinstance(session_obj, dict) or bool(session_obj.get("archived")) or _is_wedof_leads_session(session_obj):
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            trainee_nub = re.sub(
+                r"\D+", "", str(
+                    trainee.get("nub")
+                    or trainee.get("cnaps_nub")
+                    or trainee.get("cnaps_tracking_nub")
+                    or extract_nub_from_pre_car(str(trainee.get("pre_number") or ""))
+                    or ""
+                ),
+            )[-7:]
+            matches_nub = bool(normalized_nub and trainee_nub == normalized_nub)
+            matches_last_name = bool(
+                normalized_last_name
+                and _normalized_token(trainee.get("last_name")) == normalized_last_name
+            )
+            if matches_nub or matches_last_name:
+                return str(trainee.get("first_name") or "").strip()
+    return ""
+
+
+def build_cnaps_status_change_email(
+    first_name: str,
+    last_name: str,
+    nub: str,
+    new_status: str,
+    enrollments: Optional[List[Dict[str, str]]] = None,
+) -> Tuple[str, str]:
     full_name = " ".join(part for part in [str(first_name or "").strip(), str(last_name or "").strip()] if part) or "Stagiaire"
     safe_name = html.escape(full_name)
     safe_nub = html.escape(str(nub or "—"))
     safe_status = html.escape(new_status or "Statut à vérifier")
+    safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    enrollment_rows = []
+    for enrollment in enrollments or []:
+        formation = html.escape(str(enrollment.get("formation") or "Formation non renseignée"))
+        date_start = html.escape(str(enrollment.get("date_start") or "À confirmer"))
+        date_end = html.escape(str(enrollment.get("date_end") or "À confirmer"))
+        enrollment_rows.append(
+            f'<li style="margin:8px 0;"><strong>{formation}</strong><br><span style="color:#475569;">Du {date_start} au {date_end}</span></li>'
+        )
+    enrollment_html = (
+        '<div style="margin-top:18px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:18px;padding:18px;">'
+        '<div style="font-size:12px;font-weight:800;color:#1d4ed8;text-transform:uppercase;letter-spacing:.12em;">Inscrit(e) en formation : OUI</div>'
+        f'<ul style="margin:10px 0 0;padding-left:20px;font-size:15px;line-height:1.5;color:#0f172a;">{"".join(enrollment_rows)}</ul>'
+        '</div>'
+        if enrollment_rows else
+        '<div style="margin-top:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:18px;font-size:15px;font-weight:800;color:#475569;">Inscrit(e) en formation : NON</div>'
+    )
     subject = f"Changement de statut CNAPS — {full_name}"
     html_body = f"""
     <div style="margin:0;padding:0;background:#f4f7fb;font-family:Inter,Arial,sans-serif;color:#0f172a;">
       <div style="max-width:680px;margin:0 auto;padding:32px 18px;">
-        <div style="background:linear-gradient(135deg,#111827,#2563eb);border-radius:28px;padding:28px;color:#fff;box-shadow:0 24px 70px rgba(15,23,42,.22);">
+        <div style="background:linear-gradient(135deg,#111827,#2563eb);border-radius:28px;padding:28px;color:#fff;box-shadow:0 24px 70px rgba(15,23,42,.22);text-align:center;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center">
+            <img src="{safe_logo_url}" alt="Intégrale Academy" width="176" style="display:block;width:176px;max-width:100%;height:auto;margin:0 auto 24px;">
+          </td></tr></table>
           <div style="font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.82;">Intégrale Academy · CNAPS</div>
           <h1 style="margin:16px 0 8px;font-size:30px;line-height:1.1;">Changement de statut</h1>
-          <p style="margin:0;font-size:16px;line-height:1.55;opacity:.9;">Un dossier auparavant indiqué comme inconnu possède désormais un statut CNAPS exploitable.</p>
         </div>
         <div style="margin-top:-18px;background:#fff;border:1px solid #e5e7eb;border-radius:24px;padding:26px;box-shadow:0 18px 55px rgba(15,23,42,.10);">
           <div style="display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;">Nouveau statut détecté</div>
-          <h2 style="margin:18px 0 6px;font-size:24px;color:#111827;">{safe_name}</h2>
+          <div style="margin:18px 0 4px;font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.12em;">Stagiaire</div>
+          <h2 style="margin:0 0 6px;font-size:24px;color:#111827;">{safe_name}</h2>
           <p style="margin:0 0 18px;color:#64748b;font-size:14px;">NUB : <strong style="color:#111827;">{safe_nub}</strong></p>
           <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:18px;">
             <div style="font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.12em;">Statut CNAPS</div>
             <div style="margin-top:8px;font-size:18px;font-weight:900;color:#0f172a;line-height:1.45;">{safe_status}</div>
           </div>
+          {enrollment_html}
           <p style="margin:20px 0 0;color:#475569;font-size:14px;line-height:1.6;">Merci de vérifier le dossier dans le suivi CNAPS et de réaliser les actions nécessaires.</p>
         </div>
       </div>
@@ -4605,8 +5212,8 @@ def build_cnaps_status_change_email(first_name: str, last_name: str, nub: str, n
     """
     return subject, html_body
 
-def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, previous_status: str, result: Dict[str, Any]) -> bool:
-    if (previous_status or "").strip().upper() != "INCONNU" or not _cnaps_result_has_known_status(result):
+def _notify_cnaps_status_change(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, result: Dict[str, Any]) -> bool:
+    if not _cnaps_result_has_known_status(result):
         return False
     key = _cnaps_status_change_key(last_name, nub)
     if not key or key == "|":
@@ -4616,9 +5223,13 @@ def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str
     if not isinstance(sent, dict):
         sent = {}
         data["cnaps_status_change_notifications"] = sent
-    if sent.get(key, {}).get("signature") == signature:
+    # Do not resend an alert for the exact same CNAPS status.  A later,
+    # genuinely different status is nevertheless a new change to notify.
+    if isinstance(sent.get(key), dict) and sent[key].get("signature") == signature:
         return False
-    subject, html_body = build_cnaps_status_change_email(first_name, last_name, nub, signature)
+    first_name = str(first_name or "").strip() or _cnaps_trainee_first_name(data, last_name=last_name, nub=nub)
+    enrollments = _cnaps_trainee_enrollments(data, first_name=first_name, last_name=last_name, nub=nub)
+    subject, html_body = build_cnaps_status_change_email(first_name, last_name, nub, signature, enrollments)
     response = brevo_send_email(
         CNAPS_STATUS_CHANGE_NOTIFICATION_TO,
         subject,
@@ -4631,6 +5242,104 @@ def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str
         return True
     app.logger.warning("[CNAPS_STATUS_CHANGE] email non envoyé key=%s error=%s", key, response.get("error"))
     return False
+
+
+def _cnaps_public_annuaire_status_key(last_name: str, nub: str) -> str:
+    return _cnaps_status_change_key(last_name, nub)
+
+
+def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, result: Dict[str, Any]) -> bool:
+    """Record a successful annuaire check and notify only on an actual change.
+
+    The CNAPSV3 request status (for example ``TRANSMIS``) is unrelated to the
+    public-annuaire result.  The old client-side comparison therefore could
+    never detect a change from "Aucun titre CNAPS trouvé".
+    """
+    key = _cnaps_public_annuaire_status_key(last_name, nub)
+    if not key or key == "|":
+        return False
+    statuses = data.setdefault("cnaps_public_annuaire_statuses", {})
+    if not isinstance(statuses, dict):
+        statuses = {}
+        data["cnaps_public_annuaire_statuses"] = statuses
+    signature = _cnaps_result_signature(result)
+    known = bool(signature)
+    previous = statuses.get(key) if isinstance(statuses.get(key), dict) else None
+    # The first successful check is a baseline, not a change.  This is
+    # especially important when monitoring starts after a dossier has already
+    # been updated on the CNAPS site: discovering its current status weeks
+    # later must never produce a retrospective email.
+    if previous is None:
+        statuses[key] = {
+            "known": known,
+            "signature": signature,
+            "checked_at": _now_iso(),
+        }
+        return False
+
+    previously_known = bool(previous.get("known"))
+    checked_at = _now_iso()
+    # A successful HTTP response with no title is not evidence that a title
+    # previously found by the directory disappeared.  Keeping the last known
+    # state avoids treating a transient/partial annuaire response as a new
+    # ``INCONNU → connu`` transition on the next refresh.
+    if previously_known and not known:
+        statuses[key] = {
+            **previous,
+            "checked_at": checked_at,
+            "last_empty_result_at": checked_at,
+        }
+        return False
+    statuses[key] = {
+        "known": known,
+        "signature": signature,
+        "checked_at": checked_at,
+        **({"last_empty_result_at": previous["last_empty_result_at"]} if previous.get("last_empty_result_at") else {}),
+    }
+    if not known:
+        return False
+    previous_signature = str(previous.get("signature") or "")
+    if previously_known and previous_signature == signature:
+        return False
+    return _notify_cnaps_status_change(
+        data,
+        first_name=first_name,
+        last_name=last_name,
+        nub=nub,
+        result=result,
+    )
+
+
+def run_cnaps_public_annuaire_monitor() -> Dict[str, Any]:
+    """Check tracked CNAPS files without requiring an administrator page visit."""
+    rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    if fetch_error:
+        raise RuntimeError(fetch_error)
+    data = load_data(run_background_tasks=False)
+    checked = notified = errors = 0
+    seen: Set[str] = set()
+    for row in rows:
+        last_name = str(row.get("last_name") or "").strip()
+        first_name = str(row.get("first_name") or "").strip()
+        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+        key = _cnaps_public_annuaire_status_key(last_name, nub)
+        if not last_name or len(nub) != 7 or key in seen:
+            continue
+        seen.add(key)
+        result = fetch_cnaps_public_annuaire(last_name, nub)
+        if result.get("check_status") != "success":
+            errors += 1
+            continue
+        checked += 1
+        if _record_cnaps_public_annuaire_status(
+            data, first_name=first_name, last_name=last_name, nub=nub, result=result,
+        ):
+            notified += 1
+        if CNAPS_MONITOR_REQUEST_DELAY_SECONDS:
+            time.sleep(CNAPS_MONITOR_REQUEST_DELAY_SECONDS)
+    if checked:
+        save_data(data)
+    return {"checked": checked, "notified": notified, "errors": errors}
 
 def brevo_send_email(
     to_email: str,
@@ -6717,6 +7426,11 @@ def _cnaps_unknown_training_type_is_allowed(training_type: Optional[str]) -> boo
     return normalized.startswith("APS") or normalized.startswith("A3P")
 
 
+def _cnaps_pre_training_type_is_allowed(training_type: Optional[str]) -> bool:
+    """PRE/CAR imports only apply to APS and A3P training sessions."""
+    return _cnaps_unknown_training_type_is_allowed(training_type)
+
+
 def _collect_cnaps_unknown_trainees(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     rows = []
     for session_data in data.get("sessions", []):
@@ -7645,6 +8359,10 @@ def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> L
     call_status = (meta.get("call_status") or "").strip()
     if call_status:
         details.append(f"Statut d'appel : {call_status}")
+
+    if meta.get("kind") == "qonto_direct_debit_rejected":
+        details.append(f"Montant rejeté : {_format_euro(meta.get('amount'))}")
+        details.append(f"Date prévue : {fr_date(meta.get('scheduled_date') or '') or 'Non renseignée'}")
 
     return details
 
@@ -10071,10 +10789,12 @@ def _apply_pending_cnaps_imports_for_trainee(data: Dict[str, Any], session_obj: 
     trainee_first = _normalize_person_name(trainee.get("first_name", ""))
     if not trainee_last or not trainee_first:
         return 0
+    if not _cnaps_pre_training_type_is_allowed(_session_get(session_obj, "training_type", "")):
+        return 0
 
     applied = 0
     remaining = []
-    for item in pending:
+    for item_index, item in enumerate(pending):
         item_last = _normalize_person_name(item.get("last_name", ""))
         item_first = _normalize_person_name(item.get("first_name", ""))
         same_order = (item_last == trainee_last and item_first == trainee_first)
@@ -10100,6 +10820,12 @@ def _apply_pending_cnaps_imports_for_trainee(data: Dict[str, Any], session_obj: 
         trainee["cnaps_import_merged_once"] = True
         trainee["cnaps_import_merged_at"] = _now_iso()
         applied += 1
+
+        # An imported PRE/CAR is for one eligible enrolment only.  Without this,
+        # a candidate enrolled in several sessions could receive the same file
+        # on every session created after the import.
+        remaining.extend(pending[item_index + 1:])
+        break
 
     data["cnaps_pending_imports"] = remaining
     return applied
@@ -13762,17 +14488,60 @@ def admin_cnaps_unknown():
 @admin_login_required
 def admin_cnaps_tracking():
     requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
-    requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, load_data())
+    data = load_data()
+    requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
+    requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
     enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
+    # The dashboard badge and this tile both represent outstanding changes that
+    # can actually be reviewed from the tracking list.  Notifications for a
+    # dossier that is no longer returned by CNAPSV3 must not inflate the count.
+    status_change_count = sum(
+        1
+        for row in requests_rows
+        if row.get("status_change_notified") and not row.get("status_change_reviewed")
+    )
     response = make_response(render_template(
         "admin_cnaps_tracking.html",
         requests_rows=requests_rows,
         enrolled_count=enrolled_count,
+        status_change_count=status_change_count,
         fetch_error=fetch_error,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
+
+
+@app.post("/api/admin/cnaps-status-changes/toggle-reviewed")
+@admin_login_required
+@admin_write_required
+def api_admin_cnaps_status_change_toggle_reviewed():
+    payload = request.get_json(silent=True) or {}
+    last_name = str(payload.get("last_name") or "").strip()
+    nub = str(payload.get("nub") or "").strip()
+    key = _cnaps_status_change_key(last_name, nub)
+    if not last_name or not re.sub(r"\D+", "", nub) or key == "|":
+        return jsonify({"ok": False, "error": "missing_identity"}), 400
+
+    data = load_data()
+    notifications = data.get("cnaps_status_change_notifications")
+    notification = notifications.get(key) if isinstance(notifications, dict) else None
+    if not isinstance(notification, dict):
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    reviewed = not bool(notification.get("reviewed_at"))
+    if reviewed:
+        notification["reviewed_at"] = _now_iso()
+        notification["reviewed_reason"] = "manual_seen"
+    else:
+        notification.pop("reviewed_at", None)
+        notification.pop("reviewed_reason", None)
+    save_data(data)
+    return jsonify({
+        "ok": True,
+        "reviewed": reviewed,
+        "pending_status_changes_count": _cnaps_pending_status_change_count(data),
+    })
 
 
 
@@ -13800,6 +14569,34 @@ def api_admin_cnaps_tracking_delete():
     return jsonify({"ok": True, "deleted": True})
 
 
+@app.post("/api/admin/cnaps-tracking/nub")
+@admin_login_required
+@admin_write_required
+def api_admin_cnaps_tracking_nub():
+    """Persist a manually supplied NUB for a CNAPS tracking row."""
+    payload = request.get_json(silent=True) or {}
+    last_name = str(payload.get("last_name") or "").strip()
+    first_name = str(payload.get("first_name") or "").strip()
+    nub = re.sub(r"\D+", "", str(payload.get("nub") or ""))
+    if not last_name or not first_name:
+        return jsonify({"ok": False, "error": "missing_identity"}), 400
+    if len(nub) != 7:
+        return jsonify({"ok": False, "error": "invalid_nub", "message": "Le NUB doit comporter 7 chiffres."}), 400
+
+    data = load_data()
+    manual_nubs = data.setdefault("cnaps_tracking_manual_nubs", {})
+    if not isinstance(manual_nubs, dict):
+        manual_nubs = {}
+        data["cnaps_tracking_manual_nubs"] = manual_nubs
+    manual_nubs[_cnaps_tracking_manual_nub_key(last_name, first_name)] = nub
+    _append_activity_log(data, "cnaps_tracking_nub_updated", "cnaps_tracking", nub, details={
+        "last_name": last_name,
+        "first_name": first_name,
+    })
+    save_data(data)
+    return jsonify({"ok": True, "nub": nub})
+
+
 
 def _cnaps_tracking_normalize_key_part(value: Any) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
@@ -13819,6 +14616,21 @@ def _cnaps_tracking_delete_key(last_name: Any, first_name: Any, nub: Any) -> str
     ))
 
 
+def _cnaps_tracking_manual_nub_key(last_name: Any, first_name: Any) -> str:
+    return "|".join(_cnaps_tracking_match_key(last_name, first_name))
+
+
+def _cnaps_tracking_manual_nubs(data: Dict[str, Any]) -> Dict[str, str]:
+    raw = data.get("cnaps_tracking_manual_nubs")
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(key): re.sub(r"\D+", "", str(nub))
+        for key, nub in raw.items()
+        if len(re.sub(r"\D+", "", str(nub))) == 7
+    }
+
+
 def _cnaps_tracking_deleted_keys(data: Dict[str, Any]) -> Set[str]:
     raw = data.get("cnaps_tracking_deleted_keys")
     return {str(key) for key in raw if str(key).strip()} if isinstance(raw, list) else set()
@@ -13826,6 +14638,7 @@ def _cnaps_tracking_deleted_keys(data: Dict[str, Any]) -> Set[str]:
 
 def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
     deleted_keys = _cnaps_tracking_deleted_keys(data)
+    manual_nubs = _cnaps_tracking_manual_nubs(data)
     enrolled_by_name: Dict[Tuple[str, str], Dict[str, str]] = {}
     for sess in data.get("sessions", []) or []:
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
@@ -13846,6 +14659,9 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
     enriched: List[Dict[str, Any]] = []
     for row in rows or []:
         item = dict(row)
+        manual_nub = manual_nubs.get(_cnaps_tracking_manual_nub_key(item.get("last_name"), item.get("first_name")))
+        if manual_nub:
+            item["nub"] = manual_nub
         if _cnaps_tracking_delete_key(item.get("last_name"), item.get("first_name"), item.get("nub")) in deleted_keys:
             continue
         match = enrolled_by_name.get(_cnaps_tracking_match_key(item.get("last_name"), item.get("first_name")))
@@ -14022,6 +14838,128 @@ def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
     return {"rows": rows, "stats": stats}
 
 
+CASH_PAYMENT_REMINDER_RECIPIENTS = [
+    "cassandre@integraleacademy.com",
+    "clement@integraleacademy.com",
+]
+
+
+def _format_cash_reminder_date(value: Any) -> str:
+    try:
+        return datetime.date.fromisoformat(str(value or "")[:10]).strftime("%d/%m/%Y")
+    except (TypeError, ValueError):
+        return str(value or "").strip() or "Non renseignée"
+
+
+def _build_cash_payment_reminder_email(session_obj: Dict[str, Any], rows: List[Dict[str, Any]]) -> Tuple[str, str, str]:
+    """Build the internal, email-client-safe cash collection reminder."""
+    session_name = str(_session_get(session_obj, "name", "") or "Formation").strip()
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    date_start = _format_cash_reminder_date(_session_get(session_obj, "date_start", ""))
+    date_end = _format_cash_reminder_date(_session_get(session_obj, "date_end", ""))
+    period = f"du {date_start} au {date_end}"
+    total = round(sum(float(row.get("remaining_amount") or 0) for row in rows), 2)
+    amount_label = f"{total:,.2f} €".replace(",", " ").replace(".", ",")
+    subject = f"Espèces à encaisser aujourd’hui — {session_name} ({len(rows)} stagiaire{'s' if len(rows) > 1 else ''})"
+
+    cards = []
+    text_people = []
+    for row in rows:
+        first_name = str(row.get("first_name") or "").strip()
+        last_name = str(row.get("last_name") or "").strip()
+        full_name = " ".join(part for part in (first_name, last_name) if part) or "Stagiaire sans nom"
+        remaining = float(row.get("remaining_amount") or 0)
+        remaining_label = f"{remaining:,.2f} €".replace(",", " ").replace(".", ",")
+        cards.append(f"""
+          <tr><td style="padding:0 0 12px 0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;">
+              <tr><td style="padding:18px 20px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+                  <td style="font-size:16px;font-weight:700;color:#0f172a;">{html.escape(full_name)}</td>
+                  <td align="right" style="font-size:18px;font-weight:800;color:#4f46e5;white-space:nowrap;">{html.escape(remaining_label)}</td>
+                </tr></table>
+                <div style="margin-top:7px;font-size:13px;color:#64748b;">À encaisser en espèces</div>
+              </td></tr>
+            </table>
+          </td></tr>""")
+        text_people.append(f"- {full_name} : {remaining_label}")
+
+    safe_session_name = html.escape(session_name)
+    safe_training_type = html.escape(training_type or "Non renseigné")
+    html_body = f"""<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:28px 12px;"><tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,.08);">
+          <tr><td style="padding:28px 32px;background-color:#4338ca;background-image:linear-gradient(135deg,#312e81,#4f46e5);color:#fff;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;opacity:.8;">Intégrale Academy · Rappel du jour</div>
+            <h1 style="margin:10px 0 6px;font-size:26px;line-height:1.2;">Encaissements en espèces</h1>
+            <p style="margin:0;font-size:15px;opacity:.88;">La formation débute aujourd’hui.</p>
+          </td></tr>
+          <tr><td style="padding:28px 32px;">
+            <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#475569;">Bonjour Cassandre, bonjour Clément,<br>Voici les règlements en espèces restant à encaisser pour cette session.</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;background:#eef2ff;border-radius:14px;">
+              <tr><td style="padding:18px 20px;">
+                <div style="font-size:18px;font-weight:800;color:#312e81;">{safe_session_name}</div>
+                <div style="margin-top:7px;font-size:14px;color:#475569;"><strong>Formation :</strong> {safe_training_type}<br><strong>Dates :</strong> {html.escape(period)}</div>
+              </td></tr>
+            </table>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">{''.join(cards)}</table>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px;border-top:2px solid #e2e8f0;"><tr>
+              <td style="padding-top:20px;font-size:15px;font-weight:700;color:#334155;">Total à encaisser</td>
+              <td align="right" style="padding-top:20px;font-size:24px;font-weight:800;color:#4f46e5;">{html.escape(amount_label)}</td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:18px 32px;background:#f8fafc;text-align:center;font-size:12px;color:#94a3b8;">Notification automatique · Gestion Stagiaires</td></tr>
+        </table>
+      </td></tr></table>
+    </body></html>"""
+    text_body = "\n".join([
+        "Rappel des encaissements en espèces", "", f"Formation : {session_name}",
+        f"Type : {training_type or 'Non renseigné'}", f"Dates : {period}", "",
+        *text_people, "", f"Total à encaisser : {amount_label}",
+    ])
+    return subject, html_body, text_body
+
+
+def run_cash_payment_reminders(today: Optional[datetime.date] = None) -> Dict[str, int]:
+    """Email one reminder per starting session, once, using Paris' calendar day."""
+    paris_today = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    data = load_data()
+    dashboard_rows = _build_cash_payment_dashboard(data)["rows"]
+    rows_by_session: Dict[str, List[Dict[str, Any]]] = {}
+    for row in dashboard_rows:
+        if row.get("date_start", "")[:10] != paris_today.isoformat() or row.get("is_settled") or float(row.get("remaining_amount") or 0) <= 0:
+            continue
+        rows_by_session.setdefault(str(row.get("session_id") or ""), []).append(row)
+
+    checked = sent = failed = 0
+    changed = False
+    for session_obj in data.get("sessions", []):
+        session_id = str(session_obj.get("id") or "")
+        rows = rows_by_session.get(session_id, [])
+        if not rows or session_obj.get("cash_payment_reminder_sent_on") == paris_today.isoformat():
+            continue
+        checked += 1
+        subject, html_body, text_body = _build_cash_payment_reminder_email(session_obj, rows)
+        result = brevo_send_email(
+            CASH_PAYMENT_REMINDER_RECIPIENTS[0], subject, html_body,
+            cc_emails=CASH_PAYMENT_REMINDER_RECIPIENTS[1:], text_content=text_body,
+            metadata={"purpose": "cash_payment_first_day_reminder", "session_id": session_id},
+        )
+        if isinstance(result, dict) and result.get("ok"):
+            session_obj["cash_payment_reminder_sent_on"] = paris_today.isoformat()
+            session_obj["cash_payment_reminder_sent_at"] = _now_iso()
+            session_obj.pop("cash_payment_reminder_last_error", None)
+            sent += 1
+            changed = True
+        else:
+            session_obj["cash_payment_reminder_last_error"] = (result.get("error") if isinstance(result, dict) else "Échec de l’envoi") or "Échec de l’envoi"
+            failed += 1
+            changed = True
+    if changed:
+        save_data(data)
+    return {"checked": checked, "sent": sent, "failed": failed}
+
+
 @app.get("/admin/sessions/paiement-especes")
 @admin_login_required
 def admin_cash_payments():
@@ -14038,15 +14976,11 @@ def admin_cash_payments():
 
 
 def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Return signed conventions that have not yet been acknowledged from the sidebar."""
+    """Return the unprinted signed conventions tracked by the conventions page."""
     items: List[Dict[str, Any]] = []
-    minimum_session_start_date = datetime.date(2026, 7, 16)
 
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
-            continue
-        session_start_date = _session_start_date(sess)
-        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -14060,6 +14994,11 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
                 or bool(signed_at)
             )
             if not is_signed:
+                continue
+            # Keep the sidebar badge on the exact same tracking perimeter as the
+            # "À imprimer" KPI.  A recently created convention can belong to a
+            # long-running session whose start date predates tracking.
+            if not _convention_created_on_or_after_tracking_start(trainee):
                 continue
             if bool(trainee.get("printed")):
                 continue
@@ -14093,6 +15032,26 @@ def _mark_signed_conventions_seen(data: Dict[str, Any]) -> bool:
         changed = True
     return changed
 
+CONVENTIONS_SIGNED_TRACKING_START_DATE = datetime.date(2026, 7, 15)
+
+
+def _public_trainee_convention_is_signed(trainee: Dict[str, Any]) -> bool:
+    """Match the signed convention state displayed in the public journey card."""
+    convention_signature = trainee.get("convention_signature") or trainee.get("convocation_signature") or {}
+    return (
+        convention_signature.get("status") in {"signed", "done"}
+        or trainee.get("convention_status") == "signed"
+    )
+
+
+def _convention_created_on_or_after_tracking_start(trainee: Dict[str, Any]) -> bool:
+    """Return whether a convention was created on the signed-tracking start date."""
+    state = _yousign_state(trainee)
+    created_at = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
+    created_datetime = _parse_iso_datetime(created_at)
+    return bool(created_datetime and created_datetime.date() >= CONVENTIONS_SIGNED_TRACKING_START_DATE)
+
+
 @app.get("/admin/sessions/conventions")
 @admin_login_required
 def admin_sessions_conventions():
@@ -14117,20 +15076,15 @@ def admin_sessions_conventions():
     ]
     if selected_status == "signing":
         selected_status = "waiting_signature"
-    virtual_statuses = {"action_required", "downloadable"}
+    virtual_statuses = {"action_required", "to_print"}
     valid_statuses = {option["key"] for option in status_options} | virtual_statuses
     if selected_status and selected_status not in valid_statuses:
         selected_status = ""
 
-    stats = {"total": 0, "waiting_signature": 0, "signed": 0, "action_required": 0, "errors": 0, "downloadable": 0}
+    stats = {"total": 0, "waiting_signature": 0, "signed": 0, "to_print": 0, "action_required": 0, "errors": 0}
     data_changed = False
-    minimum_session_start_date = datetime.date(2026, 7, 16)
-
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
-            continue
-        session_start_date = _session_start_date(sess)
-        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -14144,6 +15098,14 @@ def admin_sessions_conventions():
         trainees = _session_trainees_list(sess)
         for trainee_index, trainee in enumerate(trainees):
             trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
+            # Les conventions signées avant le 15 juillet ne nécessitent plus de
+            # suivi. Celles créées depuis cette date restent visibles, y compris
+            # lorsqu'elles ont déjà été signées.
+            if (
+                _public_trainee_convention_is_signed(trainee)
+                and not _convention_created_on_or_after_tracking_start(trainee)
+            ):
+                continue
             is_vae_convention_row = "VAE" in str(training_type or "").upper()
             if is_vae_convention_row:
                 vae_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
@@ -14175,8 +15137,8 @@ def admin_sessions_conventions():
                     convention["tone"] = "complete"
             signed_pdf = bool(state.get("signed_pdf_path"))
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
-            row_has_download = bool(convention.get("download_url") or signed_pdf or original_pdf)
             row_needs_action = status_key in {"not_generated", "generated", "expired", "refused"}
+            row_needs_printing = status_key == "signed" and not bool(trainee.get("printed"))
             is_problem = status_key in {"error", "expired", "refused"}
 
             # Les compteurs des tuiles KPI décrivent le périmètre courant (ex. formation),
@@ -14187,16 +15149,15 @@ def admin_sessions_conventions():
                 stats["waiting_signature"] += 1
             if status_key == "signed":
                 stats["signed"] += 1
+            if row_needs_printing:
+                stats["to_print"] += 1
             if row_needs_action:
                 stats["action_required"] += 1
             if is_problem:
                 stats["errors"] += 1
-            if row_has_download:
-                stats["downloadable"] += 1
-
             if selected_status == "action_required" and not row_needs_action:
                 continue
-            if selected_status == "downloadable" and not row_has_download:
+            if selected_status == "to_print" and not row_needs_printing:
                 continue
             if selected_status and selected_status not in virtual_statuses and status_key != selected_status:
                 continue
@@ -14232,6 +15193,7 @@ def admin_sessions_conventions():
                 "next_reminder_at": _format_automation_datetime(state.get("next_reminder_at") or ""),
                 "error": convention.get("error") or "",
                 "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+                "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id),
                 "create_url": url_for("admin_create_convention_signature", session_id=session_id, trainee_id=trainee_id),
                 "reminder_url": url_for("admin_send_convention_signature_reminder_for_session", session_id=session_id, trainee_id=trainee_id),
                 "preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
@@ -14243,6 +15205,7 @@ def admin_sessions_conventions():
                 "legacy_signed": _has_legacy_signed_convention(trainee),
                 "legacy_toggle_url": url_for("admin_toggle_legacy_convention_signed", session_id=session_id, trainee_id=trainee_id),
                 "printed": bool(trainee.get("printed")),
+                "needs_printing": row_needs_printing,
                 "is_problem": is_problem,
             }
             convention_rows.append(row)
@@ -14478,8 +15441,20 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
         "00NSa00000G2PxB": training_type,
         "00NSa00000KDPOT": location,
         "00NSa00000KPDmX": origin,
-        "00NSa00000GcKVx": str(entry.get("raw_payload") or "")[:3000],
+        # Do not send the complete webhook body here.  WeDoF folder payloads can
+        # be several tens of kilobytes (and may even contain the same JSON more
+        # than once).  Salesforce Web-to-Lead rejects oversized form posts with
+        # a 503 instead of a validation error.  The permalink is enough to find
+        # the source folder from the lead and remains safely bounded.
+        "00NSa00000GcKVx": str(payload.get("permalink") or entry.get("permalink") or "")[:255],
         "00NSa00000GcKxN": training_date,
+    }
+    # Empty custom fields provide no information and can trigger Salesforce
+    # validation rules depending on their configured type.
+    salesforce_payload = {
+        key: value
+        for key, value in salesforce_payload.items()
+        if value not in (None, "") or not key.startswith("00N")
     }
     attempted_at = _now_iso()
     entry["salesforce_last_attempt_at"] = attempted_at
@@ -15686,8 +16661,10 @@ def admin_afc_export():
 def admin_qonto_settings():
     data = load_data()
     qonto_settings = data.get("qonto_settings") if isinstance(data.get("qonto_settings"), dict) else {}
-    connected = bool(_qonto_is_configured())
-    message = "Configuration présente, testez la connexion Qonto." if connected else QONTO_STATUS_NOT_CONFIGURED_MESSAGE
+    # Configuration is not a successful connection: only a live test may show
+    # the green badge, preventing a stale 401 from being presented as connected.
+    connected = False
+    message = "Configuration présente, testez la connexion Qonto." if _qonto_is_configured() else QONTO_STATUS_NOT_CONFIGURED_MESSAGE
     last_success_at = str(qonto_settings.get("last_success_at") or "")
     return render_template(
         "admin_qonto_settings.html",
@@ -15695,6 +16672,12 @@ def admin_qonto_settings():
         message=message,
         last_success_fr=fr_datetime(last_success_at),
     )
+
+
+@app.get("/api/admin/qonto/webhook-status")
+@admin_login_required
+def api_admin_qonto_webhook_status():
+    return jsonify({"ok": True, **qonto_webhook_status()})
 
 
 @app.get("/api/admin/qonto/bank-accounts")
@@ -17627,6 +18610,200 @@ def admin_trainees_print(session_id: str):
         session=session_view,
         trainees=printable_trainees,
     )
+
+
+def _require_a3p_session(data: Dict[str, Any], session_id: str) -> Dict[str, Any]:
+    session_item = find_session(data, session_id)
+    if not session_item:
+        raise LookupError("session_not_found")
+    label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
+    if "A3P" not in label:
+        raise ValueError("Cette action est réservée aux sessions A3P.")
+    return session_item
+
+
+def _a3p_exam_dossier_public_config(session_item: Dict[str, Any]) -> Dict[str, Any]:
+    saved = session_item.get("a3p_exam_dossier") if isinstance(session_item.get("a3p_exam_dossier"), dict) else {}
+    generation = saved.get("generation") if isinstance(saved.get("generation"), dict) else {}
+    return {
+        "training_start_date": saved.get("training_start_date") or _session_get(session_item, "date_start", ""),
+        "training_end_date": saved.get("training_end_date") or _session_get(session_item, "date_end", ""),
+        "exam_date": saved.get("exam_date") or _session_get(session_item, "exam_date", ""),
+        "epi_training_date": saved.get("epi_training_date") or "",
+        "selected_trainee_ids": saved.get("selected_trainee_ids") or [],
+        "generation": {
+            "available": bool(generation.get("archive_path") and os.path.isfile(generation.get("archive_path"))),
+            "created_at": generation.get("created_at") or "",
+            "candidate_count": generation.get("candidate_count") or 0,
+        },
+    }
+
+
+@app.get("/api/admin/sessions/<session_id>/a3p-exam-dossiers")
+@admin_login_required
+def api_a3p_exam_dossier_config(session_id: str):
+    data = load_data()
+    try:
+        session_item = _require_a3p_session(data, session_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    return jsonify({"ok": True, **_a3p_exam_dossier_public_config(session_item)})
+
+
+def _a3p_exam_context(trainee: Dict[str, Any], values: Dict[str, str]) -> Dict[str, str]:
+    first_name = normalize_first_name(trainee.get("first_name") or "")
+    last_name = normalize_last_name(trainee.get("last_name") or "")
+    address = trainee.get("address") if isinstance(trainee.get("address"), dict) else {}
+    address_line = trainee.get("address_line1") or (trainee.get("address") if isinstance(trainee.get("address"), str) else address.get("line1")) or ""
+    return {
+        "nom": last_name,
+        "prenom": first_name,
+        "nom_complet": " ".join(part for part in (first_name, last_name) if part),
+        "adresse": str(address_line).strip(),
+        "code_postal": str(trainee.get("postal_code") or trainee.get("zip_code") or address.get("postal_code") or "").strip(),
+        "ville": str(trainee.get("city") or address.get("city") or "").strip(),
+        "date_debut_formation": fr_date(values["training_start_date"]),
+        "date_fin_formation": fr_date(values["training_end_date"]),
+        "periode_formation": f"{fr_date(values['training_start_date'])} au {fr_date(values['training_end_date'])}",
+        "date_examen": fr_date(values["exam_date"]),
+        "date_formation_epi": fr_date(values["epi_training_date"]),
+        "date_jour": datetime.datetime.now().strftime("%d/%m/%Y"),
+    }
+
+
+def _prepare_a3p_exam_template(template_path: str, prepared_path: str) -> str:
+    """Create a renderable copy without requiring a binary DOCX change in Git.
+
+    The supplied Word file predates this feature and contains a fixed EPI date.
+    Replacing it in the DOCX XML copy keeps the original binary untouched while
+    still exposing ``date_formation_epi`` to docxtpl at generation time.
+    """
+    placeholder = "{{ date_formation_epi }}"
+    fixed_value = "22 avril 2026"
+    placeholder_found = False
+    fixed_value_found = False
+    with zipfile.ZipFile(template_path, "r") as source, zipfile.ZipFile(prepared_path, "w") as destination:
+        for item in source.infolist():
+            content = source.read(item.filename)
+            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+                xml_text = content.decode("utf-8")
+                placeholder_found = placeholder_found or placeholder in xml_text
+                if fixed_value in xml_text:
+                    xml_text = xml_text.replace(fixed_value, placeholder)
+                    fixed_value_found = True
+                content = xml_text.encode("utf-8")
+            destination.writestr(item, content)
+    if not placeholder_found and not fixed_value_found:
+        os.remove(prepared_path)
+        raise RuntimeError(
+            "Le modèle Word doit contenir {{ date_formation_epi }} ou la date EPI d'origine « 22 avril 2026 »."
+        )
+    return prepared_path
+
+
+@app.post("/api/admin/sessions/<session_id>/a3p-exam-dossiers/generate")
+@admin_login_required
+@admin_write_required
+def api_generate_a3p_exam_dossiers(session_id: str):
+    payload = request.get_json(silent=True) or {}
+    values = {key: str(payload.get(key) or "").strip() for key in (
+        "training_start_date", "training_end_date", "exam_date", "epi_training_date"
+    )}
+    selected_ids = [str(value) for value in payload.get("selected_trainee_ids", []) if str(value).strip()]
+    if not all(values.values()) or not selected_ids:
+        return jsonify({"ok": False, "message": "Toutes les dates et au moins un candidat sont obligatoires."}), 400
+    if values["training_end_date"] < values["training_start_date"]:
+        return jsonify({"ok": False, "message": "La date de fin doit être postérieure à la date de début."}), 400
+    if DocxTemplate is None:
+        return jsonify({"ok": False, "message": "Le moteur de documents Word est indisponible."}), 503
+    template_path = os.path.join(app.root_path, "templates_word", "docexamena3p.docx")
+    if not os.path.isfile(template_path):
+        return jsonify({"ok": False, "message": "Le modèle de dossier examen A3P est introuvable."}), 503
+    data = load_data()
+    try:
+        session_item = _require_a3p_session(data, session_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    trainee_by_id = {str(item.get("id") or ""): item for item in _session_trainees_list(session_item)}
+    selected = [trainee_by_id[item_id] for item_id in selected_ids if item_id in trainee_by_id]
+    if not selected:
+        return jsonify({"ok": False, "message": "Aucun candidat valide n'a été sélectionné."}), 400
+
+    generation_id = uuid.uuid4().hex
+    output_dir = os.path.join(A3P_EXAM_DOSSIER_DIR, str(session_id), generation_id)
+    os.makedirs(output_dir, exist_ok=True)
+    pdf_paths = []
+    try:
+        lo_binary = _find_libreoffice_binary()
+        prepared_template_path = _prepare_a3p_exam_template(
+            template_path, os.path.join(output_dir, "modele_dossier_examen_a3p.docx")
+        )
+        for trainee in selected:
+            display_last = normalize_last_name(trainee.get("last_name") or "")
+            display_first = normalize_first_name(trainee.get("first_name") or "")
+            base_name = f"Dossier examen A3P {display_last} {display_first}".strip()
+            safe_base = secure_filename(base_name) or f"Dossier_examen_A3P_{trainee.get('id')}"
+            docx_path = os.path.join(output_dir, safe_base + ".docx")
+            doc = DocxTemplate(prepared_template_path)
+            doc.render(_a3p_exam_context(trainee, values))
+            doc.save(docx_path)
+            result = subprocess.run(
+                [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, docx_path],
+                check=True, capture_output=True, text=True, timeout=120,
+            )
+            pdf_path = os.path.join(output_dir, safe_base + ".pdf")
+            if not os.path.isfile(pdf_path):
+                raise RuntimeError(result.stderr or "Le PDF n'a pas été créé.")
+            pdf_paths.append((pdf_path, base_name + ".pdf"))
+            os.remove(docx_path)
+        os.remove(prepared_template_path)
+
+        combined_path = os.path.join(output_dir, "Tous les dossiers examen A3P.pdf")
+        writer = PdfWriter()
+        for pdf_path, _ in pdf_paths:
+            for page in PdfReader(pdf_path).pages:
+                writer.add_page(page)
+        with open(combined_path, "wb") as combined_file:
+            writer.write(combined_file)
+        archive_path = os.path.join(output_dir, "Dossiers examen A3P.zip")
+        with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            for pdf_path, download_name in pdf_paths:
+                archive.write(pdf_path, download_name)
+            archive.write(combined_path, os.path.basename(combined_path))
+    except Exception as exc:
+        shutil.rmtree(output_dir, ignore_errors=True)
+        app.logger.exception("Génération des dossiers examen A3P impossible")
+        return jsonify({"ok": False, "message": f"La génération a échoué : {exc}"}), 500
+
+    session_item["a3p_exam_dossier"] = {
+        **values,
+        "selected_trainee_ids": [str(item.get("id") or "") for item in selected],
+        "generation": {"id": generation_id, "archive_path": archive_path, "created_at": _now_iso(), "candidate_count": len(selected)},
+    }
+    save_data(data)
+    return jsonify({"ok": True, "candidate_count": len(selected), "download_url": url_for("admin_download_a3p_exam_dossiers", session_id=session_id)})
+
+
+@app.get("/admin/sessions/<session_id>/a3p-exam-dossiers/download")
+@admin_login_required
+def admin_download_a3p_exam_dossiers(session_id: str):
+    data = load_data()
+    try:
+        session_item = _require_a3p_session(data, session_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return str(exc), 400
+    generation = (session_item.get("a3p_exam_dossier") or {}).get("generation") or {}
+    archive_path = generation.get("archive_path") or ""
+    expected_root = os.path.realpath(os.path.join(A3P_EXAM_DOSSIER_DIR, str(session_id)))
+    if not archive_path or not os.path.isfile(archive_path) or not os.path.realpath(archive_path).startswith(expected_root + os.sep):
+        abort(404, description="Aucun dossier d'examen généré n'est disponible.")
+    return send_file(archive_path, mimetype="application/zip", as_attachment=True, download_name="Dossiers examen A3P.zip")
 
 
 @app.get("/admin/sessions/<session_id>/tshirt-list")
@@ -19961,29 +21138,56 @@ def api_cnaps_public_annuaire():
     nom = (request.args.get("nom") or "").strip()
     prenom = (request.args.get("prenom") or "").strip()
     nub = (request.args.get("nub") or "").strip()
-    previous_status = (request.args.get("previous_status") or "").strip()
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
     result = fetch_cnaps_public_annuaire(nom, nub)
     if result.get("check_status") is None:
         result["check_status"] = "success"
     notified = False
-    if result.get("check_status") == "success" and previous_status.upper() == "INCONNU":
+    data = None
+    if result.get("check_status") == "success":
         data = load_data()
-        notified = _notify_cnaps_unknown_status_change(data, first_name=prenom, last_name=nom, nub=nub, previous_status=previous_status, result=result)
-        if notified:
-            save_data(data)
+        notified = _record_cnaps_public_annuaire_status(
+            data, first_name=prenom, last_name=nom, nub=nub, result=result,
+        )
+        save_data(data)
 
     if result.get("check_status") == "error":
         return jsonify({"ok": False, "notification_sent": False, "pending_status_changes_count": None, **result}), 502
-    return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if notified else None, **result})
+    return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if data is not None else None, **result})
 
 
 @app.get("/api/cnaps_status_changes/pending")
 @admin_login_required
 def api_cnaps_status_changes_pending():
     data = load_data()
-    return jsonify({"ok": True, "count": _cnaps_pending_status_change_count(data)})
+    requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    if fetch_error:
+        # Do not clear a visible alert just because CNAPSV3 is temporarily
+        # unavailable.  The next successful refresh will remove stale entries.
+        count = _cnaps_pending_status_change_count(data)
+    else:
+        requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
+        requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
+        count = sum(
+            1
+            for row in requests_rows
+            if row.get("status_change_notified") and not row.get("status_change_reviewed")
+        )
+    return jsonify({"ok": True, "count": count})
+
+
+@app.post("/internal/jobs/cnaps-public-annuaire-monitor")
+def internal_cnaps_public_annuaire_monitor():
+    """Render Cron target; intentionally independent from browser/admin sessions."""
+    supplied_token = request.headers.get("X-CNAPS-Monitor-Token", "")
+    if not CNAPS_MONITOR_TOKEN or not hmac.compare_digest(supplied_token, CNAPS_MONITOR_TOKEN):
+        abort(401)
+    try:
+        return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor()})
+    except Exception as exc:
+        app.logger.exception("[CNAPS_MONITOR] execution failed")
+        return jsonify({"ok": False, "error": str(exc)[:160]}), 502
 
 
 # =========================
@@ -20295,6 +21499,117 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
             return True
 
     return False
+
+
+def _private_documents(t: dict) -> List[Dict[str, str]]:
+    """Return the admin-only documents attached to a trainee, cleaning legacy data."""
+    documents = t.get("private_documents")
+    if not isinstance(documents, list):
+        documents = []
+
+    cleaned = []
+    for document in documents:
+        if not isinstance(document, dict):
+            continue
+        file_token = str(document.get("file") or "").strip()
+        if not file_token:
+            continue
+        cleaned.append({
+            "id": str(document.get("id") or uuid.uuid4().hex),
+            "name": str(document.get("name") or "Document sans nom").strip()[:120] or "Document sans nom",
+            "file": file_token,
+            "original_name": str(document.get("original_name") or "").strip(),
+            "uploaded_at": str(document.get("uploaded_at") or "").strip(),
+        })
+    t["private_documents"] = cleaned
+    return cleaned
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/upload")
+@admin_login_required
+@admin_write_required
+def admin_upload_private_document(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        abort(404)
+    trainee = next((item for item in _session_trainees_list(session_obj) if item.get("id") == trainee_id), None)
+    if not trainee:
+        abort(404)
+
+    display_name = " ".join((request.form.get("display_name") or "").split())[:120]
+    incoming_file = request.files.get("file")
+    if not display_name or not incoming_file or not incoming_file.filename:
+        flash("Choisissez un fichier et indiquez le nom à afficher.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
+
+    try:
+        stored_path = _store_file(session_id, trainee_id, "private_documents", incoming_file)
+    except ValueError:
+        flash("Ce type de fichier n’est pas autorisé.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
+
+    _private_documents(trainee).append({
+        "id": uuid.uuid4().hex,
+        "name": display_name,
+        "file": _tokenize_path(stored_path),
+        "original_name": secure_filename(incoming_file.filename),
+        "uploaded_at": _now_iso(),
+    })
+    trainee["updated_at"] = _now_iso()
+    append_trainee_history_event(trainee, "Document divers ajouté", display_name, "action")
+    save_data(data)
+    flash(f"Le document « {display_name} » a été ajouté.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/<document_id>/delete")
+@admin_login_required
+@admin_write_required
+def admin_delete_private_document(session_id: str, trainee_id: str, document_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        abort(404)
+    trainee = next((item for item in _session_trainees_list(session_obj) if item.get("id") == trainee_id), None)
+    if not trainee:
+        abort(404)
+
+    documents = _private_documents(trainee)
+    document = next((item for item in documents if item.get("id") == document_id), None)
+    if not document:
+        abort(404)
+    documents.remove(document)
+    full_path = _detokenize_path(document.get("file") or "")
+    if os.path.isfile(full_path):
+        os.remove(full_path)
+    trainee["updated_at"] = _now_iso()
+    append_trainee_history_event(trainee, "Document divers supprimé", document.get("name") or "", "action")
+    save_data(data)
+    flash("Le document privé a été supprimé.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/<document_id>")
+@admin_login_required
+def admin_view_private_document(session_id: str, trainee_id: str, document_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        abort(404)
+    trainee = next((item for item in _session_trainees_list(session_obj) if item.get("id") == trainee_id), None)
+    if not trainee:
+        abort(404)
+    document = next((item for item in _private_documents(trainee) if item.get("id") == document_id), None)
+    if not document:
+        abort(404)
+
+    full_path = _detokenize_path(document.get("file") or "")
+    if not os.path.isfile(full_path):
+        abort(404)
+    extension = _safe_ext(document.get("original_name") or full_path)
+    download_name = secure_filename(document.get("name") or "document") + extension
+    return send_file(full_path, as_attachment=False, download_name=download_name)
 
 
 @app.get("/espace/<token>/download/<path:file_token>")
@@ -21062,6 +22377,49 @@ def infos_missing_text(trainee: dict, training_type: str = "") -> str:
 # =========================
 # Admin actions — trainee
 # =========================
+def _transfer_trainee_billing_lines(
+    data: Dict[str, Any], trainee_id: str, source_session_id: str, target_session_id: str
+) -> int:
+    """Reattach persisted invoices and payment plans to a trainee's new session.
+
+    Billing line identifiers include the session identifier.  Moving only the
+    trainee record would consequently make an existing invoice, mandate and SEPA
+    schedule look like a brand-new amount to invoice in the destination session.
+    """
+    lines = data.get("billing_lines")
+    if not isinstance(lines, list):
+        return 0
+
+    transferred = 0
+    for line in lines:
+        if not isinstance(line, dict):
+            continue
+        if str(line.get("traineeId") or "") != str(trainee_id):
+            continue
+        if str(line.get("sessionId") or "") != str(source_session_id):
+            continue
+
+        financing_type = str(line.get("financingType") or line.get("typeFinanceur") or "").strip()
+        if not financing_type:
+            continue
+        financing_ref = str(line.get("financingRef") or "0")
+        old_line_id = str(line.get("id") or "")
+        line["id"] = _billing_line_id(target_session_id, trainee_id, financing_type, financing_ref)
+        line["sessionId"] = target_session_id
+        line["updatedAt"] = _now_iso()
+        history = line.get("billingHistory") if isinstance(line.get("billingHistory"), list) else []
+        history.append({
+            "at": _now_iso(),
+            "action": "trainee_transferred",
+            "fromSessionId": source_session_id,
+            "toSessionId": target_session_id,
+            "previousLineId": old_line_id,
+        })
+        line["billingHistory"] = history
+        transferred += 1
+    return transferred
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/delete")
 @admin_login_required
 @admin_write_required
@@ -21114,13 +22472,22 @@ def admin_transfer_trainee(session_id: str, trainee_id: str):
     target_session["trainees"] = target_trainees
     target_session.pop("stagiaires", None)
 
+    transferred_billing_lines = _transfer_trainee_billing_lines(
+        data, trainee_id, session_id, target_session_id
+    )
+
     target_training_type = _session_get(target_session, "training_type", "")
     ensure_documents_schema_for_trainee(trainee, target_training_type)
     trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, target_training_type, _session_get(target_session, "date_start", "")) else "incomplete"
     trainee["updated_at"] = _now_iso()
 
     save_data(data)
-    flash("Stagiaire transféré avec succès.", "success")
+    finance_message = (
+        f" Les informations de facturation et de prélèvement ont été conservées ({transferred_billing_lines} ligne(s))."
+        if transferred_billing_lines
+        else ""
+    )
+    flash(f"Stagiaire transféré avec succès.{finance_message}", "success")
     return redirect(url_for("admin_trainees", session_id=target_session_id))
 
 def _replace_in_docx(doc: Document, replacements: dict) -> None:
@@ -24191,6 +25558,7 @@ APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
 APS_ENTRY_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_entree_aps")
 APS_END_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_fin_aps")
+A3P_EXAM_DOSSIER_DIR = os.path.join(PERSIST_DIR, "generated_documents", "dossiers_examen_a3p")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
 os.makedirs(APS_ENTRY_ATTESTATION_DIR, exist_ok=True)
 os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
@@ -24467,11 +25835,39 @@ def make_yousign_external_id(session_id: str, trainee_id: str) -> str:
     return re.sub(r"[^A-Za-z0-9_\-@.%+ ]", "_", raw)
 
 
+YOUSIGN_RATE_LIMIT_MAX_RETRIES = 2
+YOUSIGN_RATE_LIMIT_RETRY_DELAY_SECONDS = 1.0
+
+
+def _yousign_rate_limit_retry_delay(response: requests.Response, retry_number: int) -> float:
+    """Return a bounded delay while honoring Yousign's Retry-After header."""
+    retry_after = str(response.headers.get("Retry-After") or "").strip()
+    try:
+        if retry_after:
+            return min(10.0, max(0.0, float(retry_after)))
+    except (TypeError, ValueError):
+        pass
+    return YOUSIGN_RATE_LIMIT_RETRY_DELAY_SECONDS * retry_number
+
+
 def _yousign_request(method: str, path: str, **kwargs) -> requests.Response:
     url = f"{_yousign_base_url()}/{path.lstrip('/')}"
     headers = dict(_yousign_headers())
     headers.update(kwargs.pop("headers", {}) or {})
-    response = requests.request(method.upper(), url, headers=headers, timeout=30, **kwargs)
+    response = None
+    for attempt in range(YOUSIGN_RATE_LIMIT_MAX_RETRIES + 1):
+        response = requests.request(method.upper(), url, headers=headers, timeout=30, **kwargs)
+        if response.status_code != 429:
+            break
+        if attempt == YOUSIGN_RATE_LIMIT_MAX_RETRIES:
+            raise RuntimeError("Yousign limite temporairement les demandes. Réessayez dans quelques instants.")
+        delay = _yousign_rate_limit_retry_delay(response, attempt + 1)
+        app.logger.warning(
+            "[YOUSIGN] rate limited method=%s path=%s retry=%s delay_seconds=%.1f",
+            method.upper(), path, attempt + 1, delay,
+        )
+        time.sleep(delay)
+    assert response is not None
     if response.status_code >= 400:
         try:
             detail = response.json()
@@ -24687,22 +26083,18 @@ def _convention_signature_admin_label(state: Dict[str, Any]) -> str:
         return "Expirée / refusée / erreur"
     if _is_yousign_signature_pending(state):
         count = int(state.get("reminder_count") or 0)
-        if count >= 3:
-            return "Dernier rappel envoyé"
-        if count == 2:
-            return "Rappel 2 envoyé"
-        if count == 1:
-            return "Rappel 1 envoyé"
+        if count:
+            return f"{count} rappel{'s' if count > 1 else ''} envoyé{'s' if count > 1 else ''}"
         return "En attente de signature"
     return "Non envoyée"
 
 
-def _build_yousign_signature_reminder_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str]:
+def _build_yousign_signature_reminder_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str, str]:
     first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+    training_name = _signature_email_training_label(session_obj)
     dates_session = _aps_session_dates_label(session_obj)
     subject = "Rappel : votre convention de formation est en attente de signature"
-    body = f"""Bonjour {first_name},
+    text_body = f"""Bonjour {first_name},
 
 Nous vous rappelons que votre convention de formation est toujours en attente de signature.
 
@@ -24721,7 +26113,17 @@ Intégrale Academy
 54 chemin du Carreou
 83480 Puget-sur-Argens
 04 22 47 07 68"""
-    return subject, "<br>".join(html.escape(line) for line in body.splitlines())
+    html_body = build_signature_email_html(first_name, training_name, dates_session, signature_link, reminder=True)
+    return subject, html_body, text_body
+
+
+def _convention_reminders_allowed_now(now_utc: Optional[datetime.datetime] = None) -> bool:
+    """Keep all convention reminders inside the 08:00-20:00 Europe/Paris window."""
+    current = now_utc or datetime.datetime.now(datetime.timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=datetime.timezone.utc)
+    paris_hour = current.astimezone(ZoneInfo("Europe/Paris")).hour
+    return 8 <= paris_hour < 20
 
 
 def _find_trainee_by_convocation_signature_id(data: Dict[str, Any], signature_id: str):
@@ -24736,6 +26138,8 @@ def _find_trainee_by_convocation_signature_id(data: Dict[str, Any], signature_id
 
 
 def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
+    if not _convention_reminders_allowed_now():
+        return False, "Les rappels sont envoyés uniquement entre 8 h et 20 h (heure française)."
     data = load_data()
     sess, trainees, trainee, state = _find_trainee_by_convocation_signature_id(data, signature_id)
     if not trainee or not state:
@@ -24766,27 +26170,28 @@ def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
     if not str(trainee.get("email") or "").strip():
         return False, "Adresse e-mail stagiaire manquante."
     reminder_count = int(state.get("reminder_count") or 0)
-    if reminder_count >= 3:
-        state["next_reminder_at"] = ""
-        save_data(data)
-        return False, "Nombre maximal de rappels déjà atteint."
-    subject, html_body = _build_yousign_signature_reminder_email(sess, trainee, signature_link)
+    subject, html_body, text_body = _build_yousign_signature_reminder_email(sess, trainee, signature_link)
     now = _now_iso()
     try:
-        ok = brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_body, trainee=trainee)
+        phone = str(trainee.get("phone") or "").strip()
+        if not phone:
+            raise RuntimeError("Numéro de téléphone stagiaire manquant, rappel non envoyé")
+        ok = brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_body, trainee=trainee, text_content=text_body)
         if not ok:
             raise RuntimeError("Échec d’envoi e-mail")
+        training_name = _signature_email_training_label(sess)
+        sms = (
+            f"Intégrale Academy : rappel, votre convention de formation {training_name} "
+            f"est toujours à signer. Signez-la ici : {signature_link}"
+        )
+        if not brevo_send_sms(phone, sms):
+            raise RuntimeError("Échec d’envoi SMS")
         new_count = reminder_count + 1
         state["reminder_count"] = new_count
         state["last_reminder_sent_at"] = now
         state[f"reminder_{new_count}_sent_at"] = now
         state["last_email_error"] = ""
-        if new_count == 1:
-            state["next_reminder_at"] = _add_days_iso(state.get("created_at") or now, 4)
-        elif new_count == 2:
-            state["next_reminder_at"] = _add_days_iso(state.get("created_at") or now, 7)
-        else:
-            state["next_reminder_at"] = ""
+        state["next_reminder_at"] = _add_days_iso(now, 1)
         trainee["updated_at"] = now
         sess["trainees"] = trainees
         sess.pop("stagiaires", None)
@@ -24803,6 +26208,8 @@ def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
 
 
 def run_convocation_signature_reminders() -> Dict[str, int]:
+    if not _convention_reminders_allowed_now():
+        return {"checked": 0, "sent": 0, "failed": 0}
     data = load_data()
     now = datetime.datetime.utcnow()
     due_ids = []
@@ -24810,7 +26217,7 @@ def run_convocation_signature_reminders() -> Dict[str, int]:
         for trainee in _session_trainees_list(sess):
             state = _yousign_state(trainee)
             due_at = _parse_iso_datetime(state.get("next_reminder_at"))
-            if _is_yousign_signature_pending(state) and due_at and due_at <= now and int(state.get("reminder_count") or 0) < 3:
+            if _is_yousign_signature_pending(state) and due_at and due_at <= now:
                 due_ids.append(str(trainee.get("id") or state.get("signature_request_id") or ""))
     sent = failed = 0
     for signature_id in due_ids:
@@ -24850,12 +26257,15 @@ Intégrale Academy
 04 22 47 07 68"""
 
 
-def build_signature_email_html(first_name: str, formation_label: str, dates_session: str, signature_url: str) -> str:
+def build_signature_email_html(first_name: str, formation_label: str, dates_session: str, signature_url: str, reminder: bool = False) -> str:
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
     safe_formation_label = html.escape(str(formation_label or "").strip() or "Formation")
     safe_dates_session = html.escape(str(dates_session or "").strip() or "Dates à confirmer")
     safe_signature_url = html.escape(str(signature_url or "").strip(), quote=True)
     safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    intro = "Votre convention de formation est toujours en attente de signature." if reminder else "Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation."
+    request_text = "Merci de la signer dès maintenant en utilisant le bouton sécurisé ci-dessous." if reminder else "Nous vous remercions de bien vouloir procéder à la signature électronique de ce document."
+    banner = '<div style="display:inline-block;margin-bottom:18px;padding:7px 12px;border-radius:999px;background:#fff3cd;color:#8a5700;font-size:13px;font-weight:700;">Rappel de signature</div>' if reminder else ""
     return f'''<!doctype html>
 <html lang="fr">
 <head>
@@ -24871,9 +26281,9 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
         <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
-          <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
-          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.</p>
-          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Nous vous remercions de bien vouloir procéder à la signature électronique de ce document.</p>
+          {banner}<p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">{intro}</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">{request_text}</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
             <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convention de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
           </td></tr></table>
@@ -25015,6 +26425,88 @@ def _cancel_yousign_convention_signature(trainee: Dict[str, Any], reason: str = 
     trainee["updated_at"] = now
 
 
+AUTOMATION_TRAINEE_FIELDS = (
+    "convention_signature",
+    "convocation_signature",
+    "convention_signature_history",
+    "convention_status",
+    "convention_aps_status",
+    "convention_aps_generated_at",
+    "convention_aps_signed_at",
+    "convention_aps_pdf_path",
+    "convention_aps_docx_path",
+    "convention_legacy_signed",
+    "convention_legacy_signed_at",
+    "legacy_convention_signed",
+    "convention_auto_sent_at",
+    "convention_auto_trigger",
+    "convention_auto_email_ok",
+    "convention_auto_last_error",
+    "convocation_aps_status",
+    "convocation_aps_generated_at",
+    "convocation_aps_sent_at",
+    "convocation_aps_pdf_path",
+    "convocation_aps_docx_path",
+    "convocation_aps_pdf_token",
+    "convocation_aps_generated_from",
+    "convocation_aps_view_url",
+    "convocation_aps_last_error",
+    "convocation_auto_scheduled_at",
+    "convocation_auto_last_error",
+    "convocation_aps_reminder_sent_at",
+    "convocation_aps_reminder_last_error",
+    "attestation_entree_aps_status",
+    "attestation_entree_aps_generated_at",
+    "attestation_entree_aps_sent_at",
+    "attestation_entree_aps_pdf_path",
+    "attestation_entree_aps_docx_path",
+    "attestation_entree_aps_pdf_token",
+    "attestation_entree_aps_last_error",
+    "attestation_fin_aps_status",
+    "attestation_fin_aps_generated_at",
+    "attestation_fin_aps_sent_at",
+    "attestation_fin_aps_pdf_path",
+    "attestation_fin_aps_docx_path",
+    "attestation_fin_aps_pdf_token",
+    "attestation_fin_aps_last_error",
+)
+
+
+def _remove_automation_generated_file(path: Any) -> None:
+    """Remove a generated automation file without ever deleting an arbitrary path."""
+    raw_path = str(path or "").strip()
+    if not raw_path:
+        return
+    try:
+        real_path = os.path.realpath(raw_path)
+        allowed_dirs = (APS_CONVOCATION_DIR, APS_ENTRY_ATTESTATION_DIR, APS_END_ATTESTATION_DIR, YOUSIGN_CONVENTION_DIR, YOUSIGN_SIGNED_DIR)
+        if any(os.path.commonpath((real_path, os.path.realpath(directory))) == os.path.realpath(directory) for directory in allowed_dirs) and os.path.isfile(real_path):
+            os.remove(real_path)
+    except (OSError, ValueError):
+        app.logger.warning("[AUTOMATIONS] impossible de supprimer le fichier généré %s", raw_path, exc_info=True)
+
+
+def _reset_trainee_automations(trainee: Dict[str, Any]) -> None:
+    """Return one trainee's document automations to their initial state."""
+    state = _yousign_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if request_id and _is_yousign_signature_pending(state) and _yousign_is_configured():
+        _yousign_json("POST", f"/signature_requests/{request_id}/cancel", json={
+            "reason": "other",
+            "custom_note": "Remise à zéro des automatisations depuis la fiche stagiaire.",
+        })
+
+    generated_paths = [
+        state.get("unsigned_pdf_path"), state.get("source_pdf_with_anchors_path"), state.get("unsigned_docx_path"), state.get("signed_pdf_path"),
+        *(trainee.get(key) for key in AUTOMATION_TRAINEE_FIELDS if key.endswith(("_pdf_path", "_docx_path"))),
+    ]
+    for path in generated_paths:
+        _remove_automation_generated_file(path)
+    for key in AUTOMATION_TRAINEE_FIELDS:
+        trainee.pop(key, None)
+    trainee["updated_at"] = _now_iso()
+
+
 def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str, force_new: bool = False) -> Dict[str, Any]:
     existing_state = _yousign_state(trainee)
     has_existing_request = bool(existing_state.get("signature_request_id"))
@@ -25146,7 +26638,7 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "last_error": "",
         "reminder_count": 0,
         "last_reminder_sent_at": "",
-        "next_reminder_at": _add_days_iso(now, 2),
+        "next_reminder_at": _add_days_iso(now, 1),
         "reminder_1_sent_at": "",
         "reminder_2_sent_at": "",
         "reminder_3_sent_at": "",
@@ -25184,6 +26676,7 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
 
 
 APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS = 5 * 60
+APS_CONVOCATION_REMINDER_DAYS_BEFORE_START = 7
 _aps_convocation_auto_send_timers: Set[str] = set()
 _aps_convocation_auto_send_timers_lock = threading.Lock()
 
@@ -25260,6 +26753,77 @@ def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bo
             sess["trainees"] = trainees
             sess.pop("stagiaires", None)
     return changed
+
+
+def _resend_convocation_before_training(
+    session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str
+) -> bool:
+    """Regenerate and resend a previously issued convocation before training."""
+    docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
+    with open(pdf_path, "rb") as fh:
+        encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+    subject, html_content = _build_aps_convocation_email(
+        str(trainee.get("first_name") or ""),
+        _session_get(session_obj, "date_start", ""),
+        _session_get(session_obj, "date_end", ""),
+        session_obj,
+    )
+    if not brevo_send_email(
+        str(trainee.get("email") or "").strip(),
+        subject,
+        html_content,
+        trainee=trainee,
+        attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}],
+    ):
+        raise RuntimeError("Impossible de renvoyer la convocation : échec d’envoi email")
+    now = _now_iso()
+    trainee["convocation_aps_pdf_path"] = pdf_path
+    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
+    trainee["convocation_aps_reminder_sent_at"] = now
+    trainee["convocation_aps_reminder_last_error"] = ""
+    trainee["updated_at"] = now
+    return True
+
+
+def run_training_convocation_reminders(data: Optional[Dict[str, Any]] = None) -> Dict[str, int]:
+    """Resend each already-issued convocation exactly seven days before training."""
+    owns_data = data is None
+    data = data if data is not None else load_data()
+    today = datetime.datetime.utcnow().date()
+    due_date = today + datetime.timedelta(days=APS_CONVOCATION_REMINDER_DAYS_BEFORE_START)
+    checked = sent = failed = 0
+    changed = False
+    for sess in data.get("sessions", []):
+        if not _is_aps_session(sess):
+            continue
+        start_date = _session_start_date(sess)
+        if start_date != due_date:
+            continue
+        trainees = _session_trainees_list(sess)
+        session_changed = False
+        for trainee in trainees:
+            if not trainee.get("convocation_aps_sent_at") or trainee.get("convocation_aps_reminder_sent_at"):
+                continue
+            checked += 1
+            try:
+                _resend_convocation_before_training(
+                    sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or "")
+                )
+                sent += 1
+            except Exception as exc:
+                failed += 1
+                trainee["convocation_aps_reminder_last_error"] = str(exc)
+                trainee["updated_at"] = _now_iso()
+                app.logger.exception("[CONVOCATION] seven-day reminder failed trainee_id=%s", trainee.get("id"))
+            changed = True
+            session_changed = True
+        if session_changed:
+            sess["trainees"] = trainees
+            sess.pop("stagiaires", None)
+    if owns_data and changed:
+        save_data(data)
+    return {"checked": checked, "sent": sent, "failed": failed}
 
 
 def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
@@ -26360,6 +27924,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     # ✅ deliverables
     t.setdefault("deliverables", {})
+    _private_documents(t)
 
     # file tokens for template links (documents)
     for d in (t.get("documents") or []):
@@ -26920,25 +28485,83 @@ def _normalize_payment_plan(raw: Dict[str, Any], total: Any) -> Dict[str, Any]:
 
 def _active_qonto_mandate(client_id: str) -> Optional[Dict[str, Any]]:
     mandates = list_qonto_direct_debit_mandates(client_id)
-    items = mandates.get('direct_debit_mandates') or mandates.get('mandates') or mandates.get('items') or []
+    items = _qonto_direct_debit_mandate_items(mandates)
     for mandate in items if isinstance(items, list) else []:
-        if str(mandate.get('status') or '').lower() in {'approved', 'active', 'signed'}:
+        # A mandate waiting for the customer's signature is still the mandate
+        # attached to this client.  Ignoring it would create a duplicate rather
+        # than reusing the signature link returned by Qonto.
+        if str(mandate.get('status') or '').lower() in {
+            'pending_signature', 'pending', 'approved', 'active', 'signed',
+            'accepted', 'validated',
+        }:
             return mandate
     return None
 
 
 def _map_mandate_status(status: Any) -> str:
     value = str(status or '').lower()
-    return {'pending_signature': 'pending', 'approved': 'active', 'signed': 'signed', 'active': 'active', 'failed': 'failed'}.get(value, value or 'pending')
+    return {
+        'pending_signature': 'pending', 'pending': 'pending', 'approved': 'active',
+        'accepted': 'signed', 'validated': 'signed', 'signed': 'signed',
+        'active': 'active', 'completed': 'signed', 'failed': 'failed',
+    }.get(value, value or 'pending')
 
 
 def _map_collection_status(status: Any) -> str:
     value = str(status or '').lower()
-    return {'pending': 'scheduled', 'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed', 'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded', 'on_hold': 'on_hold'}.get(value, value or 'scheduled')
+    return {'pending': 'scheduled', 'active': 'scheduled', 'scheduled': 'scheduled', 'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed', 'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded', 'on_hold': 'on_hold'}.get(value, value or 'scheduled')
 
 
 def _format_euro(value: Any) -> str:
     return f"{_money(value):,.2f} €".replace(",", " ").replace(".", ",")
+
+
+QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS = (
+    "cassandre@integraleacademy.com",
+    "clement@integraleacademy.com",
+)
+
+
+def _build_rejected_debit_alert_html(line: Dict[str, Any], installment: Dict[str, Any]) -> str:
+    """Build the internal, email-client-safe alert for a rejected SEPA debit."""
+    trainee_name = html.escape(
+        f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip()
+        or "Stagiaire non renseigné"
+    )
+    formation = html.escape(str(line.get('formationName') or line.get('sessionName') or "Formation non renseignée"))
+    start_date = html.escape(fr_date(line.get('dateStart') or "") or "Non renseignée")
+    end_date = html.escape(fr_date(line.get('dateEnd') or line.get('dateStart') or "") or "Non renseignée")
+    due_date = html.escape(fr_date(installment.get('due_date') or installment.get('date') or "") or "Non renseignée")
+    amount = html.escape(_format_euro(installment.get('amount')))
+    reason = html.escape(str(installment.get('status_reason') or installment.get('failureReason') or "Non communiqué par la banque"))
+    logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    return f"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:28px 12px;background:#f1f5f9"><tr><td align="center">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 16px 40px rgba(15,23,42,.12)"><tr><td style="padding:28px 32px;background:linear-gradient(135deg,#10233f,#7f1d1d);color:#fff"><table role="presentation" width="100%"><tr><td width="74"><img src="{logo_url}" width="56" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:13px;padding:7px"></td><td><div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#fecaca">Alerte facturation</div><div style="font-size:26px;font-weight:800;margin-top:5px">Prélèvement rejeté</div></td></tr></table></td></tr>
+<tr><td style="padding:30px 32px"><p style="margin:0 0 22px;color:#475569;font-size:16px;line-height:1.6">Une échéance SEPA vient d’être rejetée. Voici toutes les informations nécessaires à son traitement.</p>
+<div style="padding:20px;border:1px solid #fecaca;border-radius:16px;background:#fff7f7;margin-bottom:20px"><div style="color:#991b1b;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Montant rejeté</div><div style="font-size:30px;font-weight:900;margin-top:5px">{amount}</div><div style="color:#64748b;margin-top:7px">Prélèvement initialement prévu le <strong>{due_date}</strong></div></div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden"><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b;width:38%">Stagiaire</td><td style="padding:13px 16px;font-weight:700">{trainee_name}</td></tr><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b">Formation</td><td style="padding:13px 16px;font-weight:700">{formation}</td></tr><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b">Dates de formation</td><td style="padding:13px 16px;font-weight:700">Du {start_date} au {end_date}</td></tr><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b">Motif bancaire</td><td style="padding:13px 16px;font-weight:700">{reason}</td></tr></table>
+<p style="margin:22px 0 0;color:#64748b;font-size:13px;line-height:1.5">Cette alerte a été générée automatiquement par Intégrale Connect. Une notification est également disponible dans le menu Notifications.</p></td></tr></table></td></tr></table></body></html>"""
+
+
+def _notify_rejected_qonto_debit(data: Dict[str, Any], line: Dict[str, Any], installment: Dict[str, Any], collection_id: str) -> bool:
+    """Send one email and create one admin notification per rejected collection."""
+    alert_key = collection_id or f"{line.get('id', '')}:{installment.get('due_date') or installment.get('date', '')}"
+    notified_keys = line.setdefault('qonto_rejected_collection_ids', [])
+    if alert_key in notified_keys:
+        return False
+    notified_keys.append(alert_key)
+    trainee_name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire non renseigné"
+    due_date = installment.get('due_date') or installment.get('date') or ""
+    add_admin_notification(data, f"🔴 Prélèvement rejeté — {trainee_name} — {_format_euro(installment.get('amount'))}", meta={
+        "kind": "qonto_direct_debit_rejected", "trainee_id": line.get('traineeId') or "",
+        "session_id": line.get('sessionId') or "", "training": line.get('formationName') or line.get('sessionName') or "",
+        "date_start": line.get('dateStart') or "", "date_end": line.get('dateEnd') or "",
+        "amount": installment.get('amount'), "scheduled_date": due_date, "collection_id": collection_id,
+    })
+    subject = f"[Alerte] Prélèvement rejeté — {trainee_name} — {_format_euro(installment.get('amount'))}"
+    brevo_send_email(QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[0], subject, _build_rejected_debit_alert_html(line, installment), cc_emails=[QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[1]])
+    return True
 
 
 def _qonto_mandate_schedule(line: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -27031,6 +28654,15 @@ def _sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
     installments = _sepa_installments(line)
+    # The SEPA persistence model uses ``due_date`` while the billing API and
+    # its clients historically expose ``date``.  Keep both aliases populated
+    # so a signed mandate immediately shows its upcoming collections instead
+    # of blank dates in the trainee dashboard.
+    for installment in installments:
+        due_date = str(installment.get('due_date') or installment.get('date') or '')[:10]
+        if due_date:
+            installment['due_date'] = due_date
+            installment['date'] = due_date
     total_due = round(sum(_money(item.get('amount')) for item in installments), 2)
     total_paid = round(sum(_money(item.get('amount')) for item in installments if item.get('status') == 'completed'), 2)
     paid_count = sum(1 for item in installments if item.get('status') == 'completed')
@@ -27068,6 +28700,116 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
     line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
 
 
+def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: str) -> int:
+    """Import subscriptions which already exist in Qonto for a recovered mandate."""
+    subscriptions: List[Dict[str, Any]] = []
+    page, per_page = 1, 100
+    while True:
+        response = list_qonto_direct_debit_subscriptions(mandate_id, page=page, per_page=per_page)
+        items = _qonto_direct_debit_subscription_items(response)
+        subscriptions.extend(
+            item for item in items
+            if str(item.get('direct_debit_mandate_id') or mandate_id) == str(mandate_id)
+        )
+        meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
+        total_pages = meta.get('total_pages') or meta.get('totalPages')
+        next_page = meta.get('next_page') or meta.get('nextPage')
+        if next_page:
+            try: next_number = int(next_page)
+            except (TypeError, ValueError): next_number = page + 1
+        elif total_pages:
+            try: next_number = page + 1 if page < int(total_pages) else 0
+            except (TypeError, ValueError): next_number = 0
+        else:
+            next_number = page + 1 if len(items) >= per_page else 0
+        if not next_number or next_number <= page:
+            break
+        page = next_number
+
+    existing = {
+        str(item.get('qonto_direct_debit_subscription_id') or ''): item
+        for item in _sepa_installments(line)
+        if item.get('qonto_direct_debit_subscription_id')
+    }
+    recovered: List[Dict[str, Any]] = []
+    for subscription in subscriptions:
+        subscription_id = str(subscription.get('id') or '')
+        if not subscription_id:
+            continue
+        amount = subscription.get('amount')
+        if isinstance(amount, dict):
+            amount = amount.get('value') if amount.get('value') is not None else amount.get('amount')
+        first_date = str(
+            subscription.get('initial_collection_date') or subscription.get('start_date')
+            or subscription.get('first_collection_date') or subscription.get('collection_date')
+            or subscription.get('scheduled_at') or subscription.get('due_date') or subscription.get('date') or ''
+        )[:10]
+        end_date = str(
+            subscription.get('final_collection_date') or subscription.get('end_date')
+            or subscription.get('last_collection_date') or ''
+        )[:10]
+        count_raw = (
+            subscription.get('number_of_collections') or subscription.get('installments_count')
+            or subscription.get('occurrences') or subscription.get('number_of_installments')
+        )
+        try:
+            count = max(1, min(60, int(count_raw))) if count_raw else 1
+        except (TypeError, ValueError):
+            count = 1
+        start = _parse_date_safe(first_date)
+        end = _parse_date_safe(end_date)
+        schedule_type = str(subscription.get('schedule_type') or subscription.get('frequency') or '').lower()
+        if start and end and end >= start and schedule_type not in {'one_off', 'one-off'}:
+            count = 1
+            while count < 60 and _add_months(start, count) <= end:
+                count += 1
+        # Some Qonto responses omit both the final date and the occurrence
+        # count for a recurring subscription.  The invoice amount still lets
+        # us restore the complete schedule instead of reducing it to the first
+        # (possibly rejected) collection.
+        recurring_types = {'monthly', 'recurring', 'recurring_monthly'}
+        if count == 1 and schedule_type in recurring_types:
+            installment_amount = _money(amount)
+            invoice_cents = _cents_first_non_null(
+                line.get('qonto_total_amount_cents'), line.get('qontoTotalAmountCents'),
+                money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0),
+            )
+            installment_cents = money_value_to_cents(installment_amount)
+            if invoice_cents > installment_cents > 0:
+                count = max(1, min(60, int(round(invoice_cents / installment_cents))))
+        dates = [_add_months(start, offset).isoformat() for offset in range(count)] if start else [first_date]
+        subscription_status = _map_collection_status(subscription.get('status'))
+        for offset, due_date in enumerate(dates):
+            # A recurring Qonto subscription represents several collections.
+            # Keep one dashboard row per collection instead of collapsing it to
+            # a single "subscription" row.
+            current = dict(existing.get(subscription_id, {})) if count == 1 else {}
+            current.update({
+                'index': len(recovered) + 1,
+                'amount': _money(amount),
+                'due_date': due_date,
+                'date': due_date,
+                # A subscription-level rejection describes the collection
+                # that was attempted, not every future monthly occurrence.
+                'status': subscription_status if offset == 0 or subscription_status not in {'failed', 'returned', 'refunded'} else 'scheduled',
+                'qonto_direct_debit_subscription_id': subscription_id,
+                'qonto_subscription_occurrence': offset + 1,
+                'updated_at': _now_iso(),
+            })
+            recovered.append(current)
+    if not recovered:
+        return 0
+    recovered.sort(key=lambda item: (item.get('due_date') or '', item.get('index') or 0))
+    for index, item in enumerate(recovered, start=1):
+        item['index'] = index
+    line['paymentMode'] = 'sepa_direct_debit'
+    line['directDebitInstallments'] = recovered
+    line['sepa_payment_plan'] = {'installments': recovered}
+    line['qonto_direct_debit_subscription_id'] = recovered[0]['qonto_direct_debit_subscription_id']
+    _sync_sepa_aliases(line)
+    return len(recovered)
+
+
 def _prepare_sepa_payment_plan(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
     existing_by_index = {int(item.get('index') or idx): item for idx, item in enumerate(_sepa_installments(line), start=1)}
     installments = []
@@ -27100,18 +28842,42 @@ def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[
     client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
     if not client_id:
         raise RuntimeError('Client Qonto manquant pour créer le prélèvement SEPA')
-    _prepare_sepa_payment_plan(line, payment_plan)
     first = payment_plan['schedule'][0]
     mandate = _active_qonto_mandate(client_id)
     if not mandate and line.get('qonto_direct_debit_mandate_id'):
-        mandate = {'id': line.get('qonto_direct_debit_mandate_id'), 'status': line.get('qonto_mandate_status') or line.get('mandateStatus') or 'pending_signature', 'sign_url': line.get('qonto_mandate_sign_url') or line.get('sign_url')}
+        # Never trust a locally persisted identifier without checking Qonto.
+        # In particular, an earlier partial failure must not make the UI look
+        # as though a mandate exists when Qonto has no corresponding resource.
+        try:
+            response = get_qonto_direct_debit_mandate(line['qonto_direct_debit_mandate_id'])
+            mandate = response.get('direct_debit_mandate') or response.get('mandate') or response
+            if _map_mandate_status(mandate.get('status')) not in {'pending', 'active', 'signed'}:
+                mandate = None
+        except QontoNotFoundError:
+            mandate = None
     if not mandate:
         ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
         created = create_qonto_direct_debit_mandate({'client_id': client_id, 'payment_info': {'first_payment': {'collection_date': first['date'], 'amount': {'value': f"{_money(first['amount']):.2f}", 'currency': 'EUR'}, 'reference': ref}, 'notify_client': True, 'schedule_type': 'one_off'}, 'send_mandate_signature_email': False})
         mandate = created.get('direct_debit_mandate') or created.get('mandate') or created
+        if not isinstance(mandate, dict) or not str(mandate.get('id') or '').strip():
+            raise RuntimeError(
+                'Qonto n’a pas confirmé la création du mandat SEPA : '
+                'aucun identifiant de mandat n’a été retourné.'
+            )
         app.logger.info('[QONTO] mandat créé client_id=%s mandate_id=%s', client_id, mandate.get('id'))
         _billing_log(line, 'Mandat SEPA Qonto créé', 'success', 'Lien de signature en attente', mandate.get('id') or '')
+    if not isinstance(mandate, dict) or not str(mandate.get('id') or '').strip():
+        raise RuntimeError('Mandat SEPA Qonto introuvable ou invalide')
+    # Only expose the local schedule after Qonto has confirmed that the
+    # mandate exists. Subscriptions themselves remain blocked until it is
+    # signed by ``ensure_qonto_sepa_installments_for_line`` below.
+    _prepare_sepa_payment_plan(line, payment_plan)
     line['qonto_direct_debit_mandate_id'] = mandate.get('id') or line.get('qonto_direct_debit_mandate_id')
+    # Keep the human-readable Qonto proof alongside the technical mandate UUID.
+    # Qonto can expose it under several keys depending on the API version.
+    mandate_rum = _qonto_mandate_rum(mandate)
+    if mandate_rum:
+        line['qonto_mandate_rum'] = mandate_rum
     line['qonto_mandate_status'] = _map_mandate_status(mandate.get('status'))
     line['mandateStatus'] = line['qonto_mandate_status']
     line['qonto_mandate_sign_url'] = mandate.get('sign_url') or line.get('qonto_mandate_sign_url') or ''
@@ -27161,10 +28927,13 @@ def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, A
 def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
     if line.get('paymentMode') != 'sepa_direct_debit':
         return 'Comptant'
-    mandate = line.get('mandateStatus') or 'pending'
+    mandate = _map_mandate_status(
+        line.get('mandateStatus') or line.get('qonto_mandate_status') or 'pending'
+    )
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
     statuses = [i.get('status') for i in installments]
-    if mandate == 'pending': return 'Mandat à signer'
+    if not line.get('qonto_direct_debit_mandate_id') or mandate not in {'active', 'signed'}:
+        return 'Mandat à signer'
     if any(s in {'failed','returned','refunded'} for s in statuses): return 'Rejeté'
     if statuses and all(s == 'completed' for s in statuses): return 'Payé'
     if any(s == 'completed' for s in statuses): return 'Paiement partiel'
@@ -27243,7 +29012,14 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
         start = _parse_date_safe(_session_get(sess, 'date_start', ''))
         end = _parse_date_safe(_session_get(sess, 'date_end', '')) or start
         if not start or start < BILLING_START_DATE:
-            continue
+            # VAE dossiers can remain billable well after their administrative
+            # session started.  Do not hide their personal-financing line from
+            # Qonto solely because that start date predates the general billing
+            # rollout; otherwise the trainee page has a balance to invoice but
+            # no invoice action.
+            training_name = (_session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or '').upper()
+            if not start or 'VAE' not in training_name:
+                continue
         session_id = str(sess.get('id') or '')
         training = (_session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or '').strip()
         if not session_id or not training:
@@ -27292,6 +29068,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'qonto_mandate_status': persisted.get('qonto_mandate_status') or '',
                     'qonto_mandate_sign_url': persisted.get('qonto_mandate_sign_url') or '',
                     'qonto_mandate_signed_at': persisted.get('qonto_mandate_signed_at') or '',
+                    'qonto_rejected_collection_ids': persisted.get('qonto_rejected_collection_ids') if isinstance(persisted.get('qonto_rejected_collection_ids'), list) else [],
                     'sepa_payment_plan': persisted.get('sepa_payment_plan') if isinstance(persisted.get('sepa_payment_plan'), dict) else {},
                     'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
@@ -27304,6 +29081,50 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'description': f"Formation {training} - {trainee.get('first_name','')} {trainee.get('last_name','')} - {financing.get('label') or financing['type']}",
                     'vatRate': _money(trainee.get('qonto_vat_rate') if trainee.get('qonto_vat_rate') not in (None, '') else 0),
                 }
+                # A cash payment suggests a specific case by default, but an admin
+                # can explicitly dismiss that suggestion from the billing page.
+                cash_specific = bool(trainee.get('cash_payment_enabled')) and not bool(persisted.get('specificCaseCashDismissed'))
+                line['specificCase'] = cash_specific or bool(persisted.get('specificCase'))
+                line['specificCaseAutomatic'] = cash_specific
+                line['specificCaseCashDismissed'] = bool(persisted.get('specificCaseCashDismissed'))
+                line['specificCaseReason'] = (
+                    'Paiement en espèces indiqué dans la fiche stagiaire.'
+                    if cash_specific else str(persisted.get('specificCaseReason') or '').strip()
+                )
+                if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
+                    qonto_source = dict(persisted)
+                    qonto_source.update({
+                        'qontoInvoiceId': line.get('qontoInvoiceId'),
+                        'qontoDraftId': line.get('qontoDraftId'),
+                        'qontoInvoiceNumber': line.get('qontoInvoiceNumber'),
+                        'invoiceStatus': line.get('invoiceStatus'),
+                        'paymentStatus': line.get('paymentStatus'),
+                        'amountTTC': line.get('amountTTC'),
+                        'amount': line.get('amount'),
+                        'updatedAt': line.get('updatedAt'),
+                    })
+                    if qonto_source.get('qonto_amount_paid_cents') is not None or qonto_source.get('qontoAmountPaidCents') is not None:
+                        raw_paid_cents = _cents_first_non_null(
+                            qonto_source.get('qonto_amount_paid_cents'),
+                            qonto_source.get('qontoAmountPaidCents'),
+                        )
+                    else:
+                        raw_paid_cents = money_value_to_cents(qonto_source.get('qontoInvoiceAmountPaid') or 0)
+                    qonto_source['qonto_amount_paid_cents'] = _reconciled_qonto_paid_cents(qonto_source, raw_paid_cents)
+                    normalize_qonto_invoice_storage_fields(qonto_source)
+                    line['qonto_invoice'] = serialize_qonto_invoice_for_frontend(qonto_source)
+                    line['qonto_total_amount_cents'] = qonto_source['qonto_total_amount_cents']
+                    line['qonto_amount_paid_cents'] = qonto_source['qonto_amount_paid_cents']
+                    line['qonto_remaining_amount_cents'] = qonto_source['qonto_remaining_amount_cents']
+                    line['total_amount_cents'] = qonto_source['qonto_total_amount_cents']
+                    line['paid_amount_cents'] = qonto_source['qonto_amount_paid_cents']
+                    line['remaining_amount_cents'] = qonto_source['qonto_remaining_amount_cents']
+                    line['payment_percentage'] = qonto_source['payment_percentage']
+                    line['payment_status'] = qonto_source['qonto_payment_status']
+                    line['qonto_payment_status'] = qonto_source['qonto_payment_status']
+                    line['paymentStatus'] = qonto_source['qonto_payment_status']
+                    line['qonto_status'] = qonto_source.get('qonto_status') or qonto_source.get('qontoStatus') or line.get('invoiceStatus') or ''
+                    line['qontoLastSyncedAt'] = qonto_source.get('qontoLastSyncedAt') or qonto_source.get('updatedAt') or ''
                 out.append(line)
     return out
 
@@ -27319,7 +29140,9 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote')}
+    if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
+        normalize_qonto_invoice_storage_fields(line)
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -27329,17 +29152,192 @@ def _find_billing_line(data: Dict[str, Any], line_id: str) -> Optional[Dict[str,
     return next((l for l in _billing_lines(data) if l.get('id') == line_id), None)
 
 
+def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """Centralized trainee finance rollup.
+
+    Qonto client invoices are the source of truth for Qonto-collected amounts.
+    Manual payments are added only when they are not linked to a Qonto invoice,
+    which prevents double counting local legacy rows mirroring the same invoice.
+    """
+    trainee_id = str(trainee.get('id') or '')
+    lines = [l for l in (lines or []) if str(l.get('traineeId') or l.get('studentId') or '') == trainee_id]
+    personal_cents = money_value_to_cents(trainee.get('personal_amount') or 0)
+    other_cents = money_value_to_cents(trainee.get('other_financing_amount') or trainee.get('other_amount') or 0)
+    cpf_cents = money_value_to_cents(trainee.get('cpf_amount') or 0)
+    # CPF invoices and collections are managed in the external CPF software, not
+    # in Qonto.  The financial dashboard must therefore use only the amounts
+    # that we can invoice and collect here as its billing/payment objective.
+    # CPF is still exposed as externally invoiced in its financer breakdown.
+    collectable_total_cents = personal_cents + other_cents
+    invoiced_total_cents = 0
+    qonto_paid_total_cents = 0
+    manual_paid_total_cents = 0
+    cash_paid_total_cents = 0
+    qonto_payment_entries: List[Dict[str, Any]] = []
+    linked_invoice_ids = {str(l.get('qontoInvoiceId') or l.get('qontoDraftId') or '') for l in lines if l.get('qontoInvoiceId') or l.get('qontoDraftId')}
+    by_financer: Dict[str, Dict[str, Any]] = {}
+    for key, planned in (('CPF', cpf_cents), ('PERSONNEL', personal_cents), ('AUTRE', other_cents)):
+        externally_managed = key == 'CPF'
+        by_financer[key] = {
+            'planned_amount_cents': planned,
+            # A CPF amount represents an invoice generated in the dedicated
+            # external tool. It must not leave the dashboard's billing rate
+            # stuck below 100%.
+            'invoiced_amount_cents': planned if externally_managed else 0,
+            'paid_amount_cents': 0,
+            'remaining_amount_cents': 0 if externally_managed else planned,
+            'externally_managed': externally_managed,
+        }
+
+    # Cash installments are stored directly on the trainee rather than on a
+    # billing line.  Include them in the same centralized rollup returned to
+    # the trainee finance widget, otherwise its server summary overwrites the
+    # correct client-side cash total with zero.
+    if bool(trainee.get('cash_payment_enabled')):
+        cash_target_cents = money_value_to_cents(trainee.get('cash_payment_amount') or 0)
+        installment_cents = sum(
+            money_value_to_cents(item.get('amount') or 0)
+            for item in (trainee.get('cash_payment_installments') or [])
+            if isinstance(item, dict)
+        )
+        if bool(trainee.get('cash_payment_settled')) and cash_target_cents > 0:
+            cash_paid_total_cents = cash_target_cents
+        elif cash_target_cents > 0:
+            cash_paid_total_cents = min(installment_cents, cash_target_cents)
+        else:
+            cash_paid_total_cents = installment_cents
+        manual_paid_total_cents += cash_paid_total_cents
+        by_financer['PERSONNEL']['paid_amount_cents'] += cash_paid_total_cents
+
+    for line in lines:
+        invoice_status = str(line.get('invoiceStatus') or line.get('qontoStatus') or '').lower()
+        if invoice_status in {'canceled', 'cancelled', 'deleted'}:
+            continue
+        financing_text = str(line.get('financingType') or line.get('financeurName') or '').upper()
+        financer = 'CPF' if is_cpf_billing_context(line) else ('AUTRE' if 'AUTRE' in financing_text else 'PERSONNEL')
+        by_financer.setdefault(financer, {'planned_amount_cents': 0, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': 0, 'externally_managed': financer == 'CPF'})
+        # CPF billing/payment tracking belongs to the external CPF software.
+        # Do not include a CPF line in Qonto totals, even if legacy data has an
+        # invoice identifier attached to it.
+        if financer == 'CPF':
+            continue
+        invoice_id = str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '').strip()
+        if invoice_id:
+            frontend_invoice = line.get('qonto_invoice') if isinstance(line.get('qonto_invoice'), dict) else serialize_qonto_invoice_for_frontend(line)
+            total_cents = int(frontend_invoice['total_amount_cents'])
+            paid_cents = int(frontend_invoice['paid_amount_cents'])
+            remaining_cents = int(frontend_invoice['remaining_amount_cents'])
+            qonto_status = str(frontend_invoice.get('qonto_status') or '').lower()
+            status = str(frontend_invoice['payment_status'])
+            invoiced_total_cents += total_cents
+            qonto_paid_total_cents += paid_cents
+            by_financer[financer]['invoiced_amount_cents'] += total_cents
+            by_financer[financer]['paid_amount_cents'] += paid_cents
+            if paid_cents > 0:
+                qonto_payment_entries.append({
+                    'invoice_id': invoice_id,
+                    'invoice_number': frontend_invoice.get('invoice_number') or invoice_id,
+                    'source': 'qonto',
+                    'total_amount_cents': total_cents,
+                    'paid_amount_cents': paid_cents,
+                    'remaining_amount_cents': remaining_cents,
+                    'payment_status': status,
+                    'qonto_status': qonto_status,
+                    'last_synced_at': frontend_invoice.get('last_synced_at') or '',
+                })
+            continue
+        line_total_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+        if invoice_status in {'external_generated', 'external', 'generated_externally'}:
+            # A line explicitly marked as generated in another accounting tool
+            # is just as invoiced as a Qonto line, even though it has no Qonto
+            # invoice identifier.
+            invoiced_total_cents += line_total_cents
+            by_financer[financer]['invoiced_amount_cents'] += line_total_cents
+
+        # Direct-debit collections can be reported before (or independently
+        # from) a client-invoice payment amount.  The schedule is then the only
+        # source of truth available for the money already collected.
+        installments = line.get('directDebitInstallments')
+        if isinstance(installments, list):
+            paid_statuses = {'completed', 'paid', 'succeeded', 'success'}
+            installment_paid_cents = sum(
+                money_value_to_cents(item.get('amount') or 0)
+                for item in installments
+                if isinstance(item, dict) and str(item.get('status') or '').lower() in paid_statuses
+            )
+            if installment_paid_cents > 0:
+                qonto_paid_total_cents += installment_paid_cents
+                by_financer[financer]['paid_amount_cents'] += installment_paid_cents
+                qonto_payment_entries.append({
+                    'invoice_id': '',
+                    'invoice_number': line.get('qontoInvoiceNumber') or '',
+                    'source': 'qonto_direct_debit',
+                    'total_amount_cents': line_total_cents,
+                    'paid_amount_cents': installment_paid_cents,
+                    'remaining_amount_cents': max(line_total_cents - installment_paid_cents, 0),
+                    'payment_status': 'paid' if line_total_cents > 0 and installment_paid_cents >= line_total_cents else 'partially_paid',
+                    'qonto_status': str(line.get('qontoPaymentGlobalStatus') or '').lower(),
+                    'last_synced_at': line.get('qontoLastSyncedAt') or line.get('updatedAt') or '',
+                })
+                continue
+        linked_manual_invoice = str(line.get('manualPaymentInvoiceId') or line.get('qontoInvoiceId') or '').strip()
+        if linked_manual_invoice and linked_manual_invoice in linked_invoice_ids:
+            continue
+        manual_cents = money_value_to_cents(line.get('amountPaid') or line.get('amount_paid') or 0)
+        if manual_cents > 0:
+            manual_paid_total_cents += manual_cents
+            by_financer[financer]['paid_amount_cents'] += manual_cents
+
+    paid_total_cents = qonto_paid_total_cents + manual_paid_total_cents
+    for item in by_financer.values():
+        if item.get('externally_managed'):
+            item['remaining_amount_cents'] = 0
+            item['payment_status'] = 'externally_managed'
+        else:
+            item['remaining_amount_cents'] = max(item['planned_amount_cents'] - item['paid_amount_cents'], 0)
+            item['payment_status'] = 'not_planned' if item['planned_amount_cents'] <= 0 else ('paid' if item['paid_amount_cents'] >= item['planned_amount_cents'] else ('partially_paid' if item['paid_amount_cents'] > 0 else 'unpaid'))
+    pct = lambda value, total: 0 if total <= 0 else float(min((Decimal(value) / Decimal(total) * Decimal('100')), Decimal('100')).quantize(Decimal('0.01')))
+    summary = {
+        'planned_total_cents': collectable_total_cents,
+        'funded_total_cents': collectable_total_cents + cpf_cents,
+        'externally_invoiced_total_cents': cpf_cents,
+        'invoiced_total_cents': invoiced_total_cents,
+        'qonto_paid_total_cents': qonto_paid_total_cents,
+        'manual_paid_total_cents': manual_paid_total_cents,
+        'cash_paid_total_cents': cash_paid_total_cents,
+        'paid_total_cents': paid_total_cents,
+        'remaining_total_cents': max(collectable_total_cents - paid_total_cents, 0),
+        'invoicing_percentage': pct(invoiced_total_cents, collectable_total_cents),
+        'payment_percentage': pct(paid_total_cents, collectable_total_cents),
+        'qonto_payment_entries': qonto_payment_entries,
+        'payment_status': 'paid' if collectable_total_cents > 0 and paid_total_cents >= collectable_total_cents else ('partially_paid' if paid_total_cents > 0 else 'unpaid'),
+        'by_financer': by_financer,
+    }
+    summary.update({
+        'planned_amount_cents': summary['planned_total_cents'],
+        'invoiced_amount_cents': summary['invoiced_total_cents'],
+        'paid_amount_cents': summary['paid_total_cents'],
+        'remaining_amount_cents': summary['remaining_total_cents'],
+    })
+    app.logger.info(
+        'FINANCIAL_SUMMARY_FINAL trainee_id=%s planned_total_cents=%s qonto_paid_total_cents=%s manual_paid_total_cents=%s paid_total_cents=%s remaining_total_cents=%s payment_percentage=%s',
+        trainee_id, summary['planned_total_cents'], summary['qonto_paid_total_cents'], summary['manual_paid_total_cents'], summary['paid_total_cents'], summary['remaining_total_cents'], summary['payment_percentage']
+    )
+    return summary
+
+
 def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
     for key in (
         'qontoInvoiceId', 'qonto_invoice_id', 'qontoStatus', 'qonto_status', 'invoiceNumber', 'invoice_number',
         'qontoInvoiceNumber', 'invoiceDate', 'invoice_date', 'invoicePdfUrl', 'pdf_url', 'qontoPdfUrl',
-        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt', 'externalInvoiceMarkedAt', 'externalInvoiceNote'
+        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt', 'externalInvoiceMarkedAt', 'externalInvoiceNote', 'syncWarning', 'qontoPaymentGlobalStatus', 'paymentMode', 'qonto_direct_debit_subscription_id', 'qonto_mandate_sign_url', 'qonto_mandate_signed_at'
     ):
         line[key] = '' if key in line else line.get(key, '')
     if (line.get('invoiceStatus') or '') in {'draft', 'generated', 'finalized', 'sent', 'paid', 'cancelled', 'deleted', 'control', 'external_generated', 'external', 'generated_externally'}:
         line['invoiceStatus'] = 'not_invoiced'
-    if (line.get('paymentStatus') or '') in {'unpaid', 'unknown', 'paid', 'control'}:
+    if (line.get('paymentStatus') or '') in {'unpaid', 'unknown', 'paid', 'control', 'partial', 'failed'}:
         line['paymentStatus'] = 'not_applicable'
+    line['directDebitInstallments'] = []
     if (line.get('sentAt') and _normalize_billing_invoice_status(line.get('invoiceStatus')) == 'not_invoiced'):
         line['sentAt'] = ''
     line['generationInProgress'] = False
@@ -27353,31 +29351,139 @@ def _qonto_invoice_is_missing_error(exc: Exception) -> bool:
     return 'qonto http 404' in msg or 'not found' in msg or 'introuvable' in msg or 'deleted' in msg or 'supprim' in msg
 
 
+def _qonto_invoice_lookup_numbers_for_line(line: Dict[str, Any]) -> List[str]:
+    """Return likely Qonto invoice numbers to recover a line after a stale id."""
+    raw = str(line.get('qontoInvoiceNumber') or '').strip()
+    if not raw:
+        return []
+    candidates = [raw]
+    proforma_suffix = '-PROFORMA'
+    if raw.upper().endswith(proforma_suffix):
+        candidates.append(raw[:-len(proforma_suffix)])
+    return list(dict.fromkeys(candidates))
+
+
+def _recover_billing_line_invoice_by_number(line: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    for number in _qonto_invoice_lookup_numbers_for_line(line):
+        try:
+            invoice = find_qonto_invoice_by_number(number)
+        except Exception as exc:
+            app.logger.info("[QONTO] invoice recovery lookup failed line_id=%s number=%s error=%s", line.get('id'), number, exc)
+            continue
+        if invoice:
+            return invoice
+    return None
+
+
+
+def _qonto_invoice_number(invoice: Dict[str, Any]) -> str:
+    if not isinstance(invoice, dict):
+        return ''
+    for key in ('number', 'invoice_number', 'invoiceNumber', 'sequential_id', 'sequentialId', 'reference'):
+        value = invoice.get(key)
+        if value not in (None, ''):
+            return str(value)
+    return ''
+
+
+def _refresh_billing_line_invoice_from_qonto(line: Dict[str, Any], fallback_invoice: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    invoice = fallback_invoice if isinstance(fallback_invoice, dict) else {}
+    invoice_id = str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or invoice.get('id') or '').strip()
+    if invoice_id and (not _qonto_invoice_number(invoice) or not invoice.get('status')):
+        try:
+            remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
+            if isinstance(remote, dict):
+                invoice = {**invoice, **remote}
+        except Exception as exc:
+            line['syncWarning'] = f"Facture créée dans Qonto, mais synchronisation du numéro temporairement indisponible : {_sanitize_qonto_error(str(exc))}"
+            _billing_log(line, 'Synchronisation numéro facture Qonto indisponible', 'error', line['syncWarning'], invoice_id)
+    number = _qonto_invoice_number(invoice)
+    if number:
+        line['qontoInvoiceNumber'] = number
+    if invoice.get('id'):
+        line['qontoInvoiceId'] = invoice.get('id')
+        if _normalize_billing_invoice_status(invoice.get('status')) == 'draft' or not line.get('qontoDraftId'):
+            line['qontoDraftId'] = invoice.get('id')
+    if invoice.get('public_url') or invoice.get('url'):
+        line['invoicePdfUrl'] = invoice.get('public_url') or invoice.get('url') or ''
+        line['qontoPdfUrl'] = line['invoicePdfUrl']
+    status = _normalize_billing_invoice_status(invoice.get('status') or line.get('invoiceStatus'))
+    if status and status != 'not_invoiced':
+        line['invoiceStatus'] = status
+    if invoice.get('paid_at') or status == 'paid':
+        line['paymentStatus'] = 'paid'
+        line['paidAt'] = line.get('paidAt') or invoice.get('paid_at') or _now_iso()
+    return invoice
+
+def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: Dict[str, Any]) -> None:
+    normalized = normalize_qonto_invoice_payment_data(invoice, line)
+    app.logger.info(
+        "Qonto invoice sync: invoice_id=%s number=%s status=%s total_amount=%.2f amount_paid=%.2f",
+        invoice.get('id') or line.get('qontoInvoiceId') or line.get('qontoDraftId') or '',
+        _qonto_invoice_number(invoice) or line.get('qontoInvoiceNumber') or '',
+        normalized.get('qonto_status') or '',
+        cents_to_money(normalized.get('qonto_total_amount_cents') or 0),
+        cents_to_money(normalized.get('qonto_amount_paid_cents') or 0),
+    )
+    remote_status = _normalize_billing_invoice_status(normalized['qonto_status'] or line.get('invoiceStatus') or 'draft')
+    amount_paid_cents = normalized['qonto_amount_paid_cents']
+    line_amount_cents = normalized['qonto_total_amount_cents']
+    line['qontoInvoiceAmountPaid'] = cents_to_money(amount_paid_cents)
+    line['qonto_total_amount_cents'] = line_amount_cents
+    line['qonto_amount_paid_cents'] = amount_paid_cents
+    line['qonto_remaining_amount_cents'] = normalized['qonto_remaining_amount_cents']
+    line['qonto_payment_status'] = normalized['qonto_payment_status']
+    line['payment_status'] = normalized['qonto_payment_status']
+    line['qonto_status'] = normalized['qonto_status']
+    line['qontoPaidAt'] = normalized.get('qonto_paid_at') or ''
+    line['qontoLastSyncedAt'] = _now_iso()
+    line['qontoSyncError'] = None
+    if invoice.get('total_amount'):
+        line['amountTTC'] = cents_to_money(line_amount_cents)
+        line['amount'] = line.get('amount') or line['amountTTC']
+    if normalized['qonto_payment_status'] == 'paid':
+        line['paymentStatus'] = 'paid'
+        line['invoiceStatus'] = 'paid'
+        line['paidAt'] = line.get('paidAt') or invoice.get('paid_at') or _now_iso()
+    elif normalized['qonto_payment_status'] == 'partially_paid':
+        line['paymentStatus'] = 'partially_paid'
+        line['invoiceStatus'] = remote_status
+    elif normalized['qonto_payment_status'] in {'draft', 'canceled'}:
+        line['paymentStatus'] = normalized['qonto_payment_status']
+        line['invoiceStatus'] = remote_status
+    else:
+        line['paymentStatus'] = 'unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control'
+        line['invoiceStatus'] = remote_status
+
+
 def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, str]:
     invoice_id = (line.get('qontoInvoiceId') or line.get('qontoDraftId') or line.get('qonto_invoice_id') or '').strip()
     if not invoice_id:
         return False, 'Aucune facture Qonto liée'
     try:
         remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
-        remote_status = _normalize_billing_invoice_status(remote.get('status') or line.get('invoiceStatus') or 'draft')
-        if remote.get('paid_at') or remote_status == 'paid':
-            remote_status = 'paid'
-        line['paymentStatus'] = 'paid' if remote_status == 'paid' else ('unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control')
-        line['invoiceStatus'] = remote_status
-        line['qontoInvoiceNumber'] = remote.get('number') or remote.get('invoice_number') or line.get('qontoInvoiceNumber') or ''
+        _apply_qonto_invoice_payment_to_billing_line(line, remote)
+        line['qontoInvoiceNumber'] = _qonto_invoice_number(remote) or line.get('qontoInvoiceNumber') or ''
         line['invoicePdfUrl'] = remote.get('public_url') or remote.get('url') or line.get('invoicePdfUrl') or ''
         line['qontoPdfUrl'] = line.get('invoicePdfUrl') or ''
-        if remote_status == 'paid' and not line.get('paidAt'):
-            line['paidAt'] = remote.get('paid_at') or _now_iso()
         _billing_log(line, 'Facture Qonto synchronisée', 'success', line['paymentStatus'], invoice_id)
         _save_billing_line(data, line)
         return False, 'Synchronisée'
     except Exception as exc:
         if _qonto_invoice_is_missing_error(exc):
-            _billing_log(line, 'Facture Qonto supprimée ou introuvable, à contrôler', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
-            print(f"Facture Qonto supprimée ou introuvable, à contrôler: {invoice_id}")
-            for key in ('qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','invoicePdfUrl','qontoPdfUrl','invoiceGeneratedAt','finalizedAt','sentAt','paidAt'):
-                line[key] = ''
+            recovered = _recover_billing_line_invoice_by_number(line)
+            if recovered:
+                recovered_id = str(recovered.get('id') or '').strip()
+                _refresh_billing_line_invoice_from_qonto(line, recovered)
+                _apply_qonto_invoice_payment_to_billing_line(line, recovered)
+                line['syncWarning'] = ''
+                line['generationInProgress'] = False
+                line['updatedAt'] = _now_iso()
+                _billing_log(line, 'Facture Qonto récupérée par numéro', 'success', line.get('qontoInvoiceNumber') or '', recovered_id)
+                _save_billing_line(data, line)
+                return False, 'Facture Qonto retrouvée par numéro et synchronisée'
+            line['qontoSyncError'] = 'Facture Qonto introuvable ou inaccessible côté Qonto'
+            _billing_log(line, 'Facture Qonto introuvable, données locales conservées', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
             line['invoiceStatus'] = 'control'
             line['paymentStatus'] = 'control'
             line['syncWarning'] = 'Facture Qonto introuvable ou supprimée côté Qonto'
@@ -27386,6 +29492,12 @@ def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) ->
             _save_billing_line(data, line)
             return True, 'Facture Qonto introuvable ou supprimée côté Qonto : à contrôler'
         _billing_log(line, 'Erreur API synchronisation facture', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
+        line['qontoSyncError'] = _sanitize_qonto_error(str(exc))
+        # A line already flagged for manual verification must never be silently
+        # downgraded to unpaid when the remote verification cannot be completed.
+        if line.get('invoiceStatus') == 'control' or line.get('paymentStatus') == 'control':
+            line['invoiceStatus'] = 'control'
+            line['paymentStatus'] = 'control'
         _save_billing_line(data, line)
         raise
 
@@ -27405,20 +29517,9 @@ def admin_direct_debits():
 @app.get('/api/admin/billing-lines')
 @admin_login_required
 def api_admin_billing_lines():
+    # Read-only local state: webhook-driven updates are already persisted in data.
     data = load_data()
-    reset_count = 0
-    sync_warning = ''
-    if _qonto_is_configured():
-        for line in _billing_lines(data):
-            if line.get('qontoInvoiceId'):
-                try:
-                    did_reset, _ = _sync_billing_line_with_qonto(data, line)
-                    reset_count += 1 if did_reset else 0
-                except Exception:
-                    sync_warning = 'Synchronisation Qonto temporairement indisponible : les factures locales ont été conservées.'
-        if reset_count or sync_warning:
-            save_data(data)
-    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': reset_count, 'sync_warning': sync_warning})
+    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': 0, 'sync_warning': ''})
 
 
 @app.post('/api/admin/invoicing/sync-qonto')
@@ -27454,6 +29555,31 @@ def api_admin_billing_history(line_id: str):
     return jsonify({'ok': True, 'logs': line.get('logs') or []})
 
 
+@app.post('/api/admin/billing-lines/<line_id>/specific-case')
+@admin_login_required
+@admin_write_required
+def api_admin_billing_specific_case(line_id: str):
+    data = load_data()
+    line = _find_billing_line(data, line_id)
+    if not line:
+        return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    payload = request.get_json(silent=True) or {}
+    enabled = bool(payload.get('enabled'))
+    reason = str(payload.get('reason') or '').strip()
+    if enabled and not reason:
+        return jsonify({'ok': False, 'error': 'Indiquez pourquoi cette ligne est un cas spécifique.'}), 400
+    line['specificCase'] = enabled
+    line['specificCaseReason'] = reason if enabled else ''
+    # Remember an explicit opt-out so rebuilding billing lines does not
+    # immediately re-enable the cash-payment suggestion.
+    line['specificCaseCashDismissed'] = bool(line.get('specificCaseAutomatic') and not enabled)
+    line['specificCaseAutomatic'] = False
+    _billing_log(line, 'Cas spécifique activé' if enabled else 'Cas spécifique désactivé', 'success', reason)
+    _save_billing_line(data, line)
+    save_data(data)
+    return jsonify({'ok': True, 'line': _find_billing_line(data, line_id)})
+
+
 def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any], payment_plan_payload: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
     with _billing_generation_locks_guard:
         lock = _billing_generation_locks.setdefault(line['id'], threading.Lock())
@@ -27461,6 +29587,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
         return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
+        if current.get('specificCase'):
+            return False, {'error': 'Génération désactivée pour ce cas spécifique.', 'message': 'Génération désactivée pour ce cas spécifique.', 'line': current, 'ignored': True}
         if is_cpf_billing_context(current):
             return False, {'error': 'La facturation CPF est gérée dans un logiciel externe.', 'message': 'La facturation CPF est gérée dans un logiciel externe.', 'line': current}
         if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}:
@@ -27506,7 +29634,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
             if is_cpf:
                 current['clientName'] = CPF_QONTO_CLIENT_NAME
-            current.update({'qontoClientId': q_client_id, 'qontoCustomerId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoDraftId': qi.get('id'), 'qontoInvoiceNumber': qi.get('number') or qi.get('invoice_number') or '', 'invoiceStatus': 'draft' if qi.get('id') else 'not_invoiced', 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'createdAt': current.get('createdAt') or _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
+            current.update({'qontoClientId': q_client_id, 'qontoCustomerId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoDraftId': qi.get('id'), 'qontoInvoiceNumber': _qonto_invoice_number(qi), 'invoiceStatus': _normalize_billing_invoice_status(qi.get('status') or ('draft' if qi.get('id') else 'not_invoiced')), 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'createdAt': current.get('createdAt') or _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
+            _refresh_billing_line_invoice_from_qonto(current, qi)
             payment_plan = _normalize_payment_plan(payment_plan_payload or {}, amount_ttc)
             _setup_qonto_direct_debit_for_line(current, payment_plan)
             current['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(current)
@@ -27560,17 +29689,17 @@ def api_billing_session(session_id: str):
 def api_billing_trainee_session(trainee_id: str, session_id: str):
     data = load_data()
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
-    if _qonto_is_configured():
-        changed = False
-        for line in lines:
-            if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
-                try:
-                    reset, _ = _sync_billing_line_with_qonto(data, line); changed = changed or reset
-                except Exception:
-                    line['syncWarning'] = 'Synchronisation Qonto impossible pour le moment'
-        if changed:
-            save_data(data)
-    return jsonify({'ok': True, 'lines': _billing_lines_for_trainee_session(data, trainee_id, session_id)})
+    trainee = None
+    for sess in data.get('sessions', []):
+        if str(sess.get('id')) != str(session_id):
+            continue
+        for t in _session_trainees_list(sess):
+            if str(t.get('id')) == str(trainee_id):
+                trainee = t
+                break
+    fresh_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    summary = calculate_trainee_financial_summary(trainee or {'id': trainee_id}, fresh_lines)
+    return jsonify({'ok': True, 'lines': fresh_lines, 'financial_summary': summary})
 
 
 def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -27686,7 +29815,7 @@ def api_billing_finalize():
     try:
         qi = _qonto_invoice_payload(finalize_qonto_invoice(line['qontoInvoiceId']))
         line['invoiceStatus'] = _normalize_billing_invoice_status(qi.get('status') or 'finalized')
-        line['finalizedAt'] = _now_iso(); line['qontoInvoiceNumber'] = qi.get('number') or qi.get('invoice_number') or line.get('qontoInvoiceNumber') or ''
+        line['finalizedAt'] = _now_iso(); _refresh_billing_line_invoice_from_qonto(line, qi)
         _billing_log(line, 'Facture finalisée', 'success', '', line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': True, 'line': _find_billing_line(data, line['id'])})
     except Exception as exc:
@@ -27740,6 +29869,31 @@ def api_billing_cancel_or_reset():
 
 
 def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
+    """Refresh the mandate before collections, then create missing subscriptions.
+
+    Mandate signature does not change the invoice.  Refreshing it here makes the
+    manual “Synchroniser Qonto” action a reliable recovery path when a SEPA
+    webhook was not delivered.
+    """
+    client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
+    mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '')
+    if client_id and mandate_id:
+        mandates = list_qonto_direct_debit_mandates(str(client_id))
+        items = mandates.get('direct_debit_mandates') or mandates.get('mandates') or mandates.get('items') or []
+        mandate = next((item for item in items if str(item.get('id') or '') == mandate_id), None)
+        if isinstance(mandate, dict):
+            status = _map_mandate_status(mandate.get('status'))
+            line['qonto_mandate_status'] = status
+            line['mandateStatus'] = status
+            if status in {'active', 'signed'}:
+                line['qonto_mandate_signed_at'] = (
+                    mandate.get('accepted_at') or mandate.get('signed_at') or mandate.get('approved_at')
+                    or line.get('qonto_mandate_signed_at') or _now_iso()
+                )
+                result = ensure_qonto_sepa_installments_for_line(line)
+                if result.get('created'):
+                    _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)
+            _sync_sepa_aliases(line)
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
     for item in installments:
         sid = item.get('qonto_direct_debit_subscription_id')
@@ -27748,15 +29902,39 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         collections = _qonto_collection_items(list_qonto_direct_debit_collections(sid))
         if not collections:
             continue
-        collection = collections[-1]
+        def collection_date(collection: Dict[str, Any]) -> str:
+            return str(
+                collection.get('collection_date') or collection.get('scheduled_at')
+                or collection.get('due_date') or collection.get('date')
+                or collection.get('completed_at') or collection.get('paid_at') or ''
+            )[:10]
+
+        collections.sort(key=lambda collection: (collection_date(collection), str(collection.get('id') or '')))
+        due_date = str(item.get('due_date') or item.get('date') or '')[:10]
+        # Recurring subscriptions share an id across all monthly rows. Match
+        # the collection to its planned date so one paid/rejected collection
+        # cannot incorrectly change every installment in the schedule.
+        collection = next((candidate for candidate in collections if collection_date(candidate) == due_date), None)
+        if collection is None:
+            same_subscription_rows = sum(
+                1 for candidate in installments
+                if candidate.get('qonto_direct_debit_subscription_id') == sid
+            )
+            if same_subscription_rows > 1:
+                continue
+            collection = collections[-1]
         item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
         item['status'] = _map_collection_status(collection.get('status'))
+        if collection_date(collection):
+            item['date'] = collection_date(collection)
+            item['due_date'] = collection_date(collection)
         if item['status'] == 'completed':
             item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
         if collection.get('status_reason'):
             item['failureReason'] = collection.get('status_reason')
             item['status_reason'] = collection.get('status_reason')
         item['updated_at'] = _now_iso()
+    _sync_sepa_aliases(line)
     line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
     if line['qontoPaymentGlobalStatus'] == 'Payé':
         line['paymentStatus'] = 'paid'
@@ -27775,9 +29953,27 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
     updated = False
     for line in _billing_lines(data):
         installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
-        for inst in installments:
-            if subscription_id and str(inst.get('qonto_direct_debit_subscription_id') or '') != subscription_id:
-                continue
+        matching = [
+            inst for inst in installments
+            if not subscription_id or str(inst.get('qonto_direct_debit_subscription_id') or '') == subscription_id
+        ]
+        event_date = str(
+            item.get('collection_date') or item.get('scheduled_at') or item.get('due_date')
+            or item.get('date') or item.get('completed_at') or item.get('paid_at') or ''
+        )[:10]
+        if len(matching) > 1:
+            dated = [
+                inst for inst in matching
+                if str(inst.get('due_date') or inst.get('date') or '')[:10] == event_date
+            ]
+            # Never propagate one recurring collection's rejection to every
+            # future installment when Qonto has not supplied a usable date.
+            matching = dated or [
+                inst for inst in matching
+                if str(inst.get('qonto_direct_debit_collection_id') or '') == collection_id
+            ]
+        for inst in matching:
+            previous_status = inst.get('status')
             inst['qonto_direct_debit_collection_id'] = collection_id or inst.get('qonto_direct_debit_collection_id') or ''
             inst['status'] = _map_collection_status(item.get('status') or item.get('event'))
             if inst['status'] == 'completed':
@@ -27792,6 +29988,8 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
             if line['qontoPaymentGlobalStatus'] == 'Payé': line['paymentStatus'] = 'paid'
             elif line['qontoPaymentGlobalStatus'] == 'Paiement partiel': line['paymentStatus'] = 'partial'
             elif line['qontoPaymentGlobalStatus'] == 'Rejeté': line['paymentStatus'] = 'failed'
+            if inst['status'] in {'failed', 'returned', 'refunded'} and previous_status not in {'failed', 'returned', 'refunded'}:
+                _notify_rejected_qonto_debit(data, line, inst, collection_id)
             _save_billing_line(data, line)
             updated = True
     return updated
@@ -27851,6 +30049,52 @@ def api_billing_resend_mandate():
     _save_billing_line(data, line); save_data(data)
     return jsonify({'ok': bool(sent), 'message': 'Lien de mandat renvoyé' if sent else 'Email non envoyé'}), (200 if sent else 400)
 
+
+@app.post('/api/billing/create-mandate')
+@admin_login_required
+@admin_write_required
+def api_billing_create_mandate():
+    """Create (or retry) a SEPA mandate without creating another invoice."""
+    data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
+    if not line:
+        return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    try:
+        _ensure_qonto_oauth_ready()
+        if not (line.get('qontoClientId') or line.get('qontoCustomerId')):
+            client_payload = build_qonto_client_payload(
+                line, line, {'id': line.get('sessionId')},
+                line.get('financingType') or line.get('financingLabel'),
+            )
+            validation_errors = validate_qonto_client_payload(client_payload, line.get('financingType'))
+            if validation_errors:
+                raise RuntimeError(_format_qonto_validation_errors(validation_errors))
+            q_client = search_qonto_client({
+                'email': client_payload.get('email'),
+                'name': client_payload.get('name') or f"{client_payload.get('first_name', '')} {client_payload.get('last_name', '')}".strip(),
+            })
+            if not q_client:
+                q_client = create_qonto_client({'client': remove_invalid_qonto_phone(client_payload)})
+            client_id = (q_client.get('client') or q_client).get('id')
+            if not client_id:
+                raise RuntimeError('Client Qonto introuvable')
+            line['qontoClientId'] = line['qontoCustomerId'] = client_id
+        payment_plan = _normalize_payment_plan(payload.get('paymentPlan') or payload, _money(line.get('amountTTC') or line.get('amount')))
+        if payment_plan.get('mode') != 'sepa_direct_debit' or not payment_plan.get('schedule'):
+            raise RuntimeError('Veuillez définir au moins une échéance de prélèvement')
+        _setup_qonto_direct_debit_for_line(line, payment_plan)
+        line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
+        _, _, trainee = _find_trainee_any_session(data, str(line.get('traineeId') or ''))
+        if trainee and line.get('qonto_mandate_rum'):
+            trainee['qonto_mandate_rum'] = line['qonto_mandate_rum']
+            trainee['qonto_direct_debit_mandate_id'] = line.get('qonto_direct_debit_mandate_id') or ''
+            trainee['qonto_mandate_status'] = line.get('qonto_mandate_status') or ''
+        _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': True, 'message': 'Mandat de prélèvement créé', 'line': _find_billing_line(data, line['id'])})
+    except Exception as exc:
+        _billing_log(line, 'Erreur création mandat SEPA', 'error', _sanitize_qonto_error(str(exc)))
+        _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': False, 'error': format_qonto_error_for_front(exc)}), 400
+
 @app.post('/api/billing/sync-qonto')
 @admin_login_required
 @admin_write_required
@@ -27861,29 +30105,72 @@ def api_billing_sync_qonto():
         if line: lines = [line]
     if not lines:
         lines = _billing_lines(data)
-    reset_count = synced_count = 0; errors = []
+    reset_count = synced_count = 0; errors = []; last_line = None
     for line in lines:
-        if not (line.get('qontoInvoiceId') or line.get('qontoDraftId')): continue
+        has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
+        has_sepa_mandate = line.get('paymentMode') == 'sepa_direct_debit' and bool(line.get('qonto_direct_debit_mandate_id'))
+        if not (has_invoice or has_sepa_mandate):
+            continue
         try:
-            reset, _ = _sync_billing_line_with_qonto(data, line); _sync_qonto_direct_debit_line(line) if line.get('paymentMode') == 'sepa_direct_debit' else None; _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1
+            reset = False
+            if has_invoice:
+                reset, _ = _sync_billing_line_with_qonto(data, line)
+            if line.get('paymentMode') == 'sepa_direct_debit':
+                _sync_qonto_direct_debit_line(line)
+            _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1; last_line = line
         except Exception as exc:
             errors.append({'id': line.get('id'), 'message': _sanitize_qonto_error(str(exc))})
     save_data(data)
-    return jsonify({'ok': True, 'message': f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), {reset_count} ligne(s) à contrôler.', 'lines': _billing_lines(data), 'errors': errors})
+    persisted_check = None
+    if last_line:
+        reloaded_data = load_data()
+        persisted_check = _find_billing_line(reloaded_data, last_line.get('id')) or last_line
+    all_lines = _billing_lines(data)
+    trainee = None
+    if last_line:
+        for sess in data.get('sessions', []):
+            for t in _session_trainees_list(sess):
+                if str(t.get('id')) == str(last_line.get('traineeId')):
+                    trainee = t; break
+            if trainee: break
+    summary = calculate_trainee_financial_summary(trainee or {}, all_lines) if trainee else {}
+    invoice = None
+    if last_line:
+        invoice = serialize_qonto_invoice_for_frontend(last_line)
+        invoice['number'] = invoice['invoice_number']
+        invoice['amount_paid_cents'] = invoice['paid_amount_cents']
+        app.logger.info('QONTO_PAYMENT_PIPELINE invoice_number=%s raw_paid_amount=%.2f normalized_paid_cents=%s stored_paid_cents=%s stored_total_cents=%s calculated_remaining_cents=%s summary_paid_total_cents=%s frontend_paid_amount_cents=%s', invoice['number'], cents_to_money(invoice['paid_amount_cents']), invoice['paid_amount_cents'], (persisted_check or {}).get('qonto_amount_paid_cents'), (persisted_check or {}).get('qonto_total_amount_cents'), invoice['remaining_amount_cents'], summary.get('paid_total_cents'), invoice['paid_amount_cents'])
+    return jsonify({'ok': True, 'success': True, 'synced_count': synced_count, 'failed_count': len(errors), 'message': f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), {reset_count} ligne(s) à contrôler.', 'lines': all_lines, 'errors': errors, 'invoice': invoice, 'financial_summary': summary})
 
 
 @app.post('/api/admin/billing-lines/bulk-generate')
 @admin_login_required
 @admin_write_required
 def api_admin_billing_bulk_generate():
-    ids = (request.get_json(silent=True) or {}).get('ids') or []
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get('ids') or []
+    finalize_after_create = bool(payload.get('finalize') or payload.get('finalizeAfterCreate'))
     data = load_data(); summary = {'created': [], 'ignored': [], 'failed': []}
     for line_id in ids:
         line = _find_billing_line(data, str(line_id))
         if not line: summary['failed'].append({'id': line_id, 'error': 'introuvable'}); continue
         if line.get('qontoInvoiceId') or _normalize_billing_invoice_status(line.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}: summary['ignored'].append(line); continue
         ok, res = _create_invoice_for_billing_line(data, line)
-        summary['created' if ok else 'failed'].append(res.get('line') or {'id': line_id, 'error': res.get('error')})
+        created_line = res.get('line')
+        if ok and finalize_after_create and created_line and created_line.get('qontoInvoiceId'):
+            try:
+                qi = _qonto_invoice_payload(finalize_qonto_invoice(created_line['qontoInvoiceId']))
+                created_line['invoiceStatus'] = _normalize_billing_invoice_status(qi.get('status') or 'finalized')
+                created_line['finalizedAt'] = _now_iso()
+                _refresh_billing_line_invoice_from_qonto(created_line, qi)
+                _billing_log(created_line, 'Facture finalisée après génération en masse', 'success', '', created_line.get('qontoInvoiceId') or '')
+                _save_billing_line(data, created_line); save_data(data)
+                created_line = _find_billing_line(data, str(created_line.get('id'))) or created_line
+            except Exception as exc:
+                summary['failed'].append({'id': line_id, 'error': _sanitize_qonto_error(str(exc)), 'line': created_line})
+                data = load_data()
+                continue
+        summary['created' if ok else 'failed'].append(created_line or {'id': line_id, 'error': res.get('error')})
         data = load_data()
     return jsonify({'ok': True, **summary})
 
@@ -28175,39 +30462,136 @@ def api_admin_trainee_qonto_sepa_ensure(trainee_id: str):
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'message': format_qonto_error_for_front(exc)}), 400
 
 
+@app.post("/api/admin/trainees/<trainee_id>/qonto-mandate/search")
+@admin_login_required
+@admin_write_required
+def api_admin_trainee_qonto_mandate_search(trainee_id: str):
+    """Find a Qonto mandate by RUM and associate its technical UUID with the trainee."""
+    payload = request.get_json(silent=True) or {}
+    rum = str(payload.get("rum") or "").strip()
+    if not rum:
+        return jsonify({"ok": False, "error": "Saisissez un numéro RUM de mandat."}), 400
+    if len(rum) > 160 or any(ord(character) < 32 for character in rum):
+        return jsonify({"ok": False, "error": "Le numéro RUM du mandat n’est pas valide."}), 400
+
+    data = load_data()
+    sess, trainees, trainee = _find_trainee_any_session(data, trainee_id)
+    if not trainee:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable."}), 404
+    try:
+        mandate = find_qonto_direct_debit_mandate_by_rum(rum)
+        if not mandate or not mandate.get("id"):
+            return jsonify({"ok": False, "error": "Aucun mandat Qonto trouvé avec ce RUM"}), 404
+
+        status = _map_mandate_status(mandate.get("status"))
+        trainee["qonto_direct_debit_mandate_id"] = str(mandate.get("id"))
+        trainee["qonto_mandate_rum"] = rum
+        trainee["qonto_mandate_status"] = status
+        trainee["qonto_mandate_searched_at"] = _now_iso()
+        trainee["qonto_mandate_client_id"] = str(mandate.get("client_id") or "")
+        candidate_lines = [line for line in _billing_lines(data) if str(line.get("traineeId") or "") == str(trainee_id)]
+        line = next((item for item in candidate_lines if item.get("paymentMode") == "sepa_direct_debit"), None)
+        if line is None:
+            line = next((item for item in candidate_lines if str(item.get("financingType") or "").lower() in {"personal", "personnel"}), None)
+        if line is not None:
+            line["qonto_direct_debit_mandate_id"] = str(mandate.get("id"))
+            line["qonto_mandate_rum"] = rum
+            line["qonto_mandate_status"] = status
+            line["mandateStatus"] = status
+            line["qonto_mandate_sign_url"] = mandate.get("sign_url") or line.get("qonto_mandate_sign_url") or ""
+            line["sign_url"] = line["qonto_mandate_sign_url"]
+            if mandate.get("client_id"):
+                line["qontoClientId"] = mandate.get("client_id")
+            _billing_log(line, "Mandat Qonto retrouvé manuellement", "success", status, str(mandate.get("id")))
+            recovered_installments = 0
+            try:
+                recovered_installments = _recover_qonto_installments_for_mandate(line, str(mandate.get("id")))
+                if recovered_installments:
+                    _billing_log(line, "Échéancier Qonto retrouvé manuellement", "success", f"{recovered_installments} échéance(s)", str(mandate.get("id")))
+            except Exception as exc:
+                app.logger.warning("[QONTO] récupération échéancier impossible mandate_id=%s error=%s", mandate.get("id"), _sanitize_qonto_error(str(exc)))
+            _save_billing_line(data, line)
+        sess["trainees"] = trainees
+        save_data(data)
+        return jsonify({
+            "ok": True,
+            "message": "Mandat retrouvé sur Qonto et associé au stagiaire.",
+            "recovered_installments": recovered_installments if line is not None else 0,
+            "mandate": {
+                "id": str(mandate.get("id")),
+                "rum": rum,
+                "status": status,
+                "client_id": str(mandate.get("client_id") or ""),
+                "created_at": mandate.get("created_at") or "",
+            },
+        })
+    except QontoApiError as exc:
+        status_code = 404 if getattr(exc, "status_code", 0) == 404 else 502
+        message = "Aucun mandat Qonto trouvé avec ce RUM" if status_code == 404 else format_qonto_error_for_front(exc)
+        return jsonify({"ok": False, "error": message}), status_code
+    except Exception as exc:
+        app.logger.warning("[QONTO] recherche mandat impossible trainee_id=%s error=%s", trainee_id, _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": False, "error": format_qonto_error_for_front(exc)}), 502
+
+
+
+
+@app.post("/api/admin/qonto/webhook-subscription/ensure")
+@admin_login_required
+@admin_write_required
+def api_admin_qonto_webhook_subscription_ensure():
+    try:
+        return jsonify(ensure_qonto_webhook_subscription())
+    except Exception as exc:
+        app.logger.warning("[QONTO] webhook subscription ensure failed: %s", _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": False, "error": _sanitize_qonto_error(str(exc)), "callback_url": _qonto_webhook_callback_url()}), 502
+
 @app.post("/api/qonto/webhooks")
+@app.post("/api/webhooks/qonto")
 def api_qonto_webhooks():
     raw_body = request.get_data(cache=True)
-    if not _verify_qonto_webhook_signature(raw_body):
-        return jsonify({"ok": False, "error": "invalid_signature"}), 401
     payload = request.get_json(silent=True) or {}
     event = (payload.get("event") or payload.get("type") or "").strip()
     item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
-    if "sepa-direct-debit-mandates" in event:
-        data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); save_data(data)
+    if not _verify_qonto_webhook_signature(raw_body):
+        data = load_data(); _record_qonto_webhook(data, event, item, "rejected", "invalid_signature"); save_data(data)
+        return jsonify({"ok": False, "error": "invalid_signature"}), 401
+    normalized_event = event.lower().replace("_", "-")
+    if "sepa-direct-debit-mandate" in normalized_event:
+        data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); _record_qonto_webhook(data, event, item, "updated" if updated else "ignored"); save_data(data)
         return jsonify({"ok": True, "updated": updated})
-    if "sepa-direct-debit-collections" in event:
-        data = load_data(); updated = _apply_qonto_collection_webhook(data, item); save_data(data)
+    if "sepa-direct-debit-collection" in normalized_event:
+        data = load_data(); updated = _apply_qonto_collection_webhook(data, item); _record_qonto_webhook(data, event, item, "updated" if updated else "ignored"); save_data(data)
         return jsonify({"ok": True, "updated": updated})
     if event and "client-invoices" not in event and "client_invoice" not in event:
+        data = load_data(); _record_qonto_webhook(data, event, item, "ignored"); save_data(data)
         return jsonify({"ok": True, "ignored": True})
     invoice_id = item.get("id") or item.get("qonto_invoice_id")
     if not invoice_id:
+        data = load_data(); _record_qonto_webhook(data, event, item, "error", "missing_invoice_id"); save_data(data)
         return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
     data = load_data()
+    try:
+        invoice_payload = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
+    except Exception as exc:
+        app.logger.warning("[QONTO] webhook invoice refresh failed invoice_id=%s error=%s", invoice_id, _sanitize_qonto_error(str(exc)))
+        invoice_payload = {"id": invoice_id, "status": item.get("status"), "paid_at": item.get("paid_at"), "amount_paid": item.get("amount_paid")}
+    updated = False
+    for line in _billing_lines(data):
+        if str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '') == str(invoice_id):
+            _apply_qonto_invoice_payment_to_billing_line(line, invoice_payload)
+            _billing_log(line, 'Paiement facture Qonto synchronisé', 'success', line.get('paymentStatus') or '', str(invoice_id))
+            _save_billing_line(data, line)
+            updated = True
     sess, trainees, trainee = _find_trainee_by_qonto_invoice_id(data, invoice_id)
-    if not trainee:
-        return jsonify({"ok": True, "updated": False, "reason": "invoice_not_found"}), 200
-    inv = _qonto_invoice_state(trainee)
-    _apply_qonto_invoice_status(inv, {
-        "id": invoice_id,
-        "status": item.get("status"),
-        "paid_at": item.get("paid_at"),
-        "amount_paid": item.get("amount_paid"),
-    })
-    sess["trainees"] = trainees
+    if trainee:
+        inv = _qonto_invoice_state(trainee)
+        _apply_qonto_invoice_status(inv, invoice_payload)
+        sess["trainees"] = trainees
+        updated = True
+    _record_qonto_webhook(data, event, item, "updated" if updated else "ignored")
     save_data(data)
-    return jsonify({"ok": True, "updated": True, "status": inv.get("qonto_invoice_status")})
+    return jsonify({"ok": True, "updated": updated})
 
 
 @app.get("/admin/trainee/<trainee_id>/convocation-aps/preview")
@@ -28636,6 +31020,31 @@ def admin_create_convention_signature(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automations/reset")
+@admin_login_required
+@admin_write_required
+def admin_reset_trainee_automations(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        flash("Stagiaire introuvable.", "error")
+        abort(404)
+    if not _automation_is_enabled(s):
+        flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+        abort(403)
+    try:
+        _reset_trainee_automations(t)
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        flash("Les automatisations ont été remises à zéro. Vous pouvez reprendre la génération des documents.", "success")
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        app.logger.exception("[AUTOMATIONS] remise à zéro impossible trainee_id=%s error=%s", trainee_id, message)
+        flash(f"Remise à zéro des automatisations : {message}", "error")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/resend-email")
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/resend-email")
 @admin_login_required
@@ -28696,12 +31105,25 @@ def internal_cron_convocation_signature_reminders():
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     result = run_convocation_signature_reminders()
-    return jsonify({"ok": True, **result})
+    convocation_reminders = run_training_convocation_reminders()
+    return jsonify({"ok": True, **result, "training_convocations": convocation_reminders})
+
+
+@app.post("/internal/cron/cash-payment-reminders")
+def internal_cron_cash_payment_reminders():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if expected and not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify({"ok": True, **run_cash_payment_reminders()})
 
 
 @app.cli.command("send-convocation-signature-reminders")
 def cli_send_convocation_signature_reminders():
-    result = run_convocation_signature_reminders()
+    result = {
+        "signature_reminders": run_convocation_signature_reminders(),
+        "training_convocations": run_training_convocation_reminders(),
+    }
     print(json.dumps(result, ensure_ascii=False))
 
 
@@ -29842,7 +32264,7 @@ def api_cnaps_import_pre():
     trainees_by_last_name: Dict[str, List[Dict[str, Any]]] = {}
 
     for sess in data.get("sessions", []):
-        if bool(sess.get("archived")):
+        if bool(sess.get("archived")) or not _cnaps_pre_training_type_is_allowed(_session_get(sess, "training_type", "")):
             continue
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
@@ -29984,6 +32406,9 @@ def api_cnaps_import_pre_merge():
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     training_type = _session_get(s, "training_type", "")
+    if not _cnaps_pre_training_type_is_allowed(training_type):
+        return jsonify({"ok": False, "error": "training_not_eligible"}), 400
+
     stored = _store_file(session_id, trainee_id, "documents", uploaded)
     token = _tokenize_path(stored)
 
