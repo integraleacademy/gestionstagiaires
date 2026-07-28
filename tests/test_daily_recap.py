@@ -15,7 +15,7 @@ class DailyRecapTests(unittest.TestCase):
                 "trainees": [{
                     "id": "T1", "first_name": "Ada", "last_name": "Lovelace",
                     "created_at": "2026-07-27T12:00:00Z", "sales_tracking_amount": 1200,
-                    "convention_signature": {"status": "ongoing"}, "cnaps_status": "transmis",
+                    "convention_signature": {"status": "ongoing"}, "cnaps_status": "en cours",
                 }],
             }],
             "cnaps_status_change_notifications": {
@@ -34,8 +34,49 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(len(report["cnaps_pending"]), 1)
         subject, body = app.build_daily_recap_email(report)
         self.assertEqual(subject, "Récapitulatif de la veille")
-        self.assertIn("Chiffre d’affaires", body)
+        self.assertIn("Chiffre d’affaires de la veille", body)
         self.assertIn("Prélèvements rejetés", body)
+        self.assertIn("Conventions en attente de signature", body)
+        self.assertIn("👮", body)
+
+    def test_cnaps_pending_only_contains_enrolled_in_progress_trainees(self):
+        trainees = self.data["sessions"][0]["trainees"]
+        trainees.extend([
+            {"first_name": "Grace", "last_name": "Hopper", "cnaps_status": "transmis"},
+            {"first_name": "Alan", "last_name": "Turing", "cnaps_status": "validé"},
+            {"first_name": "Katherine", "last_name": "Johnson", "cnaps_status": ""},
+        ])
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual([item["name"] for item in report["cnaps_pending"]], [app._daily_recap_name(trainees[0])])
+
+    def test_rejected_debits_are_translated_and_grouped_by_trainee(self):
+        self.data["billing_lines"] = [{
+            "traineeId": "T1", "traineeFirstName": "Ada", "traineeLastName": "Lovelace",
+            "formationName": "APS", "directDebitInstallments": [
+                {"status": "rejected", "date": "2026-07-27", "amount": 100, "status_reason": "blocked_account"},
+                {"status": "failed", "date": "2026-07-27", "amount": 200, "failureReason": "insufficient_funds"},
+            ],
+        }]
+        with mock.patch.object(app, "_billing_lines", return_value=self.data["billing_lines"]):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual(len(report["rejected"]), 1)
+        self.assertIn("Compte bancaire bloqué", report["rejected"][0]["detail"])
+        self.assertIn("Solde insuffisant", report["rejected"][0]["detail"])
+        self.assertEqual(report["rejected"][0]["detail"].count("APS"), 2)
+
+    def test_revenue_has_daily_weekly_monthly_and_yearly_comparisons(self):
+        trainees = self.data["sessions"][0]["trainees"]
+        for index, created_at in enumerate(("2026-07-26", "2026-07-20", "2026-06-27", "2025-07-27"), start=2):
+            trainees.append({
+                "id": f"T{index}", "first_name": "Comparatif", "last_name": str(index),
+                "created_at": created_at, "sales_tracking_amount": 100 * index, "cnaps_status": "validé",
+            })
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual(set(report["comparison_sales"]), {"previous_day", "previous_week", "previous_month", "previous_year"})
+        _subject, body = app.build_daily_recap_email(report)
+        for label in ("jour précédent", "semaine précédente", "mois précédent", "année précédente"):
+            self.assertIn(label, body)
+        self.assertIn("APS <span", body)
 
     def test_delivery_targets_four_recipients_and_is_idempotent(self):
         sent = []
