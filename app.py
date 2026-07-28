@@ -31340,6 +31340,88 @@ DAILY_RECAP_RECIPIENTS = (
     "cassandre@integraleacademy.com",
 )
 
+DAILY_RECAP_FIRST_NAMES = {
+    "cassandre@integraleacademy.com": "Cassandre",
+    "aurelie@integraleacademy.com": "Aurélie",
+    "elsa@integraleacademy.com": "Elsa",
+    "clement@integraleacademy.com": "Clément",
+}
+DAILY_RECAP_WEATHER_LOCATIONS = {
+    "puget": {"label": "Puget sur Argens", "latitude": 43.455, "longitude": 6.685},
+    "aurillac": {"label": "Aurillac", "latitude": 44.926, "longitude": 2.441},
+}
+
+
+def _daily_recap_long_date(value: datetime.date) -> str:
+    weekdays = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+    months = ("", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+    return f"{weekdays[value.weekday()]} {value.day} {months[value.month]} {value.year}"
+
+
+def _daily_recap_weather_description(code: Any) -> str:
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return "les conditions météo ne sont pas disponibles"
+    if code == 0:
+        return "la journée sera ensoleillée"
+    if code in {1, 2}:
+        return "la journée sera assez ensoleillée"
+    if code == 3:
+        return "la journée sera nuageuse"
+    if code in {45, 48}:
+        return "la journée sera brumeuse"
+    if code in {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82}:
+        return "la journée sera pluvieuse"
+    if code in {71, 73, 75, 77, 85, 86}:
+        return "la journée sera neigeuse"
+    if code in {95, 96, 99}:
+        return "la journée sera orageuse"
+    return "la météo sera variable"
+
+
+def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str, Any]:
+    """Fetch the nameday and today's forecasts used by the 08:00 greeting."""
+    context: Dict[str, Any] = {"date": delivery_date, "nameday": "la fête du jour", "weather": {}}
+    try:
+        response = requests.get("https://nominis.cef.fr/json/nominis.php", params={"date": delivery_date.isoformat()}, timeout=10)
+        response.raise_for_status()
+        saint = (response.json().get("response") or {}).get("saintdujour") or {}
+        nameday = saint.get("nom") if isinstance(saint, dict) else saint
+        if str(nameday or "").strip():
+            context["nameday"] = str(nameday).strip()
+    except (requests.RequestException, ValueError, TypeError):
+        logging.getLogger(__name__).warning("Impossible de récupérer la fête du jour", exc_info=True)
+    for key, location in DAILY_RECAP_WEATHER_LOCATIONS.items():
+        try:
+            response = requests.get("https://api.open-meteo.com/v1/forecast", params={
+                "latitude": location["latitude"], "longitude": location["longitude"],
+                "daily": "weather_code,temperature_2m_max", "timezone": "Europe/Paris",
+                "start_date": delivery_date.isoformat(), "end_date": delivery_date.isoformat(),
+            }, timeout=10)
+            response.raise_for_status()
+            daily = response.json().get("daily") or {}
+            context["weather"][key] = {
+                "temperature": round(float((daily.get("temperature_2m_max") or [])[0])),
+                "description": _daily_recap_weather_description((daily.get("weather_code") or [])[0]),
+            }
+        except (requests.RequestException, ValueError, TypeError, IndexError):
+            logging.getLogger(__name__).warning("Impossible de récupérer la météo de %s", location["label"], exc_info=True)
+    return context
+
+
+def _daily_recap_greeting(recipient: str, context: Dict[str, Any]) -> str:
+    first_name = DAILY_RECAP_FIRST_NAMES.get(recipient.lower(), "")
+    parts = [f"Bonjour {first_name}, Nous sommes le {_daily_recap_long_date(context['date'])} et aujourd'hui nous fêtons {context['nameday']}"]
+    keys = ["puget"] + (["aurillac"] if recipient.lower() in {"elsa@integraleacademy.com", "clement@integraleacademy.com"} else [])
+    for key in keys:
+        location, forecast = DAILY_RECAP_WEATHER_LOCATIONS[key], (context.get("weather") or {}).get(key)
+        if forecast:
+            parts.append(f"la température prévue à {location['label']} aujourd'hui est de {forecast['temperature']}°C et {forecast['description']}")
+        else:
+            parts.append(f"les prévisions météo de {location['label']} ne sont pas disponibles")
+    return ". ".join(parts) + "."
+
 
 def _daily_recap_date(value: Any) -> Optional[datetime.date]:
     """Extract a calendar date from the heterogeneous timestamps we persist."""
@@ -31507,7 +31589,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "cnaps_changes": changes, "rejected": rejected, "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
 
 
-def build_daily_recap_email(report: Dict[str, Any]) -> Tuple[str, str]:
+def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
     """Render an email-client-safe, colourful SaaS-style daily dashboard."""
     def rows(items: List[Dict[str, str]], empty: str) -> str:
         if not items:
@@ -31535,7 +31617,10 @@ def build_daily_recap_email(report: Dict[str, Any]) -> Tuple[str, str]:
         ("👮", "CNAPS à valider", report["cnaps_pending"], "Aucune validation en attente"),
     ]
     cards = "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections)
-    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><div style="margin-top:24px;font-size:12px;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;opacity:.8">Daily operations</div><h1 style="margin:8px 0;font-size:30px">Récapitulatif de la veille</h1><div style="opacity:.86">{html.escape(fr_date(report['date'].isoformat()))}</div></td></tr><tr><td style="padding:10px 0"><table role="presentation" width="100%"><tr><td width="50%" style="padding:8px 4px 8px 0;vertical-align:top"><div style="background:#dcfce7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#166534;font-weight:bold;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:28px;font-weight:900;margin-top:5px">{html.escape(_format_euro(sales['revenue']))}</div><div style="font-size:12px;color:#166534;margin-top:8px">{comparison}</div></div></td><td width="50%" style="padding:8px 0 8px 4px;vertical-align:top"><div style="background:#fef3c7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase">Formations vendues</div><div style="font-size:28px;font-weight:900;margin-top:5px">{sales['count']}</div><div style="margin-top:5px">{formation_mix}</div></div></td></tr></table></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé chaque jour à 08h00</td></tr></table></td></tr></table></body></html>'''
+    greeting = ""
+    if recipient and greeting_context:
+        greeting = f'<tr><td style="padding:18px 22px;background:#fff;border-radius:18px;font-size:15px;line-height:1.65;color:#334155">{html.escape(_daily_recap_greeting(recipient, greeting_context))}</td></tr>'
+    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><div style="margin-top:24px;font-size:12px;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;opacity:.8">Daily operations</div><h1 style="margin:8px 0;font-size:30px">Récapitulatif de la veille</h1><div style="opacity:.86">{html.escape(fr_date(report['date'].isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><table role="presentation" width="100%"><tr><td width="50%" style="padding:8px 4px 8px 0;vertical-align:top"><div style="background:#dcfce7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#166534;font-weight:bold;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:28px;font-weight:900;margin-top:5px">{html.escape(_format_euro(sales['revenue']))}</div><div style="font-size:12px;color:#166534;margin-top:8px">{comparison}</div></div></td><td width="50%" style="padding:8px 0 8px 4px;vertical-align:top"><div style="background:#fef3c7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase">Formations vendues</div><div style="font-size:28px;font-weight:900;margin-top:5px">{sales['count']}</div><div style="margin-top:5px">{formation_mix}</div></div></td></tr></table></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé chaque jour à 08h00</td></tr></table></td></tr></table></body></html>'''
     return "Récapitulatif de la veille", body
 
 
@@ -31551,10 +31636,13 @@ def run_daily_recap(*, now: Optional[datetime.datetime] = None, force: bool = Fa
     if report_date.isoformat() in history:
         return {"sent": False, "reason": "already_sent", "date": report_date.isoformat()}
     report = build_daily_recap_data(data, report_date)
-    subject, html_body = build_daily_recap_email(report)
-    result = brevo_send_email(DAILY_RECAP_RECIPIENTS[0], subject, html_body, cc_emails=list(DAILY_RECAP_RECIPIENTS[1:]), metadata={"purpose": "daily_recap", "report_date": report_date.isoformat()})
-    if not result.get("ok"):
-        return {"sent": False, "reason": "email_error", "error": result.get("error", "")}
+    delivery_date = paris_now.astimezone(ZoneInfo("Europe/Paris")).date()
+    greeting_context = fetch_daily_recap_greeting_context(delivery_date)
+    for recipient in DAILY_RECAP_RECIPIENTS:
+        subject, html_body = build_daily_recap_email(report, recipient=recipient, greeting_context=greeting_context)
+        result = brevo_send_email(recipient, subject, html_body, metadata={"purpose": "daily_recap", "report_date": report_date.isoformat()})
+        if not result.get("ok"):
+            return {"sent": False, "reason": "email_error", "recipient": recipient, "error": result.get("error", "")}
     history.append(report_date.isoformat())
     data["daily_recap_sent_dates"] = history[-400:]
     save_data(data)
