@@ -31933,8 +31933,118 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
         "convention_signed_done": bool(t.get("convention_signed_done")),
         "test_fr_status": t.get("test_fr_status") or "soon",
         "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+        "summary_api_url": f"/api/admin/sessions/{session_id}/trainees/{trainee_id}/summary",
         "public_token": (t.get("public_token") or "").strip(),
         "public_url": f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(t.get('public_token') or '').strip()}",
+    }
+
+
+_QUICK_SUMMARY_FRENCH_MONTHS = ("", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+
+
+def _quick_summary_date(value: Any) -> str:
+    parsed = _parse_iso_date(str(value or "").strip())
+    if not parsed:
+        return ""
+    return f"{parsed.day}{'er' if parsed.day == 1 else ''} {_QUICK_SUMMARY_FRENCH_MONTHS[parsed.month]} {parsed.year}"
+
+
+def _quick_summary_period(start_value: Any, end_value: Any) -> str:
+    start = _parse_iso_date(str(start_value or "").strip())
+    end = _parse_iso_date(str(end_value or "").strip())
+    if not start and not end:
+        return ""
+    if not start:
+        return f"jusqu’au {_quick_summary_date(end_value)}"
+    if not end:
+        return f"à partir du {_quick_summary_date(start_value)}"
+    if start == end:
+        return f"le {_quick_summary_date(start_value)}"
+    if start.year == end.year and start.month == end.month:
+        first = f"{start.day}{'er' if start.day == 1 else ''}"
+    elif start.year == end.year:
+        first = f"{start.day}{'er' if start.day == 1 else ''} {_QUICK_SUMMARY_FRENCH_MONTHS[start.month]}"
+    else:
+        first = _quick_summary_date(start_value)
+    return f"du {first} au {_quick_summary_date(end_value)}"
+
+
+def _quick_summary_schedule(session_obj: dict) -> dict:
+    """Expose only dates read from the session associated with the trainee."""
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip().upper()
+    prefix = "dirigeant" if training_type.startswith("DIRIGEANT") else "aps"
+    remote_start = _session_get(session_obj, f"{prefix}_remote_start", "")
+    remote_end = _session_get(session_obj, f"{prefix}_remote_end", "")
+    present_start = _session_get(session_obj, f"{prefix}_in_person_start", "")
+    present_end = _session_get(session_obj, f"{prefix}_in_person_end", "")
+    hybrid = bool(remote_start or remote_end or present_start or present_end)
+    return {
+        "hybrid": hybrid,
+        "formation": _quick_summary_period(_session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", "")),
+        "remote": _quick_summary_period(remote_start, remote_end) if hybrid else "",
+        "in_person": _quick_summary_period(present_start, present_end) if hybrid else "",
+        "exam": _quick_summary_date(_session_get(session_obj, "exam_date", "")),
+    }
+
+
+def _trainee_quick_summary(data: dict, session_obj: dict, trainee: dict) -> dict:
+    """Build the concise, read-only status payload used by global search."""
+    session_id = str(session_obj.get("id") or "")
+    trainee_id = str(trainee.get("id") or "")
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    training_upper = training_type.upper()
+    automation = _build_trainee_automation_status(session_obj, trainee, session_id, trainee_id)
+    convention = automation.get("convention") or {}
+    convocation = automation.get("convocation") or {}
+
+    billing_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    payable_lines = [line for line in billing_lines if line.get("paymentStatus") != "not_applicable"]
+    paid_lines = [line for line in payable_lines if line.get("paymentStatus") == "paid"]
+    if payable_lines and len(paid_lines) == len(payable_lines):
+        payment_state, payment_label = "complete", "Tout est payé"
+    elif paid_lines:
+        payment_state, payment_label = "pending", f"Paiement partiel · {len(paid_lines)}/{len(payable_lines)} réglé(s)"
+    elif payable_lines:
+        payment_state, payment_label = "pending", "Paiement en attente"
+    else:
+        payment_state, payment_label = "neutral", "Aucune facture à régler"
+
+    cnaps_relevant = training_upper.startswith(("APS", "A3P"))
+    cnaps_ok = _cnaps_is_accepted(trainee.get("cnaps"))
+    test_fr_relevant = training_upper.startswith(("APS", "A3P"))
+    dossier_ok = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
+
+    def status(key: str, label: str, state: str, detail: str = "") -> dict:
+        return {"key": key, "label": label, "state": state, "detail": detail}
+
+    convention_state = str(convention.get("status") or "").strip().lower()
+    if convention_state == "signed":
+        convention_card_state, convention_detail = "complete", "Signée"
+    elif convention_state in {"sent", "waiting_signature"}:
+        convention_card_state, convention_detail = "complete", "Envoyée"
+    elif convention_state in {"error", "refused", "expired"}:
+        convention_card_state, convention_detail = "error", "Erreur"
+    else:
+        convention_card_state, convention_detail = "pending", "Non envoyée"
+    statuses = [
+        status("convention", "Convention", convention_card_state, convention_detail),
+        status("convocation", "Convocation", "complete" if convocation.get("status") == "sent" else "pending", convocation.get("label") or "À envoyer"),
+        status("financing", "Financement validé", "complete" if trainee.get("financement_status") == "validated" else "pending", "Validé" if trainee.get("financement_status") == "validated" else "À contrôler"),
+        status("payment", "Paiement", payment_state, payment_label),
+        status("cnaps", "CNAPS", "complete" if cnaps_ok else "pending", str(trainee.get("cnaps") or "À contrôler")) if cnaps_relevant else status("cnaps", "CNAPS", "neutral", "Non concerné"),
+        status("test_fr", "Test de français", "complete" if trainee.get("test_fr_status") == "validated" else "pending", "Validé" if trainee.get("test_fr_status") == "validated" else "À valider") if test_fr_relevant else status("test_fr", "Test de français", "neutral", "Non concerné"),
+        status("documents", "Documents", "complete" if dossier_ok else "pending", "Dossier complet" if dossier_ok else "Dossier incomplet"),
+    ]
+    relevant = [item for item in statuses if item["state"] != "neutral"]
+    completed = sum(item["state"] == "complete" for item in relevant)
+    return {
+        "ok": True,
+        "trainee": {"first_name": trainee.get("first_name") or "", "last_name": trainee.get("last_name") or "", "session_name": _session_get(session_obj, "name", ""), "training_type": training_type},
+        "schedule": _quick_summary_schedule(session_obj),
+        "progress": {"completed": completed, "total": len(relevant), "percent": round((completed / len(relevant)) * 100) if relevant else 100},
+        "statuses": statuses,
+        "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+        "public_url": f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}",
     }
 
 
@@ -32051,6 +32161,19 @@ def api_trainees_search():
     ))
     out = out[:30]
     return jsonify({"ok": True, "items": out, "count": len(out)})
+
+
+@app.get("/api/admin/sessions/<session_id>/trainees/<trainee_id>/summary")
+@admin_login_required
+def api_admin_trainee_quick_summary(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj or (session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != (_current_partner_id() or INTEGRALE_PARTNER_ID):
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    trainee = find_trainee(session_obj, trainee_id)
+    if not trainee:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+    return jsonify(_trainee_quick_summary(data, session_obj, trainee))
 
 
 @app.get("/api/cnaps/trainees")

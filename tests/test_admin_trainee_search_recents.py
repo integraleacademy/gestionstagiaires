@@ -167,6 +167,71 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item["trainee_id"] for item in response.get_json()["items"]], ["T-OWN"])
 
+    def test_trainee_search_exposes_all_three_destinations(self):
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data):
+            response = self.client.get("/api/trainees_search?q=prenom1")
+
+        item = response.get_json()["items"][0]
+        self.assertEqual(item["admin_url"], "/admin/sessions/S-1/stagiaires/T-1")
+        self.assertIn("/espace/", item["public_url"])
+        self.assertEqual(item["summary_api_url"], "/api/admin/sessions/S-1/trainees/T-1/summary")
+
+    def test_quick_summary_reports_operational_statuses(self):
+        trainee = self.fake_data["sessions"][0]["trainees"][0]
+        trainee.update({
+            "convention_status": "signed",
+            "financement_status": "validated",
+            "cnaps": "ACCEPTÉ",
+            "test_fr_status": "validated",
+        })
+        automation = {
+            "convention": {"status": "signed", "label": "Signée"},
+            "convocation": {"status": "sent", "label": "Envoyée"},
+        }
+        billing = [{"paymentStatus": "paid"}]
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data), patch.object(
+            gestion_app, "_build_trainee_automation_status", return_value=automation
+        ), patch.object(
+            gestion_app, "_billing_lines_for_trainee_session", return_value=billing
+        ), patch.object(gestion_app, "dossier_is_complete_total", return_value=True):
+            response = self.client.get("/api/admin/sessions/S-1/trainees/T-1/summary")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["progress"], {"completed": 7, "total": 7, "percent": 100})
+        self.assertEqual({item["key"] for item in payload["statuses"]}, {
+            "convention", "convocation", "financing",
+            "payment", "cnaps", "test_fr", "documents",
+        })
+        convention = next(item for item in payload["statuses"] if item["key"] == "convention")
+        self.assertEqual(convention, {"key": "convention", "label": "Convention", "state": "complete", "detail": "Signée"})
+        convocation = next(item for item in payload["statuses"] if item["key"] == "convocation")
+        self.assertEqual(convocation, {"key": "convocation", "label": "Convocation", "state": "complete", "detail": "Envoyée"})
+
+    def test_quick_summary_formats_session_and_hybrid_dates(self):
+        session = self.fake_data["sessions"][0]
+        session.update({
+            "training_type": "APS",
+            "date_start": "2027-02-15",
+            "date_end": "2027-02-26",
+            "exam_date": "2027-03-01",
+            "aps_remote_start": "2027-02-15",
+            "aps_remote_end": "2027-02-19",
+            "aps_in_person_start": "2027-02-22",
+            "aps_in_person_end": "2027-02-26",
+        })
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data), patch.object(
+            gestion_app, "_build_trainee_automation_status", return_value={}
+        ), patch.object(gestion_app, "_billing_lines_for_trainee_session", return_value=[]):
+            response = self.client.get("/api/admin/sessions/S-1/trainees/T-1/summary")
+
+        schedule = response.get_json()["schedule"]
+        self.assertEqual(schedule["formation"], "du 15 au 26 février 2027")
+        self.assertEqual(schedule["remote"], "du 15 au 19 février 2027")
+        self.assertEqual(schedule["in_person"], "du 22 au 26 février 2027")
+        self.assertEqual(schedule["exam"], "1er mars 2027")
+        self.assertTrue(schedule["hybrid"])
+
     def test_header_contains_unified_command_search(self):
         with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
             gestion_app, "_load_wedof_webhooks", return_value=[]
