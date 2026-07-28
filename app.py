@@ -29606,7 +29606,7 @@ def _trainee_quick_summary(data: dict, session_obj: dict, trainee: dict) -> dict
         convention_card_state, convention_detail = "pending", "Non envoyée"
     statuses = [
         status("convention", "Convention", convention_card_state, convention_detail),
-        status("convocation", "Convocation envoyée", "complete" if convocation.get("status") == "sent" else "pending", convocation.get("label") or "À envoyer"),
+        status("convocation", "Convocation", "complete" if convocation.get("status") == "sent" else "pending", convocation.get("label") or "À envoyer"),
         status("financing", "Financement validé", "complete" if trainee.get("financement_status") == "validated" else "pending", "Validé" if trainee.get("financement_status") == "validated" else "À contrôler"),
         status("payment", "Paiement", payment_state, payment_label),
         status("cnaps", "CNAPS", "complete" if cnaps_ok else "pending", str(trainee.get("cnaps") or "À contrôler")) if cnaps_relevant else status("cnaps", "CNAPS", "neutral", "Non concerné"),

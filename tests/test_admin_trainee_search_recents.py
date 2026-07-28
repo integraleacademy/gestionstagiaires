@@ -205,6 +205,8 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         })
         convention = next(item for item in payload["statuses"] if item["key"] == "convention")
         self.assertEqual(convention, {"key": "convention", "label": "Convention", "state": "complete", "detail": "Signée"})
+        convocation = next(item for item in payload["statuses"] if item["key"] == "convocation")
+        self.assertEqual(convocation, {"key": "convocation", "label": "Convocation", "state": "complete", "detail": "Envoyée"})
 
     def test_quick_summary_formats_session_and_hybrid_dates(self):
         session = self.fake_data["sessions"][0]
