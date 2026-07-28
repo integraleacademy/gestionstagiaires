@@ -670,12 +670,19 @@ def _exchange_qonto_oauth_token(form_data: Dict[str, str]) -> Dict[str, Any]:
     return response.json()
 
 
-def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None) -> str:
+def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None, *, force_refresh: bool = False) -> str:
+    """Return a usable OAuth token, optionally proving the refresh grant is valid.
+
+    Merely having a refresh token in ``data.json`` does not mean that Qonto still
+    accepts it (the user can revoke the authorization from Qonto).  The forced
+    refresh is used by the settings health check so that the UI never labels a
+    revoked credential as an active connection.
+    """
     data = data or load_data()
     settings = _qonto_oauth_settings(data)
     if not _qonto_oauth_connected(data):
         raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
-    if int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
+    if force_refresh or int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
         try:
             payload = _exchange_qonto_oauth_token({
                 "client_id": _qonto_oauth_client_id(),
@@ -16768,10 +16775,33 @@ def admin_qonto_oauth_reset():
 def api_qonto_oauth_status():
     data = load_data()
     settings = _qonto_oauth_settings(data)
+    validation_error = ""
+    validated = False
+    if request.args.get("validate") == "1" and _qonto_oauth_connected(data):
+        try:
+            _qonto_oauth_bearer_token(data, force_refresh=True)
+            # Token rotation is persisted by _store_qonto_oauth_tokens. Reload
+            # the canonical copy before building the response.
+            data = load_data()
+            settings = _qonto_oauth_settings(data)
+            validated = True
+        except QontoConfigurationError as exc:
+            # invalid_grant has already cleared and persisted the stale tokens.
+            data = load_data()
+            settings = _qonto_oauth_settings(data)
+            validation_error = _sanitize_qonto_error(str(exc))
+        except Exception as exc:
+            app.logger.warning("[QONTO OAUTH] live status validation failed: %s", _sanitize_qonto_error(str(exc)))
+            validation_error = "Vérification de la connexion OAuth Qonto impossible. Réessayez dans quelques instants."
     scope = settings.get("scope") or ""
     connected = _qonto_oauth_connected(data)
+    message = _qonto_oauth_status_message(data)
+    if validation_error:
+        connected = False
+        message = validation_error
     return jsonify({
         "connected": connected,
+        "validated": validated,
         "has_access_token": bool(settings.get("access_token")),
         "has_refresh_token": bool(settings.get("refresh_token")),
         "expires_at": settings.get("expires_at") or None,
@@ -16779,7 +16809,7 @@ def api_qonto_oauth_status():
         "environment": settings.get("environment") or None,
         "expected_environment": _qonto_oauth_environment(),
         "incompatible": _qonto_oauth_has_incompatible_token(data),
-        "message": _qonto_oauth_status_message(data),
+        "message": message,
     }), 200
 
 
