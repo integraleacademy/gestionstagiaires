@@ -198,11 +198,37 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
-        self.assertEqual(payload["progress"], {"completed": 8, "total": 8, "percent": 100})
+        self.assertEqual(payload["progress"], {"completed": 7, "total": 7, "percent": 100})
         self.assertEqual({item["key"] for item in payload["statuses"]}, {
-            "convention_sent", "convention_signed", "convocation", "financing",
+            "convention", "convocation", "financing",
             "payment", "cnaps", "test_fr", "documents",
         })
+        convention = next(item for item in payload["statuses"] if item["key"] == "convention")
+        self.assertEqual(convention, {"key": "convention", "label": "Convention", "state": "complete", "detail": "Signée"})
+
+    def test_quick_summary_formats_session_and_hybrid_dates(self):
+        session = self.fake_data["sessions"][0]
+        session.update({
+            "training_type": "APS",
+            "date_start": "2027-02-15",
+            "date_end": "2027-02-26",
+            "exam_date": "2027-03-01",
+            "aps_remote_start": "2027-02-15",
+            "aps_remote_end": "2027-02-19",
+            "aps_in_person_start": "2027-02-22",
+            "aps_in_person_end": "2027-02-26",
+        })
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data), patch.object(
+            gestion_app, "_build_trainee_automation_status", return_value={}
+        ), patch.object(gestion_app, "_billing_lines_for_trainee_session", return_value=[]):
+            response = self.client.get("/api/admin/sessions/S-1/trainees/T-1/summary")
+
+        schedule = response.get_json()["schedule"]
+        self.assertEqual(schedule["formation"], "du 15 au 26 février 2027")
+        self.assertEqual(schedule["remote"], "du 15 au 19 février 2027")
+        self.assertEqual(schedule["in_person"], "du 22 au 26 février 2027")
+        self.assertEqual(schedule["exam"], "1er mars 2027")
+        self.assertTrue(schedule["hybrid"])
 
     def test_header_contains_unified_command_search(self):
         with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
