@@ -2024,6 +2024,20 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn('normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"', html)
         self.assertIn('validite_titre:"ACTIF"', html)
 
+    def test_tracking_page_displays_active_ap_titles_in_green(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = client.get("/admin/sessions/suivi-cnaps")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            ".card-pro-result__chip.is-active,.card-pro-result__chip.is-cp,.card-pro-result__chip.is-ap{background:#16a34a",
+            response.get_data(as_text=True),
+        )
+
     def test_tracking_page_offers_manual_nub_entry_when_nub_is_missing(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
