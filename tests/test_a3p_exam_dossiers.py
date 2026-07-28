@@ -57,6 +57,23 @@ class A3pExamDossierTests(unittest.TestCase):
         self.assertIn("{{ date_formation_epi }}", xml)
         self.assertNotIn("22 avril 2026", xml)
 
+    def test_prepared_word_copy_reassembles_placeholder_split_by_word(self):
+        document_xml = (
+            '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            '<w:body><w:p><w:r><w:t>{{ date_</w:t></w:r>'
+            '<w:r><w:t>formation_epi }}</w:t></w:r></w:p></w:body></w:document>'
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            source = os.path.join(temp_dir, "source.docx")
+            prepared = os.path.join(temp_dir, "prepared.docx")
+            with zipfile.ZipFile(source, "w") as archive:
+                archive.writestr("word/document.xml", document_xml)
+            gestion_app._prepare_a3p_exam_template(source, prepared)
+            with zipfile.ZipFile(prepared) as archive:
+                xml = archive.read("word/document.xml").decode("utf-8")
+
+        self.assertIn("<w:t>{{ date_formation_epi }}</w:t>", xml)
+
 
 if __name__ == "__main__":
     unittest.main()

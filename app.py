@@ -18684,15 +18684,54 @@ def _prepare_a3p_exam_template(template_path: str, prepared_path: str) -> str:
     fixed_value = "22 avril 2026"
     placeholder_found = False
     fixed_value_found = False
+
+    def replace_visible_text(xml_text: str, searched: str, replacement: str) -> Tuple[str, bool]:
+        """Replace text even when Word has split it over several ``w:t`` nodes."""
+        text_node_pattern = re.compile(r"(<w:t\b[^>]*>)(.*?)(</w:t>)", re.DOTALL)
+        paragraph_pattern = re.compile(r"(<w:p\b[^>]*>)(.*?)(</w:p>)", re.DOTALL)
+        replaced = False
+
+        def replace_in_paragraph(paragraph_match):
+            nonlocal replaced
+            paragraph = paragraph_match.group(2)
+            nodes = list(text_node_pattern.finditer(paragraph))
+            visible_text = "".join(html.unescape(node.group(2)) for node in nodes)
+            start = visible_text.find(searched)
+            if start < 0:
+                return paragraph_match.group(0)
+
+            end = start + len(searched)
+            cursor = 0
+            pieces = []
+            for node in nodes:
+                node_text = html.unescape(node.group(2))
+                node_start, node_end = cursor, cursor + len(node_text)
+                if node_end > start and node_start < end:
+                    prefix = node_text[:max(0, start - node_start)]
+                    suffix = node_text[max(0, end - node_start):] if end < node_end else ""
+                    inserted = replacement if node_start <= start < node_end else ""
+                    pieces.append((node.start(2), node.end(2), escape(prefix + inserted + suffix)))
+                cursor = node_end
+
+            for content_start, content_end, value in reversed(pieces):
+                paragraph = paragraph[:content_start] + value + paragraph[content_end:]
+            replaced = True
+            return paragraph_match.group(1) + paragraph + paragraph_match.group(3)
+
+        # A placeholder occurs only once in this template, but replacing paragraph
+        # by paragraph also prevents a match from leaking across page boundaries.
+        xml_text = paragraph_pattern.sub(replace_in_paragraph, xml_text)
+        return xml_text, replaced
+
     with zipfile.ZipFile(template_path, "r") as source, zipfile.ZipFile(prepared_path, "w") as destination:
         for item in source.infolist():
             content = source.read(item.filename)
             if item.filename.startswith("word/") and item.filename.endswith(".xml"):
                 xml_text = content.decode("utf-8")
-                placeholder_found = placeholder_found or placeholder in xml_text
-                if fixed_value in xml_text:
-                    xml_text = xml_text.replace(fixed_value, placeholder)
-                    fixed_value_found = True
+                xml_text, found_placeholder = replace_visible_text(xml_text, placeholder, placeholder)
+                placeholder_found = placeholder_found or found_placeholder
+                xml_text, found_fixed_value = replace_visible_text(xml_text, fixed_value, placeholder)
+                fixed_value_found = fixed_value_found or found_fixed_value
                 content = xml_text.encode("utf-8")
             destination.writestr(item, content)
     if not placeholder_found and not fixed_value_found:
