@@ -180,6 +180,9 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Aujourd’hui, c’est la Sainte Sophie !", body)
         self.assertIn("☀️", body)
         self.assertIn("🌧️", body)
+        expected_quote = app._daily_recap_quote(context["date"])
+        self.assertIn(expected_quote["text"], body)
+        self.assertIn(expected_quote["author"], body)
         self.assertNotIn("la fête du jour", body)
 
     def test_weather_codes_have_matching_icons(self):
@@ -187,22 +190,48 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(app._daily_recap_weather_icon(61), "🌧️")
         self.assertEqual(app._daily_recap_weather_icon(95), "⛈️")
 
+    def test_nameday_remains_visible_when_nominis_is_unavailable(self):
+        with mock.patch.object(app.requests, "get", side_effect=app.requests.RequestException("offline")):
+            context = app.fetch_daily_recap_greeting_context(datetime.date(2026, 7, 29))
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 28))
+        _subject, body = app.build_daily_recap_email(
+            report,
+            recipient="clement@integraleacademy.com",
+            greeting_context=context,
+        )
+        self.assertEqual(context["nameday"], "Sainte Catherine")
+        self.assertIn("Aujourd’hui, c’est la Sainte Catherine !", body)
+
+    def test_nameday_uses_french_saints_calendar_when_nominis_is_unavailable(self):
+        nominis_error = app.requests.RequestException("offline")
+        wikipedia_response = mock.Mock(
+            text='<li><a title="29 juillet">29 juillet</a> : sainte Marthe de Béthanie</li>'
+        )
+        wikipedia_response.raise_for_status.return_value = None
+        weather_response = mock.Mock()
+        weather_response.raise_for_status.return_value = None
+        weather_response.json.return_value = {"daily": {"temperature_2m_max": [25], "weather_code": [0]}}
+        with mock.patch.object(app.requests, "get", side_effect=[nominis_error, wikipedia_response, weather_response, weather_response]):
+            context = app.fetch_daily_recap_greeting_context(datetime.date(2026, 7, 29))
+        self.assertEqual(context["nameday"], "Sainte Marthe de Béthanie")
+
     def test_endpoint_rejects_bad_secret(self):
         with mock.patch.dict(os.environ, {"CRON_SECRET": "correct"}):
             response = app.app.test_client().post("/internal/cron/daily-recap", headers={"X-Cron-Secret": "wrong"})
         self.assertEqual(response.status_code, 403)
 
-    def test_sales_tracking_preview_renders_yesterdays_email_without_sending(self):
+    def test_sales_tracking_preview_renders_tomorrows_email_without_sending(self):
         client = app.app.test_client()
-        yesterday = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() - datetime.timedelta(days=1)
+        today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+        tomorrow = today + datetime.timedelta(days=1)
         greeting_context = {
-            "date": yesterday + datetime.timedelta(days=1), "nameday": "Saint Samson",
+            "date": tomorrow, "nameday": "Sainte Catherine",
             "weather": {
                 "puget": {"temperature": 31, "description": "la journée sera ensoleillée"},
                 "aurillac": {"temperature": 22, "description": "la journée sera nuageuse"},
             },
         }
-        self.data["sessions"][0]["trainees"][0]["created_at"] = yesterday.isoformat()
+        self.data["sessions"][0]["trainees"][0]["created_at"] = today.isoformat()
         with client.session_transaction() as browser_session:
             browser_session["admin_logged_in"] = True
         with mock.patch.object(app, "load_data", return_value=self.data), \
@@ -212,12 +241,13 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_data(as_text=True)
         self.assertIn("Récapitulatif de la veille", body)
-        self.assertIn("Ada Lovelace", body)
+        self.assertIn("Ada LOVELACE", body)
         self.assertIn("Bonjour Clément", body)
+        self.assertIn("Aujourd’hui, c’est la Sainte Catherine !", body)
         self.assertIn("Puget sur Argens", body)
         self.assertIn("Aurillac", body)
         self.assertIn("no-store", response.headers["Cache-Control"])
-        fetch_greeting.assert_called_once_with(yesterday + datetime.timedelta(days=1))
+        fetch_greeting.assert_called_once_with(tomorrow)
         send_email.assert_not_called()
 
     def test_sales_tracking_page_exposes_daily_email_preview(self):
@@ -228,7 +258,7 @@ class DailyRecapTests(unittest.TestCase):
             response = client.get("/admin/suivi-ventes")
         body = response.get_data(as_text=True)
         self.assertIn("Aperçu du mail de 08h", body)
-        self.assertIn("Mail destiné à clement@integraleacademy.com", body)
+        self.assertIn("prochain envoi demain à 08h00", body)
         self.assertIn("/admin/suivi-ventes/apercu-mail-quotidien", body)
 
 
