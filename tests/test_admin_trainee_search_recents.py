@@ -244,6 +244,31 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         self.assertIn("Suivi CNAPS", html)
         self.assertIn('id="commandSearchPanel"', html)
 
+    def test_unified_suggestions_include_all_four_recent_groups(self):
+        with self.client.session_transaction() as sess:
+            sess[gestion_app.ADMIN_RECENT_TRAINEES_SESSION_KEY] = [{"session_id": "S-1", "trainee_id": "T-2"}]
+            sess[gestion_app.ADMIN_RECENT_SESSIONS_SESSION_KEY] = ["S-1"]
+            sess[gestion_app.ADMIN_RECENT_TOOLS_SESSION_KEY] = ["admin_sessions_conventions", "admin_sessions_billing"]
+
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data):
+            response = self.client.get("/api/admin/search_suggestions")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual([item["trainee_id"] for item in payload["latest_registered"]], ["T-7", "T-6"])
+        self.assertEqual([item["trainee_id"] for item in payload["recent_trainees"]], ["T-2"])
+        self.assertEqual([item["session_id"] for item in payload["recent_sessions"]], ["S-1"])
+        self.assertEqual([item["label"] for item in payload["recent_tools"]], ["Conventions", "Facturation"])
+
+    def test_sidebar_no_longer_contains_search_shortcuts(self):
+        with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
+            gestion_app, "_load_wedof_webhooks", return_value=[]
+        ):
+            html = self.client.get("/admin/sessions").get_data(as_text=True)
+
+        self.assertNotIn('data-sidebar-action="open-session-search"', html)
+        self.assertNotIn('data-sidebar-action="open-trainee-search"', html)
+
 
 if __name__ == "__main__":
     unittest.main()

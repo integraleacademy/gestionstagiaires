@@ -32093,7 +32093,42 @@ def public_docs_to_control():
 
 
 ADMIN_RECENT_TRAINEES_SESSION_KEY = "admin_recent_trainees"
+ADMIN_RECENT_SESSIONS_SESSION_KEY = "admin_recent_sessions"
+ADMIN_RECENT_TOOLS_SESSION_KEY = "admin_recent_tools"
 TRAINEE_SEARCH_RECENT_LIMIT = 2
+
+ADMIN_SEARCH_TOOLS = {
+    "admin_positioning_tests": ("Tests de positionnement", "Consulter les tests", "✓"),
+    "admin_wedof_requests": ("CPF · EDOF", "Demandes de financement", "€"),
+    "admin_cnaps_tracking": ("Suivi CNAPS", "Suivre les dossiers CNAPS", "◇"),
+    "admin_cnaps_unknown": ("CNAPS inconnus", "Dossiers à rapprocher", "?"),
+    "admin_sessions_conventions": ("Conventions", "Gérer les conventions", "▤"),
+    "admin_sessions_automations": ("Automatisations", "Configurer les envois", "⚡"),
+    "admin_sales_tracking": ("Suivi des ventes", "Piloter l’activité commerciale", "↗"),
+    "admin_sessions_billing": ("Facturation", "Factures et règlements", "€"),
+    "admin_direct_debits": ("Prélèvements", "Gérer les prélèvements directs", "↻"),
+    "admin_qonto_settings": ("Réglages Qonto", "Paramètres de facturation", "⚙"),
+    "admin_sessions_archived": ("Sessions archivées", "Retrouver les anciennes sessions", "□"),
+    "admin_afc": ("AFC", "Suivi des candidats AFC", "A"),
+    "admin_cash_payments": ("Paiements espèces", "Suivi des encaissements", "€"),
+}
+
+
+def _remember_admin_recent(key: str, value: str) -> None:
+    recent = [str(item) for item in (session.get(key) or []) if str(item) != str(value)]
+    session[key] = [str(value), *recent][:TRAINEE_SEARCH_RECENT_LIMIT]
+    session.modified = True
+
+
+@app.before_request
+def remember_admin_search_consultations() -> None:
+    """Alimente les suggestions avec les pages réellement ouvertes par l'admin."""
+    if request.method != "GET" or not session.get("admin_logged_in"):
+        return
+    if request.endpoint == "admin_trainees" and request.view_args and request.view_args.get("session_id"):
+        _remember_admin_recent(ADMIN_RECENT_SESSIONS_SESSION_KEY, request.view_args["session_id"])
+    elif request.endpoint in ADMIN_SEARCH_TOOLS:
+        _remember_admin_recent(ADMIN_RECENT_TOOLS_SESSION_KEY, request.endpoint)
 
 
 def _remember_admin_trainee_consultation(session_id: str, trainee_id: str) -> None:
@@ -32303,6 +32338,51 @@ def api_sessions_search():
     out.sort(key=lambda item: (bool(item.get("archived")), str(item.get("date_start") or "")), reverse=False)
     out = out[:30]
     return jsonify({"ok": True, "items": out, "count": len(out)})
+
+
+@app.get("/api/admin/search_suggestions")
+@admin_login_required
+def api_admin_search_suggestions():
+    """Retourne les quatre groupes affichés à l'ouverture de la recherche globale."""
+    data = load_data()
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    sessions_by_id = {
+        str(item.get("id")): item for item in data.get("sessions", [])
+        if isinstance(item, dict)
+        and (item.get("partner_id") or INTEGRALE_PARTNER_ID) == visible_partner_id
+        and not _is_wedof_leads_session(item)
+    }
+    trainee_items = []
+    trainees_by_key = {}
+    for session_obj in sessions_by_id.values():
+        for trainee in _session_trainees_list(session_obj):
+            item = _trainee_search_item(session_obj, trainee)
+            trainee_items.append(item)
+            trainees_by_key[(str(item["session_id"]), str(item["trainee_id"]))] = item
+
+    latest_registered = sorted(
+        (item for item in trainee_items if not _is_vae_training_type(item.get("training_type"))),
+        key=lambda item: str(item.get("created_at") or ""), reverse=True,
+    )[:TRAINEE_SEARCH_RECENT_LIMIT]
+    recent_trainees = [
+        trainees_by_key[key] for entry in (session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or [])
+        if isinstance(entry, dict)
+        and (key := (str(entry.get("session_id")), str(entry.get("trainee_id")))) in trainees_by_key
+    ][:TRAINEE_SEARCH_RECENT_LIMIT]
+    recent_sessions = [
+        _session_search_item(sessions_by_id[session_id])
+        for session_id in session.get(ADMIN_RECENT_SESSIONS_SESSION_KEY) or []
+        if session_id in sessions_by_id
+    ][:TRAINEE_SEARCH_RECENT_LIMIT]
+    recent_tools = [
+        {"label": ADMIN_SEARCH_TOOLS[endpoint][0], "description": ADMIN_SEARCH_TOOLS[endpoint][1],
+         "icon": ADMIN_SEARCH_TOOLS[endpoint][2], "href": url_for(endpoint)}
+        for endpoint in session.get(ADMIN_RECENT_TOOLS_SESSION_KEY) or []
+        if endpoint in ADMIN_SEARCH_TOOLS
+    ][:TRAINEE_SEARCH_RECENT_LIMIT]
+    return jsonify({"ok": True, "latest_registered": latest_registered,
+                    "recent_trainees": recent_trainees, "recent_sessions": recent_sessions,
+                    "recent_tools": recent_tools})
 
 
 @app.get("/api/trainees_search")

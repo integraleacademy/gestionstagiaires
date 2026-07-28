@@ -313,6 +313,20 @@ async function api(url, method="GET", body=null) {
       return `${heading}<div class="command-search__result" role="option" data-command-index="${index}" data-command-href="${escapeHtml(item.href)}"><span class="command-search__icon">${escapeHtml(item.icon)}</span><span class="command-search__copy"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small></span>${actions}</div>`;
     }).join('');
   }
+  async function loadSuggestions(id){
+    try{
+      const response=await fetch('/api/admin/search_suggestions',{headers:{Accept:'application/json'}});
+      const payload=await response.json();if(id!==sequence||input.value.trim())return;
+      const trainee=item=>({type:'Stagiaires',icon:'●',label:`${item.first_name||''} ${item.last_name||''}`.trim(),description:`${item.session_name||'Session'}${item.training_type?' · '+item.training_type:''}`,href:item.admin_url,publicUrl:item.public_url,summaryUrl:item.summary_api_url});
+      const items=[
+        ...(payload.latest_registered||[]).map(item=>({...trainee(item),type:'2 derniers inscrits'})),
+        ...(payload.recent_trainees||[]).map(item=>({...trainee(item),type:'2 derniers stagiaires consultés'})),
+        ...(payload.recent_sessions||[]).map(item=>({type:'2 dernières sessions consultées',icon:'□',label:item.session_name||item.training_type||'Session',description:`${item.training_type||'Formation'}${item.date_range?' · '+item.date_range:''}`,href:item.admin_url})),
+        ...(payload.recent_tools||[]).map(item=>({...item,type:'2 derniers outils consultés'}))
+      ];
+      draw(items,'');
+    }catch(_error){if(id===sequence)draw(functionMatches(''),'');}
+  }
   async function remoteSearch(query,id){
     try{
       const [traineesResponse,sessionsResponse]=await Promise.all([
@@ -328,6 +342,7 @@ async function api(url, method="GET", body=null) {
   }
   function render(value){
     const query=value.trim();window.clearTimeout(timer);
+    if(!query){const id=++sequence;draw([],query,true);loadSuggestions(id);return;}
     if(query.length<2){draw(functionMatches(query),query);return;}
     const id=++sequence;draw(functionMatches(query),query,true);
     timer=window.setTimeout(()=>remoteSearch(query,id),180);
