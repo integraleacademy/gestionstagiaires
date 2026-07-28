@@ -18714,8 +18714,10 @@ def _a3p_exam_context(trainee: Dict[str, Any], values: Dict[str, str]) -> Dict[s
         "ville": str(trainee.get("city") or address.get("city") or "").strip(),
         "date_debut_formation": fr_date(values["training_start_date"]),
         "date_fin_formation": fr_date(values["training_end_date"]),
+        "date_un_mois_avant_debut_formation": _fr_date_offset(values["training_start_date"], months=-1),
         "periode_formation": f"{fr_date(values['training_start_date'])} au {fr_date(values['training_end_date'])}",
         "date_examen": fr_date(values["exam_date"]),
+        "date_15_jours_avant_examen": _fr_date_offset(values["exam_date"], days=-15),
         "date_formation_epi": fr_date(values["epi_training_date"]),
         "date_jour": datetime.datetime.now().strftime("%d/%m/%Y"),
     }

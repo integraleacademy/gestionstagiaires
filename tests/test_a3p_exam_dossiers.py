@@ -47,6 +47,8 @@ class A3pExamDossierTests(unittest.TestCase):
         )
         self.assertEqual(context["nom_complet"], "Alice MARTIN")
         self.assertEqual(context["periode_formation"], "03/08/2026 au 25/09/2026")
+        self.assertEqual(context["date_un_mois_avant_debut_formation"], "03/07/2026")
+        self.assertEqual(context["date_15_jours_avant_examen"], "13/09/2026")
         self.assertEqual(context["date_formation_epi"], "14/08/2026")
 
     def test_prepared_word_copy_contains_editable_epi_date_variable(self):
