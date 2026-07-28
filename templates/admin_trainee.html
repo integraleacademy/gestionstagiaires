@@ -5159,6 +5159,13 @@ if(btnEtiquetteWord){
   }
   function normalizedCardProActivity(value){return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();}
   function formatCnapsDateFr(value){const x=String(value||"").trim();const m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:x;}
+  const cardProTrainingStartDate = {{ (session.date_start or "")|tojson }};
+  function isApShActiveExpiredBeforeTraining(value, expirationDate){
+    const status = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
+    const expiration = String(expirationDate || "").trim().match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
+    const trainingStart = String(cardProTrainingStartDate || "").trim().match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
+    return status === "AP SH ACTIF" && Boolean(expiration && trainingStart && expiration < trainingStart);
+  }
   function renderTraineeCardProResult(resultEl, data, mode){
     if(!resultEl) return;
     if(data && data.check_status === "error"){
@@ -5173,7 +5180,8 @@ if(btnEtiquetteWord){
     if(activeTitles.length){
       resultEl.outerHTML = activeTitles.map((title)=>{
         const activity = title.display_status || title.label;
-        const colorClass = cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
+        const expirationDate = title.date_fin_validite || title.valid_until;
+        const colorClass = isApShActiveExpiredBeforeTraining(activity, expirationDate) ? "is-inactive" : cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
         return `<span class="trainee-cnaps-followup__chip ${colorClass}" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`;
       }).join("");
       return;
@@ -5184,7 +5192,7 @@ if(btnEtiquetteWord){
       const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
       const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
       const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
-      const colorClass = validityMode === "active" ? cardProActivityColorClass(row.activite) : `is-${validityMode}`;
+      const colorClass = validityMode === "active" ? (isApShActiveExpiredBeforeTraining(`${activity} ${validity}`, row.date_validite_titre) ? "is-inactive" : cardProActivityColorClass(row.activite)) : `is-${validityMode}`;
       return `<span class="trainee-cnaps-followup__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""} data-trainee-card-pro-result>` +
         `<span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>` +
         `<span class="trainee-cnaps-followup__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>` +
