@@ -110,6 +110,10 @@
 .sales-names-list{margin:12px 0 0;padding-left:18px;color:#0f172a;}
 .sales-names-list li{margin-bottom:5px;}
 .sales-names-close{margin-top:14px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;}
+.daily-preview-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.72);z-index:1100;padding:18px;}
+.daily-preview-modal.is-visible{display:flex;}.daily-preview-dialog{display:flex;flex-direction:column;width:min(900px,96vw);height:min(880px,92vh);overflow:hidden;background:#f8fafc;border-radius:22px;border:1px solid #cbd5e1;box-shadow:0 28px 80px rgba(2,6,23,.45);}
+.daily-preview-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 18px;background:#fff;border-bottom:1px solid #e2e8f0;}.daily-preview-title{margin:0;color:#0f172a;font-size:19px;font-weight:900;}.daily-preview-sub{margin-top:3px;color:#64748b;font-size:12px;}
+.daily-preview-close{border:1px solid #cbd5e1;background:#f8fafc;color:#0f172a;border-radius:10px;padding:9px 13px;cursor:pointer;font-weight:800;}.daily-preview-frame{width:100%;flex:1;border:0;background:#f3f6fb;}
 
 :root{--sales-ink:#0f172a;--sales-muted:#64748b;--sales-blue:#2563eb;--sales-violet:#7c3aed;--sales-green:#16a34a;--sales-amber:#f59e0b;--sales-red:#dc2626;}
 .sales-page{gap:18px;background:linear-gradient(180deg,#f8fbff 0%,#ffffff 34%);margin:-10px;padding:10px;border-radius:24px;}
@@ -169,6 +173,12 @@
       <button id="salesNamesClose" class="sales-names-close" type="button">Fermer</button>
     </div>
   </div>
+  <div id="dailyPreviewModal" class="daily-preview-modal" role="dialog" aria-modal="true" aria-labelledby="dailyPreviewTitle">
+    <div class="daily-preview-dialog">
+      <div class="daily-preview-head"><div><h2 id="dailyPreviewTitle" class="daily-preview-title">Aperçu du mail quotidien</h2><div class="daily-preview-sub">Contenu réel de la veille · envoi automatique à 08h00</div></div><button id="dailyPreviewClose" class="daily-preview-close" type="button">Fermer</button></div>
+      <iframe id="dailyPreviewFrame" class="daily-preview-frame" title="Aperçu du récapitulatif quotidien"></iframe>
+    </div>
+  </div>
   <div class="sales-command">
     <div class="sales-hero-top">
       <div>
@@ -176,6 +186,7 @@
         <div class="sales-sub">Tableau de bord commercial : priorité au mois en cours, progression vers l’objectif, rythme à tenir et ventes récentes.</div>
       </div>
       <div class="sales-controls">
+        <button id="dailyPreviewOpen" class="sales-btn sales-btn--ghost" type="button">✉ Aperçu du mail de 08h</button>
         <a href="{{ url_for('admin_sessions') }}" class="btn btn-outline">← Retour sessions</a>
         <form method="get" action="{{ url_for('admin_sales_tracking') }}" style="display:flex;gap:8px;align-items:center;">
           <input class="sales-input" name="year" type="number" min="2020" max="2100" value="{{ selected_year }}" aria-label="Année du suivi des ventes">
@@ -329,6 +340,20 @@
 
 <script>
 (function(){
+  const dailyPreviewModal = document.getElementById('dailyPreviewModal');
+  const dailyPreviewFrame = document.getElementById('dailyPreviewFrame');
+  const closeDailyPreview = () => {
+    dailyPreviewModal?.classList.remove('is-visible');
+    document.body.style.overflow = '';
+  };
+  document.getElementById('dailyPreviewOpen')?.addEventListener('click', () => {
+    if (!dailyPreviewFrame.src) dailyPreviewFrame.src = '{{ url_for("admin_sales_tracking_daily_recap_preview") }}';
+    dailyPreviewModal?.classList.add('is-visible');
+    document.body.style.overflow = 'hidden';
+  });
+  document.getElementById('dailyPreviewClose')?.addEventListener('click', closeDailyPreview);
+  dailyPreviewModal?.addEventListener('click', (event) => { if (event.target === dailyPreviewModal) closeDailyPreview(); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDailyPreview(); });
   const euroFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
   const fmtEuroNodes = (root = document) => root.querySelectorAll('[data-euro]').forEach((node) => {
     const value = Number(node.getAttribute('data-euro') || '0');

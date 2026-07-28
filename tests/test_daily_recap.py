@@ -55,6 +55,31 @@ class DailyRecapTests(unittest.TestCase):
             response = app.app.test_client().post("/internal/cron/daily-recap", headers={"X-Cron-Secret": "wrong"})
         self.assertEqual(response.status_code, 403)
 
+    def test_sales_tracking_preview_renders_yesterdays_email_without_sending(self):
+        client = app.app.test_client()
+        yesterday = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() - datetime.timedelta(days=1)
+        self.data["sessions"][0]["trainees"][0]["created_at"] = yesterday.isoformat()
+        with client.session_transaction() as browser_session:
+            browser_session["admin_logged_in"] = True
+        with mock.patch.object(app, "load_data", return_value=self.data), \
+             mock.patch.object(app, "brevo_send_email") as send_email:
+            response = client.get("/admin/suivi-ventes/apercu-mail-quotidien")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Récapitulatif de la veille", response.get_data(as_text=True))
+        self.assertIn("Ada Lovelace", response.get_data(as_text=True))
+        self.assertIn("no-store", response.headers["Cache-Control"])
+        send_email.assert_not_called()
+
+    def test_sales_tracking_page_exposes_daily_email_preview(self):
+        client = app.app.test_client()
+        with client.session_transaction() as browser_session:
+            browser_session["admin_logged_in"] = True
+        with mock.patch.object(app, "load_data", return_value=self.data):
+            response = client.get("/admin/suivi-ventes")
+        body = response.get_data(as_text=True)
+        self.assertIn("Aperçu du mail de 08h", body)
+        self.assertIn("/admin/suivi-ventes/apercu-mail-quotidien", body)
+
 
 if __name__ == "__main__":
     unittest.main()
