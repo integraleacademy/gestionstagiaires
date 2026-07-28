@@ -18742,6 +18742,112 @@ def _prepare_a3p_exam_template(template_path: str, prepared_path: str) -> str:
     return prepared_path
 
 
+def _replace_a3p_docx_ooxml(template_path: str, output_path: str, context: Dict[str, str]) -> str:
+    """Fill the A3P template without letting a word processor rebuild its layout.
+
+    Word commonly splits a placeholder over several ``w:t`` elements.  This
+    routine changes only the character data of those existing elements: runs,
+    paragraphs, tables, headers, footers, relationships and page breaks remain
+    byte-for-byte structurally identical to the original package.
+    """
+    text_node_pattern = re.compile(r"(<w:t\b[^>]*>)(.*?)(</w:t>)", re.DOTALL)
+    paragraph_pattern = re.compile(r"(<w:p\b[^>]*>)(.*?)(</w:p>)", re.DOTALL)
+    replacements = {
+        re.sub(r"\s+", "", "{{" + key + "}}"): str(value)
+        for key, value in context.items()
+    }
+
+    def fill_paragraph(match):
+        paragraph = match.group(2)
+        nodes = list(text_node_pattern.finditer(paragraph))
+        visible = "".join(html.unescape(node.group(2)) for node in nodes)
+        compact = re.sub(r"\s+", "", visible)
+        # Preserve ordinary spaces in the document; compacting is only used to
+        # recognize the optional spaces inside a complete template expression.
+        found = []
+        for placeholder, value in replacements.items():
+            pattern = re.compile(r"\{\{\s*" + re.escape(placeholder[2:-2]) + r"\s*\}\}")
+            for occurrence in pattern.finditer(visible):
+                found.append((occurrence.start(), occurrence.end(), value))
+        if not found:
+            return match.group(0)
+        for start, end, value in sorted(found, reverse=True):
+            cursor = 0
+            edits = []
+            inserted = False
+            for node in nodes:
+                node_text = html.unescape(node.group(2))
+                node_start, node_end = cursor, cursor + len(node_text)
+                if node_end > start and node_start < end:
+                    prefix = node_text[:max(0, start - node_start)]
+                    suffix = node_text[max(0, end - node_start):] if end < node_end else ""
+                    addition = value if not inserted else ""
+                    edits.append((node.start(2), node.end(2), escape(prefix + addition + suffix)))
+                    inserted = True
+                cursor = node_end
+            for content_start, content_end, replacement in reversed(edits):
+                paragraph = paragraph[:content_start] + replacement + paragraph[content_end:]
+            nodes = list(text_node_pattern.finditer(paragraph))
+        return match.group(1) + paragraph + match.group(3)
+
+    unresolved = set()
+    with zipfile.ZipFile(template_path, "r") as source, zipfile.ZipFile(output_path, "w") as destination:
+        for item in source.infolist():
+            content = source.read(item.filename)
+            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+                xml_text = content.decode("utf-8")
+                xml_text = paragraph_pattern.sub(fill_paragraph, xml_text)
+                unresolved.update(re.findall(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}", xml_text))
+                content = xml_text.encode("utf-8")
+            destination.writestr(item, content)
+    if unresolved:
+        os.remove(output_path)
+        raise RuntimeError("Variables Word A3P non remplacées : " + ", ".join(sorted(unresolved)))
+    return output_path
+
+
+def _assert_calibri_font_substitution() -> None:
+    """Fail before LibreOffice starts if Render would fall back to DejaVu."""
+    result = subprocess.run(
+        ["fc-match", "-f", "%{family}\n", "Calibri"],
+        check=True, capture_output=True, text=True, timeout=15,
+    )
+    matched_family = (result.stdout or "").splitlines()[0].strip()
+    if "Carlito" not in matched_family:
+        raise RuntimeError(f"Fontconfig invalide : Calibri correspond à {matched_family or 'aucune police'}, pas à Carlito.")
+
+
+def _validate_a3p_pdf(pdf_path: str) -> None:
+    """Reject a conversion with altered pagination, blank pages or bad fonts."""
+    reader = PdfReader(pdf_path)
+    if len(reader.pages) != 6:
+        raise RuntimeError(f"Le dossier A3P doit faire exactement 6 pages (obtenu : {len(reader.pages)}).")
+    font_names, embedded_fonts = set(), set()
+    for page_number, page in enumerate(reader.pages, 1):
+        resources = page.get("/Resources") or {}
+        xobjects = resources.get("/XObject") or {}
+        has_image = any((obj.get_object().get("/Subtype") == "/Image") for obj in xobjects.values())
+        if not (page.extract_text() or "").strip() and not has_image:
+            raise RuntimeError(f"Le dossier A3P contient une page blanche (page {page_number}).")
+        for font_ref in (resources.get("/Font") or {}).values():
+            font = font_ref.get_object()
+            name = str(font.get("/BaseFont") or "")
+            font_names.add(name)
+            descriptor = font.get("/FontDescriptor")
+            if not descriptor and font.get("/DescendantFonts"):
+                descendant = font["/DescendantFonts"][0].get_object()
+                descriptor = descendant.get("/FontDescriptor")
+            if descriptor:
+                descriptor = descriptor.get_object()
+                if any(descriptor.get(key) for key in ("/FontFile", "/FontFile2", "/FontFile3")):
+                    embedded_fonts.add(name)
+    normalized = " ".join(font_names).lower()
+    if "dejavusans" in normalized or "dejavuserif" in normalized:
+        raise RuntimeError("Le PDF A3P utilise encore DejaVu Sans/Serif.")
+    if not any("carlito" in name.lower() for name in embedded_fonts):
+        raise RuntimeError("Carlito n'est pas intégrée dans le PDF A3P.")
+
+
 @app.post("/api/admin/sessions/<session_id>/a3p-exam-dossiers/generate")
 @admin_login_required
 @admin_write_required
@@ -18755,8 +18861,6 @@ def api_generate_a3p_exam_dossiers(session_id: str):
         return jsonify({"ok": False, "message": "Toutes les dates et au moins un candidat sont obligatoires."}), 400
     if values["training_end_date"] < values["training_start_date"]:
         return jsonify({"ok": False, "message": "La date de fin doit être postérieure à la date de début."}), 400
-    if DocxTemplate is None:
-        return jsonify({"ok": False, "message": "Le moteur de documents Word est indisponible."}), 503
     template_path = os.path.join(app.root_path, "templates_word", "docexamena3p.docx")
     if not os.path.isfile(template_path):
         return jsonify({"ok": False, "message": "Le modèle de dossier examen A3P est introuvable."}), 503
@@ -18778,6 +18882,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
     pdf_paths = []
     try:
         lo_binary = _find_libreoffice_binary()
+        _assert_calibri_font_substitution()
         prepared_template_path = _prepare_a3p_exam_template(
             template_path, os.path.join(output_dir, "modele_dossier_examen_a3p.docx")
         )
@@ -18787,9 +18892,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
             base_name = f"Dossier examen A3P {display_last} {display_first}".strip()
             safe_base = secure_filename(base_name) or f"Dossier_examen_A3P_{trainee.get('id')}"
             docx_path = os.path.join(output_dir, safe_base + ".docx")
-            doc = DocxTemplate(prepared_template_path)
-            doc.render(_a3p_exam_context(trainee, values))
-            doc.save(docx_path)
+            _replace_a3p_docx_ooxml(prepared_template_path, docx_path, _a3p_exam_context(trainee, values))
             result = subprocess.run(
                 [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, docx_path],
                 check=True, capture_output=True, text=True, timeout=120,
@@ -18797,6 +18900,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
             pdf_path = os.path.join(output_dir, safe_base + ".pdf")
             if not os.path.isfile(pdf_path):
                 raise RuntimeError(result.stderr or "Le PDF n'a pas été créé.")
+            _validate_a3p_pdf(pdf_path)
             pdf_paths.append((pdf_path, base_name + ".pdf"))
             os.remove(docx_path)
         os.remove(prepared_template_path)
