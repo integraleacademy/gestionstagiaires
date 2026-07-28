@@ -1,14 +1,15 @@
 <!doctype html>
 <html lang="fr">
+{% set is_public_trainee_page = request.endpoint and request.endpoint.startswith('public_trainee') %}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{{ title or "Intégrale Connect • Gestion stagiaires" }}</title>
+  <title>{{ title or ("Intégrale Academy • Espace stagiaire" if is_public_trainee_page else "Intégrale Connect • Gestion stagiaires") }}</title>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260725-admin-trainee-saas')) }}">
 
-  <meta name="apple-mobile-web-app-title" content="Intégrale Connect">
-  <meta name="application-name" content="Intégrale Connect">
+  <meta name="apple-mobile-web-app-title" content="{{ 'Intégrale Academy' if is_public_trainee_page else 'Intégrale Connect' }}">
+  <meta name="application-name" content="{{ 'Intégrale Academy' if is_public_trainee_page else 'Intégrale Connect' }}">
   <meta name="theme-color" content="#111827">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icone.png') }}">
@@ -78,18 +79,21 @@
   {% endif %}
   <div class="topbar">
     <div class="topbar-inner">
-      {% set use_academy_public_logo = request.endpoint in ['public_trainee_space', 'public_trainee_login'] %}
+      {% set use_academy_public_logo = is_public_trainee_page %}
       {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else ('logo-integrale.png' if use_academy_public_logo else 'icone.png') %}
       {% set header_logo_height = 112 if is_partner_space else (80 if use_academy_public_logo else 80) %}
       {% set confirm_logo_height = 88 if is_partner_space else 64 %}
       <a class="brand {{ 'brand--partner-hidden' if is_partner_space else '' }}" href="{{ url_for('admin_sessions') }}">
 <img
   src="{{ url_for('static', filename=header_logo) }}"
-  alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}"
+  alt="{{ 'IA Connect Partenaires' if is_partner_space else ('Intégrale Academy' if is_public_trainee_page else 'Intégrale Connect') }}"
   style="height:{{ header_logo_height }}px;width:auto;display:block;"
 />
         <div class="brand-copy">
-          <div class="brand-title-line"><strong>Intégrale Connect</strong><span>Connecter · Piloter · Certifier</span></div>
+          <div class="brand-title-line">
+            <strong>{{ 'Intégrale Academy' if is_public_trainee_page else 'Intégrale Connect' }}</strong>
+            <span>{{ 'Faites le premier pas vers votre futur métier' if is_public_trainee_page else 'Connecter · Piloter · Certifier' }}</span>
+          </div>
           <time class="brand-datetime" id="brandDateTime" datetime=""></time>
         </div>
       </a>
@@ -98,7 +102,7 @@
           Mode consultation (lecture seule)
         </div>
       {% endif %}
-      {% if is_admin_logged_in %}
+      {% if is_admin_logged_in and not is_public_trainee_page %}
         {% include "_global_command_search.html" %}
       {% endif %}
       <div class="topbar-actions">

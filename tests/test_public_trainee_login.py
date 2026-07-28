@@ -226,3 +226,17 @@ class PublicTraineeLoginTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Plusieurs dossiers correspondent", response.get_data(as_text=True))
+
+    def test_public_trainee_header_uses_academy_identity_without_admin_search(self):
+        with self.client.session_transaction() as browser_session:
+            browser_session["admin_logged_in"] = True
+
+        with patch.object(gestion_app, "load_data", return_value=self.data):
+            response = self.client.get("/espace/PUBLIC-TOKEN")
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Intégrale Academy", body)
+        self.assertIn("Faites le premier pas vers votre futur métier", body)
+        self.assertNotIn("Que recherchez-vous", body)
+        self.assertNotIn("Connecter · Piloter · Certifier", body)
