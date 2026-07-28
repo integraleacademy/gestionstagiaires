@@ -16056,10 +16056,16 @@ def admin_sales_tracking():
 @app.get("/admin/suivi-ventes/apercu-mail-quotidien")
 @admin_login_required
 def admin_sales_tracking_daily_recap_preview():
-    """Display the exact daily recap email without sending or persisting it."""
-    report_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() - datetime.timedelta(days=1)
+    """Display Clement's exact daily recap email without sending or persisting it."""
+    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    report_date = delivery_date - datetime.timedelta(days=1)
     report = build_daily_recap_data(load_data(run_background_tasks=False), report_date)
-    _subject, html_body = build_daily_recap_email(report)
+    greeting_context = fetch_daily_recap_greeting_context(delivery_date)
+    _subject, html_body = build_daily_recap_email(
+        report,
+        recipient="clement@integraleacademy.com",
+        greeting_context=greeting_context,
+    )
     return html_body, 200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"}
 
 
