@@ -197,6 +197,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn(".card-pro-result.is-active", html)
         self.assertIn(".card-pro-result.is-inactive", html)
         self.assertIn(".card-pro-result.is-unknown", html)
+        self.assertIn('.card-pro-result__date{display:inline', html)
+        self.assertIn('.card-pro-result__chip.is-cp,.card-pro-result__chip.is-ap{background:#16a34a', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
 
     def test_aps_admin_trainees_uses_suivi_cnaps_nub_when_pre_number_missing(self):
         trainee = self.data["sessions"][2]["trainees"][0]
@@ -248,6 +252,9 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-trainee-card-pro-followup', html)
         self.assertIn('data-trainee-card-pro-result', html)
         self.assertIn('Chargement CNAPS…', html)
+        self.assertIn('.trainee-cnaps-followup__chip.is-cp,.trainee-cnaps-followup__chip.is-ap{background:#16a34a', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
         self.assertNotIn('title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF"', html)
 
 
