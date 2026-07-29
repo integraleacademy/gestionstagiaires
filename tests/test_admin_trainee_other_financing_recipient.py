@@ -47,6 +47,7 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
         self.assertIn('id="invoiceCompanyEmail"', template)
         self.assertIn('id="invoiceCompanyAddress"', template)
         self.assertIn('id="invoiceNotes"', template)
+        self.assertIn('class="invoice-notes-field"', template)
         self.assertIn("invoiceRecipient", template)
 
 
