@@ -30172,8 +30172,6 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
         return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
-        if current.get('specificCase'):
-            return False, {'error': 'Génération désactivée pour ce cas spécifique.', 'message': 'Génération désactivée pour ce cas spécifique.', 'line': current, 'ignored': True}
         if is_cpf_billing_context(current):
             return False, {'error': 'La facturation CPF est gérée dans un logiciel externe.', 'message': 'La facturation CPF est gérée dans un logiciel externe.', 'line': current}
         if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}:

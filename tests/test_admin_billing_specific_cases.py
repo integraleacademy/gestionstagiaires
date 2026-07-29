@@ -1,5 +1,6 @@
 import datetime
 import unittest
+from unittest.mock import patch
 
 import app
 
@@ -86,10 +87,27 @@ class AdminBillingSpecificCasesTests(unittest.TestCase):
         self.assertIn("Cas spécifique", template)
         self.assertIn("Pourquoi est-ce un cas spécifique ?", template)
         self.assertIn("specific-case-row", template)
-        self.assertIn("Génération désactivée", template)
+        self.assertNotIn("Génération désactivée", template)
+        self.assertNotIn("selected.has(l.id)&&!l.specificCase", template)
+        self.assertNotIn("filtered.filter(l=>!l.specificCase)", template)
         self.assertIn('data-external="${id}">Générée ailleurs</button>', template)
         self.assertIn("['specific_case','Cas spécifique',specificCases.length", template)
         self.assertNotIn("['draft','Factures en brouillon'", template)
         self.assertIn('l.specificCase&&has&&!isExternalInvoice(l)', template)
         self.assertIn('data-reset-external="${id}">Générée ailleurs</button>', template)
         self.assertNotIn('disabled title="Activé automatiquement par le paiement en espèces"', template)
+
+    def test_specific_case_reaches_invoice_generation_checks(self):
+        data = {"sessions": [self._session()]}
+        line = app.buildBillingLinesFromSessions(data["sessions"])[0]
+        line["specificCase"] = True
+        line["specificCaseReason"] = "Dossier à vérifier"
+        data["billing_lines"] = [line]
+
+        with patch.object(app, "_qonto_is_configured", return_value=False), \
+                patch.object(app, "save_data"):
+            ok, result = app._create_invoice_for_billing_line(data, line)
+
+        self.assertFalse(ok)
+        self.assertEqual(result["error"], "Qonto n’est pas connecté")
+        self.assertNotIn("cas spécifique", result["message"])
