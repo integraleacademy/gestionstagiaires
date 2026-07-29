@@ -14861,20 +14861,33 @@ def build_a3p_hosting_email(first_name: str, session_obj: Dict[str, Any]) -> Tup
         </td></tr>
         <tr><td style="padding:32px 34px">
           <p style="font-size:17px;margin:0 0 14px">Bonjour {safe_first_name},</p>
-          <p style="font-size:15px;line-height:1.7;color:#475569;margin:0 0 22px">Vous êtes inscrit(e) à la formation <strong style="color:#172033">{html.escape(session_name)}</strong>, {html.escape(period)}. Si vous le souhaitez, vous pouvez réserver un hébergement au sein même du centre.</p>
+          <p style="font-size:15px;line-height:1.7;color:#475569;margin:0 0 22px">Vous êtes inscrit(e) en formation <strong style="color:#172033">{html.escape(session_name)}</strong>, {html.escape(period)}. Si vous le souhaitez, vous pouvez réserver l’hébergement au sein de notre centre de formation.</p>
+          <div style="font-size:14px;line-height:1.7;color:#475569;background:#eef2ff;border-radius:12px;padding:16px;margin:0 0 22px">
+            <strong style="color:#312e81">Notre établissement propose un hébergement sur place comprenant :</strong><br>
+            dortoir collectif, douches, cuisine équipée, salle de bain, toilettes, machine à laver et sèche-linge.<br><br>
+            La participation financière est de <strong>300 euros pour toute la durée de la formation</strong> (samedis, dimanches et jours fériés inclus). Le paiement devra être effectué impérativement le jour de votre arrivée (chèque ou espèces).<br><br>
+            <strong>👉 À préparer dans une enveloppe portant votre nom et prénom.</strong>
+          </div>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:22px"><tr><td style="padding:20px">
             <div style="font-weight:800;color:#312e81;margin-bottom:12px">Votre séjour en un coup d’œil</div>
             <div style="font-size:14px;line-height:1.9;color:#475569">📅 <strong>Formation :</strong> {html.escape(period)}<br>📍 <strong>Sur place :</strong> 54 chemin du Carreou, 83480 Puget-sur-Argens<br>🏠 <strong>Réservation :</strong> disponibilités, tarifs, modalités et paiement sont présentés sur la page sécurisée.</div>
           </td></tr></table>
           <div style="text-align:center;margin:26px 0"><a href="{booking_url}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:15px 25px;border-radius:12px;box-shadow:0 8px 20px rgba(79,70,229,.25)">Voir les disponibilités et réserver →</a></div>
-          <p style="font-size:13px;line-height:1.6;color:#64748b;background:#eef2ff;border-radius:12px;padding:14px;margin:0">La réservation est facultative et soumise aux disponibilités. Une fois celle-ci enregistrée dans votre Espace Stagiaire, vous ne recevrez plus de rappel d’hébergement.</p>
+          <p style="font-size:13px;line-height:1.6;color:#64748b;background:#eef2ff;border-radius:12px;padding:14px;margin:0">La réservation est facultative et soumise aux disponibilités.</p>
           <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0">Un souci avec le bouton ? Copiez ce lien :<br><a href="{booking_url}" style="color:#4f46e5;word-break:break-all">{booking_url}</a></p>
         </td></tr>
         <tr><td style="padding:20px 34px;background:#f8fafc;color:#64748b;font-size:13px;line-height:1.6"><strong style="color:#334155">Intégrale Academy</strong><br>54 chemin du Carreou · 83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
       </table>
     </td></tr></table></body></html>"""
-    text_body = (f"Bonjour {(first_name or '').strip()},\n\nVous êtes inscrit(e) à {session_name}, {period}. "
-                 f"Vous pouvez réserver un hébergement au centre, 54 chemin du Carreou, 83480 Puget-sur-Argens.\n\n"
+    text_body = (f"Bonjour {(first_name or '').strip()},\n\nVous êtes inscrit(e) en formation {session_name}, {period}. "
+                 f"Si vous le souhaitez, vous pouvez réserver l’hébergement au sein de notre centre de formation.\n\n"
+                 "Notre établissement propose un hébergement sur place comprenant : dortoir collectif, douches, "
+                 "cuisine équipée, salle de bain, toilettes, machine à laver et sèche-linge.\n\n"
+                 "La participation financière est de 300 euros pour toute la durée de la formation "
+                 "(samedis, dimanches et jours fériés inclus). Le paiement devra être effectué impérativement "
+                 "le jour de votre arrivée (chèque ou espèces).\n\n"
+                 "👉 À préparer dans une enveloppe portant votre nom et prénom.\n\n"
+                 "Adresse : 54 chemin du Carreou, 83480 Puget-sur-Argens.\n\n"
                  f"Disponibilités, tarifs et réservation : {A3P_HOSTING_BOOKING_URL}\n\nIntégrale Academy · 04 22 47 07 68")
     return subject, html_body, text_body
 
