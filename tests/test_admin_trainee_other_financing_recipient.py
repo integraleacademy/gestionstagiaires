@@ -80,11 +80,10 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
         finally:
             app.create_qonto_client = original_create
 
-    def test_replaces_existing_company_without_tax_id(self):
+    def test_completes_existing_company_without_tax_id(self):
         original_find = app.find_existing_qonto_client
-        original_create = app.create_qonto_client_with_optional_tax_id
         original_update = app.update_qonto_client
-        created_payloads = []
+        updated_payloads = []
         app.find_existing_qonto_client = lambda payload: {
             "id": "old-incomplete-company",
             "name": "AZZERA PROTECT",
@@ -95,11 +94,9 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
                 "country_code": "FR",
             },
         }
-        app.create_qonto_client_with_optional_tax_id = lambda payload: (
-            created_payloads.append(payload) or {"id": "identified-company"}
-        )
-        app.update_qonto_client = lambda *args: self.fail(
-            "a company without a tax id must not be patched and reused"
+        app.update_qonto_client = lambda client_id, payload: (
+            updated_payloads.append((client_id, payload))
+            or {"id": client_id, **payload}
         )
         try:
             client = app.get_or_create_qonto_billing_client({
@@ -115,12 +112,15 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
             })
         finally:
             app.find_existing_qonto_client = original_find
-            app.create_qonto_client_with_optional_tax_id = original_create
             app.update_qonto_client = original_update
 
-        self.assertEqual(client["id"], "identified-company")
+        self.assertEqual(client["id"], "old-incomplete-company")
         self.assertEqual(
-            created_payloads[0]["client"]["tax_identification_number"],
+            updated_payloads[0][0],
+            "old-incomplete-company",
+        )
+        self.assertEqual(
+            updated_payloads[0][1]["tax_identification_number"],
             "924926991",
         )
 
