@@ -14965,10 +14965,8 @@ def run_a3p_hosting_reminders(today: Optional[datetime.date] = None) -> Dict[str
 @app.get("/admin/outils/mails")
 @admin_login_required
 def admin_mails():
-    data = load_data()
-    dashboard = _build_a3p_hosting_dashboard(data)
     _subject, preview_html, _text = build_a3p_hosting_email("Camille", {"name": "A3P · Protection rapprochée", "date_start": "2026-09-21", "date_end": "2026-11-20"})
-    return render_template("admin_mails.html", rows=dashboard["rows"], stats=dashboard["stats"], preview_html=preview_html)
+    return render_template("admin_mails.html", preview_html=preview_html)
 
 
 def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
