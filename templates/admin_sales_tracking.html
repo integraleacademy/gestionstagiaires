@@ -175,7 +175,7 @@
   </div>
   <div id="dailyPreviewModal" class="daily-preview-modal" role="dialog" aria-modal="true" aria-labelledby="dailyPreviewTitle">
     <div class="daily-preview-dialog">
-      <div class="daily-preview-head"><div><h2 id="dailyPreviewTitle" class="daily-preview-title">Aperçu du mail quotidien</h2><div class="daily-preview-sub">Mail destiné à clement@integraleacademy.com · envoi prévu aujourd’hui à 08h00</div></div><button id="dailyPreviewClose" class="daily-preview-close" type="button">Fermer</button></div>
+      <div class="daily-preview-head"><div><h2 id="dailyPreviewTitle" class="daily-preview-title">Aperçu du mail de demain</h2><div class="daily-preview-sub">Mail destiné à clement@integraleacademy.com · envoi prévu demain, le {{ daily_preview_delivery_date }}, à 08h00</div></div><button id="dailyPreviewClose" class="daily-preview-close" type="button">Fermer</button></div>
       <iframe id="dailyPreviewFrame" class="daily-preview-frame" title="Aperçu du récapitulatif quotidien"></iframe>
     </div>
   </div>
@@ -186,7 +186,7 @@
         <div class="sales-sub">Tableau de bord commercial : priorité au mois en cours, progression vers l’objectif, rythme à tenir et ventes récentes.</div>
       </div>
       <div class="sales-controls">
-        <button id="dailyPreviewOpen" class="sales-btn sales-btn--ghost" type="button">✉ Aperçu du mail de 08h</button>
+        <button id="dailyPreviewOpen" class="sales-btn sales-btn--ghost" type="button">✉ Aperçu du mail de demain</button>
         <button id="dailyRecapSend" class="sales-btn" type="button">📨 Envoyer le mail de 08h</button>
         <span id="dailyRecapSendFeedback" role="status" aria-live="polite" style="font-size:13px;font-weight:800;"></span>
         <a href="{{ url_for('admin_sessions') }}" class="btn btn-outline">← Retour sessions</a>

@@ -16319,6 +16319,7 @@ def admin_sales_tracking():
 
     return render_template(
         "admin_sales_tracking.html",
+        daily_preview_delivery_date=fr_date((today + datetime.timedelta(days=1)).isoformat()),
         **metrics,
     )
 
@@ -16326,8 +16327,8 @@ def admin_sales_tracking():
 @app.get("/admin/suivi-ventes/apercu-mail-quotidien")
 @admin_login_required
 def admin_sales_tracking_daily_recap_preview():
-    """Display Clement's recap scheduled for today at 08:00 without sending it."""
-    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    """Display Clement's next recap, scheduled for tomorrow at 08:00, without sending it."""
+    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() + datetime.timedelta(days=1)
     report_date = delivery_date - datetime.timedelta(days=1)
     report = build_daily_recap_data(load_data(run_background_tasks=False), report_date)
     greeting_context = fetch_daily_recap_greeting_context(delivery_date)
@@ -32138,6 +32139,34 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
             rendered.append(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(item["name"])}</strong>{taj_label}<div style="margin-top:4px;color:#64748b;font-size:13px">{html.escape(item["detail"])}</div></div>')
         return "".join(rendered)
 
+    def key_dates_card(items: List[Dict[str, str]]) -> str:
+        """Render key dates as a compact agenda rather than a generic list."""
+        if not items:
+            return ""
+        agenda_rows = []
+        for item in items:
+            title = str(item.get("name") or "Échéance")
+            is_urgent = "demain" in title.lower()
+            accent = "#ea580c" if is_urgent else "#4f46e5"
+            soft = "#fff7ed" if is_urgent else "#eef2ff"
+            timing = "À préparer aujourd’hui" if is_urgent else "À anticiper"
+            agenda_rows.append(
+                f'<tr><td style="padding:6px 0"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+                f'style="background:{soft};border:1px solid {accent}22;border-radius:14px"><tr>'
+                f'<td width="6" style="width:6px;background:{accent};border-radius:14px 0 0 14px"></td>'
+                f'<td width="48" align="center" style="padding:14px 8px 14px 14px"><div style="width:36px;height:36px;line-height:36px;border-radius:11px;background:#fff;color:{accent};font-size:18px;text-align:center;box-shadow:0 4px 12px rgba(15,23,42,.08)">◆</div></td>'
+                f'<td style="padding:13px 14px 13px 6px"><div style="color:{accent};font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase">{timing}</div>'
+                f'<div style="margin-top:3px;color:#0f172a;font-size:15px;font-weight:900;line-height:1.3">{html.escape(title)}</div>'
+                f'<div style="margin-top:5px;color:#64748b;font-size:12px;line-height:1.45">{html.escape(str(item.get("detail") or ""))}</div></td>'
+                f'</tr></table></td></tr>'
+            )
+        return (
+            '<tr><td style="padding:8px 0"><div style="overflow:hidden;background:linear-gradient(145deg,#ffffff,#f8fafc);border:1px solid #dbeafe;border-radius:20px;padding:20px;box-shadow:0 10px 28px rgba(37,99,235,.08)">'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td><div style="color:#4f46e5;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase">Agenda opérationnel</div><h2 style="margin:4px 0 2px;color:#0f172a;font-size:19px">Dates clés</h2><div style="color:#64748b;font-size:12px">Les prochaines échéances à ne pas manquer</div></td>'
+            f'<td width="46" align="right" valign="top"><span style="display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900">{len(items)}</span></td></tr></table>'
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px">{"".join(agenda_rows)}</table></div></td></tr>'
+        )
+
     sales = report["sales"]
     comparisons = report.get("comparison_sales") or {"previous_year": report["prior_sales"]}
     comparison_labels = {"previous_day": "jour précédent", "previous_week": "semaine précédente", "previous_month": "mois précédent", "previous_year": "année précédente"}
@@ -32185,7 +32214,8 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
         ("👮", "CNAPS à valider", report["cnaps_pending"], "Aucune validation en attente"),
     ]
     hidden_when_empty = {"Dates clés", "Changements CNAPS", "Prélèvements rejetés", "Dossiers incomplets · J-7"}
-    cards = "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections if items or title not in hidden_when_empty)
+    cards = key_dates_card(report.get("key_dates") or [])
+    cards += "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections if title != "Dates clés" and (items or title not in hidden_when_empty))
     vae_follow_up = report.get("vae_follow_up") or {}
     vae_metrics = [
         ("Nouvelles demandes VAE", vae_follow_up.get("new_requests", 0)),
