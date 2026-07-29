@@ -36,7 +36,7 @@ class DailyRecapTests(unittest.TestCase):
         subject, body = app.build_daily_recap_email(report)
         self.assertEqual(subject, "Récapitulatif de la veille")
         self.assertIn("Chiffre d’affaires de la veille", body)
-        self.assertIn("Prélèvements rejetés", body)
+        self.assertNotIn("Prélèvements rejetés", body)
         self.assertIn("Conventions en attente de signature", body)
         self.assertIn("👮", body)
 
@@ -84,6 +84,44 @@ class DailyRecapTests(unittest.TestCase):
 
     def test_user_requested_rejection_reason_is_in_french(self):
         self.assertEqual(app._daily_recap_rejection_reason("User requested"), "Rejet demandé par le titulaire")
+
+    def test_empty_operational_sections_are_hidden(self):
+        report = app.build_daily_recap_data({"sessions": [], "billing_lines": []}, datetime.date(2026, 7, 27))
+        _subject, body = app.build_daily_recap_email(report)
+        for title in ("Dates clés", "Suivi des VAE", "Changements CNAPS", "Prélèvements rejetés", "Dossiers incomplets · J-7"):
+            self.assertNotIn(title, body)
+
+    def test_key_dates_include_training_and_exam_reminders(self):
+        self.data["sessions"] = [
+            {"name": "APS été", "training_type": "APS", "date_start": "2026-07-29", "date_end": "2026-08-20", "exam_date": "2026-08-04", "trainees": []},
+            {"name": "VTC juillet", "training_type": "VTC", "date_start": "2026-07-01", "date_end": "2026-07-30", "exam_theory_date": "2026-07-29", "trainees": []},
+        ]
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual(len(report["key_dates"]), 3)
+        _subject, body = app.build_daily_recap_email(report)
+        self.assertIn("Dates clés", body)
+        self.assertIn("Début de formation demain", body)
+        self.assertIn("Examen théorique demain", body)
+        self.assertIn("Examen dans 7 jours", body)
+        self.assertIn("Pensez à générer les dossiers d’examen", body)
+
+    def test_vae_follow_up_counts_yesterdays_transitions(self):
+        self.data["sessions"] = [{
+            "training_type": "DIRIGEANT VAE", "date_start": "2026-01-01",
+            "trainees": [
+                {"created_at": "2026-07-27T10:00:00Z", "vae_action_dates": {"livret_1_validated": "27/07/2026"}},
+                {"created_at": "2026-07-20", "vae_action_dates": {"livret_2_validated": "2026-07-27", "diplome_obtenu": "27/07/2026 à 16h30"}},
+            ],
+        }]
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual(report["vae_follow_up"], {
+            "new_requests": 1, "livret_1_validated": 1,
+            "livret_2_validated": 1, "certification_obtained": 1,
+        })
+        _subject, body = app.build_daily_recap_email(report)
+        self.assertIn("Suivi des VAE", body)
+        self.assertIn("Nouvelles demandes VAE", body)
+        self.assertIn("Certifications obtenues", body)
 
     def test_pending_conventions_match_actionable_yousign_requests(self):
         trainees = self.data["sessions"][0]["trainees"]
@@ -194,9 +232,9 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Puget sur Argens", sent[0][0][2])
         self.assertIn("Aurillac", sent[0][0][2])
         self.assertIn("Bonjour Aurélie", sent[1][0][2])
-        self.assertNotIn("Aurillac", sent[1][0][2])
+        self.assertIn("Aurillac", sent[1][0][2])
 
-    def test_personalized_greetings_follow_each_recipient_weather_scope(self):
+    def test_personalized_greetings_include_both_weather_locations_for_every_recipient(self):
         context = {
             "date": datetime.date(2026, 7, 29), "nameday": "Sainte Marthe",
             "weather": {
@@ -209,7 +247,7 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Bonjour Cassandre, Nous sommes le mercredi 29 juillet 2026", cassandre)
         self.assertIn("Sainte-Marthe", cassandre)
         self.assertIn("30°C", cassandre)
-        self.assertNotIn("Aurillac", cassandre)
+        self.assertIn("Aurillac", cassandre)
         self.assertIn("Bonjour Clément", clement)
         self.assertIn("Aurillac", clement)
         self.assertIn("19°C", clement)

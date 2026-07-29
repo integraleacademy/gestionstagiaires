@@ -31817,7 +31817,7 @@ def _daily_recap_greeting(recipient: str, context: Dict[str, Any]) -> str:
     nameday = _daily_recap_nameday_label(context.get("nameday"))
     if nameday:
         parts.append(f"Aujourd'hui, c'est {nameday} !")
-    keys = ["puget"] + (["aurillac"] if recipient.lower() in {"elsa@integraleacademy.com", "clement@integraleacademy.com"} else [])
+    keys = ["puget", "aurillac"]
     for key in keys:
         location, forecast = DAILY_RECAP_WEATHER_LOCATIONS[key], (context.get("weather") or {}).get(key)
         if forecast:
@@ -31844,7 +31844,7 @@ def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
         f'<div style="font-size:16px;font-style:italic;line-height:1.5">« {html.escape(str(quote.get("text") or ""))} »</div>'
         f'<div style="margin-top:6px;font-size:12px;font-weight:800;color:#6d28d9">— {html.escape(str(quote.get("author") or ""))}</div></div>'
     )
-    keys = ["puget"] + (["aurillac"] if recipient.lower() in {"elsa@integraleacademy.com", "clement@integraleacademy.com"} else [])
+    keys = ["puget", "aurillac"]
     weather_cards = []
     for key in keys:
         location = DAILY_RECAP_WEATHER_LOCATIONS[key]
@@ -31961,6 +31961,13 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     pending_signatures: List[Dict[str, str]] = []
     incomplete_upcoming: List[Dict[str, str]] = []
     cnaps_pending: List[Dict[str, str]] = []
+    key_dates: List[Dict[str, str]] = []
+    vae_follow_up = {
+        "new_requests": 0,
+        "livret_1_validated": 0,
+        "livret_2_validated": 0,
+        "certification_obtained": 0,
+    }
     today = report_date + datetime.timedelta(days=1)
 
     validated_cnaps = {"valide", "validé", "validee", "validée", "accepted", "accepte", "accepté", "active", "actif", "favorable", "done"}
@@ -31972,11 +31979,45 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
         start_date = _session_start_date(session_obj)
         end_date = _daily_recap_date(_session_get(session_obj, "date_end", "")) or start_date
         session_label = f"{formation_label(training_type) or training_type} · {fr_date(start_date.isoformat()) if start_date else 'date à confirmer'}"
+        session_name = str(_session_get(session_obj, "name", "") or "").strip()
+        formation_name = " · ".join(dict.fromkeys(part for part in (session_name, formation_label(training_type) or training_type) if part))
+        date_range = f"du {fr_date(start_date.isoformat()) if start_date else 'date à confirmer'} au {fr_date(end_date.isoformat()) if end_date else 'date à confirmer'}"
+        if start_date == today + datetime.timedelta(days=1):
+            key_dates.append({"name": "Début de formation demain", "detail": f"{formation_name} · {date_range}"})
+
+        exam_dates = []
+        for exam_key, exam_label in (
+            ("exam_date", "Examen"), ("exam_theory_date", "Examen théorique"),
+            ("exam_practice_date", "Examen pratique"), ("ssiap_exam_date", "Examen SSIAP"),
+        ):
+            exam_date = _daily_recap_date(_session_get(session_obj, exam_key, ""))
+            if exam_date and (exam_date, exam_label) not in exam_dates:
+                exam_dates.append((exam_date, exam_label))
+        for exam_date, exam_label in exam_dates:
+            days_until_exam = (exam_date - today).days
+            if days_until_exam not in {1, 7}:
+                continue
+            title = f"{exam_label} demain" if days_until_exam == 1 else f"{exam_label} dans 7 jours"
+            reminder = " · Pensez à générer les dossiers d’examen" if days_until_exam == 7 and training_type.upper().startswith(("APS", "A3P")) else ""
+            key_dates.append({"name": title, "detail": f"{formation_name} · le {fr_date(exam_date.isoformat())} · {date_range}{reminder}"})
+
         for trainee in _session_trainees_list(session_obj):
             name = _daily_recap_name(trainee)
             sale_date = _sales_trainee_anchor_date(trainee, training_label)
             price = _sales_trainee_price(trainee, training_type, training_label)
             excluded_from_sales = bool(trainee.get("exclude_from_sales_tracking") or session_obj.get("exclude_from_sales_tracking"))
+            if "VAE" in training_type.upper():
+                if _daily_recap_date(trainee.get("created_at")) == report_date:
+                    vae_follow_up["new_requests"] += 1
+                action_dates = trainee.get("vae_action_dates") or {}
+                if isinstance(action_dates, dict):
+                    for action_key, metric_key in (
+                        ("livret_1_validated", "livret_1_validated"),
+                        ("livret_2_validated", "livret_2_validated"),
+                        ("diplome_obtenu", "certification_obtained"),
+                    ):
+                        if _daily_recap_date(action_dates.get(action_key)) == report_date:
+                            vae_follow_up[metric_key] += 1
             if not excluded_from_sales and sale_date and sale_date.year == report_date.year and sale_date.month == report_date.month and sale_date <= report_date:
                 month_revenue += price
             if not excluded_from_sales and sale_date == report_date:
@@ -32083,7 +32124,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     month_objective = _parse_positive_int(monthly_objectives.get(str(report_date.month), 0) if isinstance(monthly_objectives, dict) else 0)
     month_progress_ratio = (month_revenue / month_objective) if month_objective > 0 else 0
     month_remaining = max(month_objective - month_revenue, 0) if month_objective > 0 else 0
-    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "cnaps_changes": changes, "rejected": rejected, "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
+    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "cnaps_changes": changes, "rejected": rejected, "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
 
 
 def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
@@ -32136,13 +32177,26 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     ) or '<span style="color:#92400e;font-size:13px">Aucune vente</span>'
     logo = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
     sections = [
+        ("📅", "Dates clés", report.get("key_dates") or [], ""),
         ("⚡", "Changements CNAPS", report["cnaps_changes"], "Aucun changement détecté"),
         ("↩", "Prélèvements rejetés", report["rejected"], "Aucun rejet"),
         ("✍", "Conventions en attente de signature", report["pending_signatures"], "Aucune signature en attente"),
         ("📁", "Dossiers incomplets · J-7", report["incomplete_upcoming"], "Tous les dossiers sont complets"),
         ("👮", "CNAPS à valider", report["cnaps_pending"], "Aucune validation en attente"),
     ]
-    cards = "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections)
+    hidden_when_empty = {"Dates clés", "Changements CNAPS", "Prélèvements rejetés", "Dossiers incomplets · J-7"}
+    cards = "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections if items or title not in hidden_when_empty)
+    vae_follow_up = report.get("vae_follow_up") or {}
+    vae_metrics = [
+        ("Nouvelles demandes VAE", vae_follow_up.get("new_requests", 0)),
+        ("Livrets 1 validés", vae_follow_up.get("livret_1_validated", 0)),
+        ("Livrets 2 validés", vae_follow_up.get("livret_2_validated", 0)),
+        ("Certifications obtenues", vae_follow_up.get("certification_obtained", 0)),
+    ]
+    visible_vae_metrics = [(label, int(count or 0)) for label, count in vae_metrics if int(count or 0) > 0]
+    if visible_vae_metrics:
+        vae_rows = "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right;background:#ecfdf5;color:#047857;border-radius:99px;padding:4px 10px;font-weight:900">{count}</span></div>' for label, count in visible_vae_metrics)
+        cards = f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">🎓&nbsp; Suivi des VAE</h2>{vae_rows}</div></td></tr>' + cards
     greeting = ""
     if recipient and greeting_context:
         greeting = _daily_recap_greeting_html(recipient, greeting_context)
