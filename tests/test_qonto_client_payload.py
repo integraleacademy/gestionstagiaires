@@ -30,6 +30,24 @@ class QontoClientPayloadTests(unittest.TestCase):
         self.assertEqual(payload["last_name"], "Dupont")
         self.assertEqual(payload["billing_address"]["street_address"], "10 rue de Paris")
 
+    def test_company_modal_payload_includes_normalized_siret(self):
+        payload = gestion_app.build_qonto_client_payload(
+            {
+                "type": "company",
+                "name": "AZZERA PROTECT",
+                "email": "facturation@example.com",
+                "siret": "924 926 991 00010",
+            },
+            {
+                "street_address": "131 avenue de Verdun",
+                "city": "Frejus",
+                "zip_code": "83600",
+                "country_code": "FR",
+            },
+        )
+
+        self.assertEqual(payload["tax_identification_number"], "924926991")
+
 
     def test_build_invoice_customer_uses_caisse_des_depots_for_cpf_variants(self):
         for label in ["CPF", " cpf ", "Compte Personnel de Formation", "Mon Compte Formation"]:

@@ -1073,11 +1073,9 @@ def update_qonto_client(client_id: str, payload: Dict[str, Any]) -> Dict[str, An
 def get_or_create_qonto_billing_client(client_payload: Dict[str, Any]) -> Dict[str, Any]:
     """Return a Qonto client that is usable for invoice creation.
 
-    Qonto does not reliably apply a tax identification number to an existing
-    company through the client update endpoint.  Reusing an old company found
-    by name or e-mail can therefore make invoice creation fail even though the
-    administrator just entered a SIRET in the modal.  In that situation create
-    the correctly identified company instead of keeping the incomplete one.
+    The invoice form is the source of truth for billing details.  When the
+    client already exists in Qonto, patch it with the complete canonical
+    payload instead of reusing an incomplete record (or creating a duplicate).
     """
     existing = find_existing_qonto_client(client_payload)
     if not existing:
@@ -1088,21 +1086,24 @@ def get_or_create_qonto_billing_client(client_payload: Dict[str, Any]) -> Dict[s
     existing_client = existing.get("client") if isinstance(existing.get("client"), dict) else existing
     existing_client_id = existing_client.get("id")
     existing_tax_id = existing_client.get("tax_identification_number") or existing_client.get("tin_number")
-    company_tax_missing = _qonto_client_kind(client_payload) == "company" and not existing_tax_id
-    if company_tax_missing:
+    company_tax_missing = (
+        _qonto_client_kind(client_payload) == "company"
+        and bool(client_payload.get("tax_identification_number"))
+        and not existing_tax_id
+    )
+    billing_address_missing = not qonto_client_has_complete_billing_address(existing)
+    if existing_client_id and (company_tax_missing or billing_address_missing):
+        update_payload = remove_invalid_qonto_phone(dict(client_payload))
         app.logger.info(
-            "[QONTO] Existing company has no tax id; creating an identified client instead client_id=%s",
+            "[QONTO] Completing existing billing client client_id=%s missing_tax_id=%s missing_billing_address=%s payload_keys=%s",
             existing_client_id,
+            company_tax_missing,
+            billing_address_missing,
+            list(update_payload.keys()),
         )
-        return create_qonto_client_with_optional_tax_id({
-            "client": remove_invalid_qonto_phone(client_payload),
-        })
-    if existing_client_id and not qonto_client_has_complete_billing_address(existing):
-        app.logger.info(
-            "[QONTO] Existing billing client incomplete, updating billing details client_id=%s",
-            existing_client_id,
-        )
-        return update_qonto_client(existing_client_id, remove_invalid_qonto_phone(client_payload)) or existing
+        updated = update_qonto_client(existing_client_id, update_payload)
+        if updated:
+            return updated
     return existing
 
 
@@ -28882,6 +28883,11 @@ def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[D
         if kind == "company" or client.get("company_name"):
             kind = "company"
             payload = {"type": "company", "kind": "company", "name": (client.get("company_name") or client.get("name") or "").strip()}
+            tax_id = normalize_french_company_tax_id(
+                client.get("siret") or client.get("tax_identification_number")
+            )
+            if tax_id:
+                payload["tax_identification_number"] = tax_id
         else:
             kind = "individual"
             payload = {"type": "individual", "kind": "individual", "first_name": (client.get("first_name") or "").strip(), "last_name": (client.get("last_name") or "").strip(), "name": (client.get("name") or "").strip()}
@@ -29686,7 +29692,18 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
                     'traineeEmail': trainee.get('email') or '', 'financeurName': persisted.get('financeurName') or financing.get('label') or financing['type'], 'typeFinanceur': financing['type'], 'clientName': (CPF_QONTO_CLIENT_NAME if is_cpf_billing_context(financing) else (persisted.get('clientName') or buildInvoiceCustomer(financing['type'], trainee, sess, financing).get('name') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip())),
-                    'clientAddress': trainee.get('qonto_billing_address') or trainee.get('address') or '', 'clientZipCode': trainee.get('zip_code') or '', 'clientCity': trainee.get('city') or '',
+                    # Values entered in the invoice-recipient modal belong to
+                    # the billing line.  Preserve them when the generated view
+                    # is rebuilt from the trainee/session data; otherwise the
+                    # SIRET and company address disappear between validation
+                    # and invoice creation.
+                    'companyName': persisted.get('companyName') or '',
+                    'clientEmail': persisted.get('clientEmail') or '',
+                    'clientAddress': persisted.get('clientAddress') or trainee.get('qonto_billing_address') or trainee.get('address') or '',
+                    'clientZipCode': persisted.get('clientZipCode') or trainee.get('zip_code') or '',
+                    'clientCity': persisted.get('clientCity') or trainee.get('city') or '',
+                    'siret': persisted.get('siret') or '',
+                    'invoiceNotes': persisted.get('invoiceNotes') or '',
                     'formationName': training, 'sessionName': _session_get(sess, 'name', '') or training,
                     'dateStart': start.isoformat(), 'dateEnd': end.isoformat() if end else '', 'examDate': _session_get(sess, 'exam_date', '') or '',
                     'dateLabel': f"du {fr_date(start.isoformat())} au {fr_date((end or start).isoformat())}" + (f" — examen le {fr_date(_session_get(sess, 'exam_date', ''))}" if _session_get(sess, 'exam_date', '') else ''),
@@ -30961,27 +30978,8 @@ def api_qonto_invoice_create(trainee_id: str):
         if is_cpf_invoice:
             q_client = get_or_create_cpf_qonto_client()
         else:
-            q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
             qonto_client_payload = remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))
-            if q_client:
-                q_client_id = (q_client.get("client") or q_client).get("id")
-                if not q_client_id:
-                    raise RuntimeError("Client Qonto existant introuvable")
-                if not qonto_client_has_complete_billing_address(q_client):
-                    app.logger.info("[QONTO] Existing client incomplete, updating billing address client_id=%s", q_client_id)
-                    safe_payload = dict(qonto_client_payload)
-                    if "phone" in safe_payload:
-                        app.logger.warning("[QONTO] phone field present in client payload: %s", safe_payload["phone"])
-                    app.logger.info("[QONTO] update client payload keys=%s", list(qonto_client_payload.keys()))
-                    qonto_client_payload = remove_invalid_qonto_phone(qonto_client_payload)
-                    q_client = update_qonto_client(q_client_id, qonto_client_payload) or q_client
-            else:
-                safe_payload = dict(qonto_client_payload)
-                if "phone" in safe_payload:
-                    app.logger.warning("[QONTO] phone field present in client payload: %s", safe_payload["phone"])
-                app.logger.info("[QONTO] create client payload keys=%s", list(qonto_client_payload.keys()))
-                qonto_client_payload = remove_invalid_qonto_phone(qonto_client_payload)
-                q_client = create_qonto_client({"client": qonto_client_payload})
+            q_client = get_or_create_qonto_billing_client(qonto_client_payload)
         q_client_id = (q_client.get("client") or q_client).get("id")
         if not q_client_id: raise RuntimeError("Impossible de créer le client Qonto")
         start = (payload.get("session") or {}).get("date_start") or _session_get(sess, "date_start", "")[:10]
