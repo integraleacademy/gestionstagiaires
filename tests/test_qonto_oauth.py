@@ -74,7 +74,7 @@ class QontoOauthTests(unittest.TestCase):
         self.assertTrue(payload["incompatible"])
         self.assertEqual(payload["message"], "OAuth Qonto : connecté sandbox, incompatible avec production")
 
-    def test_live_oauth_status_refreshes_token_before_claiming_connection_is_active(self):
+    def test_live_oauth_status_does_not_rotate_a_healthy_refresh_token(self):
         data = {"qonto_oauth": {"access_token": "old", "refresh_token": "refresh", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
         refreshed = {"access_token": "new", "refresh_token": "new-refresh", "expires_in": 3600, "scope": gestion_app.QONTO_OAUTH_SCOPE}
         with patch.object(gestion_app, "load_data", return_value=data), \
@@ -85,10 +85,20 @@ class QontoOauthTests(unittest.TestCase):
         payload = response.get_json()
         self.assertTrue(payload["connected"])
         self.assertTrue(payload["validated"])
-        exchange.assert_called_once()
+        exchange.assert_not_called()
+
+    def test_sepa_request_reuses_token_rotated_by_a_concurrent_request(self):
+        stale = {"qonto_oauth": {"access_token": "old", "refresh_token": "old-refresh", "expires_at": 1, "environment": "production"}}
+        current = {"qonto_oauth": {"access_token": "new", "refresh_token": "new-refresh", "expires_at": 9999999999, "environment": "production"}}
+        with patch.object(gestion_app, "load_data", return_value=current), \
+             patch.object(gestion_app, "_exchange_qonto_oauth_token") as exchange:
+            token = gestion_app._qonto_oauth_bearer_token(stale)
+
+        self.assertEqual(token, "new")
+        exchange.assert_not_called()
 
     def test_live_oauth_status_clears_revoked_connection_and_explains_reconnect(self):
-        data = {"qonto_oauth": {"access_token": "old", "refresh_token": "revoked", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
+        data = {"qonto_oauth": {"access_token": "old", "refresh_token": "revoked", "expires_at": 1, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
         with patch.object(gestion_app, "load_data", return_value=data), \
              patch.object(gestion_app, "save_data"), \
              patch.object(gestion_app, "_exchange_qonto_oauth_token", side_effect=gestion_app.QontoApiError(400, '{"error":"invalid_grant"}')):

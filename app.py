@@ -373,6 +373,7 @@ QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
 QONTO_OAUTH_PRODUCTION_REDIRECT_URI = "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback"
 QONTO_OAUTH_LEGACY_HOSTS = {"gestionstagiaires-test-v2.onrender.com"}
+_qonto_oauth_refresh_lock = threading.RLock()
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL")
     or os.environ.get("PUBLIC_BASE_URL")
@@ -683,23 +684,42 @@ def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None, *, force_re
     if not _qonto_oauth_connected(data):
         raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
     if force_refresh or int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
-        try:
-            payload = _exchange_qonto_oauth_token({
-                "client_id": _qonto_oauth_client_id(),
-                "client_secret": _qonto_oauth_client_secret(),
-                "grant_type": "refresh_token",
-                "refresh_token": _qonto_oauth_refresh_token(data),
-            })
-        except QontoApiError as exc:
-            error_text = f"{exc.body} {exc}".lower()
-            if exc.status_code == 400 and "invalid_grant" in error_text:
-                _reset_qonto_oauth_tokens(data)
-                save_data(data)
-                raise QontoConfigurationError(
-                    "Connexion Qonto OAuth expirée ou révoquée : reconnectez Qonto depuis Réglages > Qonto avant de programmer un prélèvement SEPA."
-                ) from exc
-            raise
-        _store_qonto_oauth_tokens(data, payload)
+        # Qonto rotates refresh tokens. Serialize refreshes so two simultaneous
+        # SEPA requests cannot both consume the same one and make the second
+        # request erase the newly rotated credentials with ``invalid_grant``.
+        with _qonto_oauth_refresh_lock:
+            latest_data = load_data()
+            latest_settings = _qonto_oauth_settings(latest_data)
+            latest_token = _qonto_oauth_refresh_token(latest_data)
+            original_token = _qonto_oauth_refresh_token(data)
+            latest_is_fresh = int(latest_settings.get("expires_at") or 0) > int(time.time()) + 60
+            if latest_token and latest_token != original_token and latest_is_fresh:
+                return _qonto_oauth_access_token(latest_data)
+            refresh_data = latest_data if latest_token else data
+            try:
+                payload = _exchange_qonto_oauth_token({
+                    "client_id": _qonto_oauth_client_id(),
+                    "client_secret": _qonto_oauth_client_secret(),
+                    "grant_type": "refresh_token",
+                    "refresh_token": _qonto_oauth_refresh_token(refresh_data),
+                })
+            except QontoApiError as exc:
+                error_text = f"{exc.body} {exc}".lower()
+                if exc.status_code == 400 and "invalid_grant" in error_text:
+                    # Never clear a newer token saved while this request was in
+                    # flight. Only the token actually rejected by Qonto may be
+                    # marked disconnected.
+                    canonical_data = load_data()
+                    if _qonto_oauth_refresh_token(canonical_data) != _qonto_oauth_refresh_token(refresh_data):
+                        return _qonto_oauth_bearer_token(canonical_data)
+                    _reset_qonto_oauth_tokens(canonical_data)
+                    save_data(canonical_data)
+                    raise QontoConfigurationError(
+                        "Connexion Qonto OAuth expirée ou révoquée : reconnectez Qonto depuis Réglages > Qonto avant de programmer un prélèvement SEPA."
+                    ) from exc
+                raise
+            _store_qonto_oauth_tokens(refresh_data, payload)
+            return _qonto_oauth_access_token(refresh_data)
     return _qonto_oauth_access_token(data)
 
 
@@ -17110,7 +17130,9 @@ def api_qonto_oauth_status():
     validated = False
     if request.args.get("validate") == "1" and _qonto_oauth_connected(data):
         try:
-            _qonto_oauth_bearer_token(data, force_refresh=True)
+            # Do not rotate a healthy refresh token merely by opening this
+            # settings page. The normal expiry check refreshes it when needed.
+            _qonto_oauth_bearer_token(data)
             # Token rotation is persisted by _store_qonto_oauth_tokens. Reload
             # the canonical copy before building the response.
             data = load_data()
