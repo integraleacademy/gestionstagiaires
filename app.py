@@ -1070,6 +1070,42 @@ def update_qonto_client(client_id: str, payload: Dict[str, Any]) -> Dict[str, An
     return _qonto_request("PATCH", f"/v2/clients/{client_id}", payload)
 
 
+def get_or_create_qonto_billing_client(client_payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a Qonto client that is usable for invoice creation.
+
+    Qonto does not reliably apply a tax identification number to an existing
+    company through the client update endpoint.  Reusing an old company found
+    by name or e-mail can therefore make invoice creation fail even though the
+    administrator just entered a SIRET in the modal.  In that situation create
+    the correctly identified company instead of keeping the incomplete one.
+    """
+    existing = find_existing_qonto_client(client_payload)
+    if not existing:
+        return create_qonto_client_with_optional_tax_id({
+            "client": remove_invalid_qonto_phone(client_payload),
+        })
+
+    existing_client = existing.get("client") if isinstance(existing.get("client"), dict) else existing
+    existing_client_id = existing_client.get("id")
+    existing_tax_id = existing_client.get("tax_identification_number") or existing_client.get("tin_number")
+    company_tax_missing = _qonto_client_kind(client_payload) == "company" and not existing_tax_id
+    if company_tax_missing:
+        app.logger.info(
+            "[QONTO] Existing company has no tax id; creating an identified client instead client_id=%s",
+            existing_client_id,
+        )
+        return create_qonto_client_with_optional_tax_id({
+            "client": remove_invalid_qonto_phone(client_payload),
+        })
+    if existing_client_id and not qonto_client_has_complete_billing_address(existing):
+        app.logger.info(
+            "[QONTO] Existing billing client incomplete, updating billing details client_id=%s",
+            existing_client_id,
+        )
+        return update_qonto_client(existing_client_id, remove_invalid_qonto_phone(client_payload)) or existing
+    return existing
+
+
 def create_qonto_invoice(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/client_invoices", payload)
 
@@ -30194,17 +30230,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             if is_cpf:
                 q_client = get_or_create_cpf_qonto_client()
             else:
-                q_client = find_existing_qonto_client(qonto_client_payload)
-                if q_client:
-                    existing_client_id = (q_client.get('client') or q_client).get('id')
-                    existing_client = q_client.get('client') if isinstance(q_client.get('client'), dict) else q_client
-                    existing_tax_id = existing_client.get('tax_identification_number') or existing_client.get('tin_number')
-                    company_tax_missing = _qonto_client_kind(qonto_client_payload) == 'company' and not existing_tax_id
-                    if existing_client_id and (not qonto_client_has_complete_billing_address(q_client) or company_tax_missing):
-                        app.logger.info('[QONTO] Existing billing client incomplete, updating billing details client_id=%s', existing_client_id)
-                        q_client = update_qonto_client(existing_client_id, remove_invalid_qonto_phone(qonto_client_payload)) or q_client
-                else:
-                    q_client = create_qonto_client_with_optional_tax_id({'client': remove_invalid_qonto_phone(qonto_client_payload)})
+                q_client = get_or_create_qonto_billing_client(qonto_client_payload)
             q_client_id = (q_client.get('client') or q_client).get('id')
             if not q_client_id:
                 raise RuntimeError('Client Qonto introuvable')
@@ -30673,9 +30699,7 @@ def api_billing_create_mandate():
             validation_errors = validate_qonto_client_payload(client_payload, line.get('financingType'))
             if validation_errors:
                 raise RuntimeError(_format_qonto_validation_errors(validation_errors))
-            q_client = find_existing_qonto_client(client_payload)
-            if not q_client:
-                q_client = create_qonto_client_with_optional_tax_id({'client': remove_invalid_qonto_phone(client_payload)})
+            q_client = get_or_create_qonto_billing_client(client_payload)
             client_id = (q_client.get('client') or q_client).get('id')
             if not client_id:
                 raise RuntimeError('Client Qonto introuvable')
