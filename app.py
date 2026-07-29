@@ -29171,7 +29171,7 @@ Intégrale Academy
 
 def _send_qonto_mandate_link(line: Dict[str, Any]) -> bool:
     sign_url = (line.get('sign_url') or '').strip()
-    email = (line.get('traineeEmail') or '').strip()
+    email = (line.get('clientEmail') or line.get('traineeEmail') or '').strip()
     if not sign_url or not email:
         return False
     html_body = _build_qonto_mandate_email_html(line, sign_url)
@@ -29676,7 +29676,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -30164,6 +30164,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
             invoice_item_label = qonto_invoice_item_label(current)
             q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': invoice_item_label, 'description': invoice_item_label, 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
+            if current.get('invoiceNotes'):
+                q_payload['footer'] = current['invoiceNotes']
             q_inv = create_qonto_invoice(q_payload)
             qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
             if is_cpf:
@@ -30243,6 +30245,23 @@ def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optiona
     sid, tid, ftype = str(payload.get('sessionId') or ''), str(payload.get('traineeId') or ''), str(payload.get('financingType') or payload.get('typeFinanceur') or '')
     candidates = [l for l in _billing_lines_for_trainee_session(data, tid, sid) if not ftype or l.get('financingType') == ftype]
     return candidates[0] if candidates else None
+
+
+def _apply_invoice_recipient_payload(line: Dict[str, Any], payload: Dict[str, Any]) -> None:
+    """Apply administrator-entered invoice recipient data to an AUTRE line."""
+    if 'AUTRE' not in str(line.get('financingType') or line.get('typeFinanceur') or '').upper():
+        return
+    recipient = payload.get('invoiceRecipient') if isinstance(payload.get('invoiceRecipient'), dict) else {}
+    fields = {
+        'companyName': 'companyName', 'clientEmail': 'email', 'clientAddress': 'address',
+        'clientZipCode': 'zipCode', 'clientCity': 'city', 'siret': 'siret',
+        'invoiceNotes': 'invoiceNotes',
+    }
+    for target, source in fields.items():
+        if source in recipient:
+            line[target] = str(recipient.get(source) or '').strip()
+    if line.get('companyName'):
+        line['clientName'] = line['companyName']
 
 
 
@@ -30336,6 +30355,8 @@ def api_billing_line_qonto_preview(line_id: str):
 def api_billing_create_draft():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    _apply_invoice_recipient_payload(line, payload)
+    _save_billing_line(data, line)
     ok, result = _create_invoice_for_billing_line(data, line, payload.get('paymentPlan') if isinstance(payload.get('paymentPlan'), dict) else payload)
     return jsonify({'ok': ok, **result}), (200 if ok else 400)
 
@@ -30363,7 +30384,7 @@ def api_billing_send():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Aucune facture Qonto liée'}), 400
     try:
-        send_qonto_invoice(line['qontoInvoiceId'], {'email': line.get('traineeEmail') or '', 'copy_to_self': True, 'subject': 'Votre facture', 'body': 'Bonjour,\n\nVeuillez trouver votre facture.\n\nCordialement,\nIntégrale Academy'})
+        send_qonto_invoice(line['qontoInvoiceId'], {'email': line.get('clientEmail') or line.get('traineeEmail') or '', 'copy_to_self': True, 'subject': 'Votre facture', 'body': 'Bonjour,\n\nVeuillez trouver votre facture.\n\nCordialement,\nIntégrale Academy'})
         line['invoiceStatus'] = 'sent'; line['sentAt'] = _now_iso(); line['paymentStatus'] = 'unpaid'
         _billing_log(line, 'Facture envoyée', 'success', '', line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': True, 'line': _find_billing_line(data, line['id'])})
@@ -30592,6 +30613,7 @@ def api_billing_create_mandate():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line:
         return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    _apply_invoice_recipient_payload(line, payload)
     try:
         _ensure_qonto_oauth_ready()
         if not (line.get('qontoClientId') or line.get('qontoCustomerId')):
