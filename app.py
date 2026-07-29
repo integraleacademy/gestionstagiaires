@@ -999,6 +999,20 @@ def search_qonto_client(criteria: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return _first_qonto_client(data)
 
 
+def find_existing_qonto_client(client_payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Prefer the company's stable SIRET before mutable name/email fields."""
+    tax_id = (client_payload.get("tax_identification_number") or "").strip()
+    if tax_id:
+        existing = find_qonto_client_by_tax_identification_number(tax_id)
+        if existing:
+            return existing
+    return search_qonto_client({
+        "email": client_payload.get("email"),
+        "name": client_payload.get("name")
+        or f"{client_payload.get('first_name', '')} {client_payload.get('last_name', '')}".strip(),
+    })
+
+
 def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
     client = dict(payload or {})
     # Qonto /v2/clients expects client fields at the JSON root: never wrap in
@@ -1032,6 +1046,31 @@ def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
     app.logger.info("[QONTO CREATE CLIENT URL] %s", f"{_qonto_base_url()}/v2/clients")
     app.logger.info("[QONTO CREATE CLIENT PAYLOAD] %s", json.dumps(cleaned_payload, ensure_ascii=False, indent=2))
     return _qonto_request("POST", "/v2/clients", cleaned_payload)
+
+
+def create_qonto_client_with_optional_tax_id(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a client without letting an optional SIRET block invoicing.
+
+    Qonto can reject ``tax_identification_number`` even when the remaining
+    company data is valid (for example for a tax identifier already attached
+    to another client).  SIRET is optional in our form, so retry the exact
+    request without that single field when Qonto explicitly identifies it as
+    the invalid field.  All other errors remain visible to the administrator.
+    """
+    try:
+        return create_qonto_client(payload)
+    except QontoApiError as exc:
+        client = dict(payload.get("client") if isinstance(payload.get("client"), dict) else payload)
+        error_text = f"{exc} {exc.body}".lower()
+        if not client.get("tax_identification_number") or not re.search(
+            r"tax_identification_number|tax identification|siret", error_text
+        ):
+            raise
+        client.pop("tax_identification_number", None)
+        app.logger.warning(
+            "[QONTO] SIRET rejected while creating client; retrying without optional tax identifier"
+        )
+        return create_qonto_client(client)
 
 
 def update_qonto_client(client_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -28825,11 +28864,17 @@ def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[D
         return _cpf_qonto_api_client_payload()
     first = (line.get("traineeFirstName") or trainee.get("first_name") or line.get("first_name") or "").strip()
     last = (line.get("traineeLastName") or trainee.get("last_name") or line.get("last_name") or "").strip()
-    email = (line.get("clientEmail") or line.get("traineeEmail") or trainee.get("email") or "").strip() or None
     company_name = (line.get("companyName") or line.get("company_name") or trainee.get("company_name") or trainee.get("qonto_company_name") or line.get("clientName") or "").strip()
     kind = "company" if (str(financeur_value or "").upper() not in {"PERSONNEL", "PERSONAL", "PARTICULIER"} and company_name and not f"{first} {last}".strip() == company_name) else "individual"
     if str(financeur_value or "").upper() in {"ENTREPRISE", "COMPANY", "OPCO"}:
         kind = "company"
+    # An enterprise invoice may legitimately have no billing email.  In that
+    # case, never silently attach the trainee's personal address to the Qonto
+    # company: the invoice can still be generated and downloaded manually.
+    if kind == "company":
+        email = (line.get("clientEmail") or "").strip() or None
+    else:
+        email = (line.get("clientEmail") or line.get("traineeEmail") or trainee.get("email") or "").strip() or None
     address = (line.get("clientAddress") or line.get("address") or trainee.get("qonto_billing_address") or trainee.get("address") or "").strip()
     zip_code = (line.get("clientZipCode") or line.get("zip_code") or trainee.get("zip_code") or "").strip()
     city = (line.get("clientCity") or line.get("city") or trainee.get("city") or "").strip()
@@ -30154,14 +30199,14 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             if is_cpf:
                 q_client = get_or_create_cpf_qonto_client()
             else:
-                q_client = search_qonto_client({'email': qonto_client_payload.get('email'), 'name': qonto_client_payload.get('name') or f"{qonto_client_payload.get('first_name','')} {qonto_client_payload.get('last_name','')}".strip()})
+                q_client = find_existing_qonto_client(qonto_client_payload)
                 if q_client:
                     existing_client_id = (q_client.get('client') or q_client).get('id')
                     if existing_client_id and not qonto_client_has_complete_billing_address(q_client):
                         app.logger.info('[QONTO] Existing billing client incomplete, updating billing address client_id=%s', existing_client_id)
                         q_client = update_qonto_client(existing_client_id, remove_invalid_qonto_phone(qonto_client_payload)) or q_client
                 else:
-                    q_client = create_qonto_client({'client': remove_invalid_qonto_phone(qonto_client_payload)})
+                    q_client = create_qonto_client_with_optional_tax_id({'client': remove_invalid_qonto_phone(qonto_client_payload)})
             q_client_id = (q_client.get('client') or q_client).get('id')
             if not q_client_id:
                 raise RuntimeError('Client Qonto introuvable')
@@ -30630,12 +30675,9 @@ def api_billing_create_mandate():
             validation_errors = validate_qonto_client_payload(client_payload, line.get('financingType'))
             if validation_errors:
                 raise RuntimeError(_format_qonto_validation_errors(validation_errors))
-            q_client = search_qonto_client({
-                'email': client_payload.get('email'),
-                'name': client_payload.get('name') or f"{client_payload.get('first_name', '')} {client_payload.get('last_name', '')}".strip(),
-            })
+            q_client = find_existing_qonto_client(client_payload)
             if not q_client:
-                q_client = create_qonto_client({'client': remove_invalid_qonto_phone(client_payload)})
+                q_client = create_qonto_client_with_optional_tax_id({'client': remove_invalid_qonto_phone(client_payload)})
             client_id = (q_client.get('client') or q_client).get('id')
             if not client_id:
                 raise RuntimeError('Client Qonto introuvable')
