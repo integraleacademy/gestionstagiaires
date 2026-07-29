@@ -13616,7 +13616,7 @@ PARTNER_MODULE_ROUTE_ENDPOINTS = {
     "cnaps": {"admin_cnaps_unknown"},
     "cpf": {"admin_wedof_requests", "admin_mark_wedof_treated", "send_wedof_to_salesforce"},
     "billing": {"admin_qonto_settings", "admin_sessions_billing"},
-    "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives"},
+    "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives", "admin_sales_tracking_send_daily_recap"},
     "automations": {"admin_sessions_conventions", "admin_sessions_automations"},
 }
 PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
@@ -16368,6 +16368,15 @@ def admin_sales_tracking_daily_recap_preview():
         greeting_context=greeting_context,
     )
     return html_body, 200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"}
+
+
+@app.post("/admin/suivi-ventes/envoyer-mail-quotidien")
+@admin_login_required
+def admin_sales_tracking_send_daily_recap():
+    """Manually send the personalized 08:00 recap to every configured recipient."""
+    result = run_daily_recap(force=True)
+    status_code = 200 if result.get("sent") else 502
+    return jsonify({"ok": bool(result.get("sent")), **result}), status_code
 
 
 @app.get("/admin/suivi-ventes/data")
@@ -32170,7 +32179,7 @@ def run_daily_recap(*, now: Optional[datetime.datetime] = None, force: bool = Fa
     report_date = paris_now.astimezone(ZoneInfo("Europe/Paris")).date() - datetime.timedelta(days=1)
     data = load_data(run_background_tasks=False)
     history = data.setdefault("daily_recap_sent_dates", [])
-    if report_date.isoformat() in history:
+    if not force and report_date.isoformat() in history:
         return {"sent": False, "reason": "already_sent", "date": report_date.isoformat()}
     report = build_daily_recap_data(data, report_date)
     delivery_date = paris_now.astimezone(ZoneInfo("Europe/Paris")).date()
@@ -32180,7 +32189,8 @@ def run_daily_recap(*, now: Optional[datetime.datetime] = None, force: bool = Fa
         result = brevo_send_email(recipient, subject, html_body, metadata={"purpose": "daily_recap", "report_date": report_date.isoformat()})
         if not result.get("ok"):
             return {"sent": False, "reason": "email_error", "recipient": recipient, "error": result.get("error", "")}
-    history.append(report_date.isoformat())
+    if report_date.isoformat() not in history:
+        history.append(report_date.isoformat())
     data["daily_recap_sent_dates"] = history[-400:]
     save_data(data)
     return {"sent": True, "date": report_date.isoformat(), "recipients": len(DAILY_RECAP_RECIPIENTS)}
