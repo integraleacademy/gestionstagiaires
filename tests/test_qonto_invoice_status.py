@@ -203,6 +203,9 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("⚠ Mandat de prélèvement en cours de validation", template)
         self.assertIn("mandateAction:!mandate.hasSent", template)
         self.assertIn("✅ Échéancier OK", template)
+        self.assertIn("⚠ Échéancier à programmer dans Qonto", template)
+        self.assertIn("Programmer les échéances", template)
+        self.assertIn("Échéancier non programmé", template)
         self.assertIn("qonto_direct_debit_subscription_id", template)
 
     def test_trainee_dashboard_hides_schedule_until_mandate_is_validated(self):
