@@ -292,12 +292,11 @@ class DailyRecapTests(unittest.TestCase):
             response = app.app.test_client().post("/internal/cron/daily-recap", headers={"X-Cron-Secret": "wrong"})
         self.assertEqual(response.status_code, 403)
 
-    def test_sales_tracking_preview_renders_tomorrows_email_without_sending(self):
+    def test_sales_tracking_preview_renders_todays_email_without_sending(self):
         client = app.app.test_client()
         today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
-        tomorrow = today + datetime.timedelta(days=1)
         greeting_context = {
-            "date": tomorrow, "nameday": "Sainte Catherine",
+            "date": today, "nameday": "Sainte Catherine",
             "weather": {
                 "puget": {"temperature": 31, "description": "la journée sera ensoleillée"},
                 "aurillac": {"temperature": 22, "description": "la journée sera nuageuse"},
@@ -315,11 +314,11 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Récapitulatif de la veille", body)
         self.assertIn("Ada LOVELACE", body)
         self.assertIn("Bonjour Clément", body)
-        self.assertIn(f"Nous sommes le {app._daily_recap_display_date(tomorrow)} et aujourd'hui c'est la Sainte-Catherine !", body)
+        self.assertIn(f"Nous sommes le {app._daily_recap_display_date(today)} et aujourd'hui c'est la Sainte-Catherine !", body)
         self.assertIn("Puget sur Argens", body)
         self.assertIn("Aurillac", body)
         self.assertIn("no-store", response.headers["Cache-Control"])
-        fetch_greeting.assert_called_once_with(tomorrow)
+        fetch_greeting.assert_called_once_with(today)
         send_email.assert_not_called()
 
     def test_sales_tracking_page_exposes_daily_email_preview(self):
@@ -330,7 +329,7 @@ class DailyRecapTests(unittest.TestCase):
             response = client.get("/admin/suivi-ventes")
         body = response.get_data(as_text=True)
         self.assertIn("Aperçu du mail de 08h", body)
-        self.assertIn("prochain envoi demain à 08h00", body)
+        self.assertIn("envoi prévu aujourd’hui à 08h00", body)
         self.assertIn("/admin/suivi-ventes/apercu-mail-quotidien", body)
 
     def test_sales_tracking_page_exposes_manual_daily_email_send(self):
@@ -341,7 +340,7 @@ class DailyRecapTests(unittest.TestCase):
             response = client.get("/admin/suivi-ventes")
         body = response.get_data(as_text=True)
         self.assertIn("Envoyer le mail de 08h", body)
-        self.assertIn("aux 4 destinataires personnalisés", body)
+        self.assertIn("prévu aujourd’hui aux 4 destinataires personnalisés", body)
         self.assertIn("/admin/suivi-ventes/envoyer-mail-quotidien", body)
 
     def test_manual_daily_email_endpoint_forces_four_personalized_sends(self):
@@ -353,7 +352,10 @@ class DailyRecapTests(unittest.TestCase):
             response = client.post("/admin/suivi-ventes/envoyer-mail-quotidien")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["recipients"], 4)
-        run_recap.assert_called_once_with(force=True)
+        run_recap.assert_called_once_with(
+            force=True,
+            delivery_date=datetime.datetime.now(ZoneInfo("Europe/Paris")).date(),
+        )
 
     def test_force_resends_even_when_daily_recap_is_in_history(self):
         now = datetime.datetime(2026, 7, 28, 10, tzinfo=ZoneInfo("Europe/Paris"))

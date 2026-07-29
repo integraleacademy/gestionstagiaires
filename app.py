@@ -16326,8 +16326,8 @@ def admin_sales_tracking():
 @app.get("/admin/suivi-ventes/apercu-mail-quotidien")
 @admin_login_required
 def admin_sales_tracking_daily_recap_preview():
-    """Display Clement's next 08:00 recap without sending or persisting it."""
-    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() + datetime.timedelta(days=1)
+    """Display Clement's recap scheduled for today at 08:00 without sending it."""
+    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
     report_date = delivery_date - datetime.timedelta(days=1)
     report = build_daily_recap_data(load_data(run_background_tasks=False), report_date)
     greeting_context = fetch_daily_recap_greeting_context(delivery_date)
@@ -16342,8 +16342,9 @@ def admin_sales_tracking_daily_recap_preview():
 @app.post("/admin/suivi-ventes/envoyer-mail-quotidien")
 @admin_login_required
 def admin_sales_tracking_send_daily_recap():
-    """Manually send the personalized 08:00 recap to every configured recipient."""
-    result = run_daily_recap(force=True)
+    """Manually send today's personalized 08:00 recap to every recipient."""
+    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    result = run_daily_recap(force=True, delivery_date=delivery_date)
     status_code = 200 if result.get("sent") else 502
     return jsonify({"ok": bool(result.get("sent")), **result}), status_code
 
@@ -32139,20 +32140,25 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     return "Récapitulatif de la veille", body
 
 
-def run_daily_recap(*, now: Optional[datetime.datetime] = None, force: bool = False) -> Dict[str, Any]:
+def run_daily_recap(
+    *,
+    now: Optional[datetime.datetime] = None,
+    force: bool = False,
+    delivery_date: Optional[datetime.date] = None,
+) -> Dict[str, Any]:
     paris_now = now or datetime.datetime.now(ZoneInfo("Europe/Paris"))
     if paris_now.tzinfo is None:
         paris_now = paris_now.replace(tzinfo=ZoneInfo("Europe/Paris"))
     if not force and paris_now.astimezone(ZoneInfo("Europe/Paris")).hour != 8:
         return {"sent": False, "reason": "outside_delivery_hour"}
-    report_date = paris_now.astimezone(ZoneInfo("Europe/Paris")).date() - datetime.timedelta(days=1)
+    effective_delivery_date = delivery_date or paris_now.astimezone(ZoneInfo("Europe/Paris")).date()
+    report_date = effective_delivery_date - datetime.timedelta(days=1)
     data = load_data(run_background_tasks=False)
     history = data.setdefault("daily_recap_sent_dates", [])
     if not force and report_date.isoformat() in history:
         return {"sent": False, "reason": "already_sent", "date": report_date.isoformat()}
     report = build_daily_recap_data(data, report_date)
-    delivery_date = paris_now.astimezone(ZoneInfo("Europe/Paris")).date()
-    greeting_context = fetch_daily_recap_greeting_context(delivery_date)
+    greeting_context = fetch_daily_recap_greeting_context(effective_delivery_date)
     for recipient in DAILY_RECAP_RECIPIENTS:
         subject, html_body = build_daily_recap_email(report, recipient=recipient, greeting_context=greeting_context)
         result = brevo_send_email(recipient, subject, html_body, metadata={"purpose": "daily_recap", "report_date": report_date.isoformat()})
