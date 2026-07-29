@@ -31641,15 +31641,30 @@ def _daily_recap_rejection_reason(value: Any) -> str:
     return "Motif bancaire non traduit" if normalized else "Motif non communiqué par la banque"
 
 
-def _daily_recap_convention_is_pending(trainee: Dict[str, Any]) -> bool:
-    """Match the conventions dashboard's actionable signature perimeter."""
+def _daily_recap_convention_is_pending(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    """Use the same eligibility and status rules as the conventions dashboard."""
+    if _public_trainee_convention_is_signed(trainee) and not _convention_created_on_or_after_tracking_start(trainee):
+        return False
+    training_type = str(_session_get(session_obj, "training_type", "") or "")
+    if "VAE" in training_type.upper():
+        vae_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+        inferred_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
+        if inferred_key and VAE_STATUS_RANK.get(inferred_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
+            vae_key = inferred_key
+        if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
+            return False
     state = _yousign_state(trainee)
+    raw_status = _normalize_yousign_status(state.get("status"))
+    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at")
     has_request = bool(state.get("signature_request_id"))
-    if has_request and _is_yousign_signature_pending(state):
-        return True
-    # Preserve the explicit legacy state also handled by the conventions page,
-    # but do not count orphaned Yousign status strings without a request.
-    return not _has_generated_yousign_convention(trainee) and str(trainee.get("convention_status") or "").strip().lower() == "signing"
+    if raw_status in {"error", "download_error", "declined", "refused", "expired", "canceled", "cancelled"}:
+        return False
+    if _yousign_signature_link_is_expired(state) or _is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee):
+        return False
+    if has_request:
+        return _is_yousign_signature_pending(state)
+    # Same legacy override as the dashboard for a convention with no generated file.
+    return not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path") and str(trainee.get("convention_status") or "").strip().lower() == "signing"
 
 
 def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> Dict[str, Any]:
@@ -31659,6 +31674,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     except ValueError:  # 29 February: compare with the last day of February N-1.
         prior_year_date = report_date.replace(year=report_date.year - 1, day=28)
     sales = {"revenue": 0, "count": 0, "formations": {}}
+    month_revenue = 0
     comparison_dates = {
         "previous_day": report_date - datetime.timedelta(days=1),
         "previous_week": report_date - datetime.timedelta(days=7),
@@ -31685,6 +31701,8 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             sale_date = _sales_trainee_anchor_date(trainee, training_label)
             price = _sales_trainee_price(trainee, training_type, training_label)
             excluded_from_sales = bool(trainee.get("exclude_from_sales_tracking") or session_obj.get("exclude_from_sales_tracking"))
+            if not excluded_from_sales and sale_date and sale_date.year == report_date.year and sale_date.month == report_date.month and sale_date <= report_date:
+                month_revenue += price
             if not excluded_from_sales and sale_date == report_date:
                 sales["revenue"] += price
                 sales["count"] += 1
@@ -31696,7 +31714,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
                         comparison_sales[key]["revenue"] += price
                         comparison_sales[key]["count"] += 1
 
-            if _daily_recap_convention_is_pending(trainee):
+            if _daily_recap_convention_is_pending(session_obj, trainee):
                 pending_signatures.append({"name": name, "detail": session_label})
 
             if start_date and 0 <= (start_date - today).days < 7 and not dossier_is_complete_total(trainee, training_type, start_date):
@@ -31720,15 +31738,25 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     cnaps_rows, cnaps_error = fetch_cnapsv3_tracking_requests()
     if not cnaps_error:
         cnaps_pending = []
+        annuaire_statuses = data.get("cnaps_public_annuaire_statuses") or {}
         for row in enrich_cnaps_tracking_rows_with_enrollment(cnaps_rows, data):
+            if not row.get("is_enrolled"):
+                continue
+            nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+            annuaire_key = _cnaps_public_annuaire_status_key(str(row.get("last_name") or ""), nub)
+            annuaire_status = annuaire_statuses.get(annuaire_key) if isinstance(annuaire_statuses, dict) else None
+            # This is exactly the page's “En cours” meaning: the public CNAPS
+            # annuaire check succeeded but returned no active title. Older data
+            # without an annuaire baseline keeps the legacy explicit status.
+            no_title_found = isinstance(annuaire_status, dict) and not bool(annuaire_status.get("known"))
             normalized_status = _normalize_cnaps_status(row.get("cnaps_status")).replace("_", " ")
-            if not row.get("is_enrolled") or normalized_status != "EN COURS":
+            if not no_title_found and (annuaire_status is not None or normalized_status != "EN COURS"):
                 continue
             enrollment = row.get("enrollment") or {}
             detail = str(enrollment.get("training_type") or enrollment.get("session_name") or "Formation").strip()
             cnaps_pending.append({
                 "name": _format_trainee_name(row.get("first_name", ""), row.get("last_name", "")) or "Stagiaire",
-                "detail": f"{detail} · En cours",
+                "detail": f"{detail} · Aucun titre CNAPS trouvé",
             })
 
     changes = []
@@ -31759,7 +31787,13 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
         for item in rejected_by_trainee.values()
     ]
 
-    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "cnaps_changes": changes, "rejected": rejected, "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
+    objectives = data.get("sales_tracking", {}).get("objectives", {})
+    year_objectives = objectives.get(str(report_date.year), {}) if isinstance(objectives, dict) else {}
+    monthly_objectives = year_objectives.get("months", {}) if isinstance(year_objectives, dict) else {}
+    month_objective = _parse_positive_int(monthly_objectives.get(str(report_date.month), 0) if isinstance(monthly_objectives, dict) else 0)
+    month_progress_ratio = (month_revenue / month_objective) if month_objective > 0 else 0
+    month_remaining = max(month_objective - month_revenue, 0) if month_objective > 0 else 0
+    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "cnaps_changes": changes, "rejected": rejected, "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
 
 
 def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
@@ -31772,13 +31806,38 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     sales = report["sales"]
     comparisons = report.get("comparison_sales") or {"previous_year": report["prior_sales"]}
     comparison_labels = {"previous_day": "jour précédent", "previous_week": "semaine précédente", "previous_month": "mois précédent", "previous_year": "année précédente"}
-    comparison = "".join(
-        f'<div style="margin-top:5px"><strong>{html.escape(_format_euro(sales["revenue"] - item["revenue"]))}</strong> vs {comparison_labels[key]} ({html.escape(_format_euro(item["revenue"]))})</div>'
-        for key, item in comparisons.items() if key in comparison_labels
-    )
+    comparison_cards = []
+    for key, item in comparisons.items():
+        comparison_revenue = float(item.get("revenue") or 0)
+        if key not in comparison_labels or comparison_revenue <= 0:
+            continue
+        delta = float(sales["revenue"] or 0) - comparison_revenue
+        ratio = (delta / comparison_revenue) * 100
+        positive = delta >= 0
+        comparison_cards.append(
+            f'<td width="25%" style="padding:4px;vertical-align:top"><div style="min-height:58px;padding:11px;border:1px solid #dbeafe;border-radius:12px;background:#fff">'
+            f'<div style="color:#64748b;font-size:10px;font-weight:800;text-transform:uppercase">{comparison_labels[key]}</div>'
+            f'<div style="margin-top:5px;color:{"#15803d" if positive else "#dc2626"};font-size:13px;font-weight:900">{"▲" if positive else "▼"} {abs(ratio):.0f}%</div>'
+            f'<div style="margin-top:2px;color:#475569;font-size:11px">{html.escape(_format_euro(comparison_revenue))}</div></div></td>'
+        )
+    comparison = (f'<table role="presentation" width="100%" style="margin-top:12px"><tr>{"".join(comparison_cards)}</tr></table>') if comparison_cards else '<div style="margin-top:12px;color:#64748b;font-size:12px">Pas encore de période comparable.</div>'
+    month_kpi = report.get("month_kpi") or {}
+    objective = float(month_kpi.get("objective") or 0)
+    progress_ratio = float(month_kpi.get("progress_ratio") or 0)
+    progress_percent = min(max(progress_ratio * 100, 0), 100)
+    if objective > 0:
+        objective_visual = (
+            f'<div style="margin-top:18px;padding:14px;background:#eff6ff;border-radius:14px">'
+            f'<div style="font-size:11px;color:#475569;font-weight:800;text-transform:uppercase">Objectif du mois</div>'
+            f'<div style="margin-top:7px;height:10px;background:#dbeafe;border-radius:99px;overflow:hidden"><div style="height:10px;width:{progress_percent:.1f}%;background:linear-gradient(90deg,#2563eb,#06b6d4);border-radius:99px"></div></div>'
+            f'<table role="presentation" width="100%" style="margin-top:8px"><tr><td style="font-size:12px;color:#1e40af;font-weight:900">{progress_ratio * 100:.0f}% atteint</td><td align="right" style="font-size:12px;color:#475569">{html.escape(_format_euro(month_kpi.get("revenue")))} / {html.escape(_format_euro(objective))}</td></tr></table>'
+            f'<div style="margin-top:5px;color:#64748b;font-size:11px">Reste {html.escape(_format_euro(month_kpi.get("remaining")))} à réaliser</div></div>'
+        )
+    else:
+        objective_visual = '<div style="margin-top:14px;padding:11px;background:#f8fafc;border-radius:12px;color:#64748b;font-size:12px">Objectif mensuel non renseigné</div>'
     palette = [("#dbeafe", "#1d4ed8"), ("#fce7f3", "#be185d"), ("#ede9fe", "#6d28d9"), ("#ffedd5", "#c2410c"), ("#ccfbf1", "#0f766e")]
     formation_mix = "".join(
-        f'<span style="display:inline-block;margin:4px 4px 0 0;padding:7px 10px;border-radius:10px;background:{palette[index % len(palette)][0]};color:{palette[index % len(palette)][1]};font-size:13px;font-weight:800">{html.escape(label)} <span style="font-size:17px">{count}</span></span>'
+        f'<span style="display:inline-block;margin:5px 5px 0 0;padding:5px 10px 5px 5px;border-radius:99px;background:{palette[index % len(palette)][0]};color:{palette[index % len(palette)][1]};font-size:13px;font-weight:800"><span style="display:inline-block;min-width:21px;padding:3px 5px;margin-right:6px;border-radius:99px;background:{palette[index % len(palette)][1]};color:#fff;text-align:center;font-size:12px">{count}</span>{html.escape(label)}</span>'
         for index, (label, count) in enumerate(sorted(sales["formations"].items()))
     ) or '<span style="color:#92400e;font-size:13px">Aucune vente</span>'
     logo = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
@@ -31793,7 +31852,7 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     greeting = ""
     if recipient and greeting_context:
         greeting = _daily_recap_greeting_html(recipient, greeting_context)
-    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><div style="margin-top:24px;font-size:12px;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;opacity:.8">Daily operations</div><h1 style="margin:8px 0;font-size:30px">Récapitulatif de la veille</h1><div style="opacity:.86">{html.escape(fr_date(report['date'].isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><table role="presentation" width="100%"><tr><td width="50%" style="padding:8px 4px 8px 0;vertical-align:top"><div style="background:#dcfce7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#166534;font-weight:bold;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:28px;font-weight:900;margin-top:5px">{html.escape(_format_euro(sales['revenue']))}</div><div style="font-size:12px;color:#166534;margin-top:8px">{comparison}</div></div></td><td width="50%" style="padding:8px 0 8px 4px;vertical-align:top"><div style="background:#fef3c7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase">Formations vendues</div><div style="font-size:28px;font-weight:900;margin-top:5px">{sales['count']}</div><div style="margin-top:5px">{formation_mix}</div></div></td></tr></table></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé chaque jour à 08h00</td></tr></table></td></tr></table></body></html>'''
+    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><div style="margin-top:24px;font-size:12px;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;opacity:.8">Daily operations</div><h1 style="margin:8px 0;font-size:30px">Récapitulatif de la veille</h1><div style="opacity:.86">{html.escape(fr_date(report['date'].isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><div style="background:linear-gradient(145deg,#ffffff,#eff6ff);border:1px solid #bfdbfe;border-radius:22px;padding:22px;box-shadow:0 12px 30px rgba(37,99,235,.08)"><div style="font-size:12px;color:#1e40af;font-weight:900;text-transform:uppercase;letter-spacing:.06em">📈 Performance commerciale</div><table role="presentation" width="100%" style="margin-top:10px"><tr><td width="54%" style="vertical-align:top;padding-right:16px;border-right:1px solid #dbeafe"><div style="color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:34px;font-weight:950;color:#0f172a;margin-top:3px">{html.escape(_format_euro(sales['revenue']))}</div><div style="margin-top:5px;color:#475569;font-size:12px">{sales['count']} vente{'s' if sales['count'] != 1 else ''} enregistrée{'s' if sales['count'] != 1 else ''}</div>{objective_visual}</td><td width="46%" style="vertical-align:top;padding-left:16px"><div style="color:#92400e;font-size:11px;font-weight:800;text-transform:uppercase">Formations vendues</div><div style="margin-top:8px">{formation_mix}</div></td></tr></table>{comparison}</div></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé chaque jour à 08h00</td></tr></table></td></tr></table></body></html>'''
     return "Récapitulatif de la veille", body
 
 

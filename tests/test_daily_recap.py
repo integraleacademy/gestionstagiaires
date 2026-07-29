@@ -120,7 +120,34 @@ class DailyRecapTests(unittest.TestCase):
         _subject, body = app.build_daily_recap_email(report)
         for label in ("jour précédent", "semaine précédente", "mois précédent", "année précédente"):
             self.assertIn(label, body)
-        self.assertIn("APS <span", body)
+        self.assertLess(body.index(">1</span>"), body.index("APS</span>"))
+
+    def test_kpi_hides_empty_comparisons_and_displays_month_objective(self):
+        self.data["sales_tracking"] = {"objectives": {"2026": {"months": {"7": 6000}}}}
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        _subject, body = app.build_daily_recap_email(report)
+        self.assertEqual(report["month_kpi"]["revenue"], 1200)
+        self.assertEqual(report["month_kpi"]["progress_ratio"], .2)
+        self.assertIn("20% atteint", body)
+        self.assertIn("1 200,00 € / 6 000,00 €", body)
+        self.assertNotIn("année précédente", body)
+        self.assertNotIn("(0,00 €)", body)
+
+    def test_cnaps_pending_matches_enrolled_rows_with_no_annuaire_title(self):
+        rows = [
+            {"first_name": "Ada", "last_name": "Lovelace", "nub": "1234567", "cnaps_status": "TRANSMIS"},
+            {"first_name": "Grace", "last_name": "Hopper", "nub": "7654321", "cnaps_status": "EN COURS"},
+        ]
+        enriched = [
+            {**rows[0], "is_enrolled": True, "enrollment": {"training_type": "APS"}},
+            {**rows[1], "is_enrolled": False, "enrollment": {}},
+        ]
+        self.data["cnaps_public_annuaire_statuses"] = {"LOVELACE|1234567": {"known": False}}
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=(rows, None)), \
+             mock.patch.object(app, "enrich_cnaps_tracking_rows_with_enrollment", return_value=enriched):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual([item["name"] for item in report["cnaps_pending"]], [app._format_trainee_name("Ada", "Lovelace")])
+        self.assertIn("Aucun titre CNAPS trouvé", report["cnaps_pending"][0]["detail"])
 
     def test_delivery_targets_four_recipients_and_is_idempotent(self):
         sent = []
@@ -248,7 +275,7 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Récapitulatif de la veille", body)
         self.assertIn("Ada LOVELACE", body)
         self.assertIn("Bonjour Clément", body)
-        self.assertIn("Nous sommes le mercredi 29 juillet et aujourd'hui c'est la Sainte-Catherine !", body)
+        self.assertIn(f"Nous sommes le {app._daily_recap_display_date(tomorrow)} et aujourd'hui c'est la Sainte-Catherine !", body)
         self.assertIn("Puget sur Argens", body)
         self.assertIn("Aurillac", body)
         self.assertIn("no-store", response.headers["Cache-Control"])
