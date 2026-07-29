@@ -57,6 +57,18 @@ services:
       - key: CRON_SECRET
         sync: false
   - type: cron
+    name: gestionstagiaires-a3p-hosting-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "15 6 * * *"
+    dockerCommand: python scripts/run_a3p_hosting_reminders.py
+    envVars:
+      - key: A3P_HOSTING_REMINDERS_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/a3p-hosting-reminders
+      - key: CRON_SECRET
+        sync: false
+  - type: cron
     name: gestionstagiaires-cash-payment-reminders
     runtime: docker
     dockerfilePath: ./Dockerfile
