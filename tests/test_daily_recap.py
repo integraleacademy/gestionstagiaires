@@ -184,6 +184,9 @@ class DailyRecapTests(unittest.TestCase):
             result = app.run_daily_recap(now=now)
             duplicate = app.run_daily_recap(now=now)
         self.assertTrue(result["sent"])
+        self.assertEqual(result["delivery_status"], "accepted_by_provider")
+        self.assertEqual(len(result["deliveries"]), 4)
+        self.assertTrue(all(item["accepted"] for item in result["deliveries"]))
         self.assertEqual(duplicate["reason"], "already_sent")
         self.assertEqual([call[0][0] for call in sent], list(app.DAILY_RECAP_RECIPIENTS))
         self.assertTrue(all("cc_emails" not in call[1] for call in sent))
@@ -369,6 +372,23 @@ class DailyRecapTests(unittest.TestCase):
         self.assertTrue(result["sent"])
         self.assertEqual(sent, list(app.DAILY_RECAP_RECIPIENTS))
         self.assertEqual(self.data["daily_recap_sent_dates"], ["2026-07-27"])
+
+    def test_delivery_error_reports_recipients_already_accepted(self):
+        now = datetime.datetime(2026, 7, 28, 8, tzinfo=ZoneInfo("Europe/Paris"))
+        responses = [
+            {"ok": True, "message_id": "brevo-1"},
+            {"ok": False, "error": "Adresse rejetée"},
+        ]
+        with mock.patch.object(app, "load_data", return_value=self.data), \
+             mock.patch.object(app, "save_data") as save_data, \
+             mock.patch.object(app, "fetch_daily_recap_greeting_context", return_value={"date": now.date(), "weather": {}}), \
+             mock.patch.object(app, "brevo_send_email", side_effect=responses):
+            result = app.run_daily_recap(now=now)
+        self.assertFalse(result["sent"])
+        self.assertEqual(result["accepted_recipients"], 1)
+        self.assertEqual(result["deliveries"][0]["message_id"], "brevo-1")
+        self.assertFalse(result["deliveries"][1]["accepted"])
+        save_data.assert_not_called()
 
 
 if __name__ == "__main__":

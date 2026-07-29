@@ -32159,16 +32159,36 @@ def run_daily_recap(
         return {"sent": False, "reason": "already_sent", "date": report_date.isoformat()}
     report = build_daily_recap_data(data, report_date)
     greeting_context = fetch_daily_recap_greeting_context(effective_delivery_date)
+    deliveries = []
     for recipient in DAILY_RECAP_RECIPIENTS:
         subject, html_body = build_daily_recap_email(report, recipient=recipient, greeting_context=greeting_context)
         result = brevo_send_email(recipient, subject, html_body, metadata={"purpose": "daily_recap", "report_date": report_date.isoformat()})
+        delivery = {
+            "recipient": recipient,
+            "accepted": bool(result.get("ok")),
+            "message_id": str(result.get("message_id") or ""),
+        }
+        deliveries.append(delivery)
         if not result.get("ok"):
-            return {"sent": False, "reason": "email_error", "recipient": recipient, "error": result.get("error", "")}
+            return {
+                "sent": False,
+                "reason": "email_error",
+                "recipient": recipient,
+                "error": result.get("error", ""),
+                "accepted_recipients": sum(item["accepted"] for item in deliveries),
+                "deliveries": deliveries,
+            }
     if report_date.isoformat() not in history:
         history.append(report_date.isoformat())
     data["daily_recap_sent_dates"] = history[-400:]
     save_data(data)
-    return {"sent": True, "date": report_date.isoformat(), "recipients": len(DAILY_RECAP_RECIPIENTS)}
+    return {
+        "sent": True,
+        "delivery_status": "accepted_by_provider",
+        "date": report_date.isoformat(),
+        "recipients": len(DAILY_RECAP_RECIPIENTS),
+        "deliveries": deliveries,
+    }
 
 
 @app.post("/internal/cron/daily-recap")
