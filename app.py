@@ -7583,6 +7583,8 @@ def run_deferred_background_tasks(data: Dict[str, Any], force: bool = False) -> 
             changed = True
         if _send_docs_relance_reminders(data):
             changed = True
+        if _send_a3p_hosting_reminders(data):
+            changed = True
         if _inject_vtc_exam_results_notifications(data):
             changed = True
         _BACKGROUND_TASKS_LAST_RUN_AT = time.monotonic()
@@ -14818,6 +14820,155 @@ def _cash_installments_dates(raw_installments: Any) -> List[str]:
         if date_value:
             dates.append(date_value)
     return sorted(dates)
+
+
+A3P_HOSTING_START_DATE = datetime.date(2026, 9, 1)
+A3P_HOSTING_BOOKING_URL = os.environ.get(
+    "A3P_HOSTING_BOOKING_URL", "https://assistance-alw9.onrender.com/hebergement"
+).strip()
+A3P_HOSTING_REMINDER_STAGES = (
+    ("registration", "Le lendemain de l’inscription"),
+    ("three_weeks", "3 semaines avant la formation"),
+    ("one_week", "1 semaine avant la formation"),
+)
+
+
+def _parse_calendar_date(value: Any) -> Optional[datetime.date]:
+    try:
+        return datetime.date.fromisoformat(str(value or "")[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def build_a3p_hosting_email(first_name: str, session_obj: Dict[str, Any]) -> Tuple[str, str, str]:
+    """Return an email-client-safe accommodation invitation and its text fallback."""
+    safe_first_name = html.escape((first_name or "").strip() or "bonjour")
+    session_name = str(_session_get(session_obj, "name", "") or "Formation A3P").strip()
+    start = _parse_calendar_date(_session_get(session_obj, "date_start", ""))
+    end = _parse_calendar_date(_session_get(session_obj, "date_end", ""))
+    start_label = start.strftime("%d/%m/%Y") if start else "à confirmer"
+    end_label = end.strftime("%d/%m/%Y") if end else "à confirmer"
+    period = f"du {start_label} au {end_label}"
+    booking_url = html.escape(A3P_HOSTING_BOOKING_URL, quote=True)
+    subject = f"Votre hébergement pour la formation A3P du {start_label}"
+    html_body = f"""<!doctype html><html lang="fr"><body style="margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#172033;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:28px 10px;background:#eef2f7"><tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:660px;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 20px 55px rgba(15,23,42,.12)">
+        <tr><td style="padding:34px;background:#111827;background-image:linear-gradient(135deg,#111827,#312e81 55%,#2563eb);color:#fff">
+          <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#bfdbfe">Intégrale Academy · A3P</div>
+          <h1 style="font-size:30px;line-height:1.15;margin:12px 0 10px">Dormez sur place,<br>formez-vous l’esprit libre.</h1>
+          <p style="margin:0;color:#dbeafe;font-size:16px;line-height:1.6">Une solution d’hébergement pratique, directement au sein de votre centre de formation.</p>
+        </td></tr>
+        <tr><td style="padding:32px 34px">
+          <p style="font-size:17px;margin:0 0 14px">Bonjour {safe_first_name},</p>
+          <p style="font-size:15px;line-height:1.7;color:#475569;margin:0 0 22px">Vous êtes inscrit(e) à la formation <strong style="color:#172033">{html.escape(session_name)}</strong>, {html.escape(period)}. Si vous le souhaitez, vous pouvez réserver un hébergement au sein même du centre.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:22px"><tr><td style="padding:20px">
+            <div style="font-weight:800;color:#312e81;margin-bottom:12px">Votre séjour en un coup d’œil</div>
+            <div style="font-size:14px;line-height:1.9;color:#475569">📅 <strong>Formation :</strong> {html.escape(period)}<br>📍 <strong>Sur place :</strong> 54 chemin du Carreou, 83480 Puget-sur-Argens<br>🏠 <strong>Réservation :</strong> disponibilités, tarifs, modalités et paiement sont présentés sur la page sécurisée.</div>
+          </td></tr></table>
+          <div style="text-align:center;margin:26px 0"><a href="{booking_url}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:15px 25px;border-radius:12px;box-shadow:0 8px 20px rgba(79,70,229,.25)">Voir les disponibilités et réserver →</a></div>
+          <p style="font-size:13px;line-height:1.6;color:#64748b;background:#eef2ff;border-radius:12px;padding:14px;margin:0">La réservation est facultative et soumise aux disponibilités. Une fois celle-ci enregistrée dans votre Espace Stagiaire, vous ne recevrez plus de rappel d’hébergement.</p>
+          <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0">Un souci avec le bouton ? Copiez ce lien :<br><a href="{booking_url}" style="color:#4f46e5;word-break:break-all">{booking_url}</a></p>
+        </td></tr>
+        <tr><td style="padding:20px 34px;background:#f8fafc;color:#64748b;font-size:13px;line-height:1.6"><strong style="color:#334155">Intégrale Academy</strong><br>54 chemin du Carreou · 83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
+      </table>
+    </td></tr></table></body></html>"""
+    text_body = (f"Bonjour {(first_name or '').strip()},\n\nVous êtes inscrit(e) à {session_name}, {period}. "
+                 f"Vous pouvez réserver un hébergement au centre, 54 chemin du Carreou, 83480 Puget-sur-Argens.\n\n"
+                 f"Disponibilités, tarifs et réservation : {A3P_HOSTING_BOOKING_URL}\n\nIntégrale Academy · 04 22 47 07 68")
+    return subject, html_body, text_body
+
+
+def _a3p_hosting_due_dates(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, datetime.date]:
+    start = _parse_calendar_date(_session_get(session_obj, "date_start", ""))
+    created = _parse_calendar_date(trainee.get("created_at"))
+    if not start or start < A3P_HOSTING_START_DATE:
+        return {}
+    dates = {"three_weeks": start - datetime.timedelta(days=21), "one_week": start - datetime.timedelta(days=7)}
+    if created:
+        dates["registration"] = created + datetime.timedelta(days=1)
+    return dates
+
+
+def _is_a3p_hosting_reserved(trainee: Dict[str, Any]) -> bool:
+    return str(trainee.get("hosting_status") or trainee.get("hebergement") or "").strip().lower() in {"reserved", "reserve", "réservé", "oui", "yes", "true"}
+
+
+def _build_a3p_hosting_dashboard(data: Dict[str, Any], today: Optional[datetime.date] = None) -> Dict[str, Any]:
+    current = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    rows = []
+    stats = {"eligible": 0, "reserved": 0, "sent": 0, "upcoming": 0}
+    stage_labels = dict(A3P_HOSTING_REMINDER_STAGES)
+    for session_obj in data.get("sessions", []):
+        if str(_session_get(session_obj, "training_type", "") or "").strip().upper() != "A3P":
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            due_dates = _a3p_hosting_due_dates(session_obj, trainee)
+            if not due_dates:
+                continue
+            stats["eligible"] += 1
+            reserved = _is_a3p_hosting_reserved(trainee)
+            stats["reserved"] += int(reserved)
+            history = trainee.get("a3p_hosting_reminders") if isinstance(trainee.get("a3p_hosting_reminders"), dict) else {}
+            stats["sent"] += len([key for key in due_dates if history.get(key)])
+            pending = sorted(((date, key) for key, date in due_dates.items() if not history.get(key)), key=lambda item: item[0])
+            next_date, next_stage = pending[0] if pending else (None, "")
+            if pending and not reserved:
+                stats["upcoming"] += 1
+            rows.append({
+                "trainee_name": " ".join(filter(None, [str(trainee.get("first_name") or "").strip(), str(trainee.get("last_name") or "").strip()])) or "Sans nom",
+                "email": str(trainee.get("email") or "").strip(), "session_name": str(_session_get(session_obj, "name", "") or "A3P"),
+                "date_start": str(_session_get(session_obj, "date_start", "") or "")[:10], "reserved": reserved,
+                "sent_count": len([key for key in due_dates if history.get(key)]), "next_date": next_date.isoformat() if next_date else "",
+                "next_label": stage_labels.get(next_stage, "Terminé"), "due": bool(next_date and next_date <= current and not reserved),
+            })
+    rows.sort(key=lambda row: (row["reserved"], row["next_date"] or "9999-12-31", row["trainee_name"]))
+    return {"rows": rows, "stats": stats}
+
+
+def _send_a3p_hosting_reminders(data: Dict[str, Any], today: Optional[datetime.date] = None) -> bool:
+    current = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    changed = False
+    for session_obj in data.get("sessions", []):
+        if str(_session_get(session_obj, "training_type", "") or "").strip().upper() != "A3P":
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            if _is_a3p_hosting_reserved(trainee):
+                continue
+            history = trainee.setdefault("a3p_hosting_reminders", {})
+            if not isinstance(history, dict):
+                history = trainee["a3p_hosting_reminders"] = {}
+            for stage, _label in A3P_HOSTING_REMINDER_STAGES:
+                due = _a3p_hosting_due_dates(session_obj, trainee).get(stage)
+                if not due or due > current or history.get(stage):
+                    continue
+                subject, html_body, text_body = build_a3p_hosting_email(str(trainee.get("first_name") or ""), session_obj)
+                result = brevo_send_email(str(trainee.get("email") or ""), subject, html_body, text_content=text_body, trainee=trainee,
+                    metadata={"purpose": "a3p_hosting_reminder", "stage": stage, "session_id": session_obj.get("id")})
+                if isinstance(result, dict) and result.get("ok"):
+                    history[stage] = _now_iso()
+                    changed = True
+                break  # Never send several catch-up reminders to the same person on one day.
+    return changed
+
+
+def run_a3p_hosting_reminders(today: Optional[datetime.date] = None) -> Dict[str, int]:
+    data = load_data()
+    before = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _session_trainees_list(s))
+    changed = _send_a3p_hosting_reminders(data, today=today)
+    after = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _session_trainees_list(s))
+    if changed:
+        save_data(data)
+    return {"sent": max(after - before, 0), "changed": int(changed)}
+
+
+@app.get("/admin/outils/mails")
+@admin_login_required
+def admin_mails():
+    data = load_data()
+    dashboard = _build_a3p_hosting_dashboard(data)
+    _subject, preview_html, _text = build_a3p_hosting_email("Camille", {"name": "A3P · Protection rapprochée", "date_start": "2026-09-21", "date_end": "2026-11-20"})
+    return render_template("admin_mails.html", rows=dashboard["rows"], stats=dashboard["stats"], preview_html=preview_html)
 
 
 def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -31408,6 +31559,15 @@ def internal_cron_cash_payment_reminders():
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     return jsonify({"ok": True, **run_cash_payment_reminders()})
+
+
+@app.post("/internal/cron/a3p-hosting-reminders")
+def internal_cron_a3p_hosting_reminders():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if expected and not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify({"ok": True, **run_a3p_hosting_reminders()})
 
 
 DAILY_RECAP_RECIPIENTS = (
