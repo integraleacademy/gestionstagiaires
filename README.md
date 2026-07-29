@@ -25,6 +25,7 @@ python app.py
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
 - `CNAPS_MONITOR_TOKEN` (secret partagé entre le cron Render et le endpoint interne de suivi CNAPS)
+- `CRON_SECRET` est généré et partagé automatiquement par le Blueprint Render entre le service web et les tâches cron ; il ne doit pas être créé séparément sur chaque service.
 - `CNAPSV3_API_TOKEN` (obligatoire sur le service web pour que le suivi automatique lise les dossiers CNAPS)
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
