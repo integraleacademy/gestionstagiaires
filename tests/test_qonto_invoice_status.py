@@ -207,6 +207,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("Programmer les échéances", template)
         self.assertIn("Échéancier non programmé", template)
         self.assertIn("qonto_direct_debit_subscription_id", template)
+        self.assertIn("installment?.qonto_direct_debit_subscription_id?'Programmé':'À venir'", template)
+        self.assertIn("installmentStatusLabel(it)", template)
 
     def test_trainee_dashboard_hides_schedule_until_mandate_is_validated(self):
         template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
