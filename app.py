@@ -31466,8 +31466,12 @@ def _daily_recap_weather_description(code: Any) -> str:
         return "la journée sera nuageuse"
     if code in {45, 48}:
         return "la journée sera brumeuse"
-    if code in {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82}:
-        return "la journée sera pluvieuse"
+    if code in {51, 53, 55, 56, 57}:
+        return "un risque de bruine est prévu"
+    if code in {61, 63, 65, 66, 67}:
+        return "des passages pluvieux sont prévus"
+    if code in {80, 81, 82}:
+        return "un risque d’averses est prévu"
     if code in {71, 73, 75, 77, 85, 86}:
         return "la journée sera neigeuse"
     if code in {95, 96, 99}:
@@ -31527,15 +31531,21 @@ def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str
         try:
             response = requests.get("https://api.open-meteo.com/v1/forecast", params={
                 "latitude": location["latitude"], "longitude": location["longitude"],
-                "daily": "weather_code,temperature_2m_max", "timezone": "Europe/Paris",
+                "daily": "weather_code,temperature_2m_max,precipitation_probability_max", "timezone": "Europe/Paris",
                 "start_date": delivery_date.isoformat(), "end_date": delivery_date.isoformat(),
             }, timeout=10)
             response.raise_for_status()
             daily = response.json().get("daily") or {}
+            precipitation_values = daily.get("precipitation_probability_max") or []
+            precipitation_probability = (
+                round(float(precipitation_values[0]))
+                if precipitation_values and precipitation_values[0] is not None else None
+            )
             context["weather"][key] = {
                 "temperature": round(float((daily.get("temperature_2m_max") or [])[0])),
                 "description": _daily_recap_weather_description((daily.get("weather_code") or [])[0]),
                 "icon": _daily_recap_weather_icon((daily.get("weather_code") or [])[0]),
+                "precipitation_probability": precipitation_probability,
             }
         except (requests.RequestException, ValueError, TypeError, IndexError):
             logging.getLogger(__name__).warning("Impossible de récupérer la météo de %s", location["label"], exc_info=True)
@@ -31552,7 +31562,9 @@ def _daily_recap_greeting(recipient: str, context: Dict[str, Any]) -> str:
     for key in keys:
         location, forecast = DAILY_RECAP_WEATHER_LOCATIONS[key], (context.get("weather") or {}).get(key)
         if forecast:
-            parts.append(f"la température prévue à {location['label']} aujourd'hui est de {forecast['temperature']}°C et {forecast['description']}")
+            rain_probability = forecast.get("precipitation_probability")
+            probability_text = f" (probabilité maximale de précipitations : {rain_probability} %)" if rain_probability is not None else ""
+            parts.append(f"la température prévue à {location['label']} aujourd'hui est de {forecast['temperature']}°C et {forecast['description']}{probability_text}")
         else:
             parts.append(f"les prévisions météo de {location['label']} ne sont pas disponibles")
     return ". ".join(parts).replace("!. ", "! ") + ("" if parts[-1].endswith("!") else ".")
@@ -31581,10 +31593,15 @@ def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
         if forecast:
             icon = html.escape(str(forecast.get("icon") or "🌡️"))
             description = str(forecast.get("description") or "météo du jour").removeprefix("la journée sera ")
+            rain_probability = forecast.get("precipitation_probability")
+            probability_html = (
+                f'<div style="margin-top:3px;font-size:12px;font-weight:700;color:#0369a1">Risque de précipitations : {html.escape(str(rain_probability))} %</div>'
+                if rain_probability is not None else ""
+            )
             weather_cards.append(
                 f'<td style="padding:6px;vertical-align:top"><div style="min-width:210px;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#ecfeff);border:1px solid #bae6fd;border-radius:16px">'
                 f'<table role="presentation" width="100%"><tr><td style="font-size:32px;width:44px">{icon}</td><td><div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0369a1">{html.escape(location["label"])}</div>'
-                f'<div style="margin-top:2px;font-size:22px;font-weight:900;color:#172554">{html.escape(str(forecast["temperature"]))}°C</div><div style="font-size:13px;color:#475569">{html.escape(description.capitalize())}</div></td></tr></table></div></td>'
+                f'<div style="margin-top:2px;font-size:22px;font-weight:900;color:#172554">{html.escape(str(forecast["temperature"]))}°C</div><div style="font-size:13px;color:#475569">{html.escape(description.capitalize())}</div>{probability_html}</td></tr></table></div></td>'
             )
         else:
             weather_cards.append(f'<td style="padding:6px"><div style="padding:16px;background:#f8fafc;border-radius:16px;color:#64748b">🌡️ Prévisions indisponibles · {html.escape(location["label"])}</div></td>')

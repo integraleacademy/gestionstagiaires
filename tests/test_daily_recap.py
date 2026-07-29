@@ -223,6 +223,28 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(app._daily_recap_weather_icon(0), "☀️")
         self.assertEqual(app._daily_recap_weather_icon(61), "🌧️")
         self.assertEqual(app._daily_recap_weather_icon(95), "⛈️")
+        self.assertEqual(app._daily_recap_weather_description(51), "un risque de bruine est prévu")
+        self.assertEqual(app._daily_recap_weather_description(61), "des passages pluvieux sont prévus")
+        self.assertEqual(app._daily_recap_weather_description(80), "un risque d’averses est prévu")
+
+    def test_weather_fetch_and_card_include_precipitation_probability(self):
+        weather_response = mock.Mock()
+        weather_response.raise_for_status.return_value = None
+        weather_response.json.return_value = {
+            "daily": {
+                "weather_code": [80],
+                "temperature_2m_max": [24.4],
+                "precipitation_probability_max": [35],
+            }
+        }
+        with mock.patch.object(app.requests, "get", return_value=weather_response) as request_get:
+            context = app.fetch_daily_recap_greeting_context(datetime.date(2026, 7, 30))
+
+        self.assertEqual(context["weather"]["aurillac"]["precipitation_probability"], 35)
+        self.assertIn("precipitation_probability_max", request_get.call_args.kwargs["params"]["daily"])
+        body = app._daily_recap_greeting_html("clement@integraleacademy.com", context)
+        self.assertIn("Risque de précipitations : 35 %", body)
+        self.assertIn("Un risque d’averses", body)
 
     def test_nameday_calendar_is_complete_and_used_without_network(self):
         expected_days = {month: 31 for month in (1, 3, 5, 7, 8, 10, 12)}
@@ -235,7 +257,7 @@ class DailyRecapTests(unittest.TestCase):
 
         weather_response = mock.Mock()
         weather_response.raise_for_status.return_value = None
-        weather_response.json.return_value = {"daily": {"weather_code": [0], "temperature_2m_max": [28]}}
+        weather_response.json.return_value = {"daily": {"weather_code": [0], "temperature_2m_max": [28], "precipitation_probability_max": [0]}}
         with mock.patch.object(app.requests, "get", return_value=weather_response) as request_get:
             context = app.fetch_daily_recap_greeting_context(datetime.date(2026, 8, 21))
         self.assertEqual(context["nameday"], "Christophe")
