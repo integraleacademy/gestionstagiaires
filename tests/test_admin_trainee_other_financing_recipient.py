@@ -154,6 +154,46 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
         self.assertEqual(client["name"], "Entreprise Exemple")
         self.assertEqual(client["email"], "compta@example.com")
 
+    def test_invoice_recipient_survives_billing_line_rebuild(self):
+        session = {
+            "id": "S1",
+            "name": "APS",
+            "training_type": "APS",
+            "date_start": "2026-08-01",
+            "date_end": "2026-08-15",
+            "trainees": [{
+                "id": "T1",
+                "first_name": "Jean",
+                "last_name": "Dupont",
+                "other_financing_amount": 950,
+            }],
+        }
+        line_id = app._billing_line_id("S1", "T1", "AUTRE", "legacy")
+        existing = {
+            line_id: {
+                "id": line_id,
+                "companyName": "AZZERA PROTECT",
+                "clientName": "AZZERA PROTECT",
+                "clientEmail": "facturation@azzera.example",
+                "clientAddress": "131 avenue de Verdun",
+                "clientZipCode": "83600",
+                "clientCity": "Frejus",
+                "siret": "92492699100010",
+                "invoiceNotes": "Dossier 42",
+            }
+        }
+
+        rebuilt = app.buildBillingLinesFromSessions([session], existing)[0]
+        payload = app.build_qonto_client_payload(
+            rebuilt, rebuilt, {"id": "S1"}, rebuilt["financingType"]
+        )
+
+        self.assertEqual(rebuilt["companyName"], "AZZERA PROTECT")
+        self.assertEqual(rebuilt["clientAddress"], "131 avenue de Verdun")
+        self.assertEqual(rebuilt["siret"], "92492699100010")
+        self.assertEqual(rebuilt["invoiceNotes"], "Dossier 42")
+        self.assertEqual(payload["tax_identification_number"], "924926991")
+
     def test_personal_financing_ignores_company_recipient_override(self):
         line = {"financingType": "PERSONNEL", "clientName": "Jean Dupont"}
         app._apply_invoice_recipient_payload(line, {

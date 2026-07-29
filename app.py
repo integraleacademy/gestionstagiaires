@@ -29692,7 +29692,18 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
                     'traineeEmail': trainee.get('email') or '', 'financeurName': persisted.get('financeurName') or financing.get('label') or financing['type'], 'typeFinanceur': financing['type'], 'clientName': (CPF_QONTO_CLIENT_NAME if is_cpf_billing_context(financing) else (persisted.get('clientName') or buildInvoiceCustomer(financing['type'], trainee, sess, financing).get('name') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip())),
-                    'clientAddress': trainee.get('qonto_billing_address') or trainee.get('address') or '', 'clientZipCode': trainee.get('zip_code') or '', 'clientCity': trainee.get('city') or '',
+                    # Values entered in the invoice-recipient modal belong to
+                    # the billing line.  Preserve them when the generated view
+                    # is rebuilt from the trainee/session data; otherwise the
+                    # SIRET and company address disappear between validation
+                    # and invoice creation.
+                    'companyName': persisted.get('companyName') or '',
+                    'clientEmail': persisted.get('clientEmail') or '',
+                    'clientAddress': persisted.get('clientAddress') or trainee.get('qonto_billing_address') or trainee.get('address') or '',
+                    'clientZipCode': persisted.get('clientZipCode') or trainee.get('zip_code') or '',
+                    'clientCity': persisted.get('clientCity') or trainee.get('city') or '',
+                    'siret': persisted.get('siret') or '',
+                    'invoiceNotes': persisted.get('invoiceNotes') or '',
                     'formationName': training, 'sessionName': _session_get(sess, 'name', '') or training,
                     'dateStart': start.isoformat(), 'dateEnd': end.isoformat() if end else '', 'examDate': _session_get(sess, 'exam_date', '') or '',
                     'dateLabel': f"du {fr_date(start.isoformat())} au {fr_date((end or start).isoformat())}" + (f" — examen le {fr_date(_session_get(sess, 'exam_date', ''))}" if _session_get(sess, 'exam_date', '') else ''),
