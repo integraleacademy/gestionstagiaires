@@ -5295,10 +5295,12 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
     # been updated on the CNAPS site: discovering its current status weeks
     # later must never produce a retrospective email.
     if previous is None:
+        checked_at = _now_iso()
         statuses[key] = {
             "known": known,
             "signature": signature,
-            "checked_at": _now_iso(),
+            "checked_at": checked_at,
+            "status_since": checked_at,
         }
         return False
 
@@ -5319,6 +5321,11 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
         "known": known,
         "signature": signature,
         "checked_at": checked_at,
+        "status_since": (
+            previous.get("status_since") or previous.get("checked_at") or checked_at
+            if previously_known == known and (not known or str(previous.get("signature") or "") == signature)
+            else checked_at
+        ),
         **({"last_empty_result_at": previous["last_empty_result_at"]} if previous.get("last_empty_result_at") else {}),
     }
     if not known:
@@ -14552,6 +14559,17 @@ def admin_cnaps_tracking():
     requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
     data = load_data()
     requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
+    annuaire_statuses = data.get("cnaps_public_annuaire_statuses") or {}
+    today = datetime.date.today()
+    for row in requests_rows:
+        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+        status = annuaire_statuses.get(
+            _cnaps_public_annuaire_status_key(str(row.get("last_name") or ""), nub)
+        ) if isinstance(annuaire_statuses, dict) else None
+        since = _daily_recap_date(status.get("status_since") or status.get("checked_at")) if isinstance(status, dict) else None
+        row["taj_suspected"] = bool(
+            status is not None and not status.get("known") and since and (today - since).days >= 10
+        )
     requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
     enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
     # The dashboard badge and this tile both represent outstanding changes that
@@ -14715,6 +14733,8 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
                 "session_id": str(sess.get("id") or ""),
                 "session_name": session_name,
                 "training_type": training_type,
+                "date_start": str(_session_get(sess, "date_start", "") or ""),
+                "date_end": str(_session_get(sess, "date_end", "") or ""),
                 "trainee_id": str(trainee.get("id") or ""),
             }
 
@@ -31758,7 +31778,14 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             # training session. Only the explicit “En cours” CNAPS queue is
             # actionable; blank, transmitted or other statuses must stay out.
             if end_date and end_date >= today and cnaps_is_in_progress and not cnaps_is_validated:
-                cnaps_pending.append({"name": name, "detail": f"{session_label} · {cnaps_raw or 'statut non renseigné'}"})
+                session_name = str(_session_get(session_obj, "name", "") or "").strip()
+                cnaps_session = " · ".join(dict.fromkeys(part for part in (session_name, formation_label(training_type) or training_type) if part))
+                start_label = fr_date(start_date.isoformat()) if start_date else "date à confirmer"
+                end_label = fr_date(end_date.isoformat()) if end_date else start_label
+                cnaps_pending.append({
+                    "name": name,
+                    "detail": f"{cnaps_session or 'Formation'} · du {start_label} au {end_label} · {cnaps_raw or 'statut non renseigné'}",
+                })
 
     # The CNAPS tracking page is authoritative: it contains statuses returned by
     # CNAPSV3 and enrollment matching. Fall back to locally stored trainee
@@ -31781,10 +31808,17 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             if not no_title_found and (annuaire_status is not None or normalized_status != "EN COURS"):
                 continue
             enrollment = row.get("enrollment") or {}
-            detail = str(enrollment.get("training_type") or enrollment.get("session_name") or "Formation").strip()
+            session_name = str(enrollment.get("session_name") or "").strip()
+            training_type = str(enrollment.get("training_type") or "").strip()
+            session_detail = " · ".join(dict.fromkeys(part for part in (session_name, training_type) if part)) or "Formation"
+            start_label = fr_date(str(enrollment.get("date_start") or "")) or "date à confirmer"
+            end_label = fr_date(str(enrollment.get("date_end") or "")) or start_label
+            session_detail = f"{session_detail} · du {start_label} au {end_label}"
+            status_since = _daily_recap_date(annuaire_status.get("status_since") or annuaire_status.get("checked_at")) if isinstance(annuaire_status, dict) else None
             cnaps_pending.append({
                 "name": _format_trainee_name(row.get("first_name", ""), row.get("last_name", "")) or "Stagiaire",
-                "detail": f"{detail} · Aucun titre CNAPS trouvé",
+                "detail": f"{session_detail} · Aucun titre CNAPS trouvé",
+                "taj_suspected": bool(no_title_found and status_since and (today - status_since).days >= 10),
             })
 
     changes = []
@@ -31829,7 +31863,11 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     def rows(items: List[Dict[str, str]], empty: str) -> str:
         if not items:
             return f'<div style="padding:18px;color:#64748b;text-align:center">✓ {html.escape(empty)}</div>'
-        return "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(item["name"])}</strong><div style="margin-top:4px;color:#64748b;font-size:13px">{html.escape(item["detail"])}</div></div>' for item in items)
+        rendered = []
+        for item in items:
+            taj_label = '<span style="display:inline-block;margin-left:7px;padding:4px 8px;border-radius:99px;background:#dc2626;color:#fff;font-size:10px;font-weight:900;text-transform:uppercase">Suspicion de TAJ</span>' if item.get("taj_suspected") else ""
+            rendered.append(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(item["name"])}</strong>{taj_label}<div style="margin-top:4px;color:#64748b;font-size:13px">{html.escape(item["detail"])}</div></div>')
+        return "".join(rendered)
 
     sales = report["sales"]
     comparisons = report.get("comparison_sales") or {"previous_year": report["prior_sales"]}
