@@ -15430,7 +15430,10 @@ def admin_sessions_conventions():
         save_data(data)
     selected_formation = (request.args.get("formation") or "").strip().upper()
     selected_status_param = (request.args.get("status") or "").strip().lower()
-    selected_status = selected_status_param
+    # The operational view is the print queue when no status was explicitly
+    # requested. An explicit empty value still means "all statuses" (used by
+    # the Total tile and the status filter).
+    selected_status = selected_status_param if "status" in request.args else "to_print"
     selected_q = (request.args.get("q") or "").strip().lower()
     convention_rows = []
     formation_options_by_key = {}

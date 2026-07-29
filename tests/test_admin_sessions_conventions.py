@@ -61,7 +61,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         }
 
         with patch.object(gestion_app, "load_data", return_value=fake_data):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -101,7 +101,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         with patch.object(gestion_app, "load_data", return_value=fake_data), \
              patch.object(gestion_app, "render_template", side_effect=fake_render_template):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(captured["rows"], [])
@@ -121,7 +121,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         }
 
         with patch.object(gestion_app, "load_data", return_value=fake_data):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -150,7 +150,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         }
 
         with patch.object(gestion_app, "load_data", return_value=fake_data):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -199,7 +199,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         }
 
         with patch.object(gestion_app, "load_data", return_value=fake_data):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -236,7 +236,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         }
 
         with patch.object(gestion_app, "load_data", return_value=fake_data):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -275,7 +275,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         }
 
         with patch.object(gestion_app, "load_data", return_value=fake_data):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
@@ -377,7 +377,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data", side_effect=lambda data: saved_payloads.append(data)):
             api_response = self.client.get("/api/conventions_signed_unseen")
-            page_response = self.client.get("/admin/sessions/conventions")
+            page_response = self.client.get("/admin/sessions/conventions?status=")
             api_after_response = self.client.get("/api/conventions_signed_unseen")
 
         self.assertEqual(api_response.status_code, 200)
@@ -418,7 +418,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data", side_effect=lambda data: saved_payloads.append(data)):
             api_response = self.client.get("/api/conventions_signed_unseen")
-            page_response = self.client.get("/admin/sessions/conventions")
+            page_response = self.client.get("/admin/sessions/conventions?status=")
             api_after_page_response = self.client.get("/api/conventions_signed_unseen")
             print_response = self.client.post("/api/stagiaires/T1/mark-printed", json={"printed": True})
             api_after_print_response = self.client.get("/api/conventions_signed_unseen")
@@ -504,7 +504,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         with patch.object(gestion_app, "load_data", return_value=fake_data), \
              patch.object(gestion_app, "render_template", side_effect=fake_render_template):
-            response = self.client.get("/admin/sessions/conventions")
+            response = self.client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         rows_by_id = {row["trainee_id"]: row for row in captured["rows"]}
@@ -538,6 +538,46 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertNotIn('content:"Filtre actif"', html)
         self.assertLess(html.index("À imprimer"), html.index("Total"))
         self.assertNotIn("<span>Documents</span>", html)
+
+    def test_conventions_default_to_the_print_queue(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [
+                    {"id": "T-TO-PRINT", "last_name": "A-IMPRIMER", "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"}},
+                    {"id": "T-UNSIGNED", "last_name": "A-SIGNER", "convention_status": "signing"},
+                ],
+            }],
+        }
+        captured = {}
+
+        def fake_render_template(template_name, **context):
+            captured.update(context)
+            return "OK"
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "render_template", side_effect=fake_render_template):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["selected_status_effective"], "to_print")
+        self.assertEqual([row["trainee_id"] for row in captured["rows"]], ["T-TO-PRINT"])
+
+    def test_explicit_empty_status_still_displays_all_conventions(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [{"id": "T-UNSIGNED", "last_name": "A-SIGNER", "convention_status": "signing"}],
+            }],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions?status=")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("A-SIGNER", response.get_data(as_text=True))
 
     def test_empty_print_kpi_is_disabled_and_has_no_filter_link(self):
         fake_data = {
