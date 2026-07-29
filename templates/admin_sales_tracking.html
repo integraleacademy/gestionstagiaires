@@ -371,10 +371,12 @@
       const payload = await response.json();
       if (!response.ok || !payload.sent) throw new Error(payload.error || payload.reason || 'Échec de l’envoi');
       const tracked = (payload.deliveries || []).filter((delivery) => delivery.message_id).length;
+      const recipients = (payload.deliveries || []).map((delivery) => delivery.recipient).filter(Boolean).join(', ');
       const trackingDetail = tracked
         ? ` (${tracked} identifiant${tracked > 1 ? 's' : ''} de suivi reçu${tracked > 1 ? 's' : ''})`
         : '';
-      dailyRecapSendFeedback.textContent = `✓ ${payload.recipients} mail(s) pris en charge par Brevo${trackingDetail}. La réception n’est pas encore confirmée : vérifiez aussi les indésirables.`;
+      const requestDetail = payload.request_id ? ` Référence : ${payload.request_id}.` : '';
+      dailyRecapSendFeedback.textContent = `✓ ${payload.recipients} mail(s) remis à Brevo${trackingDetail}${recipients ? ` pour ${recipients}` : ''}.${requestDetail} Cela confirme la mise en file, pas la réception : recherchez cette référence dans les logs.`;
       dailyRecapSendFeedback.style.color = '#bbf7d0';
     } catch (error) {
       dailyRecapSendFeedback.textContent = `Erreur : ${error.message}`;

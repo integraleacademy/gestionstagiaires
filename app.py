@@ -16344,7 +16344,14 @@ def admin_sales_tracking_daily_recap_preview():
 def admin_sales_tracking_send_daily_recap():
     """Manually send today's personalized 08:00 recap to every recipient."""
     delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
-    result = run_daily_recap(force=True, delivery_date=delivery_date)
+    request_id = uuid.uuid4().hex[:12]
+    app.logger.info(
+        "[DAILY_RECAP] manual_request request_id=%s delivery_date=%s admin_user_id=%s",
+        request_id,
+        delivery_date.isoformat(),
+        session.get("admin_user_id", ""),
+    )
+    result = run_daily_recap(force=True, delivery_date=delivery_date, request_id=request_id)
     status_code = 200 if result.get("sent") else 502
     return jsonify({"ok": bool(result.get("sent")), **result}), status_code
 
@@ -32145,6 +32152,7 @@ def run_daily_recap(
     now: Optional[datetime.datetime] = None,
     force: bool = False,
     delivery_date: Optional[datetime.date] = None,
+    request_id: str = "",
 ) -> Dict[str, Any]:
     paris_now = now or datetime.datetime.now(ZoneInfo("Europe/Paris"))
     if paris_now.tzinfo is None:
@@ -32153,6 +32161,14 @@ def run_daily_recap(
         return {"sent": False, "reason": "outside_delivery_hour"}
     effective_delivery_date = delivery_date or paris_now.astimezone(ZoneInfo("Europe/Paris")).date()
     report_date = effective_delivery_date - datetime.timedelta(days=1)
+    request_id = request_id or uuid.uuid4().hex[:12]
+    app.logger.info(
+        "[DAILY_RECAP] send_start request_id=%s force=%s report_date=%s recipients=%s",
+        request_id,
+        force,
+        report_date.isoformat(),
+        len(DAILY_RECAP_RECIPIENTS),
+    )
     data = load_data(run_background_tasks=False)
     history = data.setdefault("daily_recap_sent_dates", [])
     if not force and report_date.isoformat() in history:
@@ -32169,6 +32185,15 @@ def run_daily_recap(
             "message_id": str(result.get("message_id") or ""),
         }
         deliveries.append(delivery)
+        app.logger.info(
+            "[DAILY_RECAP] provider_response request_id=%s recipient=%s accepted=%s status_code=%s message_id=%s error=%s",
+            request_id,
+            recipient,
+            delivery["accepted"],
+            result.get("status_code"),
+            delivery["message_id"],
+            str(result.get("error") or "")[:200],
+        )
         if not result.get("ok"):
             return {
                 "sent": False,
@@ -32177,17 +32202,25 @@ def run_daily_recap(
                 "error": result.get("error", ""),
                 "accepted_recipients": sum(item["accepted"] for item in deliveries),
                 "deliveries": deliveries,
+                "request_id": request_id,
             }
     if report_date.isoformat() not in history:
         history.append(report_date.isoformat())
     data["daily_recap_sent_dates"] = history[-400:]
     save_data(data)
+    app.logger.info(
+        "[DAILY_RECAP] send_complete request_id=%s report_date=%s accepted_recipients=%s",
+        request_id,
+        report_date.isoformat(),
+        len(deliveries),
+    )
     return {
         "sent": True,
         "delivery_status": "accepted_by_provider",
         "date": report_date.isoformat(),
         "recipients": len(DAILY_RECAP_RECIPIENTS),
         "deliveries": deliveries,
+        "request_id": request_id,
     }
 
 

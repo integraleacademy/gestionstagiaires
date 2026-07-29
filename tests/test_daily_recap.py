@@ -358,7 +358,19 @@ class DailyRecapTests(unittest.TestCase):
         run_recap.assert_called_once_with(
             force=True,
             delivery_date=datetime.datetime.now(ZoneInfo("Europe/Paris")).date(),
+            request_id=mock.ANY,
         )
+
+    def test_manual_daily_email_returns_traceable_request_id(self):
+        client = app.app.test_client()
+        with client.session_transaction() as browser_session:
+            browser_session["admin_logged_in"] = True
+        with mock.patch.object(app, "run_daily_recap", side_effect=lambda **kwargs: {
+            "sent": True, "recipients": 4, "request_id": kwargs["request_id"],
+        }):
+            response = client.post("/admin/suivi-ventes/envoyer-mail-quotidien")
+        request_id = response.get_json()["request_id"]
+        self.assertRegex(request_id, r"^[0-9a-f]{12}$")
 
     def test_force_resends_even_when_daily_recap_is_in_history(self):
         now = datetime.datetime(2026, 7, 28, 10, tzinfo=ZoneInfo("Europe/Paris"))
