@@ -16345,7 +16345,10 @@ def admin_sales_tracking_send_daily_recap():
     """Manually send today's personalized 08:00 recap to every recipient."""
     delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
     request_id = uuid.uuid4().hex[:12]
-    app.logger.info(
+    # Render does not consistently expose Flask INFO records when Gunicorn owns
+    # the logging configuration.  This operation is rare and important enough
+    # to use WARNING so the request can always be correlated with Brevo.
+    app.logger.warning(
         "[DAILY_RECAP] manual_request request_id=%s delivery_date=%s admin_user_id=%s",
         request_id,
         delivery_date.isoformat(),
@@ -32162,7 +32165,7 @@ def run_daily_recap(
     effective_delivery_date = delivery_date or paris_now.astimezone(ZoneInfo("Europe/Paris")).date()
     report_date = effective_delivery_date - datetime.timedelta(days=1)
     request_id = request_id or uuid.uuid4().hex[:12]
-    app.logger.info(
+    app.logger.warning(
         "[DAILY_RECAP] send_start request_id=%s force=%s report_date=%s recipients=%s",
         request_id,
         force,
@@ -32185,7 +32188,7 @@ def run_daily_recap(
             "message_id": str(result.get("message_id") or ""),
         }
         deliveries.append(delivery)
-        app.logger.info(
+        app.logger.warning(
             "[DAILY_RECAP] provider_response request_id=%s recipient=%s accepted=%s status_code=%s message_id=%s error=%s",
             request_id,
             recipient,
@@ -32208,7 +32211,7 @@ def run_daily_recap(
         history.append(report_date.isoformat())
     data["daily_recap_sent_dates"] = history[-400:]
     save_data(data)
-    app.logger.info(
+    app.logger.warning(
         "[DAILY_RECAP] send_complete request_id=%s report_date=%s accepted_recipients=%s",
         request_id,
         report_date.isoformat(),

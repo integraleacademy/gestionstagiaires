@@ -385,6 +385,22 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(sent, list(app.DAILY_RECAP_RECIPIENTS))
         self.assertEqual(self.data["daily_recap_sent_dates"], ["2026-07-27"])
 
+    def test_manual_delivery_details_are_logged_at_render_visible_level(self):
+        now = datetime.datetime(2026, 7, 28, 10, tzinfo=ZoneInfo("Europe/Paris"))
+        with mock.patch.object(app, "load_data", return_value=self.data), \
+             mock.patch.object(app, "save_data"), \
+             mock.patch.object(app, "fetch_daily_recap_greeting_context", return_value={"date": now.date(), "weather": {}}), \
+             mock.patch.object(app, "brevo_send_email", return_value={"ok": True, "status_code": 201, "message_id": "brevo-123"}), \
+             self.assertLogs(app.app.logger, level="WARNING") as captured:
+            result = app.run_daily_recap(now=now, force=True, request_id="trace123")
+
+        logs = "\n".join(captured.output)
+        self.assertTrue(result["sent"])
+        self.assertIn("[DAILY_RECAP] send_start request_id=trace123", logs)
+        self.assertIn("[DAILY_RECAP] provider_response request_id=trace123", logs)
+        self.assertIn("status_code=201 message_id=brevo-123", logs)
+        self.assertIn("[DAILY_RECAP] send_complete request_id=trace123", logs)
+
     def test_delivery_error_reports_recipients_already_accepted(self):
         now = datetime.datetime(2026, 7, 28, 8, tzinfo=ZoneInfo("Europe/Paris"))
         responses = [
