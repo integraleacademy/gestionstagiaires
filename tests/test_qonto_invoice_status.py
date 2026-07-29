@@ -165,6 +165,30 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertEqual(line["qonto_mandate_rum"], "RUM-QONTO-2026-001")
 
+    def test_qonto_mandate_rum_is_copied_to_trainee_financing_settings(self):
+        line = {
+            "traineeId": "T1",
+            "qonto_mandate_rum": "RUM-QONTO-2026-001",
+            "qonto_direct_debit_mandate_id": "mandate_123",
+            "qonto_mandate_status": "pending",
+        }
+
+        gestion_app._persist_qonto_mandate_on_trainee(self.data, line)
+
+        trainee = self.data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["qonto_mandate_rum"], "RUM-QONTO-2026-001")
+        self.assertEqual(trainee["qonto_direct_debit_mandate_id"], "mandate_123")
+        self.assertEqual(trainee["qonto_mandate_status"], "pending")
+
+    def test_invoice_confirmation_displays_mandate_rum_and_updates_settings(self):
+        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+
+        self.assertIn("Facture et mandat créés avec succès", template)
+        self.assertIn("Numéro RUM du mandat", template)
+        self.assertIn("Le RUM a été ajouté automatiquement à la stratégie de financement.", template)
+        self.assertIn("if(rumInput&&updated.qonto_mandate_rum)rumInput.value=updated.qonto_mandate_rum", template)
+        self.assertIn("Le RUM généré par Qonto s’ajoute automatiquement", template)
+
     def test_pending_qonto_mandate_never_reports_programmed_debits(self):
         line = {
             "paymentMode": "sepa_direct_debit",

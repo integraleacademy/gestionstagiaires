@@ -29506,6 +29506,19 @@ def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[
     ensure_qonto_sepa_installments_for_line(line)
 
 
+def _persist_qonto_mandate_on_trainee(data: Dict[str, Any], line: Dict[str, Any]) -> None:
+    """Copy the Qonto mandate proof to the trainee's financing settings."""
+    rum = str(line.get('qonto_mandate_rum') or '').strip()
+    if not rum:
+        return
+    _, _, trainee = _find_trainee_any_session(data, str(line.get('traineeId') or ''))
+    if not trainee:
+        return
+    trainee['qonto_mandate_rum'] = rum
+    trainee['qonto_direct_debit_mandate_id'] = line.get('qonto_direct_debit_mandate_id') or ''
+    trainee['qonto_mandate_status'] = line.get('qonto_mandate_status') or ''
+
+
 def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
     if line.get('paymentMode') != 'sepa_direct_debit':
         return {'created': 0, 'skipped': True}
@@ -30266,6 +30279,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             _refresh_billing_line_invoice_from_qonto(current, qi)
             payment_plan = _normalize_payment_plan(payment_plan_payload or {}, amount_ttc)
             _setup_qonto_direct_debit_for_line(current, payment_plan)
+            _persist_qonto_mandate_on_trainee(data, current)
             current['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(current)
             _billing_log(current, 'Facture brouillon créée dans Qonto', 'success', current.get('qontoInvoiceNumber') or '', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
@@ -30726,11 +30740,7 @@ def api_billing_create_mandate():
             raise RuntimeError('Veuillez définir au moins une échéance de prélèvement')
         _setup_qonto_direct_debit_for_line(line, payment_plan)
         line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
-        _, _, trainee = _find_trainee_any_session(data, str(line.get('traineeId') or ''))
-        if trainee and line.get('qonto_mandate_rum'):
-            trainee['qonto_mandate_rum'] = line['qonto_mandate_rum']
-            trainee['qonto_direct_debit_mandate_id'] = line.get('qonto_direct_debit_mandate_id') or ''
-            trainee['qonto_mandate_status'] = line.get('qonto_mandate_status') or ''
+        _persist_qonto_mandate_on_trainee(data, line)
         _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': True, 'message': 'Mandat de prélèvement créé', 'line': _find_billing_line(data, line['id'])})
     except Exception as exc:
