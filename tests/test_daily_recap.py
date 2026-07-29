@@ -333,6 +333,41 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("prochain envoi demain à 08h00", body)
         self.assertIn("/admin/suivi-ventes/apercu-mail-quotidien", body)
 
+    def test_sales_tracking_page_exposes_manual_daily_email_send(self):
+        client = app.app.test_client()
+        with client.session_transaction() as browser_session:
+            browser_session["admin_logged_in"] = True
+        with mock.patch.object(app, "load_data", return_value=self.data):
+            response = client.get("/admin/suivi-ventes")
+        body = response.get_data(as_text=True)
+        self.assertIn("Envoyer le mail de 08h", body)
+        self.assertIn("aux 4 destinataires personnalisés", body)
+        self.assertIn("/admin/suivi-ventes/envoyer-mail-quotidien", body)
+
+    def test_manual_daily_email_endpoint_forces_four_personalized_sends(self):
+        client = app.app.test_client()
+        with client.session_transaction() as browser_session:
+            browser_session["admin_logged_in"] = True
+        result = {"sent": True, "date": "2026-07-28", "recipients": 4}
+        with mock.patch.object(app, "run_daily_recap", return_value=result) as run_recap:
+            response = client.post("/admin/suivi-ventes/envoyer-mail-quotidien")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["recipients"], 4)
+        run_recap.assert_called_once_with(force=True)
+
+    def test_force_resends_even_when_daily_recap_is_in_history(self):
+        now = datetime.datetime(2026, 7, 28, 10, tzinfo=ZoneInfo("Europe/Paris"))
+        self.data["daily_recap_sent_dates"] = ["2026-07-27"]
+        sent = []
+        with mock.patch.object(app, "load_data", return_value=self.data), \
+             mock.patch.object(app, "save_data"), \
+             mock.patch.object(app, "fetch_daily_recap_greeting_context", return_value={"date": now.date(), "weather": {}}), \
+             mock.patch.object(app, "brevo_send_email", side_effect=lambda *args, **kwargs: sent.append(args[0]) or {"ok": True}):
+            result = app.run_daily_recap(now=now, force=True)
+        self.assertTrue(result["sent"])
+        self.assertEqual(sent, list(app.DAILY_RECAP_RECIPIENTS))
+        self.assertEqual(self.data["daily_recap_sent_dates"], ["2026-07-27"])
+
 
 if __name__ == "__main__":
     unittest.main()

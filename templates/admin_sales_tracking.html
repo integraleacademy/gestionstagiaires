@@ -187,6 +187,8 @@
       </div>
       <div class="sales-controls">
         <button id="dailyPreviewOpen" class="sales-btn sales-btn--ghost" type="button">✉ Aperçu du mail de 08h</button>
+        <button id="dailyRecapSend" class="sales-btn" type="button">📨 Envoyer le mail de 08h</button>
+        <span id="dailyRecapSendFeedback" role="status" aria-live="polite" style="font-size:13px;font-weight:800;"></span>
         <a href="{{ url_for('admin_sessions') }}" class="btn btn-outline">← Retour sessions</a>
         <form method="get" action="{{ url_for('admin_sales_tracking') }}" style="display:flex;gap:8px;align-items:center;">
           <input class="sales-input" name="year" type="number" min="2020" max="2100" value="{{ selected_year }}" aria-label="Année du suivi des ventes">
@@ -354,6 +356,30 @@
   document.getElementById('dailyPreviewClose')?.addEventListener('click', closeDailyPreview);
   dailyPreviewModal?.addEventListener('click', (event) => { if (event.target === dailyPreviewModal) closeDailyPreview(); });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDailyPreview(); });
+  const dailyRecapSend = document.getElementById('dailyRecapSend');
+  const dailyRecapSendFeedback = document.getElementById('dailyRecapSendFeedback');
+  dailyRecapSend?.addEventListener('click', async () => {
+    if (!window.confirm('Envoyer maintenant le mail de 08h aux 4 destinataires personnalisés ?')) return;
+    dailyRecapSend.disabled = true;
+    dailyRecapSend.textContent = 'Envoi en cours…';
+    dailyRecapSendFeedback.textContent = '';
+    try {
+      const response = await fetch('{{ url_for("admin_sales_tracking_send_daily_recap") }}', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.sent) throw new Error(payload.error || payload.reason || 'Échec de l’envoi');
+      dailyRecapSendFeedback.textContent = `✓ Mail envoyé aux ${payload.recipients} destinataires`;
+      dailyRecapSendFeedback.style.color = '#bbf7d0';
+    } catch (error) {
+      dailyRecapSendFeedback.textContent = `Erreur : ${error.message}`;
+      dailyRecapSendFeedback.style.color = '#fecaca';
+    } finally {
+      dailyRecapSend.disabled = false;
+      dailyRecapSend.textContent = '📨 Envoyer le mail de 08h';
+    }
+  });
   const euroFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
   const fmtEuroNodes = (root = document) => root.querySelectorAll('[data-euro]').forEach((node) => {
     const value = Number(node.getAttribute('data-euro') || '0');
