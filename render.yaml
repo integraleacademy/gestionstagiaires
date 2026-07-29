@@ -1,4 +1,10 @@
 envVarGroups:
+  - name: gestionstagiaires-cron-secrets
+    envVars:
+      # Render generates this value once and shares the exact same secret with
+      # the web service and every cron caller.
+      - key: CRON_SECRET
+        generateValue: true
   - name: gestionstagiaires-cnaps-monitor-secrets
     envVars:
       # One shared value authenticates the worker against the web service.
@@ -13,6 +19,7 @@ services:
     dockerContext: .
     healthCheckPath: /healthz
     envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
       - fromGroup: gestionstagiaires-cnaps-monitor-secrets
       - key: QONTO_LOGIN
         sync: false
@@ -52,10 +59,9 @@ services:
     schedule: "0 * * * *"
     dockerCommand: python scripts/run_convocation_reminders.py
     envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
       - key: CONVOCATION_REMINDERS_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/convocation-signature-reminders
-      - key: CRON_SECRET
-        sync: false
   - type: cron
     name: gestionstagiaires-a3p-hosting-reminders
     runtime: docker
@@ -64,10 +70,9 @@ services:
     schedule: "15 6 * * *"
     dockerCommand: python scripts/run_a3p_hosting_reminders.py
     envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
       - key: A3P_HOSTING_REMINDERS_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/a3p-hosting-reminders
-      - key: CRON_SECRET
-        sync: false
   - type: cron
     name: gestionstagiaires-cash-payment-reminders
     runtime: docker
@@ -76,10 +81,9 @@ services:
     schedule: "0 6 * * *"
     dockerCommand: python scripts/run_cash_payment_reminders.py
     envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
       - key: CASH_PAYMENT_REMINDERS_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/cash-payment-reminders
-      - key: CRON_SECRET
-        sync: false
   - type: cron
     name: gestionstagiaires-daily-recap
     runtime: docker
@@ -90,10 +94,9 @@ services:
     schedule: "0 * * * *"
     dockerCommand: python scripts/run_daily_recap.py
     envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
       - key: DAILY_RECAP_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/daily-recap
-      - key: CRON_SECRET
-        sync: false
   - type: worker
     name: gestionstagiaires-cnaps-monitor
     runtime: docker
