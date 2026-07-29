@@ -99,6 +99,7 @@ class DailyRecapTests(unittest.TestCase):
             {
                 "traineeId": "T1", "traineeFirstName": "Ada", "traineeLastName": "Lovelace",
                 "formationName": "APS", "paymentMode": "sepa_direct_debit",
+                "dateStart": "2026-07-31", "dateEnd": "2026-08-28",
                 "qonto_direct_debit_mandate_id": "mandate-pending", "qonto_mandate_status": "pending",
             },
             {
@@ -111,13 +112,29 @@ class DailyRecapTests(unittest.TestCase):
         with mock.patch.object(app, "_billing_lines", return_value=self.data["billing_lines"]):
             report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
         self.assertEqual(report["pending_mandates"], [{
-            "name": "Ada Lovelace", "detail": "APS · Signature du mandat en attente",
+            "name": "Ada Lovelace", "detail": "APS · du 31/07/2026 au 28/08/2026 · Signature du mandat en attente",
         }])
 
         _subject, body = app.build_daily_recap_email(report)
         self.assertIn("Mandats de prélèvement à valider", body)
         self.assertIn("Ada Lovelace", body)
+        self.assertIn("du 31/07/2026 au 28/08/2026", body)
         self.assertNotIn("Grace Hopper", body)
+
+    def test_pending_mandate_billing_line_displays_formation_dates(self):
+        self.data["sessions"] = []
+        self.data["billing_lines"] = [{
+            "traineeId": "T1", "traineeFirstName": "Ada", "traineeLastName": "Lovelace",
+            "formationName": "APS", "paymentMode": "sepa_direct_debit",
+            "dateStart": "2026-07-31", "dateEnd": "2026-08-28",
+            "qonto_direct_debit_mandate_id": "mandate-pending", "qonto_mandate_status": "pending",
+        }]
+
+        with mock.patch.object(app, "_billing_lines", return_value=self.data["billing_lines"]):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+
+        self.assertEqual(report["pending_mandates"][0]["detail"],
+                         "APS · du 31/07/2026 au 28/08/2026 · Signature du mandat en attente")
 
     def test_user_requested_rejection_reason_is_in_french(self):
         self.assertEqual(app._daily_recap_rejection_reason("User requested"), "Rejet demandé par le titulaire")
