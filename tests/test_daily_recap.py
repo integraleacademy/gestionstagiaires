@@ -40,6 +40,18 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Conventions en attente de signature", body)
         self.assertIn("👮", body)
 
+    def test_operational_section_count_badges_share_the_key_dates_style(self):
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=([], "indisponible")):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        report["key_dates"] = [{"name": "Examen demain", "detail": "APS"}]
+
+        _subject, body = app.build_daily_recap_email(report)
+
+        badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
+        visible_section_count = 5  # Dates clés, changements CNAPS, signatures, dossiers incomplets et CNAPS à valider.
+        self.assertEqual(body.count(badge_style), visible_section_count)
+        self.assertNotIn("background:#eef2ff;color:#4338ca", body)
+
     def test_cnaps_pending_only_contains_enrolled_in_progress_trainees(self):
         trainees = self.data["sessions"][0]["trainees"]
         trainees.extend([

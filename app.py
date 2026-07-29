@@ -32130,6 +32130,10 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
 
 def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
     """Render an email-client-safe, colourful SaaS-style daily dashboard."""
+    def section_count_badge(count: int) -> str:
+        """Render the same prominent counter on every operational section."""
+        return f'<span style="display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900">{count}</span>'
+
     def rows(items: List[Dict[str, str]], empty: str) -> str:
         if not items:
             return f'<div style="padding:18px;color:#64748b;text-align:center">✓ {html.escape(empty)}</div>'
@@ -32163,7 +32167,7 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
         return (
             '<tr><td style="padding:8px 0"><div style="overflow:hidden;background:linear-gradient(145deg,#ffffff,#f8fafc);border:1px solid #dbeafe;border-radius:20px;padding:20px;box-shadow:0 10px 28px rgba(37,99,235,.08)">'
             '<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td><div style="color:#4f46e5;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase">Agenda opérationnel</div><h2 style="margin:4px 0 2px;color:#0f172a;font-size:19px">Dates clés</h2><div style="color:#64748b;font-size:12px">Les prochaines échéances à ne pas manquer</div></td>'
-            f'<td width="46" align="right" valign="top"><span style="display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900">{len(items)}</span></td></tr></table>'
+            f'<td width="46" align="right" valign="top">{section_count_badge(len(items))}</td></tr></table>'
             f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px">{"".join(agenda_rows)}</table></div></td></tr>'
         )
 
@@ -32215,7 +32219,7 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     ]
     hidden_when_empty = {"Dates clés", "Changements CNAPS", "Prélèvements rejetés", "Dossiers incomplets · J-7"}
     cards = key_dates_card(report.get("key_dates") or [])
-    cards += "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections if title != "Dates clés" and (items or title not in hidden_when_empty))
+    cards += "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right">{section_count_badge(len(items))}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections if title != "Dates clés" and (items or title not in hidden_when_empty))
     vae_follow_up = report.get("vae_follow_up") or {}
     vae_metrics = [
         ("Nouvelles demandes VAE", vae_follow_up.get("new_requests", 0)),
