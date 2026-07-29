@@ -59,6 +59,23 @@ class A3PHostingReminderTests(unittest.TestCase):
         self.assertIn("Vous êtes inscrit(e) en formation", text_body)
         self.assertIn("300 euros pour toute la durée de la formation", text_body)
 
+    def test_email_uses_a3p_branding_and_an_animated_booking_button(self):
+        _, html_body, text_body = gestion_app.build_a3p_hosting_email(
+            "Alice",
+            {**self.data()["sessions"][0], "name": "A3P · Protection rapprochée"},
+        )
+
+        expected_training_name = "Agent de Protection Physique des Personnes (A3P)"
+        removed_booking_copy = "Réservation :</strong> disponibilités, tarifs, modalités et paiement"
+        self.assertIn("logo-integrale.png", html_body)
+        self.assertIn(expected_training_name, html_body)
+        self.assertIn(expected_training_name, text_body)
+        self.assertNotIn("A3P · Protection rapprochée", html_body)
+        self.assertNotIn("A3P · Protection rapprochée", text_body)
+        self.assertNotIn(removed_booking_copy, html_body)
+        self.assertIn("@keyframes bookingPulse", html_body)
+        self.assertIn('class="booking-button"', html_body)
+
 
 if __name__ == "__main__":
     unittest.main()

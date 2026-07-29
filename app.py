@@ -14843,18 +14843,24 @@ def _parse_calendar_date(value: Any) -> Optional[datetime.date]:
 def build_a3p_hosting_email(first_name: str, session_obj: Dict[str, Any]) -> Tuple[str, str, str]:
     """Return an email-client-safe accommodation invitation and its text fallback."""
     safe_first_name = html.escape((first_name or "").strip() or "bonjour")
-    session_name = str(_session_get(session_obj, "name", "") or "Formation A3P").strip()
+    session_name = "Agent de Protection Physique des Personnes (A3P)"
     start = _parse_calendar_date(_session_get(session_obj, "date_start", ""))
     end = _parse_calendar_date(_session_get(session_obj, "date_end", ""))
     start_label = start.strftime("%d/%m/%Y") if start else "à confirmer"
     end_label = end.strftime("%d/%m/%Y") if end else "à confirmer"
     period = f"du {start_label} au {end_label}"
     booking_url = html.escape(A3P_HOSTING_BOOKING_URL, quote=True)
+    logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
     subject = f"Votre hébergement pour la formation A3P du {start_label}"
-    html_body = f"""<!doctype html><html lang="fr"><body style="margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#172033;">
+    html_body = f"""<!doctype html><html lang="fr"><head><style>
+    @keyframes bookingPulse {{ 0%,100% {{ transform:scale(1);box-shadow:0 8px 20px rgba(79,70,229,.25); }} 50% {{ transform:scale(1.045);box-shadow:0 0 0 10px rgba(79,70,229,0),0 12px 28px rgba(79,70,229,.38); }} }}
+    .booking-button {{ animation:bookingPulse 1.6s ease-in-out infinite; }}
+    @media (prefers-reduced-motion:reduce) {{ .booking-button {{ animation:none; }} }}
+    </style></head><body style="margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#172033;">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:28px 10px;background:#eef2f7"><tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:660px;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 20px 55px rgba(15,23,42,.12)">
         <tr><td style="padding:34px;background:#111827;background-image:linear-gradient(135deg,#111827,#312e81 55%,#2563eb);color:#fff">
+          <img src="{logo_url}" width="150" alt="Intégrale Academy" style="display:block;width:150px;max-width:100%;height:auto;margin:0 0 24px;background:#fff;border-radius:12px;padding:7px;border:0">
           <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#bfdbfe">Intégrale Academy · A3P</div>
           <h1 style="font-size:30px;line-height:1.15;margin:12px 0 10px">Dormez sur place,<br>formez-vous l’esprit libre.</h1>
           <p style="margin:0;color:#dbeafe;font-size:16px;line-height:1.6">Une solution d’hébergement pratique, directement au sein de votre centre de formation.</p>
@@ -14870,9 +14876,9 @@ def build_a3p_hosting_email(first_name: str, session_obj: Dict[str, Any]) -> Tup
           </div>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:22px"><tr><td style="padding:20px">
             <div style="font-weight:800;color:#312e81;margin-bottom:12px">Votre séjour en un coup d’œil</div>
-            <div style="font-size:14px;line-height:1.9;color:#475569">📅 <strong>Formation :</strong> {html.escape(period)}<br>📍 <strong>Sur place :</strong> 54 chemin du Carreou, 83480 Puget-sur-Argens<br>🏠 <strong>Réservation :</strong> disponibilités, tarifs, modalités et paiement sont présentés sur la page sécurisée.</div>
+            <div style="font-size:14px;line-height:1.9;color:#475569">📅 <strong>Formation :</strong> {html.escape(period)}<br>📍 <strong>Sur place :</strong> 54 chemin du Carreou, 83480 Puget-sur-Argens</div>
           </td></tr></table>
-          <div style="text-align:center;margin:26px 0"><a href="{booking_url}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:15px 25px;border-radius:12px;box-shadow:0 8px 20px rgba(79,70,229,.25)">Voir les disponibilités et réserver →</a></div>
+          <div style="text-align:center;margin:26px 0"><a href="{booking_url}" class="booking-button" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:15px 25px;border-radius:12px;box-shadow:0 8px 20px rgba(79,70,229,.25);animation:bookingPulse 1.6s ease-in-out infinite">Voir les disponibilités et réserver →</a></div>
           <p style="font-size:13px;line-height:1.6;color:#64748b;background:#eef2ff;border-radius:12px;padding:14px;margin:0">La réservation est facultative et soumise aux disponibilités.</p>
           <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0">Un souci avec le bouton ? Copiez ce lien :<br><a href="{booking_url}" style="color:#4f46e5;word-break:break-all">{booking_url}</a></p>
         </td></tr>
