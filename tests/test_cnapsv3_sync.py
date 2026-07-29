@@ -1,5 +1,6 @@
 import io
 import unittest
+from unittest import mock
 
 from flask import render_template
 
@@ -1927,6 +1928,22 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("updateCnapsStatusChangeTile", html)
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
+
+    def test_tracking_page_displays_taj_warning_for_ten_day_empty_status(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+        data = {"sessions": [], "cnaps_public_annuaire_statuses": {
+            "DOE|1234567": {"known": False, "status_since": "2020-01-01T00:00:00Z"},
+        }}
+        with mock.patch.object(gestion_app, "fetch_cnapsv3_tracking_requests", return_value=([{
+            "last_name": "DOE", "first_name": "Jane", "nub": "1234567", "cnaps_status": "TRANSMIS",
+        }], None)), mock.patch.object(gestion_app, "load_data", return_value=data):
+            response = client.get("/admin/sessions/suivi-cnaps")
+        html = response.get_data(as_text=True)
+        self.assertIn('data-taj-suspected="true"', html)
+        self.assertIn("Suspicion de TAJ", html)
 
     def test_tracking_page_prioritizes_pending_status_changes_and_excludes_seen_ones(self):
         client = gestion_app.app.test_client()

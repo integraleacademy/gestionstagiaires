@@ -149,6 +149,24 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual([item["name"] for item in report["cnaps_pending"]], [app._format_trainee_name("Ada", "Lovelace")])
         self.assertIn("Aucun titre CNAPS trouvé", report["cnaps_pending"][0]["detail"])
 
+    def test_cnaps_pending_includes_session_dates_and_taj_warning_after_ten_days(self):
+        rows = [{"first_name": "Ada", "last_name": "Lovelace", "nub": "1234567", "cnaps_status": "TRANSMIS"}]
+        enriched = [{**rows[0], "is_enrolled": True, "enrollment": {
+            "session_name": "APS été", "training_type": "APS",
+            "date_start": "2026-07-31", "date_end": "2026-08-28",
+        }}]
+        self.data["cnaps_public_annuaire_statuses"] = {
+            "LOVELACE|1234567": {"known": False, "status_since": "2026-07-18T08:00:00Z"},
+        }
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=(rows, None)), \
+             mock.patch.object(app, "enrich_cnaps_tracking_rows_with_enrollment", return_value=enriched):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        item = report["cnaps_pending"][0]
+        self.assertIn("APS été · APS · du 31/07/2026 au 28/08/2026", item["detail"])
+        self.assertTrue(item["taj_suspected"])
+        _subject, body = app.build_daily_recap_email(report)
+        self.assertIn("Suspicion de TAJ", body)
+
     def test_delivery_targets_four_recipients_and_is_idempotent(self):
         sent = []
         now = datetime.datetime(2026, 7, 28, 8, tzinfo=ZoneInfo("Europe/Paris"))
