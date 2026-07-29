@@ -138,6 +138,37 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(report["pending_mandates"][0]["detail"],
                          "APS · du 31/07/2026 au 28/08/2026 · Signature du mandat en attente")
 
+    def test_signed_mandate_timestamp_overrides_stale_pending_status(self):
+        self.data["billing_lines"] = [{
+            "traineeId": "T1", "traineeFirstName": "Antonio", "traineeLastName": "Prati",
+            "formationName": "APS", "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "mandate-signed",
+            "qonto_mandate_status": "pending",
+            "qonto_mandate_signed_at": "2026-07-29T10:00:00Z",
+        }]
+
+        with mock.patch.object(app, "_billing_lines", return_value=self.data["billing_lines"]):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 29))
+
+        self.assertEqual(report["pending_mandates"], [])
+
+    def test_synchronized_billing_status_overrides_stale_session_status(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+        trainee.update({
+            "qonto_direct_debit_mandate_id": "mandate-signed",
+            "qonto_mandate_status": "pending",
+        })
+        self.data["billing_lines"] = [{
+            "traineeId": "T1", "traineeFirstName": "Ada", "traineeLastName": "Lovelace",
+            "formationName": "APS", "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "mandate-signed", "qonto_mandate_status": "signed",
+        }]
+
+        with mock.patch.object(app, "_billing_lines", return_value=self.data["billing_lines"]):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 29))
+
+        self.assertEqual(report["pending_mandates"], [])
+
     def test_user_requested_rejection_reason_is_in_french(self):
         self.assertEqual(app._daily_recap_rejection_reason("User requested"), "Rejet demandé par le titulaire")
 
