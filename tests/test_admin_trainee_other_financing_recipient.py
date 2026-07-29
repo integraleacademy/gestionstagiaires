@@ -80,6 +80,50 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
         finally:
             app.create_qonto_client = original_create
 
+    def test_replaces_existing_company_without_tax_id(self):
+        original_find = app.find_existing_qonto_client
+        original_create = app.create_qonto_client_with_optional_tax_id
+        original_update = app.update_qonto_client
+        created_payloads = []
+        app.find_existing_qonto_client = lambda payload: {
+            "id": "old-incomplete-company",
+            "name": "AZZERA PROTECT",
+            "billing_address": {
+                "street_address": "131 avenue de Verdun",
+                "zip_code": "83600",
+                "city": "Frejus",
+                "country_code": "FR",
+            },
+        }
+        app.create_qonto_client_with_optional_tax_id = lambda payload: (
+            created_payloads.append(payload) or {"id": "identified-company"}
+        )
+        app.update_qonto_client = lambda *args: self.fail(
+            "a company without a tax id must not be patched and reused"
+        )
+        try:
+            client = app.get_or_create_qonto_billing_client({
+                "kind": "company",
+                "name": "AZZERA PROTECT",
+                "tax_identification_number": "924926991",
+                "billing_address": {
+                    "street_address": "131 avenue de Verdun",
+                    "zip_code": "83600",
+                    "city": "Frejus",
+                    "country_code": "FR",
+                },
+            })
+        finally:
+            app.find_existing_qonto_client = original_find
+            app.create_qonto_client_with_optional_tax_id = original_create
+            app.update_qonto_client = original_update
+
+        self.assertEqual(client["id"], "identified-company")
+        self.assertEqual(
+            created_payloads[0]["client"]["tax_identification_number"],
+            "924926991",
+        )
+
     def test_recipient_payload_replaces_trainee_with_company(self):
         line = {
             "financingType": "AUTRE",
@@ -146,6 +190,8 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
         self.assertIn('id="invoiceNotes"', template)
         self.assertIn('class="invoice-notes-field"', template)
         self.assertIn("invoiceRecipient", template)
+        self.assertIn("recipient.city||!recipient.siret", template)
+        self.assertIn("Le SIRET de l’entreprise doit contenir exactement 14 chiffres.", template)
 
 
 if __name__ == "__main__":
