@@ -32058,6 +32058,22 @@ def _daily_recap_convention_is_pending(session_obj: Dict[str, Any], trainee: Dic
     return not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path") and str(trainee.get("convention_status") or "").strip().lower() == "signing"
 
 
+def _daily_recap_mandate_is_pending(item: Dict[str, Any]) -> bool:
+    """Return whether a mandate still needs signing, honoring proof of signature."""
+    status = _map_mandate_status(item.get("qonto_mandate_status") or item.get("mandateStatus"))
+    has_mandate_to_sign = bool(
+        item.get("qonto_direct_debit_mandate_id")
+        or item.get("qonto_mandate_sign_url")
+        or item.get("sign_url")
+    )
+    signed_at = bool(
+        item.get("qonto_mandate_signed_at")
+        or item.get("mandateSignedAt")
+        or item.get("mandate_signed_at")
+    )
+    return status == "pending" and has_mandate_to_sign and not signed_at
+
+
 def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> Dict[str, Any]:
     """Build the previous-day operational snapshot without mutating stored data."""
     try:
@@ -32151,12 +32167,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             if _daily_recap_convention_is_pending(session_obj, trainee):
                 pending_signatures.append({"name": name, "detail": session_label})
 
-            mandate_status = _map_mandate_status(trainee.get("qonto_mandate_status"))
-            has_mandate_to_sign = bool(
-                trainee.get("qonto_direct_debit_mandate_id")
-                or trainee.get("qonto_mandate_sign_url")
-            )
-            if mandate_status == "pending" and has_mandate_to_sign:
+            if _daily_recap_mandate_is_pending(trainee):
                 pending_mandates_by_trainee[trainee_key] = {
                     "name": name,
                     "detail": f"{formation_name or 'Formation'} · {date_range} · Signature du mandat en attente",
@@ -32227,26 +32238,21 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             })
 
     rejected_by_trainee: Dict[str, Dict[str, Any]] = {}
+    billing_mandates_by_trainee: Dict[str, Optional[Dict[str, str]]] = {}
     for line in _billing_lines(data):
         trainee_id = str(line.get("traineeId") or "").strip()
-        mandate_status = _map_mandate_status(line.get("qonto_mandate_status") or line.get("mandateStatus"))
-        has_mandate_to_sign = bool(
-            line.get("qonto_direct_debit_mandate_id")
-            or line.get("qonto_mandate_sign_url")
-            or line.get("sign_url")
-        )
-        if line.get("paymentMode") == "sepa_direct_debit" and mandate_status == "pending" and has_mandate_to_sign:
+        if line.get("paymentMode") == "sepa_direct_debit":
             name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire"
             key = trainee_id or _normalized_token(name)
-            formation = str(line.get("formationName") or line.get("sessionName") or "Formation non renseignée").strip()
-            start_label = fr_date(str(line.get("dateStart") or "")) or "date à confirmer"
-            end_label = fr_date(str(line.get("dateEnd") or line.get("dateStart") or "")) or "date à confirmer"
-            # Prefer the session entry assembled above: it is authoritative and
-            # prevents a less complete billing line from hiding its dates.
-            pending_mandates_by_trainee.setdefault(key, {
-                "name": name,
-                "detail": f"{formation} · du {start_label} au {end_label} · Signature du mandat en attente",
-            })
+            billing_mandates_by_trainee.setdefault(key, None)
+            if _daily_recap_mandate_is_pending(line):
+                formation = str(line.get("formationName") or line.get("sessionName") or "Formation non renseignée").strip()
+                start_label = fr_date(str(line.get("dateStart") or "")) or "date à confirmer"
+                end_label = fr_date(str(line.get("dateEnd") or line.get("dateStart") or "")) or "date à confirmer"
+                billing_mandates_by_trainee[key] = {
+                    "name": name,
+                    "detail": f"{formation} · du {start_label} au {end_label} · Signature du mandat en attente",
+                }
         for installment in _sepa_installments(line):
             if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
                 continue
@@ -32259,6 +32265,13 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
                 due_date = fr_date(str(installment.get("due_date") or installment.get("date") or "")) or "date non renseignée"
                 reason = _daily_recap_rejection_reason(installment.get("status_reason") or installment.get("failureReason"))
                 item["details"].append(f"{formation} · échéance du {due_date} · {_format_euro(installment.get('amount'))} · {reason}")
+
+    # Billing lines are synchronized with Qonto and therefore supersede a stale
+    # mandate status copied onto the session trainee record.
+    for key, pending_item in billing_mandates_by_trainee.items():
+        pending_mandates_by_trainee.pop(key, None)
+        if pending_item:
+            pending_mandates_by_trainee[key] = pending_item
 
     rejected = [
         {"name": item["name"], "detail": " | ".join(dict.fromkeys(item["details"]))}
