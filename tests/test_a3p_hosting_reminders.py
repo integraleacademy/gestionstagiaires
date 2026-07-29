@@ -50,6 +50,14 @@ class A3PHostingReminderTests(unittest.TestCase):
         self.assertIn("54 chemin du Carreou", html_body)
         self.assertIn(gestion_app.A3P_HOSTING_BOOKING_URL, html_body)
         self.assertIn("tarifs", text_body.lower())
+        self.assertIn("Vous êtes inscrit(e) en formation", html_body)
+        self.assertIn("réserver l’hébergement au sein de notre centre de formation", html_body)
+        self.assertIn("dortoir collectif, douches, cuisine équipée", html_body)
+        self.assertIn("300 euros pour toute la durée de la formation", html_body)
+        self.assertIn("enveloppe portant votre nom et prénom", html_body)
+        self.assertNotIn("vous ne recevrez plus de rappel d’hébergement", html_body)
+        self.assertIn("Vous êtes inscrit(e) en formation", text_body)
+        self.assertIn("300 euros pour toute la durée de la formation", text_body)
 
 
 if __name__ == "__main__":
