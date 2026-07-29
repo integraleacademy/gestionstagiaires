@@ -19,7 +19,7 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Nom</th><th>Prénom</th><th>Email</th><th>Téléphone</th><th>Formation</th><th>Action</th>
+          <th>Nom</th><th>Prénom</th><th>Email</th><th>Téléphone</th><th>Formation</th><th>Dates sélectionnées</th><th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -27,12 +27,24 @@
           {% set p = item.payload or {} %}
           {% set attendee = p.attendee or {} %}
           {% set training = p.trainingActionInfo or {} %}
+          {% set display = item.display_fields or {} %}
           <tr>
-            <td>{{ attendee.lastName or '-' }}</td>
-            <td>{{ attendee.firstName or '-' }}</td>
-            <td>{{ attendee.email or '-' }}</td>
-            <td>{{ attendee.phoneNumber or '-' }}</td>
-            <td>{{ training.title or '-' }}</td>
+            <td>{{ display.last_name or attendee.lastName or '-' }}</td>
+            <td>{{ display.first_name or attendee.firstName or '-' }}</td>
+            <td>{{ display.email or attendee.email or '-' }}</td>
+            <td>{{ display.phone or attendee.phoneNumber or '-' }}</td>
+            <td>{{ display.training_title or training.title or '-' }}</td>
+            <td>
+              {% if display.training_date and display.training_end_date %}
+                Du <strong>{{ display.training_date|frdate }}</strong><br>au <strong>{{ display.training_end_date|frdate }}</strong>
+              {% elif display.training_date %}
+                <strong>{{ display.training_date|frdate }}</strong>
+              {% elif display.training_end_date %}
+                Jusqu'au <strong>{{ display.training_end_date|frdate }}</strong>
+              {% else %}
+                <span class="muted">Non renseignées</span>
+              {% endif %}
+            </td>
             <td>
               <button
                 class="btn {% if item.processed %}btn-outline{% else %}btn-blue{% endif %}"
@@ -81,7 +93,7 @@
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="6" class="muted">Aucune demande WeDoF reçue.</td></tr>
+          <tr><td colspan="7" class="muted">Aucune demande WeDoF reçue.</td></tr>
         {% endfor %}
       </tbody>
     </table>
