@@ -14978,8 +14978,70 @@ def run_a3p_hosting_reminders(today: Optional[datetime.date] = None) -> Dict[str
 @app.get("/admin/outils/mails")
 @admin_login_required
 def admin_mails():
-    _subject, preview_html, _text = build_a3p_hosting_email("Camille", {"name": "A3P · Protection rapprochée", "date_start": "2026-09-21", "date_end": "2026-11-20"})
-    return render_template("admin_mails.html", preview_html=preview_html)
+    _subject, hosting_preview, _text = build_a3p_hosting_email("Camille", {"name": "A3P · Protection rapprochée", "date_start": "2026-09-21", "date_end": "2026-11-20"})
+
+    def preview(title: str, message: str, action: str = "Accéder à mon espace") -> str:
+        """Return a safe, representative preview for catalogue-only messages."""
+        return mail_layout(f"""
+          <h1 style="margin:0 0 20px;color:#172033;font-size:25px">{html.escape(title)}</h1>
+          <p style="font-size:16px;line-height:1.7;color:#475569">Bonjour Camille,</p>
+          <p style="font-size:15px;line-height:1.7;color:#475569">{html.escape(message)}</p>
+          <p style="text-align:center;margin:28px 0"><a href="#" style="display:inline-block;padding:14px 22px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700">{html.escape(action)}</a></p>
+          <p style="font-size:13px;color:#94a3b8">Ceci est un aperçu : les nom, dates, formation et liens sont personnalisés lors de l’envoi.</p>
+        """)
+
+    categories = [
+        {"name": "Inscriptions & accès", "icon": "👤", "description": "Création de compte, inscription et accès aux services.", "models": [
+            ("Accès espace stagiaire", "Identifiants et lien de connexion au portail du stagiaire.", preview("Votre espace stagiaire est prêt", "Votre compte a été créé. Utilisez le bouton ci-dessous pour définir votre accès.")),
+            ("Accès e-learning", "Mise à disposition de la plateforme de formation en ligne.", preview("Votre accès e-learning est disponible", "Vous pouvez maintenant commencer votre parcours de formation en ligne.", "Commencer ma formation")),
+            ("Inscription VTC", "Formulaire d’inscription et collecte des informations VTC.", preview("Votre inscription Chauffeur VTC", "Merci de compléter les informations nécessaires à votre inscription.", "Compléter mon dossier")),
+            ("VAE Dirigeant", "Démarrage du parcours VAE dirigeant de sécurité privée.", preview("Votre VAE Dirigeant", "Votre parcours VAE démarre : retrouvez les prochaines étapes dans votre espace.", "Démarrer mon parcours")),
+            ("Activation espace partenaire", "Invitation d’un utilisateur dans l’espace partenaire.", preview("Activation de votre espace partenaire", "Vous avez été invité à rejoindre Intégrale Connect.", "Activer mon compte")),
+        ]},
+        {"name": "Dossier & documents", "icon": "📁", "description": "Pièces administratives, conformité et démarches CNAPS.", "models": [
+            ("Dossier incomplet", "Relance automatique pour les pièces encore manquantes.", preview("Votre dossier de formation est incomplet", "Certaines pièces sont encore nécessaires pour finaliser votre inscription.", "Voir les documents manquants")),
+            ("Documents non conformes", "Demande de remplacement des documents refusés.", preview("Documents non conformes", "Un ou plusieurs documents doivent être corrigés ou remplacés.", "Corriger mes documents")),
+            ("Envoi de documents", "Invitation à déposer des justificatifs complémentaires.", preview("Envoi de documents – action requise", "Des justificatifs complémentaires sont attendus pour poursuivre le traitement de votre dossier.", "Déposer mes documents")),
+            ("Test de français", "Invitation, relance et nouvelle tentative au test de français.", preview("Test de français à réaliser", "Votre test de français est disponible. Réalisez-le avant la date indiquée.", "Passer le test")),
+            ("Autorisation CNAPS", "Transmission du numéro d’autorisation préalable.", preview("Votre numéro d’autorisation CNAPS", "Votre autorisation préalable a été enregistrée dans votre dossier.", "Consulter mon dossier")),
+            ("Relance CNAPS", "Rappel des documents requis par le ministère de l’Intérieur.", preview("Relance documents CNAPS", "Des éléments sont encore attendus pour compléter votre démarche CNAPS.", "Mettre à jour mon dossier")),
+        ]},
+        {"name": "Formation & convocations", "icon": "🎓", "description": "Organisation pratique avant, pendant et après la formation.", "models": [
+            ("Mail hébergement A3P", "Proposition d’hébergement envoyée aux stagiaires A3P.", hosting_preview),
+            ("Convocation formation", "Convocation APS, A3P, SSIAP, DESP ou VTC avec les dates utiles.", preview("Votre convocation en formation", "Votre convocation est disponible avec les horaires, l’adresse et les informations pratiques.", "Voir ma convocation")),
+            ("Convention à signer", "Premier envoi du lien de signature électronique YouSign.", preview("Votre convention de formation est à signer", "Votre convention est prête. Merci de la lire et de la signer électroniquement.", "Signer ma convention")),
+            ("Relance convention", "Rappel automatique lorsqu’une convention reste en attente.", preview("Rappel : convention en attente", "Nous n’avons pas encore reçu votre signature électronique.", "Signer maintenant")),
+            ("Attestation d’entrée", "Envoi de l’attestation d’entrée en formation.", preview("Attestation d’entrée en formation", "Votre attestation d’entrée est disponible en pièce jointe.", "Ouvrir mon espace")),
+            ("Attestation de fin", "Envoi de l’attestation à l’issue de la formation.", preview("Attestation de fin de formation", "Votre attestation de fin de formation est disponible en pièce jointe.", "Ouvrir mon espace")),
+            ("Pratique VTC", "Convocation à la pratique et résultat de l’examen VTC.", preview("Formation pratique Chauffeur VTC", "Retrouvez la date et les informations utiles pour votre formation pratique.", "Voir les informations")),
+            ("Identifiants ExamenT3P", "Collecte, relance et signalement des identifiants VTC.", preview("Identifiants Chambre des métiers manquants", "Vos identifiants sont nécessaires afin de poursuivre votre inscription à l’examen.", "Transmettre mes identifiants")),
+        ]},
+        {"name": "Candidatures & financements", "icon": "✅", "description": "Décisions de sélection et suivi des demandes de financement.", "models": [
+            ("Candidature AFC retenue", "Confirmation envoyée aux candidats sélectionnés.", preview("Votre dossier a été retenu", "Votre candidature à la formation a été retenue. Nous vous indiquons les prochaines étapes.")),
+            ("Candidature AFC refusée", "Information envoyée aux candidats non sélectionnés.", preview("Réponse à votre candidature", "Après étude, votre candidature n’a pas pu être retenue pour cette session.", "Découvrir les autres sessions")),
+            ("Convocation réunion AFC", "Invitation des candidats à la réunion d’information.", preview("Convocation à la réunion d’information", "Nous vous invitons à participer à la prochaine réunion d’information collective.", "Confirmer ma présence")),
+            ("Demande d’inscription", "Accusé de réception d’une demande CPF ou EDOF.", preview("Votre demande d’inscription", "Votre demande a bien été reçue et sera étudiée par notre équipe.")),
+            ("Financement refusé", "Notification d’un refus de financement France Travail.", preview("Financement France Travail refusé", "Votre demande de financement n’a malheureusement pas été acceptée.", "Contacter l’équipe")),
+        ]},
+        {"name": "VAE & suivi pédagogique", "icon": "📘", "description": "Étapes du parcours VAE et dépôts de livrets.", "models": [
+            ("Réception Livret 1", "Confirmation de réception du premier livret.", preview("Réception de votre Livret 1", "Nous vous confirmons la bonne réception de votre Livret 1.")),
+            ("Validation Livret 1", "Décision favorable de la commission.", preview("Votre Livret 1 est validé", "La commission a validé votre Livret 1. Vous pouvez poursuivre votre parcours.", "Poursuivre mon parcours")),
+            ("Transmission Livret 2", "Ouverture de l’étape de rédaction du Livret 2.", preview("Transmission du Livret 2", "Votre Livret 2 est disponible dans votre espace candidat.", "Accéder au Livret 2")),
+            ("Validation Livret 2", "Confirmation de validation du dossier VAE.", preview("Votre Livret 2 est validé", "Votre Livret 2 a été validé. Nous reviendrons vers vous pour la suite.")),
+            ("Convocation jury VAE", "Communication de la date de passage devant le jury.", preview("Votre passage devant le jury", "La date et les modalités de votre passage devant le jury sont disponibles.", "Voir ma convocation")),
+            ("Diplôme VAE obtenu", "Félicitations après validation par le jury.", preview("Félicitations, diplôme obtenu !", "Le jury a validé votre parcours VAE. Félicitations pour votre réussite !", "Voir mon résultat")),
+            ("Dépôt Livret 2 SCOTIA", "Notification interne lors d’un nouveau dépôt.", preview("Nouveau Livret 2 déposé", "Un candidat vient de déposer une nouvelle version de son Livret 2.", "Consulter le dossier")),
+        ]},
+        {"name": "Paiements & prélèvements", "icon": "💳", "description": "Mandats, échéances, factures et incidents de paiement.", "models": [
+            ("Signature mandat SEPA", "Lien sécurisé de signature du mandat de prélèvement.", preview("Signature de votre mandat SEPA", "Merci de signer votre mandat afin d’activer votre échéancier.", "Signer mon mandat")),
+            ("Mandat en attente", "Rappel lorsqu’un mandat n’a pas encore été validé.", preview("Prélèvement en attente", "Votre mandat doit encore être validé pour permettre le prochain prélèvement.", "Valider mon mandat")),
+            ("Nouvelle date de prélèvement", "Proposition d’une nouvelle échéance au stagiaire.", preview("Nouveau prélèvement proposé", "Une nouvelle date de prélèvement vous est proposée.", "Consulter la proposition")),
+            ("Prélèvement rejeté", "Information au stagiaire après un rejet bancaire.", preview("Prélèvement rejeté – action requise", "Votre prélèvement n’a pas pu aboutir. Merci de régulariser votre situation.", "Régulariser")),
+            ("Facture disponible", "Envoi d’une facture générée depuis Qonto.", preview("Votre facture", "Veuillez trouver votre facture en pièce jointe à ce message.", "Ouvrir mon espace")),
+        ]},
+    ]
+    mail_count = sum(len(category["models"]) for category in categories)
+    return render_template("admin_mails.html", categories=categories, mail_count=mail_count)
 
 
 def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
