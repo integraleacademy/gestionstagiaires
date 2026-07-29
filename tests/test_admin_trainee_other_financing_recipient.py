@@ -24,36 +24,46 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
 
         self.assertEqual(client["id"], "existing-company")
 
-    def test_retries_company_creation_without_rejected_optional_siret(self):
+    def test_does_not_retry_company_creation_without_required_tax_id(self):
         payloads = []
         original_create = app.create_qonto_client
 
         def fake_create(payload):
             normalized = payload.get("client", payload)
             payloads.append(dict(normalized))
-            if normalized.get("tax_identification_number"):
-                raise app.QontoApiError(
-                    422,
-                    '{"errors":[{"field":"tax_identification_number","message":"is invalid"}]}',
-                )
-            return {"id": "company-client"}
+            raise app.QontoApiError(
+                422,
+                '{"errors":[{"field":"tax_identification_number","message":"is invalid"}]}',
+            )
 
         app.create_qonto_client = fake_create
         try:
-            client = app.create_qonto_client_with_optional_tax_id({
-                "client": {
-                    "kind": "company",
-                    "name": "AZZERA PROTECT",
-                    "tax_identification_number": "92492699100010",
-                }
-            })
+            with self.assertRaises(app.QontoApiError):
+                app.create_qonto_client_with_optional_tax_id({
+                    "client": {
+                        "kind": "company",
+                        "name": "AZZERA PROTECT",
+                        "tax_identification_number": "924926991",
+                    }
+                })
         finally:
             app.create_qonto_client = original_create
 
-        self.assertEqual(client["id"], "company-client")
-        self.assertEqual(len(payloads), 2)
-        self.assertEqual(payloads[0]["tax_identification_number"], "92492699100010")
-        self.assertNotIn("tax_identification_number", payloads[1])
+        self.assertEqual(len(payloads), 1)
+        self.assertEqual(payloads[0]["tax_identification_number"], "924926991")
+
+    def test_converts_company_siret_to_qonto_french_tin(self):
+        client = app.build_qonto_client_payload({
+            "financingType": "AUTRE",
+            "companyName": "AZZERA PROTECT",
+            "clientAddress": "10 rue des Entreprises",
+            "clientZipCode": "75001",
+            "clientCity": "Paris",
+            "siret": "924 926 991 00010",
+        }, {}, {}, "AUTRE")
+
+        self.assertEqual(client["tax_identification_number"], "924926991")
+        self.assertEqual(app.validate_qonto_client_payload(client, "AUTRE"), [])
 
     def test_does_not_retry_company_creation_for_unrelated_qonto_error(self):
         original_create = app.create_qonto_client
@@ -114,6 +124,7 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
             "clientAddress": "10 rue des Entreprises",
             "clientZipCode": "75001",
             "clientCity": "Paris",
+            "siret": "12345678900012",
             "traineeEmail": "stagiaire@example.com",
         }
 
@@ -128,6 +139,7 @@ class OtherFinancingInvoiceRecipientTests(unittest.TestCase):
             template = template_file.read()
         self.assertIn("Entreprise à facturer", template)
         self.assertIn('id="invoiceCompanyEmail"', template)
+        self.assertIn('id="invoiceCompanySiret" inputmode="numeric" required', template)
         self.assertIn("Email de facturation (facultatif)", template)
         self.assertNotIn("!recipient.companyName||!recipient.email", template)
         self.assertIn('id="invoiceCompanyAddress"', template)

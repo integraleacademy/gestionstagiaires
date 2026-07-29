@@ -903,6 +903,9 @@ QONTO_FIELD_LABELS = {
     "first_name": "prénom",
     "last_name": "nom",
     "email": "e-mail",
+    "tax_identification_number": "SIRET",
+    "tin_number": "SIRET",
+    "tin number": "SIRET",
 }
 
 
@@ -969,6 +972,12 @@ def _first_qonto_client(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return clients[0] if isinstance(clients, list) and clients else None
 
 
+def normalize_french_company_tax_id(value: Any) -> str:
+    """Convert a French SIRET into the SIREN/TIN expected by Qonto."""
+    compact = re.sub(r"[\s.\-]", "", str(value or "").strip()).upper()
+    return compact[:9] if compact.isdigit() and len(compact) == 14 else compact
+
+
 def find_qonto_client_by_name(name: str) -> Optional[Dict[str, Any]]:
     normalized_name = (name or "").strip()
     if not normalized_name:
@@ -978,7 +987,7 @@ def find_qonto_client_by_name(name: str) -> Optional[Dict[str, Any]]:
 
 
 def find_qonto_client_by_tax_identification_number(tax_identification_number: str) -> Optional[Dict[str, Any]]:
-    normalized_tax_id = (tax_identification_number or "").strip()
+    normalized_tax_id = normalize_french_company_tax_id(tax_identification_number)
     if not normalized_tax_id:
         return None
     data = _qonto_request("GET", "/v2/clients", params={"filter[tax_identification_number]": normalized_tax_id})
@@ -1001,7 +1010,7 @@ def search_qonto_client(criteria: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def find_existing_qonto_client(client_payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Prefer the company's stable SIRET before mutable name/email fields."""
-    tax_id = (client_payload.get("tax_identification_number") or "").strip()
+    tax_id = normalize_french_company_tax_id(client_payload.get("tax_identification_number"))
     if tax_id:
         existing = find_qonto_client_by_tax_identification_number(tax_id)
         if existing:
@@ -1049,28 +1058,12 @@ def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def create_qonto_client_with_optional_tax_id(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Create a client without letting an optional SIRET block invoicing.
+    """Create a client without discarding its required company tax ID.
 
-    Qonto can reject ``tax_identification_number`` even when the remaining
-    company data is valid (for example for a tax identifier already attached
-    to another client).  SIRET is optional in our form, so retry the exact
-    request without that single field when Qonto explicitly identifies it as
-    the invalid field.  All other errors remain visible to the administrator.
+    Retrying without this value only postpones the failure until Qonto creates
+    the invoice, where the French company TIN is mandatory.
     """
-    try:
-        return create_qonto_client(payload)
-    except QontoApiError as exc:
-        client = dict(payload.get("client") if isinstance(payload.get("client"), dict) else payload)
-        error_text = f"{exc} {exc.body}".lower()
-        if not client.get("tax_identification_number") or not re.search(
-            r"tax_identification_number|tax identification|siret", error_text
-        ):
-            raise
-        client.pop("tax_identification_number", None)
-        app.logger.warning(
-            "[QONTO] SIRET rejected while creating client; retrying without optional tax identifier"
-        )
-        return create_qonto_client(client)
+    return create_qonto_client(payload)
 
 
 def update_qonto_client(client_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -28836,6 +28829,7 @@ def qonto_invoice_item_label(line: Dict[str, Any]) -> str:
     trainee_name = f"{line.get('traineeFirstName','')} {line.get('traineeLastName','')}".strip()
     return f"Formation {formation} - {trainee_name} - Session du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}"
 
+
 def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[Dict[str, Any]] = None, session_data: Optional[Dict[str, Any]] = None, financeur: Any = None) -> Dict[str, Any]:
     """Construit le client Qonto canonique (company/individual) avant toute création API.
 
@@ -28881,7 +28875,7 @@ def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[D
     payload = {"type": kind, "kind": kind, "email": email, "currency": "EUR", "locale": "FR", "address_line_1": address, "address": address, "zip_code": zip_code, "city": city, "country_code": "FR", "billing_address": {"street_address": address, "city": city, "zip_code": zip_code, "country_code": "FR"}}
     if kind == "company":
         payload["name"] = company_name
-        tax = (line.get("siret") or trainee.get("siret") or trainee.get("qonto_siret") or "").strip()
+        tax = normalize_french_company_tax_id(line.get("siret") or trainee.get("siret") or trainee.get("qonto_siret"))
         if tax:
             payload["tax_identification_number"] = tax
     else:
@@ -28902,10 +28896,13 @@ def validate_qonto_client_payload(client_payload: Dict[str, Any], financeur: Any
                 errors.append({"field": key, "label": key, "message": "CPF doit être facturé à CAISSE DES DEPOTS."})
     if kind == "company":
         billing = client_payload.get("billing_address") if isinstance(client_payload.get("billing_address"), dict) else {}
-        required = (("name", "Nom société", client_payload.get("name")), ("address_line_1", "Adresse", client_payload.get("address_line_1") or billing.get("street_address")), ("zip_code", "Code postal", client_payload.get("zip_code") or billing.get("zip_code")), ("city", "Ville", client_payload.get("city") or billing.get("city")), ("country_code", "Pays", client_payload.get("country_code") or billing.get("country_code")))
+        required = (("name", "Nom société", client_payload.get("name")), ("tax_identification_number", "SIRET", client_payload.get("tax_identification_number")), ("address_line_1", "Adresse", client_payload.get("address_line_1") or billing.get("street_address")), ("zip_code", "Code postal", client_payload.get("zip_code") or billing.get("zip_code")), ("city", "Ville", client_payload.get("city") or billing.get("city")), ("country_code", "Pays", client_payload.get("country_code") or billing.get("country_code")))
         for key, label, value in required:
             if not (value or "").strip():
                 errors.append({"field": key, "label": label, "message": f"{label} obligatoire pour un client société."})
+        tax_id = str(client_payload.get("tax_identification_number") or "").strip()
+        if tax_id and not re.fullmatch(r"\d{9}", tax_id):
+            errors.append({"field": "tax_identification_number", "label": "SIRET valide", "message": "Le SIRET doit contenir 14 chiffres."})
     else:
         for key, label in (("first_name", "Prénom"), ("last_name", "Nom")):
             if not (client_payload.get(key) or "").strip():
@@ -30200,8 +30197,11 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
                 q_client = find_existing_qonto_client(qonto_client_payload)
                 if q_client:
                     existing_client_id = (q_client.get('client') or q_client).get('id')
-                    if existing_client_id and not qonto_client_has_complete_billing_address(q_client):
-                        app.logger.info('[QONTO] Existing billing client incomplete, updating billing address client_id=%s', existing_client_id)
+                    existing_client = q_client.get('client') if isinstance(q_client.get('client'), dict) else q_client
+                    existing_tax_id = existing_client.get('tax_identification_number') or existing_client.get('tin_number')
+                    company_tax_missing = _qonto_client_kind(qonto_client_payload) == 'company' and not existing_tax_id
+                    if existing_client_id and (not qonto_client_has_complete_billing_address(q_client) or company_tax_missing):
+                        app.logger.info('[QONTO] Existing billing client incomplete, updating billing details client_id=%s', existing_client_id)
                         q_client = update_qonto_client(existing_client_id, remove_invalid_qonto_phone(qonto_client_payload)) or q_client
                 else:
                     q_client = create_qonto_client_with_optional_tax_id({'client': remove_invalid_qonto_phone(qonto_client_payload)})
