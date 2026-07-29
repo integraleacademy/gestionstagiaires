@@ -7760,6 +7760,7 @@ def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
     attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
     attendee_address = attendee.get("address") if isinstance(attendee.get("address"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
+    session_info = training.get("session") if isinstance(training.get("session"), dict) else {}
 
     def to_text(value: Any) -> str:
         if value is None:
@@ -7787,10 +7788,46 @@ def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
         "training_title": pick(training.get("title"), payload.get("training_title"), payload.get("formation"), payload.get("formation_title"), payload.get("intitule_formation")),
         "status": pick(payload.get("state"), payload.get("status"), payload.get("dossier_status"), payload.get("statut")),
         "external_link": pick(payload.get("externalLink")),
-        "training_date": pick(training.get("sessionStartDate"), payload.get("training_date"), payload.get("date_formation"), payload.get("start_date")),
-        "training_end_date": pick(training.get("sessionEndDate")),
+        "training_date": pick(
+            training.get("sessionStartDate"),
+            training.get("startDate"),
+            training.get("dateStart"),
+            session_info.get("startDate"),
+            session_info.get("sessionStartDate"),
+            payload.get("training_date"),
+            payload.get("date_formation"),
+            payload.get("start_date"),
+        ),
+        "training_end_date": pick(
+            training.get("sessionEndDate"),
+            training.get("endDate"),
+            training.get("dateEnd"),
+            session_info.get("endDate"),
+            session_info.get("sessionEndDate"),
+            payload.get("training_end_date"),
+            payload.get("end_date"),
+        ),
         "price_total_incl": pick(training.get("totalIncl")),
         "_raw": flat,
+    }
+
+
+def _wedof_entry_display_fields(entry: Dict[str, Any]) -> Dict[str, str]:
+    """Return the first displayable WeDoF values from webhook and folder data."""
+    payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
+    folder_details = entry.get("wedof_folder_details") if isinstance(entry.get("wedof_folder_details"), dict) else {}
+    candidates = [payload]
+    if isinstance(payload.get("data"), dict):
+        candidates.append(payload["data"])
+    candidates.append(folder_details)
+    if isinstance(folder_details.get("data"), dict):
+        candidates.append(folder_details["data"])
+
+    extracted = [_extract_wedof_payload_fields(candidate) for candidate in candidates]
+    keys = ("first_name", "last_name", "email", "phone", "training_title", "training_date", "training_end_date")
+    return {
+        key: next((fields[key] for fields in extracted if fields.get(key)), "")
+        for key in keys
     }
 
 
@@ -15363,6 +15400,9 @@ def admin_sessions_automations():
 @admin_login_required
 def admin_wedof_requests():
     wedof_webhooks = _load_wedof_webhooks()[:100]
+    for item in wedof_webhooks:
+        if isinstance(item, dict):
+            item["display_fields"] = _wedof_entry_display_fields(item)
     wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
     return render_template(
         "admin_wedof.html",

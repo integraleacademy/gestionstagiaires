@@ -174,6 +174,54 @@ class WedofIsolationTests(unittest.TestCase):
         self.assertIn("Envoyé automatiquement à Salesforce", html)
         self.assertIn("Renvoyer Salesforce", html)
 
+    def test_admin_wedof_shows_the_selected_training_date_range(self):
+        entry = {
+            "id": "WEDOF-DATES",
+            "payload": {
+                "attendee": {"firstName": "Sara", "lastName": "Boukhari"},
+                "trainingActionInfo": {
+                    "title": "Formation APS",
+                    "sessionStartDate": "2026-09-14T08:30:00+02:00",
+                    "sessionEndDate": "2026-10-09T17:00:00+02:00",
+                },
+            },
+        }
+
+        with patch.object(gestion_app, "_load_wedof_webhooks", return_value=[entry]):
+            response = self.client.get("/admin/wedof")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Dates sélectionnées", html)
+        self.assertIn("14/09/2026", html)
+        self.assertIn("09/10/2026", html)
+
+    def test_admin_wedof_uses_folder_details_when_dates_are_not_in_webhook(self):
+        entry = {
+            "id": "WEDOF-FOLDER-DATES",
+            "payload": {},
+            "wedof_folder_details": {
+                "data": {
+                    "trainingActionInfo": {
+                        "title": "Formation VTC",
+                        "session": {
+                            "startDate": "2026-11-02",
+                            "endDate": "2026-11-27",
+                        },
+                    }
+                }
+            },
+        }
+
+        with patch.object(gestion_app, "_load_wedof_webhooks", return_value=[entry]):
+            response = self.client.get("/admin/wedof")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Formation VTC", html)
+        self.assertIn("02/11/2026", html)
+        self.assertIn("27/11/2026", html)
+
 
 if __name__ == "__main__":
     unittest.main()
