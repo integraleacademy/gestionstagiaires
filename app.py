@@ -32067,7 +32067,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             if mandate_status == "pending" and has_mandate_to_sign:
                 pending_mandates_by_trainee[trainee_key] = {
                     "name": name,
-                    "detail": f"{session_label} · Signature du mandat en attente",
+                    "detail": f"{formation_name or 'Formation'} · {date_range} · Signature du mandat en attente",
                 }
 
             if start_date and 0 <= (start_date - today).days < 7 and not dossier_is_complete_total(trainee, training_type, start_date):
@@ -32147,10 +32147,14 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire"
             key = trainee_id or _normalized_token(name)
             formation = str(line.get("formationName") or line.get("sessionName") or "Formation non renseignée").strip()
-            pending_mandates_by_trainee[key] = {
+            start_label = fr_date(str(line.get("dateStart") or "")) or "date à confirmer"
+            end_label = fr_date(str(line.get("dateEnd") or line.get("dateStart") or "")) or "date à confirmer"
+            # Prefer the session entry assembled above: it is authoritative and
+            # prevents a less complete billing line from hiding its dates.
+            pending_mandates_by_trainee.setdefault(key, {
                 "name": name,
-                "detail": f"{formation} · Signature du mandat en attente",
-            }
+                "detail": f"{formation} · du {start_label} au {end_label} · Signature du mandat en attente",
+            })
         for installment in _sepa_installments(line):
             if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
                 continue
