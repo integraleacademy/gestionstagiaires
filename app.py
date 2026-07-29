@@ -29617,8 +29617,14 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                 }
                 # A cash payment suggests a specific case by default, but an admin
                 # can explicitly dismiss that suggestion from the billing page.
-                cash_specific = bool(trainee.get('cash_payment_enabled')) and not bool(persisted.get('specificCaseCashDismissed'))
-                line['specificCase'] = cash_specific or bool(persisted.get('specificCase'))
+                # The cash-payment flag describes the trainee's personal share.
+                # It must not block an unrelated third-party (AUTRE) invoice.
+                # Also discard automatic flags persisted before this distinction
+                # was introduced, while preserving genuinely manual cases.
+                is_personal_financing = str(financing.get('type') or '').strip().upper() == 'PERSONNEL'
+                cash_specific = is_personal_financing and bool(trainee.get('cash_payment_enabled')) and not bool(persisted.get('specificCaseCashDismissed'))
+                manual_specific = bool(persisted.get('specificCase')) and not bool(persisted.get('specificCaseAutomatic'))
+                line['specificCase'] = cash_specific or manual_specific
                 line['specificCaseAutomatic'] = cash_specific
                 line['specificCaseCashDismissed'] = bool(persisted.get('specificCaseCashDismissed'))
                 line['specificCaseReason'] = (
