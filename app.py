@@ -15440,18 +15440,28 @@ def admin_delete_wedof_entry(entry_id: str):
 def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     entry_id = str(entry.get("id") or "")
     payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
-    attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
     folder_details = entry.get("wedof_folder_details") if isinstance(entry.get("wedof_folder_details"), dict) else {}
+    wedof_fields = _wedof_entry_display_fields(entry)
 
-    first_name = str(attendee.get("firstName") or "").strip()
-    last_name = str(attendee.get("lastName") or "").strip()
-    email = str(attendee.get("email") or "").strip()
-    phone = str(attendee.get("phoneNumber") or "").strip()
-    training_title = str(training.get("title") or folder_details.get("title") or "").strip()
-    training_date = str(training.get("date") or folder_details.get("date") or "").strip()
+    first_name = wedof_fields["first_name"]
+    last_name = wedof_fields["last_name"]
+    email = wedof_fields["email"]
+    phone = wedof_fields["phone"]
+    training_title = wedof_fields["training_title"]
+    training_start_date = wedof_fields["training_date"]
+    training_end_date = wedof_fields["training_end_date"]
     location = str(training.get("location") or folder_details.get("location") or "").strip()
     origin = "Compte CPF"
+
+    if training_start_date and training_end_date:
+        desired_dates = f"Du {fr_date(training_start_date)} au {fr_date(training_end_date)}"
+    elif training_start_date:
+        desired_dates = fr_date(training_start_date)
+    elif training_end_date:
+        desired_dates = f"Jusqu'au {fr_date(training_end_date)}"
+    else:
+        desired_dates = ""
 
     def _map_training_type(raw_value: str) -> str:
         value = (raw_value or "").strip().lower()
@@ -15476,8 +15486,8 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
     summary = []
     if training_title:
         summary.append(f"Formation: {training_title}")
-    if training_date:
-        summary.append(f"Date souhaitée: {training_date}")
+    if desired_dates:
+        summary.append(f"Dates souhaitées: {desired_dates}")
     if location:
         summary.append(f"Lieu: {location}")
     case_id = str(entry.get("folder_id") or payload.get("externalId") or "").strip()
@@ -15512,7 +15522,8 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
         # a 503 instead of a validation error.  The permalink is enough to find
         # the source folder from the lead and remains safely bounded.
         "00NSa00000GcKVx": str(payload.get("permalink") or entry.get("permalink") or "")[:255],
-        "00NSa00000GcKxN": training_date,
+        # Champ Salesforce « Dates souhaitées » (plage choisie dans WeDoF).
+        "00NSa00000GcKxN": desired_dates,
     }
     # Empty custom fields provide no information and can trigger Salesforce
     # validation rules depending on their configured type.
