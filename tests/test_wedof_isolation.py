@@ -147,6 +147,82 @@ class WedofIsolationTests(unittest.TestCase):
         self.assertNotIn("00NSa00000GcKxN", sent_payload)
         self.assertLess(len(str(sent_payload)), 5000)
 
+    def test_salesforce_payload_sends_selected_date_range_to_desired_dates(self):
+        salesforce_response = type(
+            "SalesforceResponse",
+            (),
+            {"status_code": 200, "text": "ok", "url": "https://webto.salesforce.com/lead"},
+        )()
+        entry = {
+            "id": "WEDOF-DATES",
+            "payload": {
+                "attendee": {
+                    "firstName": "Sara",
+                    "lastName": "Boukhari",
+                    "email": "sara@example.com",
+                },
+                "trainingActionInfo": {
+                    "title": "Formation APS",
+                    "sessionStartDate": "2026-09-14T08:30:00+02:00",
+                    "sessionEndDate": "2026-10-09T17:00:00+02:00",
+                },
+            },
+        }
+
+        with patch.object(
+            gestion_app.requests, "post", return_value=salesforce_response
+        ) as salesforce_post:
+            result, status = gestion_app._send_wedof_entry_to_salesforce(entry)
+
+        self.assertEqual(status, 200)
+        self.assertTrue(result["success"])
+        sent_payload = salesforce_post.call_args.kwargs["data"]
+        self.assertEqual(
+            sent_payload["00NSa00000GcKxN"],
+            "Du 14/09/2026 au 09/10/2026",
+        )
+        self.assertIn(
+            "Dates souhaitées: Du 14/09/2026 au 09/10/2026",
+            sent_payload["description"],
+        )
+
+    def test_salesforce_payload_uses_dates_from_wedof_folder_details(self):
+        salesforce_response = type(
+            "SalesforceResponse",
+            (),
+            {"status_code": 200, "text": "ok", "url": "https://webto.salesforce.com/lead"},
+        )()
+        entry = {
+            "id": "WEDOF-FOLDER-DATES",
+            "payload": {},
+            "wedof_folder_details": {
+                "data": {
+                    "attendee": {
+                        "lastName": "Boukhari",
+                        "email": "sara@example.com",
+                    },
+                    "trainingActionInfo": {
+                        "session": {
+                            "startDate": "2026-11-02",
+                            "endDate": "2026-11-27",
+                        }
+                    },
+                }
+            },
+        }
+
+        with patch.object(
+            gestion_app.requests, "post", return_value=salesforce_response
+        ) as salesforce_post:
+            result, status = gestion_app._send_wedof_entry_to_salesforce(entry)
+
+        self.assertEqual(status, 200)
+        self.assertTrue(result["success"])
+        self.assertEqual(
+            salesforce_post.call_args.kwargs["data"]["00NSa00000GcKxN"],
+            "Du 02/11/2026 au 27/11/2026",
+        )
+
     def test_admin_wedof_keeps_notification_manual_and_shows_automatic_salesforce_status(self):
         entry = {
             "id": "WEDOF-TEST",
