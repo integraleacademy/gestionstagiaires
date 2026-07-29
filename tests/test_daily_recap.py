@@ -94,6 +94,31 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Solde insuffisant", report["rejected"][0]["detail"])
         self.assertEqual(report["rejected"][0]["detail"].count("APS"), 2)
 
+    def test_pending_direct_debit_mandates_are_listed_in_morning_email(self):
+        self.data["billing_lines"] = [
+            {
+                "traineeId": "T1", "traineeFirstName": "Ada", "traineeLastName": "Lovelace",
+                "formationName": "APS", "paymentMode": "sepa_direct_debit",
+                "qonto_direct_debit_mandate_id": "mandate-pending", "qonto_mandate_status": "pending",
+            },
+            {
+                "traineeId": "T2", "traineeFirstName": "Grace", "traineeLastName": "Hopper",
+                "formationName": "VTC", "paymentMode": "sepa_direct_debit",
+                "qonto_direct_debit_mandate_id": "mandate-signed", "qonto_mandate_status": "signed",
+            },
+        ]
+
+        with mock.patch.object(app, "_billing_lines", return_value=self.data["billing_lines"]):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual(report["pending_mandates"], [{
+            "name": "Ada Lovelace", "detail": "APS · Signature du mandat en attente",
+        }])
+
+        _subject, body = app.build_daily_recap_email(report)
+        self.assertIn("Mandats de prélèvement à valider", body)
+        self.assertIn("Ada Lovelace", body)
+        self.assertNotIn("Grace Hopper", body)
+
     def test_user_requested_rejection_reason_is_in_french(self):
         self.assertEqual(app._daily_recap_rejection_reason("User requested"), "Rejet demandé par le titulaire")
 

@@ -31982,6 +31982,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     }
     comparison_sales = {key: {"date": date, "revenue": 0, "count": 0} for key, date in comparison_dates.items()}
     pending_signatures: List[Dict[str, str]] = []
+    pending_mandates_by_trainee: Dict[str, Dict[str, str]] = {}
     incomplete_upcoming: List[Dict[str, str]] = []
     cnaps_pending: List[Dict[str, str]] = []
     key_dates: List[Dict[str, str]] = []
@@ -32026,6 +32027,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
 
         for trainee in _session_trainees_list(session_obj):
             name = _daily_recap_name(trainee)
+            trainee_key = str(trainee.get("id") or "").strip() or _normalized_token(name)
             sale_date = _sales_trainee_anchor_date(trainee, training_label)
             price = _sales_trainee_price(trainee, training_type, training_label)
             excluded_from_sales = bool(trainee.get("exclude_from_sales_tracking") or session_obj.get("exclude_from_sales_tracking"))
@@ -32056,6 +32058,17 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
 
             if _daily_recap_convention_is_pending(session_obj, trainee):
                 pending_signatures.append({"name": name, "detail": session_label})
+
+            mandate_status = _map_mandate_status(trainee.get("qonto_mandate_status"))
+            has_mandate_to_sign = bool(
+                trainee.get("qonto_direct_debit_mandate_id")
+                or trainee.get("qonto_mandate_sign_url")
+            )
+            if mandate_status == "pending" and has_mandate_to_sign:
+                pending_mandates_by_trainee[trainee_key] = {
+                    "name": name,
+                    "detail": f"{session_label} · Signature du mandat en attente",
+                }
 
             if start_date and 0 <= (start_date - today).days < 7 and not dossier_is_complete_total(trainee, training_type, start_date):
                 incomplete_upcoming.append({"name": name, "detail": session_label})
@@ -32123,6 +32136,21 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
 
     rejected_by_trainee: Dict[str, Dict[str, Any]] = {}
     for line in _billing_lines(data):
+        trainee_id = str(line.get("traineeId") or "").strip()
+        mandate_status = _map_mandate_status(line.get("qonto_mandate_status") or line.get("mandateStatus"))
+        has_mandate_to_sign = bool(
+            line.get("qonto_direct_debit_mandate_id")
+            or line.get("qonto_mandate_sign_url")
+            or line.get("sign_url")
+        )
+        if line.get("paymentMode") == "sepa_direct_debit" and mandate_status == "pending" and has_mandate_to_sign:
+            name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire"
+            key = trainee_id or _normalized_token(name)
+            formation = str(line.get("formationName") or line.get("sessionName") or "Formation non renseignée").strip()
+            pending_mandates_by_trainee[key] = {
+                "name": name,
+                "detail": f"{formation} · Signature du mandat en attente",
+            }
         for installment in _sepa_installments(line):
             if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
                 continue
@@ -32147,7 +32175,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     month_objective = _parse_positive_int(monthly_objectives.get(str(report_date.month), 0) if isinstance(monthly_objectives, dict) else 0)
     month_progress_ratio = (month_revenue / month_objective) if month_objective > 0 else 0
     month_remaining = max(month_objective - month_revenue, 0) if month_objective > 0 else 0
-    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "cnaps_changes": changes, "rejected": rejected, "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
+    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "cnaps_changes": changes, "rejected": rejected, "pending_mandates": list(pending_mandates_by_trainee.values()), "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
 
 
 def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
@@ -32235,11 +32263,12 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
         ("📅", "Dates clés", report.get("key_dates") or [], ""),
         ("⚡", "Changements CNAPS", report["cnaps_changes"], "Aucun changement détecté"),
         ("↩", "Prélèvements rejetés", report["rejected"], "Aucun rejet"),
+        ("🏦", "Mandats de prélèvement à valider", report.get("pending_mandates") or [], "Tous les mandats sont validés"),
         ("✍", "Conventions en attente de signature", report["pending_signatures"], "Aucune signature en attente"),
         ("📁", "Dossiers incomplets · J-7", report["incomplete_upcoming"], "Tous les dossiers sont complets"),
         ("👮", "CNAPS à valider", report["cnaps_pending"], "Aucune validation en attente"),
     ]
-    hidden_when_empty = {"Dates clés", "Changements CNAPS", "Prélèvements rejetés", "Dossiers incomplets · J-7"}
+    hidden_when_empty = {"Dates clés", "Changements CNAPS", "Prélèvements rejetés", "Mandats de prélèvement à valider", "Dossiers incomplets · J-7"}
     cards = key_dates_card(report.get("key_dates") or [])
     cards += "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right">{section_count_badge(len(items))}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections if title != "Dates clés" and (items or title not in hidden_when_empty))
     vae_follow_up = report.get("vae_follow_up") or {}
