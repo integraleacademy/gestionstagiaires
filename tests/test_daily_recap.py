@@ -347,6 +347,40 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(result, {"sent": False, "reason": "before_delivery_hour"})
         load_data.assert_not_called()
 
+    def test_hourly_job_does_not_send_on_weekends(self):
+        for day in (25, 26):  # Saturday and Sunday.
+            now = datetime.datetime(2026, 7, day, 8, tzinfo=ZoneInfo("Europe/Paris"))
+            with self.subTest(now=now), mock.patch.object(app, "load_data") as load_data:
+                result = app.run_daily_recap(now=now)
+
+            self.assertEqual(result, {"sent": False, "reason": "weekend"})
+            load_data.assert_not_called()
+
+    def test_next_delivery_skips_the_weekend(self):
+        self.assertEqual(
+            app._daily_recap_next_delivery_date(datetime.date(2026, 7, 24)),
+            datetime.date(2026, 7, 27),
+        )
+        self.assertEqual(
+            app._daily_recap_report_date(datetime.date(2026, 7, 27)),
+            datetime.date(2026, 7, 24),
+        )
+
+    def test_monday_recap_uses_friday_activity(self):
+        now = datetime.datetime(2026, 7, 27, 8, tzinfo=ZoneInfo("Europe/Paris"))
+        friday = datetime.date(2026, 7, 24)
+        with mock.patch.object(app, "load_data", return_value=self.data), \
+             mock.patch.object(app, "save_data"), \
+             mock.patch.object(app, "build_daily_recap_data", wraps=app.build_daily_recap_data) as build_report, \
+             mock.patch.object(app, "fetch_daily_recap_greeting_context", return_value={"date": now.date(), "weather": {}}), \
+             mock.patch.object(app, "brevo_send_email", return_value={"ok": True}) as send_email:
+            result = app.run_daily_recap(now=now)
+
+        self.assertTrue(result["sent"])
+        self.assertEqual(result["date"], friday.isoformat())
+        build_report.assert_called_once_with(self.data, friday)
+        self.assertEqual(send_email.call_args.kwargs["metadata"]["report_date"], friday.isoformat())
+
     def test_personalized_greetings_include_both_weather_locations_for_every_recipient(self):
         context = {
             "date": datetime.date(2026, 7, 29), "nameday": "Sainte Marthe",

@@ -89,7 +89,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    # The endpoint sends only during the 08:00 Europe/Paris hour. Running
+    # The endpoint sends after 08:00 Europe/Paris on weekdays only. Running
     # hourly keeps the delivery correct across winter/summer time changes.
     schedule: "0 * * * *"
     dockerCommand: python scripts/run_daily_recap.py
