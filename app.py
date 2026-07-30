@@ -28542,6 +28542,12 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     }
 
     trainees = _session_trainees_list(s)
+    # Keep the individual trainee sheet consistent with the session roster: a
+    # NUB recovered by the CNAPS tracking page must also enable the live title
+    # badges when the sheet is opened directly (without visiting the roster
+    # first).
+    if session_view["training_type"] in {"APS", "A3P"}:
+        _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
