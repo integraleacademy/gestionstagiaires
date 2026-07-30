@@ -1,4 +1,6 @@
 import os
+import json
+import tempfile
 import unittest
 from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
@@ -113,7 +115,7 @@ class QontoOauthTests(unittest.TestCase):
     def test_admin_reset_qonto_oauth_tokens_clears_sensitive_fields(self):
         data = {"qonto_oauth": {"connected": True, "access_token": "access", "refresh_token": "refresh", "expires_at": 123, "scope": "a b", "scopes": ["a"], "environment": "sandbox"}}
         saved = []
-        with patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data", side_effect=saved.append):
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data", side_effect=lambda payload, **kwargs: saved.append(payload)):
             response = self.client.post("/admin/qonto/oauth/reset")
         self.assertEqual(response.status_code, 302)
         settings = data["qonto_oauth"]
@@ -127,7 +129,7 @@ class QontoOauthTests(unittest.TestCase):
         saved = []
         token_response = {"access_token": "new-token", "refresh_token": "new-refresh", "expires_in": 3600, "token_type": "bearer"}
         with patch.object(gestion_app, "load_data", return_value=data), \
-             patch.object(gestion_app, "save_data", side_effect=saved.append), \
+             patch.object(gestion_app, "save_data", side_effect=lambda payload, **kwargs: saved.append(payload)), \
              patch.dict(os.environ, {"QONTO_OAUTH_CLIENT_ID": "cid", "QONTO_OAUTH_CLIENT_SECRET": "csecret", "QONTO_LOGIN": "login", "QONTO_SECRET_KEY": "api-secret"}, clear=False), \
              patch.object(gestion_app, "_exchange_qonto_oauth_token", return_value=token_response) as exchange, \
              patch.object(gestion_app.requests, "request") as req:
@@ -165,7 +167,7 @@ class QontoOauthTests(unittest.TestCase):
         data = {"qonto_oauth": {"connected": True, "access_token": "old-token", "refresh_token": "expired-refresh", "expires_at": 1, "environment": "production"}}
         saved = []
         with patch.object(gestion_app, "load_data", return_value=data), \
-             patch.object(gestion_app, "save_data", side_effect=saved.append), \
+             patch.object(gestion_app, "save_data", side_effect=lambda payload, **kwargs: saved.append(payload)), \
              patch.dict(os.environ, {"QONTO_OAUTH_CLIENT_ID": "cid", "QONTO_OAUTH_CLIENT_SECRET": "csecret", "QONTO_LOGIN": "login", "QONTO_SECRET_KEY": "api-secret"}, clear=False), \
              patch.object(gestion_app, "_exchange_qonto_oauth_token", side_effect=gestion_app.QontoApiError(400, '{"error":"invalid_grant"}')):
             with self.assertRaisesRegex(gestion_app.QontoConfigurationError, "reconnectez Qonto"):
@@ -181,6 +183,47 @@ class QontoOauthTests(unittest.TestCase):
         with patch.object(gestion_app, "load_data", return_value={"qonto_oauth": {}}):
             with self.assertRaisesRegex(gestion_app.QontoConfigurationError, gestion_app.QONTO_OAUTH_REQUIRED_MESSAGE):
                 gestion_app._setup_qonto_direct_debit_for_line({"qontoClientId": "client_123"}, {"mode": "sepa_direct_debit", "schedule": [{"date": "2026-07-10", "amount": 100}], "installments": 1})
+
+    def test_stale_business_save_preserves_canonical_oauth_tokens(self):
+        with tempfile.TemporaryDirectory() as directory:
+            data_file = os.path.join(directory, "data.json")
+            canonical_oauth = {
+                "connected": True,
+                "access_token": "new-access",
+                "refresh_token": "new-refresh",
+                "environment": "production",
+            }
+            with open(data_file, "w", encoding="utf-8") as stream:
+                json.dump({"sessions": [], "qonto_oauth": canonical_oauth}, stream)
+
+            stale_request_data = {
+                "sessions": [],
+                "qonto_oauth": {"connected": False},
+                "notifications_admin": [{"id": "saved-business-change"}],
+            }
+            with patch.object(gestion_app, "DATA_FILE", data_file), \
+                 patch.object(gestion_app, "BACKUP_SNAPSHOT_BEFORE_SAVE", False):
+                gestion_app.save_data(stale_request_data)
+
+            with open(data_file, "r", encoding="utf-8") as stream:
+                saved = json.load(stream)
+            self.assertEqual(saved["qonto_oauth"], canonical_oauth)
+            self.assertEqual(saved["notifications_admin"][0]["id"], "saved-business-change")
+
+    def test_oauth_writer_can_replace_canonical_tokens(self):
+        with tempfile.TemporaryDirectory() as directory:
+            data_file = os.path.join(directory, "data.json")
+            with open(data_file, "w", encoding="utf-8") as stream:
+                json.dump({"sessions": [], "qonto_oauth": {"refresh_token": "old"}}, stream)
+            rotated = {"sessions": [], "qonto_oauth": {"refresh_token": "rotated", "environment": "production"}}
+
+            with patch.object(gestion_app, "DATA_FILE", data_file), \
+                 patch.object(gestion_app, "BACKUP_SNAPSHOT_BEFORE_SAVE", False):
+                gestion_app.save_data(rotated, preserve_qonto_oauth=False)
+
+            with open(data_file, "r", encoding="utf-8") as stream:
+                saved = json.load(stream)
+            self.assertEqual(saved["qonto_oauth"]["refresh_token"], "rotated")
 
 
 if __name__ == "__main__":
