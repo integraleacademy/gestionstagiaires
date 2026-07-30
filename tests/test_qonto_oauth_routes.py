@@ -31,7 +31,7 @@ class QontoOAuthRoutesTest(unittest.TestCase):
 
         with patch.object(gestion_app, "_exchange_qonto_oauth_token", return_value=token_payload) as exchange, \
              patch.object(gestion_app, "load_data", return_value={}) as load_data, \
-             patch.object(gestion_app, "save_data", side_effect=lambda data: saved.update(data)):
+             patch.object(gestion_app, "save_data", side_effect=lambda data, **kwargs: saved.update(data)):
             response = self.client.get("/api/qonto/oauth/callback?code=abc123")
 
         self.assertEqual(response.status_code, 302)

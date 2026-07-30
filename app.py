@@ -26,7 +26,7 @@ try:
     import resource
 except ImportError:
     resource = None
-from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
+from typing import Dict, Any, Optional, List, Iterable, Tuple, Set, Callable
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
@@ -659,7 +659,10 @@ def _store_qonto_oauth_tokens(data: Dict[str, Any], token_payload: Dict[str, Any
         "updated_at": _now_iso(),
         "environment": _qonto_oauth_environment(),
     })
-    save_data(data)
+    # OAuth is one of the few callers allowed to replace the canonical token
+    # set. Ordinary business-data saves preserve the latest tokens already on
+    # disk so a request that started before this rotation cannot erase it.
+    save_data(data, preserve_qonto_oauth=False)
 
 
 def _exchange_qonto_oauth_token(form_data: Dict[str, str]) -> Dict[str, Any]:
@@ -713,7 +716,7 @@ def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None, *, force_re
                     if _qonto_oauth_refresh_token(canonical_data) != _qonto_oauth_refresh_token(refresh_data):
                         return _qonto_oauth_bearer_token(canonical_data)
                     _reset_qonto_oauth_tokens(canonical_data)
-                    save_data(canonical_data)
+                    save_data(canonical_data, preserve_qonto_oauth=False)
                     raise QontoConfigurationError(
                         "Connexion Qonto OAuth expirée ou révoquée : reconnectez Qonto depuis Réglages > Qonto avant de programmer un prélèvement SEPA."
                     ) from exc
@@ -3781,13 +3784,23 @@ def _fsync_parent_dir(path: str) -> None:
         pass
 
 
-def _write_json_with_backups(path: str, payload: Any, lock: threading.RLock) -> None:
+def _write_json_with_backups(
+    path: str,
+    payload: Any,
+    lock: threading.RLock,
+    payload_transform: Optional[Callable[[Any], Any]] = None,
+) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     lock_path = path + ".lock"
     with lock:
         with open(lock_path, "a+", encoding="utf-8") as lock_file:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             try:
+                # Run read/merge transforms only after taking the inter-process
+                # lock. This closes the race between reading the canonical
+                # value and replacing the JSON file.
+                if payload_transform is not None:
+                    payload = payload_transform(payload)
                 now_ts = datetime.datetime.utcnow().timestamp()
                 base_name = os.path.basename(path)
                 prefix = base_name.replace(".", "_")
@@ -7831,12 +7844,28 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     return result
 
 
-def save_data(data: Dict[str, Any]) -> None:
+def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> None:
+    """Persist business data without letting stale requests erase OAuth.
+
+    Most handlers load the whole JSON document and save it later. A handler
+    which loaded before a Qonto token rotation therefore carries an obsolete
+    ``qonto_oauth`` object. Preserve the canonical on-disk object at the last
+    possible moment, while holding the file lock. Only the OAuth callback,
+    refresh and explicit reset opt out.
+    """
     if _is_partner_scoped_session():
         data = _merge_partner_scoped_payload(data, _current_partner_id())
     _ensure_multi_partner_payload(data)
     normalize_all_partner_subscriptions(data)
-    _write_json_with_backups(DATA_FILE, data, _data_lock)
+
+    def preserve_canonical_oauth(payload: Dict[str, Any]) -> Dict[str, Any]:
+        canonical = _load_valid_json_payload(DATA_FILE)
+        if isinstance(canonical, dict) and isinstance(canonical.get("qonto_oauth"), dict):
+            payload["qonto_oauth"] = canonical["qonto_oauth"]
+        return payload
+
+    transform = preserve_canonical_oauth if preserve_qonto_oauth else None
+    _write_json_with_backups(DATA_FILE, data, _data_lock, payload_transform=transform)
 
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
     if not os.path.exists(WEDOF_WEBHOOK_FILE):
@@ -17188,7 +17217,7 @@ def admin_qonto_connect():
 def admin_qonto_oauth_reset():
     data = load_data()
     _reset_qonto_oauth_tokens(data)
-    save_data(data)
+    save_data(data, preserve_qonto_oauth=False)
     flash("Connexion Qonto OAuth réinitialisée. Vous pouvez relancer une connexion production.", "success")
     return redirect(url_for("admin_qonto_settings"))
 
