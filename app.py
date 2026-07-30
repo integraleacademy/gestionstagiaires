@@ -32420,9 +32420,14 @@ def run_daily_recap(
     paris_now = now or datetime.datetime.now(ZoneInfo("Europe/Paris"))
     if paris_now.tzinfo is None:
         paris_now = paris_now.replace(tzinfo=ZoneInfo("Europe/Paris"))
-    if not force and paris_now.astimezone(ZoneInfo("Europe/Paris")).hour != 8:
-        return {"sent": False, "reason": "outside_delivery_hour"}
-    effective_delivery_date = delivery_date or paris_now.astimezone(ZoneInfo("Europe/Paris")).date()
+    paris_now = paris_now.astimezone(ZoneInfo("Europe/Paris"))
+    # The Render job runs hourly.  Do not require it to start during the exact
+    # 08:00 hour: a delayed deployment, cold start or temporary provider error
+    # must be recoverable by the next hourly run.  The persisted history below
+    # still guarantees at most one successful automatic delivery per day.
+    if not force and paris_now.hour < 8:
+        return {"sent": False, "reason": "before_delivery_hour"}
+    effective_delivery_date = delivery_date or paris_now.date()
     report_date = effective_delivery_date - datetime.timedelta(days=1)
     request_id = request_id or uuid.uuid4().hex[:12]
     app.logger.warning(
@@ -32493,7 +32498,12 @@ def internal_cron_daily_recap():
     provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
-    return jsonify({"ok": True, **run_daily_recap()})
+    result = run_daily_recap()
+    # Make delivery failures visible as failed Render jobs.  Previously the
+    # endpoint returned HTTP 200 even when Brevo rejected a message, so the
+    # scheduler misleadingly reported a successful execution.
+    status_code = 502 if result.get("reason") == "email_error" else 200
+    return jsonify({"ok": status_code == 200, **result}), status_code
 
 
 @app.cli.command("send-convocation-signature-reminders")

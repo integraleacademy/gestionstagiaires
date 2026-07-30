@@ -328,6 +328,25 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Bonjour Aurélie", sent[1][0][2])
         self.assertIn("Aurillac", sent[1][0][2])
 
+    def test_hourly_job_catches_up_after_eight_when_first_run_was_missed(self):
+        now = datetime.datetime(2026, 7, 28, 9, tzinfo=ZoneInfo("Europe/Paris"))
+        with mock.patch.object(app, "load_data", return_value=self.data), \
+             mock.patch.object(app, "save_data"), \
+             mock.patch.object(app, "fetch_daily_recap_greeting_context", return_value={"date": now.date(), "weather": {}}), \
+             mock.patch.object(app, "brevo_send_email", return_value={"ok": True}) as send_email:
+            result = app.run_daily_recap(now=now)
+
+        self.assertTrue(result["sent"])
+        self.assertEqual(send_email.call_count, len(app.DAILY_RECAP_RECIPIENTS))
+
+    def test_hourly_job_does_not_send_before_eight(self):
+        now = datetime.datetime(2026, 7, 28, 7, 59, tzinfo=ZoneInfo("Europe/Paris"))
+        with mock.patch.object(app, "load_data") as load_data:
+            result = app.run_daily_recap(now=now)
+
+        self.assertEqual(result, {"sent": False, "reason": "before_delivery_hour"})
+        load_data.assert_not_called()
+
     def test_personalized_greetings_include_both_weather_locations_for_every_recipient(self):
         context = {
             "date": datetime.date(2026, 7, 29), "nameday": "Sainte Marthe",
@@ -426,6 +445,17 @@ class DailyRecapTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"CRON_SECRET": "correct"}):
             response = app.app.test_client().post("/internal/cron/daily-recap", headers={"X-Cron-Secret": "wrong"})
         self.assertEqual(response.status_code, 403)
+
+    def test_endpoint_reports_email_failure_as_failed_cron_execution(self):
+        result = {"sent": False, "reason": "email_error", "error": "Brevo indisponible"}
+        with mock.patch.dict(os.environ, {"CRON_SECRET": "correct"}), \
+             mock.patch.object(app, "run_daily_recap", return_value=result):
+            response = app.app.test_client().post(
+                "/internal/cron/daily-recap", headers={"X-Cron-Secret": "correct"}
+            )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertFalse(response.get_json()["ok"])
 
     def test_sales_tracking_preview_renders_tomorrows_email_without_sending(self):
         client = app.app.test_client()
