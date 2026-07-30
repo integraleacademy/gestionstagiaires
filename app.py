@@ -16438,9 +16438,10 @@ def admin_sales_tracking():
     selected_year = max(2020, min(2100, selected_year))
     metrics = _build_sales_tracking_metrics(data, selected_year)
 
+    next_delivery_date = _daily_recap_next_delivery_date(datetime.datetime.now(ZoneInfo("Europe/Paris")).date())
     return render_template(
         "admin_sales_tracking.html",
-        daily_preview_delivery_date=fr_date((today + datetime.timedelta(days=1)).isoformat()),
+        daily_preview_delivery_date=fr_date(next_delivery_date.isoformat()),
         **metrics,
     )
 
@@ -16448,9 +16449,9 @@ def admin_sales_tracking():
 @app.get("/admin/suivi-ventes/apercu-mail-quotidien")
 @admin_login_required
 def admin_sales_tracking_daily_recap_preview():
-    """Display Clement's next recap, scheduled for tomorrow at 08:00, without sending it."""
-    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() + datetime.timedelta(days=1)
-    report_date = delivery_date - datetime.timedelta(days=1)
+    """Display Clement's next weekday recap at 08:00, without sending it."""
+    delivery_date = _daily_recap_next_delivery_date(datetime.datetime.now(ZoneInfo("Europe/Paris")).date())
+    report_date = _daily_recap_report_date(delivery_date)
     report = build_daily_recap_data(load_data(run_background_tasks=False), report_date)
     greeting_context = fetch_daily_recap_greeting_context(delivery_date)
     _subject, html_body = build_daily_recap_email(
@@ -32046,6 +32047,22 @@ def _daily_recap_previous_month(value: datetime.date) -> datetime.date:
     return value.replace(year=year, month=month, day=min(value.day, calendar.monthrange(year, month)[1]))
 
 
+def _daily_recap_report_date(delivery_date: datetime.date) -> datetime.date:
+    """Return the last business day covered by a morning recap."""
+    report_date = delivery_date - datetime.timedelta(days=1)
+    while report_date.weekday() >= 5:
+        report_date -= datetime.timedelta(days=1)
+    return report_date
+
+
+def _daily_recap_next_delivery_date(value: datetime.date) -> datetime.date:
+    """Return the next weekday on which the automatic recap can be sent."""
+    delivery_date = value + datetime.timedelta(days=1)
+    while delivery_date.weekday() >= 5:
+        delivery_date += datetime.timedelta(days=1)
+    return delivery_date
+
+
 def _daily_recap_rejection_reason(value: Any) -> str:
     """Translate Qonto's machine-readable rejection reasons for the team."""
     raw = str(value or "").strip()
@@ -32435,7 +32452,7 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     greeting = ""
     if recipient and greeting_context:
         greeting = _daily_recap_greeting_html(recipient, greeting_context)
-    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><h1 style="margin:24px 0 8px;font-size:30px">DAILY OPERATIONS</h1><div style="opacity:.86">{html.escape(fr_date(display_date.isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><div style="background:linear-gradient(145deg,#ffffff,#eff6ff);border:1px solid #bfdbfe;border-radius:22px;padding:22px;box-shadow:0 12px 30px rgba(37,99,235,.08)"><div style="font-size:12px;color:#1e40af;font-weight:900;text-transform:uppercase;letter-spacing:.06em">📈 Performance commerciale</div><table role="presentation" width="100%" style="margin-top:10px"><tr><td width="54%" style="vertical-align:top;padding-right:16px;border-right:1px solid #dbeafe"><div style="color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:34px;font-weight:950;color:#0f172a;margin-top:3px">{html.escape(_format_euro(sales['revenue']))}</div><div style="margin-top:5px;color:#475569;font-size:12px">{sales['count']} vente{'s' if sales['count'] != 1 else ''} enregistrée{'s' if sales['count'] != 1 else ''}</div>{objective_visual}</td><td width="46%" style="vertical-align:top;padding-left:16px"><div style="color:#92400e;font-size:11px;font-weight:800;text-transform:uppercase">Formations vendues</div><div style="margin-top:8px">{formation_mix}</div></td></tr></table>{comparison}</div></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé chaque jour à 08h00</td></tr></table></td></tr></table></body></html>'''
+    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><h1 style="margin:24px 0 8px;font-size:30px">DAILY OPERATIONS</h1><div style="opacity:.86">{html.escape(fr_date(display_date.isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><div style="background:linear-gradient(145deg,#ffffff,#eff6ff);border:1px solid #bfdbfe;border-radius:22px;padding:22px;box-shadow:0 12px 30px rgba(37,99,235,.08)"><div style="font-size:12px;color:#1e40af;font-weight:900;text-transform:uppercase;letter-spacing:.06em">📈 Performance commerciale</div><table role="presentation" width="100%" style="margin-top:10px"><tr><td width="54%" style="vertical-align:top;padding-right:16px;border-right:1px solid #dbeafe"><div style="color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:34px;font-weight:950;color:#0f172a;margin-top:3px">{html.escape(_format_euro(sales['revenue']))}</div><div style="margin-top:5px;color:#475569;font-size:12px">{sales['count']} vente{'s' if sales['count'] != 1 else ''} enregistrée{'s' if sales['count'] != 1 else ''}</div>{objective_visual}</td><td width="46%" style="vertical-align:top;padding-left:16px"><div style="color:#92400e;font-size:11px;font-weight:800;text-transform:uppercase">Formations vendues</div><div style="margin-top:8px">{formation_mix}</div></td></tr></table>{comparison}</div></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé les jours ouvrés à 08h00</td></tr></table></td></tr></table></body></html>'''
     return "DAILY OPERATIONS", body
 
 
@@ -32457,7 +32474,11 @@ def run_daily_recap(
     if not force and paris_now.hour < 8:
         return {"sent": False, "reason": "before_delivery_hour"}
     effective_delivery_date = delivery_date or paris_now.date()
-    report_date = effective_delivery_date - datetime.timedelta(days=1)
+    # The company is closed at weekends: automatic recaps resume on Monday,
+    # using Friday as the reporting day for sales and all dated activity.
+    if not force and effective_delivery_date.weekday() >= 5:
+        return {"sent": False, "reason": "weekend"}
+    report_date = _daily_recap_report_date(effective_delivery_date)
     request_id = request_id or uuid.uuid4().hex[:12]
     app.logger.warning(
         "[DAILY_RECAP] send_start request_id=%s force=%s report_date=%s recipients=%s",
