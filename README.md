@@ -99,6 +99,18 @@ Lors de l’application du Blueprint, Render demande les trois secrets suivants 
 
 Le worker n’a besoin ni du jeton CNAPSV3 ni de la clé Brevo : il réveille le endpoint protégé du service web, qui effectue le contrôle et l’envoi. Après configuration, redéployer le Blueprint et vérifier dans les logs de `gestionstagiaires-cnaps-monitor` qu’une réponse contenant `"ok": true` apparaît environ toutes les 15 minutes.
 
+### Disponibilité du service web
+
+Le service web utilise un seul worker Gunicorn par défaut afin de limiter sa
+consommation mémoire. Son recyclage périodique est désactivé : recycler l’unique
+worker laisse le service sans processus disponible pendant le rechargement de
+l’application et provoque des réponses 502 intermittentes sur Render.
+
+Si le service est dimensionné avec `WEB_CONCURRENCY=2` ou plus, le recyclage
+peut être réactivé avec `GUNICORN_MAX_REQUESTS` et
+`GUNICORN_MAX_REQUESTS_JITTER`. L’endpoint léger `/healthz` permet de vérifier
+la disponibilité sans lire les fichiers de données.
+
 ## Intégration cnapsv3 (sync ACCEPTÉ)
 
 Lorsqu'une entrée CNAPS PRE est enregistrée et devient visible dans `/admin/cnaps/import-pre/pending`, gestionstagiaires déclenche un `POST` vers:
