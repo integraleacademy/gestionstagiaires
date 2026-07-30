@@ -257,6 +257,28 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
         self.assertNotIn('title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF"', html)
 
+    def test_aps_admin_trainee_sheet_recovers_tracking_nub_when_opened_directly(self):
+        trainee = self.data["sessions"][2]["trainees"][0]
+        trainee["last_name"] = "Dupont"
+        trainee["first_name"] = "Noa"
+        trainee.pop("pre_number", None)
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DUPONT",
+            "first_name": "Noa",
+            "nub": "1050370",
+            "cnaps_status": "TRANSMIS",
+        }], None)
+
+        response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(trainee["cnaps_tracking_nub"], "1050370")
+        self.assertIn("NUB : 1050370", html)
+        self.assertIn('data-trainee-card-pro-followup', html)
+        self.assertIn('data-nub="1050370"', html)
+        self.assertIn("Chargement CNAPS…", html)
+
 
     def test_cnaps_public_annuaire_api_returns_activity_and_validity(self):
         original_fetch = gestion_app.fetch_cnaps_public_annuaire
