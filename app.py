@@ -37187,8 +37187,24 @@ def public_trainee_qcu_question(token: str, kind: str, attempt_id: str, position
     order = candidate.get("question_order", [])
     if candidate.get("status") != "in_progress" or position != len(candidate.get("answers", [])) or not 0 <= position < len(order):
         return {"ok": False, "error": "Question indisponible."}, 409
+    # The deadline belongs to the question, not to the browser page.  Keeping it
+    # with the candidate prevents a refresh (or a second tab) from granting a
+    # fresh 45-second period.
+    deadlines = candidate.setdefault("question_deadlines", [])
+    if position < len(deadlines) and deadlines[position]:
+        deadline_at = deadlines[position]
+    else:
+        opened_at = _now_iso_utc()
+        deadline_at = (_desp_qcu_parse_utc(opened_at) + datetime.timedelta(
+            seconds=DESP_OFFICIAL_QCU_QUESTION_SECONDS
+        )).isoformat().replace("+00:00", "Z")
+        while len(deadlines) <= position:
+            deadlines.append(None)
+        deadlines[position] = deadline_at
+        save_data(data)
     source = DESP_TRAINING_QCU_QUESTIONS[order[position]]
-    return {"question": source["question"], "choices": source["choices"]}
+    return {"question": source["question"], "choices": source["choices"],
+            "deadline_at": deadline_at, "server_time": _now_iso_utc()}
 
 
 @app.get("/admin/exams/<session_id>/qcu/<kind>/<attempt_id>/results.pdf")
