@@ -1,6 +1,5 @@
 """Gunicorn settings for Render and local container runs."""
 
-import multiprocessing
 import os
 
 bind = f"0.0.0.0:{os.environ.get('PORT', '10000')}"
@@ -15,10 +14,9 @@ errorlog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
 capture_output = True
 
-# Avoid unbounded growth on long-lived Render instances while keeping the
-# default single-worker footprint conservative for this large Flask app.
-max_requests = int(os.environ.get("GUNICORN_MAX_REQUESTS") or "1000")
-max_requests_jitter = int(os.environ.get("GUNICORN_MAX_REQUESTS_JITTER") or "100")
-
-# Document a safe upper bound for manual tuning without changing the default.
-_suggested_workers = max(1, min(multiprocessing.cpu_count() * 2 + 1, 4))
+# Do not periodically recycle the only worker by default.  With one worker,
+# Gunicorn cannot serve requests while its replacement imports this large app;
+# Render exposes that restart window as an intermittent 502.  Operators running
+# at least two workers can still opt in to recycling through the environment.
+max_requests = int(os.environ.get("GUNICORN_MAX_REQUESTS") or "0")
+max_requests_jitter = int(os.environ.get("GUNICORN_MAX_REQUESTS_JITTER") or "0")

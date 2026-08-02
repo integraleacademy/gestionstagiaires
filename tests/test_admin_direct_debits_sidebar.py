@@ -32,6 +32,8 @@ class AdminDirectDebitsSidebarTests(unittest.TestCase):
         self.assertIn('href="/admin/sessions/facturation"', html)
         self.assertIn('aria-label="CPF"', html)
         self.assertIn('>1</span>', html)
+        self.assertIn("partner-sidebar__collapse--collapsed", html)
+        self.assertIn('aria-label="Déployer la barre"', html)
 
     def test_rejected_installment_aliases_are_used_by_dashboard(self):
         response = self.client.get("/admin/billing/direct-debits")

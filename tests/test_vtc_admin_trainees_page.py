@@ -197,6 +197,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn(".card-pro-result.is-active", html)
         self.assertIn(".card-pro-result.is-inactive", html)
         self.assertIn(".card-pro-result.is-unknown", html)
+        self.assertIn('.card-pro-result__date{display:inline', html)
+        self.assertIn('.card-pro-result__chip.is-cp,.card-pro-result__chip.is-ap{background:#16a34a', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
 
     def test_aps_admin_trainees_uses_suivi_cnaps_nub_when_pre_number_missing(self):
         trainee = self.data["sessions"][2]["trainees"][0]
@@ -248,7 +252,32 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-trainee-card-pro-followup', html)
         self.assertIn('data-trainee-card-pro-result', html)
         self.assertIn('Chargement CNAPS…', html)
+        self.assertIn('.trainee-cnaps-followup__chip.is-cp,.trainee-cnaps-followup__chip.is-ap{background:#16a34a', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}', html)
+        self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
         self.assertNotIn('title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF"', html)
+
+    def test_aps_admin_trainee_sheet_recovers_tracking_nub_when_opened_directly(self):
+        trainee = self.data["sessions"][2]["trainees"][0]
+        trainee["last_name"] = "Dupont"
+        trainee["first_name"] = "Noa"
+        trainee.pop("pre_number", None)
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DUPONT",
+            "first_name": "Noa",
+            "nub": "1050370",
+            "cnaps_status": "TRANSMIS",
+        }], None)
+
+        response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(trainee["cnaps_tracking_nub"], "1050370")
+        self.assertIn("NUB : 1050370", html)
+        self.assertIn('data-trainee-card-pro-followup', html)
+        self.assertIn('data-nub="1050370"', html)
+        self.assertIn("Chargement CNAPS…", html)
 
 
     def test_cnaps_public_annuaire_api_returns_activity_and_validity(self):

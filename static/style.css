@@ -2037,6 +2037,7 @@ body.ypareo-sync-is-running{overflow:hidden;}
 .qonto-invoice-card{margin-top:18px;grid-column:1/-1;border:1px solid rgba(37,99,235,.18);border-radius:18px;padding:18px;background:linear-gradient(135deg,#eff6ff 0%,#fff 54%,#f8fafc 100%);box-shadow:0 16px 38px rgba(15,23,42,.08)}
 .qonto-invoice-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}.qonto-eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#2563eb;font-weight:900}.qonto-title{font-size:1.08rem;font-weight:950;color:#0f172a;margin-top:2px}.qonto-status{border-radius:999px;background:#0f172a;color:#fff;font-weight:900;padding:7px 12px;font-size:.85rem}.qonto-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}.qonto-history{margin-top:12px;color:#475569;font-size:.92rem;display:grid;gap:4px}.qonto-error{color:#dc2626;font-weight:800}.qonto-field-error{border-color:#dc2626!important;box-shadow:0 0 0 2px rgba(220,38,38,.12)!important}
 .billing-modal-overlay{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.64);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}.billing-modal{width:100%;max-width:980px;max-height:90vh;overflow:auto;background:#fff;border-radius:24px;padding:24px;box-shadow:0 24px 80px rgba(15,23,42,.28)}.billing-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:1px solid #e2e8f0;padding-bottom:14px}.billing-modal-close{border:0;background:#f1f5f9;border-radius:999px;width:38px;height:38px;font-weight:900;cursor:pointer}.billing-modal-step{display:inline-flex;align-items:center;gap:8px;background:#eff6ff;color:#1d4ed8;border-radius:999px;padding:6px 10px;font-weight:800;font-size:12px;margin-top:8px}.billing-modal-existing{background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:14px;padding:12px;margin-top:14px;font-weight:700}.billing-modal h2{margin:0 0 6px;color:#0f172a}.billing-modal-summary{display:grid;gap:8px;margin-top:16px}.billing-modal-summary p{margin:0}.billing-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.kv{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:12px}.billing-modal-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px;flex-wrap:wrap}.billing-modal-error{margin-top:16px;padding:12px;border-radius:12px;background:#fee2e2;color:#991b1b;font-weight:600}.billing-modal-success{margin-top:16px;padding:12px;border-radius:12px;background:#dcfce7;color:#166534;font-weight:600}@media(max-width:900px){.billing-modal-grid{grid-template-columns:1fr}}
+.invoice-notes-field{display:flex;flex-direction:column;align-items:stretch;gap:5px;margin-top:16px;padding:14px 16px;border:1px solid #dbeafe;border-radius:14px;background:rgba(255,255,255,.72)}.invoice-notes-field .label{display:block;color:#1e293b}.invoice-notes-hint{color:#64748b;font-size:12px;line-height:1.4}.invoice-notes-field textarea{display:block;width:100%;min-height:82px;margin-top:5px;padding:11px 12px;box-sizing:border-box;resize:vertical;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;font:inherit;line-height:1.45;transition:border-color .2s,box-shadow .2s}.invoice-notes-field textarea::placeholder{color:#94a3b8}.invoice-notes-field textarea:focus{border-color:#2563eb;outline:0;box-shadow:0 0 0 3px rgba(37,99,235,.13)}
 .qonto-result{position:relative;max-width:620px;margin:0 auto;padding:34px;text-align:center;border-radius:24px;background:radial-gradient(circle at top,#eff6ff 0,#fff 52%);overflow:hidden}.qonto-result__brand{display:inline-flex;padding:7px 12px;border-radius:9px;background:#0f172a;color:#fff;font-size:11px;font-weight:950;letter-spacing:.18em}.qonto-result__eyebrow{margin-top:18px;color:#2563eb;font-size:12px;font-weight:950;letter-spacing:.12em;text-transform:uppercase}.qonto-result h2{margin:8px auto 10px;font-size:28px;line-height:1.15}.qonto-result p{max-width:500px;margin:0 auto;color:#64748b;line-height:1.6}.qonto-result__loader{height:82px;display:flex;align-items:center;justify-content:center;gap:9px}.qonto-result__loader span{width:12px;height:12px;border-radius:50%;background:#2563eb;animation:qontoPulse 1.2s infinite ease-in-out}.qonto-result__loader span:nth-child(2){animation-delay:.15s}.qonto-result__loader span:nth-child(3){animation-delay:.3s}.qonto-result__progress{height:6px;margin-top:28px;border-radius:999px;background:#dbeafe;overflow:hidden}.qonto-result__progress span{display:block;width:45%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#38bdf8);animation:qontoProgress 1.4s infinite ease-in-out}.qonto-result__check{display:grid;place-items:center;width:78px;height:78px;margin:24px auto 4px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#4ade80);box-shadow:0 16px 36px rgba(22,163,74,.25);color:#fff;font-size:40px;font-weight:950}.qonto-result__reference{display:grid;gap:6px;margin:26px auto 0;padding:18px;border:1px solid #bbf7d0;border-radius:18px;background:#f0fdf4}.qonto-result__reference span{color:#64748b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.09em}.qonto-result__reference strong{color:#14532d;font-size:22px;overflow-wrap:anywhere}.qonto-result__close{position:absolute;right:18px;top:18px}.qonto-result .billing-modal-actions{justify-content:center}@keyframes qontoPulse{0%,80%,100%{transform:scale(.72);opacity:.42}40%{transform:scale(1);opacity:1}}@keyframes qontoProgress{0%{transform:translateX(-120%)}100%{transform:translateX(260%)}}
 
 /* =========================
@@ -2591,7 +2592,8 @@ body.partner-sidebar-collapsed .partner-sidebar__section h2,
 body.partner-sidebar-collapsed .partner-sidebar__label,
 body.partner-sidebar-collapsed .subscription-usage-card,
 body.partner-sidebar-collapsed .partner-sidebar__version{display:none;}
-body.partner-sidebar-collapsed .partner-sidebar__collapse{position:absolute;right:-20px;top:180px;background:#10213d;border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 24px rgba(2,6,23,.28);}
+/* Keep the expand control inside the scroll container so it cannot be clipped. */
+body.partner-sidebar-collapsed .partner-sidebar__collapse{position:absolute;right:4px;top:180px;background:#10213d;border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 24px rgba(2,6,23,.28);}
 body.partner-sidebar-collapsed .collapse-icon--open{display:none;}
 body.partner-sidebar-collapsed .collapse-icon--closed{display:inline-flex;}
 body.partner-sidebar-collapsed .partner-sidebar__item{justify-content:center;padding:10px 8px;}
@@ -2739,7 +2741,7 @@ body.partner-space.partner-sidebar-collapsed .partner-sidebar__section h2,
 body.partner-space.partner-sidebar-collapsed .partner-sidebar__label,
 body.partner-space.partner-sidebar-collapsed .subscription-usage-card,
 body.partner-space.partner-sidebar-collapsed .partner-sidebar__powered span{display:none;}
-body.partner-space.partner-sidebar-collapsed .partner-sidebar__collapse{position:absolute;right:-20px;top:180px;width:30px;height:30px;background:#10213d;border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 24px rgba(2,6,23,.28);}
+body.partner-space.partner-sidebar-collapsed .partner-sidebar__collapse{position:absolute;right:4px;top:180px;width:30px;height:30px;background:#10213d;border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 24px rgba(2,6,23,.28);}
 body.partner-space.partner-sidebar-collapsed .partner-sidebar__item{justify-content:center;padding:10px 8px;}
 body.partner-space.partner-sidebar-collapsed .partner-sidebar__powered img{max-width:44px;max-height:44px;}
 body.partner-space.partner-sidebar-collapsed .sidebar-create-menu{
@@ -3480,3 +3482,19 @@ body.partner-sidebar-collapsed .docs-to-control-panel{
 .docs-to-control-list [data-docs-to-control-href]:hover{background:#f8fafc;}
 @media (max-width:860px){.trainee-search-panel,.docs-to-control-panel{left:12px!important;right:12px;top:76px;bottom:12px;width:auto!important;border-radius:24px!important;}}
 .trainee-summary__schedule{display:grid;gap:3px;margin-top:5px}.trainee-summary__card header .trainee-summary__schedule p{margin:0;color:rgba(255,255,255,.9);font-weight:650}.trainee-summary__schedule strong{color:#fff}
+
+/* The collapsed handle lives outside the scrolling panel so it stays fully
+   visible above the page header instead of being clipped at the sidebar edge. */
+.partner-sidebar > .partner-sidebar__collapse--collapsed{display:none;}
+@media (min-width:861px){
+  body.partner-sidebar-collapsed .partner-sidebar__identity .partner-sidebar__collapse{display:none;}
+  body.partner-sidebar-collapsed .partner-sidebar > .partner-sidebar__collapse--collapsed{
+    display:flex;
+    position:absolute;
+    top:18px;
+    right:-19px;
+    z-index:4;
+    align-items:center;
+    justify-content:center;
+  }
+}

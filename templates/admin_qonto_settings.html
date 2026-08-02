@@ -176,13 +176,13 @@
     const oauthMessage = document.getElementById('qontoOauthMessage');
     if (!oauthMessage) return;
     try {
-      const res = await fetch('/api/qonto/oauth/status', {headers:{'Accept':'application/json'}});
+      const res = await fetch('/api/qonto/oauth/status?validate=1', {headers:{'Accept':'application/json'},cache:'no-store'});
       const payload = await res.json();
       const hasWebhookScope = (payload.scopes || []).includes('webhook');
       oauthMessage.textContent = !hasWebhookScope && payload.connected
         ? 'La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto.'
         : (payload.message || (payload.connected ? 'OAuth Qonto : connecté production' : 'OAuth Qonto : non connecté'));
-      oauthMessage.style.color = payload.connected ? '#166534' : (payload.incompatible ? '#b45309' : '#991b1b');
+      oauthMessage.style.color = payload.connected && payload.validated ? '#166534' : (payload.incompatible ? '#b45309' : '#991b1b');
       oauthMessage.style.fontWeight = '800';
     } catch (e) {
       oauthMessage.textContent = 'Statut OAuth indisponible.';

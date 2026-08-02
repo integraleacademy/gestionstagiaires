@@ -145,6 +145,7 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         trainee.update({
             "test_fr_status": "in_progress",
             "cnaps": "INSTRUCTION",
+            "hosting_status": "reserved",
         })
         self._authenticate_public()
 
@@ -157,6 +158,44 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("EN COURS", tracking)
         self.assertIn("CNAPS", tracking)
         self.assertIn("INSTRUCTION", tracking)
+        self.assertIn("Hébergement", tracking)
+        self.assertIn("RÉSERVÉ", tracking)
+        self.assertNotIn("https://assistance-alw9.onrender.com/hebergement", tracking)
+
+    def test_public_tracking_offers_hosting_booking_when_unknown_for_a3p(self):
+        self.payload["sessions"][0].update({
+            "name": "A3P Juin 2026",
+            "training_type": "A3P",
+            "date_start": "2026-06-09",
+            "date_end": "2026-06-30",
+        })
+        self.payload["sessions"][0]["trainees"][0]["hosting_status"] = "unknown"
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        tracking = response.get_data(as_text=True).split('id="trackingTitle"', 1)[1].split('</section>', 1)[0]
+        self.assertIn("Hébergement", tracking)
+        self.assertIn("Aucun hébergement réservé", tracking)
+        self.assertIn("https://assistance-alw9.onrender.com/hebergement", tracking)
+        self.assertIn(">Réserver</a>", tracking)
+
+    def test_public_tracking_hides_hosting_for_non_a3p_training(self):
+        self.payload["sessions"][0].update({
+            "name": "APS Juin 2026",
+            "training_type": "APS",
+            "date_start": "2026-06-09",
+            "date_end": "2026-06-30",
+        })
+        self.payload["sessions"][0]["trainees"][0]["hosting_status"] = "reserved"
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        tracking = response.get_data(as_text=True).split('id="trackingTitle"', 1)[1].split('</section>', 1)[0]
+        self.assertNotIn("Hébergement", tracking)
 
     def test_non_vae_training_accepts_sheet_submission(self):
         self.payload["sessions"][0]["name"] = "SSIAP 1 Juin 2026"

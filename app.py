@@ -26,7 +26,7 @@ try:
     import resource
 except ImportError:
     resource = None
-from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
+from typing import Dict, Any, Optional, List, Iterable, Tuple, Set, Callable
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
@@ -373,6 +373,7 @@ QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
 QONTO_OAUTH_PRODUCTION_REDIRECT_URI = "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback"
 QONTO_OAUTH_LEGACY_HOSTS = {"gestionstagiaires-test-v2.onrender.com"}
+_qonto_oauth_refresh_lock = threading.RLock()
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL")
     or os.environ.get("PUBLIC_BASE_URL")
@@ -658,7 +659,10 @@ def _store_qonto_oauth_tokens(data: Dict[str, Any], token_payload: Dict[str, Any
         "updated_at": _now_iso(),
         "environment": _qonto_oauth_environment(),
     })
-    save_data(data)
+    # OAuth is one of the few callers allowed to replace the canonical token
+    # set. Ordinary business-data saves preserve the latest tokens already on
+    # disk so a request that started before this rotation cannot erase it.
+    save_data(data, preserve_qonto_oauth=False)
 
 
 def _exchange_qonto_oauth_token(form_data: Dict[str, str]) -> Dict[str, Any]:
@@ -670,29 +674,55 @@ def _exchange_qonto_oauth_token(form_data: Dict[str, str]) -> Dict[str, Any]:
     return response.json()
 
 
-def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None) -> str:
+def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None, *, force_refresh: bool = False) -> str:
+    """Return a usable OAuth token, optionally proving the refresh grant is valid.
+
+    Merely having a refresh token in ``data.json`` does not mean that Qonto still
+    accepts it (the user can revoke the authorization from Qonto).  The forced
+    refresh is used by the settings health check so that the UI never labels a
+    revoked credential as an active connection.
+    """
     data = data or load_data()
     settings = _qonto_oauth_settings(data)
     if not _qonto_oauth_connected(data):
         raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
-    if int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
-        try:
-            payload = _exchange_qonto_oauth_token({
-                "client_id": _qonto_oauth_client_id(),
-                "client_secret": _qonto_oauth_client_secret(),
-                "grant_type": "refresh_token",
-                "refresh_token": _qonto_oauth_refresh_token(data),
-            })
-        except QontoApiError as exc:
-            error_text = f"{exc.body} {exc}".lower()
-            if exc.status_code == 400 and "invalid_grant" in error_text:
-                _reset_qonto_oauth_tokens(data)
-                save_data(data)
-                raise QontoConfigurationError(
-                    "Connexion Qonto OAuth expirée ou révoquée : reconnectez Qonto depuis Réglages > Qonto avant de programmer un prélèvement SEPA."
-                ) from exc
-            raise
-        _store_qonto_oauth_tokens(data, payload)
+    if force_refresh or int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
+        # Qonto rotates refresh tokens. Serialize refreshes so two simultaneous
+        # SEPA requests cannot both consume the same one and make the second
+        # request erase the newly rotated credentials with ``invalid_grant``.
+        with _qonto_oauth_refresh_lock:
+            latest_data = load_data()
+            latest_settings = _qonto_oauth_settings(latest_data)
+            latest_token = _qonto_oauth_refresh_token(latest_data)
+            original_token = _qonto_oauth_refresh_token(data)
+            latest_is_fresh = int(latest_settings.get("expires_at") or 0) > int(time.time()) + 60
+            if latest_token and latest_token != original_token and latest_is_fresh:
+                return _qonto_oauth_access_token(latest_data)
+            refresh_data = latest_data if latest_token else data
+            try:
+                payload = _exchange_qonto_oauth_token({
+                    "client_id": _qonto_oauth_client_id(),
+                    "client_secret": _qonto_oauth_client_secret(),
+                    "grant_type": "refresh_token",
+                    "refresh_token": _qonto_oauth_refresh_token(refresh_data),
+                })
+            except QontoApiError as exc:
+                error_text = f"{exc.body} {exc}".lower()
+                if exc.status_code == 400 and "invalid_grant" in error_text:
+                    # Never clear a newer token saved while this request was in
+                    # flight. Only the token actually rejected by Qonto may be
+                    # marked disconnected.
+                    canonical_data = load_data()
+                    if _qonto_oauth_refresh_token(canonical_data) != _qonto_oauth_refresh_token(refresh_data):
+                        return _qonto_oauth_bearer_token(canonical_data)
+                    _reset_qonto_oauth_tokens(canonical_data)
+                    save_data(canonical_data, preserve_qonto_oauth=False)
+                    raise QontoConfigurationError(
+                        "Connexion Qonto OAuth expirée ou révoquée : reconnectez Qonto depuis Réglages > Qonto avant de programmer un prélèvement SEPA."
+                    ) from exc
+                raise
+            _store_qonto_oauth_tokens(refresh_data, payload)
+            return _qonto_oauth_access_token(refresh_data)
     return _qonto_oauth_access_token(data)
 
 
@@ -876,6 +906,9 @@ QONTO_FIELD_LABELS = {
     "first_name": "prénom",
     "last_name": "nom",
     "email": "e-mail",
+    "tax_identification_number": "SIRET",
+    "tin_number": "SIRET",
+    "tin number": "SIRET",
 }
 
 
@@ -942,6 +975,12 @@ def _first_qonto_client(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return clients[0] if isinstance(clients, list) and clients else None
 
 
+def normalize_french_company_tax_id(value: Any) -> str:
+    """Convert a French SIRET into the SIREN/TIN expected by Qonto."""
+    compact = re.sub(r"[\s.\-]", "", str(value or "").strip()).upper()
+    return compact[:9] if compact.isdigit() and len(compact) == 14 else compact
+
+
 def find_qonto_client_by_name(name: str) -> Optional[Dict[str, Any]]:
     normalized_name = (name or "").strip()
     if not normalized_name:
@@ -951,7 +990,7 @@ def find_qonto_client_by_name(name: str) -> Optional[Dict[str, Any]]:
 
 
 def find_qonto_client_by_tax_identification_number(tax_identification_number: str) -> Optional[Dict[str, Any]]:
-    normalized_tax_id = (tax_identification_number or "").strip()
+    normalized_tax_id = normalize_french_company_tax_id(tax_identification_number)
     if not normalized_tax_id:
         return None
     data = _qonto_request("GET", "/v2/clients", params={"filter[tax_identification_number]": normalized_tax_id})
@@ -970,6 +1009,20 @@ def search_qonto_client(criteria: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if name and (client.get("name") or "").strip().lower() == name.lower():
             return client
     return _first_qonto_client(data)
+
+
+def find_existing_qonto_client(client_payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Prefer the company's stable SIRET before mutable name/email fields."""
+    tax_id = normalize_french_company_tax_id(client_payload.get("tax_identification_number"))
+    if tax_id:
+        existing = find_qonto_client_by_tax_identification_number(tax_id)
+        if existing:
+            return existing
+    return search_qonto_client({
+        "email": client_payload.get("email"),
+        "name": client_payload.get("name")
+        or f"{client_payload.get('first_name', '')} {client_payload.get('last_name', '')}".strip(),
+    })
 
 
 def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1007,8 +1060,54 @@ def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/clients", cleaned_payload)
 
 
+def create_qonto_client_with_optional_tax_id(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a client without discarding its required company tax ID.
+
+    Retrying without this value only postpones the failure until Qonto creates
+    the invoice, where the French company TIN is mandatory.
+    """
+    return create_qonto_client(payload)
+
+
 def update_qonto_client(client_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("PATCH", f"/v2/clients/{client_id}", payload)
+
+
+def get_or_create_qonto_billing_client(client_payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a Qonto client that is usable for invoice creation.
+
+    The invoice form is the source of truth for billing details.  When the
+    client already exists in Qonto, patch it with the complete canonical
+    payload instead of reusing an incomplete record (or creating a duplicate).
+    """
+    existing = find_existing_qonto_client(client_payload)
+    if not existing:
+        return create_qonto_client_with_optional_tax_id({
+            "client": remove_invalid_qonto_phone(client_payload),
+        })
+
+    existing_client = existing.get("client") if isinstance(existing.get("client"), dict) else existing
+    existing_client_id = existing_client.get("id")
+    existing_tax_id = existing_client.get("tax_identification_number") or existing_client.get("tin_number")
+    company_tax_missing = (
+        _qonto_client_kind(client_payload) == "company"
+        and bool(client_payload.get("tax_identification_number"))
+        and not existing_tax_id
+    )
+    billing_address_missing = not qonto_client_has_complete_billing_address(existing)
+    if existing_client_id and (company_tax_missing or billing_address_missing):
+        update_payload = remove_invalid_qonto_phone(dict(client_payload))
+        app.logger.info(
+            "[QONTO] Completing existing billing client client_id=%s missing_tax_id=%s missing_billing_address=%s payload_keys=%s",
+            existing_client_id,
+            company_tax_missing,
+            billing_address_missing,
+            list(update_payload.keys()),
+        )
+        updated = update_qonto_client(existing_client_id, update_payload)
+        if updated:
+            return updated
+    return existing
 
 
 def create_qonto_invoice(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -2900,6 +2999,24 @@ def fr_date(value: str) -> str:
     except Exception:
         return value
 
+def _fr_date_offset(value: str, *, months: int = 0, days: int = 0) -> str:
+    """Format an ISO date after applying calendar-month and day offsets."""
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    try:
+        result = datetime.datetime.strptime(s[:10], "%Y-%m-%d").date()
+        if months:
+            month_index = result.year * 12 + result.month - 1 + months
+            year, zero_based_month = divmod(month_index, 12)
+            month = zero_based_month + 1
+            day = min(result.day, calendar.monthrange(year, month)[1])
+            result = result.replace(year=year, month=month, day=day)
+        result += datetime.timedelta(days=days)
+        return result.strftime("%d/%m/%Y")
+    except (TypeError, ValueError):
+        return ""
+
 def fr_datetime(value: str) -> str:
     s = (value or "").strip()
     if not s:
@@ -3667,13 +3784,23 @@ def _fsync_parent_dir(path: str) -> None:
         pass
 
 
-def _write_json_with_backups(path: str, payload: Any, lock: threading.RLock) -> None:
+def _write_json_with_backups(
+    path: str,
+    payload: Any,
+    lock: threading.RLock,
+    payload_transform: Optional[Callable[[Any], Any]] = None,
+) -> None:
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     lock_path = path + ".lock"
     with lock:
         with open(lock_path, "a+", encoding="utf-8") as lock_file:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             try:
+                # Run read/merge transforms only after taking the inter-process
+                # lock. This closes the race between reading the canonical
+                # value and replacing the JSON file.
+                if payload_transform is not None:
+                    payload = payload_transform(payload)
                 now_ts = datetime.datetime.utcnow().timestamp()
                 base_name = os.path.basename(path)
                 prefix = base_name.replace(".", "_")
@@ -5270,10 +5397,12 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
     # been updated on the CNAPS site: discovering its current status weeks
     # later must never produce a retrospective email.
     if previous is None:
+        checked_at = _now_iso()
         statuses[key] = {
             "known": known,
             "signature": signature,
-            "checked_at": _now_iso(),
+            "checked_at": checked_at,
+            "status_since": checked_at,
         }
         return False
 
@@ -5294,6 +5423,11 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
         "known": known,
         "signature": signature,
         "checked_at": checked_at,
+        "status_since": (
+            previous.get("status_since") or previous.get("checked_at") or checked_at
+            if previously_known == known and (not known or str(previous.get("signature") or "") == signature)
+            else checked_at
+        ),
         **({"last_empty_result_at": previous["last_empty_result_at"]} if previous.get("last_empty_result_at") else {}),
     }
     if not known:
@@ -7551,6 +7685,8 @@ def run_deferred_background_tasks(data: Dict[str, Any], force: bool = False) -> 
             changed = True
         if _send_docs_relance_reminders(data):
             changed = True
+        if _send_a3p_hosting_reminders(data):
+            changed = True
         if _inject_vtc_exam_results_notifications(data):
             changed = True
         _BACKGROUND_TASKS_LAST_RUN_AT = time.monotonic()
@@ -7708,12 +7844,28 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     return result
 
 
-def save_data(data: Dict[str, Any]) -> None:
+def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> None:
+    """Persist business data without letting stale requests erase OAuth.
+
+    Most handlers load the whole JSON document and save it later. A handler
+    which loaded before a Qonto token rotation therefore carries an obsolete
+    ``qonto_oauth`` object. Preserve the canonical on-disk object at the last
+    possible moment, while holding the file lock. Only the OAuth callback,
+    refresh and explicit reset opt out.
+    """
     if _is_partner_scoped_session():
         data = _merge_partner_scoped_payload(data, _current_partner_id())
     _ensure_multi_partner_payload(data)
     normalize_all_partner_subscriptions(data)
-    _write_json_with_backups(DATA_FILE, data, _data_lock)
+
+    def preserve_canonical_oauth(payload: Dict[str, Any]) -> Dict[str, Any]:
+        canonical = _load_valid_json_payload(DATA_FILE)
+        if isinstance(canonical, dict) and isinstance(canonical.get("qonto_oauth"), dict):
+            payload["qonto_oauth"] = canonical["qonto_oauth"]
+        return payload
+
+    transform = preserve_canonical_oauth if preserve_qonto_oauth else None
+    _write_json_with_backups(DATA_FILE, data, _data_lock, payload_transform=transform)
 
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
     if not os.path.exists(WEDOF_WEBHOOK_FILE):
@@ -7735,6 +7887,7 @@ def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
     attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
     attendee_address = attendee.get("address") if isinstance(attendee.get("address"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
+    session_info = training.get("session") if isinstance(training.get("session"), dict) else {}
 
     def to_text(value: Any) -> str:
         if value is None:
@@ -7762,10 +7915,46 @@ def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
         "training_title": pick(training.get("title"), payload.get("training_title"), payload.get("formation"), payload.get("formation_title"), payload.get("intitule_formation")),
         "status": pick(payload.get("state"), payload.get("status"), payload.get("dossier_status"), payload.get("statut")),
         "external_link": pick(payload.get("externalLink")),
-        "training_date": pick(training.get("sessionStartDate"), payload.get("training_date"), payload.get("date_formation"), payload.get("start_date")),
-        "training_end_date": pick(training.get("sessionEndDate")),
+        "training_date": pick(
+            training.get("sessionStartDate"),
+            training.get("startDate"),
+            training.get("dateStart"),
+            session_info.get("startDate"),
+            session_info.get("sessionStartDate"),
+            payload.get("training_date"),
+            payload.get("date_formation"),
+            payload.get("start_date"),
+        ),
+        "training_end_date": pick(
+            training.get("sessionEndDate"),
+            training.get("endDate"),
+            training.get("dateEnd"),
+            session_info.get("endDate"),
+            session_info.get("sessionEndDate"),
+            payload.get("training_end_date"),
+            payload.get("end_date"),
+        ),
         "price_total_incl": pick(training.get("totalIncl")),
         "_raw": flat,
+    }
+
+
+def _wedof_entry_display_fields(entry: Dict[str, Any]) -> Dict[str, str]:
+    """Return the first displayable WeDoF values from webhook and folder data."""
+    payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
+    folder_details = entry.get("wedof_folder_details") if isinstance(entry.get("wedof_folder_details"), dict) else {}
+    candidates = [payload]
+    if isinstance(payload.get("data"), dict):
+        candidates.append(payload["data"])
+    candidates.append(folder_details)
+    if isinstance(folder_details.get("data"), dict):
+        candidates.append(folder_details["data"])
+
+    extracted = [_extract_wedof_payload_fields(candidate) for candidate in candidates]
+    keys = ("first_name", "last_name", "email", "phone", "training_title", "training_date", "training_end_date")
+    return {
+        key: next((fields[key] for fields in extracted if fields.get(key)), "")
+        for key in keys
     }
 
 
@@ -13545,7 +13734,7 @@ PARTNER_MODULE_ROUTE_ENDPOINTS = {
     "cnaps": {"admin_cnaps_unknown"},
     "cpf": {"admin_wedof_requests", "admin_mark_wedof_treated", "send_wedof_to_salesforce"},
     "billing": {"admin_qonto_settings", "admin_sessions_billing"},
-    "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives"},
+    "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives", "admin_sales_tracking_send_daily_recap"},
     "automations": {"admin_sessions_conventions", "admin_sessions_automations"},
 }
 PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
@@ -14490,6 +14679,17 @@ def admin_cnaps_tracking():
     requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
     data = load_data()
     requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
+    annuaire_statuses = data.get("cnaps_public_annuaire_statuses") or {}
+    today = datetime.date.today()
+    for row in requests_rows:
+        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+        status = annuaire_statuses.get(
+            _cnaps_public_annuaire_status_key(str(row.get("last_name") or ""), nub)
+        ) if isinstance(annuaire_statuses, dict) else None
+        since = _daily_recap_date(status.get("status_since") or status.get("checked_at")) if isinstance(status, dict) else None
+        row["taj_suspected"] = bool(
+            status is not None and not status.get("known") and since and (today - since).days >= 10
+        )
     requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
     enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
     # The dashboard badge and this tile both represent outstanding changes that
@@ -14653,6 +14853,8 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
                 "session_id": str(sess.get("id") or ""),
                 "session_name": session_name,
                 "training_type": training_type,
+                "date_start": str(_session_get(sess, "date_start", "") or ""),
+                "date_end": str(_session_get(sess, "date_end", "") or ""),
                 "trainee_id": str(trainee.get("id") or ""),
             }
 
@@ -14736,6 +14938,203 @@ def _cash_installments_dates(raw_installments: Any) -> List[str]:
         if date_value:
             dates.append(date_value)
     return sorted(dates)
+
+
+A3P_HOSTING_START_DATE = datetime.date(2026, 9, 1)
+A3P_HOSTING_BOOKING_URL = os.environ.get(
+    "A3P_HOSTING_BOOKING_URL", "https://assistance-alw9.onrender.com/hebergement"
+).strip()
+A3P_HOSTING_REMINDER_STAGES = (
+    ("registration", "Le lendemain de l’inscription"),
+    ("three_weeks", "3 semaines avant la formation"),
+    ("one_week", "1 semaine avant la formation"),
+)
+
+
+def _parse_calendar_date(value: Any) -> Optional[datetime.date]:
+    try:
+        return datetime.date.fromisoformat(str(value or "")[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def build_a3p_hosting_email(first_name: str, session_obj: Dict[str, Any]) -> Tuple[str, str, str]:
+    """Return an email-client-safe accommodation invitation and its text fallback."""
+    safe_first_name = html.escape((first_name or "").strip() or "bonjour")
+    session_name = "Agent de Protection Physique des Personnes (A3P)"
+    start = _parse_calendar_date(_session_get(session_obj, "date_start", ""))
+    end = _parse_calendar_date(_session_get(session_obj, "date_end", ""))
+    start_label = start.strftime("%d/%m/%Y") if start else "à confirmer"
+    end_label = end.strftime("%d/%m/%Y") if end else "à confirmer"
+    period = f"du {start_label} au {end_label}"
+    booking_url = html.escape(A3P_HOSTING_BOOKING_URL, quote=True)
+    logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    subject = f"Votre hébergement pour la formation A3P du {start_label}"
+    html_body = f"""<!doctype html><html lang="fr"><head><style>
+    @keyframes bookingPulse {{ 0%,100% {{ transform:scale(1);box-shadow:0 8px 20px rgba(79,70,229,.25); }} 50% {{ transform:scale(1.045);box-shadow:0 0 0 10px rgba(79,70,229,0),0 12px 28px rgba(79,70,229,.38); }} }}
+    .booking-button {{ animation:bookingPulse 1.6s ease-in-out infinite; }}
+    @media (prefers-reduced-motion:reduce) {{ .booking-button {{ animation:none; }} }}
+    </style></head><body style="margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#172033;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:28px 10px;background:#eef2f7"><tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:660px;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 20px 55px rgba(15,23,42,.12)">
+        <tr><td style="padding:34px;background:#111827;background-image:linear-gradient(135deg,#111827,#312e81 55%,#2563eb);color:#fff">
+          <img src="{logo_url}" width="150" alt="Intégrale Academy" style="display:block;width:150px;max-width:100%;height:auto;margin:0 0 24px;background:#fff;border-radius:12px;padding:7px;border:0">
+          <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#bfdbfe">Intégrale Academy · A3P</div>
+          <h1 style="font-size:30px;line-height:1.15;margin:12px 0 10px">Dormez sur place,<br>formez-vous l’esprit libre.</h1>
+          <p style="margin:0;color:#dbeafe;font-size:16px;line-height:1.6">Une solution d’hébergement pratique, directement au sein de votre centre de formation.</p>
+        </td></tr>
+        <tr><td style="padding:32px 34px">
+          <p style="font-size:17px;margin:0 0 14px">Bonjour {safe_first_name},</p>
+          <p style="font-size:15px;line-height:1.7;color:#475569;margin:0 0 22px">Vous êtes inscrit(e) en formation <strong style="color:#172033">{html.escape(session_name)}</strong>, {html.escape(period)}. Si vous le souhaitez, vous pouvez réserver l’hébergement au sein de notre centre de formation.</p>
+          <div style="font-size:14px;line-height:1.7;color:#475569;background:#eef2ff;border-radius:12px;padding:16px;margin:0 0 22px">
+            <strong style="color:#312e81">Notre établissement propose un hébergement sur place comprenant :</strong><br>
+            dortoir collectif, douches, cuisine équipée, salle de bain, toilettes, machine à laver et sèche-linge.<br><br>
+            La participation financière est de <strong>300 euros pour toute la durée de la formation</strong> (samedis, dimanches et jours fériés inclus). Le paiement devra être effectué impérativement le jour de votre arrivée (chèque ou espèces).<br><br>
+            <strong>👉 À préparer dans une enveloppe portant votre nom et prénom.</strong>
+          </div>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:22px"><tr><td style="padding:20px">
+            <div style="font-weight:800;color:#312e81;margin-bottom:12px">Votre séjour en un coup d’œil</div>
+            <div style="font-size:14px;line-height:1.9;color:#475569">📅 <strong>Formation :</strong> {html.escape(period)}<br>📍 <strong>Sur place :</strong> 54 chemin du Carreou, 83480 Puget-sur-Argens</div>
+          </td></tr></table>
+          <div style="text-align:center;margin:26px 0"><a href="{booking_url}" class="booking-button" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:15px 25px;border-radius:12px;box-shadow:0 8px 20px rgba(79,70,229,.25);animation:bookingPulse 1.6s ease-in-out infinite">Voir les disponibilités et réserver →</a></div>
+          <p style="font-size:13px;line-height:1.6;color:#64748b;background:#eef2ff;border-radius:12px;padding:14px;margin:0">La réservation est facultative et soumise aux disponibilités.</p>
+          <p style="font-size:13px;line-height:1.6;color:#94a3b8;margin:20px 0 0">Un souci avec le bouton ? Copiez ce lien :<br><a href="{booking_url}" style="color:#4f46e5;word-break:break-all">{booking_url}</a></p>
+        </td></tr>
+        <tr><td style="padding:20px 34px;background:#f8fafc;color:#64748b;font-size:13px;line-height:1.6"><strong style="color:#334155">Intégrale Academy</strong><br>54 chemin du Carreou · 83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
+      </table>
+    </td></tr></table></body></html>"""
+    text_body = (f"Bonjour {(first_name or '').strip()},\n\nVous êtes inscrit(e) en formation {session_name}, {period}. "
+                 f"Si vous le souhaitez, vous pouvez réserver l’hébergement au sein de notre centre de formation.\n\n"
+                 "Notre établissement propose un hébergement sur place comprenant : dortoir collectif, douches, "
+                 "cuisine équipée, salle de bain, toilettes, machine à laver et sèche-linge.\n\n"
+                 "La participation financière est de 300 euros pour toute la durée de la formation "
+                 "(samedis, dimanches et jours fériés inclus). Le paiement devra être effectué impérativement "
+                 "le jour de votre arrivée (chèque ou espèces).\n\n"
+                 "👉 À préparer dans une enveloppe portant votre nom et prénom.\n\n"
+                 "Adresse : 54 chemin du Carreou, 83480 Puget-sur-Argens.\n\n"
+                 f"Disponibilités, tarifs et réservation : {A3P_HOSTING_BOOKING_URL}\n\nIntégrale Academy · 04 22 47 07 68")
+    return subject, html_body, text_body
+
+
+def _a3p_hosting_due_dates(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, datetime.date]:
+    start = _parse_calendar_date(_session_get(session_obj, "date_start", ""))
+    created = _parse_calendar_date(trainee.get("created_at"))
+    if not start or start < A3P_HOSTING_START_DATE:
+        return {}
+    dates = {"three_weeks": start - datetime.timedelta(days=21), "one_week": start - datetime.timedelta(days=7)}
+    if created:
+        dates["registration"] = created + datetime.timedelta(days=1)
+    return dates
+
+
+def _is_a3p_hosting_reserved(trainee: Dict[str, Any]) -> bool:
+    return str(trainee.get("hosting_status") or trainee.get("hebergement") or "").strip().lower() in {"reserved", "reserve", "réservé", "oui", "yes", "true"}
+
+
+def _build_a3p_hosting_dashboard(data: Dict[str, Any], today: Optional[datetime.date] = None) -> Dict[str, Any]:
+    current = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    rows = []
+    stats = {"eligible": 0, "reserved": 0, "sent": 0, "upcoming": 0}
+    stage_labels = dict(A3P_HOSTING_REMINDER_STAGES)
+    for session_obj in data.get("sessions", []):
+        if str(_session_get(session_obj, "training_type", "") or "").strip().upper() != "A3P":
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            due_dates = _a3p_hosting_due_dates(session_obj, trainee)
+            if not due_dates:
+                continue
+            stats["eligible"] += 1
+            reserved = _is_a3p_hosting_reserved(trainee)
+            stats["reserved"] += int(reserved)
+            history = trainee.get("a3p_hosting_reminders") if isinstance(trainee.get("a3p_hosting_reminders"), dict) else {}
+            stats["sent"] += len([key for key in due_dates if history.get(key)])
+            pending = sorted(((date, key) for key, date in due_dates.items() if not history.get(key)), key=lambda item: item[0])
+            next_date, next_stage = pending[0] if pending else (None, "")
+            if pending and not reserved:
+                stats["upcoming"] += 1
+            rows.append({
+                "trainee_name": " ".join(filter(None, [str(trainee.get("first_name") or "").strip(), str(trainee.get("last_name") or "").strip()])) or "Sans nom",
+                "email": str(trainee.get("email") or "").strip(), "session_name": str(_session_get(session_obj, "name", "") or "A3P"),
+                "date_start": str(_session_get(session_obj, "date_start", "") or "")[:10], "reserved": reserved,
+                "sent_count": len([key for key in due_dates if history.get(key)]), "next_date": next_date.isoformat() if next_date else "",
+                "next_label": stage_labels.get(next_stage, "Terminé"), "due": bool(next_date and next_date <= current and not reserved),
+            })
+    rows.sort(key=lambda row: (row["reserved"], row["next_date"] or "9999-12-31", row["trainee_name"]))
+    return {"rows": rows, "stats": stats}
+
+
+def _send_a3p_hosting_reminders(data: Dict[str, Any], today: Optional[datetime.date] = None) -> bool:
+    current = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    changed = False
+    for session_obj in data.get("sessions", []):
+        if str(_session_get(session_obj, "training_type", "") or "").strip().upper() != "A3P":
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            if _is_a3p_hosting_reserved(trainee):
+                continue
+            history = trainee.setdefault("a3p_hosting_reminders", {})
+            if not isinstance(history, dict):
+                history = trainee["a3p_hosting_reminders"] = {}
+            for stage, _label in A3P_HOSTING_REMINDER_STAGES:
+                due = _a3p_hosting_due_dates(session_obj, trainee).get(stage)
+                if not due or due > current or history.get(stage):
+                    continue
+                subject, html_body, text_body = build_a3p_hosting_email(str(trainee.get("first_name") or ""), session_obj)
+                result = brevo_send_email(str(trainee.get("email") or ""), subject, html_body, text_content=text_body, trainee=trainee,
+                    metadata={"purpose": "a3p_hosting_reminder", "stage": stage, "session_id": session_obj.get("id")})
+                if isinstance(result, dict) and result.get("ok"):
+                    history[stage] = _now_iso()
+                    changed = True
+                break  # Never send several catch-up reminders to the same person on one day.
+    return changed
+
+
+def run_a3p_hosting_reminders(today: Optional[datetime.date] = None) -> Dict[str, int]:
+    data = load_data()
+    before = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _session_trainees_list(s))
+    changed = _send_a3p_hosting_reminders(data, today=today)
+    after = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _session_trainees_list(s))
+    if changed:
+        save_data(data)
+    return {"sent": max(after - before, 0), "changed": int(changed)}
+
+
+@app.get("/admin/outils/mails")
+@admin_login_required
+def admin_mails():
+    # Do not hand-write approximations here: each preview below is produced by the
+    # very same builder used at send time.  This keeps this screen useful when a
+    # transactional email is changed elsewhere in the application.
+    sample_session = {"name": "A3P · Protection rapprochée", "training_type": "A3P", "date_start": "2026-09-21", "date_end": "2026-11-20"}
+    sample_trainee = {"first_name": "Camille", "last_name": "Martin", "email": "camille@example.com"}
+    sample_link = "https://gestionstagiaires-r5no.onrender.com/exemple"
+
+    def model(title: str, description: str, built: Tuple[str, str], trigger: str) -> Dict[str, str]:
+        subject, preview_html = built
+        return {"title": title, "description": description, "subject": subject, "preview_html": preview_html, "trigger": trigger}
+
+    categories = [
+        {"name": "Inscriptions & accès", "icon": "👤", "description": "Création de compte, inscription et accès aux services.", "models": [
+            model("Inscription VTC", "Mail d’accueil du parcours Chauffeur VTC.", build_vtc_onboarding_email("Camille", sample_link), "Envoyé à la création ou au renvoi de l’accès VTC."),
+            model("VAE Dirigeant", "Démarrage du parcours VAE dirigeant de sécurité privée.", build_dirigeant_vae_onboarding_email_sms("Camille", sample_link)[:2], "Envoyé à la création ou au renvoi de l’accès VAE DESP."),
+        ]},
+        {"name": "VTC", "icon": "🚘", "description": "Messages réellement générés pendant le parcours Chauffeur VTC.", "models": [
+            model("Identifiants ExamenT3P manquants", "Relance pour transmettre les identifiants Chambre des métiers.", build_vtc_credentials_reminder_email("Camille", sample_link), "Envoyé par la relance des identifiants VTC."),
+            model("Identifiants ExamenT3P invalides", "Alerte lorsqu’Intégrale Academy ne peut pas se connecter.", build_vtc_credentials_invalid_email("Camille", sample_link), "Envoyé après l’échec de connexion ExamenT3P."),
+            model("Formation pratique VTC", "Informations détaillées après réussite à la théorie.", build_vtc_practice_convocation_email("Camille", "2026-10-05"), "Envoyé lorsque la date de formation pratique est enregistrée."),
+            model("Réussite à l’examen pratique VTC", "Confirmation de la réussite à l’épreuve pratique.", build_vtc_practice_exam_success_email("Camille", "2026-10-19"), "Envoyé lorsque le résultat pratique passe à Réussi."),
+        ]},
+        {"name": "Formation & convocations", "icon": "🎓", "description": "Organisation pratique avant, pendant et après la formation.", "models": [
+            model("Hébergement A3P", "Proposition d’hébergement envoyée aux stagiaires A3P.", build_a3p_hosting_email("Camille", sample_session)[:2], "Relance automatique avant le début d’une session A3P."),
+            model("Convention à signer", "Premier lien de signature électronique YouSign.", _build_yousign_signature_link_email(sample_session, sample_trainee, sample_link)[:2], "Envoyé après la création de la demande YouSign."),
+            model("Relance convention", "Rappel automatique d’une convention non signée.", _build_yousign_signature_reminder_email(sample_session, sample_trainee, sample_link)[:2], "Envoyé automatiquement tant que la signature est en attente."),
+            model("Convocation A3P", "Mail accompagnant la convocation officielle en pièce jointe.", _build_aps_convocation_email("Camille", "2026-09-21", "2026-11-20", sample_session), "Envoyé après signature de la convention ou depuis la fiche stagiaire."),
+            model("Attestation d’entrée A3P", "Mail accompagnant l’attestation d’entrée en pièce jointe.", _build_aps_entry_attestation_email("Camille", "2026-09-21", sample_session), "Envoyé depuis la fiche stagiaire ou l’automatisation documentaire."),
+            model("Attestation de fin A3P", "Mail accompagnant l’attestation de fin en pièce jointe.", _build_aps_end_attestation_email("Camille", "2026-11-20", sample_session), "Envoyé depuis la fiche stagiaire ou l’automatisation documentaire."),
+        ]},
+    ]
+    mail_count = sum(len(category["models"]) for category in categories)
+    return render_template("admin_mails.html", categories=categories, mail_count=mail_count)
 
 
 def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -15060,7 +15459,10 @@ def admin_sessions_conventions():
         save_data(data)
     selected_formation = (request.args.get("formation") or "").strip().upper()
     selected_status_param = (request.args.get("status") or "").strip().lower()
-    selected_status = selected_status_param
+    # The operational view is the print queue when no status was explicitly
+    # requested. An explicit empty value still means "all statuses" (used by
+    # the Total tile and the status filter).
+    selected_status = selected_status_param if "status" in request.args else "to_print"
     selected_q = (request.args.get("q") or "").strip().lower()
     convention_rows = []
     formation_options_by_key = {}
@@ -15338,6 +15740,9 @@ def admin_sessions_automations():
 @admin_login_required
 def admin_wedof_requests():
     wedof_webhooks = _load_wedof_webhooks()[:100]
+    for item in wedof_webhooks:
+        if isinstance(item, dict):
+            item["display_fields"] = _wedof_entry_display_fields(item)
     wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
     return render_template(
         "admin_wedof.html",
@@ -15375,18 +15780,28 @@ def admin_delete_wedof_entry(entry_id: str):
 def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     entry_id = str(entry.get("id") or "")
     payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
-    attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
     folder_details = entry.get("wedof_folder_details") if isinstance(entry.get("wedof_folder_details"), dict) else {}
+    wedof_fields = _wedof_entry_display_fields(entry)
 
-    first_name = str(attendee.get("firstName") or "").strip()
-    last_name = str(attendee.get("lastName") or "").strip()
-    email = str(attendee.get("email") or "").strip()
-    phone = str(attendee.get("phoneNumber") or "").strip()
-    training_title = str(training.get("title") or folder_details.get("title") or "").strip()
-    training_date = str(training.get("date") or folder_details.get("date") or "").strip()
+    first_name = wedof_fields["first_name"]
+    last_name = wedof_fields["last_name"]
+    email = wedof_fields["email"]
+    phone = wedof_fields["phone"]
+    training_title = wedof_fields["training_title"]
+    training_start_date = wedof_fields["training_date"]
+    training_end_date = wedof_fields["training_end_date"]
     location = str(training.get("location") or folder_details.get("location") or "").strip()
     origin = "Compte CPF"
+
+    if training_start_date and training_end_date:
+        desired_dates = f"Du {fr_date(training_start_date)} au {fr_date(training_end_date)}"
+    elif training_start_date:
+        desired_dates = fr_date(training_start_date)
+    elif training_end_date:
+        desired_dates = f"Jusqu'au {fr_date(training_end_date)}"
+    else:
+        desired_dates = ""
 
     def _map_training_type(raw_value: str) -> str:
         value = (raw_value or "").strip().lower()
@@ -15411,8 +15826,8 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
     summary = []
     if training_title:
         summary.append(f"Formation: {training_title}")
-    if training_date:
-        summary.append(f"Date souhaitée: {training_date}")
+    if desired_dates:
+        summary.append(f"Dates souhaitées: {desired_dates}")
     if location:
         summary.append(f"Lieu: {location}")
     case_id = str(entry.get("folder_id") or payload.get("externalId") or "").strip()
@@ -15447,7 +15862,8 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
         # a 503 instead of a validation error.  The permalink is enough to find
         # the source folder from the lead and remains safely bounded.
         "00NSa00000GcKVx": str(payload.get("permalink") or entry.get("permalink") or "")[:255],
-        "00NSa00000GcKxN": training_date,
+        # Champ Salesforce « Dates souhaitées » (plage choisie dans WeDoF).
+        "00NSa00000GcKxN": desired_dates,
     }
     # Empty custom fields provide no information and can trigger Salesforce
     # validation rules depending on their configured type.
@@ -15804,6 +16220,26 @@ def _sales_trainee_item(trainee: Dict[str, Any], session_id: str) -> Dict[str, s
     }
 
 
+def _sales_trainee_anchor_date(trainee: Dict[str, Any], training_label: str) -> Optional[datetime.date]:
+    """Return the sale date used by the sales dashboard and its daily recap."""
+    anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
+    if training_label != "DIRIGEANT VAE":
+        return anchor_date
+    vae_status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+    if vae_status_key != "certified":
+        return None
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    return _parse_flexible_date(action_dates.get("diplome_obtenu"))
+
+
+def _sales_trainee_price(trainee: Dict[str, Any], training_type: str, training_label: str) -> int:
+    adjusted_price = _parse_positive_int(trainee.get("sales_tracking_amount"))
+    if adjusted_price > 0:
+        return adjusted_price
+    unit_price = _sales_training_unit_price(training_type, training_label)
+    return unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
+
+
 def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> Dict[str, Any]:
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
@@ -15841,29 +16277,15 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         training_type_raw = _session_get(session, "training_type", "")
         trainees = _session_trainees_list(session)
         training_label = _sales_training_label(training_type_raw)
-        unit_price = _sales_training_unit_price(training_type_raw, training_label)
 
         for trainee in trainees:
             if bool(trainee.get("exclude_from_sales_tracking")):
                 continue
-            anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
-            if training_label == "DIRIGEANT VAE":
-                vae_status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
-                if vae_status_key != "certified":
-                    continue
-                action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
-                anchor_date = _parse_flexible_date(action_dates.get("diplome_obtenu"))
-                if not anchor_date:
-                    continue
-
+            anchor_date = _sales_trainee_anchor_date(trainee, training_label)
             if not anchor_date:
                 continue
 
-            adjusted_tracking_price = _parse_positive_int(trainee.get("sales_tracking_amount"))
-            if adjusted_tracking_price > 0:
-                training_price = adjusted_tracking_price
-            else:
-                training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
+            training_price = _sales_trainee_price(trainee, training_type_raw, training_label)
             trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
             sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
             trainee_item = _sales_trainee_item(trainee, session_id)
@@ -16016,10 +16438,48 @@ def admin_sales_tracking():
     selected_year = max(2020, min(2100, selected_year))
     metrics = _build_sales_tracking_metrics(data, selected_year)
 
+    next_delivery_date = _daily_recap_next_delivery_date(datetime.datetime.now(ZoneInfo("Europe/Paris")).date())
     return render_template(
         "admin_sales_tracking.html",
+        daily_preview_delivery_date=fr_date(next_delivery_date.isoformat()),
         **metrics,
     )
+
+
+@app.get("/admin/suivi-ventes/apercu-mail-quotidien")
+@admin_login_required
+def admin_sales_tracking_daily_recap_preview():
+    """Display Clement's next weekday recap at 08:00, without sending it."""
+    delivery_date = _daily_recap_next_delivery_date(datetime.datetime.now(ZoneInfo("Europe/Paris")).date())
+    report_date = _daily_recap_report_date(delivery_date)
+    report = build_daily_recap_data(load_data(run_background_tasks=False), report_date)
+    greeting_context = fetch_daily_recap_greeting_context(delivery_date)
+    _subject, html_body = build_daily_recap_email(
+        report,
+        recipient="clement@integraleacademy.com",
+        greeting_context=greeting_context,
+    )
+    return html_body, 200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"}
+
+
+@app.post("/admin/suivi-ventes/envoyer-mail-quotidien")
+@admin_login_required
+def admin_sales_tracking_send_daily_recap():
+    """Manually send today's personalized 08:00 recap to every recipient."""
+    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    request_id = uuid.uuid4().hex[:12]
+    # Render does not consistently expose Flask INFO records when Gunicorn owns
+    # the logging configuration.  This operation is rare and important enough
+    # to use WARNING so the request can always be correlated with Brevo.
+    app.logger.warning(
+        "[DAILY_RECAP] manual_request request_id=%s delivery_date=%s admin_user_id=%s",
+        request_id,
+        delivery_date.isoformat(),
+        session.get("admin_user_id", ""),
+    )
+    result = run_daily_recap(force=True, delivery_date=delivery_date, request_id=request_id)
+    status_code = 200 if result.get("sent") else 502
+    return jsonify({"ok": bool(result.get("sent")), **result}), status_code
 
 
 @app.get("/admin/suivi-ventes/data")
@@ -16758,7 +17218,7 @@ def admin_qonto_connect():
 def admin_qonto_oauth_reset():
     data = load_data()
     _reset_qonto_oauth_tokens(data)
-    save_data(data)
+    save_data(data, preserve_qonto_oauth=False)
     flash("Connexion Qonto OAuth réinitialisée. Vous pouvez relancer une connexion production.", "success")
     return redirect(url_for("admin_qonto_settings"))
 
@@ -16768,10 +17228,35 @@ def admin_qonto_oauth_reset():
 def api_qonto_oauth_status():
     data = load_data()
     settings = _qonto_oauth_settings(data)
+    validation_error = ""
+    validated = False
+    if request.args.get("validate") == "1" and _qonto_oauth_connected(data):
+        try:
+            # Do not rotate a healthy refresh token merely by opening this
+            # settings page. The normal expiry check refreshes it when needed.
+            _qonto_oauth_bearer_token(data)
+            # Token rotation is persisted by _store_qonto_oauth_tokens. Reload
+            # the canonical copy before building the response.
+            data = load_data()
+            settings = _qonto_oauth_settings(data)
+            validated = True
+        except QontoConfigurationError as exc:
+            # invalid_grant has already cleared and persisted the stale tokens.
+            data = load_data()
+            settings = _qonto_oauth_settings(data)
+            validation_error = _sanitize_qonto_error(str(exc))
+        except Exception as exc:
+            app.logger.warning("[QONTO OAUTH] live status validation failed: %s", _sanitize_qonto_error(str(exc)))
+            validation_error = "Vérification de la connexion OAuth Qonto impossible. Réessayez dans quelques instants."
     scope = settings.get("scope") or ""
     connected = _qonto_oauth_connected(data)
+    message = _qonto_oauth_status_message(data)
+    if validation_error:
+        connected = False
+        message = validation_error
     return jsonify({
         "connected": connected,
+        "validated": validated,
         "has_access_token": bool(settings.get("access_token")),
         "has_refresh_token": bool(settings.get("refresh_token")),
         "expires_at": settings.get("expires_at") or None,
@@ -16779,7 +17264,7 @@ def api_qonto_oauth_status():
         "environment": settings.get("environment") or None,
         "expected_environment": _qonto_oauth_environment(),
         "incompatible": _qonto_oauth_has_incompatible_token(data),
-        "message": _qonto_oauth_status_message(data),
+        "message": message,
     }), 200
 
 
@@ -18666,8 +19151,10 @@ def _a3p_exam_context(trainee: Dict[str, Any], values: Dict[str, str]) -> Dict[s
         "ville": str(trainee.get("city") or address.get("city") or "").strip(),
         "date_debut_formation": fr_date(values["training_start_date"]),
         "date_fin_formation": fr_date(values["training_end_date"]),
+        "date_un_mois_avant_debut_formation": _fr_date_offset(values["training_start_date"], months=-1),
         "periode_formation": f"{fr_date(values['training_start_date'])} au {fr_date(values['training_end_date'])}",
         "date_examen": fr_date(values["exam_date"]),
+        "date_15_jours_avant_examen": _fr_date_offset(values["exam_date"], days=-15),
         "date_formation_epi": fr_date(values["epi_training_date"]),
         "date_jour": datetime.datetime.now().strftime("%d/%m/%Y"),
     }
@@ -18684,15 +19171,54 @@ def _prepare_a3p_exam_template(template_path: str, prepared_path: str) -> str:
     fixed_value = "22 avril 2026"
     placeholder_found = False
     fixed_value_found = False
+
+    def replace_visible_text(xml_text: str, searched: str, replacement: str) -> Tuple[str, bool]:
+        """Replace text even when Word has split it over several ``w:t`` nodes."""
+        text_node_pattern = re.compile(r"(<w:t\b[^>]*>)(.*?)(</w:t>)", re.DOTALL)
+        paragraph_pattern = re.compile(r"(<w:p\b[^>]*>)(.*?)(</w:p>)", re.DOTALL)
+        replaced = False
+
+        def replace_in_paragraph(paragraph_match):
+            nonlocal replaced
+            paragraph = paragraph_match.group(2)
+            nodes = list(text_node_pattern.finditer(paragraph))
+            visible_text = "".join(html.unescape(node.group(2)) for node in nodes)
+            start = visible_text.find(searched)
+            if start < 0:
+                return paragraph_match.group(0)
+
+            end = start + len(searched)
+            cursor = 0
+            pieces = []
+            for node in nodes:
+                node_text = html.unescape(node.group(2))
+                node_start, node_end = cursor, cursor + len(node_text)
+                if node_end > start and node_start < end:
+                    prefix = node_text[:max(0, start - node_start)]
+                    suffix = node_text[max(0, end - node_start):] if end < node_end else ""
+                    inserted = replacement if node_start <= start < node_end else ""
+                    pieces.append((node.start(2), node.end(2), escape(prefix + inserted + suffix)))
+                cursor = node_end
+
+            for content_start, content_end, value in reversed(pieces):
+                paragraph = paragraph[:content_start] + value + paragraph[content_end:]
+            replaced = True
+            return paragraph_match.group(1) + paragraph + paragraph_match.group(3)
+
+        # A placeholder occurs only once in this template, but replacing paragraph
+        # by paragraph also prevents a match from leaking across page boundaries.
+        xml_text = paragraph_pattern.sub(replace_in_paragraph, xml_text)
+        return xml_text, replaced
+
     with zipfile.ZipFile(template_path, "r") as source, zipfile.ZipFile(prepared_path, "w") as destination:
         for item in source.infolist():
             content = source.read(item.filename)
             if item.filename.startswith("word/") and item.filename.endswith(".xml"):
                 xml_text = content.decode("utf-8")
-                placeholder_found = placeholder_found or placeholder in xml_text
-                if fixed_value in xml_text:
-                    xml_text = xml_text.replace(fixed_value, placeholder)
-                    fixed_value_found = True
+                xml_text, found_placeholder = replace_visible_text(xml_text, placeholder, placeholder)
+                placeholder_found = placeholder_found or found_placeholder
+                xml_text, found_fixed_value = replace_visible_text(xml_text, fixed_value, placeholder)
+                fixed_value_found = fixed_value_found or found_fixed_value
                 content = xml_text.encode("utf-8")
             destination.writestr(item, content)
     if not placeholder_found and not fixed_value_found:
@@ -18701,6 +19227,112 @@ def _prepare_a3p_exam_template(template_path: str, prepared_path: str) -> str:
             "Le modèle Word doit contenir {{ date_formation_epi }} ou la date EPI d'origine « 22 avril 2026 »."
         )
     return prepared_path
+
+
+def _replace_a3p_docx_ooxml(template_path: str, output_path: str, context: Dict[str, str]) -> str:
+    """Fill the A3P template without letting a word processor rebuild its layout.
+
+    Word commonly splits a placeholder over several ``w:t`` elements.  This
+    routine changes only the character data of those existing elements: runs,
+    paragraphs, tables, headers, footers, relationships and page breaks remain
+    byte-for-byte structurally identical to the original package.
+    """
+    text_node_pattern = re.compile(r"(<w:t\b[^>]*>)(.*?)(</w:t>)", re.DOTALL)
+    paragraph_pattern = re.compile(r"(<w:p\b[^>]*>)(.*?)(</w:p>)", re.DOTALL)
+    replacements = {
+        re.sub(r"\s+", "", "{{" + key + "}}"): str(value)
+        for key, value in context.items()
+    }
+
+    def fill_paragraph(match):
+        paragraph = match.group(2)
+        nodes = list(text_node_pattern.finditer(paragraph))
+        visible = "".join(html.unescape(node.group(2)) for node in nodes)
+        compact = re.sub(r"\s+", "", visible)
+        # Preserve ordinary spaces in the document; compacting is only used to
+        # recognize the optional spaces inside a complete template expression.
+        found = []
+        for placeholder, value in replacements.items():
+            pattern = re.compile(r"\{\{\s*" + re.escape(placeholder[2:-2]) + r"\s*\}\}")
+            for occurrence in pattern.finditer(visible):
+                found.append((occurrence.start(), occurrence.end(), value))
+        if not found:
+            return match.group(0)
+        for start, end, value in sorted(found, reverse=True):
+            cursor = 0
+            edits = []
+            inserted = False
+            for node in nodes:
+                node_text = html.unescape(node.group(2))
+                node_start, node_end = cursor, cursor + len(node_text)
+                if node_end > start and node_start < end:
+                    prefix = node_text[:max(0, start - node_start)]
+                    suffix = node_text[max(0, end - node_start):] if end < node_end else ""
+                    addition = value if not inserted else ""
+                    edits.append((node.start(2), node.end(2), escape(prefix + addition + suffix)))
+                    inserted = True
+                cursor = node_end
+            for content_start, content_end, replacement in reversed(edits):
+                paragraph = paragraph[:content_start] + replacement + paragraph[content_end:]
+            nodes = list(text_node_pattern.finditer(paragraph))
+        return match.group(1) + paragraph + match.group(3)
+
+    unresolved = set()
+    with zipfile.ZipFile(template_path, "r") as source, zipfile.ZipFile(output_path, "w") as destination:
+        for item in source.infolist():
+            content = source.read(item.filename)
+            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+                xml_text = content.decode("utf-8")
+                xml_text = paragraph_pattern.sub(fill_paragraph, xml_text)
+                unresolved.update(re.findall(r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}", xml_text))
+                content = xml_text.encode("utf-8")
+            destination.writestr(item, content)
+    if unresolved:
+        os.remove(output_path)
+        raise RuntimeError("Variables Word A3P non remplacées : " + ", ".join(sorted(unresolved)))
+    return output_path
+
+
+def _assert_calibri_font_substitution() -> None:
+    """Fail before LibreOffice starts if Render would fall back to DejaVu."""
+    result = subprocess.run(
+        ["fc-match", "-f", "%{family}\n", "Calibri"],
+        check=True, capture_output=True, text=True, timeout=15,
+    )
+    matched_family = (result.stdout or "").splitlines()[0].strip()
+    if "Carlito" not in matched_family:
+        raise RuntimeError(f"Fontconfig invalide : Calibri correspond à {matched_family or 'aucune police'}, pas à Carlito.")
+
+
+def _validate_a3p_pdf(pdf_path: str) -> None:
+    """Reject a conversion with altered pagination, blank pages or bad fonts."""
+    reader = PdfReader(pdf_path)
+    if len(reader.pages) != 6:
+        raise RuntimeError(f"Le dossier A3P doit faire exactement 6 pages (obtenu : {len(reader.pages)}).")
+    font_names, embedded_fonts = set(), set()
+    for page_number, page in enumerate(reader.pages, 1):
+        resources = page.get("/Resources") or {}
+        xobjects = resources.get("/XObject") or {}
+        has_image = any((obj.get_object().get("/Subtype") == "/Image") for obj in xobjects.values())
+        if not (page.extract_text() or "").strip() and not has_image:
+            raise RuntimeError(f"Le dossier A3P contient une page blanche (page {page_number}).")
+        for font_ref in (resources.get("/Font") or {}).values():
+            font = font_ref.get_object()
+            name = str(font.get("/BaseFont") or "")
+            font_names.add(name)
+            descriptor = font.get("/FontDescriptor")
+            if not descriptor and font.get("/DescendantFonts"):
+                descendant = font["/DescendantFonts"][0].get_object()
+                descriptor = descendant.get("/FontDescriptor")
+            if descriptor:
+                descriptor = descriptor.get_object()
+                if any(descriptor.get(key) for key in ("/FontFile", "/FontFile2", "/FontFile3")):
+                    embedded_fonts.add(name)
+    normalized = " ".join(font_names).lower()
+    if "dejavusans" in normalized or "dejavuserif" in normalized:
+        raise RuntimeError("Le PDF A3P utilise encore DejaVu Sans/Serif.")
+    if not any("carlito" in name.lower() for name in embedded_fonts):
+        raise RuntimeError("Carlito n'est pas intégrée dans le PDF A3P.")
 
 
 @app.post("/api/admin/sessions/<session_id>/a3p-exam-dossiers/generate")
@@ -18716,8 +19348,6 @@ def api_generate_a3p_exam_dossiers(session_id: str):
         return jsonify({"ok": False, "message": "Toutes les dates et au moins un candidat sont obligatoires."}), 400
     if values["training_end_date"] < values["training_start_date"]:
         return jsonify({"ok": False, "message": "La date de fin doit être postérieure à la date de début."}), 400
-    if DocxTemplate is None:
-        return jsonify({"ok": False, "message": "Le moteur de documents Word est indisponible."}), 503
     template_path = os.path.join(app.root_path, "templates_word", "docexamena3p.docx")
     if not os.path.isfile(template_path):
         return jsonify({"ok": False, "message": "Le modèle de dossier examen A3P est introuvable."}), 503
@@ -18739,6 +19369,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
     pdf_paths = []
     try:
         lo_binary = _find_libreoffice_binary()
+        _assert_calibri_font_substitution()
         prepared_template_path = _prepare_a3p_exam_template(
             template_path, os.path.join(output_dir, "modele_dossier_examen_a3p.docx")
         )
@@ -18748,9 +19379,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
             base_name = f"Dossier examen A3P {display_last} {display_first}".strip()
             safe_base = secure_filename(base_name) or f"Dossier_examen_A3P_{trainee.get('id')}"
             docx_path = os.path.join(output_dir, safe_base + ".docx")
-            doc = DocxTemplate(prepared_template_path)
-            doc.render(_a3p_exam_context(trainee, values))
-            doc.save(docx_path)
+            _replace_a3p_docx_ooxml(prepared_template_path, docx_path, _a3p_exam_context(trainee, values))
             result = subprocess.run(
                 [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, docx_path],
                 check=True, capture_output=True, text=True, timeout=120,
@@ -18758,6 +19387,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
             pdf_path = os.path.join(output_dir, safe_base + ".pdf")
             if not os.path.isfile(pdf_path):
                 raise RuntimeError(result.stderr or "Le PDF n'a pas été créé.")
+            _validate_a3p_pdf(pdf_path)
             pdf_paths.append((pdf_path, base_name + ".pdf"))
             os.remove(docx_path)
         os.remove(prepared_template_path)
@@ -25570,7 +26200,8 @@ APS_CONVOCATION_VARIABLES = [
     "civilite", "prenom", "nom", "nom_complet", "adresse_ligne1", "adresse_ligne2",
     "adresse_ligne3", "adresse_ligne4", "code_postal", "ville", "formation_nom",
     "nom_pedagogique", "date_convocation", "heure_convocation", "date_debut_formation",
-    "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel",
+    "date_fin_formation", "date_un_mois_avant_debut_formation", "date_15_jours_avant_examen",
+    "periode_formation", "periode_elearning", "periode_presentiel",
     "date_examen", "heure_examen", "date_jour", "lieu_formation", "espace_stagiaire_url",
     "h_elearning", "h_presentiel", "h_total", "duree_exam", "modalites_suivi",
     "date_ouverture", "lieu_examen",
@@ -27140,6 +27771,8 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "nom_pedagogique": str(_session_get(session_obj, "nom_pedagogique", "") or training_name).strip(),
         "date_convocation": fr_date(date_start), "heure_convocation": convocation_time,
         "date_debut_formation": fr_date(date_start), "date_fin_formation": fr_date(date_end),
+        "date_un_mois_avant_debut_formation": _fr_date_offset(date_start, months=-1),
+        "date_15_jours_avant_examen": _fr_date_offset(exam_date, days=-15),
         "periode_formation": f"du {fr_date(date_start)} au {fr_date(date_end)}",
         "periode_elearning": f"du {fr_date(remote_start)} au {fr_date(remote_end)}",
         "periode_presentiel": f"du {fr_date(in_person_start)} au {fr_date(in_person_end)}",
@@ -27296,7 +27929,8 @@ APS_CONVENTION_VARIABLES = [
     "montant_formation", "montant_formation_eur", "montant_cpf", "montant_cpf_eur",
     "montant_financement_personnel", "montant_financement_personnel_eur",
     "montant_personnel", "montant_personnel_eur", "montant_autre", "montant_autre_eur",
-    "date_debut_formation", "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel", "date_ouverture",
+    "date_debut_formation", "date_fin_formation", "date_un_mois_avant_debut_formation", "date_15_jours_avant_examen",
+    "periode_formation", "periode_elearning", "periode_presentiel", "date_ouverture",
     "h_elearning", "h_presentiel", "h_total",
     "date_convocation", "heure_convocation", "date_examen", "heure_examen", "duree_exam",
     "lieu_formation", "lieu_examen", "espace_stagiaire_url", "modalites_suivi", "date_jour",
@@ -27482,6 +28116,8 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "montant_autre_eur": _format_euro_amount(other_amount),
         "date_debut_formation": date_start,
         "date_fin_formation": date_end,
+        "date_un_mois_avant_debut_formation": _fr_date_offset(_session_get(session_obj, "date_start", ""), months=-1),
+        "date_15_jours_avant_examen": _fr_date_offset(_first_non_empty(trainee.get("date_examen"), _session_get(session_obj, "exam_date", "")), days=-15),
         "periode_formation": periode,
         "periode_elearning": _first_non_empty(elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
         "periode_presentiel": _first_non_empty(presentiel_period, trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
@@ -27906,6 +28542,12 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     }
 
     trainees = _session_trainees_list(s)
+    # Keep the individual trainee sheet consistent with the session roster: a
+    # NUB recovered by the CNAPS tracking page must also enable the live title
+    # badges when the sheet is opened directly (without visiting the roster
+    # first).
+    if session_view["training_type"] in {"APS", "A3P"}:
+        _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
@@ -28263,6 +28905,7 @@ def qonto_invoice_item_label(line: Dict[str, Any]) -> str:
     trainee_name = f"{line.get('traineeFirstName','')} {line.get('traineeLastName','')}".strip()
     return f"Formation {formation} - {trainee_name} - Session du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}"
 
+
 def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[Dict[str, Any]] = None, session_data: Optional[Dict[str, Any]] = None, financeur: Any = None) -> Dict[str, Any]:
     """Construit le client Qonto canonique (company/individual) avant toute création API.
 
@@ -28279,6 +28922,11 @@ def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[D
         if kind == "company" or client.get("company_name"):
             kind = "company"
             payload = {"type": "company", "kind": "company", "name": (client.get("company_name") or client.get("name") or "").strip()}
+            tax_id = normalize_french_company_tax_id(
+                client.get("siret") or client.get("tax_identification_number")
+            )
+            if tax_id:
+                payload["tax_identification_number"] = tax_id
         else:
             kind = "individual"
             payload = {"type": "individual", "kind": "individual", "first_name": (client.get("first_name") or "").strip(), "last_name": (client.get("last_name") or "").strip(), "name": (client.get("name") or "").strip()}
@@ -28291,18 +28939,24 @@ def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[D
         return _cpf_qonto_api_client_payload()
     first = (line.get("traineeFirstName") or trainee.get("first_name") or line.get("first_name") or "").strip()
     last = (line.get("traineeLastName") or trainee.get("last_name") or line.get("last_name") or "").strip()
-    email = (line.get("clientEmail") or line.get("traineeEmail") or trainee.get("email") or "").strip() or None
     company_name = (line.get("companyName") or line.get("company_name") or trainee.get("company_name") or trainee.get("qonto_company_name") or line.get("clientName") or "").strip()
     kind = "company" if (str(financeur_value or "").upper() not in {"PERSONNEL", "PERSONAL", "PARTICULIER"} and company_name and not f"{first} {last}".strip() == company_name) else "individual"
     if str(financeur_value or "").upper() in {"ENTREPRISE", "COMPANY", "OPCO"}:
         kind = "company"
+    # An enterprise invoice may legitimately have no billing email.  In that
+    # case, never silently attach the trainee's personal address to the Qonto
+    # company: the invoice can still be generated and downloaded manually.
+    if kind == "company":
+        email = (line.get("clientEmail") or "").strip() or None
+    else:
+        email = (line.get("clientEmail") or line.get("traineeEmail") or trainee.get("email") or "").strip() or None
     address = (line.get("clientAddress") or line.get("address") or trainee.get("qonto_billing_address") or trainee.get("address") or "").strip()
     zip_code = (line.get("clientZipCode") or line.get("zip_code") or trainee.get("zip_code") or "").strip()
     city = (line.get("clientCity") or line.get("city") or trainee.get("city") or "").strip()
     payload = {"type": kind, "kind": kind, "email": email, "currency": "EUR", "locale": "FR", "address_line_1": address, "address": address, "zip_code": zip_code, "city": city, "country_code": "FR", "billing_address": {"street_address": address, "city": city, "zip_code": zip_code, "country_code": "FR"}}
     if kind == "company":
         payload["name"] = company_name
-        tax = (line.get("siret") or trainee.get("siret") or trainee.get("qonto_siret") or "").strip()
+        tax = normalize_french_company_tax_id(line.get("siret") or trainee.get("siret") or trainee.get("qonto_siret"))
         if tax:
             payload["tax_identification_number"] = tax
     else:
@@ -28323,10 +28977,13 @@ def validate_qonto_client_payload(client_payload: Dict[str, Any], financeur: Any
                 errors.append({"field": key, "label": key, "message": "CPF doit être facturé à CAISSE DES DEPOTS."})
     if kind == "company":
         billing = client_payload.get("billing_address") if isinstance(client_payload.get("billing_address"), dict) else {}
-        required = (("name", "Nom société", client_payload.get("name")), ("address_line_1", "Adresse", client_payload.get("address_line_1") or billing.get("street_address")), ("zip_code", "Code postal", client_payload.get("zip_code") or billing.get("zip_code")), ("city", "Ville", client_payload.get("city") or billing.get("city")), ("country_code", "Pays", client_payload.get("country_code") or billing.get("country_code")))
+        required = (("name", "Nom société", client_payload.get("name")), ("tax_identification_number", "SIRET", client_payload.get("tax_identification_number")), ("address_line_1", "Adresse", client_payload.get("address_line_1") or billing.get("street_address")), ("zip_code", "Code postal", client_payload.get("zip_code") or billing.get("zip_code")), ("city", "Ville", client_payload.get("city") or billing.get("city")), ("country_code", "Pays", client_payload.get("country_code") or billing.get("country_code")))
         for key, label, value in required:
             if not (value or "").strip():
                 errors.append({"field": key, "label": label, "message": f"{label} obligatoire pour un client société."})
+        tax_id = str(client_payload.get("tax_identification_number") or "").strip()
+        if tax_id and not re.fullmatch(r"\d{9}", tax_id):
+            errors.append({"field": "tax_identification_number", "label": "SIRET valide", "message": "Le SIRET doit contenir 14 chiffres."})
     else:
         for key, label in (("first_name", "Prénom"), ("last_name", "Nom")):
             if not (client_payload.get(key) or "").strip():
@@ -28637,7 +29294,7 @@ Intégrale Academy
 
 def _send_qonto_mandate_link(line: Dict[str, Any]) -> bool:
     sign_url = (line.get('sign_url') or '').strip()
-    email = (line.get('traineeEmail') or '').strip()
+    email = (line.get('clientEmail') or line.get('traineeEmail') or '').strip()
     if not sign_url or not email:
         return False
     html_body = _build_qonto_mandate_email_html(line, sign_url)
@@ -28888,6 +29545,19 @@ def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[
     ensure_qonto_sepa_installments_for_line(line)
 
 
+def _persist_qonto_mandate_on_trainee(data: Dict[str, Any], line: Dict[str, Any]) -> None:
+    """Copy the Qonto mandate proof to the trainee's financing settings."""
+    rum = str(line.get('qonto_mandate_rum') or '').strip()
+    if not rum:
+        return
+    _, _, trainee = _find_trainee_any_session(data, str(line.get('traineeId') or ''))
+    if not trainee:
+        return
+    trainee['qonto_mandate_rum'] = rum
+    trainee['qonto_direct_debit_mandate_id'] = line.get('qonto_direct_debit_mandate_id') or ''
+    trainee['qonto_mandate_status'] = line.get('qonto_mandate_status') or ''
+
+
 def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
     if line.get('paymentMode') != 'sepa_direct_debit':
         return {'created': 0, 'skipped': True}
@@ -29074,7 +29744,18 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
                     'traineeEmail': trainee.get('email') or '', 'financeurName': persisted.get('financeurName') or financing.get('label') or financing['type'], 'typeFinanceur': financing['type'], 'clientName': (CPF_QONTO_CLIENT_NAME if is_cpf_billing_context(financing) else (persisted.get('clientName') or buildInvoiceCustomer(financing['type'], trainee, sess, financing).get('name') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip())),
-                    'clientAddress': trainee.get('qonto_billing_address') or trainee.get('address') or '', 'clientZipCode': trainee.get('zip_code') or '', 'clientCity': trainee.get('city') or '',
+                    # Values entered in the invoice-recipient modal belong to
+                    # the billing line.  Preserve them when the generated view
+                    # is rebuilt from the trainee/session data; otherwise the
+                    # SIRET and company address disappear between validation
+                    # and invoice creation.
+                    'companyName': persisted.get('companyName') or '',
+                    'clientEmail': persisted.get('clientEmail') or '',
+                    'clientAddress': persisted.get('clientAddress') or trainee.get('qonto_billing_address') or trainee.get('address') or '',
+                    'clientZipCode': persisted.get('clientZipCode') or trainee.get('zip_code') or '',
+                    'clientCity': persisted.get('clientCity') or trainee.get('city') or '',
+                    'siret': persisted.get('siret') or '',
+                    'invoiceNotes': persisted.get('invoiceNotes') or '',
                     'formationName': training, 'sessionName': _session_get(sess, 'name', '') or training,
                     'dateStart': start.isoformat(), 'dateEnd': end.isoformat() if end else '', 'examDate': _session_get(sess, 'exam_date', '') or '',
                     'dateLabel': f"du {fr_date(start.isoformat())} au {fr_date((end or start).isoformat())}" + (f" — examen le {fr_date(_session_get(sess, 'exam_date', ''))}" if _session_get(sess, 'exam_date', '') else ''),
@@ -29083,8 +29764,14 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                 }
                 # A cash payment suggests a specific case by default, but an admin
                 # can explicitly dismiss that suggestion from the billing page.
-                cash_specific = bool(trainee.get('cash_payment_enabled')) and not bool(persisted.get('specificCaseCashDismissed'))
-                line['specificCase'] = cash_specific or bool(persisted.get('specificCase'))
+                # The cash-payment flag describes the trainee's personal share.
+                # It must not block an unrelated third-party (AUTRE) invoice.
+                # Also discard automatic flags persisted before this distinction
+                # was introduced, while preserving genuinely manual cases.
+                is_personal_financing = str(financing.get('type') or '').strip().upper() == 'PERSONNEL'
+                cash_specific = is_personal_financing and bool(trainee.get('cash_payment_enabled')) and not bool(persisted.get('specificCaseCashDismissed'))
+                manual_specific = bool(persisted.get('specificCase')) and not bool(persisted.get('specificCaseAutomatic'))
+                line['specificCase'] = cash_specific or manual_specific
                 line['specificCaseAutomatic'] = cash_specific
                 line['specificCaseCashDismissed'] = bool(persisted.get('specificCaseCashDismissed'))
                 line['specificCaseReason'] = (
@@ -29142,7 +29829,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -29587,8 +30274,6 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
         return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
-        if current.get('specificCase'):
-            return False, {'error': 'Génération désactivée pour ce cas spécifique.', 'message': 'Génération désactivée pour ce cas spécifique.', 'line': current, 'ignored': True}
         if is_cpf_billing_context(current):
             return False, {'error': 'La facturation CPF est gérée dans un logiciel externe.', 'message': 'La facturation CPF est gérée dans un logiciel externe.', 'line': current}
         if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}:
@@ -29614,14 +30299,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             if is_cpf:
                 q_client = get_or_create_cpf_qonto_client()
             else:
-                q_client = search_qonto_client({'email': qonto_client_payload.get('email'), 'name': qonto_client_payload.get('name') or f"{qonto_client_payload.get('first_name','')} {qonto_client_payload.get('last_name','')}".strip()})
-                if q_client:
-                    existing_client_id = (q_client.get('client') or q_client).get('id')
-                    if existing_client_id and not qonto_client_has_complete_billing_address(q_client):
-                        app.logger.info('[QONTO] Existing billing client incomplete, updating billing address client_id=%s', existing_client_id)
-                        q_client = update_qonto_client(existing_client_id, remove_invalid_qonto_phone(qonto_client_payload)) or q_client
-                else:
-                    q_client = create_qonto_client({'client': remove_invalid_qonto_phone(qonto_client_payload)})
+                q_client = get_or_create_qonto_billing_client(qonto_client_payload)
             q_client_id = (q_client.get('client') or q_client).get('id')
             if not q_client_id:
                 raise RuntimeError('Client Qonto introuvable')
@@ -29630,6 +30308,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
             invoice_item_label = qonto_invoice_item_label(current)
             q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': invoice_item_label, 'description': invoice_item_label, 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
+            if current.get('invoiceNotes'):
+                q_payload['footer'] = current['invoiceNotes']
             q_inv = create_qonto_invoice(q_payload)
             qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
             if is_cpf:
@@ -29638,6 +30318,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             _refresh_billing_line_invoice_from_qonto(current, qi)
             payment_plan = _normalize_payment_plan(payment_plan_payload or {}, amount_ttc)
             _setup_qonto_direct_debit_for_line(current, payment_plan)
+            _persist_qonto_mandate_on_trainee(data, current)
             current['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(current)
             _billing_log(current, 'Facture brouillon créée dans Qonto', 'success', current.get('qontoInvoiceNumber') or '', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
@@ -29709,6 +30390,23 @@ def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optiona
     sid, tid, ftype = str(payload.get('sessionId') or ''), str(payload.get('traineeId') or ''), str(payload.get('financingType') or payload.get('typeFinanceur') or '')
     candidates = [l for l in _billing_lines_for_trainee_session(data, tid, sid) if not ftype or l.get('financingType') == ftype]
     return candidates[0] if candidates else None
+
+
+def _apply_invoice_recipient_payload(line: Dict[str, Any], payload: Dict[str, Any]) -> None:
+    """Apply administrator-entered invoice recipient data to an AUTRE line."""
+    if 'AUTRE' not in str(line.get('financingType') or line.get('typeFinanceur') or '').upper():
+        return
+    recipient = payload.get('invoiceRecipient') if isinstance(payload.get('invoiceRecipient'), dict) else {}
+    fields = {
+        'companyName': 'companyName', 'clientEmail': 'email', 'clientAddress': 'address',
+        'clientZipCode': 'zipCode', 'clientCity': 'city', 'siret': 'siret',
+        'invoiceNotes': 'invoiceNotes',
+    }
+    for target, source in fields.items():
+        if source in recipient:
+            line[target] = str(recipient.get(source) or '').strip()
+    if line.get('companyName'):
+        line['clientName'] = line['companyName']
 
 
 
@@ -29802,6 +30500,8 @@ def api_billing_line_qonto_preview(line_id: str):
 def api_billing_create_draft():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    _apply_invoice_recipient_payload(line, payload)
+    _save_billing_line(data, line)
     ok, result = _create_invoice_for_billing_line(data, line, payload.get('paymentPlan') if isinstance(payload.get('paymentPlan'), dict) else payload)
     return jsonify({'ok': ok, **result}), (200 if ok else 400)
 
@@ -29829,7 +30529,7 @@ def api_billing_send():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Aucune facture Qonto liée'}), 400
     try:
-        send_qonto_invoice(line['qontoInvoiceId'], {'email': line.get('traineeEmail') or '', 'copy_to_self': True, 'subject': 'Votre facture', 'body': 'Bonjour,\n\nVeuillez trouver votre facture.\n\nCordialement,\nIntégrale Academy'})
+        send_qonto_invoice(line['qontoInvoiceId'], {'email': line.get('clientEmail') or line.get('traineeEmail') or '', 'copy_to_self': True, 'subject': 'Votre facture', 'body': 'Bonjour,\n\nVeuillez trouver votre facture.\n\nCordialement,\nIntégrale Academy'})
         line['invoiceStatus'] = 'sent'; line['sentAt'] = _now_iso(); line['paymentStatus'] = 'unpaid'
         _billing_log(line, 'Facture envoyée', 'success', '', line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': True, 'line': _find_billing_line(data, line['id'])})
@@ -30058,6 +30758,7 @@ def api_billing_create_mandate():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line:
         return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    _apply_invoice_recipient_payload(line, payload)
     try:
         _ensure_qonto_oauth_ready()
         if not (line.get('qontoClientId') or line.get('qontoCustomerId')):
@@ -30068,12 +30769,7 @@ def api_billing_create_mandate():
             validation_errors = validate_qonto_client_payload(client_payload, line.get('financingType'))
             if validation_errors:
                 raise RuntimeError(_format_qonto_validation_errors(validation_errors))
-            q_client = search_qonto_client({
-                'email': client_payload.get('email'),
-                'name': client_payload.get('name') or f"{client_payload.get('first_name', '')} {client_payload.get('last_name', '')}".strip(),
-            })
-            if not q_client:
-                q_client = create_qonto_client({'client': remove_invalid_qonto_phone(client_payload)})
+            q_client = get_or_create_qonto_billing_client(client_payload)
             client_id = (q_client.get('client') or q_client).get('id')
             if not client_id:
                 raise RuntimeError('Client Qonto introuvable')
@@ -30083,11 +30779,7 @@ def api_billing_create_mandate():
             raise RuntimeError('Veuillez définir au moins une échéance de prélèvement')
         _setup_qonto_direct_debit_for_line(line, payment_plan)
         line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
-        _, _, trainee = _find_trainee_any_session(data, str(line.get('traineeId') or ''))
-        if trainee and line.get('qonto_mandate_rum'):
-            trainee['qonto_mandate_rum'] = line['qonto_mandate_rum']
-            trainee['qonto_direct_debit_mandate_id'] = line.get('qonto_direct_debit_mandate_id') or ''
-            trainee['qonto_mandate_status'] = line.get('qonto_mandate_status') or ''
+        _persist_qonto_mandate_on_trainee(data, line)
         _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': True, 'message': 'Mandat de prélèvement créé', 'line': _find_billing_line(data, line['id'])})
     except Exception as exc:
@@ -30335,27 +31027,8 @@ def api_qonto_invoice_create(trainee_id: str):
         if is_cpf_invoice:
             q_client = get_or_create_cpf_qonto_client()
         else:
-            q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
             qonto_client_payload = remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))
-            if q_client:
-                q_client_id = (q_client.get("client") or q_client).get("id")
-                if not q_client_id:
-                    raise RuntimeError("Client Qonto existant introuvable")
-                if not qonto_client_has_complete_billing_address(q_client):
-                    app.logger.info("[QONTO] Existing client incomplete, updating billing address client_id=%s", q_client_id)
-                    safe_payload = dict(qonto_client_payload)
-                    if "phone" in safe_payload:
-                        app.logger.warning("[QONTO] phone field present in client payload: %s", safe_payload["phone"])
-                    app.logger.info("[QONTO] update client payload keys=%s", list(qonto_client_payload.keys()))
-                    qonto_client_payload = remove_invalid_qonto_phone(qonto_client_payload)
-                    q_client = update_qonto_client(q_client_id, qonto_client_payload) or q_client
-            else:
-                safe_payload = dict(qonto_client_payload)
-                if "phone" in safe_payload:
-                    app.logger.warning("[QONTO] phone field present in client payload: %s", safe_payload["phone"])
-                app.logger.info("[QONTO] create client payload keys=%s", list(qonto_client_payload.keys()))
-                qonto_client_payload = remove_invalid_qonto_phone(qonto_client_payload)
-                q_client = create_qonto_client({"client": qonto_client_payload})
+            q_client = get_or_create_qonto_billing_client(qonto_client_payload)
         q_client_id = (q_client.get("client") or q_client).get("id")
         if not q_client_id: raise RuntimeError("Impossible de créer le client Qonto")
         start = (payload.get("session") or {}).get("date_start") or _session_get(sess, "date_start", "")[:10]
@@ -31116,6 +31789,777 @@ def internal_cron_cash_payment_reminders():
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     return jsonify({"ok": True, **run_cash_payment_reminders()})
+
+
+@app.post("/internal/cron/a3p-hosting-reminders")
+def internal_cron_a3p_hosting_reminders():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if expected and not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify({"ok": True, **run_a3p_hosting_reminders()})
+
+
+DAILY_RECAP_RECIPIENTS = (
+    "elsa@integraleacademy.com",
+    "aurelie@integraleacademy.com",
+    "clement@integraleacademy.com",
+    "cassandre@integraleacademy.com",
+)
+
+DAILY_RECAP_FIRST_NAMES = {
+    "cassandre@integraleacademy.com": "Cassandre",
+    "aurelie@integraleacademy.com": "Aurélie",
+    "elsa@integraleacademy.com": "Elsa",
+    "clement@integraleacademy.com": "Clément",
+}
+DAILY_RECAP_WEATHER_LOCATIONS = {
+    "puget": {"label": "Puget sur Argens", "latitude": 43.455, "longitude": 6.685},
+    "aurillac": {"label": "Aurillac", "latitude": 44.926, "longitude": 2.441},
+}
+DAILY_RECAP_QUOTES = (
+    ("Seuls ceux qui sont assez fous pour penser qu’ils peuvent changer le monde y parviennent.", "Steve Jobs"),
+    ("Le succès, c’est d’aller d’échec en échec sans perdre son enthousiasme.", "Winston Churchill"),
+    ("Ils ne savaient pas que c’était impossible, alors ils l’ont fait.", "Mark Twain"),
+    ("La meilleure façon de prédire l’avenir est de le créer.", "Peter Drucker"),
+    ("Le seul endroit où le succès précède le travail est dans le dictionnaire.", "Vidal Sassoon"),
+    ("Faites de votre vie un rêve, et d’un rêve, une réalité.", "Antoine de Saint-Exupéry"),
+    ("Le courage n’est pas l’absence de peur, mais la capacité de la vaincre.", "Nelson Mandela"),
+    ("La simplicité est la sophistication suprême.", "Léonard de Vinci"),
+    ("On ne voit bien qu’avec le cœur. L’essentiel est invisible pour les yeux.", "Antoine de Saint-Exupéry"),
+    ("Il n’y a qu’une façon d’échouer, c’est d’abandonner avant d’avoir réussi.", "Georges Clemenceau"),
+    ("La vie, c’est comme une bicyclette, il faut avancer pour ne pas perdre l’équilibre.", "Albert Einstein"),
+    ("Choisissez un travail que vous aimez et vous n’aurez pas à travailler un seul jour de votre vie.", "Confucius"),
+)
+
+# This calendar is deliberately kept in the application instead of depending on
+# Nominis: the 08:00 cron must still display the celebration when an external
+# service is slow or unavailable.  February 29 intentionally uses February 28.
+DAILY_RECAP_NAMEDAYS = {
+    1: "Marie, mère de Dieu|Basile de Césarée et Grégoire de Nazianze|Geneviève|Odilon|Édouard|Mélaine|Raymond|Lucien|Alix|Guillaume|Paulin|Tatiana|Yvette|Nina|Rémi|Marcel|Roseline|Prisca|Marius|Sébastien|Agnès|Vincent|Barnard|François|Ananie, Conversion de Paul|Paule|Angèle|Thomas|Gildas|Martine|Marcelle".split("|"),
+    2: "Ella|Théophane|Blaise|Véronique|Agathe|Gaston|Eugénie|Jacqueline|Apolline|Arnaud|Héloïse, Notre-Dame de Lourdes|Félix|Béatrice|Valentin|Claude|Julienne|Alexis|Bernadette|Gabin|Aimée|Pierre-Damien|Isabelle|Lazare|Modeste|Roméo|Nestor|Honorine|Romain".split("|"),
+    3: "Aubin|Charles|Guénolé|Casimir|Olive|Colette|Félicité|Jean|Françoise|Vivien|Rosine|Justine|Rodrigue|Mathilde|Louise|Bénédicte|Patrice|Cyrille|Joseph|Herbert|Clémence|Léa|Victorien|Catherine|Humbert|Larissa|Habib|Gontran|Gwladys|Amédée|Benjamin".split("|"),
+    4: "Hugues|Sandrine, Alexandrine|Richard|Isidore|Irène|Marcellin|Jean-Baptiste|Julie|Gauthier|Fulbert|Stanislas|Jules|Ida|Maxime|Paterne|Benoît-Joseph|Anicet|Parfait|Emma|Odette|Anselme|Alexandre|Georges|Fidèle|Marc|Alida|Zita|Valérie|Catherine|Robert".split("|"),
+    5: "Jérémie|Boris|Philippe et Jacques|Sylvain|Judith|Prudence|Gisèle|Désiré|Pacôme|Solange|Estelle|Achille|Rolande|Matthias|Denise|Honoré|Pascal|Éric|Yves|Bernardin|Constantin|Émile|Didier|Donatien|Sophie|Bérenger|Augustin|Germain|Aymard|Ferdinand|Perrine, Visitation de la Vierge Marie".split("|"),
+    6: "Justin|Blandine|Kévin|Clotilde|Igor|Norbert|Gilbert|Médard|Diane|Landry|Barnabé|Guy|Antoine|Élisée|Germaine|Jean-François|Hervé|Léonce|Romuald|Silvère|Rodolphe|Alban|Audrey|Jean-Baptiste|Prosper|Anthelme|Fernand|Irénée|Pierre et Paul|Martial".split("|"),
+    7: "Thierry|Martinien|Thomas|Florent|Antoine|Mariette|Raoul|Thibaut|Amandine|Ulrich|Benoît|Olivier|Henri, Joël|Camille|Donald|Carmen, Notre-Dame du Mont-Carmel|Charlotte|Frédéric|Arsène|Marina|Victor|Marie-Madeleine|Brigitte|Christine|Jacques|Anne et Joachim|Nathalie|Samson|Sainte Marthe|Juliette|Ignace".split("|"),
+    8: "Alphonse|Julien|Lydie|Jean-Marie|Abel|Octavien, Transfiguration|Gaétan|Dominique|Amour|Laurent|Claire|Clarisse, Jeanne|Hippolyte|Évrard|Marie, Assomption|Armel|Hyacinthe|Hélène|Jean-Eudes|Bernard|Christophe|Fabrice|Rose|Barthélémy|Louis|Natacha et Adrien|Monique|Augustin|Sabine|Fiacre|Aristide".split("|"),
+    9: "Gilles|Ingrid|Grégoire|Rosalie|Raïssa|Bertrand|Reine, Régine, Réjane|Adrien, Nativité de Marie|Alain|Inès|Adelphe|Apollinaire|Aimé|Cyprien, Fête de la Croix|Roland|Édith|Renaud|Nadège|Émilie|Davy|Matthieu|Maurice|Constant|Thècle|Hermann|Côme et Damien|Vincent|Venceslas|Michel|Jérôme".split("|"),
+    10: "Thérèse|Léger|Gérard|François|Fleur|Bruno|Serge|Pélagie|Denis|Ghislain|Firmin|Wilfried|Géraud|Juste|Aurélie, Thérèse|Edwige|Baudouin|Luc|René|Adeline|Céline|Élodie|Jean|Florentin|Crépin, Enguerrand|Dimitri|Emeline|Simon et Jude|Narcisse|Bienvenue|Quentin".split("|"),
+    11: "Harold, Toussaint|Océane, Défunts|Hubert|Charles|Sylvie|Bertille|Carine|Geoffroy|Théodore|Léon|Martin|Christian|Brice|Sidoine|Albert|Marguerite|Élisabeth|Aude|Tanguy|Edmond|Rufus, Marie|Cécile|Clément, Christ-Roi|Flora|Catherine|Delphine|Séverin, Marie|Jacques|Saturnin|André".split("|"),
+    12: "Florence|Viviane|Xavier|Barbara|Gérald|Nicolas|Ambroise|Elfried|Pierre|Romaric|Daniel|Corentin|Lucie|Odile|Ninon|Alice|Gaël|Gatien|Urbain|Théophile, Ignace|Pierre|Françoise-Xavière|Armand|Adèle|Emmanuel|Étienne|Jean|Gaspard, Saints Innocents|David, Sainte Famille|Roger|Sylvestre".split("|"),
+}
+
+
+def _daily_recap_nameday(value: datetime.date) -> str:
+    """Return the configured celebration for every day of the year."""
+    day = min(value.day, len(DAILY_RECAP_NAMEDAYS[value.month]))
+    return DAILY_RECAP_NAMEDAYS[value.month][day - 1]
+
+
+def _daily_recap_quote(value: datetime.date) -> Dict[str, str]:
+    """Return a stable quote for a delivery date, shared by preview and email."""
+    quote, author = DAILY_RECAP_QUOTES[value.toordinal() % len(DAILY_RECAP_QUOTES)]
+    return {"text": quote, "author": author}
+
+
+def _daily_recap_long_date(value: datetime.date) -> str:
+    weekdays = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
+    months = ("", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+    return f"{weekdays[value.weekday()]} {value.day} {months[value.month]} {value.year}"
+
+
+def _daily_recap_display_date(value: datetime.date) -> str:
+    """Return the shorter date used in the greeting card."""
+    return _daily_recap_long_date(value).rsplit(" ", 1)[0]
+
+
+def _daily_recap_weather_description(code: Any) -> str:
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return "les conditions météo ne sont pas disponibles"
+    if code == 0:
+        return "la journée sera ensoleillée"
+    if code in {1, 2}:
+        return "la journée sera assez ensoleillée"
+    if code == 3:
+        return "la journée sera nuageuse"
+    if code in {45, 48}:
+        return "la journée sera brumeuse"
+    if code in {51, 53, 55, 56, 57}:
+        return "un risque de bruine est prévu"
+    if code in {61, 63, 65, 66, 67}:
+        return "des passages pluvieux sont prévus"
+    if code in {80, 81, 82}:
+        return "un risque d’averses est prévu"
+    if code in {71, 73, 75, 77, 85, 86}:
+        return "la journée sera neigeuse"
+    if code in {95, 96, 99}:
+        return "la journée sera orageuse"
+    return "la météo sera variable"
+
+
+def _daily_recap_weather_icon(code: Any) -> str:
+    """Return a simple, email-client-safe weather pictogram for a WMO code."""
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return "🌡️"
+    if code == 0:
+        return "☀️"
+    if code in {1, 2}:
+        return "🌤️"
+    if code == 3:
+        return "☁️"
+    if code in {45, 48}:
+        return "🌫️"
+    if code in {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82}:
+        return "🌧️"
+    if code in {71, 73, 75, 77, 85, 86}:
+        return "🌨️"
+    if code in {95, 96, 99}:
+        return "⛈️"
+    return "🌦️"
+
+
+def _daily_recap_nameday_label(nameday: Any) -> str:
+    """Format Nominis' value as a friendly French celebration label."""
+    value = str(nameday or "").strip().strip(".!")
+    if not value or value.casefold() == "la fête du jour":
+        return ""
+    lowered = value.casefold()
+    if lowered.startswith("sainte "):
+        return f"la Sainte-{value[7:].strip()}"
+    if lowered.startswith("saint "):
+        return f"la Saint-{value[6:].strip()}"
+    if lowered.startswith("la sainte "):
+        return f"la Sainte-{value[10:].strip()}"
+    if lowered.startswith("la saint "):
+        return f"la Saint-{value[9:].strip()}"
+    return value if lowered.startswith(("la saint-", "la sainte-")) else f"la Saint-{value}"
+
+
+def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str, Any]:
+    """Fetch the nameday and today's forecasts used by the 08:00 greeting."""
+    context: Dict[str, Any] = {
+        "date": delivery_date,
+        "nameday": _daily_recap_nameday(delivery_date),
+        "weather": {},
+        "quote": _daily_recap_quote(delivery_date),
+    }
+    for key, location in DAILY_RECAP_WEATHER_LOCATIONS.items():
+        try:
+            response = requests.get("https://api.open-meteo.com/v1/forecast", params={
+                "latitude": location["latitude"], "longitude": location["longitude"],
+                "daily": "weather_code,temperature_2m_max,precipitation_probability_max", "timezone": "Europe/Paris",
+                "start_date": delivery_date.isoformat(), "end_date": delivery_date.isoformat(),
+            }, timeout=10)
+            response.raise_for_status()
+            daily = response.json().get("daily") or {}
+            precipitation_values = daily.get("precipitation_probability_max") or []
+            precipitation_probability = (
+                round(float(precipitation_values[0]))
+                if precipitation_values and precipitation_values[0] is not None else None
+            )
+            context["weather"][key] = {
+                "temperature": round(float((daily.get("temperature_2m_max") or [])[0])),
+                "description": _daily_recap_weather_description((daily.get("weather_code") or [])[0]),
+                "icon": _daily_recap_weather_icon((daily.get("weather_code") or [])[0]),
+                "precipitation_probability": precipitation_probability,
+            }
+        except (requests.RequestException, ValueError, TypeError, IndexError):
+            logging.getLogger(__name__).warning("Impossible de récupérer la météo de %s", location["label"], exc_info=True)
+    return context
+
+
+def _daily_recap_greeting(recipient: str, context: Dict[str, Any]) -> str:
+    first_name = DAILY_RECAP_FIRST_NAMES.get(recipient.lower(), "")
+    parts = [f"Bonjour {first_name}, Nous sommes le {_daily_recap_long_date(context['date'])}"]
+    nameday = _daily_recap_nameday_label(context.get("nameday"))
+    if nameday:
+        parts.append(f"Aujourd'hui, c'est {nameday} !")
+    keys = ["puget", "aurillac"]
+    for key in keys:
+        location, forecast = DAILY_RECAP_WEATHER_LOCATIONS[key], (context.get("weather") or {}).get(key)
+        if forecast:
+            rain_probability = forecast.get("precipitation_probability")
+            probability_text = f" (probabilité maximale de précipitations : {rain_probability} %)" if rain_probability is not None else ""
+            parts.append(f"la température prévue à {location['label']} aujourd'hui est de {forecast['temperature']}°C et {forecast['description']}{probability_text}")
+        else:
+            parts.append(f"les prévisions météo de {location['label']} ne sont pas disponibles")
+    return ". ".join(parts).replace("!. ", "! ") + ("" if parts[-1].endswith("!") else ".")
+
+
+def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
+    """Render the greeting as a compact hero and individual weather cards."""
+    first_name = DAILY_RECAP_FIRST_NAMES.get(recipient.lower(), "")
+    nameday = _daily_recap_nameday_label(context.get("nameday"))
+    celebration = (
+        f'<div style="margin-top:5px;color:#64748b;font-size:14px">Nous sommes le {html.escape(_daily_recap_display_date(context["date"]))} et aujourd\'hui c\'est {html.escape(nameday)} !</div>'
+        if nameday else ""
+    )
+    quote = context.get("quote") or _daily_recap_quote(context["date"])
+    quote_card = (
+        f'<div style="margin-top:16px;font-size:14px;font-weight:800;color:#172554">Citation du jour</div>'
+        f'<div style="margin-top:6px;padding:15px 18px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:10px;color:#312e81">'
+        f'<div style="font-size:16px;font-style:italic;line-height:1.5">« {html.escape(str(quote.get("text") or ""))} »</div>'
+        f'<div style="margin-top:6px;font-size:12px;font-weight:800;color:#6d28d9">— {html.escape(str(quote.get("author") or ""))}</div></div>'
+    )
+    keys = ["puget", "aurillac"]
+    weather_cards = []
+    for key in keys:
+        location = DAILY_RECAP_WEATHER_LOCATIONS[key]
+        forecast = (context.get("weather") or {}).get(key)
+        if forecast:
+            icon = html.escape(str(forecast.get("icon") or "🌡️"))
+            description = str(forecast.get("description") or "météo du jour").removeprefix("la journée sera ")
+            rain_probability = forecast.get("precipitation_probability")
+            probability_html = (
+                f'<div style="margin-top:3px;font-size:12px;font-weight:700;color:#0369a1">Risque de précipitations : {html.escape(str(rain_probability))} %</div>'
+                if rain_probability is not None else ""
+            )
+            weather_cards.append(
+                f'<td style="padding:6px;vertical-align:top"><div style="min-width:210px;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#ecfeff);border:1px solid #bae6fd;border-radius:16px">'
+                f'<table role="presentation" width="100%"><tr><td style="font-size:32px;width:44px">{icon}</td><td><div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0369a1">{html.escape(location["label"])}</div>'
+                f'<div style="margin-top:2px;font-size:22px;font-weight:900;color:#172554">{html.escape(str(forecast["temperature"]))}°C</div><div style="font-size:13px;color:#475569">{html.escape(description.capitalize())}</div>{probability_html}</td></tr></table></div></td>'
+            )
+        else:
+            weather_cards.append(f'<td style="padding:6px"><div style="padding:16px;background:#f8fafc;border-radius:16px;color:#64748b">🌡️ Prévisions indisponibles · {html.escape(location["label"])}</div></td>')
+    return (
+        '<tr><td style="padding-top:12px"><div style="padding:22px;background:#fff;border:1px solid #e0e7ff;border-radius:20px;box-shadow:0 8px 24px rgba(30,41,59,.06)">'
+        f'<div style="font-size:23px;font-weight:900;color:#172554">Bonjour {html.escape(first_name)} 👋</div>'
+        f'{celebration}'
+        f'<table role="presentation" width="100%" style="margin-top:14px"><tr>{"".join(weather_cards)}</tr></table>{quote_card}</div></td></tr>'
+    )
+
+
+def _daily_recap_date(value: Any) -> Optional[datetime.date]:
+    """Extract a calendar date from the heterogeneous timestamps we persist."""
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    return _parse_flexible_date(str(value or ""))
+
+
+def _daily_recap_name(trainee: Dict[str, Any]) -> str:
+    return _sales_trainee_display_name(trainee)
+
+
+def _daily_recap_previous_month(value: datetime.date) -> datetime.date:
+    """Return the comparable calendar day in the previous month."""
+    year, month = (value.year - 1, 12) if value.month == 1 else (value.year, value.month - 1)
+    return value.replace(year=year, month=month, day=min(value.day, calendar.monthrange(year, month)[1]))
+
+
+def _daily_recap_report_date(delivery_date: datetime.date) -> datetime.date:
+    """Return the last business day covered by a morning recap."""
+    report_date = delivery_date - datetime.timedelta(days=1)
+    while report_date.weekday() >= 5:
+        report_date -= datetime.timedelta(days=1)
+    return report_date
+
+
+def _daily_recap_next_delivery_date(value: datetime.date) -> datetime.date:
+    """Return the next weekday on which the automatic recap can be sent."""
+    delivery_date = value + datetime.timedelta(days=1)
+    while delivery_date.weekday() >= 5:
+        delivery_date += datetime.timedelta(days=1)
+    return delivery_date
+
+
+def _daily_recap_rejection_reason(value: Any) -> str:
+    """Translate Qonto's machine-readable rejection reasons for the team."""
+    raw = str(value or "").strip()
+    normalized = raw.lower().replace("-", "_").replace(" ", "_")
+    labels = {
+        "blocked_account": "Compte bancaire bloqué",
+        "insufficient_funds": "Solde insuffisant",
+        "closed_account": "Compte bancaire clôturé",
+        "bank_account_closed": "Compte bancaire clôturé",
+        "invalid_account": "Coordonnées bancaires invalides",
+        "revoked_mandate": "Mandat de prélèvement révoqué",
+        "no_mandate": "Mandat de prélèvement absent",
+        "mandate_not_found": "Mandat de prélèvement introuvable",
+        "refused_by_bank": "Prélèvement refusé par la banque",
+        "debtor_dispute": "Prélèvement contesté par le titulaire",
+        "user_requested": "Rejet demandé par le titulaire",
+        "requested_by_user": "Rejet demandé par le titulaire",
+        "duplicate": "Prélèvement en double",
+        "regulatory_reason": "Rejet pour raison réglementaire",
+        "technical_error": "Erreur technique bancaire",
+    }
+    if normalized in labels:
+        return labels[normalized]
+    return "Motif bancaire non traduit" if normalized else "Motif non communiqué par la banque"
+
+
+def _daily_recap_convention_is_pending(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    """Use the same eligibility and status rules as the conventions dashboard."""
+    if _public_trainee_convention_is_signed(trainee) and not _convention_created_on_or_after_tracking_start(trainee):
+        return False
+    training_type = str(_session_get(session_obj, "training_type", "") or "")
+    if "VAE" in training_type.upper():
+        vae_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+        inferred_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
+        if inferred_key and VAE_STATUS_RANK.get(inferred_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
+            vae_key = inferred_key
+        if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
+            return False
+    state = _yousign_state(trainee)
+    raw_status = _normalize_yousign_status(state.get("status"))
+    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at")
+    has_request = bool(state.get("signature_request_id"))
+    if raw_status in {"error", "download_error", "declined", "refused", "expired", "canceled", "cancelled"}:
+        return False
+    if _yousign_signature_link_is_expired(state) or _is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee):
+        return False
+    if has_request:
+        return _is_yousign_signature_pending(state)
+    # Same legacy override as the dashboard for a convention with no generated file.
+    return not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path") and str(trainee.get("convention_status") or "").strip().lower() == "signing"
+
+
+def _daily_recap_mandate_is_pending(item: Dict[str, Any]) -> bool:
+    """Return whether a mandate still needs signing, honoring proof of signature."""
+    status = _map_mandate_status(item.get("qonto_mandate_status") or item.get("mandateStatus"))
+    has_mandate_to_sign = bool(
+        item.get("qonto_direct_debit_mandate_id")
+        or item.get("qonto_mandate_sign_url")
+        or item.get("sign_url")
+    )
+    signed_at = bool(
+        item.get("qonto_mandate_signed_at")
+        or item.get("mandateSignedAt")
+        or item.get("mandate_signed_at")
+    )
+    return status == "pending" and has_mandate_to_sign and not signed_at
+
+
+def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> Dict[str, Any]:
+    """Build the previous-day operational snapshot without mutating stored data."""
+    try:
+        prior_year_date = report_date.replace(year=report_date.year - 1)
+    except ValueError:  # 29 February: compare with the last day of February N-1.
+        prior_year_date = report_date.replace(year=report_date.year - 1, day=28)
+    sales = {"revenue": 0, "count": 0, "formations": {}}
+    month_revenue = 0
+    comparison_dates = {
+        "previous_day": report_date - datetime.timedelta(days=1),
+        "previous_week": report_date - datetime.timedelta(days=7),
+        "previous_month": _daily_recap_previous_month(report_date),
+        "previous_year": prior_year_date,
+    }
+    comparison_sales = {key: {"date": date, "revenue": 0, "count": 0} for key, date in comparison_dates.items()}
+    pending_signatures: List[Dict[str, str]] = []
+    pending_mandates_by_trainee: Dict[str, Dict[str, str]] = {}
+    incomplete_upcoming: List[Dict[str, str]] = []
+    cnaps_pending: List[Dict[str, str]] = []
+    key_dates: List[Dict[str, str]] = []
+    vae_follow_up = {
+        "new_requests": 0,
+        "livret_1_validated": 0,
+        "livret_2_validated": 0,
+        "certification_obtained": 0,
+    }
+    today = report_date + datetime.timedelta(days=1)
+
+    validated_cnaps = {"valide", "validé", "validee", "validée", "accepted", "accepte", "accepté", "active", "actif", "favorable", "done"}
+    for session_obj in data.get("sessions", []) or []:
+        if not isinstance(session_obj, dict) or session_obj.get("archived") or _is_wedof_leads_session(session_obj):
+            continue
+        training_type = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
+        training_label = _sales_training_label(training_type)
+        start_date = _session_start_date(session_obj)
+        end_date = _daily_recap_date(_session_get(session_obj, "date_end", "")) or start_date
+        session_label = f"{formation_label(training_type) or training_type} · {fr_date(start_date.isoformat()) if start_date else 'date à confirmer'}"
+        session_name = str(_session_get(session_obj, "name", "") or "").strip()
+        formation_name = " · ".join(dict.fromkeys(part for part in (session_name, formation_label(training_type) or training_type) if part))
+        date_range = f"du {fr_date(start_date.isoformat()) if start_date else 'date à confirmer'} au {fr_date(end_date.isoformat()) if end_date else 'date à confirmer'}"
+        if start_date == today + datetime.timedelta(days=1):
+            key_dates.append({"name": "Début de formation demain", "detail": f"{formation_name} · {date_range}"})
+
+        exam_dates = []
+        for exam_key, exam_label in (
+            ("exam_date", "Examen"), ("exam_theory_date", "Examen théorique"),
+            ("exam_practice_date", "Examen pratique"), ("ssiap_exam_date", "Examen SSIAP"),
+        ):
+            exam_date = _daily_recap_date(_session_get(session_obj, exam_key, ""))
+            if exam_date and (exam_date, exam_label) not in exam_dates:
+                exam_dates.append((exam_date, exam_label))
+        for exam_date, exam_label in exam_dates:
+            days_until_exam = (exam_date - today).days
+            if days_until_exam not in {1, 7}:
+                continue
+            title = f"{exam_label} demain" if days_until_exam == 1 else f"{exam_label} dans 7 jours"
+            reminder = " · Pensez à générer les dossiers d’examen" if days_until_exam == 7 and training_type.upper().startswith(("APS", "A3P")) else ""
+            key_dates.append({"name": title, "detail": f"{formation_name} · le {fr_date(exam_date.isoformat())} · {date_range}{reminder}"})
+
+        for trainee in _session_trainees_list(session_obj):
+            name = _daily_recap_name(trainee)
+            trainee_key = str(trainee.get("id") or "").strip() or _normalized_token(name)
+            sale_date = _sales_trainee_anchor_date(trainee, training_label)
+            price = _sales_trainee_price(trainee, training_type, training_label)
+            excluded_from_sales = bool(trainee.get("exclude_from_sales_tracking") or session_obj.get("exclude_from_sales_tracking"))
+            if "VAE" in training_type.upper():
+                if _daily_recap_date(trainee.get("created_at")) == report_date:
+                    vae_follow_up["new_requests"] += 1
+                action_dates = trainee.get("vae_action_dates") or {}
+                if isinstance(action_dates, dict):
+                    for action_key, metric_key in (
+                        ("livret_1_validated", "livret_1_validated"),
+                        ("livret_2_validated", "livret_2_validated"),
+                        ("diplome_obtenu", "certification_obtained"),
+                    ):
+                        if _daily_recap_date(action_dates.get(action_key)) == report_date:
+                            vae_follow_up[metric_key] += 1
+            if not excluded_from_sales and sale_date and sale_date.year == report_date.year and sale_date.month == report_date.month and sale_date <= report_date:
+                month_revenue += price
+            if not excluded_from_sales and sale_date == report_date:
+                sales["revenue"] += price
+                sales["count"] += 1
+                label = training_label
+                sales["formations"][label] = sales["formations"].get(label, 0) + 1
+            if not excluded_from_sales:
+                for key, comparison_date in comparison_dates.items():
+                    if sale_date == comparison_date:
+                        comparison_sales[key]["revenue"] += price
+                        comparison_sales[key]["count"] += 1
+
+            if _daily_recap_convention_is_pending(session_obj, trainee):
+                pending_signatures.append({"name": name, "detail": session_label})
+
+            if _daily_recap_mandate_is_pending(trainee):
+                pending_mandates_by_trainee[trainee_key] = {
+                    "name": name,
+                    "detail": f"{formation_name or 'Formation'} · {date_range} · Signature du mandat en attente",
+                }
+
+            if start_date and 0 <= (start_date - today).days < 7 and not dossier_is_complete_total(trainee, training_type, start_date):
+                incomplete_upcoming.append({"name": name, "detail": session_label})
+
+            cnaps_raw = str(trainee.get("cnaps_status") or trainee.get("statut_cnaps") or trainee.get("pre_status") or "").strip()
+            normalized_cnaps = unicodedata.normalize("NFD", cnaps_raw.lower())
+            normalized_cnaps = "".join(ch for ch in normalized_cnaps if unicodedata.category(ch) != "Mn")
+            normalized_validated = {unicodedata.normalize('NFD', value).encode('ascii', 'ignore').decode() for value in validated_cnaps}
+            cnaps_is_validated = normalized_cnaps in normalized_validated or normalized_cnaps in {f"cnaps {value}" for value in normalized_validated}
+            cnaps_is_in_progress = normalized_cnaps in {"en cours", "en_cours", "in progress", "in_progress", "ongoing"}
+            # Every trainee iterated here belongs to a real, non-archived
+            # training session. Only the explicit “En cours” CNAPS queue is
+            # actionable; blank, transmitted or other statuses must stay out.
+            if end_date and end_date >= today and cnaps_is_in_progress and not cnaps_is_validated:
+                session_name = str(_session_get(session_obj, "name", "") or "").strip()
+                cnaps_session = " · ".join(dict.fromkeys(part for part in (session_name, formation_label(training_type) or training_type) if part))
+                start_label = fr_date(start_date.isoformat()) if start_date else "date à confirmer"
+                end_label = fr_date(end_date.isoformat()) if end_date else start_label
+                cnaps_pending.append({
+                    "name": name,
+                    "detail": f"{cnaps_session or 'Formation'} · du {start_label} au {end_label} · {cnaps_raw or 'statut non renseigné'}",
+                })
+
+    # The CNAPS tracking page is authoritative: it contains statuses returned by
+    # CNAPSV3 and enrollment matching. Fall back to locally stored trainee
+    # statuses only while that service is unavailable.
+    cnaps_rows, cnaps_error = fetch_cnapsv3_tracking_requests()
+    if not cnaps_error:
+        cnaps_pending = []
+        annuaire_statuses = data.get("cnaps_public_annuaire_statuses") or {}
+        for row in enrich_cnaps_tracking_rows_with_enrollment(cnaps_rows, data):
+            if not row.get("is_enrolled"):
+                continue
+            nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+            annuaire_key = _cnaps_public_annuaire_status_key(str(row.get("last_name") or ""), nub)
+            annuaire_status = annuaire_statuses.get(annuaire_key) if isinstance(annuaire_statuses, dict) else None
+            # This is exactly the page's “En cours” meaning: the public CNAPS
+            # annuaire check succeeded but returned no active title. Older data
+            # without an annuaire baseline keeps the legacy explicit status.
+            no_title_found = isinstance(annuaire_status, dict) and not bool(annuaire_status.get("known"))
+            normalized_status = _normalize_cnaps_status(row.get("cnaps_status")).replace("_", " ")
+            if not no_title_found and (annuaire_status is not None or normalized_status != "EN COURS"):
+                continue
+            enrollment = row.get("enrollment") or {}
+            session_name = str(enrollment.get("session_name") or "").strip()
+            training_type = str(enrollment.get("training_type") or "").strip()
+            session_detail = " · ".join(dict.fromkeys(part for part in (session_name, training_type) if part)) or "Formation"
+            start_label = fr_date(str(enrollment.get("date_start") or "")) or "date à confirmer"
+            end_label = fr_date(str(enrollment.get("date_end") or "")) or start_label
+            session_detail = f"{session_detail} · du {start_label} au {end_label}"
+            status_since = _daily_recap_date(annuaire_status.get("status_since") or annuaire_status.get("checked_at")) if isinstance(annuaire_status, dict) else None
+            cnaps_pending.append({
+                "name": _format_trainee_name(row.get("first_name", ""), row.get("last_name", "")) or "Stagiaire",
+                "detail": f"{session_detail} · Aucun titre CNAPS trouvé",
+                "taj_suspected": bool(no_title_found and status_since and (today - status_since).days >= 10),
+            })
+
+    changes = []
+    for notification in (data.get("cnaps_status_change_notifications") or {}).values():
+        if isinstance(notification, dict) and _daily_recap_date(notification.get("sent_at")) == report_date:
+            changes.append({
+                "name": " ".join(filter(None, [str(notification.get("first_name") or "").strip(), str(notification.get("last_name") or "").strip()])) or "Stagiaire",
+                "detail": str(notification.get("signature") or "Nouveau statut détecté"),
+            })
+
+    rejected_by_trainee: Dict[str, Dict[str, Any]] = {}
+    billing_mandates_by_trainee: Dict[str, Optional[Dict[str, str]]] = {}
+    for line in _billing_lines(data):
+        trainee_id = str(line.get("traineeId") or "").strip()
+        if line.get("paymentMode") == "sepa_direct_debit":
+            name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire"
+            key = trainee_id or _normalized_token(name)
+            billing_mandates_by_trainee.setdefault(key, None)
+            if _daily_recap_mandate_is_pending(line):
+                formation = str(line.get("formationName") or line.get("sessionName") or "Formation non renseignée").strip()
+                start_label = fr_date(str(line.get("dateStart") or "")) or "date à confirmer"
+                end_label = fr_date(str(line.get("dateEnd") or line.get("dateStart") or "")) or "date à confirmer"
+                billing_mandates_by_trainee[key] = {
+                    "name": name,
+                    "detail": f"{formation} · du {start_label} au {end_label} · Signature du mandat en attente",
+                }
+        for installment in _sepa_installments(line):
+            if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
+                continue
+            event_date = _daily_recap_date(installment.get("rejected_at") or installment.get("failed_at") or installment.get("updated_at") or installment.get("updatedAt") or installment.get("date") or installment.get("due_date"))
+            if event_date == report_date:
+                name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire"
+                key = str(line.get("traineeId") or "").strip() or _normalized_token(name)
+                item = rejected_by_trainee.setdefault(key, {"name": name, "details": []})
+                formation = str(line.get("formationName") or line.get("sessionName") or "Formation non renseignée").strip()
+                due_date = fr_date(str(installment.get("due_date") or installment.get("date") or "")) or "date non renseignée"
+                reason = _daily_recap_rejection_reason(installment.get("status_reason") or installment.get("failureReason"))
+                item["details"].append(f"{formation} · échéance du {due_date} · {_format_euro(installment.get('amount'))} · {reason}")
+
+    # Billing lines are synchronized with Qonto and therefore supersede a stale
+    # mandate status copied onto the session trainee record.
+    for key, pending_item in billing_mandates_by_trainee.items():
+        pending_mandates_by_trainee.pop(key, None)
+        if pending_item:
+            pending_mandates_by_trainee[key] = pending_item
+
+    rejected = [
+        {"name": item["name"], "detail": " | ".join(dict.fromkeys(item["details"]))}
+        for item in rejected_by_trainee.values()
+    ]
+
+    objectives = data.get("sales_tracking", {}).get("objectives", {})
+    year_objectives = objectives.get(str(report_date.year), {}) if isinstance(objectives, dict) else {}
+    monthly_objectives = year_objectives.get("months", {}) if isinstance(year_objectives, dict) else {}
+    month_objective = _parse_positive_int(monthly_objectives.get(str(report_date.month), 0) if isinstance(monthly_objectives, dict) else 0)
+    month_progress_ratio = (month_revenue / month_objective) if month_objective > 0 else 0
+    month_remaining = max(month_objective - month_revenue, 0) if month_objective > 0 else 0
+    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "cnaps_changes": changes, "rejected": rejected, "pending_mandates": list(pending_mandates_by_trainee.values()), "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
+
+
+def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    """Render an email-client-safe, colourful SaaS-style daily dashboard."""
+    display_date = (greeting_context or {}).get("date") or (report["date"] + datetime.timedelta(days=1))
+    def section_count_badge(count: int) -> str:
+        """Render the same prominent counter on every operational section."""
+        return f'<span style="display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900">{count}</span>'
+
+    def rows(items: List[Dict[str, str]], empty: str) -> str:
+        if not items:
+            return f'<div style="padding:18px;color:#64748b;text-align:center">✓ {html.escape(empty)}</div>'
+        rendered = []
+        for item in items:
+            taj_label = '<span style="display:inline-block;margin-left:7px;padding:4px 8px;border-radius:99px;background:#dc2626;color:#fff;font-size:10px;font-weight:900;text-transform:uppercase">Suspicion de TAJ</span>' if item.get("taj_suspected") else ""
+            rendered.append(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(item["name"])}</strong>{taj_label}<div style="margin-top:4px;color:#64748b;font-size:13px">{html.escape(item["detail"])}</div></div>')
+        return "".join(rendered)
+
+    def key_dates_card(items: List[Dict[str, str]]) -> str:
+        """Render key dates as a compact agenda rather than a generic list."""
+        if not items:
+            return ""
+        agenda_rows = []
+        for item in items:
+            title = str(item.get("name") or "Échéance")
+            is_urgent = "demain" in title.lower()
+            accent = "#ea580c" if is_urgent else "#4f46e5"
+            soft = "#fff7ed" if is_urgent else "#eef2ff"
+            timing = "À préparer aujourd’hui" if is_urgent else "À anticiper"
+            agenda_rows.append(
+                f'<tr><td style="padding:6px 0"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" '
+                f'style="background:{soft};border:1px solid {accent}22;border-radius:14px"><tr>'
+                f'<td width="6" style="width:6px;background:{accent};border-radius:14px 0 0 14px"></td>'
+                f'<td width="48" align="center" style="padding:14px 8px 14px 14px"><div style="width:36px;height:36px;line-height:36px;border-radius:11px;background:#fff;color:{accent};font-size:18px;text-align:center;box-shadow:0 4px 12px rgba(15,23,42,.08)">◆</div></td>'
+                f'<td style="padding:13px 14px 13px 6px"><div style="color:{accent};font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase">{timing}</div>'
+                f'<div style="margin-top:3px;color:#0f172a;font-size:15px;font-weight:900;line-height:1.3">{html.escape(title)}</div>'
+                f'<div style="margin-top:5px;color:#64748b;font-size:12px;line-height:1.45">{html.escape(str(item.get("detail") or ""))}</div></td>'
+                f'</tr></table></td></tr>'
+            )
+        return (
+            '<tr><td style="padding:8px 0"><div style="overflow:hidden;background:linear-gradient(145deg,#ffffff,#f8fafc);border:1px solid #dbeafe;border-radius:20px;padding:20px;box-shadow:0 10px 28px rgba(37,99,235,.08)">'
+            '<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td><div style="color:#4f46e5;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase">Agenda opérationnel</div><h2 style="margin:4px 0 2px;color:#0f172a;font-size:19px">Dates clés</h2><div style="color:#64748b;font-size:12px">Les prochaines échéances à ne pas manquer</div></td>'
+            f'<td width="46" align="right" valign="top">{section_count_badge(len(items))}</td></tr></table>'
+            f'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px">{"".join(agenda_rows)}</table></div></td></tr>'
+        )
+
+    sales = report["sales"]
+    comparisons = report.get("comparison_sales") or {"previous_year": report["prior_sales"]}
+    comparison_labels = {"previous_day": "jour précédent", "previous_week": "semaine précédente", "previous_month": "mois précédent", "previous_year": "année précédente"}
+    comparison_cards = []
+    for key, item in comparisons.items():
+        comparison_revenue = float(item.get("revenue") or 0)
+        if key not in comparison_labels or comparison_revenue <= 0:
+            continue
+        delta = float(sales["revenue"] or 0) - comparison_revenue
+        ratio = (delta / comparison_revenue) * 100
+        positive = delta >= 0
+        comparison_cards.append(
+            f'<td width="25%" style="padding:4px;vertical-align:top"><div style="min-height:58px;padding:11px;border:1px solid #dbeafe;border-radius:12px;background:#fff">'
+            f'<div style="color:#64748b;font-size:10px;font-weight:800;text-transform:uppercase">{comparison_labels[key]}</div>'
+            f'<div style="margin-top:5px;color:{"#15803d" if positive else "#dc2626"};font-size:13px;font-weight:900">{"▲" if positive else "▼"} {abs(ratio):.0f}%</div>'
+            f'<div style="margin-top:2px;color:#475569;font-size:11px">{html.escape(_format_euro(comparison_revenue))}</div></div></td>'
+        )
+    comparison = (f'<table role="presentation" width="100%" style="margin-top:12px"><tr>{"".join(comparison_cards)}</tr></table>') if comparison_cards else '<div style="margin-top:12px;color:#64748b;font-size:12px">Pas encore de période comparable.</div>'
+    month_kpi = report.get("month_kpi") or {}
+    objective = float(month_kpi.get("objective") or 0)
+    progress_ratio = float(month_kpi.get("progress_ratio") or 0)
+    progress_percent = min(max(progress_ratio * 100, 0), 100)
+    if objective > 0:
+        objective_visual = (
+            f'<div style="margin-top:18px;padding:14px;background:#eff6ff;border-radius:14px">'
+            f'<div style="font-size:11px;color:#475569;font-weight:800;text-transform:uppercase">Objectif du mois</div>'
+            f'<div style="margin-top:7px;height:10px;background:#dbeafe;border-radius:99px;overflow:hidden"><div style="height:10px;width:{progress_percent:.1f}%;background:linear-gradient(90deg,#2563eb,#06b6d4);border-radius:99px"></div></div>'
+            f'<table role="presentation" width="100%" style="margin-top:8px"><tr><td style="font-size:12px;color:#1e40af;font-weight:900">{progress_ratio * 100:.0f}% atteint</td><td align="right" style="font-size:12px;color:#475569">{html.escape(_format_euro(month_kpi.get("revenue")))} / {html.escape(_format_euro(objective))}</td></tr></table>'
+            f'<div style="margin-top:5px;color:#64748b;font-size:11px">Reste {html.escape(_format_euro(month_kpi.get("remaining")))} à réaliser</div></div>'
+        )
+    else:
+        objective_visual = '<div style="margin-top:14px;padding:11px;background:#f8fafc;border-radius:12px;color:#64748b;font-size:12px">Objectif mensuel non renseigné</div>'
+    palette = [("#dbeafe", "#1d4ed8"), ("#fce7f3", "#be185d"), ("#ede9fe", "#6d28d9"), ("#ffedd5", "#c2410c"), ("#ccfbf1", "#0f766e")]
+    formation_mix = "".join(
+        f'<span style="display:inline-block;margin:5px 5px 0 0;padding:5px 10px 5px 5px;border-radius:99px;background:{palette[index % len(palette)][0]};color:{palette[index % len(palette)][1]};font-size:13px;font-weight:800"><span style="display:inline-block;min-width:21px;padding:3px 5px;margin-right:6px;border-radius:99px;background:{palette[index % len(palette)][1]};color:#fff;text-align:center;font-size:12px">{count}</span>{html.escape(label)}</span>'
+        for index, (label, count) in enumerate(sorted(sales["formations"].items()))
+    ) or '<span style="color:#92400e;font-size:13px">Aucune vente</span>'
+    logo = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    sections = [
+        ("📅", "Dates clés", report.get("key_dates") or [], ""),
+        ("⚡", "Changements CNAPS", report["cnaps_changes"], "Aucun changement détecté"),
+        ("↩", "Prélèvements rejetés", report["rejected"], "Aucun rejet"),
+        ("🏦", "Mandats de prélèvement à valider", report.get("pending_mandates") or [], "Tous les mandats sont validés"),
+        ("✍", "Conventions en attente de signature", report["pending_signatures"], "Aucune signature en attente"),
+        ("📁", "Dossiers incomplets · J-7", report["incomplete_upcoming"], "Tous les dossiers sont complets"),
+        ("👮", "CNAPS à valider", report["cnaps_pending"], "Aucune validation en attente"),
+    ]
+    hidden_when_empty = {"Dates clés", "Changements CNAPS", "Prélèvements rejetés", "Mandats de prélèvement à valider", "Dossiers incomplets · J-7"}
+    cards = key_dates_card(report.get("key_dates") or [])
+    cards += "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right">{section_count_badge(len(items))}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections if title != "Dates clés" and (items or title not in hidden_when_empty))
+    vae_follow_up = report.get("vae_follow_up") or {}
+    vae_metrics = [
+        ("Nouvelles demandes VAE", vae_follow_up.get("new_requests", 0)),
+        ("Livrets 1 validés", vae_follow_up.get("livret_1_validated", 0)),
+        ("Livrets 2 validés", vae_follow_up.get("livret_2_validated", 0)),
+        ("Certifications obtenues", vae_follow_up.get("certification_obtained", 0)),
+    ]
+    visible_vae_metrics = [(label, int(count or 0)) for label, count in vae_metrics if int(count or 0) > 0]
+    if visible_vae_metrics:
+        vae_rows = "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right;background:#ecfdf5;color:#047857;border-radius:99px;padding:4px 10px;font-weight:900">{count}</span></div>' for label, count in visible_vae_metrics)
+        cards = f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">🎓&nbsp; Suivi des VAE</h2>{vae_rows}</div></td></tr>' + cards
+    greeting = ""
+    if recipient and greeting_context:
+        greeting = _daily_recap_greeting_html(recipient, greeting_context)
+    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><h1 style="margin:24px 0 8px;font-size:30px">DAILY OPERATIONS</h1><div style="opacity:.86">{html.escape(fr_date(display_date.isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><div style="background:linear-gradient(145deg,#ffffff,#eff6ff);border:1px solid #bfdbfe;border-radius:22px;padding:22px;box-shadow:0 12px 30px rgba(37,99,235,.08)"><div style="font-size:12px;color:#1e40af;font-weight:900;text-transform:uppercase;letter-spacing:.06em">📈 Performance commerciale</div><table role="presentation" width="100%" style="margin-top:10px"><tr><td width="54%" style="vertical-align:top;padding-right:16px;border-right:1px solid #dbeafe"><div style="color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:34px;font-weight:950;color:#0f172a;margin-top:3px">{html.escape(_format_euro(sales['revenue']))}</div><div style="margin-top:5px;color:#475569;font-size:12px">{sales['count']} vente{'s' if sales['count'] != 1 else ''} enregistrée{'s' if sales['count'] != 1 else ''}</div>{objective_visual}</td><td width="46%" style="vertical-align:top;padding-left:16px"><div style="color:#92400e;font-size:11px;font-weight:800;text-transform:uppercase">Formations vendues</div><div style="margin-top:8px">{formation_mix}</div></td></tr></table>{comparison}</div></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé les jours ouvrés à 08h00</td></tr></table></td></tr></table></body></html>'''
+    return "DAILY OPERATIONS", body
+
+
+def run_daily_recap(
+    *,
+    now: Optional[datetime.datetime] = None,
+    force: bool = False,
+    delivery_date: Optional[datetime.date] = None,
+    request_id: str = "",
+) -> Dict[str, Any]:
+    paris_now = now or datetime.datetime.now(ZoneInfo("Europe/Paris"))
+    if paris_now.tzinfo is None:
+        paris_now = paris_now.replace(tzinfo=ZoneInfo("Europe/Paris"))
+    paris_now = paris_now.astimezone(ZoneInfo("Europe/Paris"))
+    # The Render job runs hourly.  Do not require it to start during the exact
+    # 08:00 hour: a delayed deployment, cold start or temporary provider error
+    # must be recoverable by the next hourly run.  The persisted history below
+    # still guarantees at most one successful automatic delivery per day.
+    if not force and paris_now.hour < 8:
+        return {"sent": False, "reason": "before_delivery_hour"}
+    effective_delivery_date = delivery_date or paris_now.date()
+    # The company is closed at weekends: automatic recaps resume on Monday,
+    # using Friday as the reporting day for sales and all dated activity.
+    if not force and effective_delivery_date.weekday() >= 5:
+        return {"sent": False, "reason": "weekend"}
+    report_date = _daily_recap_report_date(effective_delivery_date)
+    request_id = request_id or uuid.uuid4().hex[:12]
+    app.logger.warning(
+        "[DAILY_RECAP] send_start request_id=%s force=%s report_date=%s recipients=%s",
+        request_id,
+        force,
+        report_date.isoformat(),
+        len(DAILY_RECAP_RECIPIENTS),
+    )
+    data = load_data(run_background_tasks=False)
+    history = data.setdefault("daily_recap_sent_dates", [])
+    if not force and report_date.isoformat() in history:
+        return {"sent": False, "reason": "already_sent", "date": report_date.isoformat()}
+    report = build_daily_recap_data(data, report_date)
+    greeting_context = fetch_daily_recap_greeting_context(effective_delivery_date)
+    deliveries = []
+    for recipient in DAILY_RECAP_RECIPIENTS:
+        subject, html_body = build_daily_recap_email(report, recipient=recipient, greeting_context=greeting_context)
+        result = brevo_send_email(recipient, subject, html_body, metadata={"purpose": "daily_recap", "report_date": report_date.isoformat()})
+        delivery = {
+            "recipient": recipient,
+            "accepted": bool(result.get("ok")),
+            "message_id": str(result.get("message_id") or ""),
+        }
+        deliveries.append(delivery)
+        app.logger.warning(
+            "[DAILY_RECAP] provider_response request_id=%s recipient=%s accepted=%s status_code=%s message_id=%s error=%s",
+            request_id,
+            recipient,
+            delivery["accepted"],
+            result.get("status_code"),
+            delivery["message_id"],
+            str(result.get("error") or "")[:200],
+        )
+        if not result.get("ok"):
+            return {
+                "sent": False,
+                "reason": "email_error",
+                "recipient": recipient,
+                "error": result.get("error", ""),
+                "accepted_recipients": sum(item["accepted"] for item in deliveries),
+                "deliveries": deliveries,
+                "request_id": request_id,
+            }
+    if report_date.isoformat() not in history:
+        history.append(report_date.isoformat())
+    data["daily_recap_sent_dates"] = history[-400:]
+    save_data(data)
+    app.logger.warning(
+        "[DAILY_RECAP] send_complete request_id=%s report_date=%s accepted_recipients=%s",
+        request_id,
+        report_date.isoformat(),
+        len(deliveries),
+    )
+    return {
+        "sent": True,
+        "delivery_status": "accepted_by_provider",
+        "date": report_date.isoformat(),
+        "recipients": len(DAILY_RECAP_RECIPIENTS),
+        "deliveries": deliveries,
+        "request_id": request_id,
+    }
+
+
+@app.post("/internal/cron/daily-recap")
+def internal_cron_daily_recap():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if expected and not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    result = run_daily_recap()
+    # Make delivery failures visible as failed Render jobs.  Previously the
+    # endpoint returned HTTP 200 even when Brevo rejected a message, so the
+    # scheduler misleadingly reported a successful execution.
+    status_code = 502 if result.get("reason") == "email_error" else 200
+    return jsonify({"ok": status_code == 200, **result}), status_code
 
 
 @app.cli.command("send-convocation-signature-reminders")
@@ -31894,7 +33338,42 @@ def public_docs_to_control():
 
 
 ADMIN_RECENT_TRAINEES_SESSION_KEY = "admin_recent_trainees"
+ADMIN_RECENT_SESSIONS_SESSION_KEY = "admin_recent_sessions"
+ADMIN_RECENT_TOOLS_SESSION_KEY = "admin_recent_tools"
 TRAINEE_SEARCH_RECENT_LIMIT = 2
+
+ADMIN_SEARCH_TOOLS = {
+    "admin_positioning_tests": ("Tests de positionnement", "Consulter les tests", "✓"),
+    "admin_wedof_requests": ("CPF · EDOF", "Demandes de financement", "€"),
+    "admin_cnaps_tracking": ("Suivi CNAPS", "Suivre les dossiers CNAPS", "◇"),
+    "admin_cnaps_unknown": ("CNAPS inconnus", "Dossiers à rapprocher", "?"),
+    "admin_sessions_conventions": ("Conventions", "Gérer les conventions", "▤"),
+    "admin_sessions_automations": ("Automatisations", "Configurer les envois", "⚡"),
+    "admin_sales_tracking": ("Suivi des ventes", "Piloter l’activité commerciale", "↗"),
+    "admin_sessions_billing": ("Facturation", "Factures et règlements", "€"),
+    "admin_direct_debits": ("Prélèvements", "Gérer les prélèvements directs", "↻"),
+    "admin_qonto_settings": ("Réglages Qonto", "Paramètres de facturation", "⚙"),
+    "admin_sessions_archived": ("Sessions archivées", "Retrouver les anciennes sessions", "□"),
+    "admin_afc": ("AFC", "Suivi des candidats AFC", "A"),
+    "admin_cash_payments": ("Paiements espèces", "Suivi des encaissements", "€"),
+}
+
+
+def _remember_admin_recent(key: str, value: str) -> None:
+    recent = [str(item) for item in (session.get(key) or []) if str(item) != str(value)]
+    session[key] = [str(value), *recent][:TRAINEE_SEARCH_RECENT_LIMIT]
+    session.modified = True
+
+
+@app.before_request
+def remember_admin_search_consultations() -> None:
+    """Alimente les suggestions avec les pages réellement ouvertes par l'admin."""
+    if request.method != "GET" or not session.get("admin_logged_in"):
+        return
+    if request.endpoint == "admin_trainees" and request.view_args and request.view_args.get("session_id"):
+        _remember_admin_recent(ADMIN_RECENT_SESSIONS_SESSION_KEY, request.view_args["session_id"])
+    elif request.endpoint in ADMIN_SEARCH_TOOLS:
+        _remember_admin_recent(ADMIN_RECENT_TOOLS_SESSION_KEY, request.endpoint)
 
 
 def _remember_admin_trainee_consultation(session_id: str, trainee_id: str) -> None:
@@ -32104,6 +33583,51 @@ def api_sessions_search():
     out.sort(key=lambda item: (bool(item.get("archived")), str(item.get("date_start") or "")), reverse=False)
     out = out[:30]
     return jsonify({"ok": True, "items": out, "count": len(out)})
+
+
+@app.get("/api/admin/search_suggestions")
+@admin_login_required
+def api_admin_search_suggestions():
+    """Retourne les quatre groupes affichés à l'ouverture de la recherche globale."""
+    data = load_data()
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    sessions_by_id = {
+        str(item.get("id")): item for item in data.get("sessions", [])
+        if isinstance(item, dict)
+        and (item.get("partner_id") or INTEGRALE_PARTNER_ID) == visible_partner_id
+        and not _is_wedof_leads_session(item)
+    }
+    trainee_items = []
+    trainees_by_key = {}
+    for session_obj in sessions_by_id.values():
+        for trainee in _session_trainees_list(session_obj):
+            item = _trainee_search_item(session_obj, trainee)
+            trainee_items.append(item)
+            trainees_by_key[(str(item["session_id"]), str(item["trainee_id"]))] = item
+
+    latest_registered = sorted(
+        (item for item in trainee_items if not _is_vae_training_type(item.get("training_type"))),
+        key=lambda item: str(item.get("created_at") or ""), reverse=True,
+    )[:TRAINEE_SEARCH_RECENT_LIMIT]
+    recent_trainees = [
+        trainees_by_key[key] for entry in (session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or [])
+        if isinstance(entry, dict)
+        and (key := (str(entry.get("session_id")), str(entry.get("trainee_id")))) in trainees_by_key
+    ][:TRAINEE_SEARCH_RECENT_LIMIT]
+    recent_sessions = [
+        _session_search_item(sessions_by_id[session_id])
+        for session_id in session.get(ADMIN_RECENT_SESSIONS_SESSION_KEY) or []
+        if session_id in sessions_by_id
+    ][:TRAINEE_SEARCH_RECENT_LIMIT]
+    recent_tools = [
+        {"label": ADMIN_SEARCH_TOOLS[endpoint][0], "description": ADMIN_SEARCH_TOOLS[endpoint][1],
+         "icon": ADMIN_SEARCH_TOOLS[endpoint][2], "href": url_for(endpoint)}
+        for endpoint in session.get(ADMIN_RECENT_TOOLS_SESSION_KEY) or []
+        if endpoint in ADMIN_SEARCH_TOOLS
+    ][:TRAINEE_SEARCH_RECENT_LIMIT]
+    return jsonify({"ok": True, "latest_registered": latest_registered,
+                    "recent_trainees": recent_trainees, "recent_sessions": recent_sessions,
+                    "recent_tools": recent_tools})
 
 
 @app.get("/api/trainees_search")

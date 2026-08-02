@@ -25,6 +25,7 @@ python app.py
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
 - `CNAPS_MONITOR_TOKEN` (secret partagé entre le cron Render et le endpoint interne de suivi CNAPS)
+- `CRON_SECRET` est généré et partagé automatiquement par le Blueprint Render entre le service web et les tâches cron ; il ne doit pas être créé séparément sur chaque service.
 - `CNAPSV3_API_TOKEN` (obligatoire sur le service web pour que le suivi automatique lise les dossiers CNAPS)
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
@@ -97,6 +98,18 @@ Lors de l’application du Blueprint, Render demande les trois secrets suivants 
 3. Sur ce même service web, renseigner `BREVO_API_KEY` pour permettre l’envoi des e-mails.
 
 Le worker n’a besoin ni du jeton CNAPSV3 ni de la clé Brevo : il réveille le endpoint protégé du service web, qui effectue le contrôle et l’envoi. Après configuration, redéployer le Blueprint et vérifier dans les logs de `gestionstagiaires-cnaps-monitor` qu’une réponse contenant `"ok": true` apparaît environ toutes les 15 minutes.
+
+### Disponibilité du service web
+
+Le service web utilise un seul worker Gunicorn par défaut afin de limiter sa
+consommation mémoire. Son recyclage périodique est désactivé : recycler l’unique
+worker laisse le service sans processus disponible pendant le rechargement de
+l’application et provoque des réponses 502 intermittentes sur Render.
+
+Si le service est dimensionné avec `WEB_CONCURRENCY=2` ou plus, le recyclage
+peut être réactivé avec `GUNICORN_MAX_REQUESTS` et
+`GUNICORN_MAX_REQUESTS_JITTER`. L’endpoint léger `/healthz` permet de vérifier
+la disponibilité sans lire les fichiers de données.
 
 ## Intégration cnapsv3 (sync ACCEPTÉ)
 

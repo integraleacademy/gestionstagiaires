@@ -1140,9 +1140,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 <style>
 
 #traineesTable .col-card-pro-followup{
-  width:130px;
-  min-width:130px;
-  max-width:150px;
+  width:210px;
+  min-width:210px;
+  max-width:240px;
   vertical-align:middle;
 }
 .card-pro-followup{
@@ -1190,14 +1190,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   box-sizing:border-box;
 }
 .card-pro-refresh-btn{padding:5px 8px;}
-.card-pro-result__date{display:none;}
+.card-pro-result__date{display:inline;font-size:9px;font-weight:800;opacity:.95;}
 .card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:5px 8px;}
-.card-pro-result__chip.is-active,.card-pro-result__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
-.card-pro-result__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
+.card-pro-result__chip.is-active,.card-pro-result__chip.is-cp,.card-pro-result__chip.is-ap{background:#16a34a;border-color:#16a34a;color:#fff;}
 .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
 .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
-.card-pro-result.is-active .card-pro-result__chip.is-active,.card-pro-result.is-active .card-pro-result__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
-.card-pro-result.is-active .card-pro-result__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
+.card-pro-result.is-active .card-pro-result__chip.is-active,.card-pro-result.is-active .card-pro-result__chip.is-cp,.card-pro-result.is-active .card-pro-result__chip.is-ap{background:#16a34a;border-color:#16a34a;color:#fff;}
 .card-pro-result.is-inactive .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
 .card-pro-result.is-unknown .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
 
@@ -3945,6 +3943,13 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   }
 
   function formatCnapsDateFr(value){const x=String(value||"").trim();const m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:x;}
+  const cardProTrainingStartDate = {{ (session.date_start or "")|tojson }};
+  function isApShActiveExpiredBeforeTraining(value, expirationDate){
+    const status = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
+    const expiration = String(expirationDate || "").trim().match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
+    const trainingStart = String(cardProTrainingStartDate || "").trim().match(/^\d{4}-\d{2}-\d{2}/)?.[0] || "";
+    return status === "AP SH ACTIF" && Boolean(expiration && trainingStart && expiration < trainingStart);
+  }
   function renderCardProFollowupResult(resultEl, data, mode){
     if(data && data.check_status === "error"){
       resultEl.className = "card-pro-result is-unknown";
@@ -3960,7 +3965,8 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     if(activeTitles.length){
       const chips = activeTitles.map((title)=>{
         const activity = title.display_status || title.label;
-        const colorClass = cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
+        const expirationDate = title.date_fin_validite || title.valid_until;
+        const colorClass = isApShActiveExpiredBeforeTraining(activity, expirationDate) ? "is-inactive" : cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
         return `<span class="card-pro-result__chip ${colorClass}" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}"><span class="card-pro-result__activity">${escapeHtml(activity)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`;
       }).join("");
       resultEl.className = "card-pro-result is-active";
@@ -3973,12 +3979,12 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
       const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
       const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
-      const colorClass = validityMode === "active" ? cardProActivityColorClass(row.activite) : `is-${validityMode}`;
+      const colorClass = validityMode === "active" ? (isApShActiveExpiredBeforeTraining(`${activity} ${validity}`, row.date_validite_titre) ? "is-inactive" : cardProActivityColorClass(row.activite)) : `is-${validityMode}`;
       return `
         <span class="card-pro-result__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""}>
           <span class="card-pro-result__activity">${escapeHtml(activity)}</span>
           <span class="card-pro-result__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>
-          ${row.date_validite_titre ? `<span class="card-pro-result__date">${escapeHtml(row.date_validite_titre)}</span>` : ""}
+          ${row.date_validite_titre ? `<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}</span>` : ""}
         </span>
       `;
     }).join("");

@@ -1,5 +1,6 @@
 import datetime
 import unittest
+from unittest.mock import patch
 
 import app
 
@@ -26,6 +27,38 @@ class AdminBillingSpecificCasesTests(unittest.TestCase):
         self.assertTrue(line["specificCase"])
         self.assertTrue(line["specificCaseAutomatic"])
         self.assertIn("espèces", line["specificCaseReason"])
+
+    def test_cash_payment_does_not_block_other_financing_invoice(self):
+        session = self._session(cash=True)
+        trainee = session["trainees"][0]
+        trainee["other_amount"] = 900
+
+        lines = app.buildBillingLinesFromSessions([session])
+        other_line = next(line for line in lines if line["financingType"] == "AUTRE")
+
+        self.assertFalse(other_line["specificCase"])
+        self.assertFalse(other_line["specificCaseAutomatic"])
+        self.assertEqual(other_line["specificCaseReason"], "")
+
+    def test_old_automatic_cash_flag_no_longer_blocks_other_financing(self):
+        session = self._session(cash=True)
+        trainee = session["trainees"][0]
+        trainee["other_amount"] = 900
+        initial_lines = app.buildBillingLinesFromSessions([session])
+        other_line = next(line for line in initial_lines if line["financingType"] == "AUTRE")
+
+        rebuilt = app.buildBillingLinesFromSessions([session], {
+            other_line["id"]: {
+                "id": other_line["id"],
+                "specificCase": True,
+                "specificCaseAutomatic": True,
+                "specificCaseReason": "Paiement en espèces indiqué dans la fiche stagiaire.",
+            }
+        })
+        rebuilt_other = next(line for line in rebuilt if line["financingType"] == "AUTRE")
+
+        self.assertFalse(rebuilt_other["specificCase"])
+        self.assertFalse(rebuilt_other["specificCaseAutomatic"])
 
     def test_manual_specific_case_is_restored_from_persisted_line(self):
         base = app.buildBillingLinesFromSessions([self._session()])[0]
@@ -54,10 +87,27 @@ class AdminBillingSpecificCasesTests(unittest.TestCase):
         self.assertIn("Cas spécifique", template)
         self.assertIn("Pourquoi est-ce un cas spécifique ?", template)
         self.assertIn("specific-case-row", template)
-        self.assertIn("Génération désactivée", template)
+        self.assertNotIn("Génération désactivée", template)
+        self.assertNotIn("selected.has(l.id)&&!l.specificCase", template)
+        self.assertNotIn("filtered.filter(l=>!l.specificCase)", template)
         self.assertIn('data-external="${id}">Générée ailleurs</button>', template)
         self.assertIn("['specific_case','Cas spécifique',specificCases.length", template)
         self.assertNotIn("['draft','Factures en brouillon'", template)
         self.assertIn('l.specificCase&&has&&!isExternalInvoice(l)', template)
         self.assertIn('data-reset-external="${id}">Générée ailleurs</button>', template)
         self.assertNotIn('disabled title="Activé automatiquement par le paiement en espèces"', template)
+
+    def test_specific_case_reaches_invoice_generation_checks(self):
+        data = {"sessions": [self._session()]}
+        line = app.buildBillingLinesFromSessions(data["sessions"])[0]
+        line["specificCase"] = True
+        line["specificCaseReason"] = "Dossier à vérifier"
+        data["billing_lines"] = [line]
+
+        with patch.object(app, "_qonto_is_configured", return_value=False), \
+                patch.object(app, "save_data"):
+            ok, result = app._create_invoice_for_billing_line(data, line)
+
+        self.assertFalse(ok)
+        self.assertEqual(result["error"], "Qonto n’est pas connecté")
+        self.assertNotIn("cas spécifique", result["message"])

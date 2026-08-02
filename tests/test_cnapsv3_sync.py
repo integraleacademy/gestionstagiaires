@@ -1,5 +1,6 @@
 import io
 import unittest
+from unittest import mock
 
 from flask import render_template
 
@@ -1928,6 +1929,22 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
 
+    def test_tracking_page_displays_taj_warning_for_ten_day_empty_status(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+        data = {"sessions": [], "cnaps_public_annuaire_statuses": {
+            "DOE|1234567": {"known": False, "status_since": "2020-01-01T00:00:00Z"},
+        }}
+        with mock.patch.object(gestion_app, "fetch_cnapsv3_tracking_requests", return_value=([{
+            "last_name": "DOE", "first_name": "Jane", "nub": "1234567", "cnaps_status": "TRANSMIS",
+        }], None)), mock.patch.object(gestion_app, "load_data", return_value=data):
+            response = client.get("/admin/sessions/suivi-cnaps")
+        html = response.get_data(as_text=True)
+        self.assertIn('data-taj-suspected="true"', html)
+        self.assertIn("Suspicion de TAJ", html)
+
     def test_tracking_page_prioritizes_pending_status_changes_and_excludes_seen_ones(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
@@ -2023,6 +2040,20 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn('data-nub="1079213"', html)
         self.assertIn('normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"', html)
         self.assertIn('validite_titre:"ACTIF"', html)
+
+    def test_tracking_page_displays_active_ap_titles_in_green(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = client.get("/admin/sessions/suivi-cnaps")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            ".card-pro-result__chip.is-active,.card-pro-result__chip.is-cp,.card-pro-result__chip.is-ap{background:#16a34a",
+            response.get_data(as_text=True),
+        )
 
     def test_tracking_page_offers_manual_nub_entry_when_nub_is_missing(self):
         client = gestion_app.app.test_client()
