@@ -36978,6 +36978,7 @@ def admin_vae_export(dossier_id: str):
     )
 
 DESP_TRAINING_QCU_LIMIT = 4
+DESP_OFFICIAL_QCU_QUESTION_SECONDS = 45
 DESP_TRAINING_QCU_QUESTIONS = [
     {"question": "Quelle autorité délivre l'autorisation d'exercer d'une entreprise de sécurité privée ?", "choices": ["Le CNAPS", "La préfecture", "La mairie", "La chambre de commerce"], "answer": 0},
     {"question": "Pendant combien de temps les documents relatifs au contrôle des salariés doivent-ils rester accessibles ?", "choices": ["Un mois", "Un an", "Selon les durées légales applicables", "Ils ne sont jamais conservés"], "answer": 2},
@@ -36997,6 +36998,33 @@ def _desp_exam_or_404(data: Dict[str, Any], session_id: str) -> Dict[str, Any]:
     if not session_obj or not _is_desp_initial_session(session_obj):
         abort(404)
     return session_obj
+
+
+def _desp_official_attempt_or_404(exam: Dict[str, Any], attempt_id: str) -> Dict[str, Any]:
+    attempt = next((item for item in exam.get("desp_official_qcu_attempts", [])
+                    if isinstance(item, dict) and item.get("id") == attempt_id), None)
+    if not attempt:
+        abort(404)
+    return attempt
+
+
+def _desp_training_attempt_or_404(exam: Dict[str, Any], attempt_id: str) -> Dict[str, Any]:
+    attempt = next((item for item in exam.get("desp_training_qcu_attempts", [])
+                    if isinstance(item, dict) and item.get("id") == attempt_id), None)
+    if not attempt:
+        abort(404)
+    return attempt
+
+
+def _desp_qcu_audit(attempt: Dict[str, Any], event: str, **details: Any) -> str:
+    """Append-only, server-dated audit trail for a DESP QCU attempt."""
+    timestamp = _now_iso_utc()
+    attempt.setdefault("audit_log", []).append({"at": timestamp, "event": event, **details})
+    return timestamp
+
+
+def _desp_qcu_parse_utc(value: str) -> datetime.datetime:
+    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 @app.get("/admin/exams")
@@ -37027,7 +37055,15 @@ def admin_exam_training_qcu_start(session_id: str):
         attempts = exam["desp_training_qcu_attempts"] = []
     if len(attempts) >= DESP_TRAINING_QCU_LIMIT:
         return redirect(url_for("admin_exam_detail", session_id=session_id, limit="1"))
-    attempt = {"id": uuid.uuid4().hex, "started_at": _now_iso_utc(), "status": "in_progress"}
+    attempt = {
+        "id": uuid.uuid4().hex,
+        "started_at": _now_iso_utc(),
+        "status": "ready",
+        "questions": [],
+        "answers": [],
+        "audit_log": [],
+    }
+    _desp_qcu_audit(attempt, "attempt_created")
     attempts.append(attempt)
     save_data(data)
     return redirect(url_for("admin_exam_training_qcu_play", session_id=session_id, attempt_id=attempt["id"]))
@@ -37038,12 +37074,95 @@ def admin_exam_training_qcu_start(session_id: str):
 def admin_exam_training_qcu_play(session_id: str, attempt_id: str):
     data = load_data()
     exam = _desp_exam_or_404(data, session_id)
-    attempt = next((a for a in exam.get("desp_training_qcu_attempts", []) if a.get("id") == attempt_id), None)
-    if not attempt:
-        abort(404)
+    attempt = _desp_training_attempt_or_404(exam, attempt_id)
     if attempt.get("status") == "completed":
         return redirect(url_for("admin_exam_detail", session_id=session_id, completed="1"))
-    return render_template("admin_exam_qcu.html", exam=exam, attempt=attempt, questions=DESP_TRAINING_QCU_QUESTIONS)
+    claim_key = f"desp_training_qcu_{attempt_id}"
+    claim = session.get(claim_key)
+    if attempt.get("claim_id") and claim != attempt["claim_id"]:
+        _desp_qcu_audit(attempt, "unauthorized_resume_rejected")
+        save_data(data)
+        abort(409, "Cet entraînement est déjà ouvert sur un autre navigateur.")
+    if not attempt.get("claim_id"):
+        attempt["claim_id"] = uuid.uuid4().hex
+        attempt["status"] = "in_progress"
+        session[claim_key] = attempt["claim_id"]
+        _desp_qcu_audit(attempt, "attempt_claimed")
+        save_data(data)
+    return render_template("admin_exam_qcu.html", exam=exam, attempt=attempt,
+                           question_count=len(DESP_TRAINING_QCU_QUESTIONS),
+                           question_seconds=DESP_OFFICIAL_QCU_QUESTION_SECONDS)
+
+
+def _desp_training_claim_or_409(attempt: Dict[str, Any], attempt_id: str) -> None:
+    if attempt.get("status") != "in_progress" or session.get(f"desp_training_qcu_{attempt_id}") != attempt.get("claim_id"):
+        abort(409, "Entraînement verrouillé ou reprise non autorisée.")
+
+
+@app.get("/admin/exams/<session_id>/training-qcu/<attempt_id>/clock")
+@admin_login_required
+def admin_exam_training_qcu_clock(session_id: str, attempt_id: str):
+    data = load_data()
+    attempt = _desp_training_attempt_or_404(_desp_exam_or_404(data, session_id), attempt_id)
+    _desp_training_claim_or_409(attempt, attempt_id)
+    return {"server_time": _now_iso_utc()}
+
+
+@app.post("/admin/exams/<session_id>/training-qcu/<attempt_id>/questions/<int:index>/open")
+@admin_login_required
+def admin_exam_training_qcu_open_question(session_id: str, attempt_id: str, index: int):
+    data = load_data()
+    attempt = _desp_training_attempt_or_404(_desp_exam_or_404(data, session_id), attempt_id)
+    _desp_training_claim_or_409(attempt, attempt_id)
+    if index < 0 or index >= len(DESP_TRAINING_QCU_QUESTIONS):
+        abort(404)
+    questions = attempt.setdefault("questions", [])
+    if index < len(questions):
+        return questions[index]
+    if index != len(questions):
+        return {"ok": False, "error": "Ordre des questions invalide."}, 409
+    if index and not any(answer.get("question_index") == index - 1 for answer in attempt.get("answers", [])):
+        if datetime.datetime.now(datetime.timezone.utc) <= _desp_qcu_parse_utc(questions[index - 1]["deadline_at"]):
+            return {"ok": False, "error": "La question précédente est encore active."}, 409
+    opened_at = _desp_qcu_audit(attempt, "question_opened", question_index=index)
+    deadline = _desp_qcu_parse_utc(opened_at) + datetime.timedelta(seconds=DESP_OFFICIAL_QCU_QUESTION_SECONDS)
+    source = DESP_TRAINING_QCU_QUESTIONS[index]
+    question = {"question_index": index, "question": source["question"], "choices": source["choices"],
+                "opened_at": opened_at, "deadline_at": deadline.isoformat().replace("+00:00", "Z")}
+    questions.append(question)
+    save_data(data)
+    return question, 201
+
+
+@app.post("/admin/exams/<session_id>/training-qcu/<attempt_id>/questions/<int:index>/answer")
+@admin_login_required
+def admin_exam_training_qcu_answer(session_id: str, attempt_id: str, index: int):
+    data = load_data()
+    attempt = _desp_training_attempt_or_404(_desp_exam_or_404(data, session_id), attempt_id)
+    _desp_training_claim_or_409(attempt, attempt_id)
+    questions = attempt.get("questions", [])
+    if index < 0 or index >= len(questions):
+        return {"ok": False, "error": "Question non ouverte."}, 409
+    existing_answer = next((answer for answer in attempt.get("answers", [])
+                            if answer.get("question_index") == index), None)
+    received_at = _now_iso_utc()
+    selected = (request.get_json(silent=True) or {}).get("answer")
+    if not isinstance(selected, int) or selected < 0 or selected >= len(DESP_TRAINING_QCU_QUESTIONS[index]["choices"]):
+        return {"ok": False, "error": "Réponse invalide."}, 400
+    if existing_answer:
+        if existing_answer.get("selected_answer") == selected:
+            return {"ok": True, **existing_answer, "replayed": True}
+        return {"ok": False, "error": "Une autre réponse est déjà enregistrée."}, 409
+    if _desp_qcu_parse_utc(received_at) > _desp_qcu_parse_utc(questions[index]["deadline_at"]):
+        _desp_qcu_audit(attempt, "late_answer_rejected", question_index=index, selected_answer=selected,
+                        received_at=received_at)
+        save_data(data)
+        return {"ok": False, "error": "Réponse reçue après l’échéance serveur.", "received_at": received_at}, 409
+    answer = {"question_index": index, "selected_answer": selected, "received_at": received_at}
+    attempt.setdefault("answers", []).append(answer)
+    _desp_qcu_audit(attempt, "answer_recorded", **answer)
+    save_data(data)
+    return {"ok": True, **answer}
 
 
 @app.post("/admin/exams/<session_id>/training-qcu/<attempt_id>/complete")
@@ -37051,14 +37170,158 @@ def admin_exam_training_qcu_play(session_id: str, attempt_id: str):
 def admin_exam_training_qcu_complete(session_id: str, attempt_id: str):
     data = load_data()
     exam = _desp_exam_or_404(data, session_id)
-    attempt = next((a for a in exam.get("desp_training_qcu_attempts", []) if a.get("id") == attempt_id), None)
-    if not attempt:
-        abort(404)
+    attempt = _desp_training_attempt_or_404(exam, attempt_id)
+    _desp_training_claim_or_409(attempt, attempt_id)
     if attempt.get("status") != "completed":
+        questions = attempt.get("questions", [])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if len(questions) != len(DESP_TRAINING_QCU_QUESTIONS) or any(
+            not any(answer.get("question_index") == index for answer in attempt.get("answers", []))
+            and now <= _desp_qcu_parse_utc(question["deadline_at"])
+            for index, question in enumerate(questions)
+        ):
+            return {"ok": False, "error": "Toutes les questions doivent être traitées avant de terminer."}, 409
         attempt["status"] = "completed"
         attempt["completed_at"] = _now_iso_utc()
+        _desp_qcu_audit(attempt, "attempt_completed")
+        session.pop(f"desp_training_qcu_{attempt_id}", None)
         save_data(data)
     return {"ok": True, "redirect": url_for("admin_exam_detail", session_id=session_id, completed="1")}
+
+
+@app.post("/admin/exams/<session_id>/official-qcu/<candidate_id>")
+@admin_login_required
+def admin_exam_official_qcu_start(session_id: str, candidate_id: str):
+    """Create the one non-resumable official attempt assigned to a candidate."""
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    candidate = next((item for item in _session_trainees_list(exam)
+                      if str(item.get("id")) == candidate_id), None)
+    if not candidate:
+        abort(404)
+    attempts = exam.setdefault("desp_official_qcu_attempts", [])
+    existing = next((item for item in attempts if item.get("candidate_id") == candidate_id), None)
+    if existing:
+        return {"ok": False, "error": "Une tentative officielle existe déjà pour ce candidat."}, 409
+    attempt = {
+        "id": uuid.uuid4().hex,
+        "candidate_id": candidate_id,
+        "candidate_name": f"{candidate.get('first_name', '')} {candidate.get('last_name', '')}".strip(),
+        "status": "ready",
+        "created_at": _now_iso_utc(),
+        "questions": [],
+        "answers": [],
+        "audit_log": [],
+    }
+    _desp_qcu_audit(attempt, "attempt_created")
+    attempts.append(attempt)
+    save_data(data)
+    return {"ok": True, "play_url": url_for("admin_exam_official_qcu_play", session_id=session_id,
+                                               attempt_id=attempt["id"]), "attempt_id": attempt["id"]}, 201
+
+
+@app.get("/admin/exams/<session_id>/official-qcu/<attempt_id>")
+@admin_login_required
+def admin_exam_official_qcu_play(session_id: str, attempt_id: str):
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    attempt = _desp_official_attempt_or_404(exam, attempt_id)
+    if attempt.get("status") in {"completed", "locked"}:
+        return redirect(url_for("admin_exam_detail", session_id=session_id))
+    claim_key = f"desp_official_qcu_{attempt_id}"
+    claim = session.get(claim_key)
+    if attempt.get("claim_id") and claim != attempt["claim_id"]:
+        _desp_qcu_audit(attempt, "unauthorized_resume_rejected")
+        save_data(data)
+        abort(409, "Cette tentative est déjà ouverte sur un autre navigateur.")
+    if not attempt.get("claim_id"):
+        attempt["claim_id"] = uuid.uuid4().hex
+        attempt["status"] = "in_progress"
+        session[claim_key] = attempt["claim_id"]
+        _desp_qcu_audit(attempt, "attempt_claimed")
+        save_data(data)
+    return render_template("admin_exam_qcu_official.html", exam=exam, attempt=attempt,
+                           question_count=len(DESP_TRAINING_QCU_QUESTIONS),
+                           question_seconds=DESP_OFFICIAL_QCU_QUESTION_SECONDS)
+
+
+def _desp_official_claim_or_409(attempt: Dict[str, Any], attempt_id: str) -> None:
+    if attempt.get("status") != "in_progress" or session.get(f"desp_official_qcu_{attempt_id}") != attempt.get("claim_id"):
+        abort(409, "Tentative verrouillée ou reprise non autorisée.")
+
+
+@app.get("/admin/exams/<session_id>/official-qcu/<attempt_id>/clock")
+@admin_login_required
+def admin_exam_official_qcu_clock(session_id: str, attempt_id: str):
+    data = load_data()
+    attempt = _desp_official_attempt_or_404(_desp_exam_or_404(data, session_id), attempt_id)
+    _desp_official_claim_or_409(attempt, attempt_id)
+    return {"server_time": _now_iso_utc()}
+
+
+@app.post("/admin/exams/<session_id>/official-qcu/<attempt_id>/questions/<int:index>/open")
+@admin_login_required
+def admin_exam_official_qcu_open_question(session_id: str, attempt_id: str, index: int):
+    data = load_data()
+    attempt = _desp_official_attempt_or_404(_desp_exam_or_404(data, session_id), attempt_id)
+    _desp_official_claim_or_409(attempt, attempt_id)
+    if index < 0 or index >= len(DESP_TRAINING_QCU_QUESTIONS):
+        abort(404)
+    questions = attempt.setdefault("questions", [])
+    if index < len(questions):
+        return questions[index]
+    if index != len(questions):
+        return {"ok": False, "error": "Ordre des questions invalide."}, 409
+    if index and not any(answer.get("question_index") == index - 1 for answer in attempt.get("answers", [])):
+        previous_deadline = _desp_qcu_parse_utc(questions[index - 1]["deadline_at"])
+        if datetime.datetime.now(datetime.timezone.utc) <= previous_deadline:
+            return {"ok": False, "error": "La question précédente est encore active."}, 409
+    opened_at = _desp_qcu_audit(attempt, "question_opened", question_index=index)
+    deadline = _desp_qcu_parse_utc(opened_at) + datetime.timedelta(seconds=DESP_OFFICIAL_QCU_QUESTION_SECONDS)
+    source = DESP_TRAINING_QCU_QUESTIONS[index]
+    question = {"question_index": index, "question": source["question"], "choices": source["choices"],
+                "opened_at": opened_at, "deadline_at": deadline.isoformat().replace("+00:00", "Z")}
+    questions.append(question)
+    save_data(data)
+    return question, 201
+
+
+@app.post("/admin/exams/<session_id>/official-qcu/<attempt_id>/questions/<int:index>/answer")
+@admin_login_required
+def admin_exam_official_qcu_answer(session_id: str, attempt_id: str, index: int):
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    attempt = _desp_official_attempt_or_404(exam, attempt_id)
+    _desp_official_claim_or_409(attempt, attempt_id)
+    questions = attempt.get("questions", [])
+    if index >= len(questions) or index < 0:
+        return {"ok": False, "error": "Question non ouverte."}, 409
+    existing_answer = next((answer for answer in attempt.get("answers", [])
+                            if answer.get("question_index") == index), None)
+    received_at = _now_iso_utc()
+    selected = (request.get_json(silent=True) or {}).get("answer")
+    if not isinstance(selected, int) or selected < 0 or selected >= len(DESP_TRAINING_QCU_QUESTIONS[index]["choices"]):
+        return {"ok": False, "error": "Réponse invalide."}, 400
+    if existing_answer:
+        if existing_answer.get("selected_answer") == selected:
+            return {"ok": True, **existing_answer, "replayed": True,
+                    "completed": attempt["status"] == "completed"}
+        return {"ok": False, "error": "Une autre réponse est déjà enregistrée."}, 409
+    if _desp_qcu_parse_utc(received_at) > _desp_qcu_parse_utc(questions[index]["deadline_at"]):
+        _desp_qcu_audit(attempt, "late_answer_rejected", question_index=index, selected_answer=selected,
+                        received_at=received_at)
+        save_data(data)
+        return {"ok": False, "error": "Réponse reçue après l’échéance serveur.", "received_at": received_at}, 409
+    answer = {"question_index": index, "selected_answer": selected, "received_at": received_at}
+    attempt.setdefault("answers", []).append(answer)
+    _desp_qcu_audit(attempt, "answer_recorded", **answer)
+    if index == len(DESP_TRAINING_QCU_QUESTIONS) - 1:
+        attempt["status"] = "completed"
+        attempt["completed_at"] = received_at
+        _desp_qcu_audit(attempt, "attempt_completed")
+        session.pop(f"desp_official_qcu_{attempt_id}", None)
+    save_data(data)
+    return {"ok": True, **answer, "completed": attempt["status"] == "completed"}
 
 
 @app.get("/admin/sessions/")
