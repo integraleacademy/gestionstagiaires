@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="breadcrumbs"><a href="{{ url_for('admin_sessions') }}">← Retour aux sessions</a></div>
+<div class="page-head"><div><span class="pill">DESP initial</span><h1>Gestion des examens</h1><p class="muted">Retrouvez toutes les sessions d'examen et accédez à leurs candidats et QCU d'entraînement.</p></div></div>
+<div class="grid cards" style="margin-top:20px;">
+  {% for exam in exams %}
+  {% set attempts = exam.get('desp_training_qcu_attempts', []) if exam.get('desp_training_qcu_attempts', []) is iterable else [] %}
+  <a class="card" href="{{ url_for('admin_exam_detail', session_id=exam.id) }}" style="text-decoration:none;color:inherit;padding:22px;">
+    <span class="pill">Examen DESP</span><h2 style="margin-bottom:8px;">{{ exam.name }}</h2>
+    <p>Session : <strong>{{ exam.date_start|frdate }}</strong> → <strong>{{ exam.date_end|frdate }}</strong></p>
+    <p>Examen : <strong>{{ exam.exam_date|frdate }}</strong></p>
+    <p>{{ exam.get('trainees', exam.get('stagiaires', []))|length }} candidat(s) · {{ attempts|length }}/{{ qcu_limit }} QCU utilisés</p>
+  </a>
+  {% else %}<div class="card" style="padding:30px;"><h2>Aucun examen DESP initial</h2><p class="muted">Les sessions DESP initial apparaîtront automatiquement ici.</p></div>{% endfor %}
+</div>
+{% endblock %}

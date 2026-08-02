@@ -19766,6 +19766,7 @@ def admin_trainees(session_id: str):
         is_vtc=is_vtc,
         is_aps=is_aps,
         is_dirigeant=is_dirigeant,
+        is_desp_initial=_is_desp_initial_session(s),
         finance_summary=_admin_trainees_finance_summary(session_view, trainees),
         vae_dashboard_counts=vae_dashboard_counts,
         enums=ENUMS,
@@ -36975,6 +36976,90 @@ def admin_vae_export(dossier_id: str):
         decision_labels=decision_labels,
         annex_pages=1,
     )
+
+DESP_TRAINING_QCU_LIMIT = 4
+DESP_TRAINING_QCU_QUESTIONS = [
+    {"question": "Quelle autorité délivre l'autorisation d'exercer d'une entreprise de sécurité privée ?", "choices": ["Le CNAPS", "La préfecture", "La mairie", "La chambre de commerce"], "answer": 0},
+    {"question": "Pendant combien de temps les documents relatifs au contrôle des salariés doivent-ils rester accessibles ?", "choices": ["Un mois", "Un an", "Selon les durées légales applicables", "Ils ne sont jamais conservés"], "answer": 2},
+    {"question": "Quel principe doit guider le dirigeant lors de la collecte de données personnelles ?", "choices": ["Collecter toutes les données possibles", "Limiter la collecte aux données nécessaires", "Partager les données avec tous les clients", "Conserver les données sans limite"], "answer": 1},
+    {"question": "Avant d'affecter un agent à une mission, le dirigeant doit notamment vérifier :", "choices": ["Sa carte professionnelle en cours de validité", "Son permis de construire", "Son inscription électorale", "Son abonnement de transport"], "answer": 0},
+    {"question": "En cas d'incident sur une prestation, quelle action est prioritaire pour le dirigeant ?", "choices": ["Supprimer toute trace", "Attendre la fin du contrat", "Sécuriser, consigner les faits et appliquer les procédures", "Publier immédiatement sur les réseaux sociaux"], "answer": 2},
+]
+
+
+def _is_desp_initial_session(session_obj: Dict[str, Any]) -> bool:
+    descriptor = f"{_session_get(session_obj, 'training_type', '')} {_session_get(session_obj, 'name', '')}".upper()
+    return ("DESP" in descriptor or "DIRIGEANT" in descriptor) and "VAE" not in descriptor
+
+
+def _desp_exam_or_404(data: Dict[str, Any], session_id: str) -> Dict[str, Any]:
+    session_obj = find_session(data, session_id)
+    if not session_obj or not _is_desp_initial_session(session_obj):
+        abort(404)
+    return session_obj
+
+
+@app.get("/admin/exams")
+@admin_login_required
+def admin_exams():
+    data = load_data()
+    exams = [s for s in data.get("sessions", []) if isinstance(s, dict) and not s.get("archived") and _is_desp_initial_session(s)]
+    exams.sort(key=lambda s: (_session_get(s, "exam_date", "") or "9999", _session_get(s, "name", "")))
+    return render_template("admin_exams.html", exams=exams, qcu_limit=DESP_TRAINING_QCU_LIMIT)
+
+
+@app.get("/admin/exams/<session_id>")
+@admin_login_required
+def admin_exam_detail(session_id: str):
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    attempts = exam.get("desp_training_qcu_attempts") if isinstance(exam.get("desp_training_qcu_attempts"), list) else []
+    return render_template("admin_exam_detail.html", exam=exam, trainees=_session_trainees_list(exam), attempts=attempts, qcu_limit=DESP_TRAINING_QCU_LIMIT, completed=request.args.get("completed") == "1")
+
+
+@app.post("/admin/exams/<session_id>/training-qcu")
+@admin_login_required
+def admin_exam_training_qcu_start(session_id: str):
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    attempts = exam.setdefault("desp_training_qcu_attempts", [])
+    if not isinstance(attempts, list):
+        attempts = exam["desp_training_qcu_attempts"] = []
+    if len(attempts) >= DESP_TRAINING_QCU_LIMIT:
+        return redirect(url_for("admin_exam_detail", session_id=session_id, limit="1"))
+    attempt = {"id": uuid.uuid4().hex, "started_at": _now_iso_utc(), "status": "in_progress"}
+    attempts.append(attempt)
+    save_data(data)
+    return redirect(url_for("admin_exam_training_qcu_play", session_id=session_id, attempt_id=attempt["id"]))
+
+
+@app.get("/admin/exams/<session_id>/training-qcu/<attempt_id>")
+@admin_login_required
+def admin_exam_training_qcu_play(session_id: str, attempt_id: str):
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    attempt = next((a for a in exam.get("desp_training_qcu_attempts", []) if a.get("id") == attempt_id), None)
+    if not attempt:
+        abort(404)
+    if attempt.get("status") == "completed":
+        return redirect(url_for("admin_exam_detail", session_id=session_id, completed="1"))
+    return render_template("admin_exam_qcu.html", exam=exam, attempt=attempt, questions=DESP_TRAINING_QCU_QUESTIONS)
+
+
+@app.post("/admin/exams/<session_id>/training-qcu/<attempt_id>/complete")
+@admin_login_required
+def admin_exam_training_qcu_complete(session_id: str, attempt_id: str):
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    attempt = next((a for a in exam.get("desp_training_qcu_attempts", []) if a.get("id") == attempt_id), None)
+    if not attempt:
+        abort(404)
+    if attempt.get("status") != "completed":
+        attempt["status"] = "completed"
+        attempt["completed_at"] = _now_iso_utc()
+        save_data(data)
+    return {"ok": True, "redirect": url_for("admin_exam_detail", session_id=session_id, completed="1")}
+
 
 @app.get("/admin/sessions/")
 def admin_sessions_slash_redirect():
