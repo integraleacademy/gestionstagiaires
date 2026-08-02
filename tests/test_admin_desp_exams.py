@@ -40,7 +40,8 @@ class AdminDespExamTests(unittest.TestCase):
         player = self.client.get(f"/admin/exams/DESP-1/training-qcu/{attempt_id}")
         self.assertIn("Quelle autorit", player.get_data(as_text=True))
         self.assertIn('id="timer">45', player.get_data(as_text=True))
-        self.assertIn("performance.now()+QUESTION_DURATION_MS", player.get_data(as_text=True))
+        self.assertIn("localStorage.getItem(stateKey)", player.get_data(as_text=True))
+        self.assertIn("deadline-Date.now()", player.get_data(as_text=True))
         self.assertIn("Math.ceil(left/1000)", player.get_data(as_text=True))
         complete = self.client.post(f"/admin/exams/DESP-1/training-qcu/{attempt_id}/complete")
         self.assertTrue(complete.get_json()["ok"])
@@ -65,6 +66,11 @@ class AdminDespExamTests(unittest.TestCase):
         self.assertIn("Alice MARTIN", player.get_data(as_text=True))
         question = self.client.get(f"/espace/TOKEN-1/qcu/training/{attempt['id']}/question/0")
         self.assertEqual(question.status_code, 200)
+        first_deadline = question.get_json()["deadline_at"]
+        self.assertIn("server_time", question.get_json())
+        refreshed = self.client.get(f"/espace/TOKEN-1/qcu/training/{attempt['id']}/question/0")
+        self.assertEqual(refreshed.get_json()["deadline_at"], first_deadline)
+        self.assertEqual(attempt["candidates"][0]["question_deadlines"], [first_deadline])
         answer = self.client.post(f"/espace/TOKEN-1/qcu/training/{attempt['id']}/answer",
                                   json={"position": 0, "answer": 0})
         self.assertEqual(answer.status_code, 200)
