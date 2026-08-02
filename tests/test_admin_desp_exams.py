@@ -51,6 +51,45 @@ class AdminDespExamTests(unittest.TestCase):
     def test_non_initial_desp_exam_is_not_accessible(self):
         self.assertEqual(self.client.get("/admin/exams/VAE-1").status_code, 404)
 
+    def test_official_qcu_records_server_deadlines_answers_and_candidate_audit(self):
+        started = self.client.post("/admin/exams/DESP-1/official-qcu/T1")
+        self.assertEqual(started.status_code, 201)
+        attempt_id = started.get_json()["attempt_id"]
+        play = self.client.get(started.get_json()["play_url"])
+        self.assertEqual(play.status_code, 200)
+        self.assertIn("coupure réseau", play.get_data(as_text=True))
+
+        opened = self.client.post(f"/admin/exams/DESP-1/official-qcu/{attempt_id}/questions/0/open")
+        self.assertEqual(opened.status_code, 201)
+        self.assertIn("opened_at", opened.get_json())
+        self.assertIn("deadline_at", opened.get_json())
+        answered = self.client.post(
+            f"/admin/exams/DESP-1/official-qcu/{attempt_id}/questions/0/answer", json={"answer": 0}
+        )
+        self.assertEqual(answered.status_code, 200)
+        attempt = self.data["sessions"][0]["desp_official_qcu_attempts"][0]
+        self.assertEqual(attempt["candidate_id"], "T1")
+        self.assertIn("received_at", attempt["answers"][0])
+        self.assertIn("question_opened", [event["event"] for event in attempt["audit_log"]])
+        self.assertIn("answer_recorded", [event["event"] for event in attempt["audit_log"]])
+
+        duplicate = self.client.post("/admin/exams/DESP-1/official-qcu/T1")
+        self.assertEqual(duplicate.status_code, 409)
+
+    def test_official_qcu_rejects_late_answer(self):
+        started = self.client.post("/admin/exams/DESP-1/official-qcu/T1").get_json()
+        attempt_id = started["attempt_id"]
+        self.client.get(started["play_url"])
+        self.client.post(f"/admin/exams/DESP-1/official-qcu/{attempt_id}/questions/0/open")
+        attempt = self.data["sessions"][0]["desp_official_qcu_attempts"][0]
+        attempt["questions"][0]["deadline_at"] = "2000-01-01T00:00:00Z"
+        late = self.client.post(
+            f"/admin/exams/DESP-1/official-qcu/{attempt_id}/questions/0/answer", json={"answer": 0}
+        )
+        self.assertEqual(late.status_code, 409)
+        self.assertEqual(attempt["answers"], [])
+        self.assertEqual(attempt["audit_log"][-1]["event"], "late_answer_rejected")
+
 
 if __name__ == "__main__":
     unittest.main()
