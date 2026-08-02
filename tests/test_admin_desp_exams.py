@@ -39,6 +39,8 @@ class AdminDespExamTests(unittest.TestCase):
         player = self.client.get(f"/admin/exams/DESP-1/training-qcu/{attempt_id}")
         self.assertIn("Quelle autorit", player.get_data(as_text=True))
         self.assertIn('id="timer">45', player.get_data(as_text=True))
+        self.assertIn("performance.now()+QUESTION_DURATION_MS", player.get_data(as_text=True))
+        self.assertIn("Math.ceil(left/1000)", player.get_data(as_text=True))
         complete = self.client.post(f"/admin/exams/DESP-1/training-qcu/{attempt_id}/complete")
         self.assertTrue(complete.get_json()["ok"])
         self.assertEqual(attempts[0]["status"], "completed")
