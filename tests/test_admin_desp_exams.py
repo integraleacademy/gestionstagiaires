@@ -11,7 +11,8 @@ class AdminDespExamTests(unittest.TestCase):
         self.data = {"sessions": [{
             "id": "DESP-1", "name": "DESP initial septembre", "training_type": "DIRIGEANT INITIAL",
             "date_start": "2026-09-01", "date_end": "2026-09-20", "exam_date": "2026-09-22",
-            "trainees": [{"id": "T1", "last_name": "MARTIN", "first_name": "Alice", "email": "alice@example.test"}],
+            "trainees": [{"id": "T1", "last_name": "MARTIN", "first_name": "Alice", "email": "alice@example.test", "public_token": "TOKEN-1"},
+                         {"id": "T2", "last_name": "DURAND", "first_name": "Lina", "email": "lina@example.test", "public_token": "TOKEN-2"}],
         }, {"id": "VAE-1", "name": "VAE DESP", "training_type": "DIRIGEANT VAE", "trainees": []}]}
         gestion_app.load_data = lambda: self.data
         gestion_app.save_data = lambda payload: None
@@ -50,6 +51,32 @@ class AdminDespExamTests(unittest.TestCase):
 
     def test_non_initial_desp_exam_is_not_accessible(self):
         self.assertEqual(self.client.get("/admin/exams/VAE-1").status_code, 404)
+
+    def test_training_is_nominative_public_and_uses_distinct_question_orders(self):
+        self.client.post("/admin/exams/DESP-1/training-qcu")
+        attempt = self.data["sessions"][0]["desp_training_qcu_attempts"][0]
+        self.assertEqual([c["candidate_id"] for c in attempt["candidates"]], ["T1", "T2"])
+        self.assertNotEqual(attempt["candidates"][0]["question_order"], attempt["candidates"][1]["question_order"])
+        with self.client.session_transaction() as session:
+            session.pop("admin_logged_in", None)
+            session["public_auth_TOKEN-1"] = True
+        player = self.client.get(f"/espace/TOKEN-1/qcu/training/{attempt['id']}")
+        self.assertEqual(player.status_code, 200)
+        self.assertIn("Alice MARTIN", player.get_data(as_text=True))
+        question = self.client.get(f"/espace/TOKEN-1/qcu/training/{attempt['id']}/question/0")
+        self.assertEqual(question.status_code, 200)
+        answer = self.client.post(f"/espace/TOKEN-1/qcu/training/{attempt['id']}/answer",
+                                  json={"position": 0, "answer": 0})
+        self.assertEqual(answer.status_code, 200)
+        self.assertEqual(len(attempt["candidates"][0]["answers"]), 1)
+
+    def test_exam_batch_and_designed_results_pdf(self):
+        self.client.post("/admin/exams/DESP-1/exam-qcu")
+        attempt = self.data["sessions"][0]["desp_exam_qcu_attempts"][0]
+        response = self.client.get(f"/admin/exams/DESP-1/qcu/exam/{attempt['id']}/results.pdf")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertTrue(response.data.startswith(b"%PDF"))
 
     def test_official_qcu_records_server_deadlines_answers_and_candidate_audit(self):
         started = self.client.post("/admin/exams/DESP-1/official-qcu/T1")

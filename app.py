@@ -16,6 +16,7 @@ import importlib.util
 import time
 import subprocess
 import secrets
+import random
 import base64
 import logging
 import signal
@@ -25387,6 +25388,18 @@ def public_trainee_space(token):
     ssiap_exam_date = str(_session_get(s, "ssiap_exam_date", "") or "").strip() or str(t.get("ssiap_exam_date") or "").strip()
     ssiap_medical_from_date = _subtract_months(ssiap_exam_date, 3) if ssiap_exam_date else ""
     public_invoices = _public_invoice_lines_for_trainee(data, s, t)
+    public_qcus = []
+    if _is_desp_initial_session(s):
+        candidate_id = str(t.get("id") or "")
+        for kind, key, label in (("training", "desp_training_qcu_attempts", "QCU d’entraînement"),
+                                 ("exam", "desp_exam_qcu_attempts", "QCU d’examen")):
+            for number, attempt in enumerate(s.get(key, []), 1):
+                assigned = next((c for c in attempt.get("candidates", []) if c.get("candidate_id") == candidate_id), None)
+                if assigned:
+                    score = sum(1 for answer in assigned.get("answers", []) if answer.get("correct"))
+                    public_qcus.append({"kind": kind, "label": label, "number": number, "attempt": attempt,
+                                        "candidate": assigned, "score": score,
+                                        "total": len(DESP_TRAINING_QCU_QUESTIONS)})
 
     return render_template(
         "public_trainee.html",
@@ -25405,6 +25418,7 @@ def public_trainee_space(token):
         ssiap_exam_date=ssiap_exam_date,
         ssiap_medical_from_date=ssiap_medical_from_date,
         public_invoices=public_invoices,
+        public_qcus=public_qcus,
     )
 
 
@@ -37019,6 +37033,59 @@ def _desp_qcu_parse_utc(value: str) -> datetime.datetime:
     return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _desp_candidate_name(candidate: Dict[str, Any]) -> str:
+    return f"{candidate.get('first_name', '')} {candidate.get('last_name', '')}".strip() or "Candidat"
+
+
+def _desp_new_candidate_attempt(candidate: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a nominative QCU copy with a private, candidate-specific question order."""
+    order = list(range(len(DESP_TRAINING_QCU_QUESTIONS)))
+    random.SystemRandom().shuffle(order)
+    return {
+        "candidate_id": str(candidate.get("id") or ""),
+        "candidate_name": _desp_candidate_name(candidate),
+        "status": "ready",
+        "question_order": order,
+        "answers": [],
+    }
+
+
+def _desp_candidate_attempts(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Assign distinct orders whenever the question bank has enough permutations."""
+    assigned, used = [], set()
+    for candidate in candidates:
+        item = _desp_new_candidate_attempt(candidate)
+        order = tuple(item["question_order"])
+        while order in used and len(used) < 120:  # 5! permutations for the current bank
+            random.SystemRandom().shuffle(item["question_order"])
+            order = tuple(item["question_order"])
+        used.add(order)
+        assigned.append(item)
+    return assigned
+
+
+def _desp_attempt_results(attempt: Dict[str, Any]) -> List[Dict[str, Any]]:
+    results = []
+    for candidate in attempt.get("candidates", []):
+        answers = candidate.get("answers", []) if isinstance(candidate.get("answers"), list) else []
+        score = sum(1 for answer in answers if answer.get("correct"))
+        results.append({**candidate, "score": score, "total": len(DESP_TRAINING_QCU_QUESTIONS)})
+    return results
+
+
+def _desp_public_qcu(data: Dict[str, Any], token: str, kind: str, attempt_id: str):
+    exam, trainee = find_session_and_trainee_by_token(data, token)
+    if not exam or not trainee or not _is_desp_initial_session(exam) or not _public_is_authed(token):
+        abort(404)
+    key = "desp_training_qcu_attempts" if kind == "training" else "desp_exam_qcu_attempts"
+    attempt = next((a for a in exam.get(key, []) if isinstance(a, dict) and a.get("id") == attempt_id), None)
+    candidate = next((c for c in (attempt or {}).get("candidates", [])
+                      if c.get("candidate_id") == str(trainee.get("id") or "")), None)
+    if not attempt or not candidate:
+        abort(404)
+    return exam, trainee, attempt, candidate
+
+
 @app.get("/admin/exams")
 @admin_login_required
 def admin_exams():
@@ -37034,7 +37101,10 @@ def admin_exam_detail(session_id: str):
     data = load_data()
     exam = _desp_exam_or_404(data, session_id)
     attempts = exam.get("desp_training_qcu_attempts") if isinstance(exam.get("desp_training_qcu_attempts"), list) else []
-    return render_template("admin_exam_detail.html", exam=exam, trainees=_session_trainees_list(exam), attempts=attempts, qcu_limit=DESP_TRAINING_QCU_LIMIT, completed=request.args.get("completed") == "1")
+    exam_attempts = exam.get("desp_exam_qcu_attempts") if isinstance(exam.get("desp_exam_qcu_attempts"), list) else []
+    return render_template("admin_exam_detail.html", exam=exam, trainees=_session_trainees_list(exam), attempts=attempts,
+                           exam_attempts=exam_attempts, qcu_limit=DESP_TRAINING_QCU_LIMIT,
+                           completed=request.args.get("completed") == "1")
 
 
 @app.post("/admin/exams/<session_id>/training-qcu")
@@ -37047,10 +37117,106 @@ def admin_exam_training_qcu_start(session_id: str):
         attempts = exam["desp_training_qcu_attempts"] = []
     if len(attempts) >= DESP_TRAINING_QCU_LIMIT:
         return redirect(url_for("admin_exam_detail", session_id=session_id, limit="1"))
-    attempt = {"id": uuid.uuid4().hex, "started_at": _now_iso_utc(), "status": "in_progress"}
+    attempt = {"id": uuid.uuid4().hex, "created_at": _now_iso_utc(), "status": "open",
+               "candidates": _desp_candidate_attempts(_session_trainees_list(exam))}
     attempts.append(attempt)
     save_data(data)
-    return redirect(url_for("admin_exam_training_qcu_play", session_id=session_id, attempt_id=attempt["id"]))
+    return redirect(url_for("admin_exam_detail", session_id=session_id, opened="training"))
+
+
+@app.post("/admin/exams/<session_id>/exam-qcu")
+@admin_login_required
+def admin_exam_qcu_open(session_id: str):
+    data = load_data()
+    exam = _desp_exam_or_404(data, session_id)
+    attempts = exam.setdefault("desp_exam_qcu_attempts", [])
+    attempt = {"id": uuid.uuid4().hex, "created_at": _now_iso_utc(), "status": "open",
+               "candidates": _desp_candidate_attempts(_session_trainees_list(exam))}
+    attempts.append(attempt)
+    save_data(data)
+    return redirect(url_for("admin_exam_detail", session_id=session_id, opened="exam"))
+
+
+@app.get("/espace/<token>/qcu/<kind>/<attempt_id>")
+def public_trainee_qcu(token: str, kind: str, attempt_id: str):
+    if kind not in {"training", "exam"}:
+        abort(404)
+    data = load_data()
+    exam, trainee, attempt, candidate = _desp_public_qcu(data, token, kind, attempt_id)
+    if candidate.get("status") == "ready":
+        candidate["status"] = "in_progress"
+        candidate["started_at"] = _now_iso_utc()
+        save_data(data)
+    return render_template("public_trainee_qcu.html", exam=exam, trainee=trainee, token=token, kind=kind,
+                           attempt=attempt, candidate=candidate, question_count=len(DESP_TRAINING_QCU_QUESTIONS),
+                           question_seconds=DESP_OFFICIAL_QCU_QUESTION_SECONDS)
+
+
+@app.post("/espace/<token>/qcu/<kind>/<attempt_id>/answer")
+def public_trainee_qcu_answer(token: str, kind: str, attempt_id: str):
+    data = load_data()
+    exam, trainee, attempt, candidate = _desp_public_qcu(data, token, kind, attempt_id)
+    if candidate.get("status") != "in_progress":
+        return {"ok": False, "error": "Ce QCU est déjà terminé."}, 409
+    payload = request.get_json(silent=True) or {}
+    position, selected = payload.get("position"), payload.get("answer")
+    order = candidate.get("question_order", [])
+    if not isinstance(position, int) or position != len(candidate.get("answers", [])) or position >= len(order):
+        return {"ok": False, "error": "Question invalide ou déjà répondue."}, 409
+    source_index = order[position]
+    question = DESP_TRAINING_QCU_QUESTIONS[source_index]
+    if not isinstance(selected, int) or not 0 <= selected < len(question["choices"]):
+        return {"ok": False, "error": "Réponse invalide."}, 400
+    candidate.setdefault("answers", []).append({"position": position, "question_index": source_index,
+        "selected_answer": selected, "correct": selected == question["answer"], "answered_at": _now_iso_utc()})
+    completed = len(candidate["answers"]) == len(order)
+    if completed:
+        candidate["status"] = "completed"
+        candidate["completed_at"] = _now_iso_utc()
+        if all(c.get("status") == "completed" for c in attempt.get("candidates", [])):
+            attempt["status"] = "completed"
+            attempt["completed_at"] = _now_iso_utc()
+    save_data(data)
+    return {"ok": True, "completed": completed}
+
+
+@app.get("/espace/<token>/qcu/<kind>/<attempt_id>/question/<int:position>")
+def public_trainee_qcu_question(token: str, kind: str, attempt_id: str, position: int):
+    data = load_data()
+    _, _, _, candidate = _desp_public_qcu(data, token, kind, attempt_id)
+    order = candidate.get("question_order", [])
+    if candidate.get("status") != "in_progress" or position != len(candidate.get("answers", [])) or not 0 <= position < len(order):
+        return {"ok": False, "error": "Question indisponible."}, 409
+    source = DESP_TRAINING_QCU_QUESTIONS[order[position]]
+    return {"question": source["question"], "choices": source["choices"]}
+
+
+@app.get("/admin/exams/<session_id>/qcu/<kind>/<attempt_id>/results.pdf")
+@admin_login_required
+def admin_exam_qcu_results_pdf(session_id: str, kind: str, attempt_id: str):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    data = load_data(); exam = _desp_exam_or_404(data, session_id)
+    key = "desp_training_qcu_attempts" if kind == "training" else "desp_exam_qcu_attempts"
+    attempt = next((a for a in exam.get(key, []) if a.get("id") == attempt_id), None)
+    if not attempt: abort(404)
+    output = BytesIO(); doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm)
+    styles = getSampleStyleSheet(); title = ParagraphStyle("QcuTitle", parent=styles["Title"], textColor=colors.HexColor("#312e81"))
+    story = [Paragraph("INTÉGRALE ACADEMY", title), Paragraph(f"Résultats QCU — {'Examen' if kind == 'exam' else 'Entraînement'}", styles["Heading2"]),
+             Paragraph(html.escape(str(_session_get(exam, 'name', 'Session'))), styles["Normal"]), Spacer(1, 8*mm)]
+    rows = [["Candidat", "Statut", "Score", "Réussite"]]
+    for result in _desp_attempt_results(attempt):
+        pct = round(100 * result["score"] / result["total"]) if result["total"] else 0
+        rows.append([result["candidate_name"], "Terminé" if result.get("status") == "completed" else "En cours", f"{result['score']} / {result['total']}", f"{pct} %"])
+    table = Table(rows, colWidths=[75*mm, 35*mm, 25*mm, 25*mm]); table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#312e81")), ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"), ("GRID", (0,0), (-1,-1), .4, colors.HexColor("#cbd5e1")),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#f8fafc")]), ("PADDING", (0,0), (-1,-1), 8)]))
+    story.append(table); doc.build(story); output.seek(0)
+    return send_file(output, mimetype="application/pdf", as_attachment=True, download_name="resultats-qcu.pdf")
 
 
 @app.get("/admin/exams/<session_id>/training-qcu/<attempt_id>")

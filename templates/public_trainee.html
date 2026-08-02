@@ -937,6 +937,21 @@
   <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
   {% endif %}
 
+  {% if public_qcus %}
+  <section class="card" style="margin-bottom:18px;border:1px solid #c7d2fe;background:linear-gradient(135deg,#fff,#eef2ff);">
+    <h2>📝 Mes QCU</h2>
+    <p class="muted">Ces questionnaires sont nominatifs. Répondez directement depuis votre tablette ou votre ordinateur.</p>
+    <div style="display:grid;gap:10px;margin-top:12px;">
+    {% for qcu in public_qcus %}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:13px;border-radius:12px;background:#fff;border:1px solid #e0e7ff;">
+        <div><strong>{{ qcu.label }} n° {{ qcu.number }}</strong><div class="muted">{{ 'Terminé · score enregistré : ' ~ qcu.score ~ ' / ' ~ qcu.total if qcu.candidate.status == 'completed' else ('En cours' if qcu.candidate.status == 'in_progress' else 'Prêt à démarrer') }}</div></div>
+        {% if qcu.candidate.status != 'completed' %}<a class="btn" href="{{ url_for('public_trainee_qcu', token=token_safe, kind=qcu.kind, attempt_id=qcu.attempt.id) }}">{{ 'Reprendre' if qcu.candidate.status == 'in_progress' else 'Lancer le QCU' }}</a>{% else %}<span class="pill green">✓ Réponses envoyées</span>{% endif %}
+      </div>
+    {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <div class="public-grid">
     {% if show_vtc %}
       <div class="vtc-important-notice" id="vtcImportantNotice">
