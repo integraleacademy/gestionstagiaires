@@ -25,7 +25,7 @@
     "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
     "admin_sessions_billing", "admin_direct_debits", "admin_sessions_archived", "admin_cash_payments",
     "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
-    "admin_sales_tracking"
+    "admin_sales_tracking", "admin_exams", "admin_exam_detail"
   ] %}
   {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
   {% if show_admin_sidebar %}<script>document.body.classList.add('admin-sidebar-active');</script>{% endif %}

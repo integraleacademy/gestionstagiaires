@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<style>.exam-hero{background:linear-gradient(135deg,#111827,#312e81);color:#fff;border-radius:22px;padding:28px;margin:16px 0}.exam-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}.exam-kpi{background:#fff;color:#111827;border-radius:14px;padding:16px}.exam-kpi strong{display:block;font-size:26px}.attempts{display:flex;gap:8px;flex-wrap:wrap}.attempt{border-radius:10px;padding:10px 14px;background:#e2e8f0}.attempt.done{background:#dcfce7;color:#166534}</style>
+<div class="breadcrumbs"><a href="{{ url_for('admin_exams') }}">← Tous les examens</a> · <a href="{{ url_for('admin_trainees', session_id=exam.id) }}">Voir les stagiaires</a></div>
+{% if completed %}<div class="alert success" role="status" style="margin-top:14px;">✅ Le QCU d'entraînement est terminé.</div>{% endif %}
+<section class="exam-hero"><span class="pill">DESP initial</span><h1>{{ exam.name }}</h1><p>Gestion de l'examen, des candidats et des entraînements QCU.</p>
+  <div class="exam-kpis"><div class="exam-kpi"><small>Formation</small><strong>{{ exam.date_start|frdate }}</strong><span>au {{ exam.date_end|frdate }}</span></div><div class="exam-kpi"><small>Date d'examen</small><strong>{{ exam.exam_date|frdate }}</strong></div><div class="exam-kpi"><small>Candidats</small><strong>{{ trainees|length }}</strong></div><div class="exam-kpi"><small>QCU utilisés</small><strong>{{ attempts|length }} / {{ qcu_limit }}</strong><span>{{ qcu_limit-attempts|length }} restant(s)</span></div></div>
+  <form method="post" action="{{ url_for('admin_exam_training_qcu_start', session_id=exam.id) }}" onsubmit="return confirm('Voulez-vous générer ce QCU d’entraînement ? Il sera comptabilisé parmi les {{ qcu_limit }} QCU autorisés.');">
+    <button class="btn btn-primary" type="submit" {% if attempts|length >= qcu_limit or is_read_only %}disabled{% endif %}>Générer un QCU d’entraînement</button>
+    {% if attempts|length >= qcu_limit %}<strong style="margin-left:10px;">Limite de {{ qcu_limit }} atteinte</strong>{% endif %}
+  </form>
+</section>
+<div class="card" style="padding:22px;margin-bottom:18px;"><h2>Historique des entraînements</h2><div class="attempts">{% for attempt in attempts %}<span class="attempt {{ 'done' if attempt.status == 'completed' else '' }}">QCU {{ loop.index }} · {{ 'Terminé' if attempt.status == 'completed' else 'En cours' }}</span>{% else %}<span class="muted">Aucun QCU généré pour le moment.</span>{% endfor %}</div></div>
+<div class="card" style="padding:22px;"><h2>Candidats ({{ trainees|length }})</h2><div class="table-wrap"><table class="table"><thead><tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Téléphone</th></tr></thead><tbody>{% for trainee in trainees %}<tr><td><strong>{{ trainee.last_name }}</strong></td><td>{{ trainee.first_name }}</td><td>{{ trainee.email }}</td><td>{{ trainee.phone }}</td></tr>{% else %}<tr><td colspan="4" class="muted">Aucun candidat inscrit.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

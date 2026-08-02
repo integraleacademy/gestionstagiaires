@@ -1,6 +1,7 @@
 {% import "partner_sidebar.html" as ps %}
 {% set admin_sidebar_items = [
   {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
+  {"label":"Examens","icon":"graduation","href":url_for('admin_exams'),"endpoints":["admin_exams","admin_exam_detail"],"badge":"","locked":False},
   {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
   {"label":"Gérer les partenaires","icon":"users","href":url_for('admin_partners'),"endpoints":["admin_partners","admin_partner_new","admin_partner_detail"],"badge":"","locked":False},
   {"label":"Secrétariat","icon":"clipboard","href":url_for('admin_secretariat'),"endpoints":["admin_secretariat"],"badge":"","locked":False},
