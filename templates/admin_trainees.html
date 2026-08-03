@@ -1288,10 +1288,10 @@ tr.row-todo td{
 }
 
 .vtc-status-menu{
-  position:absolute;
-  z-index:30;
-  top:calc(100% - 2px);
-  left:8px;
+  /* Le menu sort du conteneur du tableau, dont le défilement horizontal
+     masque sinon les choix des dernières lignes. */
+  position:fixed;
+  z-index:1200;
   display:flex;
   flex-direction:column;
   gap:5px;
@@ -3055,11 +3055,36 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
   // ✅ applique les couleurs au chargement
   applyAllColors();
 
-  document.addEventListener("click", ()=>{
+  function closeVtcStatusMenus(){
     document.querySelectorAll("[data-vtc-exam-status-menu]").forEach(menu=>{
       menu.hidden = true;
     });
+    document.querySelectorAll("[data-vtc-exam-status-trigger]").forEach(trigger=>{
+      trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function positionVtcStatusMenu(trigger, menu){
+    const viewportGap = 8;
+    const triggerGap = 6;
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - triggerRect.bottom - viewportGap;
+    const openAbove = spaceBelow < menuRect.height && triggerRect.top > spaceBelow;
+    const desiredTop = openAbove
+      ? triggerRect.top - menuRect.height - triggerGap
+      : triggerRect.bottom + triggerGap;
+
+    menu.style.top = `${Math.max(viewportGap, Math.min(desiredTop, window.innerHeight - menuRect.height - viewportGap))}px`;
+    menu.style.left = `${Math.max(viewportGap, Math.min(triggerRect.left, window.innerWidth - menuRect.width - viewportGap))}px`;
+  }
+
+  document.addEventListener("click", ()=>{
+    closeVtcStatusMenus();
   });
+
+  window.addEventListener("resize", closeVtcStatusMenus);
+  document.querySelector(".table-wrap")?.addEventListener("scroll", closeVtcStatusMenus, { passive:true });
 
 
   function recomputeRowHighlight(){
@@ -3790,15 +3815,19 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     });
 
     tr.querySelectorAll("[data-vtc-exam-status-trigger]").forEach(trigger=>{
+      trigger.setAttribute("aria-expanded", "false");
       trigger.addEventListener("click", (event)=>{
         event.stopPropagation();
         const mode = trigger.getAttribute("data-vtc-exam-status-trigger");
         const menu = tr.querySelector(`[data-vtc-exam-status-menu="${mode}"]`);
         if(!menu) return;
-        document.querySelectorAll("[data-vtc-exam-status-menu]").forEach(other=>{
-          if(other !== menu) other.hidden = true;
-        });
-        menu.hidden = !menu.hidden;
+        const willOpen = menu.hidden;
+        closeVtcStatusMenus();
+        if(willOpen){
+          menu.hidden = false;
+          trigger.setAttribute("aria-expanded", "true");
+          positionVtcStatusMenu(trigger, menu);
+        }
       });
     });
 
