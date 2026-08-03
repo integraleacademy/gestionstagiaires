@@ -32,4 +32,4 @@ RUN libreoffice --version || soffice --version || true
 
 EXPOSE 10000
 
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "crm_app:app"]
