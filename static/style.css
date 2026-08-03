@@ -1102,8 +1102,8 @@ select.status-pill{
 .trainee-name-row{
   grid-column:2;
   grid-row:1;
-  display:flex;
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:minmax(0,max-content) minmax(0,max-content);
   align-items:baseline;
   gap:10px;
   margin:0;
@@ -1131,11 +1131,11 @@ select.status-pill{
   overflow:visible;
 }
 .trainee-name-input--first{padding-left:6px;}
-.trainee-name-input--last{width:clamp(190px,28vw,360px);text-transform:uppercase;}
-.trainee-name-input--first{width:clamp(120px,14vw,210px);text-transform:capitalize;}
+.trainee-name-input--last{width:14ch;text-transform:uppercase;}
+.trainee-name-input--first{width:12ch;text-transform:capitalize;}
 .trainee-contact-chip-row{
   grid-column:2;
-  grid-row:3;
+  grid-row:4;
   display:flex;
   gap:8px;
   flex-wrap:wrap;
@@ -1143,7 +1143,7 @@ select.status-pill{
   align-self:start;
 }
 .trainee-contact-chip-row .btn{
-  width:100%;
+  width:auto;
   min-height:44px;
   justify-content:center;
   overflow:hidden;
@@ -1174,6 +1174,28 @@ select.status-pill{
   box-shadow:0 10px 26px rgba(15,23,42,.055);
 }
 .trainee-info-grid__email{grid-column:1 / -1;}
+.trainee-vtc-training-dates{
+  grid-column:2;
+  grid-row:3;
+  min-width:0;
+}
+.trainee-vtc-training-dates__field{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  padding:13px 16px;
+  border:1px solid #fed7aa;
+  border-radius:18px;
+  background:#fff7ed;
+  color:#c2410c;
+  font-size:12px;
+  font-weight:950;
+}
+.trainee-vtc-training-dates__field input{
+  flex:1 1 260px;
+  min-width:0 !important;
+}
 .trainee-inline-input{
   width:100%;
   min-width:0;
@@ -1252,7 +1274,7 @@ select.status-pill{
 @media (max-width:900px){
   .trainee-profile-card__identity{grid-template-columns:1fr;}
   .trainee-identity-head{display:grid;grid-template-columns:160px minmax(0,1fr);gap:14px;}
-  .trainee-photo-block,.trainee-name-row,.trainee-contact-chip-row,.trainee-info-grid,.trainee-cnaps-panel,.trainee-cnaps-history{grid-column:1 / -1;grid-row:auto;}
+  .trainee-photo-block,.trainee-name-row,.trainee-contact-chip-row,.trainee-info-grid,.trainee-vtc-training-dates,.trainee-cnaps-panel,.trainee-cnaps-history{grid-column:1 / -1;grid-row:auto;}
   .trainee-photo-block{width:auto;}
   .trainee-photo{height:190px;}
   .trainee-info-grid{grid-template-columns:1fr;}
@@ -1260,6 +1282,9 @@ select.status-pill{
 @media (max-width:620px){
   .trainee-profile-card{padding:16px;border-radius:24px;}
   .trainee-name-input{font-size:24px;}
+  .trainee-name-row{grid-template-columns:1fr;}
+  .trainee-vtc-training-dates__field{align-items:flex-start;flex-direction:column;}
+  .trainee-vtc-training-dates__field input{width:100%;flex-basis:auto;}
 }
 
 .admin-trainee-side-actions{

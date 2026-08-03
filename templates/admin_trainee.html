@@ -541,7 +541,7 @@
 
 <div class="trainee-contact-chip-row">
   {% if trainee.email %}
-    <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ {{ trainee.email }}</a>
+    <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ Envoyer un e-mail</a>
   {% endif %}
 </div>
 
@@ -594,8 +594,8 @@
       </div>
 
       {% if is_vtc %}
-      <div class="meta-line" style="margin-top:8px;">
-        <span class="mono" style="font-weight:900;color:#f97316;">
+      <div class="trainee-vtc-training-dates">
+        <span class="mono trainee-vtc-training-dates__field">
           Dates réelles de formation VTC :
           <input id="editVtcRealTrainingDates"
                  type="text"
