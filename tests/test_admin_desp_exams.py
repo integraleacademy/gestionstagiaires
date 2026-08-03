@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 import app as gestion_app
@@ -75,6 +76,30 @@ class AdminDespExamTests(unittest.TestCase):
                                   json={"position": 0, "answer": 0})
         self.assertEqual(answer.status_code, 200)
         self.assertEqual(len(attempt["candidates"][0]["answers"]), 1)
+
+    def test_public_qcu_timeout_records_zero_and_advances_to_next_question(self):
+        self.client.post("/admin/exams/DESP-1/training-qcu")
+        attempt = self.data["sessions"][0]["desp_training_qcu_attempts"][0]
+        candidate = attempt["candidates"][0]
+        with self.client.session_transaction() as session:
+            session.pop("admin_logged_in", None)
+            session["public_auth_TOKEN-1"] = True
+
+        player_url = f"/espace/TOKEN-1/qcu/training/{attempt['id']}"
+        player = self.client.get(player_url)
+        self.assertIn("answer(null)", player.get_data(as_text=True))
+        self.client.get(f"{player_url}/question/0")
+        candidate["question_deadlines"][0] = (
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=1)
+        ).isoformat().replace("+00:00", "Z")
+
+        timed_out = self.client.post(f"{player_url}/answer", json={"position": 0, "answer": None})
+        self.assertEqual(timed_out.status_code, 200)
+        self.assertTrue(timed_out.get_json()["timed_out"])
+        self.assertEqual(candidate["answers"][0]["selected_answer"], None)
+        self.assertFalse(candidate["answers"][0]["correct"])
+        self.assertTrue(candidate["answers"][0]["unanswered"])
+        self.assertEqual(self.client.get(f"{player_url}/question/1").status_code, 200)
 
     def test_exam_batch_and_designed_results_pdf(self):
         self.client.post("/admin/exams/DESP-1/exam-qcu")
