@@ -492,6 +492,68 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("Echec examen théorique</button>", html)
         self.assertIn("En attente réussite théorie</button>", html)
 
+    def test_theory_success_sends_and_marks_practice_convocation(self):
+        original_send = gestion_app._send_vtc_theory_exam_notification
+        original_add_notification = gestion_app._add_vtc_practice_convocation_notification
+        calls = []
+
+        def fake_send(session, trainee, send_notifications=True):
+            calls.append((session["id"], trainee["id"], send_notifications))
+            trainee["vtc_theory_exam_sent_at"] = "2026-08-03T09:30:00Z"
+            return {"email_ok": True, "sms_ok": True, "sent_at": trainee["vtc_theory_exam_sent_at"]}
+
+        gestion_app._send_vtc_theory_exam_notification = fake_send
+        gestion_app._add_vtc_practice_convocation_notification = lambda *args: None
+        try:
+            response = self.client.post(
+                "/api/sessions/S-VTC/stagiaires/T-WAITING-THEORY/update",
+                json={"vtc_theory_status_manual": "success"},
+            )
+        finally:
+            gestion_app._send_vtc_theory_exam_notification = original_send
+            gestion_app._add_vtc_practice_convocation_notification = original_add_notification
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(calls, [("S-VTC", "T-WAITING-THEORY", True)])
+        trainee = self.data["sessions"][0]["trainees"][1]
+        self.assertEqual(trainee["vtc_practice_convocation_sent_at"], "2026-08-03T09:30:00Z")
+        self.assertEqual(response.get_json()["vtc_practice_convocation_sent_at"], "2026-08-03T09:30:00Z")
+
+    def test_theory_success_does_not_resend_when_already_successful(self):
+        trainee = self.data["sessions"][0]["trainees"][1]
+        trainee["vtc_theory_status_manual"] = "success"
+        original_send = gestion_app._send_vtc_theory_exam_notification
+        gestion_app._send_vtc_theory_exam_notification = lambda *args, **kwargs: self.fail("unexpected resend")
+        try:
+            response = self.client.post(
+                "/api/sessions/S-VTC/stagiaires/T-WAITING-THEORY/update",
+                json={"vtc_theory_status_manual": "success"},
+            )
+        finally:
+            gestion_app._send_vtc_theory_exam_notification = original_send
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_theory_success_is_not_saved_when_convocation_email_fails(self):
+        original_send = gestion_app._send_vtc_theory_exam_notification
+        gestion_app._send_vtc_theory_exam_notification = lambda *args, **kwargs: {
+            "email_ok": False,
+            "sms_ok": True,
+            "sent_at": "2026-08-03T09:30:00Z",
+        }
+        try:
+            response = self.client.post(
+                "/api/sessions/S-VTC/stagiaires/T-WAITING-THEORY/update",
+                json={"vtc_theory_status_manual": "success"},
+            )
+        finally:
+            gestion_app._send_vtc_theory_exam_notification = original_send
+
+        self.assertEqual(response.status_code, 502)
+        trainee = self.data["sessions"][0]["trainees"][1]
+        self.assertNotIn("vtc_theory_status_manual", trainee)
+        self.assertNotIn("vtc_practice_convocation_sent_at", trainee)
+
     def test_vtc_manual_exam_status_persists_on_all_vtc_page_refresh(self):
         response = self.client.post(
             "/api/sessions/S-VTC/stagiaires/T-THEORY-OK/update",

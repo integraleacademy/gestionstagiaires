@@ -3848,12 +3848,20 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         if(menu) menu.hidden = true;
 
         try{
-          await saveField(traineeId, field, value, traineeSessionId);
+          const saved = await saveField(traineeId, field, value, traineeSessionId);
+          if(mode === "theory" && value === "success" && saved.vtc_practice_convocation_sent_at){
+            const convocationSelect = tr.querySelector('select[data-field="vtc_practice_convocation_sent_at"]');
+            if(convocationSelect){
+              convocationSelect.value = "validated";
+              convocationSelect.setAttribute("data-current-value", saved.vtc_practice_convocation_sent_at);
+              applyStatusPill(convocationSelect);
+            }
+          }
         }catch(e){
           tr.setAttribute(`data-vtc-${mode}-status-manual`, previousValue);
           refreshVtcStatusLabels(tr);
           applyRowFilters();
-          alert("Erreur sauvegarde du statut VTC");
+          alert(e.message || "Erreur sauvegarde du statut VTC");
         }
       });
     });

@@ -9034,7 +9034,6 @@ def _apply_vtc_manual_exam_status(trainee: Dict[str, Any], mode: str, status: st
         if normalized_status == "success":
             trainee["vtc_theory_result"] = "admissible"
             trainee["vtc_theory_result_label"] = "admissible"
-            trainee["vtc_theory_exam_sent_at"] = trainee.get("vtc_theory_exam_sent_at") or now
         elif normalized_status == "failed":
             trainee["vtc_theory_result"] = "non_admissible"
             trainee["vtc_theory_result_label"] = "échec examen théorique"
@@ -20608,6 +20607,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    previous_trainee = copy.deepcopy(t)
+    previous_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
     cnaps_remote_history = payload.pop("statut_cnaps_history", None)
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
     previous_elearning_link = (t.get("elearning_link") or "").strip()
@@ -21024,6 +21025,32 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     if "VTC" in ((_session_get(s, "training_type", "") or "").upper()):
         _sync_vtc_book_notification(data, s, t)
+
+    theory_notification = None
+    requested_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
+    if (
+        "vtc_theory_status_manual" in payload
+        and requested_vtc_theory_status == "success"
+        and previous_vtc_theory_status != "success"
+    ):
+        try:
+            theory_notification = _send_vtc_theory_exam_notification(s, t, send_notifications=True)
+            if (t.get("email") or "").strip() and not theory_notification.get("email_ok"):
+                raise RuntimeError("L'envoi email de la convocation pratique a échoué")
+            _add_vtc_practice_convocation_notification(data, s, t)
+            if theory_notification.get("email_ok"):
+                t["vtc_practice_convocation_sent_at"] = theory_notification.get("sent_at") or _now_iso()
+        except Exception:
+            app.logger.exception(
+                "Impossible d'envoyer la convocation pratique VTC après validation de la théorie "
+                "(session=%s, stagiaire=%s)",
+                session_id,
+                trainee_id,
+            )
+            t.clear()
+            t.update(previous_trainee)
+            return jsonify({"ok": False, "error": "Échec de l’envoi de la convocation pratique"}), 502
+
     save_data(data)
     return jsonify({
         "ok": True,
@@ -21035,6 +21062,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "elearning_link_sms_ok": bool(t.get("elearning_link_sms_ok")),
         "vtc_theory_status_manual": t.get("vtc_theory_status_manual") or "",
         "vtc_practice_status_manual": t.get("vtc_practice_status_manual") or "",
+        "vtc_practice_convocation_sent_at": t.get("vtc_practice_convocation_sent_at") or "",
+        "vtc_theory_notification": theory_notification,
     })
 
 
