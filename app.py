@@ -20172,6 +20172,19 @@ class _CrmIntegrationError(Exception):
         self.status = status
 
 
+def _crm_integration_token_required(view):
+    """Apply the CRM shared-secret authentication rule to an integration route."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        expected = os.environ.get("CRM_INTEGRATION_API_TOKEN", "")
+        authorization = request.headers.get("Authorization", "")
+        supplied = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if not expected or not supplied or not hmac.compare_digest(supplied, expected):
+            return jsonify({"error": "Authentification invalide"}), 401
+        return view(*args, **kwargs)
+    return wrapped
+
+
 def _crm_training_type(payload: Dict[str, str]) -> str:
     formation = payload["formation"].strip().upper()
     parcours = payload.get("parcours", "").strip().upper()
@@ -20185,12 +20198,8 @@ def _crm_training_type(payload: Dict[str, str]) -> str:
 
 
 @app.post("/api/integrations/crm/stagiaires")
+@_crm_integration_token_required
 def api_crm_prepare_trainee():
-    expected = os.environ.get("CRM_INTEGRATION_API_TOKEN", "")
-    authorization = request.headers.get("Authorization", "")
-    supplied = authorization[7:] if authorization.startswith("Bearer ") else ""
-    if not expected or not supplied or not hmac.compare_digest(supplied, expected):
-        return jsonify({"error": "Authentification invalide"}), 401
     raw = request.get_json(silent=True)
     if not isinstance(raw, dict):
         return jsonify({"error": "Corps JSON invalide"}), 400
@@ -20225,6 +20234,108 @@ def api_crm_prepare_trainee():
         app.logger.exception("Échec de préparation de l’intégration CRM")
         return jsonify({"error": "Impossible de préparer le transfert"}), 500
     return jsonify({"url": f"{CRM_RESPONSE_BASE_URL}/admin/sessions?crm_prefill={transfer_id}"}), 201
+
+
+def _crm_trainee_nub(trainee: Dict[str, Any]) -> str:
+    for key in ("nub", "cnaps_nub", "cnaps_tracking_nub", "pre_number"):
+        value = str(trainee.get(key) or "").strip()
+        if not value:
+            continue
+        extracted = extract_nub_from_pre_car(value)
+        normalized = re.sub(r"\D+", "", value)
+        nub = extracted or (normalized[-7:] if len(normalized) >= 7 else "")
+        if nub:
+            return nub
+    return ""
+
+
+def _crm_card_pro_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Dict[str, Any]:
+    nub = _crm_trainee_nub(trainee)
+    if not nub:
+        return {"check_status": "missing_nub", "checked_at": None, "message": "NUB absent", "titles": []}
+
+    result = fetch_cnaps_public_annuaire(str(trainee.get("last_name") or "").strip(), nub)
+    check_status = str(result.get("check_status") or "success")
+    if check_status == "error":
+        return {
+            "check_status": "error",
+            "checked_at": result.get("checked_at"),
+            "message": result.get("message") or "Vérification CNAPS impossible",
+            "titles": [],
+        }
+
+    session_start = str(_session_get(session_obj, "date_start", "") or "")
+    titles = []
+    for title in result.get("titles", []):
+        if not isinstance(title, dict):
+            continue
+        code = str(title.get("code") or "").strip()
+        if code not in CNAPS_TITLE_ORDER:
+            continue
+        status = str(title.get("status") or title.get("validity") or "").strip().upper()
+        valid_until = str(title.get("valid_until") or title.get("date_fin_validite") or "").strip()
+        display_status = _cnaps_display_status(code, status)
+        titles.append({
+            "code": code,
+            "label": str(title.get("label") or title.get("activity") or CNAPS_ACTIVITY_LABELS.get(code) or "").strip(),
+            "status": status,
+            "display_status": display_status,
+            "valid_until": valid_until,
+            # Same rule as the existing UI: exact AP SH ACTIF status and an ISO
+            # expiration date lexically earlier than the ISO training start date.
+            "expires_before_training": bool(
+                display_status == "AP SH ACTIF"
+                and re.match(r"^\d{4}-\d{2}-\d{2}", valid_until)
+                and re.match(r"^\d{4}-\d{2}-\d{2}", session_start)
+                and valid_until[:10] < session_start[:10]
+            ),
+        })
+    return {
+        "check_status": "success",
+        "checked_at": result.get("checked_at"),
+        "message": result.get("message"),
+        "titles": titles,
+    }
+
+
+@app.get("/api/integrations/crm/stagiaires")
+@_crm_integration_token_required
+def api_crm_get_trainee():
+    crm_contact_id = request.args.get("crm_contact_id")
+    if crm_contact_id is None or crm_contact_id == "":
+        return jsonify({"error": "crm_contact_id est obligatoire"}), 400
+
+    matches = []
+    for session_obj in load_data().get("sessions", []):
+        if not isinstance(session_obj, dict):
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            if isinstance(trainee, dict) and trainee.get("crm_contact_id") == crm_contact_id:
+                matches.append((session_obj, trainee))
+    if not matches:
+        return jsonify({"error": "Stagiaire lié introuvable"}), 404
+    if len(matches) > 1:
+        return jsonify({"error": "Plusieurs stagiaires utilisent ce crm_contact_id"}), 409
+
+    session_obj, trainee = matches[0]
+    trainee_id = str(trainee.get("id") or "")
+    history = trainee.get("cnaps_history")
+    return jsonify({
+        "ok": True,
+        "linked": True,
+        "crm_contact_id": crm_contact_id,
+        "trainee": {
+            "id": trainee_id,
+            "url": f"{CRM_RESPONSE_BASE_URL}/stagiaires/{trainee_id}",
+            "session_name": str(_session_get(session_obj, "name", "") or ""),
+            "session_start": str(_session_get(session_obj, "date_start", "") or ""),
+        },
+        "cnaps": {
+            "status": trainee.get("cnaps") if trainee.get("cnaps") not in (None, "") else "INCONNU",
+            "history": history if isinstance(history, list) else [],
+        },
+        "card_pro": _crm_card_pro_payload(trainee, session_obj),
+    })
 
 
 @app.get("/stagiaires/<trainee_id>")
