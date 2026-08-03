@@ -1742,7 +1742,7 @@
     const select = document.getElementById("traineeTargetSession");
     if(!select) return;
 
-    const futureOnlyTrainings = new Set(["APS", "A3P", "SSIAP", "DIRIGEANT initial", "VTC"]);
+    const futureOnlyTrainings = new Set(["APS", "A3P", "SSIAP", "DIRIGEANT initial"]);
     const matching = availableSessionsForCreate.filter(s => {
       if(normalizeTrainingChoice(s.training_type) !== selectedTrainingForCreate) return false;
       return !futureOnlyTrainings.has(selectedTrainingForCreate) || (s.status_key === "upcoming" && !!s.date_start);
