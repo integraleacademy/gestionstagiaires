@@ -257,6 +257,19 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}', html)
         self.assertNotIn('title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF"', html)
 
+    def test_vtc_admin_trainee_sheet_uses_compact_profile_layout(self):
+        trainee = self.data["sessions"][0]["trainees"][1]
+        trainee["vtc_real_training_dates"] = "10/06/2026 au 12/06/2026"
+
+        response = self.client.get("/admin/sessions/S-VTC/stagiaires/T-WAITING-THEORY")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('class="trainee-vtc-training-dates"', html)
+        self.assertIn('class="mono trainee-vtc-training-dates__field"', html)
+        self.assertIn("✉️ Envoyer un e-mail", html)
+        self.assertNotIn("✉️ bruno@example.test", html)
+
     def test_aps_admin_trainee_sheet_recovers_tracking_nub_when_opened_directly(self):
         trainee = self.data["sessions"][2]["trainees"][0]
         trainee["last_name"] = "Dupont"
