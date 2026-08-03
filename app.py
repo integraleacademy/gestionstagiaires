@@ -6397,12 +6397,24 @@ def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dic
     subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
     sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
 
-    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if (send_notifications and email) else False
+    docx_path, pdf_path = _generate_aps_convocation_files(
+        session_obj, trainee, str(session_obj.get("id") or ""), str(trainee.get("id") or "")
+    )
+    with open(pdf_path, "rb") as fh:
+        attachment = {"name": os.path.basename(pdf_path), "content": base64.b64encode(fh.read()).decode("ascii")}
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee, attachments=[attachment]) if (send_notifications and email) else False
     sms_ok = brevo_send_sms(phone, sms) if (send_notifications and phone) else False
 
     trainee["vtc_theory_exam_sent_at"] = _now_iso()
     trainee["vtc_theory_exam_email_ok"] = bool(email_ok)
     trainee["vtc_theory_exam_sms_ok"] = bool(sms_ok)
+    trainee["convocation_aps_status"] = "sent" if email_ok else "generated"
+    trainee["convocation_aps_generated_at"] = trainee["vtc_theory_exam_sent_at"]
+    trainee["convocation_aps_sent_at"] = trainee["vtc_theory_exam_sent_at"] if email_ok else ""
+    trainee["convocation_aps_pdf_path"] = pdf_path
+    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
+    trainee["convocation_aps_last_error"] = ""
     trainee["updated_at"] = _now_iso()
 
     return {
@@ -26229,7 +26241,7 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     if "A3P" in text:
         return {"enabled": True, "slug": "a3p", "label": "A3P", "convention_template": "conventiona3p.docx", "entry_template": "attestationentreea3p.docx", "end_template": "attestationfina3p.docx", "convocation_template": "convocationa3p.docx"}
     if "VTC" in text:
-        return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "entry_template": ""}
+        return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "convocation_template": "convocationvtc.docx", "entry_template": ""}
     if "DIRIGEANT" in text or "DESP" in text:
         if "PARIS" in text:
             return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
@@ -27731,7 +27743,7 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
         (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
     ]
-    if not is_dirigeant:
+    if not is_dirigeant and str(config.get("slug") or "") != "vtc":
         required.append((_session_get(session_obj, "exam_date", ""), "date d’examen manquante"))
     for value, message in required:
         if not str(value or "").strip():
@@ -27760,10 +27772,27 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
     trainee_space_url = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire"
     date_start = str(_session_get(session_obj, "date_start", "")).strip()
     date_end = str(_session_get(session_obj, "date_end", "")).strip()
-    exam_date = str(_session_get(session_obj, "exam_date", "") or (in_person_end if is_dirigeant else "")).strip()
+    exam_date = str(
+        _session_get(session_obj, "exam_date", "")
+        or (_session_get(session_obj, "exam_practice_date", "") if str(config.get("slug") or "") == "vtc" else "")
+        or (in_person_end if is_dirigeant else "")
+    ).strip()
     convocation_time = str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30"
     exam_time = str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00"
     place = f"{APS_CONVOCATION_CENTER_NAME} - {APS_CONVOCATION_CENTER_ADDRESS} - {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}"
+    practice_training_date = str(
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    ).strip()
+    theory_exam_date = str(
+        _session_get(session_obj, "exam_theory_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    ).strip()
+    practice_exam_date = str(
+        _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    ).strip()
     return {
         "civilite": civility, "prenom": first_name, "nom": last_name, "nom_complet": full_name,
         "adresse_ligne1": address_lines[0], "adresse_ligne2": address_lines[1], "adresse_ligne3": address_lines[2], "adresse_ligne4": address_lines[3],
@@ -27781,6 +27810,13 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "lieu_formation": place, "lieu_examen": place, "espace_stagiaire_url": trainee_space_url,
         "modalites_suivi": "Suivi pédagogique et administratif assuré par l’équipe Intégrale Academy.",
         "date_ouverture": fr_date(remote_start),
+        # Variables VTC.  Les alias permettent de choisir des noms explicites
+        # dans Word tout en conservant les variables communes aux convocations.
+        "date_formation_pratique": fr_date(practice_training_date),
+        "date_formation_pratique_vtc": fr_date(practice_training_date),
+        "date_examen_theorique": fr_date(theory_exam_date),
+        "date_examen_pratique": fr_date(practice_exam_date),
+        "heure_formation_pratique": str(_session_get(session_obj, "practice_training_time", "") or "08h30").strip(),
         "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
 
@@ -28301,6 +28337,9 @@ def _store_public_file_token(path: str) -> str:
 
 def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> bool:
     """Generate, send by email, and expose the convocation once the convention is signed."""
+    if str(_automation_document_config(session_obj).get("slug") or "") == "vtc":
+        # En VTC, seule la réussite à la théorie déclenche la convocation.
+        return False
     automation = _build_trainee_automation_status(session_obj, trainee, session_id, trainee_id)
     if (automation.get("convention") or {}).get("status") != "signed":
         trainee["convocation_auto_last_error"] = "En attente de signature de la convention"
@@ -28398,7 +28437,15 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_status = "not_generated"
 
-    if not has_generated_convention:
+    config = _automation_document_config(session_obj)
+    automation_slug = str(config.get("slug") or "")
+    is_vtc_automation = automation_slug == "vtc"
+    theory_succeeded = bool(trainee.get("vtc_theory_exam_sent_at"))
+    if is_vtc_automation and not theory_succeeded:
+        convocation_block_reason = "En attente de réussite à l’examen théorique"
+    elif is_vtc_automation:
+        convocation_block_reason = ""
+    elif not has_generated_convention:
         convocation_block_reason = "En attente de génération de la convention"
     elif not convention_sent:
         convocation_block_reason = "En attente d’envoi de la convention"
@@ -28407,8 +28454,6 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_block_reason = ""
 
-    config = _automation_document_config(session_obj)
-    automation_slug = str(config.get("slug") or "")
     is_vae_automation = automation_slug == "vae"
     is_aps_automation = _is_aps_session(session_obj)
     can_send_convocation_without_signed_convention = _can_send_convocation_without_signed_convention(session_obj)
@@ -28424,7 +28469,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         timeline = [
             convention_sent_step,
             convention_signed_step,
-            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")} if is_aps_automation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
+            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if ((is_vtc_automation and not theory_succeeded) or (not is_vtc_automation and not convention_signed)) else "pending")} if is_aps_automation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
         ]
@@ -28500,13 +28545,13 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         },
         "convocation": {
             "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
-            "can_generate": True, "can_send": (convention_signed or can_send_convocation_without_signed_convention) and convocation_status in {"generated", "sent"}, "block_reason": "" if can_send_convocation_without_signed_convention else convocation_block_reason,
+            "can_generate": theory_succeeded if is_vtc_automation else True, "can_send": (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) and convocation_status in {"generated", "sent"}, "block_reason": "" if (is_vtc_automation and theory_succeeded) or can_send_convocation_without_signed_convention else convocation_block_reason,
             "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
             "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
             "error": convocation_error,
             "timeline_steps": [
-                {"label": "Convention validée", "value": "Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué")), "state": "done" if (convention_signed or can_send_convocation_without_signed_convention) else "blocked"},
+                {"label": "Examen théorique" if is_vtc_automation else "Convention validée", "value": ("Réussi" if theory_succeeded else convocation_block_reason) if is_vtc_automation else ("Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué"))), "state": "done" if (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) else "blocked"},
                 {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else "pending"},
                 {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
             ],
@@ -31472,8 +31517,11 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    is_vtc = str(_automation_document_config(s).get("slug") or "") == "vtc"
+    if is_vtc and not t.get("vtc_theory_exam_sent_at"):
+        return jsonify({"ok": False, "error": "En attente de réussite à l’examen théorique"}), 400
     can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
-    if not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
+    if not is_vtc and not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
         return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
@@ -31481,7 +31529,10 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             raise Exception("Le PDF de convocation APS n’a pas été généré.")
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s)
+        if is_vtc:
+            subject, html_content = build_vtc_practice_convocation_email(str(t.get("first_name") or ""), _session_get(s, "practice_training_date", "") or _session_get(s, "exam_practice_date", ""))
+        else:
+            subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s)
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
