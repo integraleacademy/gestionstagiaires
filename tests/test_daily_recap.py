@@ -1,4 +1,5 @@
 import datetime
+import html
 import os
 import unittest
 from unittest import mock
@@ -215,6 +216,20 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Suivi des VAE", body)
         self.assertIn("Nouvelles demandes VAE", body)
         self.assertIn("Certifications obtenues", body)
+        badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
+        self.assertIn(f'{badge_style}">1</span>', body)
+        self.assertNotIn("background:#ecfdf5;color:#047857", body)
+
+    def test_monday_email_labels_revenue_as_fridays_figures(self):
+        report = app.build_daily_recap_data({"sessions": [], "billing_lines": []}, datetime.date(2026, 7, 31))
+
+        _subject, body = app.build_daily_recap_email(
+            report,
+            greeting_context={"date": datetime.date(2026, 8, 3), "weather": {}},
+        )
+
+        self.assertIn("Chiffres d'affaires vendredi", html.unescape(body))
+        self.assertNotIn("Chiffre d’affaires de la veille", body)
 
     def test_pending_conventions_match_actionable_yousign_requests(self):
         trainees = self.data["sessions"][0]["trainees"]
