@@ -1144,6 +1144,7 @@
         </div>
         <div class="trainee-session-results" id="traineeSessionSearchResults" role="listbox" aria-label="Sessions correspondant à la recherche"></div>
         <div class="trainee-session-search__status" id="traineeSessionSearchStatus" aria-live="polite"></div>
+        <div id="crmPrefillStatus" class="hint" role="status" aria-live="polite" style="display:none;margin-top:10px;font-weight:800;color:#b91c1c;"></div>
       </div>
 
       <label class="trainee-create-section" style="margin-bottom:14px;display:block;">
@@ -1486,6 +1487,8 @@
 
 <script>
   const availableSessionsForCreate = {{ sessions|tojson }};
+  const crmPrefillTransfer = {{ crm_prefill|tojson }};
+  const crmPrefillRequested = {{ crm_prefill_requested|tojson }};
   function normalizeTrainingChoice(value){
     const v = (value || "").trim().toUpperCase();
     if(v.startsWith("APS")) return "APS";
@@ -1570,6 +1573,7 @@
       city: (document.getElementById("sessionTCity")?.value || "").trim(),
       vtc_real_training_dates: (document.getElementById("sessionTVtcRealTrainingDates")?.value || "").trim(),
       carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
+      crm_prefill: crmPrefillTransfer?.id || "",
     };
   }
 
@@ -1819,6 +1823,46 @@
     refreshSessionChoices();
   }
 
+  function applyCrmPrefillFromSessions(){
+    if(!crmPrefillRequested) return;
+    initializeTraineeCreateFromSessions();
+    const status = document.getElementById("crmPrefillStatus");
+    if(!crmPrefillTransfer){
+      if(status){ status.textContent = "Ce transfert CRM est introuvable ou a expiré."; status.style.display = "block"; }
+      openModal("createTraineeFromSessionsModal");
+      return;
+    }
+    const fields = crmPrefillTransfer.payload || {};
+    selectedTrainingForCreate = crmPrefillTransfer.training_type || "";
+    refreshTrainingButtons();
+    refreshVtcRealTrainingDatesVisibility();
+    refreshSessionChoices();
+    const inputs = {
+      sessionTLastName: fields.nom,
+      sessionTFirstName: fields.prenom,
+      sessionTEmail: fields.email,
+      sessionTPhone: fields.telephone
+    };
+    Object.entries(inputs).forEach(([id, value])=>{ const input = document.getElementById(id); if(input) input.value = value || ""; });
+    const select = document.getElementById("traineeTargetSession");
+    const targetId = crmPrefillTransfer.matched_session_id || "";
+    const target = availableSessionsForCreate.find(item => item.id === targetId);
+    if(select && target){
+      if(!Array.from(select.options).some(option => option.value === targetId)){
+        select.add(new Option(sessionDisplayName(target), targetId));
+      }
+      select.disabled = false;
+      select.value = targetId;
+      if(status){ status.textContent = `Session sélectionnée : ${sessionDisplayName(target)}`; status.style.display = "block"; status.style.color = "#166534"; }
+    }else if(select){
+      select.innerHTML = '<option value="">Session correspondante introuvable</option>';
+      select.value = "";
+      select.disabled = true;
+      if(status){ status.textContent = "Session correspondante introuvable"; status.style.display = "block"; }
+    }
+    openModal("createTraineeFromSessionsModal");
+  }
+
   document.querySelectorAll("#trainingChooser .training-choice").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       selectedTrainingForCreate = btn.getAttribute("data-training") || "";
@@ -1884,6 +1928,8 @@
     if(!await window.confirmMailSmsSend?.()) return;
     await createTraineeFromSessions(true);
   });
+
+  applyCrmPrefillFromSessions();
 
   const importFromSessionsBtn = document.getElementById("btnImportTraineeInfosFromSessions");
   const importFromSessionsInput = document.getElementById("importTraineeInfosFromSessionsInput");
