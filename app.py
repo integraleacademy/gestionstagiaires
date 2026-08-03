@@ -5681,7 +5681,7 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
           <li>conseils méthodologiques pour optimiser votre passage devant le jury.</li>
         </ul>
 
-        <p style="margin:0 0 10px 0;">Vous recevrez prochainement par mail votre convocation à la formation pratique, ainsi que le document officiel de prêt du véhicule à doubles commandes.<br>
+        <p style="margin:0 0 10px 0;">Vous trouverez en pièce-jointe votre convocation à la formation pratique, ainsi que le document officiel de prêt du véhicule à doubles commandes.<br>
         ⚠️ Il est impératif de présenter ce document le jour de l’examen : en son absence, le jury peut prononcer un ajournement.</p>
 
         <p style="margin:0 0 10px 0;">Nous restons à votre disposition si vous avez la moindre question.<br>
