@@ -2655,7 +2655,9 @@ def admin_login_required(view):
         if not session.get("admin_logged_in"):
             if _request_expects_json():
                 return jsonify({"ok": False, "error": "Session administrateur expirée. Reconnectez-vous."}), 401
-            return redirect(url_for("admin_login", next=request.path))
+            # Keep the query string: CRM prefill links must survive authentication.
+            next_url = request.full_path.rstrip("?")
+            return redirect(url_for("admin_login", next=next_url))
         return view(*args, **kwargs)
     return wrapped
 
@@ -7661,6 +7663,7 @@ def _empty_data_payload() -> Dict[str, Any]:
     return {
         "sessions": [],
         "crm_integration_requests": [],
+        "crm_prefill_transfers": [],
         "afc": {},
         "positioning_tests": [],
         "notifications_edof": [],
@@ -14439,6 +14442,26 @@ def admin_sessions():
     admin_sessions_started_at = time.monotonic()
     _log_memory_stage("ADMIN_SESSIONS_BEGIN", admin_sessions_started_at, "/admin/sessions")
     data = load_data()
+    crm_prefill_id = (request.args.get("crm_prefill") or "").strip()
+    crm_prefill = None
+    if crm_prefill_id:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        transfers = data.setdefault("crm_prefill_transfers", [])
+        retained = []
+        for item in transfers:
+            try:
+                expires_at = datetime.datetime.fromisoformat(str(item.get("expires_at") or ""))
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+            except (TypeError, ValueError):
+                expires_at = now
+            if expires_at > now:
+                retained.append(item)
+                if hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id):
+                    crm_prefill = copy.deepcopy(item)
+        if len(retained) != len(transfers):
+            data["crm_prefill_transfers"] = retained
+            save_data(data)
     _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
     wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
     out_sessions = []
@@ -14680,6 +14703,8 @@ def admin_sessions():
         yearly_training_counts=yearly_training_counts,
         dashboard_training_labels=dashboard_training_labels,
         wedof_new_requests_count=wedof_new_requests_count,
+        crm_prefill=crm_prefill,
+        crm_prefill_requested=bool(crm_prefill_id),
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     _log_memory_stage("ADMIN_SESSIONS_AFTER_RENDER", getattr(request, _REQUEST_STARTED_AT_KEY, None), "/admin/sessions")
@@ -20138,6 +20163,7 @@ def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
 CRM_REQUIRED_FIELDS = ("source", "crm_contact_id", "prenom", "nom", "email", "formation", "centre", "session")
 CRM_OPTIONAL_FIELDS = ("telephone", "parcours", "commentaires")
 CRM_RESPONSE_BASE_URL = "https://gestionstagiaires-r5no.onrender.com"
+CRM_PREFILL_TTL = datetime.timedelta(minutes=15)
 
 
 class _CrmIntegrationError(Exception):
@@ -20146,109 +20172,25 @@ class _CrmIntegrationError(Exception):
         self.status = status
 
 
-def _crm_payload_fingerprint(payload: Dict[str, str]) -> str:
-    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def _crm_response(trainee_id: str) -> Dict[str, str]:
-    return {"id": trainee_id, "url": f"{CRM_RESPONSE_BASE_URL}/stagiaires/{trainee_id}"}
-
-
-def _new_crm_trainee(payload: Dict[str, str], session_obj: Dict[str, Any]) -> Dict[str, Any]:
-    trainee_id = "TRN-" + uuid.uuid4().hex[:8].upper()
-    training_type = _session_get(session_obj, "training_type", "")
-    trainee = {
-        "id": trainee_id, "personal_id": trainee_id,
-        "last_name": normalize_last_name(payload["nom"]),
-        "first_name": normalize_first_name(payload["prenom"]),
-        "email": payload["email"], "phone": payload["telephone"],
-        "birth_date": "", "birth_city": "", "address": "", "zip_code": "", "city": "",
-        "comment": payload["commentaires"], "crm_contact_id": payload["crm_contact_id"],
-        "crm_source": payload["source"], "crm_parcours": payload["parcours"],
-        "cnaps": "INCONNU", "convention_status": "soon", "test_fr_status": "soon",
-        "dossier_status": "incomplete", "financement_status": "soon",
-        "training_price": default_training_price(training_type) or "",
-        "cpf_amount": "", "personal_amount": "", "other_amount": "",
-        "vae_status": "soon" if "DESP" in (payload["parcours"] or training_type).upper() else "",
-        "hosting_status": "unknown" if training_type == "A3P" else "",
-        "public_token": uuid.uuid4().hex, "documents": [], "created_at": _now_iso(),
-        "phone_followups": [], "public_hide_popup": False, "tshirt_size": "",
-        "no_permis": False, "no_bac_diploma": False, "force_dossier_complete": False,
-        "professional_experience_sheet_required": True, "ssiap_exam_date": "",
-        "partner_id": session_obj.get("partner_id") or INTEGRALE_PARTNER_ID,
-        "ypareo_statut": "Non envoyé", "ypareo_id": "", "ypareo_erreur": "",
-        "ypareo_cursus_statut": "Non envoyé", "ypareo_cursus_id": "", "ypareo_cursus_erreur": "",
-    }
-    ensure_documents_schema_for_trainee(trainee, training_type)
-    return trainee
-
-
-def _create_crm_registration(data: Dict[str, Any], payload: Dict[str, str], idempotency_key: str) -> Dict[str, Any]:
-    requests_store = data.setdefault("crm_integration_requests", [])
-    fingerprint = _crm_payload_fingerprint(payload)
-    prior = next((item for item in requests_store if item.get("idempotency_key") == idempotency_key), None)
-    if prior:
-        if prior.get("payload_fingerprint") != fingerprint:
-            raise _CrmIntegrationError(409, "Clé d’idempotence déjà utilisée avec des données différentes")
-        return {"created": False, "trainee_id": str(prior["trainee_id"])}
-
-    duplicate_contact = next((item for item in requests_store if item.get("crm_contact_id") == payload["crm_contact_id"]), None)
-    if duplicate_contact:
-        raise _CrmIntegrationError(409, "Ce contact CRM est déjà lié à une autre demande")
-
-    matches = [s for s in data.get("sessions", []) if isinstance(s, dict)
-               and str(_session_get(s, "training_type", "")) == payload["formation"]
-               and str(s.get("crm_center") or s.get("center") or s.get("centre") or "") == payload["centre"]
-               and str(_session_get(s, "name", "")) == payload["session"]]
-    if len(matches) != 1:
-        qualifier = "ambiguë" if len(matches) > 1 else "inconnue"
-        raise _CrmIntegrationError(422, f"Combinaison formation, centre et session {qualifier}")
-    target_session = matches[0]
-
-    certain = []
-    wanted_email = payload["email"].strip().casefold()
-    wanted_first = normalize_first_name(payload["prenom"]).casefold()
-    wanted_last = normalize_last_name(payload["nom"]).casefold()
-    for session_obj in data.get("sessions", []):
-        for trainee in _session_trainees_list(session_obj) if isinstance(session_obj, dict) else []:
-            if ((trainee.get("email") or "").strip().casefold() == wanted_email
-                    and (trainee.get("first_name") or "").strip().casefold() == wanted_first
-                    and (trainee.get("last_name") or "").strip().casefold() == wanted_last):
-                certain.append(trainee)
-    distinct = {str(item.get("id") or "") for item in certain}
-    reusable = certain[0] if len(distinct) == 1 else None
-    target_trainees = _session_trainees_list(target_session)
-    if reusable and any(item.get("id") == reusable.get("id") for item in target_trainees):
-        trainee = reusable
-    elif reusable:
-        trainee = copy.deepcopy(reusable)
-        target_trainees.insert(0, trainee)
-    else:
-        trainee = _new_crm_trainee(payload, target_session)
-        target_trainees.insert(0, trainee)
-    target_session["trainees"] = target_trainees
-    target_session.pop("stagiaires", None)
-    trainee["crm_contact_id"] = payload["crm_contact_id"]
-    trainee["crm_idempotency_key"] = idempotency_key
-    requests_store.append({
-        "idempotency_key": idempotency_key, "crm_contact_id": payload["crm_contact_id"],
-        "payload_fingerprint": fingerprint, "trainee_id": trainee["id"],
-        "session_id": target_session.get("id") or "", "created_at": _now_iso(),
-    })
-    return {"created": True, "trainee_id": trainee["id"]}
+def _crm_training_type(payload: Dict[str, str]) -> str:
+    formation = payload["formation"].strip().upper()
+    parcours = payload.get("parcours", "").strip().upper()
+    if formation == "APS": return "APS"
+    if formation == "A3P": return "A3P"
+    if formation in {"SSIAP", "SSIAP 1"}: return "SSIAP"
+    if formation == "DESP" and parcours == "INITIAL": return "DIRIGEANT initial"
+    if formation == "DESP" and parcours == "VAE": return "DIRIGEANT VAE"
+    if formation in {"CHAUFFEUR VTC", "VTC"}: return "VTC"
+    raise _CrmIntegrationError(422, "Formation ou parcours CRM non pris en charge")
 
 
 @app.post("/api/integrations/crm/stagiaires")
-def api_crm_create_trainee():
+def api_crm_prepare_trainee():
     expected = os.environ.get("CRM_INTEGRATION_API_TOKEN", "")
     authorization = request.headers.get("Authorization", "")
     supplied = authorization[7:] if authorization.startswith("Bearer ") else ""
     if not expected or not supplied or not hmac.compare_digest(supplied, expected):
         return jsonify({"error": "Authentification invalide"}), 401
-    idempotency_key = request.headers.get("Idempotency-Key", "").strip()
-    if not idempotency_key:
-        return jsonify({"error": "L’en-tête Idempotency-Key est obligatoire"}), 400
     raw = request.get_json(silent=True)
     if not isinstance(raw, dict):
         return jsonify({"error": "Corps JSON invalide"}), 400
@@ -20260,13 +20202,29 @@ def api_crm_create_trainee():
         return jsonify({"error": "Champs obligatoires manquants ou vides : " + ", ".join(missing)}), 400
     payload = {key: raw.get(key, "") for key in CRM_REQUIRED_FIELDS + CRM_OPTIONAL_FIELDS}
     try:
-        result = _atomic_update_data(lambda data: _create_crm_registration(data, payload, idempotency_key))
+        training_type = _crm_training_type(payload)
+        transfer_id = secrets.token_urlsafe(32)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        def prepare(data):
+            matches = [s for s in data.get("sessions", []) if isinstance(s, dict)
+                       and str(_session_get(s, "training_type", "")) == training_type
+                       and str(s.get("crm_center") or s.get("center") or s.get("centre") or "") == payload["centre"]
+                       and str(_session_get(s, "name", "")) == payload["session"]]
+            data.setdefault("crm_prefill_transfers", []).append({
+                "id": transfer_id, "created_at": now.isoformat(),
+                "expires_at": (now + CRM_PREFILL_TTL).isoformat(),
+                "training_type": training_type,
+                "matched_session_id": str(matches[0].get("id") or "") if len(matches) == 1 else "",
+                "payload": payload,
+            })
+            return {"id": transfer_id}
+        _atomic_update_data(prepare)
     except _CrmIntegrationError as exc:
         return jsonify({"error": str(exc)}), exc.status
     except Exception:
-        app.logger.exception("Échec transactionnel de l’intégration CRM")
-        return jsonify({"error": "Impossible de créer l’inscription"}), 500
-    return jsonify(_crm_response(result["trainee_id"])), 201 if result["created"] else 200
+        app.logger.exception("Échec de préparation de l’intégration CRM")
+        return jsonify({"error": "Impossible de préparer le transfert"}), 500
+    return jsonify({"url": f"{CRM_RESPONSE_BASE_URL}/admin/sessions?crm_prefill={transfer_id}"}), 201
 
 
 @app.get("/stagiaires/<trainee_id>")
@@ -20456,6 +20414,23 @@ def api_create_trainee(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    crm_prefill_id = str(payload.get("crm_prefill") or "").strip()
+    crm_transfer = None
+    if crm_prefill_id:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        crm_transfer = next((item for item in data.get("crm_prefill_transfers", [])
+                             if hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)), None)
+        if not crm_transfer:
+            return jsonify({"ok": False, "error": "crm_prefill_not_found"}), 410
+        try:
+            expires_at = datetime.datetime.fromisoformat(str(crm_transfer.get("expires_at") or ""))
+            if expires_at.tzinfo is None: expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+        except (TypeError, ValueError):
+            expires_at = now
+        if expires_at <= now:
+            return jsonify({"ok": False, "error": "crm_prefill_expired"}), 410
+        if crm_transfer.get("matched_session_id") != session_id:
+            return jsonify({"ok": False, "error": "crm_session_mismatch"}), 409
     last_name = normalize_last_name(payload.get("last_name") or "")
     first_name = normalize_first_name(payload.get("first_name") or "")
     birth_date = (payload.get("birth_date") or "").strip()
@@ -20552,6 +20527,12 @@ def api_create_trainee(session_id: str):
         "ypareo_cursus_id": "",
         "ypareo_cursus_erreur": "",
     }
+    if crm_transfer:
+        crm_payload = crm_transfer.get("payload") or {}
+        t["crm_contact_id"] = str(crm_payload.get("crm_contact_id") or "")
+        t["crm_source"] = str(crm_payload.get("source") or "")
+        t["crm_parcours"] = str(crm_payload.get("parcours") or "")
+        t["comment"] = str(crm_payload.get("commentaires") or "")
 
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
     ensure_documents_schema_for_trainee(t, training_type)
@@ -20575,6 +20556,9 @@ def api_create_trainee(session_id: str):
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
+    if crm_transfer:
+        data["crm_prefill_transfers"] = [item for item in data.get("crm_prefill_transfers", [])
+                                           if not hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)]
     increment_partner_trainee_usage(data, s.get("partner_id") or _current_partner_id() or INTEGRALE_PARTNER_ID, t)
     save_data(data)
 

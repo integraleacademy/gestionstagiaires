@@ -3,14 +3,18 @@
 ## Intégration CRM Intégrale Connect
 
 Le endpoint `POST /api/integrations/crm/stagiaires` est protégé par un jeton Bearer.
-Configurer `CRM_INTEGRATION_API_TOKEN` avec un secret long partagé avec le CRM. Après
-déploiement, appliquer la migration du stockage JSON avec :
+Configurer `CRM_INTEGRATION_API_TOKEN` avec un secret long partagé avec le CRM. Il ne
+crée pas de stagiaire : il conserve le préremplissage pendant 15 minutes et renvoie
+une URL d'administration contenant uniquement un identifiant temporaire opaque. Le
+stagiaire n'est créé qu'après authentification et validation de la modale existante.
+
+Après déploiement, appliquer si nécessaire la migration historique du stockage JSON avec :
 
 ```bash
 python scripts/migrate_crm_integration.py
 ```
 
-La migration crée une sauvegarde, initialise le registre d'idempotence et ajoute le
+La migration crée une sauvegarde, initialise l'ancien registre d'idempotence et ajoute le
 champ structuré `crm_center` aux sessions sans tenter de déduire un centre depuis leur
 nom. Les sessions destinées au CRM doivent avoir ce champ renseigné exactement.
 
