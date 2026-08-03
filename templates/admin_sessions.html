@@ -1929,7 +1929,20 @@
     await createTraineeFromSessions(true);
   });
 
-  applyCrmPrefillFromSessions();
+  function startCrmPrefillWhenReady(){
+    if(!crmPrefillRequested) return;
+    if(typeof window.openModal !== "function"){
+      window.setTimeout(startCrmPrefillWhenReady, 50);
+      return;
+    }
+    applyCrmPrefillFromSessions();
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", startCrmPrefillWhenReady, {once:true});
+  }else{
+    startCrmPrefillWhenReady();
+  }
 
   const importFromSessionsBtn = document.getElementById("btnImportTraineeInfosFromSessions");
   const importFromSessionsInput = document.getElementById("importTraineeInfosFromSessionsInput");
