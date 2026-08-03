@@ -37165,10 +37165,17 @@ def public_trainee_qcu_answer(token: str, kind: str, attempt_id: str):
         return {"ok": False, "error": "Question invalide ou déjà répondue."}, 409
     source_index = order[position]
     question = DESP_TRAINING_QCU_QUESTIONS[source_index]
-    if not isinstance(selected, int) or not 0 <= selected < len(question["choices"]):
+    deadlines = candidate.get("question_deadlines", [])
+    deadline_at = deadlines[position] if position < len(deadlines) else None
+    timed_out = bool(deadline_at and _desp_qcu_parse_utc(_now_iso_utc()) >= _desp_qcu_parse_utc(deadline_at))
+    if selected is None and not timed_out:
+        return {"ok": False, "error": "Le temps de réponse n'est pas encore écoulé."}, 409
+    if not timed_out and (not isinstance(selected, int) or not 0 <= selected < len(question["choices"])):
         return {"ok": False, "error": "Réponse invalide."}, 400
     candidate.setdefault("answers", []).append({"position": position, "question_index": source_index,
-        "selected_answer": selected, "correct": selected == question["answer"], "answered_at": _now_iso_utc()})
+        "selected_answer": None if timed_out else selected,
+        "correct": False if timed_out else selected == question["answer"],
+        "unanswered": timed_out, "answered_at": _now_iso_utc()})
     completed = len(candidate["answers"]) == len(order)
     if completed:
         candidate["status"] = "completed"
@@ -37177,7 +37184,7 @@ def public_trainee_qcu_answer(token: str, kind: str, attempt_id: str):
             attempt["status"] = "completed"
             attempt["completed_at"] = _now_iso_utc()
     save_data(data)
-    return {"ok": True, "completed": completed}
+    return {"ok": True, "completed": completed, "timed_out": timed_out}
 
 
 @app.get("/espace/<token>/qcu/<kind>/<attempt_id>/question/<int:position>")
