@@ -418,6 +418,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;', html)
         self.assertIn("function bindImmediateRowFilters", html)
         self.assertIn('event.target?.matches?.("#vaeStatusFilter, #vtcTheoryFilter, #vtcPracticeFilter")', html)
+
         self.assertIn('field === "vtc_cmar_manual_ok"', html)
         self.assertIn('data-vtc-exam-status-trigger="theory"', html)
         self.assertIn('data-vtc-exam-status-trigger="practice"', html)
@@ -453,6 +454,21 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🔴", html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🟡", html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🟢", html)
+
+    def test_theory_success_displays_practice_convocation_transmission_modal(self):
+        response = self.client.get("/admin/sessions/S-VTC/trainees")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('id="vtcConvocationTransmissionModal"', html)
+        self.assertIn("Convocation Formation Pratique VTC", html)
+        self.assertIn("en cours de transmission", html)
+        self.assertIn('mode === "theory" && value === "success"', html)
+        self.assertIn('openModal("vtcConvocationTransmissionModal")', html)
+        self.assertIn('closeModal("vtcConvocationTransmissionModal")', html)
+
+        aps_html = self.client.get("/admin/sessions/S-APS/trainees").get_data(as_text=True)
+        self.assertNotIn('id="vtcConvocationTransmissionModal"', aps_html)
 
     def test_vtc_exam_center_can_be_saved(self):
         response = self.client.post(

@@ -759,6 +759,24 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </table>
 </div>
 
+{% if is_vtc %}
+<div class="modal-backdrop vtc-convocation-transmission" id="vtcConvocationTransmissionModal" aria-hidden="true" data-static-backdrop>
+  <div class="modal vtc-convocation-transmission__dialog" role="dialog" aria-modal="true" aria-labelledby="vtcConvocationTransmissionTitle" aria-describedby="vtcConvocationTransmissionText">
+    <div class="modal-body vtc-convocation-transmission__body">
+      <div class="vtc-convocation-transmission__icon" aria-hidden="true">
+        <span class="vtc-convocation-transmission__envelope">✉</span>
+        <span class="vtc-convocation-transmission__pulse"></span>
+      </div>
+      <p class="vtc-convocation-transmission__eyebrow">Envoi sécurisé</p>
+      <h2 id="vtcConvocationTransmissionTitle">Convocation Formation Pratique VTC</h2>
+      <p id="vtcConvocationTransmissionText">en cours de transmission</p>
+      <div class="vtc-convocation-transmission__progress" aria-hidden="true"><span></span></div>
+      <small>Merci de patienter pendant la préparation et l’envoi de la convocation.</small>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 
 {% if is_a3p_header and not is_read_only %}
 <div class="modal-backdrop" id="a3pExamDossierModal" aria-hidden="true">
@@ -1764,6 +1782,46 @@ body.vae-l2-validated-card-active .col-vae-exam-status{
   text-transform:none;
   letter-spacing:0;
 }
+
+.vtc-convocation-transmission__dialog{
+  width:min(520px,calc(100vw - 32px));
+  overflow:hidden;
+  border:1px solid rgba(191,219,254,.9)!important;
+  background:linear-gradient(155deg,#fff 0%,#eff6ff 58%,#ecfdf5 100%)!important;
+  box-shadow:0 34px 100px rgba(30,64,175,.3)!important;
+}
+.vtc-convocation-transmission__body{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:38px 38px 34px!important;
+  text-align:center;
+}
+.vtc-convocation-transmission__icon{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:88px;
+  height:88px;
+  margin-bottom:22px;
+  border-radius:28px;
+  color:#fff;
+  background:linear-gradient(135deg,#2563eb,#0ea5e9 58%,#10b981);
+  box-shadow:0 20px 42px rgba(37,99,235,.3);
+}
+.vtc-convocation-transmission__envelope{font-size:42px;line-height:1;animation:vtcEnvelopeFloat 1.3s ease-in-out infinite;}
+.vtc-convocation-transmission__pulse{position:absolute;inset:-8px;border:2px solid rgba(37,99,235,.32);border-radius:34px;animation:vtcTransmissionPulse 1.5s ease-out infinite;}
+.vtc-convocation-transmission__eyebrow{margin:0 0 8px;color:#2563eb;font-size:12px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase;}
+.vtc-convocation-transmission h2{max-width:430px;margin:0;color:#0f172a;font-size:clamp(22px,4vw,29px);line-height:1.16;letter-spacing:-.025em;}
+.vtc-convocation-transmission #vtcConvocationTransmissionText{margin:7px 0 0;color:#2563eb;font-size:19px;font-weight:900;}
+.vtc-convocation-transmission small{margin-top:16px;color:#64748b;font-size:13px;font-weight:650;}
+.vtc-convocation-transmission__progress{width:min(320px,85%);height:7px;margin-top:24px;overflow:hidden;border-radius:999px;background:#dbeafe;}
+.vtc-convocation-transmission__progress span{display:block;width:42%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#0ea5e9,#10b981);animation:vtcTransmissionProgress 1.25s ease-in-out infinite;}
+@keyframes vtcEnvelopeFloat{0%,100%{transform:translateY(2px) rotate(-2deg)}50%{transform:translateY(-4px) rotate(2deg)}}
+@keyframes vtcTransmissionPulse{0%{transform:scale(.92);opacity:.8}100%{transform:scale(1.18);opacity:0}}
+@keyframes vtcTransmissionProgress{0%{transform:translateX(-110%)}100%{transform:translateX(345%)}}
+@media (prefers-reduced-motion:reduce){.vtc-convocation-transmission__envelope,.vtc-convocation-transmission__pulse,.vtc-convocation-transmission__progress span{animation-duration:3s;}}
 
 .trainee-search-field{
   position:relative;
@@ -3847,6 +3905,8 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         applyRowFilters();
         if(menu) menu.hidden = true;
 
+        const showConvocationTransmission = mode === "theory" && value === "success";
+        if(showConvocationTransmission) openModal("vtcConvocationTransmissionModal");
         try{
           const saved = await saveField(traineeId, field, value, traineeSessionId);
           if(mode === "theory" && value === "success" && saved.vtc_practice_convocation_sent_at){
@@ -3862,6 +3922,8 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           refreshVtcStatusLabels(tr);
           applyRowFilters();
           alert(e.message || "Erreur sauvegarde du statut VTC");
+        }finally{
+          if(showConvocationTransmission) closeModal("vtcConvocationTransmissionModal");
         }
       });
     });
