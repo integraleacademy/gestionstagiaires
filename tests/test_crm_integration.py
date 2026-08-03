@@ -53,6 +53,24 @@ class CrmIntegrationTests(unittest.TestCase):
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         return self.client.post("/api/integrations/crm/stagiaires", json=payload or self.payload, headers=headers)
 
+    def lookup(self, crm_contact_id="contact-42", token="secret-token"):
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        query = {} if crm_contact_id is None else {"crm_contact_id": crm_contact_id}
+        return self.client.get("/api/integrations/crm/stagiaires", query_string=query, headers=headers)
+
+    def add_trainee(self, **overrides):
+        data = self.read()
+        trainee = {
+            "id": "trainee-1", "crm_contact_id": "contact-42", "first_name": "Lina",
+            "last_name": "Martin", "cnaps": "TRANSMIS", "cnaps_history": [],
+            "nub": "1000731",
+        }
+        trainee.update(overrides)
+        data["sessions"][0].update({"date_start": "2026-09-01"})
+        data["sessions"][0]["trainees"].append(trainee)
+        self.write(data)
+        return trainee
+
     def transfer_id(self, response):
         return parse_qs(urlparse(response.get_json()["url"]).query)["crm_prefill"][0]
 
@@ -65,6 +83,74 @@ class CrmIntegrationTests(unittest.TestCase):
     def test_token_is_required(self):
         self.assertEqual(self.prepare(token=None).status_code, 401)
         self.assertEqual(self.prepare(token="wrong").status_code, 401)
+
+    def test_lookup_uses_same_authentication_and_requires_contact_id(self):
+        self.assertEqual(self.lookup(token=None).status_code, 401)
+        self.assertEqual(self.lookup(token="wrong").status_code, 401)
+        self.assertEqual(self.lookup(crm_contact_id=None).status_code, 400)
+
+    def test_lookup_returns_linked_trainee_and_regulatory_data_without_nub(self):
+        self.add_trainee(cnaps="STATUT PERSONNALISÉ")
+        annuaire = {
+            "check_status": "success", "checked_at": "2026-08-03T12:00:00+00:00", "message": None,
+            "titles": [{
+                "code": "CP SH", "label": "Carte professionnelle - Surveillance humaine ou gardiennage",
+                "status": "ACTIF", "valid_until": "2031-06-30",
+            }],
+        }
+        with mock.patch.object(gestion_app, "fetch_cnaps_public_annuaire", return_value=annuaire) as fetch:
+            response = self.lookup()
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["cnaps"]["status"], "STATUT PERSONNALISÉ")
+        self.assertEqual(body["trainee"], {
+            "id": "trainee-1",
+            "url": "https://gestionstagiaires-r5no.onrender.com/stagiaires/trainee-1",
+            "session_name": self.payload["session"], "session_start": "2026-09-01",
+        })
+        self.assertEqual(body["card_pro"]["titles"][0]["display_status"], "CP SH ACTIF")
+        self.assertNotIn("nub", json.dumps(body).lower())
+        self.assertNotIn("pre_number", body["card_pro"])
+        fetch.assert_called_once_with("Martin", "1000731")
+
+    def test_lookup_returns_not_found_and_duplicate(self):
+        self.assertEqual(self.lookup().status_code, 404)
+        self.add_trainee(nub="")
+        data = self.read()
+        data["sessions"].append({
+            "id": "session-2", "name": "Autre", "date_start": "2026-10-01",
+            "trainees": [{"id": "trainee-2", "crm_contact_id": "contact-42"}],
+        })
+        self.write(data)
+        self.assertEqual(self.lookup().status_code, 409)
+
+    def test_lookup_reports_missing_nub_without_calling_annuaire(self):
+        self.add_trainee(nub="", cnaps_nub="", cnaps_tracking_nub="", pre_number="")
+        with mock.patch.object(gestion_app, "fetch_cnaps_public_annuaire") as fetch:
+            response = self.lookup()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["card_pro"]["check_status"], "missing_nub")
+        self.assertEqual(response.get_json()["card_pro"]["titles"], [])
+        fetch.assert_not_called()
+
+    def test_lookup_flags_active_ap_sh_expiring_before_training(self):
+        self.add_trainee(nub="", pre_number="PRE-2026-01-01-00001000731")
+        annuaire = {"check_status": "success", "checked_at": "now", "message": None, "titles": [{
+            "code": "AP SH", "label": "Autorisation préalable - Surveillance humaine ou gardiennage",
+            "status": "ACTIF", "date_fin_validite": "2026-08-31",
+        }]}
+        with mock.patch.object(gestion_app, "fetch_cnaps_public_annuaire", return_value=annuaire):
+            response = self.lookup()
+        self.assertTrue(response.get_json()["card_pro"]["titles"][0]["expires_before_training"])
+
+    def test_lookup_keeps_http_200_when_cnaps_annuaire_fails(self):
+        self.add_trainee()
+        failure = {"check_status": "error", "checked_at": "now", "message": "Vérification CNAPS impossible"}
+        with mock.patch.object(gestion_app, "fetch_cnaps_public_annuaire", return_value=failure):
+            response = self.lookup()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["cnaps"]["status"], "TRANSMIS")
+        self.assertEqual(response.get_json()["card_pro"]["check_status"], "error")
 
     def test_preparation_creates_no_trainee_and_url_contains_no_personal_data(self):
         response = self.prepare()
