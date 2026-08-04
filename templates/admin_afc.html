@@ -104,7 +104,11 @@
   #afcTable tbody tr.afc-row-enrolled:hover td{
     background:#dcfce7 !important;
   }
-  .afc-import-modal{max-width:min(1180px,96vw);width:96vw;max-height:92vh;overflow:auto;}
+  .afc-import-modal{max-width:1500px;width:calc(100vw - 32px);height:calc(100vh - 32px);max-height:none;display:flex;flex-direction:column;overflow:hidden;}
+  .afc-import-modal .modal-body{flex:1;overflow:auto;}
+  .afc-import-date{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:14px 16px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;}
+  .afc-import-date label{font-weight:800;color:#1e3a8a;}
+  .afc-import-date input{min-height:40px;padding:0 12px;border:1px solid #94a3b8;border-radius:8px;background:#fff;}
   .afc-dropzone{border:2px dashed #94a3b8;border-radius:16px;padding:32px;text-align:center;background:#f8fafc;transition:.2s;}
   .afc-dropzone.drag{border-color:#f97316;background:#fff7ed;}
   .afc-import-preview{max-width:220px;max-height:160px;border-radius:10px;margin-top:14px;object-fit:contain;}
@@ -268,6 +272,10 @@
         <p id="afcImportError" style="color:#b91c1c;font-weight:700" role="alert"></p>
       </div>
       <div id="afcImportStep2" hidden>
+        <div class="afc-import-date">
+          <label for="afcImportIcopDate">Date de l’ICOP à attribuer aux candidats</label>
+          <input id="afcImportIcopDate" type="date" required>
+        </div>
         <p id="afcImportSummary" style="font-weight:800"></p>
         <div style="overflow-x:auto"><table class="afc-import-table"><thead><tr><th>✓</th><th>Identifiant France Travail</th><th>Nom</th><th>Prénom(s)</th><th>Téléphone</th><th>E-mail</th><th>Statut</th><th>Action</th></tr></thead><tbody id="afcImportRows"></tbody></table></div>
       </div>
@@ -314,6 +322,7 @@ const afcImportModal = document.getElementById('afcImportModal');
 const afcDropzone = document.getElementById('afcDropzone');
 const afcAnalyzeImage = document.getElementById('afcAnalyzeImage');
 const afcConfirmImport = document.getElementById('afcConfirmImport');
+const afcImportIcopDate = document.getElementById('afcImportIcopDate');
 const afcImportRows = document.getElementById('afcImportRows');
 let afcSelectedFile = null;
 let afcCandidates = [];
@@ -532,7 +541,7 @@ function updateCandidateCount(){
 
 
 function resetAfcImport(){
-  afcSelectedFile=null; afcCandidates=[]; afcImportInput.value=''; afcImportRows.innerHTML='';
+  afcSelectedFile=null; afcCandidates=[]; afcImportInput.value=''; afcImportIcopDate.value=''; afcImportRows.innerHTML='';
   document.getElementById('afcImagePreview').hidden=true; document.getElementById('afcImportError').textContent='';
   document.getElementById('afcImportStep1').hidden=false; document.getElementById('afcImportStep2').hidden=true;
   document.getElementById('afcReplaceImage').hidden=true; afcAnalyzeImage.hidden=false; afcAnalyzeImage.disabled=true;
@@ -637,7 +646,7 @@ function renderAfcImportRows(){
   updateAfcImportCount();
 }
 function updateAfcImportCount(){
-  const s=afcImportRows.querySelectorAll('[data-select]:checked').length;afcConfirmImport.disabled=s===0;afcConfirmImport.textContent=`Importer ${s} candidat${s>1?'s':''}`;
+  const s=afcImportRows.querySelectorAll('[data-select]:checked').length;afcConfirmImport.disabled=s===0||!afcImportIcopDate.value;afcConfirmImport.textContent=`Importer ${s} candidat${s>1?'s':''}`;
   const counts={ready:0,duplicate:0,invalid:0,conflict:0};afcCandidates.forEach(c=>counts[c.status]++);
   document.getElementById('afcImportSummary').textContent=`${afcCandidates.length} candidats détectés — ${counts.ready} importables — ${counts.duplicate} déjà présents — ${counts.invalid} à corriger${counts.conflict?` — ${counts.conflict} conflits`:''}`;
 }
@@ -648,9 +657,10 @@ function afcLocallyValid(c){
 }
 afcImportRows.addEventListener('change',e=>{const tr=e.target.closest('tr');if(!tr)return;const c=afcCandidates[+tr.dataset.index];if(e.target.dataset.importField){c[e.target.dataset.importField]=e.target.value;if(c.status==='invalid'&&afcLocallyValid(c)){c.status='ready';c.reason='';c.selected=true;renderAfcImportRows();return;}if(c.status==='ready'&&!afcLocallyValid(c)){c.status='invalid';c.reason='Champs obligatoires invalides';c.selected=false;renderAfcImportRows();return;}}if(e.target.matches('[data-select]'))c.selected=e.target.checked;updateAfcImportCount();});
 afcImportRows.addEventListener('click',e=>{if(!e.target.matches('[data-remove]'))return;afcCandidates.splice(+e.target.closest('tr').dataset.index,1);renderAfcImportRows();});
+afcImportIcopDate.addEventListener('change',updateAfcImportCount);
 afcConfirmImport.addEventListener('click',async()=>{
-  const rows=afcCandidates.filter(c=>c.selected&&c.status==='ready');if(!rows.length)return;afcConfirmImport.disabled=true;afcConfirmImport.textContent='Import en cours…';
-  try{const res=await fetch('/admin/afc/import-image/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates:rows})});const body=await res.json().catch(()=>({}));if(!res.ok||!body.success)throw new Error(body.message||'Import impossible.');alert(body.message);closeAfcImport();location.reload();}
+  const rows=afcCandidates.filter(c=>c.selected&&c.status==='ready');if(!rows.length||!afcImportIcopDate.value)return;afcConfirmImport.disabled=true;afcConfirmImport.textContent='Import et envoi en cours…';
+  try{const res=await fetch('/admin/afc/import-image/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates:rows,date_icop:afcImportIcopDate.value})});const body=await res.json().catch(()=>({}));if(!res.ok||!body.success)throw new Error(body.message||'Import impossible.');alert(body.message);closeAfcImport();location.reload();}
   catch(err){alert(err.message);updateAfcImportCount();}
 });
 
