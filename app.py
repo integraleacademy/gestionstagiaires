@@ -16645,9 +16645,15 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _afc_render_mail_template(template: str, candidate: Dict[str, Any]) -> str:
+    raw_date_icop = str(candidate.get("date_icop") or "").strip()
+    try:
+        date_icop = datetime.date.fromisoformat(raw_date_icop).strftime("%d/%m/%Y")
+    except ValueError:
+        date_icop = raw_date_icop
     values = {
         "nom": (candidate.get("nom") or "").strip(),
         "prenom": (candidate.get("prenom") or "").strip(),
+        "date_icop": date_icop,
         "motif_refus": (candidate.get("motif_refus") or "").strip(),
         "complement_refus": (
             (candidate.get("complement_refus_autre") or "").strip()
@@ -16698,7 +16704,7 @@ def _afc_find_latest_positioning_score(candidate: Dict[str, Any], positioning_te
 def admin_afc():
     data = load_data()
     bucket = _afc_bucket(data)
-    candidates = bucket.get("candidates", [])
+    candidates = [c for c in bucket.get("candidates", []) if not c.get("archived")]
     positioning_tests = list(data.get("positioning_tests") or [])
     changed = False
     for candidate in candidates:
@@ -17015,6 +17021,23 @@ def api_admin_afc_delete_all_candidates():
     return jsonify({"ok": True, "deleted": deleted})
 
 
+@app.post("/api/admin/afc/candidates/archive-all")
+def api_admin_afc_archive_all_candidates():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    archived = 0
+    archived_at = _now_iso()
+    for candidate in bucket.get("candidates") or []:
+        if candidate.get("archived"):
+            continue
+        candidate["archived"] = True
+        candidate["archived_at"] = archived_at
+        archived += 1
+    if archived:
+        save_data(data)
+    return jsonify({"ok": True, "archived": archived})
+
+
 @app.post("/api/admin/afc/candidates/<candidate_id>/notify")
 def api_admin_afc_notify_candidate(candidate_id: str):
     data = load_data()
@@ -17104,6 +17127,9 @@ def api_admin_afc_notify_pending_candidates():
     skipped = 0
     failed = 0
     for candidate in candidates:
+        if candidate.get("archived"):
+            skipped += 1
+            continue
         status = (candidate.get("notification_status") or "").strip().upper()
         if status == "ENVOYEE":
             skipped += 1
@@ -17158,7 +17184,7 @@ def admin_afc_candidate_sheet(candidate_id: str):
 def admin_afc_export():
     data = load_data()
     bucket = _afc_bucket(data)
-    candidates = bucket.get("candidates", [])
+    candidates = [c for c in bucket.get("candidates", []) if not c.get("archived")]
     prioritized = [c for c in candidates if c.get("cnaps_priority")]
     non_prioritized = [c for c in candidates if not c.get("cnaps_priority")]
     retained = [c for c in non_prioritized if (c.get("decision") or "").strip().upper() == "RETENU"]
