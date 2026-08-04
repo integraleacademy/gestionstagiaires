@@ -61,6 +61,29 @@ class CrmIntegrationTests(unittest.TestCase):
         query = {} if crm_contact_id is None else {"crm_contact_id": crm_contact_id}
         return self.client.get("/api/integrations/crm/stagiaires", query_string=query, headers=headers)
 
+    def link_existing(self, payload=None, token="secret-token"):
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        link_payload = payload or {
+            "crm_contact_id": "contact-new", "prenom": "Lina", "nom": "Martin",
+            "email": "lina@example.com", "telephone": "0600000000",
+            "source": "integrale_connect",
+        }
+        return self.client.post(
+            "/api/integrations/crm/stagiaires/link-existing", json=link_payload, headers=headers,
+        )
+
+    def add_unlinked_trainee(self, trainee_id="trainee-manual", **overrides):
+        values = {
+            "id": trainee_id, "first_name": "Lina", "last_name": "Martin",
+            "email": "lina@example.com", "phone": "0600000000", "cnaps_history": [],
+        }
+        values.update(overrides)
+        data = self.read()
+        data["sessions"][0].update({"date_start": "2026-09-01", "training_type": "DIRIGEANT VAE"})
+        data["sessions"][0]["trainees"].append(values)
+        self.write(data)
+        return values
+
     def add_trainee(self, **overrides):
         data = self.read()
         trainee = {
@@ -91,6 +114,122 @@ class CrmIntegrationTests(unittest.TestCase):
         self.assertEqual(self.lookup(token=None).status_code, 401)
         self.assertEqual(self.lookup(token="wrong").status_code, 401)
         self.assertEqual(self.lookup(crm_contact_id=None).status_code, 400)
+
+    def test_link_existing_requires_valid_bearer(self):
+        self.assertEqual(self.link_existing(token=None).status_code, 401)
+        self.assertEqual(self.link_existing(token="wrong").status_code, 401)
+
+    def test_link_existing_by_exact_email_preserves_data_and_vae_fields(self):
+        self.add_unlinked_trainee(
+            email=" Lina.Example@Example.com ", phone="", custom_data={"keep": True},
+            vae_status="livret_2_analysis", vae_jury_date="2026-10-12",
+            vae_action_dates={"livret_1_received": "2026-01-02"}, crm_source="",
+        )
+        payload = {
+            "crm_contact_id": "new-42", "prenom": "Lína", "nom": "MARTIN",
+            "email": "lina.example@example.com", "telephone": "", "source": "integrale_connect",
+        }
+        before = self.read()["sessions"][0]["trainees"][0]
+        response = self.link_existing(payload)
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["link_created"])
+        self.assertTrue(body["vae"]["applicable"])
+        self.assertEqual(body["vae"]["status_code"], "livret_2_analysis")
+        after = self.read()["sessions"][0]["trainees"][0]
+        for key in ("email", "phone", "custom_data", "vae_status", "vae_jury_date", "vae_action_dates"):
+            self.assertEqual(after[key], before[key])
+        self.assertEqual(after["crm_contact_id"], "new-42")
+        self.assertEqual(after["crm_source"], "integrale_connect")
+        self.assertEqual(after["activity_history"][0]["label"], "Liaison avec la piste CRM créée")
+        self.assertNotIn("secret-token", json.dumps(body))
+
+    def test_link_existing_by_phone_and_normalizes_french_prefix(self):
+        self.add_unlinked_trainee(email="", phone="06 12 34 56 78")
+        payload = {
+            "crm_contact_id": "phone-42", "prenom": "Lina", "nom": "Martin",
+            "email": "", "telephone": "+33 6 12 34 56 78",
+        }
+        response = self.link_existing(payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.read()["sessions"][0]["trainees"][0]["crm_contact_id"], "phone-42")
+
+    def test_link_existing_checks_identity(self):
+        self.add_unlinked_trainee()
+        payload = {
+            "crm_contact_id": "new-42", "prenom": "Autre", "nom": "Martin",
+            "email": "lina@example.com", "telephone": "",
+        }
+        response = self.link_existing(payload)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json()["reason"], "identity_mismatch")
+        self.assertNotIn("crm_contact_id", self.read()["sessions"][0]["trainees"][0])
+
+    def test_link_existing_not_found(self):
+        response = self.link_existing()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json()["reason"], "trainee_not_found")
+
+    def test_link_existing_rejects_ambiguous_email(self):
+        self.add_unlinked_trainee()
+        self.add_unlinked_trainee("trainee-manual-2")
+        response = self.link_existing({
+            "crm_contact_id": "new-42", "prenom": "Lina", "nom": "Martin",
+            "email": "lina@example.com", "telephone": "",
+        })
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json()["reason"], "ambiguous_match")
+        self.assertTrue(all(not trainee.get("crm_contact_id") for trainee in self.read()["sessions"][0]["trainees"]))
+
+    def test_link_existing_rejects_conflicting_email_and_phone(self):
+        self.add_unlinked_trainee(phone="0611111111")
+        self.add_unlinked_trainee("trainee-manual-2", email="other@example.com", phone="0600000000")
+        response = self.link_existing()
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json()["reason"], "conflicting_matches")
+
+    def test_link_existing_rejects_used_contact_id_and_already_linked_trainee(self):
+        self.add_unlinked_trainee(crm_contact_id="used-by-this-record")
+        response = self.link_existing()
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json()["reason"], "trainee_already_linked")
+
+        data = self.read()
+        data["sessions"][0]["trainees"][0].update({
+            "first_name": "Other", "email": "other@example.com", "phone": "0611111111",
+            "crm_contact_id": "contact-new",
+        })
+        data["sessions"][0]["trainees"].append({
+            "id": "target", "first_name": "Lina", "last_name": "Martin",
+            "email": "lina@example.com", "phone": "0600000000",
+        })
+        self.write(data)
+        response = self.link_existing()
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.get_json()["reason"], "crm_contact_id_already_used")
+
+    def test_link_existing_is_idempotent_and_get_finds_complete_vae(self):
+        self.add_unlinked_trainee(vae_status="jury", vae_jury_date="2026-11-03")
+        first = self.link_existing()
+        second = self.link_existing()
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertFalse(second.get_json()["link_created"])
+        trainee = self.read()["sessions"][0]["trainees"][0]
+        self.assertEqual(len(trainee["activity_history"]), 1)
+        fetched = self.lookup("contact-new")
+        self.assertEqual(fetched.status_code, 200)
+        self.assertEqual(fetched.get_json()["vae"], second.get_json()["vae"])
+        self.assertEqual(fetched.get_json()["vae"]["jury"]["date"], "2026-11-03")
+
+    def test_link_existing_isolated_to_integrale_partner(self):
+        self.add_unlinked_trainee()
+        data = self.read()
+        data["sessions"][0]["partner_id"] = "other-partner"
+        self.write(data)
+        response = self.link_existing()
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json()["reason"], "trainee_not_found")
 
     def test_lookup_returns_linked_trainee_and_regulatory_data_without_nub(self):
         self.add_trainee(cnaps="STATUT PERSONNALISÉ")

@@ -20427,6 +20427,156 @@ def _crm_vae_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Di
     }
 
 
+def _crm_trainee_response(session_obj: Dict[str, Any], trainee: Dict[str, Any], crm_contact_id: str) -> Dict[str, Any]:
+    """Build the single, privacy-filtered trainee representation exposed to the CRM."""
+    trainee_id = str(trainee.get("id") or "")
+    history = trainee.get("cnaps_history")
+    return {
+        "ok": True,
+        "linked": True,
+        "crm_contact_id": crm_contact_id,
+        "trainee": {
+            "id": trainee_id,
+            "url": f"{CRM_RESPONSE_BASE_URL}/stagiaires/{trainee_id}",
+            "session_name": str(_session_get(session_obj, "name", "") or ""),
+            "session_start": str(_session_get(session_obj, "date_start", "") or ""),
+        },
+        "cnaps": {
+            "status": trainee.get("cnaps") if trainee.get("cnaps") not in (None, "") else "INCONNU",
+            "history": history if isinstance(history, list) else [],
+        },
+        "card_pro": _crm_card_pro_payload(trainee, session_obj),
+        "vae": _crm_vae_payload(trainee, session_obj),
+    }
+
+
+def _crm_matching_email(value: Any) -> str:
+    return re.sub(r"\s+", "", str(value or "")).lower()
+
+
+def _crm_matching_phone(value: Any) -> str:
+    digits = re.sub(r"\D+", "", str(value or ""))
+    french_international = False
+    if digits.startswith("0033"):
+        digits = digits[4:]
+        french_international = True
+    elif digits.startswith("33"):
+        digits = digits[2:]
+        french_international = True
+    if french_international and digits and not digits.startswith("0"):
+        digits = "0" + digits
+    return digits
+
+
+def _crm_matching_name(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or "").strip().lower())
+    return "".join(character for character in normalized if not unicodedata.combining(character))
+
+
+def _crm_link_error(status: int, reason: str, message: str):
+    return jsonify({"ok": False, "reason": reason, "error": message}), status
+
+
+@app.post("/api/integrations/crm/stagiaires/link-existing")
+@_crm_integration_token_required
+def api_crm_link_existing_trainee():
+    raw = request.get_json(silent=True)
+    allowed = {"crm_contact_id", "prenom", "nom", "email", "telephone", "source"}
+    if not isinstance(raw, dict) or any(key not in allowed for key in raw):
+        return _crm_link_error(400, "invalid_request", "Corps JSON invalide")
+    if any(not isinstance(value, str) for value in raw.values()):
+        return _crm_link_error(400, "invalid_request", "Tous les champs doivent être des chaînes")
+    required = ("crm_contact_id", "prenom", "nom")
+    if any(not raw.get(key, "").strip() for key in required):
+        return _crm_link_error(400, "invalid_request", "crm_contact_id, prenom et nom sont obligatoires")
+    if not raw.get("email", "").strip() and not raw.get("telephone", "").strip():
+        return _crm_link_error(400, "invalid_request", "email ou telephone est obligatoire")
+
+    crm_contact_id = raw["crm_contact_id"].strip()
+    wanted_email = _crm_matching_email(raw.get("email"))
+    wanted_phone = _crm_matching_phone(raw.get("telephone"))
+    wanted_first_name = _crm_matching_name(raw["prenom"])
+    wanted_last_name = _crm_matching_name(raw["nom"])
+
+    def link(data):
+        accessible = []
+        for session_obj in data.get("sessions", []):
+            if not isinstance(session_obj, dict):
+                continue
+            if str(session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != INTEGRALE_PARTNER_ID:
+                continue
+            for trainee in _session_trainees_list(session_obj):
+                if isinstance(trainee, dict):
+                    accessible.append((session_obj, trainee))
+
+        already_linked = [(session_obj, trainee) for session_obj, trainee in accessible
+                          if str(trainee.get("crm_contact_id") or "") == crm_contact_id]
+        if already_linked:
+            if len(already_linked) == 1:
+                session_obj, trainee = already_linked[0]
+                same_identity = (_crm_matching_name(trainee.get("first_name")) == wanted_first_name
+                                 and _crm_matching_name(trainee.get("last_name")) == wanted_last_name)
+                same_contact = bool(wanted_email or wanted_phone)
+                if wanted_email:
+                    same_contact = same_contact and _crm_matching_email(trainee.get("email")) == wanted_email
+                if wanted_phone:
+                    same_contact = same_contact and (
+                        _crm_matching_phone(trainee.get("phone") or trainee.get("telephone")) == wanted_phone
+                    )
+                if same_identity and same_contact:
+                    return {"outcome": "success", "created": False, "session": session_obj, "trainee": trainee}
+            return {"outcome": "crm_contact_id_already_used"}
+
+        email_matches = [(session_obj, trainee) for session_obj, trainee in accessible
+                         if wanted_email and _crm_matching_email(trainee.get("email")) == wanted_email]
+        phone_matches = [(session_obj, trainee) for session_obj, trainee in accessible
+                         if wanted_phone and _crm_matching_phone(trainee.get("phone") or trainee.get("telephone")) == wanted_phone]
+        email_ids = {id(trainee) for _, trainee in email_matches}
+        phone_ids = {id(trainee) for _, trainee in phone_matches}
+        if email_ids and phone_ids and email_ids != phone_ids:
+            return {"outcome": "conflicting_matches"}
+
+        matches = email_matches if email_matches else phone_matches
+        if not matches:
+            return {"outcome": "trainee_not_found"}
+        if len(matches) != 1:
+            return {"outcome": "ambiguous_match"}
+        session_obj, trainee = matches[0]
+        if (_crm_matching_name(trainee.get("first_name")) != wanted_first_name
+                or _crm_matching_name(trainee.get("last_name")) != wanted_last_name):
+            return {"outcome": "identity_mismatch"}
+        existing_contact_id = str(trainee.get("crm_contact_id") or "").strip()
+        if existing_contact_id and existing_contact_id != crm_contact_id:
+            return {"outcome": "trainee_already_linked"}
+
+        trainee["crm_contact_id"] = crm_contact_id
+        if not str(trainee.get("crm_source") or "").strip():
+            trainee["crm_source"] = "integrale_connect"
+        append_trainee_history_event(trainee, "Liaison avec la piste CRM créée")
+        return {"outcome": "success", "created": True, "session": session_obj, "trainee": trainee}
+
+    try:
+        result = _atomic_update_data(link)
+    except Exception:
+        app.logger.exception("Échec de liaison d’un stagiaire avec le CRM")
+        return _crm_link_error(500, "storage_error", "Impossible d’enregistrer la liaison")
+
+    errors = {
+        "conflicting_matches": (409, "L’adresse e-mail et le téléphone désignent des stagiaires différents"),
+        "ambiguous_match": (409, "Plusieurs stagiaires correspondent"),
+        "identity_mismatch": (409, "Le nom ou le prénom ne correspond pas"),
+        "trainee_not_found": (404, "Aucun stagiaire ne correspond"),
+        "crm_contact_id_already_used": (409, "Cet identifiant CRM est déjà utilisé"),
+        "trainee_already_linked": (409, "Ce stagiaire est déjà lié à un autre identifiant CRM"),
+    }
+    if result.get("outcome") != "success":
+        status, message = errors.get(result.get("outcome"), (500, "Impossible d’enregistrer la liaison"))
+        return _crm_link_error(status, result.get("outcome") or "storage_error", message)
+    response = _crm_trainee_response(result["session"], result["trainee"], crm_contact_id)
+    response["link_created"] = bool(result["created"])
+    return jsonify(response), 200
+
+
 @app.get("/api/integrations/crm/stagiaires")
 @_crm_integration_token_required
 def api_crm_get_trainee():
@@ -20449,25 +20599,7 @@ def api_crm_get_trainee():
         return jsonify({"error": "Plusieurs stagiaires utilisent ce crm_contact_id"}), 409
 
     session_obj, trainee = matches[0]
-    trainee_id = str(trainee.get("id") or "")
-    history = trainee.get("cnaps_history")
-    return jsonify({
-        "ok": True,
-        "linked": True,
-        "crm_contact_id": crm_contact_id,
-        "trainee": {
-            "id": trainee_id,
-            "url": f"{CRM_RESPONSE_BASE_URL}/stagiaires/{trainee_id}",
-            "session_name": str(_session_get(session_obj, "name", "") or ""),
-            "session_start": str(_session_get(session_obj, "date_start", "") or ""),
-        },
-        "cnaps": {
-            "status": trainee.get("cnaps") if trainee.get("cnaps") not in (None, "") else "INCONNU",
-            "history": history if isinstance(history, list) else [],
-        },
-        "card_pro": _crm_card_pro_payload(trainee, session_obj),
-        "vae": _crm_vae_payload(trainee, session_obj),
-    })
+    return jsonify(_crm_trainee_response(session_obj, trainee, crm_contact_id))
 
 
 @app.get("/stagiaires/<trainee_id>")
