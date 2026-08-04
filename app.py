@@ -20162,7 +20162,8 @@ def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
 
 CRM_REQUIRED_FIELDS = ("source", "crm_contact_id", "prenom", "nom", "email", "formation", "centre", "session")
 CRM_OPTIONAL_FIELDS = ("telephone", "parcours", "commentaires")
-CRM_RESPONSE_BASE_URL = "https://gestionstagiaires-r5no.onrender.com"
+# Keep CRM links aligned with the application's single public URL configuration.
+CRM_RESPONSE_BASE_URL = PUBLIC_BASE_URL.rstrip("/")
 CRM_PREFILL_TTL = datetime.timedelta(minutes=15)
 
 
@@ -20298,6 +20299,134 @@ def _crm_card_pro_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) 
     }
 
 
+VAE_CRM_PROGRESS = {
+    "livret_1_todo": 10, "livret_1_analysis": 20, "non_recevable": 20,
+    "complement_requested": 20, "livret_1_validated": 30,
+    "financement_validated": 40, "livret_2_todo": 50,
+    "livret_2_analysis": 65, "livret_2_validated": 75,
+    "financement_l2_validated": 85, "jury": 95, "certified": 100,
+}
+VAE_CRM_NEXT_ACTIONS = {
+    "livret_1_todo": ("complete_livret_1", "Compléter le Livret 1"),
+    "livret_1_analysis": ("analyse_livret_1", "Analyser le Livret 1"),
+    "complement_requested": ("provide_complements", "Transmettre les compléments demandés"),
+    "livret_1_validated": ("validate_financing", "Valider le financement"),
+    "financement_validated": ("complete_livret_2", "Compléter le Livret 2"),
+    "livret_2_todo": ("complete_livret_2", "Compléter le Livret 2"),
+    "livret_2_analysis": ("analyse_livret_2", "Analyser le Livret 2"),
+    "livret_2_validated": ("validate_livret_2_financing", "Valider le financement du Livret 2"),
+    "financement_l2_validated": ("schedule_jury", "Planifier le passage devant le jury"),
+    "jury": ("jury", "Passage devant le jury"),
+}
+
+
+def get_vae_crm_progress(status_code: str) -> Dict[str, Any]:
+    """Return computed CRM progress and outcome flags for a canonical status."""
+    status_code = vae_status_view(status_code)["key"]
+    return {
+        "progress_percent": VAE_CRM_PROGRESS[status_code],
+        "is_terminal": status_code in {"non_recevable", "certified"},
+        "is_success": status_code == "certified",
+        "is_blocked": status_code in {"non_recevable", "complement_requested"},
+    }
+
+
+def get_vae_crm_next_action(status_code: str, trainee=None, dossier=None) -> Optional[Dict[str, str]]:
+    """Return the stable next CRM action; dates never mutate this mapping."""
+    action = VAE_CRM_NEXT_ACTIONS.get(vae_status_view(status_code)["key"])
+    return {"code": action[0], "label": action[1]} if action else None
+
+
+def _crm_nullable(value: Any) -> Any:
+    return value if value not in (None, "") else None
+
+
+def _crm_date_sort_value(value: Any) -> float:
+    raw = str(value or "").strip()
+    if not raw:
+        return float("-inf")
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        return datetime.datetime.fromisoformat(normalized).timestamp()
+    except (ValueError, OverflowError):
+        pass
+    match = re.match(r"^(\d{2})/(\d{2})/(\d{4})(?:\s+à\s+(\d{2})h(\d{2}))?", raw)
+    if match:
+        day, month, year, hour, minute = match.groups()
+        return datetime.datetime(int(year), int(month), int(day), int(hour or 0), int(minute or 0), tzinfo=datetime.timezone.utc).timestamp()
+    return float("-inf")
+
+
+def get_vae_crm_recevabilite(status_code: str, dossier: Optional[Dict[str, Any]], trainee: Dict[str, Any]) -> Dict[str, Any]:
+    dossier_status = str((dossier or {}).get("statut_dossier") or "").strip().lower()
+    code = "non_recevable" if status_code == "non_recevable" else (dossier_status or None)
+    labels = {"non_recevable": "Non recevable", "recevable": "Recevable", "refuse": "Refusé", "soumis": "Soumis", "brouillon": "Brouillon"}
+    deliverables = trainee.get("deliverables") if isinstance(trainee.get("deliverables"), dict) else {}
+    return {
+        "status_code": code,
+        "status_label": labels.get(code) if code else None,
+        "attestation_available": bool(deliverables.get("attestation_recevabilite")),
+    }
+
+
+def _crm_vae_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Dict[str, Any]:
+    if str(_session_get(session_obj, "training_type", "") or "") != "DIRIGEANT VAE":
+        return {"applicable": False}
+
+    trainee_id, session_id = str(trainee.get("id") or ""), str(session_obj.get("id") or "")
+    # Do not let this read-only endpoint create an absent data file.
+    vae_data = _vae_load_all() if os.path.exists(VAE_DATA_FILE) else {"dossiers": []}
+    dossiers = []
+    for item in vae_data.get("dossiers", []):
+        if not isinstance(item, dict):
+            continue
+        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+        if str(meta.get("trainee_id") or "") != trainee_id:
+            continue
+        linked_session = str(meta.get("session_id") or "")
+        if linked_session and linked_session != session_id:
+            continue
+        dossiers.append(item)
+    dossiers.sort(key=lambda item: _crm_date_sort_value(item.get("updated_at") or item.get("created_at")), reverse=True)
+    dossier = dossiers[0] if dossiers else None
+    status = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))
+    status_code = status["key"]
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    date_fields = {
+        "livret_1_received_at": "livret_1_received", "livret_1_validated_at": "livret_1_validated",
+        "livret_1_transmitted_scotia_at": "livret_1_transmitted_scotia", "livret_2_received_at": "livret_2_received",
+        "livret_2_validated_at": "livret_2_validated", "livret_2_transmitted_scotia_at": "livret_2_transmitted_scotia",
+        "diploma_obtained_at": "diplome_obtenu",
+    }
+    crm_dates = {output: _crm_nullable(action_dates.get(source)) for output, source in date_fields.items()}
+    jury_date = _crm_nullable(trainee.get("vae_jury_date") or action_dates.get("jury_date"))
+    update_candidates = [dossier.get("updated_at") or dossier.get("created_at") if dossier else None, jury_date, *action_dates.values()]
+    reliable = [(value, _crm_date_sort_value(value)) for value in update_candidates if _crm_date_sort_value(value) != float("-inf")]
+    updated_at = max(reliable, key=lambda pair: pair[1])[0] if reliable else None
+    progress = get_vae_crm_progress(status_code)
+    certified = status_code == "certified"
+    dossier_status = str((dossier or {}).get("statut_dossier") or "").strip().lower() or None
+    dossier_labels = {"brouillon": "Brouillon", "soumis": "Soumis", "recevable": "Recevable", "refuse": "Refusé"}
+    return {
+        "applicable": True, "training_type": "DIRIGEANT VAE", "status_code": status_code,
+        "status_label": status["label"], **progress,
+        "next_action": get_vae_crm_next_action(status_code, trainee, dossier), "updated_at": updated_at,
+        "action_dates": crm_dates,
+        "recevabilite": get_vae_crm_recevabilite(status_code, dossier, trainee),
+        "jury": {"scheduled": bool(jury_date), "date": jury_date, "location": None},
+        "final_result": {"code": "certified" if certified else None, "label": "Diplôme obtenu" if certified else None,
+                         "diploma_obtained_at": crm_dates["diploma_obtained_at"] if certified else None},
+        "complements": {"requested": status_code == "complement_requested", "missing_items_supported": False,
+                        "missing_items_count": None, "missing_items": []},
+        "dossier": {"found": bool(dossier), "id": str(dossier.get("id")) if dossier else None,
+                    "status_code": dossier_status, "status_label": dossier_labels.get(dossier_status),
+                    "updated_at": _crm_nullable(dossier.get("updated_at") or dossier.get("created_at")) if dossier else None,
+                    "dossier_count": len(dossiers), "multiple_dossiers": len(dossiers) > 1,
+                    "admin_url": f"{CRM_RESPONSE_BASE_URL}/admin/vae/{dossier.get('id')}" if dossier else None},
+        "trainee_admin_url": f"{CRM_RESPONSE_BASE_URL}/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+    }
+
+
 @app.get("/api/integrations/crm/stagiaires")
 @_crm_integration_token_required
 def api_crm_get_trainee():
@@ -20308,6 +20437,8 @@ def api_crm_get_trainee():
     matches = []
     for session_obj in load_data().get("sessions", []):
         if not isinstance(session_obj, dict):
+            continue
+        if str(session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != INTEGRALE_PARTNER_ID:
             continue
         for trainee in _session_trainees_list(session_obj):
             if isinstance(trainee, dict) and trainee.get("crm_contact_id") == crm_contact_id:
@@ -20335,6 +20466,7 @@ def api_crm_get_trainee():
             "history": history if isinstance(history, list) else [],
         },
         "card_pro": _crm_card_pro_payload(trainee, session_obj),
+        "vae": _crm_vae_payload(trainee, session_obj),
     })
 
 
