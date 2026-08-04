@@ -16,8 +16,10 @@ class CrmIntegrationTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.original_data_file = gestion_app.DATA_FILE
         self.original_backup_dir = gestion_app.BACKUP_DIR
+        self.original_vae_data_file = gestion_app.VAE_DATA_FILE
         gestion_app.DATA_FILE = os.path.join(self.temp_dir.name, "data.json")
         gestion_app.BACKUP_DIR = os.path.join(self.temp_dir.name, "backups")
+        gestion_app.VAE_DATA_FILE = os.path.join(self.temp_dir.name, "data_vae.json")
         os.makedirs(gestion_app.BACKUP_DIR)
         self.payload = {
             "source": "integrale-connect-crm", "crm_contact_id": "contact-42",
@@ -39,6 +41,7 @@ class CrmIntegrationTests(unittest.TestCase):
         self.env.stop()
         gestion_app.DATA_FILE = self.original_data_file
         gestion_app.BACKUP_DIR = self.original_backup_dir
+        gestion_app.VAE_DATA_FILE = self.original_vae_data_file
         self.temp_dir.cleanup()
 
     def read(self):
@@ -111,7 +114,98 @@ class CrmIntegrationTests(unittest.TestCase):
         self.assertEqual(body["card_pro"]["titles"][0]["display_status"], "CP SH ACTIF")
         self.assertNotIn("nub", json.dumps(body).lower())
         self.assertNotIn("pre_number", body["card_pro"])
+        self.assertEqual(body["vae"], {"applicable": False})
         fetch.assert_called_once_with("Martin", "1000731")
+
+    def test_vae_without_dossier_returns_operational_status(self):
+        data = self.read()
+        data["sessions"][0]["training_type"] = "DIRIGEANT VAE"
+        self.write(data)
+        self.add_trainee(nub="", vae_status="livret_2_analysis")
+        body = self.lookup().get_json()["vae"]
+        self.assertTrue(body["applicable"])
+        self.assertEqual((body["status_code"], body["status_label"], body["progress_percent"]),
+                         ("livret_2_analysis", "Réception livret 2", 65))
+        self.assertEqual(body["next_action"]["code"], "analyse_livret_2")
+        self.assertEqual(body["dossier"], {
+            "found": False, "id": None, "status_code": None, "status_label": None,
+            "updated_at": None, "dossier_count": 0, "multiple_dossiers": False, "admin_url": None,
+        })
+        self.assertFalse(Path(gestion_app.VAE_DATA_FILE).exists(), "a GET request must not create data_vae.json")
+
+    def test_all_canonical_statuses_and_legacy_alias_are_computed(self):
+        expected = {
+            "livret_1_todo": (10, "complete_livret_1"), "livret_1_analysis": (20, "analyse_livret_1"),
+            "non_recevable": (20, None), "complement_requested": (20, "provide_complements"),
+            "livret_1_validated": (30, "validate_financing"), "financement_validated": (40, "complete_livret_2"),
+            "livret_2_todo": (50, "complete_livret_2"), "livret_2_analysis": (65, "analyse_livret_2"),
+            "livret_2_validated": (75, "validate_livret_2_financing"),
+            "financement_l2_validated": (85, "schedule_jury"), "jury": (95, "jury"), "certified": (100, None),
+        }
+        for status, (percent, action) in expected.items():
+            with self.subTest(status=status):
+                progress = gestion_app.get_vae_crm_progress(status)
+                self.assertEqual(progress["progress_percent"], percent)
+                result = gestion_app.get_vae_crm_next_action(status)
+                self.assertEqual(result["code"] if result else None, action)
+        self.assertTrue(gestion_app.get_vae_crm_progress("complement_requested")["is_blocked"])
+        self.assertEqual(gestion_app.get_vae_crm_progress("non_recevable"), {
+            "progress_percent": 20, "is_terminal": True, "is_success": False, "is_blocked": True,
+        })
+        self.assertEqual(gestion_app.get_vae_crm_progress("certification obtenue"), {
+            "progress_percent": 100, "is_terminal": True, "is_success": True, "is_blocked": False,
+        })
+
+    def test_vae_dossier_is_safe_scoped_and_latest_is_selected(self):
+        data = self.read()
+        data["sessions"][0]["training_type"] = "DIRIGEANT VAE"
+        self.write(data)
+        self.add_trainee(nub="", vae_status="certified", vae_jury_date="2026-09-15",
+                         vae_action_dates={"diplome_obtenu": "20/09/2026"},
+                         deliverables={"attestation_recevabilite": "private-document-token"})
+        dossiers = [
+            {"id": "old", "statut_dossier": "soumis", "created_at": "2026-07-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-1", "session_id": "session-1", "public_token": "secret"},
+             "experiences": [{"description": "private prose"}]},
+            {"id": "latest", "statut_dossier": "recevable", "updated_at": "2026-08-04T09:32:00+02:00",
+             "meta": {"trainee_id": "trainee-1", "session_id": "session-1", "trainee_token": "secret"},
+             "livret": "private content"},
+            {"id": "other", "updated_at": "2027-01-01T00:00:00Z", "meta": {"trainee_id": "trainee-2"}},
+            {"id": "other-session", "updated_at": "2028-01-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-1", "session_id": "session-2"}},
+        ]
+        Path(gestion_app.VAE_DATA_FILE).write_text(json.dumps({"dossiers": dossiers}), encoding="utf-8")
+        first = self.lookup().get_json()["vae"]
+        second = self.lookup().get_json()["vae"]
+        self.assertEqual(first["dossier"]["id"], "latest")
+        self.assertEqual((first["dossier"]["dossier_count"], first["dossier"]["multiple_dossiers"]), (2, True))
+        self.assertEqual(first["dossier"]["admin_url"],
+                         "https://gestionstagiaires-r5no.onrender.com/admin/vae/latest")
+        self.assertEqual(first["jury"], {"scheduled": True, "date": "2026-09-15", "location": None})
+        self.assertEqual(first["final_result"], {"code": "certified", "label": "Diplôme obtenu",
+                                                  "diploma_obtained_at": "20/09/2026"})
+        self.assertEqual(first["updated_at"], "20/09/2026")
+        self.assertEqual(first["updated_at"], second["updated_at"])
+        serialized = json.dumps(first)
+        for forbidden in ("public_token", "trainee_token", "private prose", "private content", "onrender.com/vae/latest"):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_non_certified_has_no_fictitious_final_result_and_complements_are_blocked(self):
+        data = self.read()
+        data["sessions"][0]["training_type"] = "DIRIGEANT VAE"
+        self.write(data)
+        self.add_trainee(nub="", vae_status="complement_requested")
+        vae = self.lookup().get_json()["vae"]
+        self.assertEqual(vae["final_result"], {"code": None, "label": None, "diploma_obtained_at": None})
+        self.assertEqual(vae["complements"], {"requested": True, "missing_items_supported": False,
+                                               "missing_items_count": None, "missing_items": []})
+
+    def test_lookup_is_limited_to_integrale_partner(self):
+        self.add_trainee(nub="")
+        data = self.read()
+        data["sessions"][0]["partner_id"] = "another-partner"
+        self.write(data)
+        self.assertEqual(self.lookup().status_code, 404)
 
     def test_lookup_returns_not_found_and_duplicate(self):
         self.assertEqual(self.lookup().status_code, 404)
