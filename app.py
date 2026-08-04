@@ -20402,7 +20402,8 @@ def _crm_vae_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Di
     trainee_id, session_id = str(trainee.get("id") or ""), str(session_obj.get("id") or "")
     # Do not let this read-only endpoint create an absent data file.
     vae_data = _vae_load_all() if os.path.exists(VAE_DATA_FILE) else {"dossiers": []}
-    dossiers = []
+    exact_session_dossiers = []
+    legacy_dossiers = []
     for item in vae_data.get("dossiers", []):
         if not isinstance(item, dict):
             continue
@@ -20410,9 +20411,28 @@ def _crm_vae_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Di
         if str(meta.get("trainee_id") or "") != trainee_id:
             continue
         linked_session = str(meta.get("session_id") or "")
-        if linked_session and linked_session != session_id:
+        if linked_session and linked_session == session_id:
+            exact_session_dossiers.append(item)
+        elif not linked_session:
+            legacy_dossiers.append(item)
+
+    selected_dossiers = exact_session_dossiers or legacy_dossiers
+    unique_dossiers = {}
+    unkeyed_dossiers = []
+    for item in selected_dossiers:
+        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+        dossier_id = str(item.get("id") or "").strip()
+        linkage_id = str(meta.get("linkage_id") or "").strip()
+        stable_key = ("id", dossier_id) if dossier_id else (("linkage_id", linkage_id) if linkage_id else None)
+        if stable_key is None:
+            # Without a stable identifier, two entries cannot safely be treated as copies.
+            unkeyed_dossiers.append(item)
             continue
-        dossiers.append(item)
+        previous = unique_dossiers.get(stable_key)
+        if previous is None or _crm_date_sort_value(item.get("updated_at") or item.get("created_at")) > \
+                _crm_date_sort_value(previous.get("updated_at") or previous.get("created_at")):
+            unique_dossiers[stable_key] = item
+    dossiers = list(unique_dossiers.values()) + unkeyed_dossiers
     dossiers.sort(key=lambda item: _crm_date_sort_value(item.get("updated_at") or item.get("created_at")), reverse=True)
     dossier = dossiers[0] if dossiers else None
     status = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))
