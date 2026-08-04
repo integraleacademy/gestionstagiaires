@@ -108,8 +108,12 @@
 
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-    <h1 style="margin:0;">Gestion des AFC</h1>
+    <h1 style="margin:0;">{{ 'Candidats AFC archivés' if show_archived else 'Gestion des AFC' }}</h1>
     <div style="display:flex;gap:8px;">
+      {% if show_archived %}
+      <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">← Retour aux candidats actifs</a>
+      {% else %}
+      <a class="btn btn-outline" href="{{ url_for('admin_afc', archives=1) }}">Archives ({{ archived_count }})</a>
       <a class="btn btn-outline" href="{{ url_for('admin_positioning_tests') }}">Tests de positionnement</a>
       <button class="btn btn-outline" id="btnArchiveAllCandidates" type="button">Archiver tous les candidats</button>
       <button class="btn btn-danger" id="btnDeleteAllCandidates" type="button">Supprimer toutes les lignes</button>
@@ -117,6 +121,7 @@
       <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
       <button class="btn btn-orange" id="btnImportCandidates" type="button">Importer</button>
       <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -227,7 +232,11 @@
         </td>
         <td><a class="btn btn-outline" href="{{ url_for('admin_afc_candidate_sheet', candidate_id=c.id) }}">Fiche candidat</a></td>
         <td>
+          {% if show_archived %}
+          <button type="button" class="btn btn-primary" data-restore-candidate>Restaurer</button>
+          {% else %}
           <button type="button" class="btn btn-outline" data-delete-candidate>Supprimer</button>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
@@ -260,6 +269,7 @@ const newNom = document.getElementById('newNom');
 const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
 const newTel = document.getElementById('newTel');
+const btnArchiveAllCandidates = document.getElementById('btnArchiveAllCandidates');
 const btnDeleteAllCandidates = document.getElementById('btnDeleteAllCandidates');
 const btnImportCandidates = document.getElementById('btnImportCandidates');
 const btnNotifyPending = document.getElementById('btnNotifyPending');
@@ -478,12 +488,12 @@ function updateCandidateCount(){
 
 
 
-btnImportCandidates.addEventListener('click', ()=>{
+btnImportCandidates?.addEventListener('click', ()=>{
   afcImportInput.value = '';
   afcImportInput.click();
 });
 
-btnNotifyPending.addEventListener('click', async ()=>{
+btnNotifyPending?.addEventListener('click', async ()=>{
   if(!confirm('Envoyer la notification à tous les candidats "non envoyée" ?')) return;
   btnNotifyPending.disabled = true;
   try{
@@ -504,7 +514,7 @@ btnNotifyPending.addEventListener('click', async ()=>{
   }
 });
 
-btnArchiveAllCandidates.addEventListener('click', async ()=>{
+btnArchiveAllCandidates?.addEventListener('click', async ()=>{
   if(!confirm('Archiver tous les candidats actuellement affichés dans Gestion des AFC ?')) return;
   btnArchiveAllCandidates.disabled = true;
   try{
@@ -524,7 +534,7 @@ btnArchiveAllCandidates.addEventListener('click', async ()=>{
   }
 });
 
-btnDeleteAllCandidates.addEventListener('click', async ()=>{
+btnDeleteAllCandidates?.addEventListener('click', async ()=>{
   if(!confirm('Supprimer toutes les lignes de Gestion des AFC ?')) return;
   btnDeleteAllCandidates.disabled = true;
   try{
@@ -578,7 +588,7 @@ afcImportInput.addEventListener('change', async ()=>{
   }
 });
 
-document.getElementById('btnAddCandidate').addEventListener('click', openModal);
+document.getElementById('btnAddCandidate')?.addEventListener('click', openModal);
 document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
 btnToggleTemplates.addEventListener('click', toggleMailTemplates);
 modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
@@ -635,6 +645,21 @@ document.querySelectorAll('[data-delete-candidate]').forEach((btn)=>{
     const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}/delete`, { method:'POST' });
     if(!res.ok){
       alert('Erreur suppression');
+      return;
+    }
+    tr.remove();
+    applyAfcFilters();
+  });
+});
+
+document.querySelectorAll('[data-restore-candidate]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const tr = e.currentTarget.closest('tr');
+    const fullName = `${getCandidateFieldValue(tr, 'prenom')} ${getCandidateFieldValue(tr, 'nom')}`.trim();
+    if(!confirm(`Restaurer le candidat ${fullName} dans la liste active ?`)) return;
+    const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}/unarchive`, { method:'POST' });
+    if(!res.ok){
+      alert('Erreur lors de la restauration');
       return;
     }
     tr.remove();
