@@ -16704,7 +16704,13 @@ def _afc_find_latest_positioning_score(candidate: Dict[str, Any], positioning_te
 def admin_afc():
     data = load_data()
     bucket = _afc_bucket(data)
-    candidates = [c for c in bucket.get("candidates", []) if not c.get("archived")]
+    all_candidates = bucket.get("candidates", [])
+    show_archived = request.args.get("archives") == "1"
+    archived_count = sum(1 for candidate in all_candidates if candidate.get("archived"))
+    candidates = [
+        candidate for candidate in all_candidates
+        if bool(candidate.get("archived")) == show_archived
+    ]
     positioning_tests = list(data.get("positioning_tests") or [])
     changed = False
     for candidate in candidates:
@@ -16737,6 +16743,8 @@ def admin_afc():
         "admin_afc.html",
         afc=bucket,
         candidates=ordered_candidates,
+        show_archived=show_archived,
+        archived_count=archived_count,
         afc_presence_status_labels=AFC_PRESENCE_STATUS_LABELS,
         refusal_reasons=AFC_REFUSAL_REASONS,
         refusal_complements=AFC_REFUSAL_COMPLEMENTS,
@@ -17036,6 +17044,25 @@ def api_admin_afc_archive_all_candidates():
     if archived:
         save_data(data)
     return jsonify({"ok": True, "archived": archived})
+
+
+@app.post("/api/admin/afc/candidates/<candidate_id>/unarchive")
+def api_admin_afc_unarchive_candidate(candidate_id: str):
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidate = next(
+        (candidate for candidate in bucket.get("candidates", []) if str(candidate.get("id") or "") == candidate_id),
+        None,
+    )
+    if not candidate:
+        return jsonify({"ok": False, "error": "Candidat introuvable"}), 404
+
+    restored = bool(candidate.get("archived"))
+    if restored:
+        candidate["archived"] = False
+        candidate.pop("archived_at", None)
+        save_data(data)
+    return jsonify({"ok": True, "restored": restored})
 
 
 @app.post("/api/admin/afc/candidates/<candidate_id>/notify")
