@@ -183,7 +183,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('document.body.classList.toggle("vae-l2-validated-card-active", activeVaeDashboardFilter === "status:livret_2_validated");', html)
         self.assertIn("A TRAITER (Scotia)", html)
         self.assertIn("COMPLEMENT DE DOSSIER A CONSULTER (Scotia)", html)
-        self.assertIn("EN ATTENTE DOCUMENTS COMPLEMENTAIRES", html)
+        self.assertIn("En attente documents complémentaires", html)
         self.assertIn("NON TRANSMIS", html)
         self.assertIn("scotia-admin-status--danger", html)
         self.assertIn("scotia-admin-status--warning", html)
@@ -229,7 +229,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
             "scotia_complementary_documents_review_status": "complement_documents_new_expected",
         })
 
-        self.assertEqual(badge["label"], "EN ATTENTE DOCUMENTS COMPLEMENTAIRES")
+        self.assertEqual(badge["label"], "En attente documents complémentaires")
         self.assertEqual(badge["tone"], "warning")
 
     def test_received_complement_scotia_status_uses_orange_tone(self):

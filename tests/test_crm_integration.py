@@ -322,7 +322,7 @@ class CrmIntegrationTests(unittest.TestCase):
         first = self.lookup().get_json()["vae"]
         second = self.lookup().get_json()["vae"]
         self.assertEqual(first["dossier"]["id"], "latest")
-        self.assertEqual((first["dossier"]["dossier_count"], first["dossier"]["multiple_dossiers"]), (2, True))
+        self.assertEqual((first["dossier"]["dossier_count"], first["dossier"]["multiple_dossiers"]), (1, False))
         self.assertEqual(first["dossier"]["admin_url"],
                          "https://gestionstagiaires-r5no.onrender.com/admin/vae/latest")
         self.assertEqual(first["jury"], {"scheduled": True, "date": "2026-09-15", "location": None})
@@ -404,10 +404,12 @@ class CrmIntegrationTests(unittest.TestCase):
                 self.assertIs(dossier["multiple_dossiers"], False)
                 self.assertEqual(dossier["updated_at"], "2026-08-01T00:00:00Z")
 
-    def test_vae_two_distinct_session_dossiers_keep_latest_as_primary(self):
+    def test_vae_versions_with_distinct_ids_are_one_business_dossier(self):
         self.add_unlinked_trainee(crm_contact_id="contact-42")
         self.write_vae_dossiers([
             {"id": "older", "updated_at": "2026-07-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": "session-1"}},
+            {"id": "middle", "updated_at": "2026-07-15T00:00:00Z",
              "meta": {"trainee_id": "trainee-manual", "session_id": "session-1"}},
             {"id": "newer", "updated_at": "2026-08-01T00:00:00Z",
              "meta": {"trainee_id": "trainee-manual", "session_id": "session-1"}},
@@ -416,8 +418,83 @@ class CrmIntegrationTests(unittest.TestCase):
         dossier = self.lookup().get_json()["vae"]["dossier"]
 
         self.assertEqual(dossier["id"], "newer")
-        self.assertEqual(dossier["dossier_count"], 2)
-        self.assertIs(dossier["multiple_dossiers"], True)
+        self.assertEqual(dossier["dossier_count"], 1)
+        self.assertIs(dossier["multiple_dossiers"], False)
+
+    def test_vae_versions_with_distinct_linkage_ids_are_one_business_dossier(self):
+        self.add_unlinked_trainee(crm_contact_id="contact-42")
+        self.write_vae_dossiers([
+            {"id": f"version-{index}", "created_at": f"2026-0{index + 5}-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": "session-1",
+                      "linkage_id": f"link-{index}"}}
+            for index in range(1, 4)
+        ])
+        dossier = self.lookup().get_json()["vae"]["dossier"]
+        self.assertEqual(dossier["id"], "version-3")
+        self.assertEqual(dossier["dossier_count"], 1)
+        self.assertIs(dossier["multiple_dossiers"], False)
+
+    def test_vae_multiple_legacy_versions_use_latest_fallback(self):
+        self.add_unlinked_trainee(crm_contact_id="contact-42")
+        self.write_vae_dossiers([
+            {"id": "legacy-old", "created_at": "2026-06-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual"}},
+            {"id": "legacy-new", "updated_at": "2026-08-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": ""}},
+        ])
+        dossier = self.lookup().get_json()["vae"]["dossier"]
+        self.assertEqual(dossier["id"], "legacy-new")
+        self.assertEqual(dossier["dossier_count"], 1)
+        self.assertIs(dossier["multiple_dossiers"], False)
+
+    def test_vae_date_selection_uses_created_fallback_and_deterministic_tie(self):
+        self.add_unlinked_trainee(crm_contact_id="contact-42")
+        common_meta = {"trainee_id": "trainee-manual", "session_id": "session-1"}
+        self.write_vae_dossiers([
+            {"id": "created-only", "created_at": "2026-08-01T00:00:00Z", "meta": common_meta},
+            {"id": "updated", "created_at": "2026-01-01T00:00:00Z",
+             "updated_at": "2026-09-01T00:00:00Z", "meta": common_meta},
+        ])
+        self.assertEqual(self.lookup().get_json()["vae"]["dossier"]["id"], "updated")
+        tied = [
+            {"id": dossier_id, "updated_at": "2026-09-01T00:00:00Z", "meta": common_meta}
+            for dossier_id in ("a", "b", "c")
+        ]
+        self.write_vae_dossiers(tied)
+        first = self.lookup().get_json()["vae"]["dossier"]["id"]
+        second = self.lookup().get_json()["vae"]["dossier"]["id"]
+        self.assertEqual((first, second), ("c", "c"))
+
+    def test_vae_scotia_uses_admin_status_and_exact_trainee_comment(self):
+        expected_comment = "62h Scotia en cours <b>&</b>\nrenvoi L1 M.E"
+        self.add_unlinked_trainee(
+            crm_contact_id="contact-42", vae_status="livret_1_validated",
+            scotia_status="complement_requested", scotia_force_visible=True,
+            scotia_complementary_documents_review_status="complement_documents_new_expected",
+            comment=expected_comment,
+        )
+        data = self.read()
+        items = gestion_app._all_scotia_items(data, include_archived=True)
+        expected_status = gestion_app._scotia_admin_status_for_trainee(
+            items, "session-1", "trainee-manual",
+        )
+        response = self.lookup()
+        scotia = response.get_json()["vae"]["scotia"]
+        self.assertEqual(scotia["status_label"], "En attente documents complémentaires")
+        self.assertEqual(scotia["status_label"], expected_status["label"])
+        self.assertEqual(scotia["status_tone"], expected_status["tone"])
+        self.assertEqual(scotia["comment"], expected_comment)
+        self.assertIn("no-store", response.headers["Cache-Control"])
+
+    def test_vae_scotia_missing_comment_is_empty_and_get_is_read_only(self):
+        self.add_unlinked_trainee(crm_contact_id="contact-42", comment=None)
+        self.write_vae_dossiers([])
+        data_before = Path(gestion_app.DATA_FILE).read_bytes()
+        vae_before = Path(gestion_app.VAE_DATA_FILE).read_bytes()
+        body = self.lookup().get_json()
+        self.assertEqual(body["vae"]["scotia"]["comment"], "")
+        self.assertEqual(Path(gestion_app.DATA_FILE).read_bytes(), data_before)
+        self.assertEqual(Path(gestion_app.VAE_DATA_FILE).read_bytes(), vae_before)
 
     def test_non_certified_has_no_fictitious_final_result_and_complements_are_blocked(self):
         data = self.read()
