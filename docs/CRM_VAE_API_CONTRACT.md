@@ -78,6 +78,11 @@ Les propriétés historiques `ok`, `linked`, `crm_contact_id`, `trainee`, `cnaps
     "jury": {"scheduled": true, "date": "2026-09-15", "location": null},
     "final_result": {"code": null, "label": null, "diploma_obtained_at": null},
     "complements": {"requested": false, "missing_items_supported": false, "missing_items_count": null, "missing_items": []},
+    "scotia": {
+      "status_label": "En attente documents complémentaires",
+      "status_tone": "warning",
+      "comment": "62h Scotia en cours & renvoi L1 M.E"
+    },
     "dossier": {
       "found": true, "id": "UUID-DOSSIER", "status_code": "soumis", "status_label": "Soumis",
       "updated_at": "2026-08-04T09:32:00+02:00", "dossier_count": 1, "multiple_dossiers": false,
@@ -140,6 +145,12 @@ Le parcours est applicable **uniquement** si `session.training_type` vaut exacte
 
 Pour un parcours applicable, les champs sont : statut canonique et libellé serveur, progression et indicateurs calculés, prochaine action, dernière mise à jour fiable, sept dates d'action, recevabilité, jury, résultat final, compléments, dossier administratif et URL administrative du stagiaire. Une valeur indisponible vaut `null`, et non une chaîne vide.
 
+### Statut et commentaire SCOTIA
+
+`vae.scotia` est additif et contient `status_label`, `status_tone` et `comment`. Le libellé et le tone proviennent exactement du helper commun qui construit `trainee.scotia_admin_status` pour la liste administrative des stagiaires ; l'API ne maintient donc aucune table de correspondance SCOTIA parallèle. En l'absence de statut, le libellé vaut `""` et le tone neutre vaut `"grey"` (ou la valeur neutre produite par le helper administratif).
+
+Le commentaire provient exclusivement de `trainee.comment`, le même champ que la colonne « Commentaire » de cette liste. Son contenu, y compris ses retours à la ligne et d'éventuels caractères HTML, est rendu comme une chaîne JSON sans transformation ; seule une valeur absente ou `null` devient `""`.
+
 ### Statuts, progression et prochaine action
 
 Le pourcentage indique l'étape atteinte, pas une probabilité de réussite.
@@ -167,7 +178,7 @@ Le pourcentage indique l'étape atteinte, pas une probabilité de réussite.
 
 Le seul résultat final fiable est `certified` / `Diplôme obtenu`; tout autre statut produit trois valeurs `null`. `complements.requested` est vrai uniquement pour `complement_requested`. La liste métier des pièces manquantes n'étant pas structurée, `missing_items_supported` reste faux, le compteur reste `null` et la liste reste vide.
 
-### Dossier absent ou multiple
+### Dossier métier courant ou absent
 
 Sans dossier, le statut opérationnel demeure disponible et `dossier` vaut :
 
@@ -178,12 +189,15 @@ Sans dossier, le statut opérationnel demeure disponible et `dossier` vaut :
 
 Les dossiers sont d'abord associés par `meta.trainee_id`. Les dossiers dont `meta.session_id` correspond exactement à la session consultée sont prioritaires et constituent seuls le périmètre retenu dès qu'il en existe au moins un. Les dossiers historiques dont `meta.session_id` est absent ou vide ne servent que de fallback lorsqu'aucun dossier de la session exacte n'existe ; ils ne sont jamais additionnés à ceux de la session. Un dossier rattaché à une autre session est toujours exclu.
 
-Dans le périmètre retenu, les copies techniques ayant le même `dossier.id`, ou à défaut le même `meta.linkage_id`, sont dédupliquées en conservant la plus récemment mise à jour (sinon créée). Les entrées sans aucun de ces identifiants stables restent distinctes. `dossier_count` compte ainsi les dossiers uniques du seul périmètre retenu et `multiple_dossiers` vaut `true` uniquement lorsque ce nombre est supérieur à un. Le dossier principal est le plus récent parmi ces dossiers uniques. `updated_at` global est la date fiable la plus récente parmi dossier, actions et jury ; une consultation ne le modifie jamais.
+Pour le CRM, une paire `meta.trainee_id` / `meta.session_id` représente exactement **un dossier VAE métier courant**. Plusieurs enregistrements techniques ou historiques peuvent porter des `dossier.id` ou `meta.linkage_id` différents sans être comptés comme plusieurs dossiers métier simultanés. Dès qu'au moins un enregistrement appartient au périmètre retenu, `dossier_count` vaut `1` et `multiple_dossiers` vaut `false`.
+
+Le dossier canonique retourné est celui dont `updated_at` est le plus récent ; `created_at` sert de fallback lorsqu'`updated_at` est absent. Les formats de dates historiques restent normalisés par les règles existantes et les égalités sont départagées de manière stable et déterministe. Cette sélection est strictement une projection de lecture : elle ne supprime, ne fusionne et ne modifie aucun enregistrement source. `updated_at` global est la date fiable la plus récente parmi dossier, actions et jury ; une consultation ne le modifie jamais.
 
 ## Sécurité et confidentialité
 
 - Le Bearer existant est comparé côté serveur au secret `CRM_INTEGRATION_API_TOKEN`; aucun nouveau secret n'est introduit.
 - La recherche est limitée aux sessions du partenaire autorisé par cette intégration.
 - Les URL retournées pour le suivi sont des routes administratives. La route publique de possession `/vae/<id>` n'est jamais exposée.
-- La réponse ne contient ni `public_token`, ni `trainee_token`, ni documents ou pièces jointes, ni expériences, contenu rédactionnel des livrets, données personnelles complètes, notes/commentaires internes, motivation ou avis interne détaillé.
+- La réponse ne contient ni `public_token`, ni `trainee_token`, ni documents ou pièces jointes, ni expériences, contenu rédactionnel des livrets, données personnelles complètes, notes SCOTIA, motivation ou avis interne détaillé. La seule exception documentaire est `vae.scotia.comment`, explicitement issu de `trainee.comment` selon le contrat ci-dessus.
 - Le CRM est une interface de consultation : cette API `GET` ne modifie ni le stagiaire ni son dossier, et Gestion Stagiaires demeure la source officielle.
+- Les réponses du `GET` portent `Cache-Control: no-store` afin qu'une actualisation ne réutilise pas une représentation mise en cache.

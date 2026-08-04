@@ -12134,7 +12134,11 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
                     "file_tokens": file_tokens,
                 })
 
-            latest_vae = _vae_find_latest_for_trainee(str(t.get("id") or ""))
+            # Administrative projections must not create an absent VAE store during reads.
+            latest_vae = (
+                _vae_find_latest_for_trainee(str(t.get("id") or ""))
+                if os.path.exists(VAE_DATA_FILE) else None
+            )
             vae_justificatifs = latest_vae.get("justificatifs_experience") if isinstance(latest_vae, dict) and isinstance(latest_vae.get("justificatifs_experience"), list) else []
 
             item_data = {
@@ -12564,7 +12568,7 @@ def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]
                 "tone": "orange",
             }
         return {
-            "label": "EN ATTENTE DOCUMENTS COMPLEMENTAIRES",
+            "label": "En attente documents complémentaires",
             "tone": "warning",
         }
     if not scotia_status:
@@ -12573,6 +12577,22 @@ def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]
             "tone": "danger",
         }
     return {}
+
+
+def _scotia_admin_status_for_trainee(
+    scotia_items: List[Dict[str, Any]], session_id: Any, trainee_id: Any,
+) -> Dict[str, str]:
+    """Return the admin-list SCOTIA badge for one trainee without mutating inputs."""
+    wanted_key = (str(session_id or ""), str(trainee_id or ""))
+    item = next(
+        (
+            candidate for candidate in scotia_items
+            if isinstance(candidate, dict)
+            and (str(candidate.get("session_id") or ""), str(candidate.get("trainee_id") or "")) == wanted_key
+        ),
+        None,
+    )
+    return _scotia_admin_status_badge(item)
 
 
 def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
@@ -19808,13 +19828,11 @@ def admin_trainees(session_id: str):
             unread_summary = _scotia_unread_thread_summary(t)
             t["scotia_unread_thread_count"] = int(unread_summary.get("count") or 0) if unread_summary else 0
 
-        scotia_items_by_trainee = {
-            (str(item.get("session_id") or ""), str(item.get("trainee_id") or "")): item
-            for item in _all_scotia_items(data, include_archived=True)
-        }
+        scotia_items = _all_scotia_items(data, include_archived=True)
         for t in trainees:
-            key = (str(session_view["id"] or ""), str(t.get("id") or ""))
-            t["scotia_admin_status"] = _scotia_admin_status_badge(scotia_items_by_trainee.get(key))
+            t["scotia_admin_status"] = _scotia_admin_status_for_trainee(
+                scotia_items, session_view["id"], t.get("id"),
+            )
 
     if session_view["training_type"] in {"APS", "A3P"}:
         _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
@@ -20440,7 +20458,9 @@ def get_vae_crm_recevabilite(status_code: str, dossier: Optional[Dict[str, Any]]
     }
 
 
-def _crm_vae_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Dict[str, Any]:
+def _crm_vae_payload(
+    trainee: Dict[str, Any], session_obj: Dict[str, Any], data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     if str(_session_get(session_obj, "training_type", "") or "") != "DIRIGEANT VAE":
         return {"applicable": False}
 
@@ -20462,24 +20482,20 @@ def _crm_vae_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Di
             legacy_dossiers.append(item)
 
     selected_dossiers = exact_session_dossiers or legacy_dossiers
-    unique_dossiers = {}
-    unkeyed_dossiers = []
-    for item in selected_dossiers:
+
+    def canonical_sort_key(index_and_item):
+        index, item = index_and_item
         meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
-        dossier_id = str(item.get("id") or "").strip()
-        linkage_id = str(meta.get("linkage_id") or "").strip()
-        stable_key = ("id", dossier_id) if dossier_id else (("linkage_id", linkage_id) if linkage_id else None)
-        if stable_key is None:
-            # Without a stable identifier, two entries cannot safely be treated as copies.
-            unkeyed_dossiers.append(item)
-            continue
-        previous = unique_dossiers.get(stable_key)
-        if previous is None or _crm_date_sort_value(item.get("updated_at") or item.get("created_at")) > \
-                _crm_date_sort_value(previous.get("updated_at") or previous.get("created_at")):
-            unique_dossiers[stable_key] = item
-    dossiers = list(unique_dossiers.values()) + unkeyed_dossiers
-    dossiers.sort(key=lambda item: _crm_date_sort_value(item.get("updated_at") or item.get("created_at")), reverse=True)
-    dossier = dossiers[0] if dossiers else None
+        # The source order is the final stable tie-breaker after stable identifiers.
+        return (
+            _crm_date_sort_value(item.get("updated_at") or item.get("created_at")),
+            str(item.get("id") or ""), str(meta.get("linkage_id") or ""), index,
+        )
+
+    dossier = max(enumerate(selected_dossiers), key=canonical_sort_key)[1] if selected_dossiers else None
+    dossier_count = 1 if dossier else 0
+    scotia_items = _all_scotia_items(data or {"sessions": [session_obj]}, include_archived=True)
+    scotia_status = _scotia_admin_status_for_trainee(scotia_items, session_id, trainee_id)
     status = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))
     status_code = status["key"]
     action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
@@ -20509,16 +20525,22 @@ def _crm_vae_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Di
                          "diploma_obtained_at": crm_dates["diploma_obtained_at"] if certified else None},
         "complements": {"requested": status_code == "complement_requested", "missing_items_supported": False,
                         "missing_items_count": None, "missing_items": []},
+        "scotia": {"status_label": scotia_status.get("label", ""),
+                   "status_tone": scotia_status.get("tone", "grey"),
+                   "comment": trainee.get("comment") if trainee.get("comment") is not None else ""},
         "dossier": {"found": bool(dossier), "id": str(dossier.get("id")) if dossier else None,
                     "status_code": dossier_status, "status_label": dossier_labels.get(dossier_status),
                     "updated_at": _crm_nullable(dossier.get("updated_at") or dossier.get("created_at")) if dossier else None,
-                    "dossier_count": len(dossiers), "multiple_dossiers": len(dossiers) > 1,
+                    "dossier_count": dossier_count, "multiple_dossiers": False,
                     "admin_url": f"{CRM_RESPONSE_BASE_URL}/admin/vae/{dossier.get('id')}" if dossier else None},
         "trainee_admin_url": f"{CRM_RESPONSE_BASE_URL}/admin/sessions/{session_id}/stagiaires/{trainee_id}",
     }
 
 
-def _crm_trainee_response(session_obj: Dict[str, Any], trainee: Dict[str, Any], crm_contact_id: str) -> Dict[str, Any]:
+def _crm_trainee_response(
+    session_obj: Dict[str, Any], trainee: Dict[str, Any], crm_contact_id: str,
+    data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Build the single, privacy-filtered trainee representation exposed to the CRM."""
     trainee_id = str(trainee.get("id") or "")
     history = trainee.get("cnaps_history")
@@ -20537,7 +20559,7 @@ def _crm_trainee_response(session_obj: Dict[str, Any], trainee: Dict[str, Any], 
             "history": history if isinstance(history, list) else [],
         },
         "card_pro": _crm_card_pro_payload(trainee, session_obj),
-        "vae": _crm_vae_payload(trainee, session_obj),
+        "vae": _crm_vae_payload(trainee, session_obj, data),
     }
 
 
@@ -20675,8 +20697,12 @@ def api_crm_get_trainee():
     if crm_contact_id is None or crm_contact_id == "":
         return jsonify({"error": "crm_contact_id est obligatoire"}), 400
 
+    # Unlike the administrative loader, this integration read must not persist
+    # schema normalization or create backups as a side effect of a GET.
+    data = _load_valid_json_payload(DATA_FILE) if os.path.exists(DATA_FILE) else None
+    data = data if isinstance(data, dict) else _empty_data_payload()
     matches = []
-    for session_obj in load_data().get("sessions", []):
+    for session_obj in data.get("sessions", []):
         if not isinstance(session_obj, dict):
             continue
         if str(session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != INTEGRALE_PARTNER_ID:
@@ -20690,7 +20716,9 @@ def api_crm_get_trainee():
         return jsonify({"error": "Plusieurs stagiaires utilisent ce crm_contact_id"}), 409
 
     session_obj, trainee = matches[0]
-    return jsonify(_crm_trainee_response(session_obj, trainee, crm_contact_id))
+    response = jsonify(_crm_trainee_response(session_obj, trainee, crm_contact_id, data))
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/stagiaires/<trainee_id>")
