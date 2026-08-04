@@ -61,6 +61,12 @@
     color:#0a8f50;
     background:#eaf9f1;
   }
+  .afc-notification-details{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:145px;}
+  .afc-delivery-badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;white-space:nowrap;}
+  .afc-delivery-badge.accepted{background:#dcfce7;color:#166534;}
+  .afc-delivery-badge.failed{background:#fee2e2;color:#991b1b;}
+  .afc-delivery-badge.missing{background:#f1f5f9;color:#64748b;}
+  .afc-delivery-help{font-size:10px;color:#64748b;white-space:normal;line-height:1.25;max-width:190px;}
   .afc-filters{
     display:flex;
     flex-wrap:wrap;
@@ -234,10 +240,24 @@
           </button>
         </td>
         <td>
-          <button type="button" class="afc-toggle {{ 'on' if (c.notification_status or '')|upper == 'ENVOYEE' else '' }}" data-toggle-notification>
+          {% set email_status = (c.convocation_email_status or ('ACCEPTE' if c.convocation_email_sent_at else ''))|upper %}
+          {% set sms_status = (c.convocation_sms_status or ('ACCEPTE' if c.convocation_sms_sent_at else ''))|upper %}
+          {% if email_status or sms_status %}
+          <div class="afc-notification-details">
+            <span class="afc-delivery-badge {{ 'accepted' if email_status == 'ACCEPTE' else ('failed' if email_status == 'ECHEC' else 'missing') }}" title="{{ ('Demande acceptée par Brevo le ' ~ c.convocation_email_sent_at) if email_status == 'ACCEPTE' else ('Échec de la demande d’envoi' if email_status == 'ECHEC' else 'Aucune adresse e-mail') }}">
+              {{ '✅ E-mail accepté' if email_status == 'ACCEPTE' else ('❌ E-mail en échec' if email_status == 'ECHEC' else '— E-mail absent') }}
+            </span>
+            <span class="afc-delivery-badge {{ 'accepted' if sms_status == 'ACCEPTE' else ('failed' if sms_status == 'ECHEC' else 'missing') }}" title="{{ ('Demande acceptée par Brevo le ' ~ c.convocation_sms_sent_at) if sms_status == 'ACCEPTE' else ('Échec de la demande d’envoi' if sms_status == 'ECHEC' else 'Aucun numéro de téléphone') }}">
+              {{ '✅ SMS accepté' if sms_status == 'ACCEPTE' else ('❌ SMS en échec' if sms_status == 'ECHEC' else '— SMS absent') }}
+            </span>
+            <small class="afc-delivery-help">Accepté par Brevo, sans garantie de lecture.</small>
+          </div>
+          {% else %}
             {% set notification_status = (c.notification_status or '')|upper %}
-            {{ '🟢 Envoyée' if notification_status == 'ENVOYEE' else ('🔴 Non envoyée' if notification_status else '🟡 En attente') }}
-          </button>
+            <span class="afc-delivery-badge {{ 'accepted' if notification_status == 'ENVOYEE' else ('failed' if notification_status == 'NON ENVOYEE' else 'missing') }}">
+              {{ '✅ Notification envoyée' if notification_status == 'ENVOYEE' else ('❌ Non envoyée' if notification_status == 'NON ENVOYEE' else '⏳ En attente') }}
+            </span>
+          {% endif %}
         </td>
         <td>
           <div class="afc-cnaps-wrap">
@@ -800,22 +820,6 @@ document.querySelectorAll('[data-toggle-fr]').forEach((btn)=>{
       applyAfcFilters();
     }catch(_err){
       alert('Erreur sauvegarde test de français');
-    }
-  });
-});
-
-document.querySelectorAll('[data-toggle-notification]').forEach((btn)=>{
-  btn.addEventListener('click', async (e)=>{
-    const target = e.currentTarget;
-    const tr = target.closest('tr');
-    const enabled = target.classList.contains('on');
-    const notification_status = enabled ? 'NON ENVOYEE' : 'ENVOYEE';
-    try{
-      await patchCandidate(tr, { notification_status });
-      target.classList.toggle('on', !enabled);
-      target.textContent = !enabled ? '🟢 Envoyée' : '🔴 Non envoyée';
-    }catch(_err){
-      alert('Erreur sauvegarde notification');
     }
   });
 });

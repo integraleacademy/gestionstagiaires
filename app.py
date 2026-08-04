@@ -17186,6 +17186,7 @@ def _send_afc_convocation_notification(bucket: dict, candidate: dict) -> tuple[b
         candidate,
     )
 
+    sent_at = _now_iso()
     email_ok = True
     if email:
         html = mail_layout("<p>" + "</p><p>".join([line for line in raw_mail.splitlines() if line.strip()]) + "</p>")
@@ -17195,8 +17196,12 @@ def _send_afc_convocation_notification(bucket: dict, candidate: dict) -> tuple[b
     if phone:
         sms_ok = brevo_send_sms(phone, raw_sms)
 
-    candidate["convocation_email_sent_at"] = _now_iso() if email_ok and email else ""
-    candidate["convocation_sms_sent_at"] = _now_iso() if sms_ok and phone else ""
+    # These statuses mean that Brevo accepted the send request.  Actual delivery
+    # (or opening for e-mail) requires provider webhooks and must not be implied.
+    candidate["convocation_email_status"] = "ACCEPTE" if email and email_ok else ("ECHEC" if email else "ABSENT")
+    candidate["convocation_sms_status"] = "ACCEPTE" if phone and sms_ok else ("ECHEC" if phone else "ABSENT")
+    candidate["convocation_email_sent_at"] = sent_at if email_ok and email else ""
+    candidate["convocation_sms_sent_at"] = sent_at if sms_ok and phone else ""
 
     if (email and not email_ok) or (phone and not sms_ok):
         return False, "Échec envoi convocation"
