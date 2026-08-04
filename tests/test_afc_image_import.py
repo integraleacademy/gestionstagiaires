@@ -48,6 +48,20 @@ class AfcImageImportTests(unittest.TestCase):
    first=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]],'date_icop':'2026-09-15'}).get_json(); second=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]],'date_icop':'2026-09-15'}).get_json()
   self.assertEqual(first['imported'],1); self.assertEqual(second['imported'],0); self.assertEqual(second['duplicates_skipped'],1); self.assertEqual(len(persisted['afc']['candidates']),1)
   candidate=persisted['afc']['candidates'][0]; self.assertEqual(candidate['date_icop'],'2026-09-15'); self.assertEqual(candidate['presence_afc_status'],'CONVOQUE'); self.assertEqual(candidate['notification_status'],'ENVOYEE'); email.assert_called_once(); sms.assert_called_once()
+  self.assertEqual(candidate['convocation_email_status'],'ACCEPTE'); self.assertEqual(candidate['convocation_sms_status'],'ACCEPTE')
+  self.assertTrue(candidate['convocation_email_sent_at']); self.assertEqual(candidate['convocation_email_sent_at'],candidate['convocation_sms_sent_at'])
+ def test_convocation_records_each_channel_failure(self):
+  candidate={'email':'personne@example.com','telephone':'06 01 02 03 04','prenom':'Jean','nom':'DUPONT','date_icop':'2026-09-15'}
+  with patch.object(gestion_app,'brevo_send_email',return_value=True),patch.object(gestion_app,'brevo_send_sms',return_value=False):
+   ok,error=gestion_app._send_afc_convocation_notification({'mail_templates':{}},candidate)
+  self.assertFalse(ok); self.assertIn('Échec',error)
+  self.assertEqual(candidate['convocation_email_status'],'ACCEPTE'); self.assertTrue(candidate['convocation_email_sent_at'])
+  self.assertEqual(candidate['convocation_sms_status'],'ECHEC'); self.assertEqual(candidate['convocation_sms_sent_at'],'')
+ def test_afc_page_displays_separate_provider_acceptance_statuses(self):
+  self.login(); self.data={'afc':{'candidates':[{'id':'AFC-1','nom':'DUPONT','prenom':'Jean','email':'personne@example.com','telephone':'0601020304','convocation_email_status':'ACCEPTE','convocation_sms_status':'ECHEC','convocation_email_sent_at':'2026-08-04T12:00:00Z'}]}}
+  with patch.object(gestion_app,'load_data',return_value=self.data),patch.object(gestion_app,'fetch_cnaps_lookup_by_name',return_value={}):
+   html=self.client.get('/admin/afc').get_data(as_text=True)
+  self.assertIn('E-mail accepté',html); self.assertIn('SMS en échec',html); self.assertIn('sans garantie de lecture',html)
  def test_confirmation_requires_icop_date(self):
   self.login(); response=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]]}); self.assertEqual(response.status_code,400); self.assertIn('date ICOP',response.get_json()['message'])
  def test_provider_error_readable(self):
