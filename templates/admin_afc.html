@@ -44,6 +44,7 @@
   .afc-cnaps-statuses{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0;max-width:360px;font-size:11px;line-height:1;font-weight:900;}
   .afc-cnaps-status-chip{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;border:1px solid var(--line);border-radius:999px;padding:7px 9px;white-space:nowrap;letter-spacing:.02em;}
   .afc-cnaps-status-chip.is-active,.afc-cnaps-status-chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
+  .afc-cnaps-status-chip.is-progress{background:#2563eb;border-color:#2563eb;color:#fff;}
   .afc-cnaps-status-chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
   .afc-cnaps-status-chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
   .afc-cnaps-status-chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
@@ -403,15 +404,32 @@ function afcCnapsChipClass(status){
   if(text.includes('INACTIF') || text.includes('EXPIR') || text.includes('REFUS')) return 'is-inactive';
   if(text.startsWith('AP ') || text.includes('AUTORISATION PR')) return 'is-ap';
   if(text.startsWith('CP ') || text.includes('CARTE PROFESSIONNELLE')) return 'is-cp';
+  if(text.includes('TRANSM') || text.includes('ENREG') || text.includes('INSTRU') || text.includes('DOC')) return 'is-progress';
   if(text.includes('ACTIF') || text.includes('ACCEPT')) return 'is-active';
   return 'is-unknown';
+}
+
+function afcCnapsDisplayEntries(status, history){
+  const rawStatus = String(status || '').trim().toUpperCase() || 'INCONNU';
+  const entries = normalizeAfcCnapsHistory(history);
+  const titleEntries = entries.length ? entries : afcCnapsStatusFallbackEntries(rawStatus);
+  const displayEntries = [...titleEntries];
+  // Le statut du dossier (TRANSMIS, ACCEPTÉ, etc.) et les titres détectés
+  // (AP/CP SH ACTIF) sont deux informations distinctes : afficher les deux.
+  const normalizedRawStatus = rawStatus.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const alreadyDisplayed = displayEntries.some((entry) => (
+    String(entry.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normalizedRawStatus
+  ));
+  if(rawStatus !== 'INCONNU' && !alreadyDisplayed){
+    displayEntries.unshift({ status: rawStatus, date: '' });
+  }
+  return { entries, displayEntries };
 }
 
 function renderAfcCnapsStatuses(span, status, history){
   if(!span) return;
   const rawStatus = String(status || '').trim().toUpperCase() || 'INCONNU';
-  const entries = normalizeAfcCnapsHistory(history);
-  const displayEntries = entries.length ? entries : afcCnapsStatusFallbackEntries(rawStatus);
+  const { entries, displayEntries } = afcCnapsDisplayEntries(rawStatus, history);
   span.dataset.cnapsStatus = rawStatus;
   span.dataset.cnapsHistory = JSON.stringify(entries);
   if(displayEntries.length){
