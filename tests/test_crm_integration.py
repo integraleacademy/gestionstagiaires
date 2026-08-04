@@ -52,6 +52,11 @@ class CrmIntegrationTests(unittest.TestCase):
         with open(gestion_app.DATA_FILE, "w", encoding="utf-8") as handle:
             json.dump(data, handle)
 
+    def write_vae_dossiers(self, dossiers):
+        Path(gestion_app.VAE_DATA_FILE).write_text(
+            json.dumps({"dossiers": dossiers}), encoding="utf-8",
+        )
+
     def prepare(self, payload=None, token="secret-token"):
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         return self.client.post("/api/integrations/crm/stagiaires", json=payload or self.payload, headers=headers)
@@ -328,6 +333,91 @@ class CrmIntegrationTests(unittest.TestCase):
         serialized = json.dumps(first)
         for forbidden in ("public_token", "trainee_token", "private prose", "private content", "onrender.com/vae/latest"):
             self.assertNotIn(forbidden, serialized)
+
+    def test_vae_exact_session_takes_priority_over_historical_dossiers_without_writing(self):
+        self.add_unlinked_trainee(
+            crm_contact_id="contact-42", vae_status="livret_2_analysis",
+            vae_action_dates={"livret_2_received": "2026-08-03T10:00:00Z"},
+            deliverables={"attestation_recevabilite": "document-token"},
+        )
+        dossiers = [
+            {"id": "exact", "statut_dossier": "recevable", "updated_at": "2026-08-02T10:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": "session-1"}},
+            {"id": "historical-1", "updated_at": "2026-08-04T10:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": ""}},
+            {"id": "historical-2", "updated_at": "2026-08-05T10:00:00Z",
+             "meta": {"trainee_id": "trainee-manual"}},
+        ]
+        self.write_vae_dossiers(dossiers)
+        before = Path(gestion_app.VAE_DATA_FILE).read_bytes()
+
+        body = self.lookup().get_json()
+
+        self.assertEqual(body["vae"]["dossier"]["dossier_count"], 1)
+        self.assertIs(body["vae"]["dossier"]["multiple_dossiers"], False)
+        self.assertEqual(body["vae"]["dossier"], {
+            "found": True, "id": "exact", "status_code": "recevable", "status_label": "Recevable",
+            "updated_at": "2026-08-02T10:00:00Z", "dossier_count": 1, "multiple_dossiers": False,
+            "admin_url": "https://gestionstagiaires-r5no.onrender.com/admin/vae/exact",
+        })
+        self.assertEqual(body["vae"]["action_dates"]["livret_2_received_at"], "2026-08-03T10:00:00Z")
+        self.assertEqual(body["vae"]["recevabilite"], {
+            "status_code": "recevable", "status_label": "Recevable", "attestation_available": True,
+        })
+        self.assertEqual(Path(gestion_app.VAE_DATA_FILE).read_bytes(), before,
+                         "a GET request must not modify data_vae.json")
+
+    def test_vae_historical_dossier_is_fallback_without_exact_session(self):
+        self.add_unlinked_trainee(crm_contact_id="contact-42")
+        self.write_vae_dossiers([
+            {"id": "historical", "created_at": "2026-07-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual"}},
+            {"id": "other-session", "updated_at": "2027-01-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": "session-2"}},
+        ])
+
+        dossier = self.lookup().get_json()["vae"]["dossier"]
+
+        self.assertEqual(dossier["id"], "historical")
+        self.assertEqual(dossier["dossier_count"], 1)
+        self.assertIs(dossier["multiple_dossiers"], False)
+
+    def test_vae_technical_copies_are_deduplicated_by_id_or_linkage_id(self):
+        self.add_unlinked_trainee(crm_contact_id="contact-42")
+        cases = {
+            "dossier id": [
+                {"id": "same-id", "updated_at": "2026-07-01T00:00:00Z"},
+                {"id": "same-id", "updated_at": "2026-08-01T00:00:00Z"},
+            ],
+            "linkage id": [
+                {"created_at": "2026-07-01T00:00:00Z", "meta": {"linkage_id": "same-link"}},
+                {"created_at": "2026-08-01T00:00:00Z", "meta": {"linkage_id": "same-link"}},
+            ],
+        }
+        for label, copies in cases.items():
+            with self.subTest(key=label):
+                for copy in copies:
+                    copy.setdefault("meta", {}).update({"trainee_id": "trainee-manual", "session_id": "session-1"})
+                self.write_vae_dossiers(copies)
+                dossier = self.lookup().get_json()["vae"]["dossier"]
+                self.assertEqual(dossier["dossier_count"], 1)
+                self.assertIs(dossier["multiple_dossiers"], False)
+                self.assertEqual(dossier["updated_at"], "2026-08-01T00:00:00Z")
+
+    def test_vae_two_distinct_session_dossiers_keep_latest_as_primary(self):
+        self.add_unlinked_trainee(crm_contact_id="contact-42")
+        self.write_vae_dossiers([
+            {"id": "older", "updated_at": "2026-07-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": "session-1"}},
+            {"id": "newer", "updated_at": "2026-08-01T00:00:00Z",
+             "meta": {"trainee_id": "trainee-manual", "session_id": "session-1"}},
+        ])
+
+        dossier = self.lookup().get_json()["vae"]["dossier"]
+
+        self.assertEqual(dossier["id"], "newer")
+        self.assertEqual(dossier["dossier_count"], 2)
+        self.assertIs(dossier["multiple_dossiers"], True)
 
     def test_non_certified_has_no_fictitious_final_result_and_complements_are_blocked(self):
         data = self.read()

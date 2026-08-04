@@ -176,7 +176,9 @@ Sans dossier, le statut opérationnel demeure disponible et `dossier` vaut :
  "dossier_count": 0, "multiple_dossiers": false, "admin_url": null}
 ```
 
-Les dossiers sont associés par `meta.trainee_id`, puis isolés par `meta.session_id` quand ce dernier existe. Si plusieurs dossiers correspondent, le plus récemment mis à jour (sinon créé) est retenu, `dossier_count` les compte et `multiple_dossiers` vaut `true`. `updated_at` global est la date fiable la plus récente parmi dossier, actions et jury; une consultation ne le modifie jamais.
+Les dossiers sont d'abord associés par `meta.trainee_id`. Les dossiers dont `meta.session_id` correspond exactement à la session consultée sont prioritaires et constituent seuls le périmètre retenu dès qu'il en existe au moins un. Les dossiers historiques dont `meta.session_id` est absent ou vide ne servent que de fallback lorsqu'aucun dossier de la session exacte n'existe ; ils ne sont jamais additionnés à ceux de la session. Un dossier rattaché à une autre session est toujours exclu.
+
+Dans le périmètre retenu, les copies techniques ayant le même `dossier.id`, ou à défaut le même `meta.linkage_id`, sont dédupliquées en conservant la plus récemment mise à jour (sinon créée). Les entrées sans aucun de ces identifiants stables restent distinctes. `dossier_count` compte ainsi les dossiers uniques du seul périmètre retenu et `multiple_dossiers` vaut `true` uniquement lorsque ce nombre est supérieur à un. Le dossier principal est le plus récent parmi ces dossiers uniques. `updated_at` global est la date fiable la plus récente parmi dossier, actions et jury ; une consultation ne le modifie jamais.
 
 ## Sécurité et confidentialité
 
