@@ -583,7 +583,6 @@ afcImportInput.addEventListener('change',()=>chooseAfcFile(afcImportInput.files?
 afcDropzone.addEventListener('drop',e=>chooseAfcFile(e.dataTransfer.files?.[0]));
 document.getElementById('afcCancelImport').addEventListener('click',closeAfcImport);
 document.getElementById('afcReplaceImage').addEventListener('click',resetAfcImport);
-afcImportModal.addEventListener('click',e=>{if(e.target===afcImportModal)closeAfcImport()});
 
 btnNotifyPending?.addEventListener('click', async ()=>{
   if(!confirm('Envoyer la notification à tous les candidats "non envoyée" ?')) return;
