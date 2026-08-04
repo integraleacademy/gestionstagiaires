@@ -111,6 +111,7 @@
     <h1 style="margin:0;">Gestion des AFC</h1>
     <div style="display:flex;gap:8px;">
       <a class="btn btn-outline" href="{{ url_for('admin_positioning_tests') }}">Tests de positionnement</a>
+      <button class="btn btn-outline" id="btnArchiveAllCandidates" type="button">Archiver tous les candidats</button>
       <button class="btn btn-danger" id="btnDeleteAllCandidates" type="button">Supprimer toutes les lignes</button>
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
       <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
@@ -131,6 +132,7 @@
     Modèles de mail
   </button>
   <div id="mailTemplatesPanel" style="display:none;">
+    <p style="margin:0 0 10px;color:#475569;">Variables disponibles : <code>{{'{{nom}}'}}</code>, <code>{{'{{prenom}}'}}</code> et <code>{{'{{date_icop}}'}}</code> (date ICOP du candidat).</p>
     <label>Mail candidat retenu</label>
     <textarea id="tmplRetained" rows="10" style="width:100%;">{{ afc.mail_templates.retained }}</textarea>
     <label style="margin-top:10px;display:block;">Mail candidat non retenu (variables: {{'{{motif_refus}}'}} {{'{{complement_refus}}'}})</label>
@@ -499,6 +501,26 @@ btnNotifyPending.addEventListener('click', async ()=>{
     alert('Erreur envoi des notifications');
   }finally{
     btnNotifyPending.disabled = false;
+  }
+});
+
+btnArchiveAllCandidates.addEventListener('click', async ()=>{
+  if(!confirm('Archiver tous les candidats actuellement affichés dans Gestion des AFC ?')) return;
+  btnArchiveAllCandidates.disabled = true;
+  try{
+    const res = await fetch('/api/admin/afc/candidates/archive-all', { method:'POST' });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok || !body.ok){
+      alert('Erreur lors de l’archivage global');
+      return;
+    }
+    alert(`Archivage terminé : ${body.archived || 0} candidat(s) archivé(s).`);
+    document.querySelectorAll('#afcTable tbody tr').forEach((tr)=> tr.remove());
+    applyAfcFilters();
+  }catch(_err){
+    alert('Erreur lors de l’archivage global');
+  }finally{
+    btnArchiveAllCandidates.disabled = false;
   }
 });
 
