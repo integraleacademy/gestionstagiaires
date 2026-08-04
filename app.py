@@ -16896,29 +16896,50 @@ def api_admin_afc_import_image_confirm():
     selected = payload.get("candidates")
     if not isinstance(selected, list):
         return jsonify({"success": False, "message": "Données d’import invalides."}), 400
+    date_icop = str(payload.get("date_icop") or "").strip()
+    try:
+        datetime.date.fromisoformat(date_icop)
+    except ValueError:
+        return jsonify({"success": False, "message": "Sélectionnez une date ICOP valide."}), 400
 
     def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
         bucket = _afc_bucket(data)
         classified = _afc_classify_import_candidates(selected, bucket["candidates"])
-        imported, skipped, errors = [], 0, []
+        imported, skipped, errors, notification_failures = [], 0, [], 0
         for row in classified:
             if row["status"] != "ready":
                 skipped += row["status"] in {"duplicate", "conflict"}
                 if row["status"] == "invalid": errors.append(row["reason"])
                 continue
             candidate = _create_afc_candidate({"identifiant_ft": row["france_travail_id"], "nom": row["last_name"],
-                "prenom": row["first_names"], "telephone": row["phone"], "email": row["email"]}, import_source="Import image France Travail")
+                "prenom": row["first_names"], "telephone": row["phone"], "email": row["email"],
+                "date_icop": date_icop, "presence_afc_status": "CONVOQUE"}, import_source="Import image France Travail")
+            candidate["date_icop"] = date_icop
+            candidate["presence_afc_status"] = "CONVOQUE"
+            candidate["presence_afc"] = False
+            notified, notification_error = _send_afc_convocation_notification(bucket, candidate)
+            if notified:
+                candidate["notification_status"] = "ENVOYEE"
+                candidate["notification_sent_at"] = _now_iso()
+            else:
+                notification_failures += 1
+                errors.append(f"{candidate.get('prenom', '')} {candidate.get('nom', '')} : {notification_error}")
             bucket["candidates"].append(candidate)
             imported.append(candidate)
         if imported:
             _append_activity_log(data, "afc_candidates_image_imported", "afc", details={"imported_count": len(imported), "skipped_count": skipped})
-        return {"imported": len(imported), "duplicates_skipped": skipped, "errors": errors}
+        return {"imported": len(imported), "duplicates_skipped": skipped, "notification_failures": notification_failures, "errors": errors}
 
     result = _atomic_update_data(mutate)
     imported, skipped = result.get("imported", 0), result.get("duplicates_skipped", 0)
     message = f"{imported} candidat{'s' if imported != 1 else ''} importé{'s' if imported != 1 else ''}."
     if skipped:
         message += f" {skipped} candidat{'s' if skipped != 1 else ''} déjà existant{'s' if skipped != 1 else ''} {'ont' if skipped != 1 else 'a'} été ignoré{'s' if skipped != 1 else ''}."
+    failures = result.get("notification_failures", 0)
+    if failures:
+        message += f" L’envoi de la convocation a échoué pour {failures} candidat{'s' if failures != 1 else ''}."
+    elif imported:
+        message += " Les convocations e-mail et SMS ont été envoyées."
     return jsonify({"success": True, **result, "message": message})
 
 

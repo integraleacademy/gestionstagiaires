@@ -44,9 +44,12 @@ class AfcImageImportTests(unittest.TestCase):
  def test_selected_confirmation_is_idempotent(self):
   self.login(); persisted={'afc':{'candidates':[]}}
   def atomic(mutator): return mutator(persisted)
-  with patch.object(gestion_app,'_atomic_update_data',side_effect=atomic),patch.object(gestion_app,'fetch_cnaps_lookup_by_name',return_value={}):
-   first=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]]}).get_json(); second=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]]}).get_json()
+  with patch.object(gestion_app,'_atomic_update_data',side_effect=atomic),patch.object(gestion_app,'fetch_cnaps_lookup_by_name',return_value={}),patch.object(gestion_app,'brevo_send_email',return_value=True) as email,patch.object(gestion_app,'brevo_send_sms',return_value=True) as sms:
+   first=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]],'date_icop':'2026-09-15'}).get_json(); second=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]],'date_icop':'2026-09-15'}).get_json()
   self.assertEqual(first['imported'],1); self.assertEqual(second['imported'],0); self.assertEqual(second['duplicates_skipped'],1); self.assertEqual(len(persisted['afc']['candidates']),1)
+  candidate=persisted['afc']['candidates'][0]; self.assertEqual(candidate['date_icop'],'2026-09-15'); self.assertEqual(candidate['presence_afc_status'],'CONVOQUE'); self.assertEqual(candidate['notification_status'],'ENVOYEE'); email.assert_called_once(); sms.assert_called_once()
+ def test_confirmation_requires_icop_date(self):
+  self.login(); response=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]]}); self.assertEqual(response.status_code,400); self.assertIn('date ICOP',response.get_json()['message'])
  def test_provider_error_readable(self):
   self.login()
   with patch.object(afc_import,'analyze_image',side_effect=afc_import.AfcVisionError(afc_import.GENERIC_ANALYSIS_ERROR)):
