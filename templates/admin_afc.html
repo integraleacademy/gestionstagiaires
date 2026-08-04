@@ -104,6 +104,17 @@
   #afcTable tbody tr.afc-row-enrolled:hover td{
     background:#dcfce7 !important;
   }
+  .afc-import-modal{max-width:min(1180px,96vw);width:96vw;max-height:92vh;overflow:auto;}
+  .afc-dropzone{border:2px dashed #94a3b8;border-radius:16px;padding:32px;text-align:center;background:#f8fafc;transition:.2s;}
+  .afc-dropzone.drag{border-color:#f97316;background:#fff7ed;}
+  .afc-import-preview{max-width:220px;max-height:160px;border-radius:10px;margin-top:14px;object-fit:contain;}
+  .afc-import-table{width:100%;min-width:980px;border-collapse:collapse;}
+  .afc-import-table th,.afc-import-table td{padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top;}
+  .afc-import-table input[type=text],.afc-import-table input[type=email]{width:100%;min-width:120px;}
+  .afc-status{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;white-space:nowrap;}
+  .afc-status-ready{background:#dcfce7;color:#166534}.afc-status-duplicate{background:#e2e8f0;color:#475569}
+  .afc-status-invalid{background:#ffedd5;color:#9a3412}.afc-status-conflict{background:#fee2e2;color:#991b1b}
+  @media(max-width:700px){.afc-import-modal{width:100vw;max-width:100vw;max-height:100vh;border-radius:0}.afc-dropzone{padding:20px 10px}}
 </style>
 
 <div class="card">
@@ -119,7 +130,7 @@
       <button class="btn btn-danger" id="btnDeleteAllCandidates" type="button">Supprimer toutes les lignes</button>
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
       <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
-      <button class="btn btn-orange" id="btnImportCandidates" type="button">Importer</button>
+      <button class="btn btn-orange" id="btnImportCandidates" type="button">↥ Importer</button>
       <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
       {% endif %}
     </div>
@@ -243,7 +254,32 @@
     </tbody>
   </table>
 </div>
-<input type="file" id="afcImportInput" accept="image/png,image/jpeg,image/webp,image/bmp" style="display:none;">
+<div class="modal-backdrop" id="afcImportModal" aria-hidden="true">
+  <div class="modal afc-import-modal" role="dialog" aria-modal="true" aria-labelledby="afcImportTitle">
+    <div class="modal-head"><div class="modal-title" id="afcImportTitle">Importer des candidats France Travail</div></div>
+    <div class="modal-body">
+      <div id="afcImportStep1">
+        <div class="afc-dropzone" id="afcDropzone">
+          <strong>Glissez-déposez votre capture ici</strong><br><small>PNG, JPG, JPEG ou WEBP — 10 Mo maximum</small><br><br>
+          <button class="btn btn-outline" id="afcChooseImage" type="button">Choisir une image</button>
+          <input type="file" id="afcImportInput" accept="image/png,image/jpeg,image/webp" hidden>
+          <div><img id="afcImagePreview" class="afc-import-preview" alt="Aperçu de la capture" hidden></div>
+        </div>
+        <p id="afcImportError" style="color:#b91c1c;font-weight:700" role="alert"></p>
+      </div>
+      <div id="afcImportStep2" hidden>
+        <p id="afcImportSummary" style="font-weight:800"></p>
+        <div style="overflow-x:auto"><table class="afc-import-table"><thead><tr><th>✓</th><th>Identifiant France Travail</th><th>Nom</th><th>Prénom(s)</th><th>Téléphone</th><th>E-mail</th><th>Statut</th><th>Action</th></tr></thead><tbody id="afcImportRows"></tbody></table></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="afcReplaceImage" type="button" hidden>Remplacer l’image</button>
+      <button class="btn" id="afcCancelImport" type="button">Annuler</button>
+      <button class="btn btn-primary" id="afcAnalyzeImage" type="button" disabled>Analyser l’image</button>
+      <button class="btn btn-primary" id="afcConfirmImport" type="button" hidden disabled>Importer 0 candidat</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="candidateModal" aria-hidden="true">
   <div class="modal" style="max-width:520px;">
@@ -274,6 +310,13 @@ const btnDeleteAllCandidates = document.getElementById('btnDeleteAllCandidates')
 const btnImportCandidates = document.getElementById('btnImportCandidates');
 const btnNotifyPending = document.getElementById('btnNotifyPending');
 const afcImportInput = document.getElementById('afcImportInput');
+const afcImportModal = document.getElementById('afcImportModal');
+const afcDropzone = document.getElementById('afcDropzone');
+const afcAnalyzeImage = document.getElementById('afcAnalyzeImage');
+const afcConfirmImport = document.getElementById('afcConfirmImport');
+const afcImportRows = document.getElementById('afcImportRows');
+let afcSelectedFile = null;
+let afcCandidates = [];
 const afcSearchInput = document.getElementById('afcSearchInput');
 const afcDecisionFilter = document.getElementById('afcDecisionFilter');
 const afcPresenceFilter = document.getElementById('afcPresenceFilter');
@@ -488,10 +531,30 @@ function updateCandidateCount(){
 
 
 
-btnImportCandidates?.addEventListener('click', ()=>{
-  afcImportInput.value = '';
-  afcImportInput.click();
-});
+function resetAfcImport(){
+  afcSelectedFile=null; afcCandidates=[]; afcImportInput.value=''; afcImportRows.innerHTML='';
+  document.getElementById('afcImagePreview').hidden=true; document.getElementById('afcImportError').textContent='';
+  document.getElementById('afcImportStep1').hidden=false; document.getElementById('afcImportStep2').hidden=true;
+  document.getElementById('afcReplaceImage').hidden=true; afcAnalyzeImage.hidden=false; afcAnalyzeImage.disabled=true;
+  afcConfirmImport.hidden=true;
+}
+function openAfcImport(){resetAfcImport();afcImportModal.classList.add('show');afcImportModal.setAttribute('aria-hidden','false');}
+function closeAfcImport(){afcImportModal.classList.remove('show');afcImportModal.setAttribute('aria-hidden','true');resetAfcImport();}
+function chooseAfcFile(file){
+  const error=document.getElementById('afcImportError'); error.textContent='';
+  if(!file)return; if(file.size>10*1024*1024){error.textContent='L’image dépasse la taille maximale de 10 Mo.';return;}
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)){error.textContent='Format non autorisé. Utilisez PNG, JPG, JPEG ou WEBP.';return;}
+  afcSelectedFile=file; afcAnalyzeImage.disabled=false; const img=document.getElementById('afcImagePreview');img.src=URL.createObjectURL(file);img.hidden=false;
+}
+btnImportCandidates.addEventListener('click',openAfcImport);
+document.getElementById('afcChooseImage').addEventListener('click',()=>afcImportInput.click());
+afcImportInput.addEventListener('change',()=>chooseAfcFile(afcImportInput.files?.[0]));
+['dragenter','dragover'].forEach(e=>afcDropzone.addEventListener(e,x=>{x.preventDefault();afcDropzone.classList.add('drag')}));
+['dragleave','drop'].forEach(e=>afcDropzone.addEventListener(e,x=>{x.preventDefault();afcDropzone.classList.remove('drag')}));
+afcDropzone.addEventListener('drop',e=>chooseAfcFile(e.dataTransfer.files?.[0]));
+document.getElementById('afcCancelImport').addEventListener('click',closeAfcImport);
+document.getElementById('afcReplaceImage').addEventListener('click',resetAfcImport);
+afcImportModal.addEventListener('click',e=>{if(e.target===afcImportModal)closeAfcImport()});
 
 btnNotifyPending?.addEventListener('click', async ()=>{
   if(!confirm('Envoyer la notification à tous les candidats "non envoyée" ?')) return;
@@ -554,41 +617,45 @@ btnDeleteAllCandidates?.addEventListener('click', async ()=>{
   }
 });
 
-afcImportInput.addEventListener('change', async ()=>{
-  const file = afcImportInput.files && afcImportInput.files[0];
-  if(!file) return;
-
-  const formData = new FormData();
-  formData.append('file', file);
-
+afcAnalyzeImage.addEventListener('click', async ()=>{
+  if(!afcSelectedFile)return; afcAnalyzeImage.disabled=true; afcAnalyzeImage.textContent='Analyse en cours…';
+  const fd=new FormData();fd.append('image',afcSelectedFile);
   try{
-    const res = await fetch('/api/admin/afc/import-from-image', {
-      method:'POST',
-      body: formData
-    });
-    const body = await res.json().catch(()=>({}));
-    if(!res.ok || !body.ok){
-      const code = body.error || 'import_failed';
-      if(code === 'no_candidate_found'){
-        alert('Aucun candidat détecté dans cette image.');
-      }else if(code === 'ocr_failed'){
-        alert("Impossible de lire l'image (OCR). Réessayez avec une capture plus nette.");
-      }else{
-        alert('Erreur import: ' + code);
-      }
-      return;
-    }
-
-    alert(`Import terminé : ${body.imported_count || 0} ajouté(s), ${body.skipped_count || 0} ignoré(s) (doublons).`);
-    if((body.imported_count || 0) > 0){
-      location.reload();
-    }
-  }catch(_err){
-    alert('Erreur import image');
-  }
+    const res=await fetch('/admin/afc/import-image/preview',{method:'POST',body:fd});const body=await res.json().catch(()=>({}));
+    if(!res.ok||!body.success)throw new Error(body.message||"L’image n’a pas pu être analysée. Vérifiez qu’elle est suffisamment nette puis réessayez.");
+    afcCandidates=body.candidates; renderAfcImportRows(); document.getElementById('afcImportStep1').hidden=true;document.getElementById('afcImportStep2').hidden=false;
+    document.getElementById('afcReplaceImage').hidden=false;afcAnalyzeImage.hidden=true;afcConfirmImport.hidden=false;
+  }catch(err){document.getElementById('afcImportError').textContent=err.message;}
+  finally{afcAnalyzeImage.textContent='Analyser l’image';if(!afcAnalyzeImage.hidden)afcAnalyzeImage.disabled=false;}
+});
+function renderAfcImportRows(){
+  const labels={ready:'Prêt à importer',duplicate:'Déjà présent',invalid:'À corriger',conflict:'Conflit à vérifier'};
+  afcImportRows.innerHTML=afcCandidates.map((c,i)=>`<tr data-index="${i}"><td><input type="checkbox" data-select ${c.selected?'checked':''} ${c.status==='ready'?'':'disabled'}></td>
+    ${[['france_travail_id','text'],['last_name','text'],['first_names','text'],['phone','text'],['email','email']].map(([f,t])=>`<td><input type="${t}" data-import-field="${f}" value="${escapeHtml(c[f]||'')}"></td>`).join('')}
+    <td><span class="afc-status afc-status-${c.status}">${labels[c.status]}</span><small style="display:block">${escapeHtml(c.reason||'')}${c.existing_url?` · <a href="${escapeHtml(c.existing_url)}" target="_blank">Voir la fiche existante</a>`:''}</small></td>
+    <td><button class="btn btn-outline" type="button" data-remove>Supprimer</button></td></tr>`).join('');
+  updateAfcImportCount();
+}
+function updateAfcImportCount(){
+  const s=afcImportRows.querySelectorAll('[data-select]:checked').length;afcConfirmImport.disabled=s===0;afcConfirmImport.textContent=`Importer ${s} candidat${s>1?'s':''}`;
+  const counts={ready:0,duplicate:0,invalid:0,conflict:0};afcCandidates.forEach(c=>counts[c.status]++);
+  document.getElementById('afcImportSummary').textContent=`${afcCandidates.length} candidats détectés — ${counts.ready} importables — ${counts.duplicate} déjà présents — ${counts.invalid} à corriger${counts.conflict?` — ${counts.conflict} conflits`:''}`;
+}
+function afcLocallyValid(c){
+  const ft=String(c.france_travail_id||'').replace(/[\s-]+/g,'').toUpperCase();
+  const phone=String(c.phone||'').replace(/[\s.()\-]/g,'').replace(/^\+33/,'0').replace(/^0033/,'0');
+  return /^\d{7}[A-Z]\d{3}$/.test(ft)&&c.last_name.trim()&&c.first_names.trim()&&/^0\d{9}$/.test(phone)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
+}
+afcImportRows.addEventListener('change',e=>{const tr=e.target.closest('tr');if(!tr)return;const c=afcCandidates[+tr.dataset.index];if(e.target.dataset.importField){c[e.target.dataset.importField]=e.target.value;if(c.status==='invalid'&&afcLocallyValid(c)){c.status='ready';c.reason='';c.selected=true;renderAfcImportRows();return;}if(c.status==='ready'&&!afcLocallyValid(c)){c.status='invalid';c.reason='Champs obligatoires invalides';c.selected=false;renderAfcImportRows();return;}}if(e.target.matches('[data-select]'))c.selected=e.target.checked;updateAfcImportCount();});
+afcImportRows.addEventListener('click',e=>{if(!e.target.matches('[data-remove]'))return;afcCandidates.splice(+e.target.closest('tr').dataset.index,1);renderAfcImportRows();});
+afcConfirmImport.addEventListener('click',async()=>{
+  const rows=afcCandidates.filter(c=>c.selected&&c.status==='ready');if(!rows.length)return;afcConfirmImport.disabled=true;afcConfirmImport.textContent='Import en cours…';
+  try{const res=await fetch('/admin/afc/import-image/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates:rows})});const body=await res.json().catch(()=>({}));if(!res.ok||!body.success)throw new Error(body.message||'Import impossible.');alert(body.message);closeAfcImport();location.reload();}
+  catch(err){alert(err.message);updateAfcImportCount();}
 });
 
-document.getElementById('btnAddCandidate')?.addEventListener('click', openModal);
+
+document.getElementById('btnAddCandidate').addEventListener('click', openModal);
 document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
 btnToggleTemplates.addEventListener('click', toggleMailTemplates);
 modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });

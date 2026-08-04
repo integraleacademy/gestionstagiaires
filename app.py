@@ -56,6 +56,7 @@ import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
+import afc_import
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -5121,6 +5122,31 @@ def _normalize_afc_email(raw_email: Any) -> str:
     domain = domain.lstrip(" _.-")
     normalized = f"{local}@{domain}".strip()
     return normalized
+
+
+def _create_afc_candidate(payload: Dict[str, Any], *, import_source: str = "") -> Dict[str, Any]:
+    """Unique factory shared by manual creation and confirmed image imports."""
+    nom = str(payload.get("nom") or "").strip()
+    prenom = str(payload.get("prenom") or "").strip()
+    cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
+    candidate = {
+        "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
+        "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
+        "nom": nom, "prenom": prenom,
+        "email": str(payload.get("email") or "").strip(),
+        "telephone": str(payload.get("telephone") or "").strip(),
+        "decision": "", "notification_status": "",
+        "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
+        "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
+        "motif_refus": "", "complement_refus": "", "complement_refus_autre": "",
+        "modules": {"formation_technique": 0, "remise_niveau": 0, "soutien_personnalise": 0, "paf": 0},
+        "dates_formation": "", "test_francais_reussi": None, "cnaps_priority": False,
+        "presence_afc": False, "presence_afc_status": "A_CONVOQUER",
+        "test_results_comment": "", "created_at": _now_iso(),
+    }
+    if import_source:
+        candidate["source"] = import_source
+    return candidate
 
 
 
@@ -13787,7 +13813,8 @@ PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
     "admin_financement_refuse_submit",
     "admin_afc",
     "api_admin_afc_create_candidate",
-    "api_admin_afc_import_from_image",
+    "api_admin_afc_import_image_preview",
+    "api_admin_afc_import_image_confirm",
     "api_admin_afc_save_mail_templates",
     "api_admin_afc_save_modules",
     "api_admin_afc_update_candidate",
@@ -16756,132 +16783,123 @@ def api_admin_afc_create_candidate():
     data = load_data()
     bucket = _afc_bucket(data)
     payload = request.get_json(silent=True) or {}
-    nom = str(payload.get("nom") or "").strip()
-    prenom = str(payload.get("prenom") or "").strip()
-    email = str(payload.get("email") or "").strip()
-    telephone = str(payload.get("telephone") or "").strip()
-    if not nom or not prenom:
+    if not str(payload.get("nom") or "").strip() or not str(payload.get("prenom") or "").strip():
         return jsonify({"ok": False, "error": "Nom et prénom obligatoires"}), 400
-    cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
-    candidate = {
-        "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
-        "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
-        "nom": nom,
-        "prenom": prenom,
-        "email": email,
-        "telephone": telephone,
-        "decision": "",
-        "notification_status": "",
-        "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
-        "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
-        "motif_refus": "",
-        "complement_refus": "",
-        "complement_refus_autre": "",
-        "modules": {
-            "formation_technique": 0,
-            "remise_niveau": 0,
-            "soutien_personnalise": 0,
-            "paf": 0,
-        },
-        "dates_formation": "",
-        "test_francais_reussi": None,
-        "cnaps_priority": False,
-        "presence_afc": False,
-        "presence_afc_status": "A_CONVOQUER",
-        "test_results_comment": "",
-        "created_at": _now_iso(),
-    }
+    candidate = _create_afc_candidate(payload)
     bucket["candidates"].append(candidate)
     save_data(data)
     return jsonify({"ok": True, "candidate": candidate})
 
 
-@app.post("/api/admin/afc/import-from-image")
-def api_admin_afc_import_from_image():
-    f = request.files.get("file")
-    if not f:
-        return jsonify({"ok": False, "error": "missing_file"}), 400
+def _afc_existing_indexes(candidates: List[Dict[str, Any]]) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    indexes = {"ft": {}, "email": {}, "phone": {}}
+    for existing in candidates:
+        normalized = afc_import.normalize_candidate(existing)
+        for key, value in (("ft", normalized["_keys"]["ft"]), ("email", normalized["email"]), ("phone", normalized["_keys"]["phone"])):
+            if value:
+                indexes[key].setdefault(value, existing)
+    return indexes
 
-    filename = (f.filename or "import.png").strip()
-    lower = filename.lower()
-    allowed = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
-    if not lower.endswith(allowed):
-        return jsonify({"ok": False, "error": "invalid_file_type"}), 400
 
-    file_bytes = f.read()
-    if not file_bytes:
-        return jsonify({"ok": False, "error": "empty_file"}), 400
+def _afc_classify_import_candidates(raw_candidates: List[Dict[str, Any]], existing: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    indexes = _afc_existing_indexes(existing)
+    batch_seen = {"ft": {}, "email": {}, "phone": {}}
+    results = []
+    reasons = {"ft": "Identifiant France Travail déjà présent", "email": "Adresse e-mail déjà présente", "phone": "Numéro de téléphone déjà présent"}
+    for position, raw in enumerate(raw_candidates):
+        candidate = afc_import.normalize_candidate(raw if isinstance(raw, dict) else {})
+        errors = afc_import.validation_errors(candidate)
+        matches = []
+        keys = {"ft": candidate["_keys"]["ft"], "email": candidate["email"], "phone": candidate["_keys"]["phone"]}
+        for kind, value in keys.items():
+            if value and value in indexes[kind]:
+                matches.append((kind, indexes[kind][value]))
+            elif value and value in batch_seen[kind]:
+                matches.append((kind, batch_seen[kind][value]))
+        matched_ids = {str(item.get("id") or f"batch-{id(item)}") for _, item in matches}
+        if len(matched_ids) > 1:
+            status, reason = "conflict", "Conflit entre plusieurs fiches existantes"
+        elif matches:
+            status, reason = "duplicate", reasons[matches[0][0]]
+        elif errors:
+            status, reason = "invalid", " ; ".join(errors)
+        else:
+            status, reason = "ready", ""
+        for kind, value in keys.items():
+            if value and value not in batch_seen[kind]:
+                batch_seen[kind][value] = {"id": f"batch-{position}"}
+        candidate.pop("_keys", None)
+        candidate.update({"status": status, "reason": reason, "selected": status == "ready"})
+        if has_request_context() and matches and matches[0][1].get("id") and not str(matches[0][1].get("id")).startswith("batch-"):
+            candidate["existing_url"] = url_for("admin_afc_candidate_sheet", candidate_id=matches[0][1]["id"])
+        results.append(candidate)
+    return results
 
-    text, ocr_error = _ocr_extract_text_from_image(file_bytes, filename, f.mimetype or "")
-    if not text:
-        return jsonify({"ok": False, "error": "ocr_failed", "detail": ocr_error}), 422
 
-    parsed_candidates = _extract_afc_candidates_from_ocr_text(text)
-    if not parsed_candidates:
-        return jsonify({"ok": False, "error": "no_candidate_found"}), 422
+def _afc_import_summary(candidates: List[Dict[str, Any]]) -> Dict[str, int]:
+    return {"detected": len(candidates), "ready": sum(c["status"] == "ready" for c in candidates),
+            "duplicates": sum(c["status"] == "duplicate" for c in candidates),
+            "invalid": sum(c["status"] == "invalid" for c in candidates),
+            "conflicts": sum(c["status"] == "conflict" for c in candidates)}
 
-    data = load_data()
-    bucket = _afc_bucket(data)
-    existing = bucket.get("candidates") or []
-    existing_keys = {_afc_candidate_dedup_key(candidate) for candidate in existing}
 
-    imported: List[Dict[str, Any]] = []
-    skipped_count = 0
-    for parsed in parsed_candidates:
-        dedup_key = _afc_candidate_dedup_key(parsed)
-        if dedup_key in existing_keys:
-            skipped_count += 1
-            continue
+@app.post("/admin/afc/import-image/preview")
+def api_admin_afc_import_image_preview():
+    started = time.monotonic()
+    upload = request.files.get("image") or request.files.get("file")
+    if not upload:
+        return jsonify({"success": False, "message": "Sélectionnez une image à analyser."}), 400
+    declared_length = request.content_length or 0
+    if declared_length > afc_import.MAX_IMAGE_BYTES + 65536:
+        return jsonify({"success": False, "message": "L’image dépasse la taille maximale de 10 Mo."}), 413
+    raw = upload.stream.read(afc_import.MAX_IMAGE_BYTES + 1)
+    try:
+        prepared, mime = afc_import.prepare_image(raw)
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    try:
+        extracted = afc_import.analyze_image(prepared, mime)
+    except afc_import.AfcVisionError as exc:
+        app.logger.warning("afc_vision_preview error_type=%s duration_ms=%d", type(exc.__cause__).__name__ if exc.__cause__ else type(exc).__name__, int((time.monotonic()-started)*1000))
+        return jsonify({"success": False, "message": str(exc)}), 422
+    if not extracted:
+        return jsonify({"success": False, "message": "Aucun candidat n’a été détecté dans cette image."}), 422
+    existing = _afc_bucket(load_data()).get("candidates", [])
+    candidates = _afc_classify_import_candidates(extracted, existing)
+    app.logger.info("afc_vision_preview detected=%d duration_ms=%d", len(candidates), int((time.monotonic()-started)*1000))
+    return jsonify({"success": True, "candidates": candidates, "summary": _afc_import_summary(candidates)})
 
-        nom = str(parsed.get("nom") or "").strip()
-        prenom = str(parsed.get("prenom") or "").strip()
-        if not nom or not prenom:
-            skipped_count += 1
-            continue
 
-        cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
-        candidate = {
-            "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
-            "identifiant_ft": str(parsed.get("identifiant_ft") or "").strip(),
-            "nom": nom,
-            "prenom": prenom,
-            "email": str(parsed.get("email") or "").strip(),
-            "telephone": str(parsed.get("telephone") or "").strip(),
-            "decision": "",
-            "notification_status": "",
-            "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
-            "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
-            "motif_refus": "",
-            "complement_refus": "",
-            "complement_refus_autre": "",
-            "modules": {
-                "formation_technique": 0,
-                "remise_niveau": 0,
-                "soutien_personnalise": 0,
-                "paf": 0,
-            },
-            "dates_formation": "",
-            "test_francais_reussi": None,
-            "cnaps_priority": False,
-            "presence_afc": False,
-            "presence_afc_status": "A_CONVOQUER",
-            "test_results_comment": "",
-            "created_at": _now_iso(),
-        }
-        existing.append(candidate)
-        existing_keys.add(dedup_key)
-        imported.append(candidate)
+@app.post("/admin/afc/import-image/confirm")
+def api_admin_afc_import_image_confirm():
+    payload = request.get_json(silent=True) or {}
+    selected = payload.get("candidates")
+    if not isinstance(selected, list):
+        return jsonify({"success": False, "message": "Données d’import invalides."}), 400
 
-    if imported:
-        save_data(data)
+    def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
+        bucket = _afc_bucket(data)
+        classified = _afc_classify_import_candidates(selected, bucket["candidates"])
+        imported, skipped, errors = [], 0, []
+        for row in classified:
+            if row["status"] != "ready":
+                skipped += row["status"] in {"duplicate", "conflict"}
+                if row["status"] == "invalid": errors.append(row["reason"])
+                continue
+            candidate = _create_afc_candidate({"identifiant_ft": row["france_travail_id"], "nom": row["last_name"],
+                "prenom": row["first_names"], "telephone": row["phone"], "email": row["email"]}, import_source="Import image France Travail")
+            bucket["candidates"].append(candidate)
+            imported.append(candidate)
+        if imported:
+            _append_activity_log(data, "afc_candidates_image_imported", "afc", details={"imported_count": len(imported), "skipped_count": skipped})
+        return {"imported": len(imported), "duplicates_skipped": skipped, "errors": errors}
 
-    return jsonify({
-        "ok": True,
-        "imported": imported,
-        "imported_count": len(imported),
-        "skipped_count": skipped_count,
-        "parsed_count": len(parsed_candidates),
-    })
+    result = _atomic_update_data(mutate)
+    imported, skipped = result.get("imported", 0), result.get("duplicates_skipped", 0)
+    message = f"{imported} candidat{'s' if imported != 1 else ''} importé{'s' if imported != 1 else ''}."
+    if skipped:
+        message += f" {skipped} candidat{'s' if skipped != 1 else ''} déjà existant{'s' if skipped != 1 else ''} {'ont' if skipped != 1 else 'a'} été ignoré{'s' if skipped != 1 else ''}."
+    return jsonify({"success": True, **result, "message": message})
 
 
 @app.post("/api/admin/afc/mail-templates")

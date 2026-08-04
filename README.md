@@ -1,5 +1,14 @@
 # Gestion stagiaires
 
+## Import AFC depuis une capture France Travail
+
+L'analyse structurée de la modale `/admin/afc` est réalisée exclusivement côté serveur. Variables à configurer sur Render :
+
+- `OPENAI_API_KEY` : clé secrète du fournisseur (jamais exposée au navigateur) ;
+- `AFC_IMPORT_VISION_MODEL` : modèle vision compatible JSON structuré (défaut : `gpt-4.1-mini`).
+
+La capture est validée et réorientée en mémoire, sans conservation sur disque. La prévisualisation ne crée aucune fiche : seules les lignes confirmées sont revalidées et enregistrées.
+
 ## Intégration CRM Intégrale Connect
 
 Le endpoint `POST /api/integrations/crm/stagiaires` est protégé par un jeton Bearer.

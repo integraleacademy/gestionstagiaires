@@ -243,65 +243,6 @@ class AfcEmailNormalizationTests(unittest.TestCase):
         self.assertEqual(dedup_key, "email:test.user@gmail.com")
 
 
-class AfcImageImportApiTests(unittest.TestCase):
-    def setUp(self):
-        self.client = gestion_app.app.test_client()
-        self.original_load_data = gestion_app.load_data
-        self.original_save_data = gestion_app.save_data
-        self.original_ocr_extract = gestion_app._ocr_extract_text_from_image
-        self.original_cnaps_lookup = gestion_app.fetch_cnaps_status_by_name
-
-    def tearDown(self):
-        gestion_app.load_data = self.original_load_data
-        gestion_app.save_data = self.original_save_data
-        gestion_app._ocr_extract_text_from_image = self.original_ocr_extract
-        gestion_app.fetch_cnaps_status_by_name = self.original_cnaps_lookup
-
-    def test_import_skips_existing_candidate_by_identifiant(self):
-        data = {
-            "afc": {
-                "candidates": [
-                    {
-                        "id": "AFC-EXISTING",
-                        "identifiant_ft": "5988355G - 032",
-                        "nom": "BARRY",
-                        "prenom": "Tidiane",
-                        "email": "",
-                        "telephone": "",
-                        "presence_afc_status": "A_CONVOQUER",
-                    }
-                ]
-            }
-        }
-        saved = {"count": 0}
-        gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
-        gestion_app.fetch_cnaps_status_by_name = lambda *_: "INCONNU"
-        gestion_app._ocr_extract_text_from_image = lambda *_: (
-            "5988355G - 032\nBARRY Tidiane\n07 44 16 67 86\nbarry@example.com\n"
-            "5464627M - 032\nBENDJAMA Ilies\n06 01 08 57 99\nilies@example.com",
-            "",
-        )
-
-        with self.client.session_transaction() as sess:
-            sess["admin_logged_in"] = True
-            sess["admin_role"] = "admin"
-
-        response = self.client.post(
-            "/api/admin/afc/import-from-image",
-            data={"file": (io.BytesIO(b"fake-image"), "import.png")},
-            content_type="multipart/form-data",
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.get_json()
-        self.assertTrue(payload["ok"])
-        self.assertEqual(payload["imported_count"], 1)
-        self.assertEqual(payload["skipped_count"], 1)
-        self.assertEqual(saved["count"], 1)
-        self.assertEqual(len(data["afc"]["candidates"]), 2)
-
-
 class CnapsImportPreApiMatchingTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()

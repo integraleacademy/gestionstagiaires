@@ -49,6 +49,10 @@ services:
         sync: false
       - key: BREVO_API_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AFC_IMPORT_VISION_MODEL
+        value: gpt-4.1-mini
   - type: cron
     name: gestionstagiaires-convocation-reminders
     runtime: docker
