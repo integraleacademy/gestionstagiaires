@@ -90,6 +90,46 @@ Les propriétés historiques `ok`, `linked`, `crm_contact_id`, `trainee`, `cnaps
 
 `card_pro.check_status` vaut `success`, `missing_nub` ou `error`. Chaque titre contient `code`, `label`, `status`, `display_status`, `valid_until` et `expires_before_training`.
 
+## Rattacher un stagiaire existant
+
+`POST /api/integrations/crm/stagiaires/link-existing` rattache une piste CRM à un stagiaire déjà présent, sans créer de stagiaire. La route utilise exactement le même en-tête `Authorization: Bearer <CRM_INTEGRATION_API_TOKEN>` que la consultation.
+
+```json
+{
+  "crm_contact_id": "identifiant permanent de la piste CRM",
+  "prenom": "Jean",
+  "nom": "Dupont",
+  "email": "jean.dupont@example.com",
+  "telephone": "0612345678",
+  "source": "integrale_connect"
+}
+```
+
+`crm_contact_id`, `prenom` et `nom` sont obligatoires, ainsi qu'au moins l'un des champs `email` ou `telephone`. `source` est facultatif. Toutes les valeurs transmises doivent être des chaînes et aucun champ hors contrat n'est accepté.
+
+Le rapprochement est limité aux sessions accessibles à l'intégration et appartenant au partenaire Intégrale. Il ne fait aucune recherche floue :
+
+1. les espaces de l'e-mail sont supprimés, sa casse est ignorée, puis la comparaison est exacte ;
+2. le téléphone ne conserve que ses chiffres et les préfixes français `+33`, `0033` et `33` sont ramenés au format national `0…`, puis la comparaison est exacte ;
+3. le nom et le prénom sont comparés exactement après retrait des espaces externes, passage en minuscules et normalisation des accents.
+
+L'e-mail est prioritaire sur le téléphone. Si les deux identifient des ensembles différents, la demande est refusée. Une liaison n'est créée que si un unique stagiaire correspond et si son nom et son prénom sont cohérents. Un `crm_contact_id` déjà rattaché au même stagiaire rend l'appel idempotent : la réponse vaut `200` avec `link_created: false`. Une création de liaison réussie vaut `200` avec `link_created: true`. Dans les deux cas, le reste de la réponse (`trainee`, `cnaps`, `card_pro` et `vae`) est strictement au même format que celui du `GET` documenté ci-dessus.
+
+| Code | `reason` | Signification |
+|---:|---|---|
+| `200` | — | Liaison créée ou liaison identique déjà existante. |
+| `400` | `invalid_request` | JSON invalide, type/champ non autorisé ou champ obligatoire absent. |
+| `401` | — | Bearer absent/invalide ou secret serveur non configuré. |
+| `404` | `trainee_not_found` | Aucun stagiaire accessible ne correspond exactement. |
+| `409` | `conflicting_matches` | L'e-mail et le téléphone désignent des stagiaires différents. |
+| `409` | `ambiguous_match` | Plusieurs stagiaires correspondent. |
+| `409` | `identity_mismatch` | Le nom ou le prénom n'est pas cohérent avec le résultat. |
+| `409` | `crm_contact_id_already_used` | L'identifiant CRM est déjà rattaché à un autre stagiaire. |
+| `409` | `trainee_already_linked` | Le stagiaire correspondant possède déjà un autre identifiant CRM. |
+| `500` | `storage_error` | La sauvegarde sécurisée n'a pas abouti. |
+
+La liaison conserve tous les champs existants, notamment le dossier, le statut et les dates VAE. Elle renseigne `crm_source` avec `integrale_connect` uniquement si cette propriété est vide et ajoute une entrée d'activité sans donnée de contact.
+
 ## Applicabilité et champs VAE
 
 Le parcours est applicable **uniquement** si `session.training_type` vaut exactement `DIRIGEANT VAE`. Un nom de session contenant « VAE » ne suffit pas. Pour toute autre formation, l'objet complet est :
