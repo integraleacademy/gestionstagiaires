@@ -25,9 +25,12 @@ def normalize_text(value: Any) -> str:
 
 def normalize_ft_id(value: Any) -> Tuple[str, str]:
     compact = re.sub(r"[\s-]+", "", str(value or "")).upper()
-    if not re.fullmatch(r"\d{7}[A-Z]\d{3}", compact):
+    if not re.fullmatch(r"\d{7}[A-Z](?:\d{3})?", compact):
         return compact, normalize_text(value)
-    return compact, f"{compact[:8]} - {compact[8:]}"
+    display = f"{compact[:8]} - {compact[8:]}" if len(compact) == 11 else compact
+    # France Travail may show the identifier without its three-digit suffix.
+    # The first eight characters identify the candidate in both representations.
+    return compact[:8], display
 
 
 def normalize_phone(value: Any) -> Tuple[str, str]:
@@ -64,7 +67,7 @@ def normalize_candidate(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 def validation_errors(candidate: Dict[str, Any]) -> List[str]:
     errors = []
-    if not re.fullmatch(r"\d{7}[A-Z]\d{3}", candidate.get("_keys", {}).get("ft", "")):
+    if not re.fullmatch(r"\d{7}[A-Z]", candidate.get("_keys", {}).get("ft", "")):
         errors.append("Identifiant France Travail invalide ou ambigu")
     if not candidate.get("last_name"):
         errors.append("Nom obligatoire")

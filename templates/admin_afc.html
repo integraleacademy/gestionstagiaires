@@ -690,7 +690,7 @@ function updateAfcImportCount(){
 function afcLocallyValid(c){
   const ft=String(c.france_travail_id||'').replace(/[\s-]+/g,'').toUpperCase();
   const phone=String(c.phone||'').replace(/[\s.()\-]/g,'').replace(/^\+33/,'0').replace(/^0033/,'0');
-  return /^\d{7}[A-Z]\d{3}$/.test(ft)&&c.last_name.trim()&&c.first_names.trim()&&/^0\d{9}$/.test(phone)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
+  return /^\d{7}[A-Z](?:\d{3})?$/.test(ft)&&c.last_name.trim()&&c.first_names.trim()&&/^0\d{9}$/.test(phone)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
 }
 afcImportRows.addEventListener('change',e=>{const tr=e.target.closest('tr');if(!tr)return;const c=afcCandidates[+tr.dataset.index];if(e.target.dataset.importField){c[e.target.dataset.importField]=e.target.value;if(c.status==='invalid'&&afcLocallyValid(c)){c.status='ready';c.reason='';c.selected=true;renderAfcImportRows();return;}if(c.status==='ready'&&!afcLocallyValid(c)){c.status='invalid';c.reason='Champs obligatoires invalides';c.selected=false;renderAfcImportRows();return;}}if(e.target.matches('[data-select]'))c.selected=e.target.checked;updateAfcImportCount();});
 afcImportRows.addEventListener('click',e=>{if(!e.target.matches('[data-remove]'))return;afcCandidates.splice(+e.target.closest('tr').dataset.index,1);renderAfcImportRows();});

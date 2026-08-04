@@ -32,6 +32,16 @@ class AfcImageImportTests(unittest.TestCase):
   self.login(); r=self.client.post('/admin/afc/import-image/preview',data={'image':(io.BytesIO(b'x'*(afc_import.MAX_IMAGE_BYTES+1)),'x.png')},content_type='multipart/form-data'); self.assertIn(r.status_code,(400,413))
  def test_normalizations(self):
   self.assertEqual(afc_import.normalize_ft_id('5216923u 032')[0],afc_import.normalize_ft_id('5216923U - 032')[0]); self.assertEqual(afc_import.normalize_phone('+33 6 02 40 43 09')[0],afc_import.normalize_phone('06 02 40 43 09')[0])
+ def test_ft_identifier_is_valid_with_or_without_three_digit_suffix(self):
+  short={**SAMPLE[0],'france_travail_id':'5216923U'}
+  long={**SAMPLE[0],'france_travail_id':'5216923U - 032'}
+  self.assertEqual(gestion_app._afc_classify_import_candidates([short],[])[0]['status'],'ready')
+  self.assertEqual(gestion_app._afc_classify_import_candidates([long],[])[0]['status'],'ready')
+  self.assertEqual(afc_import.normalize_ft_id(short['france_travail_id'])[0],afc_import.normalize_ft_id(long['france_travail_id'])[0])
+ def test_short_ft_identifier_detects_existing_long_identifier(self):
+  existing=[{'id':'AFC-X','identifiant_ft':'5216923U - 032'}]
+  row=gestion_app._afc_classify_import_candidates([{**SAMPLE[0],'france_travail_id':'5216923U'}],existing)[0]
+  self.assertEqual(row['status'],'duplicate'); self.assertIn('Identifiant',row['reason'])
  def test_duplicates_by_strong_identifiers(self):
   base={'id':'AFC-X','identifiant_ft':'5216923U-032','email':'old@example.com','telephone':'06 01 02 03 04'}
   cases=[({'france_travail_id':'5216923u 032','email':'new@example.com','phone':'0611111111'},'Identifiant'),({'france_travail_id':'1111111A-001','email':'OLD@EXAMPLE.COM','phone':'0611111111'},'e-mail'),({'france_travail_id':'1111111A-001','email':'new@example.com','phone':'+33 6 01 02 03 04'},'téléphone')]
