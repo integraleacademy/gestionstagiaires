@@ -32633,6 +32633,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
         "livret_2_validated": 0,
         "certification_obtained": 0,
     }
+    vae_follow_up_people = {metric: [] for metric in vae_follow_up}
     today = report_date + datetime.timedelta(days=1)
 
     validated_cnaps = {"valide", "validé", "validee", "validée", "accepted", "accepte", "accepté", "active", "actif", "favorable", "done"}
@@ -32675,6 +32676,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             if "VAE" in training_type.upper():
                 if _daily_recap_date(trainee.get("created_at")) == report_date:
                     vae_follow_up["new_requests"] += 1
+                    vae_follow_up_people["new_requests"].append(name)
                 action_dates = trainee.get("vae_action_dates") or {}
                 if isinstance(action_dates, dict):
                     for action_key, metric_key in (
@@ -32684,6 +32686,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
                     ):
                         if _daily_recap_date(action_dates.get(action_key)) == report_date:
                             vae_follow_up[metric_key] += 1
+                            vae_follow_up_people[metric_key].append(name)
             if not excluded_from_sales and sale_date and sale_date.year == report_date.year and sale_date.month == report_date.month and sale_date <= report_date:
                 month_revenue += price
             if not excluded_from_sales and sale_date == report_date:
@@ -32817,7 +32820,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     month_objective = _parse_positive_int(monthly_objectives.get(str(report_date.month), 0) if isinstance(monthly_objectives, dict) else 0)
     month_progress_ratio = (month_revenue / month_objective) if month_objective > 0 else 0
     month_remaining = max(month_objective - month_revenue, 0) if month_objective > 0 else 0
-    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "cnaps_changes": changes, "rejected": rejected, "pending_mandates": list(pending_mandates_by_trainee.values()), "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
+    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "vae_follow_up_people": vae_follow_up_people, "cnaps_changes": changes, "rejected": rejected, "pending_mandates": list(pending_mandates_by_trainee.values()), "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
 
 
 def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
@@ -32924,7 +32927,13 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     ]
     visible_vae_metrics = [(label, int(count or 0)) for label, count in vae_metrics if int(count or 0) > 0]
     if visible_vae_metrics:
-        vae_rows = "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right">{section_count_badge(count)}</span></div>' for label, count in visible_vae_metrics)
+        vae_people = report.get("vae_follow_up_people") or {}
+        metric_keys = dict(zip((label for label, _count in vae_metrics), ("new_requests", "livret_1_validated", "livret_2_validated", "certification_obtained")))
+        vae_rows = "".join(
+            f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right">{section_count_badge(count)}</span>'
+            f'<div style="margin-top:5px;padding-right:48px;color:#64748b;font-size:13px">{html.escape(", ".join(dict.fromkeys(vae_people.get(metric_keys[label]) or [])))}</div></div>'
+            for label, count in visible_vae_metrics
+        )
         cards = f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">🎓&nbsp; Suivi des VAE</h2>{vae_rows}</div></td></tr>' + cards
     greeting = ""
     if recipient and greeting_context:
