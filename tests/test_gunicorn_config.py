@@ -21,13 +21,17 @@ class GunicornConfigTests(unittest.TestCase):
         self.assertEqual(config["max_requests"], 0)
         self.assertEqual(config["max_requests_jitter"], 0)
 
-    def test_recycling_remains_configurable_for_multi_worker_deployments(self):
+    def test_single_gthread_worker_ignores_worker_recycling_environment(self):
         config = self._load_config(
             WEB_CONCURRENCY="2",
             GUNICORN_MAX_REQUESTS="2000",
             GUNICORN_MAX_REQUESTS_JITTER="200",
         )
 
-        self.assertEqual(config["workers"], 2)
-        self.assertEqual(config["max_requests"], 2000)
-        self.assertEqual(config["max_requests_jitter"], 200)
+        self.assertEqual(config["workers"], 1)
+        self.assertEqual(config["worker_class"], "gthread")
+        self.assertEqual(config["threads"], 4)
+        self.assertEqual(config["timeout"], 300)
+        self.assertEqual(config["graceful_timeout"], 30)
+        self.assertEqual(config["max_requests"], 0)
+        self.assertEqual(config["max_requests_jitter"], 0)
