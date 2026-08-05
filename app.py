@@ -3228,6 +3228,7 @@ def _int_env(name: str, default: int) -> int:
 MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 
 _data_lock = threading.RLock()
+_cnaps_public_annuaire_monitor_lock = threading.Lock()
 _wedof_webhook_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
 _storage_startup_logged = False
@@ -3879,14 +3880,22 @@ def _iter_corrupt_candidates(path: str) -> Iterable[str]:
 
 
 def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            loaded = json.load(f)
-        if isinstance(loaded, dict):
-            return loaded
-    except Exception:
+    lock = _data_lock if "_data_lock" in globals() and path == globals().get("DATA_FILE") else None
+
+    def _read() -> Optional[Dict[str, Any]]:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                return loaded
+        except Exception:
+            return None
         return None
-    return None
+
+    if lock is not None:
+        with lock:
+            return _read()
+    return _read()
 
 
 def _recover_data_file(path: str) -> Optional[str]:
@@ -4198,7 +4207,22 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
     }
 
     try:
-        response = get_func(endpoint, headers=headers, timeout=10)
+        response = get_func(endpoint, headers=headers, timeout=(3, 10))
+    except requests.ConnectTimeout:
+        rows, error = _cnapsv3_tracking_error("timeout connexion")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except requests.ReadTimeout:
+        rows, error = _cnapsv3_tracking_error("timeout lecture")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except requests.ConnectionError:
+        rows, error = _cnapsv3_tracking_error("erreur connexion")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
     except requests.Timeout:
         rows, error = _cnapsv3_tracking_error("timeout réseau")
         if use_cache:
@@ -4310,7 +4334,7 @@ def sync_cnapsv3_lookup_identifier(
     backoff_seconds = [1, 2, 4]
     for attempt, delay in enumerate(backoff_seconds, start=1):
         try:
-            response = post_func(endpoint, headers=headers, json=payload, timeout=8)
+            response = post_func(endpoint, headers=headers, json=payload, timeout=(3, 10))
         except requests.RequestException as exc:
             app.logger.warning(
                 "[CNAPSV3_LOOKUP] Erreur réseau tentative=%s/%s payload=%s error=%s",
@@ -4442,7 +4466,7 @@ def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
         return False
 
     try:
-        response = requests.get(endpoint, timeout=10)
+        response = requests.get(endpoint, timeout=(3, 10))
         response.raise_for_status()
         payload = response.json() or {}
     except Exception:
@@ -5474,34 +5498,61 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
 
 def run_cnaps_public_annuaire_monitor() -> Dict[str, Any]:
     """Check tracked CNAPS files without requiring an administrator page visit."""
-    rows, fetch_error = fetch_cnapsv3_tracking_requests()
-    if fetch_error:
-        raise RuntimeError(fetch_error)
-    data = load_data(run_background_tasks=False)
+    job_started_at = time.monotonic()
+    app.logger.info("[CNAPS_MONITOR] JOB_BEGIN")
+    rows: List[Dict[str, Any]] = []
     checked = notified = errors = 0
-    seen: Set[str] = set()
-    for row in rows:
-        last_name = str(row.get("last_name") or "").strip()
-        first_name = str(row.get("first_name") or "").strip()
-        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
-        key = _cnaps_public_annuaire_status_key(last_name, nub)
-        if not last_name or len(nub) != 7 or key in seen:
-            continue
-        seen.add(key)
-        result = fetch_cnaps_public_annuaire(last_name, nub)
-        if result.get("check_status") != "success":
-            errors += 1
-            continue
-        checked += 1
-        if _record_cnaps_public_annuaire_status(
-            data, first_name=first_name, last_name=last_name, nub=nub, result=result,
-        ):
-            notified += 1
-        if CNAPS_MONITOR_REQUEST_DELAY_SECONDS:
-            time.sleep(CNAPS_MONITOR_REQUEST_DELAY_SECONDS)
-    if checked:
-        save_data(data)
-    return {"checked": checked, "notified": notified, "errors": errors}
+    try:
+        step_started_at = time.monotonic()
+        app.logger.info("[CNAPS_MONITOR] CANDIDATE_SELECTION_BEGIN")
+        rows, fetch_error = fetch_cnapsv3_tracking_requests()
+        if fetch_error:
+            app.logger.warning("[CNAPS_MONITOR] CANDIDATE_SELECTION_ERROR duration_ms=%s error=%s", int((time.monotonic() - step_started_at) * 1000), fetch_error)
+            return {"checked": 0, "notified": 0, "errors": 1, "status": "fetch_error", "error": str(fetch_error)[:160]}
+        app.logger.info("[CNAPS_MONITOR] CANDIDATE_SELECTION_END duration_ms=%s candidates=%s", int((time.monotonic() - step_started_at) * 1000), len(rows))
+
+        seen: Set[str] = set()
+        successful_results: List[Tuple[str, str, str, Dict[str, Any]]] = []
+        for index, row in enumerate(rows, start=1):
+            candidate_started_at = time.monotonic()
+            last_name = str(row.get("last_name") or "").strip()
+            first_name = str(row.get("first_name") or "").strip()
+            nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+            key = _cnaps_public_annuaire_status_key(last_name, nub)
+            app.logger.info("[CNAPS_MONITOR] CANDIDATE_BEGIN index=%s key=%s nub_masked=%s", index, key, _mask_cnaps_nub(nub))
+            if not last_name or len(nub) != 7 or key in seen:
+                app.logger.info("[CNAPS_MONITOR] CANDIDATE_END index=%s skipped=true duration_ms=%s", index, int((time.monotonic() - candidate_started_at) * 1000))
+                continue
+            seen.add(key)
+            call_started_at = time.monotonic()
+            app.logger.info("[CNAPS_MONITOR] CNAPS_CALL_BEGIN index=%s key=%s", index, key)
+            result = fetch_cnaps_public_annuaire(last_name, nub)
+            app.logger.info("[CNAPS_MONITOR] CNAPS_CALL_END index=%s key=%s status=%s duration_ms=%s", index, key, result.get("check_status"), int((time.monotonic() - call_started_at) * 1000))
+            if result.get("check_status") != "success":
+                errors += 1
+                app.logger.info("[CNAPS_MONITOR] CANDIDATE_END index=%s error=true duration_ms=%s", index, int((time.monotonic() - candidate_started_at) * 1000))
+                continue
+            checked += 1
+            successful_results.append((first_name, last_name, nub, result))
+            if CNAPS_MONITOR_REQUEST_DELAY_SECONDS:
+                time.sleep(CNAPS_MONITOR_REQUEST_DELAY_SECONDS)
+            app.logger.info("[CNAPS_MONITOR] CANDIDATE_END index=%s duration_ms=%s", index, int((time.monotonic() - candidate_started_at) * 1000))
+        if successful_results:
+            save_started_at = time.monotonic()
+            app.logger.info("[CNAPS_MONITOR] SAVE_BEGIN")
+
+            def merge_cnaps_results(latest_data: Dict[str, Any]) -> int:
+                merged_notified = 0
+                for first_name, last_name, nub, result in successful_results:
+                    if _record_cnaps_public_annuaire_status(latest_data, first_name=first_name, last_name=last_name, nub=nub, result=result):
+                        merged_notified += 1
+                return merged_notified
+
+            notified = update_data(merge_cnaps_results, run_background_tasks=False)
+            app.logger.info("[CNAPS_MONITOR] SAVE_END duration_ms=%s", int((time.monotonic() - save_started_at) * 1000))
+        return {"checked": checked, "notified": notified, "errors": errors, "status": "done"}
+    finally:
+        app.logger.info("[CNAPS_MONITOR] JOB_END duration_ms=%s candidates=%s checked=%s notified=%s errors=%s", int((time.monotonic() - job_started_at) * 1000), len(rows), checked, notified, errors)
 
 def brevo_send_email(
     to_email: str,
@@ -7910,6 +7961,24 @@ def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> Non
     _write_json_with_backups(DATA_FILE, data, _data_lock, payload_transform=transform)
 
 
+def update_data(
+    mutator: Callable[[Dict[str, Any]], Any],
+    *,
+    run_background_tasks: bool = False,
+    preserve_qonto_oauth: bool = True,
+) -> Any:
+    """Apply one logical read-modify-write transaction to data.json.
+
+    The shared RLock stays held from the canonical file read through the atomic
+    replace so gthread requests cannot overwrite each other's changes with a
+    stale in-memory copy. Do not perform network I/O or sleeps inside mutator.
+    """
+    with _data_lock:
+        data = load_data(run_background_tasks=run_background_tasks)
+        result = mutator(data)
+        save_data(data, preserve_qonto_oauth=preserve_qonto_oauth)
+        return data if result is None else result
+
 def _atomic_update_data(mutator: Callable[[Dict[str, Any]], Dict[str, Any]]) -> Dict[str, Any]:
     """Apply a business mutation while holding the JSON store's process/file locks."""
     result: Dict[str, Any] = {}
@@ -9526,7 +9595,7 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str, previous_success: Optional[D
         page = 0
         while page < min(total_pages, CNAPS_PUBLIC_ANNUAIRE_MAX_PAGES):
             payload = _build_cnaps_public_annuaire_payload(normalized_nom, normalized_nub, page)
-            response = session.post(endpoint, json=payload, headers=headers, timeout=(5, 15), allow_redirects=True)
+            response = session.post(endpoint, json=payload, headers=headers, timeout=(3, 10), allow_redirects=True)
             data = _validate_cnaps_json_response(response)
             rows.extend(_extract_cnaps_public_annuaire_results(data))
             total_elements = int(data.get("totalElements") or total_elements or 0)
@@ -22521,11 +22590,16 @@ def internal_cnaps_public_annuaire_monitor():
     supplied_token = request.headers.get("X-CNAPS-Monitor-Token", "")
     if not CNAPS_MONITOR_TOKEN or not hmac.compare_digest(supplied_token, CNAPS_MONITOR_TOKEN):
         abort(401)
+    if not _cnaps_public_annuaire_monitor_lock.acquire(blocking=False):
+        app.logger.info("[CNAPS_MONITOR] already_running")
+        return jsonify({"ok": True, "status": "already_running"})
     try:
         return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor()})
     except Exception as exc:
         app.logger.exception("[CNAPS_MONITOR] execution failed")
-        return jsonify({"ok": False, "error": str(exc)[:160]}), 502
+        return jsonify({"ok": True, "status": "failed", "error": str(exc)[:160]})
+    finally:
+        _cnaps_public_annuaire_monitor_lock.release()
 
 
 # =========================
