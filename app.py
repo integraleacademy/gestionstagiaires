@@ -16883,6 +16883,10 @@ def api_admin_afc_create_candidate():
 def _afc_existing_indexes(candidates: List[Dict[str, Any]]) -> Dict[str, Dict[str, Dict[str, Any]]]:
     indexes = {"ft": {}, "email": {}, "phone": {}}
     for existing in candidates:
+        # Une fiche archivée appartient à un ancien cycle AFC : elle ne doit pas
+        # empêcher une nouvelle convocation/importation du même candidat.
+        if existing.get("archived"):
+            continue
         normalized = afc_import.normalize_candidate(existing)
         for key, value in (("ft", normalized["_keys"]["ft"]), ("email", normalized["email"]), ("phone", normalized["_keys"]["phone"])):
             if value:

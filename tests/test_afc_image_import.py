@@ -47,6 +47,17 @@ class AfcImageImportTests(unittest.TestCase):
   cases=[({'france_travail_id':'5216923u 032','email':'new@example.com','phone':'0611111111'},'Identifiant'),({'france_travail_id':'1111111A-001','email':'OLD@EXAMPLE.COM','phone':'0611111111'},'e-mail'),({'france_travail_id':'1111111A-001','email':'new@example.com','phone':'+33 6 01 02 03 04'},'téléphone')]
   for changed,reason in cases:
    row=gestion_app._afc_classify_import_candidates([{**SAMPLE[0],**changed}],[base])[0]; self.assertEqual(row['status'],'duplicate'); self.assertIn(reason,row['reason'])
+ def test_archived_candidate_does_not_block_a_new_import(self):
+  archived={'id':'AFC-ARCHIVED','identifiant_ft':'5216923U-032','email':'soraya@example.com','telephone':'0602404309','archived':True}
+  row=gestion_app._afc_classify_import_candidates([SAMPLE[0]],[archived])[0]
+  self.assertEqual(row['status'],'ready'); self.assertTrue(row['selected'])
+ def test_confirmation_imports_candidate_already_in_archives(self):
+  self.login(); persisted={'afc':{'candidates':[{'id':'AFC-ARCHIVED','identifiant_ft':'5216923U-032','email':'soraya@example.com','telephone':'0602404309','archived':True}]}}
+  def atomic(mutator): return mutator(persisted)
+  with patch.object(gestion_app,'_atomic_update_data',side_effect=atomic),patch.object(gestion_app,'fetch_cnaps_lookup_by_name',return_value={}),patch.object(gestion_app,'brevo_send_email',return_value=True),patch.object(gestion_app,'brevo_send_sms',return_value=True):
+   result=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[SAMPLE[0]],'date_icop':'2026-09-15'}).get_json()
+  self.assertEqual(result['imported'],1); self.assertEqual(result['duplicates_skipped'],0); self.assertEqual(len(persisted['afc']['candidates']),2)
+  self.assertTrue(persisted['afc']['candidates'][0]['archived']); self.assertFalse(persisted['afc']['candidates'][1].get('archived',False))
  def test_batch_duplicate_incomplete_corrected_and_conflict(self):
   rows=gestion_app._afc_classify_import_candidates([SAMPLE[0],dict(SAMPLE[0])],[]); self.assertEqual([r['status'] for r in rows],['ready','duplicate'])
   bad={**SAMPLE[0],'first_names':''}; self.assertEqual(gestion_app._afc_classify_import_candidates([bad],[])[0]['status'],'invalid'); bad['first_names']='Soraya Hadria'; self.assertEqual(gestion_app._afc_classify_import_candidates([bad],[])[0]['status'],'ready')
