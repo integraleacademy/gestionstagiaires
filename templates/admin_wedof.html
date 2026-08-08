@@ -14,6 +14,45 @@
 </div>
 
 <div class="card" style="margin-bottom:12px;">
+  <div class="card-title">Prévisualisation du rapprochement WEDOF / Gestion Stagiaires</div>
+  <p>Cette prévisualisation n’enregistre aucune association et n’effectue aucune déclaration vers WEDOF.</p>
+  <p style="font-weight:700;color:#9f1239;">Automatisation inactive — aucune déclaration ne sera envoyée.</p>
+  <form method="post" action="{{ url_for('admin_wedof_matching_preview') }}">
+    <button class="btn btn-violet" type="submit">Analyser les correspondances</button>
+  </form>
+  {% if matching_preview %}
+    {% set c = matching_preview.counts %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:16px 0;">
+      {% for label, value in [
+        ('Dossiers CPF analysés', c.cpf_analyzed), ('Correspondances fiables', c.exact_match),
+        ('Correspondances ambiguës', c.ambiguous_match), ('Sessions introuvables', c.no_session_match),
+        ('Stagiaires introuvables', c.no_trainee_match), ('Données WEDOF incomplètes', c.missing_wedof_data),
+        ('Dossiers hors CPF exclus', c.excluded_non_cpf)] %}
+        <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;"><strong style="font-size:1.35rem;">{{ value }}</strong><br><span class="muted">{{ label }}</span></div>
+      {% endfor %}
+    </div>
+    <div style="max-width:100%;overflow-x:auto;">
+      <table class="table" style="width:100%;table-layout:fixed;min-width:980px;">
+        <thead><tr><th>Numéro WEDOF</th><th>État</th><th>Identité WEDOF</th><th>Email</th><th>Téléphone</th><th>Dates</th><th>Session locale</th><th>Stagiaire local</th><th>Règle</th><th>Statut</th><th>Explication</th></tr></thead>
+        <tbody>
+        {% set labels = {'exact_match':'Correspondance fiable','ambiguous_match':'Ambigu','no_session_match':'Session introuvable','no_trainee_match':'Stagiaire introuvable','missing_wedof_data':'Données incomplètes','excluded_non_cpf':'Hors CPF'} %}
+        {% set colors = {'exact_match':'#dcfce7','ambiguous_match':'#fef3c7','no_session_match':'#fee2e2','no_trainee_match':'#ffedd5','missing_wedof_data':'#e2e8f0','excluded_non_cpf':'#f1f5f9'} %}
+        {% for item in matching_preview.results %}
+          <tr style="overflow-wrap:anywhere;">
+            <td>{{ item.external_id or '—' }}</td><td>{{ item.state or '—' }}</td>
+            <td>{{ item.last_name or '—' }} {{ item.first_name or '' }}</td><td>{{ item.email or '—' }}</td><td>{{ item.phone or '—' }}</td>
+            <td>{{ item.start_date or '—' }}<br>{{ item.end_date or '—' }}</td><td>{{ item.session }}</td><td>{{ item.trainee }}</td><td>{{ item.rule }}</td>
+            <td><span style="display:inline-block;padding:4px 7px;border-radius:999px;background:{{ colors[item.status] }};font-weight:700;">{{ labels[item.status] }}</span></td>
+            <td>{{ item.explanation }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:12px;">
   <div class="card-title">Connexion API WEDOF</div>
   <div style="display:grid;gap:6px;margin:10px 0 14px;">
     <div>Clé API configurée : <strong>{{ 'Oui' if wedof_api_key_configured else 'Non' }}</strong></div>
