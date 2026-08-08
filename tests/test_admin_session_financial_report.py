@@ -109,14 +109,21 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertIn("body.endpoint-admin-session-financial-report .app-shell", template)
         self.assertIn("width:100%;max-width:none;box-sizing:border-box", template)
 
-    def test_payment_column_uses_the_billing_progress_bar(self):
-        template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
+    def test_report_exposes_trainee_link_and_cash_payment_details(self):
+        trainee = self.session["trainees"][0]
+        trainee.update({"cash_payment_enabled": True, "cash_payment_amount": "600"})
 
-        self.assertIn("payment-progress payment-progress--{{ invoice.payment_status }}", template)
-        self.assertIn('role="progressbar"', template)
-        self.assertIn('style="width:{{ invoice.payment_percentage }}%"', template)
-        self.assertIn("{{ money(invoice.paid) }} encaissé", template)
-        self.assertIn("'Soldé' if invoice.remaining <= 0 else 'Reste '", template)
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=[]):
+            row = gestion_app._session_financial_report({}, self.session)["rows"][0]
+
+        self.assertEqual(row["trainee_id"], "trainee-1")
+        self.assertTrue(row["cash_payment_enabled"])
+        self.assertEqual(row["cash_payment_amount"], 600)
+        self.assertFalse(row["cash_payment_settled"])
+
+        template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
+        self.assertIn("admin_trainee_page", template)
+        self.assertIn("À payer en espèces", template)
 
 
 if __name__ == "__main__":

@@ -20297,11 +20297,15 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         known_paid_total += paid
         unknown_payment_count += int(row_has_unknown_payment)
         row = {
+            "trainee_id": trainee_id,
             "last_name": normalize_last_name(trainee.get("last_name") or ""),
             "first_name": normalize_first_name(trainee.get("first_name") or ""),
             "price": round(price, 2), "cpf": round(cpf, 2), "personal": round(personal, 2),
             "other": round(other, 2), "funding": round(funding, 2), "gap": round(gap, 2),
             "paid": round(paid, 2), "payment_unknown": row_has_unknown_payment, "invoices": invoices,
+            "cash_payment_enabled": bool(trainee.get("cash_payment_enabled")),
+            "cash_payment_amount": _cash_amount_value(trainee.get("cash_payment_amount")),
+            "cash_payment_settled": bool(trainee.get("cash_payment_settled")),
         }
         rows.append(row)
         totals["revenue"] += row["price"]
