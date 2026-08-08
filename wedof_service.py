@@ -1,0 +1,116 @@
+"""Client en lecture seule pour vérifier la connexion à l'API WEDOF."""
+
+import os
+from typing import Any, Dict, Mapping, Optional
+
+import requests
+
+
+WEDOF_BASE_URL = "https://www.wedof.fr/api"
+_TRUE_VALUES = {"true", "1", "yes", "on"}
+
+
+class WedofConfigurationError(RuntimeError):
+    """Configuration WEDOF absente ou inutilisable."""
+
+
+class WedofApiError(RuntimeError):
+    """Erreur volontairement nettoyée renvoyée par le client WEDOF."""
+
+
+def read_env_bool(name: str, default: bool = False) -> bool:
+    """Lit un booléen d'environnement en mode fail-closed."""
+
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in _TRUE_VALUES
+
+
+class WedofClient:
+    """Client WEDOF limité aux deux contrôles GET nécessaires."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        session: Optional[requests.Session] = None,
+    ) -> None:
+        key = (api_key if api_key is not None else os.environ.get("WEDOF_API_KEY", "")).strip()
+        if not key:
+            raise WedofConfigurationError("La variable WEDOF_API_KEY est absente.")
+        self._session = session or requests.Session()
+        self._headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-Api-Key": key,
+        }
+        self._timeout = (5, 20)
+
+    def _get_json(self, path: str, *, params: Optional[Mapping[str, int]] = None) -> Any:
+        try:
+            response = self._session.get(
+                f"{WEDOF_BASE_URL}{path}",
+                headers=self._headers,
+                params=params,
+                timeout=self._timeout,
+            )
+        except requests.Timeout as exc:
+            raise WedofApiError("L’API WEDOF n’a pas répondu dans le délai prévu.") from exc
+        except requests.RequestException as exc:
+            raise WedofApiError("Impossible de se connecter à l’API WEDOF.") from exc
+
+        if response.status_code == 401:
+            raise WedofApiError("La clé API WEDOF est invalide ou refusée.")
+        if response.status_code == 403:
+            if path == "/registrationFolders":
+                raise WedofApiError("L’abonnement ou le jeton ne permet pas d’accéder aux dossiers WEDOF.")
+            raise WedofApiError("La clé API WEDOF ne permet pas d’accéder à cet organisme.")
+        if response.status_code == 404:
+            raise WedofApiError("La ressource WEDOF demandée est introuvable.")
+        if response.status_code == 429:
+            raise WedofApiError("L’API WEDOF reçoit trop de demandes. Réessayez plus tard.")
+        if response.status_code >= 500:
+            raise WedofApiError("L’API WEDOF est temporairement indisponible.")
+        if not 200 <= response.status_code < 300:
+            raise WedofApiError("L’API WEDOF a refusé la demande de vérification.")
+        try:
+            return response.json()
+        except (ValueError, TypeError) as exc:
+            raise WedofApiError("L’API WEDOF a renvoyé une réponse non JSON.") from exc
+
+    def get_current_organism(self) -> Dict[str, str]:
+        payload = self._get_json("/organisms/me")
+        if not isinstance(payload, dict):
+            raise WedofApiError("La réponse WEDOF concernant l’organisme est inattendue.")
+        name = payload.get("name") or payload.get("legalName") or payload.get("raisonSociale")
+        siret = payload.get("siret") or payload.get("siretNumber")
+        if not isinstance(name, str) or not isinstance(siret, (str, int)):
+            raise WedofApiError("La réponse WEDOF concernant l’organisme est inattendue.")
+        return {"name": name.strip(), "siret": str(siret).strip()}
+
+    def check_registration_folders_access(self) -> Dict[str, Any]:
+        payload = self._get_json("/registrationFolders", params={"limit": 1, "page": 1})
+        if isinstance(payload, list):
+            items = payload
+        elif isinstance(payload, dict):
+            items = next(
+                (payload[key] for key in ("items", "member", "hydra:member", "registrationFolders") if isinstance(payload.get(key), list)),
+                None,
+            )
+            if items is None:
+                raise WedofApiError("La réponse WEDOF concernant les dossiers est inattendue.")
+        else:
+            raise WedofApiError("La réponse WEDOF concernant les dossiers est inattendue.")
+        return {"accessible": True, "result_count": len(items)}
+
+    def test_connection(self) -> Dict[str, Any]:
+        organism = self.get_current_organism()
+        folders = self.check_registration_folders_access()
+        return {
+            "ok": True,
+            "organism": organism,
+            "registration_folders_access": folders["accessible"],
+            "registration_folders_sample_count": folders["result_count"],
+            "automation_enabled": read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
+            "dry_run": read_env_bool("WEDOF_DRY_RUN", default=True),
+        }
