@@ -1,0 +1,76 @@
+import unittest
+from unittest.mock import patch
+
+import app as gestion_app
+
+
+class AdminSessionFinancialReportTests(unittest.TestCase):
+    def setUp(self):
+        self.session = {
+            "id": "session-1",
+            "name": "APS Septembre",
+            "training_type": "APS",
+            "date_start": "2026-09-01",
+            "trainees": [
+                {
+                    "id": "trainee-1",
+                    "last_name": "dupont",
+                    "first_name": "lea",
+                    "training_price": 1800,
+                    "cpf_amount": 1000,
+                    "personal_amount": 600,
+                    "other_amount": 200,
+                }
+            ],
+        }
+
+    def test_report_rolls_up_funding_gap_and_known_payment(self):
+        lines = [{
+            "traineeId": "trainee-1",
+            "qontoInvoiceId": "invoice-1",
+            "qontoInvoiceNumber": "FAC-2026-42",
+            "invoiceStatus": "sent",
+            "amount": 600,
+            "qonto_total_amount_cents": 60000,
+            "qonto_amount_paid_cents": 25000,
+            "qonto_remaining_amount_cents": 35000,
+            "qonto_payment_status": "partially_paid",
+        }]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            report = gestion_app._session_financial_report({}, self.session)
+
+        row = report["rows"][0]
+        self.assertEqual((row["cpf"], row["personal"], row["other"], row["funding"]), (1000, 600, 200, 1800))
+        self.assertEqual(row["gap"], 0)
+        self.assertEqual(row["paid"], 250)
+        self.assertEqual(report["totals"]["paid"], 250)
+        self.assertEqual(row["invoices"][0]["number"], "FAC-2026-42")
+
+    def test_external_invoice_payment_is_explicitly_unknown(self):
+        lines = [{
+            "traineeId": "trainee-1",
+            "invoiceStatus": "external_generated",
+            "amount": 600,
+        }]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            report = gestion_app._session_financial_report({}, self.session)
+
+        self.assertTrue(report["rows"][0]["payment_unknown"])
+        self.assertTrue(report["rows"][0]["invoices"][0]["external"])
+        self.assertEqual(report["unknown_payment_count"], 1)
+
+    def test_external_invoice_keeps_a_known_payment_amount(self):
+        lines = [{
+            "traineeId": "trainee-1", "invoiceStatus": "external_generated", "amount": 600,
+            "paid_amount_cents": 60000, "total_amount_cents": 60000, "remaining_amount_cents": 0,
+        }]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            report = gestion_app._session_financial_report({}, self.session)
+
+        self.assertTrue(report["rows"][0]["invoices"][0]["payment_known"])
+        self.assertEqual(report["rows"][0]["paid"], 600)
+        self.assertEqual(report["unknown_payment_count"], 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
