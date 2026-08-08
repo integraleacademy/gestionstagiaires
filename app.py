@@ -20182,6 +20182,126 @@ def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List
     }
 
 
+def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]) -> Dict[str, Any]:
+    """Build the printable, per-trainee financial view for one session."""
+    session_id = str(session_item.get("id") or "")
+    lines_by_trainee: Dict[str, List[Dict[str, Any]]] = {}
+    for line in _billing_lines_for_session(data, session_id):
+        lines_by_trainee.setdefault(str(line.get("traineeId") or ""), []).append(line)
+
+    default_price = default_training_price(_session_get(session_item, "training_type", "") or "")
+    rows = []
+    totals = {"revenue": 0, "cpf": 0, "personal": 0, "other": 0, "funding": 0, "gap": 0, "paid": 0}
+    known_paid_total = 0
+    unknown_payment_count = 0
+
+    for trainee in _session_trainees_list(session_item):
+        trainee_id = str(trainee.get("id") or "")
+        price = max(_parse_financial_amount(trainee.get("training_price")), 0)
+        if price <= 0 and default_price is not None:
+            price = float(default_price)
+        cpf = max(_parse_financial_amount(trainee.get("cpf_amount")), 0)
+        personal = max(_parse_financial_amount(trainee.get("personal_amount")), 0)
+        other = max(_parse_financial_amount(trainee.get("other_financing_amount") or trainee.get("other_amount")), 0)
+        funding = cpf + personal + other
+        gap = price - funding
+        trainee_lines = lines_by_trainee.get(trainee_id, [])
+        invoices = []
+        row_paid_cents = 0
+        row_has_unknown_payment = False
+        for line in trainee_lines:
+            invoice_status = _normalize_billing_invoice_status(line.get("invoiceStatus") or "not_invoiced")
+            external = invoice_status == "external_generated"
+            invoice_id = line.get("qontoInvoiceId") or line.get("qontoDraftId")
+            has_invoice = bool(invoice_id) or external
+            external_paid_sources = (
+                line.get("qonto_amount_paid_cents"), line.get("paid_amount_cents"),
+                line.get("qontoAmountPaidCents"),
+            )
+            external_paid_is_known = any(value is not None for value in external_paid_sources)
+            external_paid_value = _cents_first_non_null(*external_paid_sources)
+            payment_known = (bool(invoice_id) and not external) or (external and external_paid_is_known)
+            paid_cents = 0
+            total_cents = money_value_to_cents(line.get("amount") or 0)
+            remaining_cents = total_cents
+            payment_status = "unknown" if external else "not_applicable"
+            if payment_known and external:
+                paid_cents = int(external_paid_value or 0)
+                total_cents = int(_cents_first_non_null(
+                    line.get("qonto_total_amount_cents"), line.get("total_amount_cents"), total_cents,
+                ) or total_cents)
+                remaining_cents = int(_cents_first_non_null(
+                    line.get("qonto_remaining_amount_cents"), line.get("remaining_amount_cents"),
+                    max(total_cents - paid_cents, 0),
+                ) or 0)
+                payment_status = str(line.get("qonto_payment_status") or line.get("payment_status") or line.get("paymentStatus") or ("paid" if remaining_cents == 0 else "partially_paid" if paid_cents else "unpaid"))
+                row_paid_cents += paid_cents
+            elif payment_known:
+                invoice = line.get("qonto_invoice") if isinstance(line.get("qonto_invoice"), dict) else serialize_qonto_invoice_for_frontend(line)
+                paid_cents = int(invoice.get("paid_amount_cents") or 0)
+                total_cents = int(invoice.get("total_amount_cents") or total_cents)
+                remaining_cents = int(invoice.get("remaining_amount_cents") or max(total_cents - paid_cents, 0))
+                payment_status = str(invoice.get("payment_status") or line.get("paymentStatus") or "unpaid")
+                row_paid_cents += paid_cents
+            elif external:
+                row_has_unknown_payment = True
+            invoices.append({
+                "number": str(line.get("qontoInvoiceNumber") or ("Facture externe" if external else "—")),
+                "status": invoice_status if has_invoice else "not_invoiced",
+                "payment_status": payment_status,
+                "paid": paid_cents / 100,
+                "total": total_cents / 100,
+                "remaining": remaining_cents / 100,
+                "payment_known": payment_known,
+                "external": external,
+            })
+        if not invoices:
+            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": "not_applicable", "paid": 0, "total": funding, "remaining": funding, "payment_known": False, "external": False})
+
+        paid = row_paid_cents / 100
+        known_paid_total += paid
+        unknown_payment_count += int(row_has_unknown_payment)
+        row = {
+            "last_name": normalize_last_name(trainee.get("last_name") or ""),
+            "first_name": normalize_first_name(trainee.get("first_name") or ""),
+            "price": round(price, 2), "cpf": round(cpf, 2), "personal": round(personal, 2),
+            "other": round(other, 2), "funding": round(funding, 2), "gap": round(gap, 2),
+            "paid": round(paid, 2), "payment_unknown": row_has_unknown_payment, "invoices": invoices,
+        }
+        rows.append(row)
+        totals["revenue"] += row["price"]
+        for key in ("cpf", "personal", "other", "funding", "gap"):
+            totals[key] += row[key]
+
+    rows.sort(key=_trainee_alpha_sort_key)
+    totals["paid"] = round(known_paid_total, 2)
+    for key in totals:
+        totals[key] = round(totals[key], 2)
+    totals["remaining"] = round(max(totals["revenue"] - totals["paid"], 0), 2)
+    totals["collection_pct"] = round((totals["paid"] / totals["revenue"] * 100), 1) if totals["revenue"] else 0
+    return {"rows": rows, "totals": totals, "unknown_payment_count": unknown_payment_count}
+
+
+@app.get("/admin/sessions/<session_id>/trainees/financial")
+@admin_login_required
+def admin_session_financial_report(session_id: str):
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item:
+        abort(404)
+    session_view = {
+        "id": session_item.get("id"), "name": _session_get(session_item, "name", ""),
+        "training_type": _session_get(session_item, "training_type", ""),
+        "date_start": _session_get(session_item, "date_start", ""),
+        "date_end": _session_get(session_item, "date_end", ""),
+    }
+    return render_template(
+        "admin_session_financial_report.html",
+        session=session_view,
+        report=_session_financial_report(data, session_item),
+    )
+
+
 def _easter_date(year: int) -> datetime.date:
     a = year % 19
     b = year // 100
