@@ -1,13 +1,17 @@
 """Client en lecture seule pour vérifier la connexion à l'API WEDOF."""
 
+import logging
 import os
-from typing import Any, Dict, Mapping, Optional
+import time
+import math
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import requests
 
 
 WEDOF_BASE_URL = "https://www.wedof.fr/api"
 _TRUE_VALUES = {"true", "1", "yes", "on"}
+logger = logging.getLogger(__name__)
 
 
 class WedofConfigurationError(RuntimeError):
@@ -39,14 +43,10 @@ class WedofClient:
         if not key:
             raise WedofConfigurationError("La variable WEDOF_API_KEY est absente.")
         self._session = session or requests.Session()
-        self._headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "X-Api-Key": key,
-        }
+        self._headers = {"Accept": "application/json", "X-Api-Key": key}
         self._timeout = (5, 20)
 
-    def _get_json(self, path: str, *, params: Optional[Mapping[str, int]] = None) -> Any:
+    def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Tuple[Any, Any]:
         try:
             response = self._session.get(
                 f"{WEDOF_BASE_URL}{path}",
@@ -74,9 +74,53 @@ class WedofClient:
         if not 200 <= response.status_code < 300:
             raise WedofApiError("L’API WEDOF a refusé la demande de vérification.")
         try:
-            return response.json()
+            return response.json(), response
         except (ValueError, TypeError) as exc:
             raise WedofApiError("L’API WEDOF a renvoyé une réponse non JSON.") from exc
+
+    def _get_json(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Any:
+        return self._get_json_response(path, params=params)[0]
+
+    @staticmethod
+    def _folder_items(payload: Any) -> List[Dict[str, Any]]:
+        if isinstance(payload, list):
+            items = payload
+        elif isinstance(payload, dict):
+            items = next((payload[key] for key in ("items", "member", "hydra:member", "registrationFolders") if isinstance(payload.get(key), list)), None)
+            if items is None:
+                raise WedofApiError("La réponse WEDOF concernant les dossiers est inattendue.")
+        else:
+            raise WedofApiError("La réponse WEDOF concernant les dossiers est inattendue.")
+        return [item for item in items if isinstance(item, dict)]
+
+    def list_registration_folders(self, state: str, *, limit: int = 100, max_pages: int = 100) -> List[Dict[str, Any]]:
+        """Liste paginée en lecture seule les dossiers d'un état WEDOF."""
+        if state not in {"accepted", "inTraining"}:
+            raise ValueError("État WEDOF non autorisé pour la prévisualisation.")
+        limit = max(1, min(int(limit), 100))
+        results: List[Dict[str, Any]] = []
+        for page in range(1, max_pages + 1):
+            payload, response = self._get_json_response(
+                "/registrationFolders", params={"state": state, "limit": limit, "page": page}
+            )
+            items = self._folder_items(payload)
+            results.extend(items)
+            logger.info("WEDOF GET dossiers code_http=%s page=%s nombre=%s", response.status_code, page, len(items))
+
+            headers = getattr(response, "headers", {}) or {}
+            try:
+                current = int(headers.get("x-current-page", page))
+                per_page = int(headers.get("x-item-per-page", limit))
+                total = int(headers["x-total-count"])
+                last_page = max(1, math.ceil(total / per_page))
+                should_continue = current < last_page
+            except (KeyError, TypeError, ValueError, ZeroDivisionError):
+                should_continue = len(items) >= limit
+            if not should_continue:
+                break
+            # Une cadence modeste évite une rafale de requêtes sur l'API distante.
+            time.sleep(0.1)
+        return results
 
     def get_current_organism(self) -> Dict[str, str]:
         payload = self._get_json("/organisms/me")
@@ -90,17 +134,7 @@ class WedofClient:
 
     def check_registration_folders_access(self) -> Dict[str, Any]:
         payload = self._get_json("/registrationFolders", params={"limit": 1, "page": 1})
-        if isinstance(payload, list):
-            items = payload
-        elif isinstance(payload, dict):
-            items = next(
-                (payload[key] for key in ("items", "member", "hydra:member", "registrationFolders") if isinstance(payload.get(key), list)),
-                None,
-            )
-            if items is None:
-                raise WedofApiError("La réponse WEDOF concernant les dossiers est inattendue.")
-        else:
-            raise WedofApiError("La réponse WEDOF concernant les dossiers est inattendue.")
+        items = self._folder_items(payload)
         return {"accessible": True, "result_count": len(items)}
 
     def test_connection(self) -> Dict[str, Any]:

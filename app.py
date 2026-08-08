@@ -58,6 +58,7 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
+from wedof_matching import build_matching_preview
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -15922,6 +15923,39 @@ def admin_wedof_requests():
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
         wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
+    )
+
+
+@app.post("/admin/wedof/matching/preview")
+@admin_login_required
+def admin_wedof_matching_preview():
+    started_at = time.monotonic()
+    try:
+        client = WedofClient()
+        accepted = client.list_registration_folders("accepted")
+        in_training = client.list_registration_folders("inTraining")
+        preview = build_matching_preview(accepted + in_training, load_data())
+        app.logger.info(
+            "Prévisualisation WEDOF dossiers=%s accepted=%s inTraining=%s catégories=%s durée_ms=%s",
+            len(accepted) + len(in_training), len(accepted), len(in_training), preview["counts"],
+            round((time.monotonic() - started_at) * 1000),
+        )
+    except (WedofConfigurationError, WedofApiError) as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("admin_wedof_requests"))
+
+    wedof_webhooks = _load_wedof_webhooks()[:100]
+    for item in wedof_webhooks:
+        if isinstance(item, dict):
+            item["display_fields"] = _wedof_entry_display_fields(item)
+    return render_template(
+        "admin_wedof.html",
+        wedof_webhooks=wedof_webhooks,
+        wedof_new_requests_count=sum(1 for item in wedof_webhooks if not bool(item.get("processed"))),
+        wedof_api_key_configured=True,
+        wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
+        wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
+        matching_preview=preview,
     )
 
 
