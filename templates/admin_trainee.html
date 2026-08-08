@@ -4097,6 +4097,11 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const html = `<div class="qonto-feedback qonto-feedback--${type}" role="${type==='error'?'alert':'status'}">${esc(message)}</div>`;
     box.insertAdjacentHTML('afterbegin', html);
   }
+  function showQontoSyncModal(){
+    document.getElementById('qontoSyncProgressModal')?.remove();
+    document.body.insertAdjacentHTML('beforeend', `<div class="qonto-sync-overlay no-print" id="qontoSyncProgressModal" role="dialog" aria-modal="true" aria-labelledby="qontoSyncProgressTitle" aria-describedby="qontoSyncProgressDescription"><div class="qonto-sync-dialog"><div class="qonto-sync-brand">Connexion sécurisée</div><div class="qonto-sync-visual" aria-hidden="true"><span class="qonto-sync-ring"></span><span class="qonto-sync-icon">↻</span></div><h2 id="qontoSyncProgressTitle">Synchronisation Qonto en cours</h2><p id="qontoSyncProgressDescription">Nous récupérons les factures, paiements et échéances à jour. Cela ne prendra que quelques instants.</p><div class="qonto-sync-progress" aria-hidden="true"><span></span></div><div class="qonto-sync-safe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>Vous pouvez laisser cette fenêtre ouverte</div></div></div>`);
+  }
+  function hideQontoSyncModal(){ document.getElementById('qontoSyncProgressModal')?.remove(); }
   function setRowBusy(btn,busy){
     const row = btn.closest('.qonto-invoice-row');
     row?.querySelectorAll('[data-action-control]').forEach(control=>{ if('disabled' in control) control.disabled=busy; else control.setAttribute('aria-disabled', busy?'true':'false'); });
@@ -4126,7 +4131,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   });
   financeNotificationsBtn?.addEventListener('click', ()=>{ financeNotificationsOpen = !financeNotificationsOpen; render(currentLines); });
   quickGenerateBtn?.addEventListener('click', ()=>{ const line=firstInvoiceToGenerate(); if(line) openGenerateInvoiceModal(line); });
-  syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; try{ const j=await billingApi('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); if(j.failed_count){const detail=j.errors?.[0]?.message||'Qonto a refusé la programmation des échéances.';throw new Error(`Échéancier non programmé : ${detail}`);} alert(j.message||'Synchronisation terminée'); }catch(e){ alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ syncBtn.disabled=false; }});
+  syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; showQontoSyncModal(); try{ const j=await billingApi('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); if(j.failed_count){const detail=j.errors?.[0]?.message||'Qonto a refusé la programmation des échéances.';throw new Error(`Échéancier non programmé : ${detail}`);} hideQontoSyncModal(); alert(j.message||'Synchronisation terminée'); }catch(e){ hideQontoSyncModal(); alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ hideQontoSyncModal(); syncBtn.disabled=false; }});
   const mandateSearchBtn=document.getElementById('btnSearchQontoMandate');
   const mandateNumberInput=document.getElementById('qontoMandateNumber');
   const mandateSearchFeedback=document.getElementById('qontoMandateSearchFeedback');
