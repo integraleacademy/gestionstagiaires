@@ -1,11 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <div class="card" role="status" style="margin-bottom:12px;background:{{ '#fee2e2' if category == 'error' else '#dcfce7' }};">
+    {{ message }}
+  </div>
+{% endfor %}
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
   <h1 style="margin:0">Demandes WeDoF CPF/EDOF</h1>
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour aux sessions</a>
     <span class="btn btn-violet" style="pointer-events:none;">Nouvelles demandes : {{ wedof_new_requests_count or 0 }}</span>
   </div>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-title">Connexion API WEDOF</div>
+  <div style="display:grid;gap:6px;margin:10px 0 14px;">
+    <div>Clé API configurée : <strong>{{ 'Oui' if wedof_api_key_configured else 'Non' }}</strong></div>
+    <div>Automatisation active : <strong>{{ 'Oui' if wedof_automation_enabled else 'Non' }}</strong></div>
+    <div>Mode test sans envoi : <strong>{{ 'Oui' if wedof_dry_run else 'Non' }}</strong></div>
+  </div>
+  <form method="post" action="{{ url_for('admin_test_wedof_api') }}">
+    <button class="btn btn-violet" type="submit">Tester la connexion API WEDOF</button>
+  </form>
 </div>
 
 <div class="card" style="margin-bottom:12px;">

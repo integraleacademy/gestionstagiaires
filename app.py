@@ -57,6 +57,7 @@ from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
+from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -15918,7 +15919,26 @@ def admin_wedof_requests():
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=wedof_new_requests_count,
+        wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
+        wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
+        wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
     )
+
+
+@app.post("/admin/wedof/api/test")
+@admin_login_required
+def admin_test_wedof_api():
+    try:
+        result = WedofClient().test_connection()
+        organism = result["organism"]
+        flash(
+            f"Connexion WEDOF réussie — organisme : {organism['name']} — "
+            f"SIRET : {organism['siret']} — accès aux dossiers confirmé.",
+            "success",
+        )
+    except (WedofConfigurationError, WedofApiError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("admin_wedof_requests"))
 
 @app.post("/admin/wedof/mark-treated/<entry_id>")
 @admin_login_required
