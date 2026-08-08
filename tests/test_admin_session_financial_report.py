@@ -45,6 +45,9 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertEqual(row["gap"], 0)
         self.assertEqual(row["paid"], 250)
         self.assertEqual(report["totals"]["paid"], 250)
+        self.assertEqual(report["totals"]["remaining"], 350)
+        self.assertEqual(report["totals"]["cpf_remaining"], 1000)
+        self.assertEqual(report["totals"]["other_remaining"], 200)
         self.assertEqual(row["invoices"][0]["number"], "FAC-2026-42")
         self.assertEqual(row["invoices"][0]["payment_percentage"], 41.7)
 
@@ -124,6 +127,15 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
         self.assertIn("admin_trainee_page", template)
         self.assertIn("À payer en espèces", template)
+
+    def test_report_displays_payment_progress_and_separate_remaining_kpis(self):
+        template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
+
+        self.assertIn('role="progressbar"', template)
+        self.assertIn("invoice.payment_percentage", template)
+        self.assertIn("Reste à encaisser CPF", template)
+        self.assertIn("Reste à encaisser autres", template)
+        self.assertIn("Financement personnel uniquement", template)
 
 
 if __name__ == "__main__":

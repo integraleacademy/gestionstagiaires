@@ -20191,7 +20191,8 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
 
     default_price = default_training_price(_session_get(session_item, "training_type", "") or "")
     rows = []
-    totals = {"revenue": 0, "cpf": 0, "personal": 0, "other": 0, "funding": 0, "gap": 0, "paid": 0}
+    totals = {"revenue": 0, "cpf": 0, "personal": 0, "other": 0, "funding": 0, "gap": 0, "paid": 0,
+              "remaining": 0, "cpf_remaining": 0, "other_remaining": 0}
     known_paid_total = 0
     unknown_payment_count = 0
 
@@ -20212,6 +20213,13 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         # looked only at invoice fields, so it could say "Montant inconnu"
         # while the trainee sheet correctly said that the balance was paid.
         financial_summary = calculate_trainee_financial_summary(trainee, trainee_lines)
+        paid_by_financer = financial_summary.get("by_financer") or {}
+        personal_paid = int((paid_by_financer.get("PERSONNEL") or {}).get("paid_amount_cents") or 0) / 100
+        cpf_paid = int((paid_by_financer.get("CPF") or {}).get("paid_amount_cents") or 0) / 100
+        other_paid = int((paid_by_financer.get("AUTRE") or {}).get("paid_amount_cents") or 0) / 100
+        personal_remaining = max(personal - personal_paid, 0)
+        cpf_remaining = max(cpf - cpf_paid, 0)
+        other_remaining = max(other - other_paid, 0)
         summary_paid_cents = int(financial_summary.get("paid_total_cents") or 0)
         invoices = []
         row_paid_cents = 0
@@ -20303,6 +20311,9 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
             "price": round(price, 2), "cpf": round(cpf, 2), "personal": round(personal, 2),
             "other": round(other, 2), "funding": round(funding, 2), "gap": round(gap, 2),
             "paid": round(paid, 2), "payment_unknown": row_has_unknown_payment, "invoices": invoices,
+            "personal_remaining": round(personal_remaining, 2),
+            "cpf_remaining": round(cpf_remaining, 2),
+            "other_remaining": round(other_remaining, 2),
             "cash_payment_enabled": bool(trainee.get("cash_payment_enabled")),
             "cash_payment_amount": _cash_amount_value(trainee.get("cash_payment_amount")),
             "cash_payment_settled": bool(trainee.get("cash_payment_settled")),
@@ -20311,12 +20322,14 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         totals["revenue"] += row["price"]
         for key in ("cpf", "personal", "other", "funding", "gap"):
             totals[key] += row[key]
+        totals["remaining"] += row["personal_remaining"]
+        totals["cpf_remaining"] += row["cpf_remaining"]
+        totals["other_remaining"] += row["other_remaining"]
 
     rows.sort(key=_trainee_alpha_sort_key)
     totals["paid"] = round(known_paid_total, 2)
     for key in totals:
         totals[key] = round(totals[key], 2)
-    totals["remaining"] = round(max(totals["revenue"] - totals["paid"], 0), 2)
     totals["collection_pct"] = round((totals["paid"] / totals["revenue"] * 100), 1) if totals["revenue"] else 0
     return {"rows": rows, "totals": totals, "unknown_payment_count": unknown_payment_count}
 
