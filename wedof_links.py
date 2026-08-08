@@ -81,14 +81,50 @@ def sync_exact_wedof_links(
 
 
 def local_association_status(result: Dict[str, Any], links: Iterable[Dict[str, Any]]) -> str:
-    if result.get("status") != "exact_match":
-        return "Non associable automatiquement"
     external_id, session_id, trainee_id = (str(result.get(key) or "") for key in ("external_id", "session_id", "trainee_id"))
     active = [item for item in links if isinstance(item, dict) and item.get("active") is True]
     same = next((item for item in active if str(item.get("external_id")) == external_id), None)
+    if same:
+        if same.get("source") == "manual_admin":
+            return "Associée manuellement"
+        if (not session_id or not trainee_id or
+                (str(same.get("session_id")) == session_id and str(same.get("trainee_id")) == trainee_id)):
+            return "Déjà enregistrée automatiquement"
+    if result.get("status") != "exact_match":
+        return "Non associable automatiquement"
     registration = next((item for item in active if str(item.get("session_id")) == session_id and str(item.get("trainee_id")) == trainee_id), None)
     if same and same is registration:
-        return "Déjà enregistrée"
+        return "Déjà enregistrée automatiquement"
     if same or registration:
         return "Conflit avec une association existante"
     return "Nouvelle correspondance fiable"
+
+
+def save_manual_wedof_link(data: Dict[str, Any], *, external_id: str, session_id: str,
+                           trainee_id: str, state: str, date_start: Optional[str],
+                           date_end: Optional[str], now: Optional[str] = None) -> str:
+    """Crée un lien manuel après validation, avec les mêmes règles d'unicité."""
+    links = data.setdefault("wedof_links", [])
+    if not isinstance(links, list):
+        links = []
+        data["wedof_links"] = links
+    active = [item for item in links if isinstance(item, dict) and item.get("active") is True]
+    by_external = next((item for item in active if str(item.get("external_id")) == external_id), None)
+    by_registration = next((item for item in active if str(item.get("session_id")) == session_id
+                            and str(item.get("trainee_id")) == trainee_id), None)
+    timestamp = now or _now_iso()
+    if by_external or by_registration:
+        if by_external is by_registration and by_external is not None:
+            by_external["wedof_state"] = state
+            by_external["updated_at"] = timestamp
+            by_external["last_seen_at"] = timestamp
+            return "already_linked"
+        return "conflict"
+    links.append({
+        "id": "WLINK-" + secrets.token_hex(4).upper(), "external_id": external_id,
+        "session_id": session_id, "trainee_id": trainee_id, "source": "manual_admin",
+        "matching_rule": "manual_selection", "wedof_state": state, "wedof_type": "cpf",
+        "wedof_date_start": date_start, "wedof_date_end": date_end, "active": True,
+        "created_at": timestamp, "updated_at": timestamp, "last_seen_at": timestamp,
+    })
+    return "created"

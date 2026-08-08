@@ -122,7 +122,9 @@ def match_folder(folder: Dict[str, Any], sessions: Iterable[Dict[str, Any]]) -> 
             if rule:
                 matches.append((session, trainee, rule))
     if not matches:
-        result.update(status="no_trainee_match", explanation="Une session existe, mais aucun stagiaire ne satisfait une règle forte.", session=_session_label(candidates[0]))
+        result.update(status="no_trainee_match", explanation="Une session existe, mais aucun stagiaire ne satisfait une règle forte.",
+                      session=_session_label(candidates[0]),
+                      session_id=str(candidates[0].get("id") or "") if len(candidates) == 1 else "")
         return result
     if len(matches) > 1:
         result.update(status="ambiguous_match", explanation="Plusieurs couples session/stagiaire satisfont une règle forte.")
