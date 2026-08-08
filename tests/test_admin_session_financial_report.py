@@ -72,6 +72,35 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertEqual(report["rows"][0]["paid"], 600)
         self.assertEqual(report["unknown_payment_count"], 0)
 
+    def test_external_invoice_uses_manual_payment_from_trainee_financial_summary(self):
+        lines = [{
+            "traineeId": "trainee-1", "invoiceStatus": "external_generated", "amount": 600,
+            "amountPaid": 600,
+        }]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            report = gestion_app._session_financial_report({}, self.session)
+
+        invoice = report["rows"][0]["invoices"][0]
+        self.assertTrue(invoice["payment_known"])
+        self.assertEqual(invoice["paid"], 600)
+        self.assertEqual(invoice["payment_status"], "paid")
+        self.assertEqual(report["unknown_payment_count"], 0)
+
+    def test_cash_payment_without_invoice_is_visible_in_report(self):
+        trainee = self.session["trainees"][0]
+        trainee.update({
+            "cash_payment_enabled": True,
+            "cash_payment_amount": 600,
+            "cash_payment_settled": True,
+        })
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=[]):
+            report = gestion_app._session_financial_report({}, self.session)
+
+        row = report["rows"][0]
+        self.assertEqual(row["paid"], 600)
+        self.assertTrue(row["invoices"][0]["payment_known"])
+        self.assertEqual(row["invoices"][0]["payment_status"], "partially_paid")
+
     def test_report_uses_the_full_available_width(self):
         template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
 
