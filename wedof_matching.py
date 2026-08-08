@@ -129,7 +129,8 @@ def match_folder(folder: Dict[str, Any], sessions: Iterable[Dict[str, Any]]) -> 
         return result
     session, trainee, rule = matches[0]
     result.update(status="exact_match", explanation="Un seul couple session/stagiaire satisfait une règle forte.",
-                  session=_session_label(session), trainee=_trainee_label(trainee), rule=rule)
+                  session=_session_label(session), trainee=_trainee_label(trainee), rule=rule,
+                  session_id=str(session.get("id") or ""), trainee_id=str(trainee.get("id") or ""))
     return result
 
 
