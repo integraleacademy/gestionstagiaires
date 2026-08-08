@@ -20206,6 +20206,13 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         funding = cpf + personal + other
         gap = price - funding
         trainee_lines = lines_by_trainee.get(trainee_id, [])
+        # Reuse the same rollup as the trainee's "Financement" tab.  Besides
+        # Qonto invoice amounts, it includes cash instalments, manual payments
+        # and paid direct-debit instalments.  The session report previously
+        # looked only at invoice fields, so it could say "Montant inconnu"
+        # while the trainee sheet correctly said that the balance was paid.
+        financial_summary = calculate_trainee_financial_summary(trainee, trainee_lines)
+        summary_paid_cents = int(financial_summary.get("paid_total_cents") or 0)
         invoices = []
         row_paid_cents = 0
         row_has_unknown_payment = False
@@ -20255,9 +20262,34 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
                 "payment_known": payment_known,
                 "external": external,
             })
-        if not invoices:
-            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": "not_applicable", "paid": 0, "total": funding, "remaining": funding, "payment_known": False, "external": False})
 
+        # Attribute payments known by the centralized rollup but not attached
+        # to a Qonto invoice (cash/manual/direct debit) to external invoices.
+        # This removes false unknowns without inventing more than the amount
+        # actually recorded as collected.
+        unallocated_paid_cents = max(summary_paid_cents - row_paid_cents, 0)
+        for invoice in invoices:
+            if not invoice["external"] or invoice["payment_known"] or unallocated_paid_cents <= 0:
+                continue
+            invoice_total_cents = int(round(invoice["total"] * 100))
+            allocated_cents = min(unallocated_paid_cents, invoice_total_cents)
+            invoice["paid"] = allocated_cents / 100
+            invoice["remaining"] = max(invoice_total_cents - allocated_cents, 0) / 100
+            invoice["payment_known"] = True
+            invoice["payment_status"] = "paid" if allocated_cents >= invoice_total_cents else "partially_paid"
+            row_paid_cents += allocated_cents
+            unallocated_paid_cents -= allocated_cents
+
+        row_has_unknown_payment = any(
+            invoice["external"] and not invoice["payment_known"] for invoice in invoices
+        )
+        if not invoices:
+            payment_known = summary_paid_cents > 0
+            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": funding, "remaining": max(int(round(funding * 100)) - summary_paid_cents, 0) / 100, "payment_known": payment_known, "external": False})
+
+        # Keep the KPI consistent with the trainee sheet, including payments
+        # which cannot sensibly be assigned to one invoice row.
+        row_paid_cents = max(row_paid_cents, summary_paid_cents)
         paid = row_paid_cents / 100
         known_paid_total += paid
         unknown_payment_count += int(row_has_unknown_payment)
