@@ -46,6 +46,7 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertEqual(row["paid"], 250)
         self.assertEqual(report["totals"]["paid"], 250)
         self.assertEqual(row["invoices"][0]["number"], "FAC-2026-42")
+        self.assertEqual(row["invoices"][0]["payment_percentage"], 41.7)
 
     def test_external_invoice_payment_is_explicitly_unknown(self):
         lines = [{
@@ -107,6 +108,15 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertIn("body.endpoint-admin-session-financial-report > .container", template)
         self.assertIn("body.endpoint-admin-session-financial-report .app-shell", template)
         self.assertIn("width:100%;max-width:none;box-sizing:border-box", template)
+
+    def test_payment_column_uses_the_billing_progress_bar(self):
+        template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
+
+        self.assertIn("payment-progress payment-progress--{{ invoice.payment_status }}", template)
+        self.assertIn('role="progressbar"', template)
+        self.assertIn('style="width:{{ invoice.payment_percentage }}%"', template)
+        self.assertIn("{{ money(invoice.paid) }} encaissé", template)
+        self.assertIn("'Soldé' if invoice.remaining <= 0 else 'Reste '", template)
 
 
 if __name__ == "__main__":
