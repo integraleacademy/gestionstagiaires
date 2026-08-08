@@ -134,6 +134,7 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertIn('role="progressbar"', template)
         self.assertIn("invoice.payment_percentage", template)
         self.assertIn("Reste à encaisser CPF", template)
+        self.assertIn('class="financial-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF"', template)
         self.assertIn("Reste à encaisser autres", template)
         self.assertIn("Financement personnel uniquement", template)
 
