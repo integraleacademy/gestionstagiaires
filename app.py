@@ -20259,6 +20259,7 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
                 "paid": paid_cents / 100,
                 "total": total_cents / 100,
                 "remaining": remaining_cents / 100,
+                "payment_percentage": round(min(max(paid_cents / total_cents * 100, 0), 100), 1) if total_cents else 0,
                 "payment_known": payment_known,
                 "external": external,
             })
@@ -20277,6 +20278,7 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
             invoice["remaining"] = max(invoice_total_cents - allocated_cents, 0) / 100
             invoice["payment_known"] = True
             invoice["payment_status"] = "paid" if allocated_cents >= invoice_total_cents else "partially_paid"
+            invoice["payment_percentage"] = round(min(max(allocated_cents / invoice_total_cents * 100, 0), 100), 1) if invoice_total_cents else 0
             row_paid_cents += allocated_cents
             unallocated_paid_cents -= allocated_cents
 
@@ -20285,7 +20287,8 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         )
         if not invoices:
             payment_known = summary_paid_cents > 0
-            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": funding, "remaining": max(int(round(funding * 100)) - summary_paid_cents, 0) / 100, "payment_known": payment_known, "external": False})
+            funding_cents = int(round(funding * 100))
+            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": funding, "remaining": max(funding_cents - summary_paid_cents, 0) / 100, "payment_percentage": round(min(max(summary_paid_cents / funding_cents * 100, 0), 100), 1) if funding_cents else 0, "payment_known": payment_known, "external": False})
 
         # Keep the KPI consistent with the trainee sheet, including payments
         # which cannot sensibly be assigned to one invoice row.

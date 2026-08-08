@@ -46,6 +46,7 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertEqual(row["paid"], 250)
         self.assertEqual(report["totals"]["paid"], 250)
         self.assertEqual(row["invoices"][0]["number"], "FAC-2026-42")
+        self.assertEqual(row["invoices"][0]["payment_percentage"], 41.7)
 
     def test_external_invoice_payment_is_explicitly_unknown(self):
         lines = [{
