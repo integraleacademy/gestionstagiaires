@@ -111,6 +111,10 @@ class WedofLinksRouteTests(unittest.TestCase):
         self.assertIn('class="app-shell"', html)
         self.assertIn('class="partner-sidebar admin-sidebar"', html)
         self.assertIn("wedof-preview-table-wrap", html)
+        self.assertIn('aria-label="Prévisualisation des correspondances WEDOF"', html)
+        self.assertIn("Faites défiler le tableau horizontalement", html)
+        self.assertIn("max-height:calc(100vh - 340px)", html)
+        self.assertIn("position:sticky;top:0", html)
         self.assertIn("Association locale", html)
 
 

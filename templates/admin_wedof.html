@@ -37,7 +37,8 @@
         <div style="padding:10px;border:1px solid #e2e8f0;border-radius:10px;"><strong style="font-size:1.35rem;">{{ value }}</strong><br><span class="muted">{{ label }}</span></div>
       {% endfor %}
     </div>
-    <div class="wedof-preview-table-wrap">
+    <p class="hint wedof-preview-scroll-hint">Faites défiler le tableau horizontalement pour consulter toutes les colonnes.</p>
+    <div class="wedof-preview-table-wrap" role="region" aria-label="Prévisualisation des correspondances WEDOF" tabindex="0">
       <table class="table wedof-preview-table">
         <thead><tr><th>Numéro WEDOF</th><th>État</th><th>Identité WEDOF</th><th>Email</th><th>Téléphone</th><th>Dates</th><th>Session locale</th><th>Stagiaire local</th><th>Règle</th><th>Statut</th><th>Association locale</th><th class="wedof-explanation">Explication</th><th>Action</th></tr></thead>
         <tbody>
@@ -81,8 +82,10 @@
 </div>
 
 <style>
-  .wedof-preview-table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;}
+  .wedof-preview-scroll-hint{margin:0 0 8px;font-weight:700;}
+  .wedof-preview-table-wrap{max-width:100%;max-height:calc(100vh - 340px);min-height:280px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable;border:1px solid #e2e8f0;border-radius:10px;}
   .wedof-preview-table{width:100%;min-width:1500px;table-layout:auto;}
+  .wedof-preview-table thead th{position:sticky;top:0;z-index:2;background:#f8fafc;box-shadow:0 1px 0 #e2e8f0;}
   .wedof-preview-table th,.wedof-preview-table td{white-space:nowrap;word-break:normal;overflow-wrap:normal;vertical-align:top;}
   .wedof-preview-table .wedof-explanation{white-space:normal;min-width:260px;overflow-wrap:break-word;}
   .wedof-modal{border:0;border-radius:14px;width:min(760px,calc(100% - 24px));max-height:90vh;padding:0;}
@@ -90,7 +93,7 @@
   .wedof-modal-body{padding:20px;display:grid;gap:14px}.wedof-modal-results{display:grid;gap:6px;max-height:180px;overflow:auto}
   .wedof-choice{width:100%;text-align:left;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}.wedof-choice.selected{border:2px solid #4f46e5;background:#eef2ff}
   .wedof-warning{background:#fee2e2;color:#991b1b;border:2px solid #dc2626;border-radius:8px;padding:10px;font-weight:700}
-  @media(max-width:600px){.wedof-modal-body{padding:14px}.wedof-modal .btn{width:100%}}
+  @media(max-width:600px){.wedof-preview-table-wrap{max-height:65vh;min-height:240px}.wedof-modal-body{padding:14px}.wedof-modal .btn{width:100%}}
 </style>
 
 {% if matching_preview %}
