@@ -24,7 +24,8 @@
     <button class="btn btn-blue" type="submit">Enregistrer les correspondances fiables</button>
   </form>
   <p class="hint" style="font-weight:700;">Cette opération enregistre uniquement les associations locales. Elle ne déclare aucune entrée en formation et aucun service fait auprès de WEDOF.</p>
-  <div style="margin-top:10px;"><strong>{{ wedof_links_count or 0 }}</strong> — Associations WEDOF enregistrées</div>
+  <div style="margin-top:10px;"><strong id="wedof-links-count">{{ wedof_links_count or 0 }}</strong> — Associations WEDOF enregistrées</div>
+  <div id="wedof-manual-feedback" role="status" hidden></div>
   {% if matching_preview %}
     {% set c = matching_preview.counts %}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin:16px 0;">
@@ -38,17 +39,25 @@
     </div>
     <div class="wedof-preview-table-wrap">
       <table class="table wedof-preview-table">
-        <thead><tr><th>Numéro WEDOF</th><th>État</th><th>Identité WEDOF</th><th>Email</th><th>Téléphone</th><th>Dates</th><th>Session locale</th><th>Stagiaire local</th><th>Règle</th><th>Statut</th><th>Association locale</th><th class="wedof-explanation">Explication</th></tr></thead>
+        <thead><tr><th>Numéro WEDOF</th><th>État</th><th>Identité WEDOF</th><th>Email</th><th>Téléphone</th><th>Dates</th><th>Session locale</th><th>Stagiaire local</th><th>Règle</th><th>Statut</th><th>Association locale</th><th class="wedof-explanation">Explication</th><th>Action</th></tr></thead>
         <tbody>
         {% set labels = {'exact_match':'Correspondance fiable','ambiguous_match':'Ambigu','no_session_match':'Session introuvable','no_trainee_match':'Stagiaire introuvable','missing_wedof_data':'Données incomplètes','excluded_non_cpf':'Hors CPF'} %}
         {% set colors = {'exact_match':'#dcfce7','ambiguous_match':'#fef3c7','no_session_match':'#fee2e2','no_trainee_match':'#ffedd5','missing_wedof_data':'#e2e8f0','excluded_non_cpf':'#f1f5f9'} %}
         {% for item in matching_preview.results %}
-          <tr>
+          <tr data-wedof-row="{{ item.external_id|e }}">
             <td>{{ item.external_id or '—' }}</td><td>{{ item.state or '—' }}</td>
             <td>{{ item.last_name or '—' }} {{ item.first_name or '' }}</td><td>{{ item.email or '—' }}</td><td>{{ item.phone or '—' }}</td>
-            <td>{{ item.start_date or '—' }}<br>{{ item.end_date or '—' }}</td><td>{{ item.session }}</td><td>{{ item.trainee }}</td><td>{{ item.rule }}</td>
+            <td>{{ item.start_date or '—' }}<br>{{ item.end_date or '—' }}</td><td data-local-session>{{ item.session }}</td><td data-local-trainee>{{ item.trainee }}</td><td>{{ item.rule }}</td>
             <td><span style="display:inline-block;padding:4px 7px;border-radius:999px;background:{{ colors[item.status] }};font-weight:700;">{{ labels[item.status] }}</span></td>
-            <td>{{ item.local_association }}</td><td class="wedof-explanation">{{ item.explanation }}</td>
+            <td data-local-association>{{ item.local_association }}</td><td class="wedof-explanation">{{ item.explanation }}</td>
+            <td>{% if item.external_id and not item.linked and item.status in ['no_session_match','no_trainee_match','ambiguous_match','missing_wedof_data'] %}
+              <button type="button" class="btn btn-blue" data-manual-link
+                data-external-id="{{ item.external_id|e }}" data-state="{{ item.state|e }}"
+                data-identity="{{ ((item.last_name or '') ~ ' ' ~ (item.first_name or ''))|trim|e }}"
+                data-email="{{ item.email|e }}" data-phone="{{ item.phone|e }}"
+                data-date-start="{{ item.start_date|e }}" data-date-end="{{ item.end_date|e }}"
+                data-session-id="{{ item.session_id|default('', true)|e }}">Associer manuellement</button>
+            {% endif %}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -65,7 +74,7 @@
       <tbody>{% for link in wedof_links %}<tr>
         <td>{{ link.external_id }}</td><td>{{ link.wedof_state }}</td>
         {% if link.orphaned %}<td colspan="2"><strong>Association locale orpheline</strong></td>{% else %}<td>{{ link.session_label }}</td><td>{{ link.trainee_label }}</td>{% endif %}
-        <td>{{ link.source }}</td><td>{{ link.matching_rule }}</td><td>{{ link.created_at }}</td><td>{{ link.last_seen_at }}</td>
+        <td>{{ link.source_label }}</td><td>{{ link.matching_rule }}</td><td>{{ link.created_at }}</td><td>{{ link.last_seen_at }}</td>
       </tr>{% else %}<tr><td colspan="8" class="muted">Aucune association WEDOF enregistrée.</td></tr>{% endfor %}</tbody>
     </table>
   </div>
@@ -76,7 +85,33 @@
   .wedof-preview-table{width:100%;min-width:1500px;table-layout:auto;}
   .wedof-preview-table th,.wedof-preview-table td{white-space:nowrap;word-break:normal;overflow-wrap:normal;vertical-align:top;}
   .wedof-preview-table .wedof-explanation{white-space:normal;min-width:260px;overflow-wrap:break-word;}
+  .wedof-modal{border:0;border-radius:14px;width:min(760px,calc(100% - 24px));max-height:90vh;padding:0;}
+  .wedof-modal::backdrop{background:rgba(15,23,42,.65)}
+  .wedof-modal-body{padding:20px;display:grid;gap:14px}.wedof-modal-results{display:grid;gap:6px;max-height:180px;overflow:auto}
+  .wedof-choice{width:100%;text-align:left;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}.wedof-choice.selected{border:2px solid #4f46e5;background:#eef2ff}
+  .wedof-warning{background:#fee2e2;color:#991b1b;border:2px solid #dc2626;border-radius:8px;padding:10px;font-weight:700}
+  @media(max-width:600px){.wedof-modal-body{padding:14px}.wedof-modal .btn{width:100%}}
 </style>
+
+{% if matching_preview %}
+<dialog id="wedof-manual-modal" class="wedof-modal">
+ <form id="wedof-manual-form" class="wedof-modal-body" method="post" action="{{ url_for('admin_wedof_manual_link') }}">
+  <h2 style="margin:0">Associer manuellement un dossier WEDOF</h2>
+  <div id="wedof-folder-summary"></div>
+  <input type="hidden" name="external_id"><input type="hidden" name="session_id"><input type="hidden" name="trainee_id">
+  <label><strong>Rechercher une session</strong><input id="wedof-session-search" class="form-control" autocomplete="off"></label>
+  <div id="wedof-session-results" class="wedof-modal-results"></div><div id="wedof-archive-warning" class="wedof-warning" hidden>Cette session est archivée. Elle ne pourra pas servir au déclenchement automatique futur sans règle spécifique.</div>
+  <label><strong>Rechercher un stagiaire dans cette session</strong><input id="wedof-trainee-search" class="form-control" autocomplete="off" disabled></label>
+  <div id="wedof-trainee-results" class="wedof-modal-results"></div>
+  <div id="wedof-date-warning" class="wedof-warning" hidden>Attention : les dates de la session sélectionnée sont différentes des dates déclarées dans WEDOF.</div>
+  <div><strong>Dossier WEDOF :</strong> <span id="wedof-confirm-folder"></span><br><strong>Sera associé à :</strong><br><span id="wedof-confirm-session">—</span><br><span id="wedof-confirm-trainee">—</span></div>
+  <label><input type="checkbox" name="confirm_manual_link" value="1" required> Je confirme que ce dossier WEDOF appartient à ce stagiaire et à cette session.</label>
+  <label id="wedof-date-confirm" hidden><input type="checkbox" name="confirm_date_mismatch" value="1"> Je confirme l’association malgré la différence de dates.</label>
+  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn btn-outline" id="wedof-modal-cancel">Annuler</button><button type="submit" class="btn btn-blue">Enregistrer l’association</button></div>
+ </form>
+</dialog>
+<script src="{{ url_for('static', filename='js/wedof-manual-links.js') }}"></script>
+{% endif %}
 
 <div class="card" style="margin-bottom:12px;">
   <div class="card-title">Connexion API WEDOF</div>

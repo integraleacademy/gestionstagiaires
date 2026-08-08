@@ -58,8 +58,8 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
-from wedof_matching import build_matching_preview
-from wedof_links import local_association_status, sync_exact_wedof_links
+from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
+from wedof_links import local_association_status, save_manual_wedof_link, sync_exact_wedof_links
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -15951,12 +15951,29 @@ def _wedof_links_for_display(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         row["orphaned"] = not local_session or not trainee
         row["session_label"] = _session_label_for_wedof(local_session) if local_session else "Association locale orpheline"
         row["trainee_label"] = (" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or "").strip(), str(trainee.get("last_name") or trainee.get("nom") or "").strip()])) if trainee else "Association locale orpheline")
+        row["source_label"] = ({"automatic_exact_match": "Association automatique fiable",
+                                "manual_admin": "Association manuelle administrateur"}.get(
+                                    str(link.get("source") or ""), str(link.get("source") or "—")))
         displayed.append(row)
     return displayed
 
 
 def _session_label_for_wedof(session_obj: Dict[str, Any]) -> str:
     return str(session_obj.get("name") or session_obj.get("title") or session_obj.get("training_type") or session_obj.get("id") or "—")
+
+
+def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> None:
+    """Priorise tout lien actif, notamment manuel, sur le résultat automatique."""
+    displayed = {str(item.get("external_id") or ""): item for item in _wedof_links_for_display(data)}
+    for result in preview["results"]:
+        result["local_association"] = local_association_status(result, data.get("wedof_links", []))
+        linked = displayed.get(str(result.get("external_id") or ""))
+        if linked:
+            result["session"] = linked["session_label"]
+            result["trainee"] = linked["trainee_label"]
+            result["linked"] = True
+        else:
+            result["linked"] = False
 
 
 @app.post("/admin/wedof/matching/preview")
@@ -15969,8 +15986,7 @@ def admin_wedof_matching_preview():
         in_training = client.list_registration_folders("inTraining")
         data = load_data(run_background_tasks=False)
         preview = build_matching_preview(accepted + in_training, data)
-        for result in preview["results"]:
-            result["local_association"] = local_association_status(result, data.get("wedof_links", []))
+        _decorate_wedof_preview(preview, data)
         app.logger.info(
             "Prévisualisation WEDOF dossiers=%s accepted=%s inTraining=%s catégories=%s durée_ms=%s",
             len(accepted) + len(in_training), len(accepted), len(in_training), preview["counts"],
@@ -15995,6 +16011,129 @@ def admin_wedof_matching_preview():
         wedof_links=_wedof_links_for_display(data),
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
     )
+
+
+def _manual_session_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": str(item.get("id") or ""), "name": _session_label_for_wedof(item),
+        "training_type": str(item.get("training_type") or item.get("type_formation") or ""),
+        "date_start": normalize_date(item.get("date_start") or item.get("date_debut")),
+        "date_end": normalize_date(item.get("date_end") or item.get("date_fin")),
+        "archived": bool(item.get("archived") or item.get("is_archived")),
+    }
+
+
+@app.get("/admin/wedof/matching/manual/sessions")
+@admin_login_required
+def admin_wedof_manual_sessions():
+    query = normalize_name(request.args.get("q"))
+    try:
+        limit = max(1, min(int(request.args.get("limit", 20)), 20))
+    except ValueError:
+        limit = 20
+    items = []
+    for session_obj in load_data(run_background_tasks=False).get("sessions", []):
+        if not isinstance(session_obj, dict) or _is_wedof_leads_session(session_obj):
+            continue
+        item = _manual_session_item(session_obj)
+        searchable = normalize_name(" ".join(str(item.get(key) or "") for key in
+                                             ("name", "training_type", "date_start", "date_end")))
+        if not query or query in searchable:
+            items.append(item)
+    items.sort(key=lambda item: (item["date_start"] or "", item["name"]))
+    return jsonify({"items": items[:limit]})
+
+
+@app.get("/admin/wedof/matching/manual/trainees")
+@admin_login_required
+def admin_wedof_manual_trainees():
+    session_id = str(request.args.get("session_id") or "").strip()
+    local_session = next((item for item in load_data(run_background_tasks=False).get("sessions", [])
+                          if isinstance(item, dict) and str(item.get("id") or "") == session_id), None)
+    if local_session is None:
+        return jsonify({"error": "Session locale introuvable."}), 404
+    query = normalize_name(request.args.get("q"))
+    items = []
+    for trainee in local_session.get("trainees", []) or []:
+        if not isinstance(trainee, dict):
+            continue
+        item = {"id": str(trainee.get("id") or ""),
+                "first_name": str(trainee.get("first_name") or trainee.get("prenom") or ""),
+                "last_name": str(trainee.get("last_name") or trainee.get("nom") or ""),
+                "email": str(trainee.get("email") or trainee.get("mail") or ""),
+                "phone": str(trainee.get("phone") or trainee.get("telephone") or trainee.get("phone_number") or "")}
+        searchable = normalize_name(" ".join(item.values()))
+        if not query or query in searchable or normalize_phone(query) in normalize_phone(item["phone"]):
+            items.append(item)
+    return jsonify({"items": items[:20]})
+
+
+def _manual_link_response(message: str, status: int, *, result: Optional[Dict[str, Any]] = None):
+    if request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        body = {"ok": status < 400, "message": message}
+        if result:
+            body.update(result)
+        return jsonify(body), status
+    flash(message, "success" if status < 400 else "error")
+    return redirect(url_for("admin_wedof_requests"))
+
+
+@app.post("/admin/wedof/matching/manual-link")
+@admin_login_required
+def admin_wedof_manual_link():
+    external_id = str(request.form.get("external_id") or "").strip()
+    session_id = str(request.form.get("session_id") or "").strip()
+    trainee_id = str(request.form.get("trainee_id") or "").strip()
+    if request.form.get("confirm_manual_link") not in {"1", "true", "on"}:
+        return _manual_link_response("La confirmation manuelle est obligatoire.", 400)
+    try:
+        folder = WedofClient().get_registration_folder(external_id)
+        wedof = extract_folder(folder)
+    except (WedofConfigurationError, WedofApiError) as exc:
+        return _manual_link_response(str(exc), 400)
+    if str(wedof.get("external_id") or "") != external_id:
+        return _manual_link_response("L’identifiant retourné par WEDOF ne correspond pas au dossier demandé.", 400)
+    if str(wedof.get("type") or "").strip().casefold() != "cpf":
+        return _manual_link_response("Ce dossier WEDOF n’est pas de type CPF.", 400)
+    state = str(wedof.get("state") or "").strip()
+    if state not in {"accepted", "inTraining"}:
+        return _manual_link_response(f"Association refusée : le dossier WEDOF est désormais dans l’état {state or 'inconnu'}.", 400)
+    result: Dict[str, Any] = {}
+
+    def merge_under_file_lock(_: Dict[str, Any]) -> Dict[str, Any]:
+        canonical = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+        local_session = next((item for item in canonical.get("sessions", []) if isinstance(item, dict)
+                              and str(item.get("id") or "") == session_id), None)
+        if local_session is None:
+            result.update(error="Session locale introuvable.")
+            return canonical
+        trainee = next((item for item in local_session.get("trainees", []) or [] if isinstance(item, dict)
+                        and str(item.get("id") or "") == trainee_id), None)
+        if trainee is None:
+            result.update(error="Le stagiaire n’appartient pas à la session sélectionnée.")
+            return canonical
+        local_dates = (normalize_date(local_session.get("date_start") or local_session.get("date_debut")),
+                       normalize_date(local_session.get("date_end") or local_session.get("date_fin")))
+        wedof_dates = (normalize_date(wedof.get("start_date")), normalize_date(wedof.get("end_date")))
+        if local_dates != wedof_dates and request.form.get("confirm_date_mismatch") not in {"1", "true", "on"}:
+            result.update(error="La confirmation de la différence de dates est obligatoire.")
+            return canonical
+        outcome = save_manual_wedof_link(canonical, external_id=external_id, session_id=session_id,
+                                         trainee_id=trainee_id, state=state, date_start=wedof_dates[0],
+                                         date_end=wedof_dates[1])
+        result.update(outcome=outcome, session=_session_label_for_wedof(local_session),
+                      trainee=" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or ""),
+                                                      str(trainee.get("last_name") or trainee.get("nom") or "")])),
+                      count=sum(item.get("active") is True for item in canonical.get("wedof_links", []) if isinstance(item, dict)))
+        return canonical
+
+    _write_json_with_backups(DATA_FILE, {}, _data_lock, payload_transform=merge_under_file_lock)
+    if result.get("error"):
+        return _manual_link_response(result["error"], 400)
+    if result.get("outcome") == "conflict":
+        return _manual_link_response("Conflit avec une association existante. Aucun lien n’a été remplacé.", 409)
+    message = "Association locale enregistrée. Aucune déclaration n’a été envoyée à WEDOF."
+    return _manual_link_response(message, 200, result=result)
 
 
 @app.post("/admin/wedof/matching/sync-exact")

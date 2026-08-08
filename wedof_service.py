@@ -32,7 +32,7 @@ def read_env_bool(name: str, default: bool = False) -> bool:
 
 
 class WedofClient:
-    """Client WEDOF limité aux deux contrôles GET nécessaires."""
+    """Client WEDOF strictement limité aux lectures nécessaires."""
 
     def __init__(
         self,
@@ -121,6 +121,16 @@ class WedofClient:
             # Une cadence modeste évite une rafale de requêtes sur l'API distante.
             time.sleep(0.1)
         return results
+
+    def get_registration_folder(self, external_id: str) -> Dict[str, Any]:
+        """Relit un dossier précis sans jamais effectuer de requête mutatrice."""
+        identifier = str(external_id or "").strip()
+        if not identifier or "/" in identifier:
+            raise WedofApiError("L’identifiant du dossier WEDOF est invalide.")
+        payload = self._get_json(f"/registrationFolders/{identifier}")
+        if not isinstance(payload, dict):
+            raise WedofApiError("La réponse WEDOF concernant le dossier est inattendue.")
+        return payload
 
     def get_current_organism(self) -> Dict[str, str]:
         payload = self._get_json("/organisms/me")

@@ -60,7 +60,7 @@ class WedofLinksServiceTests(unittest.TestCase):
 
     def test_preview_labels(self):
         payload = data(); sync_exact_wedof_links(payload, [exact()])
-        self.assertEqual(local_association_status(exact(), payload["wedof_links"]), "Déjà enregistrée")
+        self.assertEqual(local_association_status(exact(), payload["wedof_links"]), "Déjà enregistrée automatiquement")
         self.assertEqual(local_association_status(exact(external_id="W2"), payload["wedof_links"]), "Conflit avec une association existante")
         self.assertEqual(local_association_status(exact(status="ambiguous_match"), []), "Non associable automatiquement")
 
