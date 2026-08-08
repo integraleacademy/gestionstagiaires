@@ -59,6 +59,7 @@ from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
 from wedof_matching import build_matching_preview
+from wedof_links import local_association_status, sync_exact_wedof_links
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -7741,6 +7742,7 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
 def _empty_data_payload() -> Dict[str, Any]:
     return {
         "sessions": [],
+        "wedof_links": [],
         "crm_integration_requests": [],
         "crm_prefill_transfers": [],
         "afc": {},
@@ -7801,6 +7803,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         if recovered_from:
             loaded = _load_valid_json_payload(DATA_FILE)
             if loaded is not None:
+                if not isinstance(loaded.get("wedof_links"), list):
+                    loaded["wedof_links"] = []
                 _ensure_multi_partner_payload(loaded)
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
@@ -7825,6 +7829,11 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
             _log_storage_state(base)
             _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
             return base
+
+    # Compatibilité ascendante : exposer une collection vide sans provoquer à
+    # elle seule une réécriture du fichier lors d'une simple lecture.
+    if not isinstance(data.get("wedof_links"), list):
+        data["wedof_links"] = []
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
     changed = False
@@ -15911,6 +15920,7 @@ def admin_sessions_automations():
 @app.get("/admin/wedof")
 @admin_login_required
 def admin_wedof_requests():
+    data = load_data(run_background_tasks=False)
     wedof_webhooks = _load_wedof_webhooks()[:100]
     for item in wedof_webhooks:
         if isinstance(item, dict):
@@ -15923,7 +15933,30 @@ def admin_wedof_requests():
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
         wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
+        wedof_links=_wedof_links_for_display(data),
+        wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
     )
+
+
+def _wedof_links_for_display(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    sessions = {str(item.get("id") or ""): item for item in data.get("sessions", []) if isinstance(item, dict)}
+    displayed = []
+    for link in data.get("wedof_links", []) or []:
+        if not isinstance(link, dict) or link.get("active") is not True:
+            continue
+        row = dict(link)
+        local_session = sessions.get(str(link.get("session_id") or ""))
+        trainees = local_session.get("trainees", local_session.get("stagiaires", [])) if local_session else []
+        trainee = next((item for item in trainees or [] if isinstance(item, dict) and str(item.get("id") or "") == str(link.get("trainee_id") or "")), None)
+        row["orphaned"] = not local_session or not trainee
+        row["session_label"] = _session_label_for_wedof(local_session) if local_session else "Association locale orpheline"
+        row["trainee_label"] = (" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or "").strip(), str(trainee.get("last_name") or trainee.get("nom") or "").strip()])) if trainee else "Association locale orpheline")
+        displayed.append(row)
+    return displayed
+
+
+def _session_label_for_wedof(session_obj: Dict[str, Any]) -> str:
+    return str(session_obj.get("name") or session_obj.get("title") or session_obj.get("training_type") or session_obj.get("id") or "—")
 
 
 @app.post("/admin/wedof/matching/preview")
@@ -15934,7 +15967,10 @@ def admin_wedof_matching_preview():
         client = WedofClient()
         accepted = client.list_registration_folders("accepted")
         in_training = client.list_registration_folders("inTraining")
-        preview = build_matching_preview(accepted + in_training, load_data())
+        data = load_data(run_background_tasks=False)
+        preview = build_matching_preview(accepted + in_training, data)
+        for result in preview["results"]:
+            result["local_association"] = local_association_status(result, data.get("wedof_links", []))
         app.logger.info(
             "Prévisualisation WEDOF dossiers=%s accepted=%s inTraining=%s catégories=%s durée_ms=%s",
             len(accepted) + len(in_training), len(accepted), len(in_training), preview["counts"],
@@ -15956,7 +15992,45 @@ def admin_wedof_matching_preview():
         wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
         matching_preview=preview,
+        wedof_links=_wedof_links_for_display(data),
+        wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
     )
+
+
+@app.post("/admin/wedof/matching/sync-exact")
+@admin_login_required
+def admin_wedof_matching_sync_exact():
+    started_at = time.monotonic()
+    try:
+        client = WedofClient()
+        folders = client.list_registration_folders("accepted") + client.list_registration_folders("inTraining")
+        # Le rapprochement est recalculé côté serveur. Aucun champ du formulaire
+        # n'est consulté et seules les requêtes GET du client lecture seule sont utilisées.
+        summary: Dict[str, int] = {}
+        exact_count = 0
+
+        def merge_under_file_lock(_: Dict[str, Any]) -> Dict[str, Any]:
+            nonlocal summary, exact_count
+            canonical = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+            preview = build_matching_preview(folders, canonical)
+            exact_count = preview["counts"]["exact_match"]
+            summary = sync_exact_wedof_links(canonical, preview["results"])
+            return canonical
+
+        _write_json_with_backups(DATA_FILE, {}, _data_lock, payload_transform=merge_under_file_lock)
+        app.logger.info(
+            "Synchronisation WEDOF dossiers=%s exacts=%s créés=%s existants=%s conflits=%s ignorés=%s durée_ms=%s",
+            len(folders), exact_count, summary["created"], summary["already_linked"], summary["conflicts"], summary["skipped"],
+            round((time.monotonic() - started_at) * 1000),
+        )
+        flash(
+            f"Associations WEDOF enregistrées : {summary['created']} nouvelles, "
+            f"{summary['already_linked']} déjà existantes, {summary['conflicts']} conflit(s). "
+            "Aucune déclaration n’a été envoyée à WEDOF.", "success",
+        )
+    except (WedofConfigurationError, WedofApiError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("admin_wedof_requests"))
 
 
 @app.post("/admin/wedof/api/test")
