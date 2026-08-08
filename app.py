@@ -59,7 +59,8 @@ from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
 from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
-from wedof_links import local_association_status, save_manual_wedof_link, sync_exact_wedof_links
+from wedof_links import (evaluate_wedof_link_date_consistency, local_association_status,
+                         save_manual_wedof_link, sync_exact_wedof_links)
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -15926,6 +15927,7 @@ def admin_wedof_requests():
         if isinstance(item, dict):
             item["display_fields"] = _wedof_entry_display_fields(item)
     wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
+    displayed_links = _wedof_links_for_display(data)
     return render_template(
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
@@ -15933,7 +15935,8 @@ def admin_wedof_requests():
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
         wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
-        wedof_links=_wedof_links_for_display(data),
+        wedof_links=displayed_links,
+        wedof_date_anomalies=[row for row in displayed_links if not row["date_consistency"]["date_gate_ok"]],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
     )
 
@@ -15954,6 +15957,7 @@ def _wedof_links_for_display(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         row["source_label"] = ({"automatic_exact_match": "Association automatique fiable",
                                 "manual_admin": "Association manuelle administrateur"}.get(
                                     str(link.get("source") or ""), str(link.get("source") or "—")))
+        row["date_consistency"] = evaluate_wedof_link_date_consistency(link, local_session or {})
         displayed.append(row)
     return displayed
 
@@ -15965,6 +15969,7 @@ def _session_label_for_wedof(session_obj: Dict[str, Any]) -> str:
 def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> None:
     """Priorise tout lien actif, notamment manuel, sur le résultat automatique."""
     displayed = {str(item.get("external_id") or ""): item for item in _wedof_links_for_display(data)}
+    sessions = {str(item.get("id") or ""): item for item in data.get("sessions", []) if isinstance(item, dict)}
     for result in preview["results"]:
         result["local_association"] = local_association_status(result, data.get("wedof_links", []))
         linked = displayed.get(str(result.get("external_id") or ""))
@@ -15972,8 +15977,11 @@ def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> No
             result["session"] = linked["session_label"]
             result["trainee"] = linked["trainee_label"]
             result["linked"] = True
+            result["date_consistency"] = evaluate_wedof_link_date_consistency(linked, sessions.get(str(linked.get("session_id") or ""), {}), result)
         else:
             result["linked"] = False
+            matched_session = sessions.get(str(result.get("session_id") or ""), {})
+            result["date_consistency"] = evaluate_wedof_link_date_consistency({}, matched_session, result)
 
 
 @app.post("/admin/wedof/matching/preview")
@@ -16000,6 +16008,7 @@ def admin_wedof_matching_preview():
     for item in wedof_webhooks:
         if isinstance(item, dict):
             item["display_fields"] = _wedof_entry_display_fields(item)
+    displayed_links = _wedof_links_for_display(data)
     return render_template(
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
@@ -16008,7 +16017,8 @@ def admin_wedof_matching_preview():
         wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
         matching_preview=preview,
-        wedof_links=_wedof_links_for_display(data),
+        wedof_links=displayed_links,
+        wedof_date_anomalies=[row for row in displayed_links if not row["date_consistency"]["date_gate_ok"]],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
     )
 
@@ -21351,6 +21361,16 @@ def api_update_session(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    old_dates = (normalize_date(s.get("date_start") or s.get("date_debut")),
+                 normalize_date(s.get("date_end") or s.get("date_fin")))
+    requested_dates = (normalize_date(payload.get("date_start", old_dates[0])),
+                       normalize_date(payload.get("date_end", old_dates[1])))
+    dates_changed = requested_dates != old_dates
+    active_links = [link for link in data.get("wedof_links", []) if isinstance(link, dict)
+                    and link.get("active") is True and str(link.get("session_id") or "") == session_id]
+    if dates_changed and active_links and payload.get("confirm_wedof_date_change") is not True:
+        return jsonify({"ok": False, "error": "wedof_date_change_confirmation_required",
+                        "wedof_links_count": len(active_links)}), 409
     if "name" in payload:
         next_name = (payload.get("name") or "").strip()
         if not next_name:
@@ -21387,7 +21407,10 @@ def api_update_session(session_id: str):
     _sync_aps_period_dates(s)
     s["updated_at"] = _now_iso()
     save_data(data)
-    return jsonify({"ok": True})
+    anomalies = sum(not evaluate_wedof_link_date_consistency(link, s)["date_gate_ok"] for link in active_links)
+    message = (f"Dates de la session modifiées. {anomalies} dossier(s) WEDOF présentent désormais des dates "
+               "incohérentes. Les associations sont conservées et aucune déclaration n’a été envoyée à WEDOF.") if dates_changed and active_links else ""
+    return jsonify({"ok": True, "message": message, "wedof_date_anomalies": anomalies})
 
 
 @app.post("/api/sessions/<session_id>/delete")

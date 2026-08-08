@@ -25,6 +25,7 @@
   </form>
   <p class="hint" style="font-weight:700;">Cette opération enregistre uniquement les associations locales. Elle ne déclare aucune entrée en formation et aucun service fait auprès de WEDOF.</p>
   <div style="margin-top:10px;"><strong id="wedof-links-count">{{ wedof_links_count or 0 }}</strong> — Associations WEDOF enregistrées</div>
+  <div style="margin-top:6px;color:#991b1b;"><strong>{{ wedof_date_anomalies|length }}</strong> — Dossiers liés avec dates incohérentes</div>
   <div id="wedof-manual-feedback" role="status" hidden></div>
   {% if matching_preview %}
     {% set c = matching_preview.counts %}
@@ -40,7 +41,7 @@
     <p class="hint wedof-preview-scroll-hint">Faites défiler le tableau horizontalement pour consulter toutes les colonnes.</p>
     <div class="wedof-preview-table-wrap" role="region" aria-label="Prévisualisation des correspondances WEDOF" tabindex="0">
       <table class="table wedof-preview-table">
-        <thead><tr><th>Numéro WEDOF</th><th>État</th><th>Identité WEDOF</th><th>Email</th><th>Téléphone</th><th>Dates</th><th>Session locale</th><th>Stagiaire local</th><th>Règle</th><th>Statut</th><th>Association locale</th><th class="wedof-explanation">Explication</th><th>Action</th></tr></thead>
+        <thead><tr><th>Numéro WEDOF</th><th>État</th><th>Identité WEDOF</th><th>Email</th><th>Téléphone</th><th>Dates WEDOF</th><th>Dates locales</th><th>Cohérence des dates</th><th>Session locale</th><th>Stagiaire local</th><th>Règle</th><th>Statut</th><th>Association locale</th><th class="wedof-explanation">Explication</th><th>Action</th></tr></thead>
         <tbody>
         {% set labels = {'exact_match':'Correspondance fiable','ambiguous_match':'Ambigu','no_session_match':'Session introuvable','no_trainee_match':'Stagiaire introuvable','missing_wedof_data':'Données incomplètes','excluded_non_cpf':'Hors CPF'} %}
         {% set colors = {'exact_match':'#dcfce7','ambiguous_match':'#fef3c7','no_session_match':'#fee2e2','no_trainee_match':'#ffedd5','missing_wedof_data':'#e2e8f0','excluded_non_cpf':'#f1f5f9'} %}
@@ -48,7 +49,10 @@
           <tr data-wedof-row="{{ item.external_id|e }}">
             <td>{{ item.external_id or '—' }}</td><td>{{ item.state or '—' }}</td>
             <td>{{ item.last_name or '—' }} {{ item.first_name or '' }}</td><td>{{ item.email or '—' }}</td><td>{{ item.phone or '—' }}</td>
-            <td>{{ item.start_date or '—' }}<br>{{ item.end_date or '—' }}</td><td data-local-session>{{ item.session }}</td><td data-local-trainee>{{ item.trainee }}</td><td>{{ item.rule }}</td>
+            <td>du {{ item.start_date or '—' }}<br>au {{ item.end_date or '—' }}</td>
+            <td>du {{ item.date_consistency.local_date_start or '—' }}<br>au {{ item.date_consistency.local_date_end or '—' }}</td>
+            <td><strong>{{ {'dates_match':'Dates conformes','date_mismatch':'Dates différentes','dates_unverifiable':'Dates impossibles à vérifier'}[item.date_consistency.status] }}</strong>{% if not item.date_consistency.date_gate_ok %}<br><span style="color:#991b1b">Automatisation future bloquée : dates incohérentes</span>{% endif %}</td>
+            <td data-local-session>{{ item.session }}</td><td data-local-trainee>{{ item.trainee }}</td><td>{{ item.rule }}</td>
             <td><span style="display:inline-block;padding:4px 7px;border-radius:999px;background:{{ colors[item.status] }};font-weight:700;">{{ labels[item.status] }}</span></td>
             <td data-local-association>{{ item.local_association }}</td><td class="wedof-explanation">{{ item.explanation }}</td>
             <td>{% if item.external_id and not item.linked and item.status in ['no_session_match','no_trainee_match','ambiguous_match','missing_wedof_data'] %}
@@ -66,6 +70,13 @@
     </div>
   {% endif %}
 </div>
+
+{% if wedof_date_anomalies %}<div class="card wedof-warning" style="margin-bottom:12px;">
+  <div class="card-title">Anomalies de dates WEDOF</div>
+  <div style="overflow-x:auto"><table class="table"><thead><tr><th>Numéro WEDOF</th><th>Session locale</th><th>Stagiaire local</th><th>Dates WEDOF</th><th>Dates locales</th><th>Type d’anomalie</th><th>Conséquence</th></tr></thead><tbody>
+  {% for link in wedof_date_anomalies %}<tr><td>{{ link.external_id }}</td><td>{{ link.session_label }}</td><td>{{ link.trainee_label }}</td><td>du {{ link.date_consistency.wedof_date_start or '—' }} au {{ link.date_consistency.wedof_date_end or '—' }}</td><td>du {{ link.date_consistency.local_date_start or '—' }} au {{ link.date_consistency.local_date_end or '—' }}</td><td>{{ 'Dates différentes' if link.date_consistency.status == 'date_mismatch' else 'Dates impossibles à vérifier' }}</td><td>Automatisation bloquée</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>{% endif %}
 
 <div class="card" style="margin-bottom:12px;">
   <div class="card-title">Associations WEDOF enregistrées</div>
@@ -93,6 +104,8 @@
   .wedof-modal-body{padding:20px;display:grid;gap:14px}.wedof-modal-results{display:grid;gap:6px;max-height:180px;overflow:auto}
   .wedof-choice{width:100%;text-align:left;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}.wedof-choice.selected{border:2px solid #4f46e5;background:#eef2ff}
   .wedof-warning{background:#fee2e2;color:#991b1b;border:2px solid #dc2626;border-radius:8px;padding:10px;font-weight:700}
+  .wedof-date-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wedof-date-comparison>div{padding:10px;border:1px solid #cbd5e1;border-radius:8px}
+  @media(max-width:600px){.wedof-date-comparison{grid-template-columns:1fr}}
   @media(max-width:600px){.wedof-preview-table-wrap{max-height:65vh;min-height:240px}.wedof-modal-body{padding:14px}.wedof-modal .btn{width:100%}}
 </style>
 
@@ -106,10 +119,11 @@
   <div id="wedof-session-results" class="wedof-modal-results"></div><div id="wedof-archive-warning" class="wedof-warning" hidden>Cette session est archivée. Elle ne pourra pas servir au déclenchement automatique futur sans règle spécifique.</div>
   <label><strong>Rechercher un stagiaire dans cette session</strong><input id="wedof-trainee-search" class="form-control" autocomplete="off" disabled></label>
   <div id="wedof-trainee-results" class="wedof-modal-results"></div>
-  <div id="wedof-date-warning" class="wedof-warning" hidden>Attention : les dates de la session sélectionnée sont différentes des dates déclarées dans WEDOF.</div>
+  <div id="wedof-date-comparison" class="wedof-date-comparison" hidden><div><strong>Dates WEDOF :</strong><br><span id="wedof-remote-dates"></span></div><div><strong>Dates de la session sélectionnée :</strong><br><span id="wedof-local-dates"></span></div></div>
+  <div id="wedof-date-warning" class="wedof-warning" hidden>Attention : les dates de la session sélectionnée sont différentes des dates enregistrées dans WEDOF.<br><br>Cette association sera enregistrée, mais toute future déclaration automatique sera bloquée tant que les dates resteront incohérentes.</div>
   <div><strong>Dossier WEDOF :</strong> <span id="wedof-confirm-folder"></span><br><strong>Sera associé à :</strong><br><span id="wedof-confirm-session">—</span><br><span id="wedof-confirm-trainee">—</span></div>
   <label><input type="checkbox" name="confirm_manual_link" value="1" required> Je confirme que ce dossier WEDOF appartient à ce stagiaire et à cette session.</label>
-  <label id="wedof-date-confirm" hidden><input type="checkbox" name="confirm_date_mismatch" value="1"> Je confirme l’association malgré la différence de dates.</label>
+  <label id="wedof-date-confirm" hidden><input type="checkbox" name="confirm_date_mismatch" value="1"> Je confirme l’association malgré la différence de dates et j’ai compris que les déclarations automatiques resteront bloquées.</label>
   <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn btn-outline" id="wedof-modal-cancel">Annuler</button><button type="submit" class="btn btn-blue">Enregistrer l’association</button></div>
  </form>
 </dialog>

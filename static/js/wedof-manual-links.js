@@ -15,6 +15,9 @@
     document.querySelector('#wedof-date-warning').hidden = !mismatch;
     const label = document.querySelector('#wedof-date-confirm'); label.hidden = !mismatch; label.querySelector('input').required = mismatch;
     document.querySelector('#wedof-archive-warning').hidden = !(chosenSession && chosenSession.archived);
+    const comparison=document.querySelector('#wedof-date-comparison'); comparison.hidden=!chosenSession;
+    document.querySelector('#wedof-remote-dates').textContent=`du ${fr(folder.dateStart)} au ${fr(folder.dateEnd)}`;
+    document.querySelector('#wedof-local-dates').textContent=chosenSession?`du ${fr(chosenSession.date_start)} au ${fr(chosenSession.date_end)}`:'—';
   }
   async function sessions(q='') {
     const payload = await json(`/admin/wedof/matching/manual/sessions?q=${encodeURIComponent(q)}`);
