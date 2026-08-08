@@ -4,8 +4,48 @@ import datetime as dt
 import secrets
 from typing import Any, Dict, Iterable, Optional
 
+from wedof_matching import normalize_date
+
 
 ALLOWED_STATES = {"accepted", "inTraining"}
+
+
+def evaluate_wedof_link_date_consistency(
+    link: Dict[str, Any], local_session: Dict[str, Any], current_wedof_folder: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Calcule le contrôle de dates sans écriture ni appel HTTP."""
+    local_start = normalize_date(local_session.get("date_start") or local_session.get("date_debut"))
+    local_end = normalize_date(local_session.get("date_end") or local_session.get("date_fin"))
+    folder = current_wedof_folder if isinstance(current_wedof_folder, dict) else None
+    if folder is not None:
+        info = folder.get("trainingActionInfo") if isinstance(folder.get("trainingActionInfo"), dict) else {}
+        remote_start = normalize_date(folder.get("start_date") or folder.get("startDate") or info.get("startDate"))
+        remote_end = normalize_date(folder.get("end_date") or folder.get("endDate") or info.get("endDate"))
+    else:
+        remote_start = normalize_date(link.get("wedof_date_start"))
+        remote_end = normalize_date(link.get("wedof_date_end"))
+    result = {
+        "local_date_start": local_start, "local_date_end": local_end,
+        "wedof_date_start": remote_start, "wedof_date_end": remote_end,
+    }
+    if not all((local_start, local_end, remote_start, remote_end)):
+        result.update(status="dates_unverifiable", date_gate_ok=False,
+                      block_reason="wedof_dates_unverifiable")
+    elif (local_start, local_end) != (remote_start, remote_end):
+        result.update(status="date_mismatch", date_gate_ok=False,
+                      block_reason="wedof_local_dates_mismatch")
+    else:
+        result.update(status="dates_match", date_gate_ok=True, block_reason=None)
+    return result
+
+
+def evaluate_wedof_date_gate(link: Dict[str, Any], session: Dict[str, Any],
+                             current_wedof_folder: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Retourne la barrière réutilisable des futures automatisations."""
+    consistency = evaluate_wedof_link_date_consistency(link, session, current_wedof_folder)
+    # La validation des dates ne suffit pas à autoriser une déclaration : le futur
+    # traitement vérifiera aussi l’état WEDOF, démarrage, assiduité, sortie et idempotence.
+    return {"allowed": consistency["date_gate_ok"], "reason": consistency["block_reason"]}
 
 
 def _now_iso() -> str:
