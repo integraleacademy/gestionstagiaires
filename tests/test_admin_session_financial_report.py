@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import app as gestion_app
@@ -70,6 +71,13 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertTrue(report["rows"][0]["invoices"][0]["payment_known"])
         self.assertEqual(report["rows"][0]["paid"], 600)
         self.assertEqual(report["unknown_payment_count"], 0)
+
+    def test_report_uses_the_full_available_width(self):
+        template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
+
+        self.assertIn("body.endpoint-admin-session-financial-report > .container", template)
+        self.assertIn("body.endpoint-admin-session-financial-report .app-shell", template)
+        self.assertIn("width:100%;max-width:none;box-sizing:border-box", template)
 
 
 if __name__ == "__main__":
