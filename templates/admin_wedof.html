@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% for category, message in get_flashed_messages(with_categories=true) %}
-  <div class="card" role="status" style="margin-bottom:12px;background:{{ '#fee2e2' if category == 'error' else '#ffedd5' if category == 'warning' else '#dcfce7' }};">
+  <div class="card" role="status" style="margin-bottom:12px;background:{{ '#fee2e2' if category == 'error' else '#ffedd5' if category == 'warning' else '#dbeafe' if category == 'info' else '#dcfce7' }};">
     {{ message }}
   </div>
 {% endfor %}
@@ -23,6 +23,18 @@
     </div>
   </div>
   <p><strong>Dernière analyse automatique :</strong> {{ wedof_last_run.finished_at if wedof_last_run else 'Aucune analyse' }} (Europe/Paris)</p>
+  {% if wedof_last_run and wedof_last_run.status == 'skipped_maintenance_window' %}
+  <div class="card" role="status" style="background:#dbeafe;color:#1e3a8a">
+    <strong>Analyse WEDOF temporairement suspendue pendant la fenêtre habituelle d’indisponibilité de l’API, de 05:00 à 07:30, heure de Paris.</strong>
+    <p>Les dernières données synchronisées restent affichées.</p>
+    <div>Dernière tentative : {{ wedof_last_run.started_at or '—' }} (Europe/Paris)</div>
+    <div>Dernière synchronisation réussie :
+      {% set successes = (wedof_sync.states or {}).values() | selectattr('last_success_at') | map(attribute='last_success_at') | list %}
+      {{ successes | max if successes else 'Jamais' }} (Europe/Paris)
+    </div>
+    <div>Prochaine analyse automatique prévue : au premier cron horaire suivant la fin de la fenêtre.</div>
+  </div>
+  {% endif %}
   {% if wedof_last_run and wedof_last_run.status == 'partial_success' %}
   <div class="card" role="alert" style="background:#ffedd5;color:#9a3412">
     <strong>Certaines données WEDOF n’ont pas pu être actualisées. Les dernières données connues restent affichées.</strong>

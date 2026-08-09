@@ -61,7 +61,8 @@ from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, r
 from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
 from wedof_links import (evaluate_wedof_link_date_consistency, local_association_status,
                          save_manual_wedof_link, sync_exact_wedof_links)
-from wedof_automation import build_automation_dashboard, run_dry_run
+from wedof_automation import (build_automation_dashboard, is_wedof_maintenance_window,
+                              record_maintenance_skip, run_dry_run)
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -15995,6 +15996,15 @@ WEDOF_AUTOMATION_LOCK_FILE = os.path.join(PERSIST_DIR, "wedof_automation.lock")
 
 def run_wedof_automation_dry_run() -> Dict[str, Any]:
     """Exécute une analyse GET-only sous verrou interprocessus non bloquant."""
+    maintenance = is_wedof_maintenance_window()
+    if maintenance["active"]:
+        summary = None
+        def persist_skip(canonical):
+            nonlocal summary
+            summary = record_maintenance_skip(canonical)
+            return canonical
+        _atomic_update_data(persist_skip)
+        return summary
     os.makedirs(PERSIST_DIR, exist_ok=True)
     lock_file = open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8")
     try:
@@ -16026,7 +16036,12 @@ def admin_wedof_automation_analyze():
     else:
         try:
             result = run_wedof_automation_dry_run()
-            if result.get("status") == "partial_success":
+            if result.get("status") == "skipped_maintenance_window":
+                window = result["maintenance_window"]
+                flash(f"Analyse WEDOF suspendue entre {window['start_time']} et {window['end_time']}, heure de Paris, "
+                      "en raison de l’indisponibilité habituelle de l’API. Les dernières données connues restent "
+                      "affichées. La prochaine analyse reprendra automatiquement.", "info")
+            elif result.get("status") == "partial_success":
                 labels = {"accepted": "Accepté", "inTraining": "En formation",
                           "serviceDoneDeclared": "Service fait déclaré", "serviceDoneValidated": "Service fait validé"}
                 failed = ", ".join(labels.get(x, x) for x in result.get("failed_states", []))
@@ -33224,6 +33239,9 @@ def internal_cron_wedof_automation():
     except Exception:
         app.logger.exception("Erreur technique nettoyée du cron WEDOF")
         result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
+    if result.get("status") == "skipped_maintenance_window":
+        result = {"ok": True, "status": "skipped_maintenance_window", "mode": "dry_run",
+                  "next_action": "automatic_retry_on_next_cron"}
     status_code = 409 if result.get("status") == "already_running" else 503 if result.get("status") == "failed" else 200
     return jsonify(result), status_code
 

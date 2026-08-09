@@ -14,7 +14,63 @@ AUTOMATABLE_STATES = {"accepted", "inTraining"}
 SERVICE_DONE_STATES = {"serviceDoneDeclared", "serviceDoneValidated"}
 ALL_STATES = ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated")
 RUN_HISTORY_LIMIT = 100
+MAINTENANCE_TIMEZONE = "Europe/Paris"
+MAINTENANCE_START_DEFAULT = "05:00"
+MAINTENANCE_END_DEFAULT = "07:30"
 logger = logging.getLogger(__name__)
+
+
+def _maintenance_enabled() -> bool:
+    """La fenêtre reste active sauf désactivation explicite."""
+    value = os.environ.get("WEDOF_MAINTENANCE_WINDOW_ENABLED")
+    return value is None or value.strip().casefold() not in {"false", "0", "no", "off"}
+
+
+def _maintenance_time(name: str, default: str) -> tuple[dt.time, str]:
+    value = (os.environ.get(name) or default).strip()
+    try:
+        if len(value) != 5:
+            raise ValueError
+        parsed = dt.datetime.strptime(value, "%H:%M").time()
+        return parsed, value
+    except (TypeError, ValueError):
+        logger.warning("Configuration de fenêtre WEDOF invalide variable=%s; valeur par défaut appliquée", name)
+        return dt.datetime.strptime(default, "%H:%M").time(), default
+
+
+def is_wedof_maintenance_window(now: Optional[dt.datetime] = None) -> Dict[str, Any]:
+    """Retourne la configuration et indique si l'heure de Paris est suspendue.
+
+    La borne de début est incluse et celle de fin exclue. Une fenêtre dont le
+    début est postérieur à la fin traverse minuit.
+    """
+    current = now or dt.datetime.now(PARIS_TZ)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=PARIS_TZ)
+    current = current.astimezone(PARIS_TZ)
+    start, start_text = _maintenance_time("WEDOF_MAINTENANCE_START_TIME", MAINTENANCE_START_DEFAULT)
+    end, end_text = _maintenance_time("WEDOF_MAINTENANCE_END_TIME", MAINTENANCE_END_DEFAULT)
+    local_time = current.time().replace(tzinfo=None)
+    in_range = (start <= local_time < end) if start < end else (
+        local_time >= start or local_time < end) if start > end else False
+    return {"active": _maintenance_enabled() and in_range, "start_time": start_text,
+            "end_time": end_text, "timezone": MAINTENANCE_TIMEZONE}
+
+
+def record_maintenance_skip(data: Dict[str, Any], *, now: Optional[dt.datetime] = None) -> Dict[str, Any]:
+    """Enregistre uniquement le run technique, sans toucher aux instantanés métier."""
+    current = now or dt.datetime.now(PARIS_TZ)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=PARIS_TZ)
+    current = current.astimezone(PARIS_TZ)
+    window = is_wedof_maintenance_window(current)
+    timestamp = current.isoformat()
+    run = {"run_id": "WRUN-" + uuid.uuid4().hex[:12].upper(), "started_at": timestamp,
+           "finished_at": timestamp, "mode": "dry_run", "status": "skipped_maintenance_window",
+           "technical_error": None}
+    data["wedof_automation_runs"] = (data.get("wedof_automation_runs", []) + [run])[-RUN_HISTORY_LIMIT:]
+    return {"ok": True, "partial": False, "status": "skipped_maintenance_window", "mode": "dry_run",
+            "maintenance_window": {key: window[key] for key in ("start_time", "end_time", "timezone")}}
 
 
 def _target_time(name: str, default: str) -> tuple[dt.time, str]:
