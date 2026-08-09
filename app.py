@@ -61,7 +61,8 @@ from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, r
 from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
 from wedof_links import (evaluate_wedof_link_date_consistency, local_association_status,
                          save_manual_wedof_link, sync_exact_wedof_links)
-from wedof_automation import (build_automation_dashboard, is_wedof_maintenance_window,
+from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
+                              next_automatic_attempt,
                               record_maintenance_skip, run_dry_run)
 
 
@@ -15949,6 +15950,7 @@ def admin_wedof_requests():
             item["display_fields"] = _wedof_entry_display_fields(item)
     wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
     displayed_links = _wedof_links_for_display(data)
+    maintenance = is_wedof_maintenance_window()
     return render_template(
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
@@ -15963,6 +15965,9 @@ def admin_wedof_requests():
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", [])),
         wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
         wedof_sync=data.get("wedof_automation_sync", {}),
+        wedof_dashboard_state=automation_dashboard_state(data),
+        wedof_maintenance=maintenance,
+        wedof_next_attempt=next_automatic_attempt() if maintenance["active"] else None,
     )
 
 
@@ -16172,6 +16177,12 @@ def admin_wedof_matching_preview():
         wedof_links=displayed_links,
         wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
+        wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
+        wedof_sync=data.get("wedof_automation_sync", {}),
+        wedof_dashboard_state=automation_dashboard_state(data),
+        wedof_maintenance=is_wedof_maintenance_window(),
+        wedof_next_attempt=next_automatic_attempt() if is_wedof_maintenance_window()["active"] else None,
+        wedof_preview=True,
     )
 
 

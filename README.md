@@ -58,7 +58,7 @@ python app.py
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
 - `WEDOF_MAINTENANCE_WINDOW_ENABLED` (facultatif, `true` par défaut ; seules les valeurs `false`, `0`, `no` et `off` désactivent la suspension)
 - `WEDOF_MAINTENANCE_START_TIME` (facultatif, heure de Paris au format `HH:MM`, `05:00` par défaut)
-- `WEDOF_MAINTENANCE_END_TIME` (facultatif, heure de Paris au format `HH:MM`, `07:30` par défaut)
+- `WEDOF_MAINTENANCE_END_TIME` (facultatif, heure de Paris au format `HH:MM`, `07:00` par défaut ; la borne de fin est exclue)
 - `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
 - `DOCS_TO_CONTROL_TRUSTED_USER_AGENT` (optionnel : User-Agent exact autorisé pour le dashboard externe historique si aucun token public n’est configuré ; défaut `plateformegestion/1.0 (+https://plateformegestion.onrender.com)`)
 - `MAX_JSON_BACKUP_BYTES` (optionnel, défaut `52428800` : limite de copie d'un JSON sauvegardé automatiquement si la création de snapshot par lien dur n'est pas disponible)

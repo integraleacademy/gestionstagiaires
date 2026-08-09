@@ -16,7 +16,7 @@ ALL_STATES = ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValid
 RUN_HISTORY_LIMIT = 100
 MAINTENANCE_TIMEZONE = "Europe/Paris"
 MAINTENANCE_START_DEFAULT = "05:00"
-MAINTENANCE_END_DEFAULT = "07:30"
+MAINTENANCE_END_DEFAULT = "07:00"
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +71,41 @@ def record_maintenance_skip(data: Dict[str, Any], *, now: Optional[dt.datetime] 
     data["wedof_automation_runs"] = (data.get("wedof_automation_runs", []) + [run])[-RUN_HISTORY_LIMIT:]
     return {"ok": True, "partial": False, "status": "skipped_maintenance_window", "mode": "dry_run",
             "maintenance_window": {key: window[key] for key in ("start_time", "end_time", "timezone")}}
+
+
+def automation_dashboard_state(data: Dict[str, Any]) -> str:
+    """Qualifie la fiabilité de l'instantané persistant, sans déduire WEDOF des liens locaux."""
+    runs = [run for run in data.get("wedof_automation_runs", []) if isinstance(run, dict)]
+    sync_states = (data.get("wedof_automation_sync") or {}).get("states") or {}
+    has_success = any(run.get("status") in {"success", "partial_success"} for run in runs)
+    has_success = has_success or any(
+        isinstance(state, dict) and bool(state.get("last_success_at"))
+        for state in sync_states.values()
+    )
+    if not has_success:
+        return "never_synchronized"
+    last_status = runs[-1].get("status") if runs else None
+    if last_status == "skipped_maintenance_window":
+        return "maintenance_skipped"
+    if last_status == "partial_success":
+        return "partial_sync"
+    if last_status == "failed":
+        return "stale"
+    return "synchronized"
+
+
+def next_automatic_attempt(now: Optional[dt.datetime] = None) -> dt.datetime:
+    """Retourne le prochain passage horaire à :05 qui n'est pas en maintenance."""
+    current = now or dt.datetime.now(PARIS_TZ)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=PARIS_TZ)
+    current = current.astimezone(PARIS_TZ)
+    candidate = current.replace(minute=5, second=0, microsecond=0)
+    if candidate <= current:
+        candidate += dt.timedelta(hours=1)
+    while is_wedof_maintenance_window(candidate)["active"]:
+        candidate += dt.timedelta(hours=1)
+    return candidate
 
 
 def _target_time(name: str, default: str) -> tuple[dt.time, str]:
