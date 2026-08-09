@@ -14,6 +14,45 @@ def folder(external_id, state="accepted", **changes):
 
 
 class WedofDashboardUnitTests(unittest.TestCase):
+    def test_local_associations_dates_and_orphans_are_explicit(self):
+        links = [
+            {"external_id": "AUTO", "active": True, "session_id": "S1", "trainee_id": "T1",
+             "source": "automatic_exact_match", "wedof_date_start": "2026-09-01", "wedof_date_end": "2026-09-30"},
+            {"external_id": "ORPHAN", "active": True, "session_id": "MISSING", "trainee_id": "T2",
+             "source": "manual_admin"},
+        ]
+        associations = gestion_app._wedof_links_for_display({
+            "sessions": [{"id": "S1", "name": "APS SEPTEMBRE 2026",
+                          "trainees": [{"id": "T1", "first_name": "Stéphane", "last_name": "BERTIN"}]}],
+            "wedof_links": links,
+        })
+        rows = {row["external_id"]: row for row in build_automation_dashboard(
+            [], links=links,
+            statuses=[{"external_id": "AUTO", "wedof_state": "accepted", "entry_training": {"status": "planned"}},
+                      {"external_id": "ORPHAN", "wedof_state": "accepted", "entry_training": {"status": "planned"}},
+                      {"external_id": "FREE", "wedof_state": "accepted", "entry_training": {"status": "planned"}}],
+            local_associations=associations)["rows"]}
+        self.assertEqual((rows["AUTO"]["session"], rows["AUTO"]["trainee"]),
+                         ("APS SEPTEMBRE 2026", "Stéphane BERTIN"))
+        self.assertEqual(rows["AUTO"]["association"], "Association automatique fiable")
+        self.assertEqual((rows["AUTO"]["session_id"], rows["AUTO"]["trainee_id"]), ("S1", "T1"))
+        self.assertEqual((rows["AUTO"]["wedof_date_start"], rows["AUTO"]["wedof_date_end"]),
+                         ("2026-09-01", "2026-09-30"))
+        self.assertTrue(rows["ORPHAN"]["association_orphan"])
+        self.assertIn("session introuvable", rows["ORPHAN"]["association"])
+        self.assertEqual((rows["FREE"]["session"], rows["FREE"]["trainee"]),
+                         ("Non rattachée", "Non rattaché"))
+
+    def test_status_dates_override_remote_then_link_dates_are_fallback(self):
+        row = build_automation_dashboard(
+            [folder("A")],
+            links=[{"external_id": "A", "active": True, "wedof_date_start": "2026-08-01",
+                    "wedof_date_end": "2026-08-31"}],
+            statuses=[{"external_id": "A", "wedof_date_start": "2026-07-01",
+                       "wedof_date_end": "2026-07-31"}],
+        )["rows"][0]
+        self.assertEqual((row["wedof_date_start"], row["wedof_date_end"]), ("2026-07-01", "2026-07-31"))
+
     def test_classification_follows_remote_state(self):
         dashboard = build_automation_dashboard([
             folder("A", "accepted"), folder("T", "inTraining"),
@@ -77,6 +116,12 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertNotIn("Règle de rapprochement</th>", html)
         for method in ("post", "put", "patch", "delete"):
             getattr(remote, method).assert_not_called()
+
+    def test_french_date_filter_is_safe(self):
+        self.assertEqual(gestion_app.format_date_fr("2026-09-07"), "07/09/2026")
+        self.assertEqual(gestion_app.format_date_fr("2026-09-07T12:00:00+02:00"), "07/09/2026")
+        self.assertEqual(gestion_app.format_date_fr(None), "—")
+        self.assertEqual(gestion_app.format_date_fr("invalid"), "—")
 
     def test_never_synchronized_uses_dashes_and_explains_empty_snapshot(self):
         data = {"sessions": [], "wedof_links": [], "wedof_automation_status": [],

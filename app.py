@@ -3009,6 +3009,16 @@ def fr_date(value: str) -> str:
     except Exception:
         return value
 
+def format_date_fr(value: Any) -> str:
+    """Affiche une date ISO en français, sans jamais exposer une valeur invalide."""
+    try:
+        raw = str(value or "").strip()
+        if not raw:
+            return "—"
+        return datetime.date.fromisoformat(raw[:10]).strftime("%d/%m/%Y")
+    except (TypeError, ValueError):
+        return "—"
+
 def _fr_date_offset(value: str, *, months: int = 0, days: int = 0) -> str:
     """Format an ISO date after applying calendar-month and day offsets."""
     s = str(value or "").strip()
@@ -3076,6 +3086,7 @@ def history_datetime(value: str) -> str:
 # ✅ Filtres utilisables dans tous tes templates
 app.add_template_filter(fr_date, "frdate")
 app.add_template_filter(fr_datetime, "frdatetime")
+app.add_template_filter(format_date_fr, "format_date_fr")
 
 
 # =========================
@@ -15962,7 +15973,8 @@ def admin_wedof_requests():
         wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
         wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
-            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", [])),
+            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", []),
+            local_associations=displayed_links),
         wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
         wedof_sync=data.get("wedof_automation_sync", {}),
         wedof_dashboard_state=automation_dashboard_state(data),
@@ -15973,20 +15985,28 @@ def admin_wedof_requests():
 
 def _wedof_links_for_display(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     sessions = {str(item.get("id") or ""): item for item in data.get("sessions", []) if isinstance(item, dict)}
+    trainees = {
+        (session_id, str(trainee.get("id") or "")): trainee
+        for session_id, session in sessions.items()
+        for trainee in (session.get("trainees", session.get("stagiaires", [])) or [])
+        if isinstance(trainee, dict)
+    }
     displayed = []
     for link in data.get("wedof_links", []) or []:
         if not isinstance(link, dict) or link.get("active") is not True:
             continue
         row = dict(link)
         local_session = sessions.get(str(link.get("session_id") or ""))
-        trainees = local_session.get("trainees", local_session.get("stagiaires", [])) if local_session else []
-        trainee = next((item for item in trainees or [] if isinstance(item, dict) and str(item.get("id") or "") == str(link.get("trainee_id") or "")), None)
+        trainee = trainees.get((str(link.get("session_id") or ""), str(link.get("trainee_id") or "")))
         row["orphaned"] = not local_session or not trainee
-        row["session_label"] = _session_label_for_wedof(local_session) if local_session else "Association locale orpheline"
-        row["trainee_label"] = (" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or "").strip(), str(trainee.get("last_name") or trainee.get("nom") or "").strip()])) if trainee else "Association locale orpheline")
+        row["session_label"] = _session_label_for_wedof(local_session) if local_session else "Session introuvable"
+        row["trainee_label"] = (" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or "").strip(), str(trainee.get("last_name") or trainee.get("nom") or "").strip()])) if trainee else "Stagiaire introuvable")
         row["source_label"] = ({"automatic_exact_match": "Association automatique fiable",
                                 "manual_admin": "Association manuelle administrateur"}.get(
                                     str(link.get("source") or ""), str(link.get("source") or "—")))
+        row["association_label"] = ("Association locale orpheline — session introuvable" if not local_session
+                                    else "Association locale orpheline — stagiaire introuvable" if not trainee
+                                    else row["source_label"])
         row["date_consistency"] = evaluate_wedof_link_date_consistency(link, local_session or {})
         displayed.append(row)
     return displayed
@@ -16142,14 +16162,13 @@ def admin_wedof_matching_preview():
         dashboard = build_automation_dashboard(
             accepted + in_training + service_done, links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", []),
+            local_associations=_wedof_links_for_display(data),
         )
         displayed_by_id = {str(x.get("external_id") or ""): x for x in _wedof_links_for_display(data)}
         preview_by_id = {str(x.get("external_id") or ""): x for x in preview["results"]}
         for row in dashboard["rows"]:
             linked = displayed_by_id.get(row["external_id"])
             matched = preview_by_id.get(row["external_id"], {})
-            row["session"] = linked["session_label"] if linked else matched.get("session") or "—"
-            row["trainee"] = linked["trainee_label"] if linked else matched.get("trainee") or "—"
             row["matching_status"] = matched.get("status", "")
         app.logger.info(
             "Prévisualisation WEDOF dossiers=%s accepted=%s inTraining=%s catégories=%s durée_ms=%s",

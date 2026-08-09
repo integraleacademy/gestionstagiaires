@@ -126,6 +126,10 @@ class WedofDryRunTests(unittest.TestCase):
         summary = run_dry_run(client, data)
         self.assertEqual((summary["service_done_declared"], summary["service_done_validated"]), (1, 1))
         self.assertEqual(len(data["wedof_automation_runs"]), 100)
+        rows = {row["external_id"]: row for row in data["wedof_automation_status"]}
+        for external_id in ("D", "V"):
+            self.assertEqual((rows[external_id]["wedof_date_start"], rows[external_id]["wedof_date_end"]),
+                             ("2026-09-07", "2026-10-09"))
 
     def test_cron_requires_secret_and_explicit_dry_run_but_ignores_mutation_flag(self):
         client = gestion_app.app.test_client()
