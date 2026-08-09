@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% for category, message in get_flashed_messages(with_categories=true) %}
-  <div class="card" role="status" style="margin-bottom:12px;background:{{ '#fee2e2' if category == 'error' else '#dcfce7' }};">
+  <div class="card" role="status" style="margin-bottom:12px;background:{{ '#fee2e2' if category == 'error' else '#ffedd5' if category == 'warning' else '#dcfce7' }};">
     {{ message }}
   </div>
 {% endfor %}
@@ -23,6 +23,16 @@
     </div>
   </div>
   <p><strong>Dernière analyse automatique :</strong> {{ wedof_last_run.finished_at if wedof_last_run else 'Aucune analyse' }} (Europe/Paris)</p>
+  {% if wedof_last_run and wedof_last_run.status == 'partial_success' %}
+  <div class="card" role="alert" style="background:#ffedd5;color:#9a3412">
+    <strong>Certaines données WEDOF n’ont pas pu être actualisées. Les dernières données connues restent affichées.</strong>
+    <div>Dernière tentative : {{ wedof_sync.last_attempt_at or wedof_last_run.started_at or '—' }} (Europe/Paris)</div>
+    <ul>{% for state, label in [('accepted','Accepté'),('inTraining','En formation'),('serviceDoneDeclared','Service fait déclaré'),('serviceDoneValidated','Service fait validé')] %}
+      {% set state_sync = (wedof_sync.states or {}).get(state, {}) %}
+      <li>{{ label }} — dernière synchronisation réussie : {{ state_sync.last_success_at or 'Jamais' }}{% if state_sync.status == 'error' %} — momentanément indisponible{% endif %}</li>
+    {% endfor %}</ul>
+  </div>
+  {% endif %}
   <p class="wedof-readonly"><strong>Mode lecture seule :</strong> aucune déclaration d’entrée en formation ou de service fait n’est envoyée à WEDOF.</p>
   <p class="wedof-readonly">La déclaration automatique supposera une réalisation totale, sauf blocage ou exception enregistrée avant son exécution.</p>
   {% set st = wedof_dashboard.stats %}

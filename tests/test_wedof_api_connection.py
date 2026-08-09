@@ -48,7 +48,7 @@ class WedofClientTests(unittest.TestCase):
         for call in (first, second):
             self.assertEqual(call.kwargs["headers"]["X-Api-Key"], "cle-secrete")
             self.assertNotIn("Authorization", call.kwargs["headers"])
-            self.assertEqual(call.kwargs["timeout"], (5, 20))
+            self.assertEqual(call.kwargs["timeout"], (5, 45))
         self.assertEqual(result["registration_folders_sample_count"], 1)
         self.assertNotIn("trainee", str(result).lower())
         self.assertNotIn("secret@example.test", str(result))
@@ -114,6 +114,50 @@ class WedofClientTests(unittest.TestCase):
         ]
         with patch.dict(os.environ, {}, clear=True):
             self.assertTrue(WedofClient(api_key="key", session=session).test_connection()["dry_run"])
+
+    @patch("wedof_service.time.sleep")
+    def test_temporary_failures_are_retried(self, sleep):
+        for failure in (requests.Timeout(), requests.ConnectionError(), response(502), response(503)):
+            session = Mock()
+            session.get.side_effect = [failure, response(payload={"name": "Test", "siret": "1"})]
+            self.assertEqual(WedofClient(api_key="key", session=session).get_current_organism()["name"], "Test")
+            self.assertEqual(session.get.call_count, 2)
+
+    @patch("wedof_service.time.sleep")
+    def test_retry_after_and_non_retryable_statuses(self, sleep):
+        limited = response(429)
+        limited.headers = {"Retry-After": "30"}
+        session = Mock()
+        session.get.side_effect = [limited, response(payload={"name": "Test", "siret": "1"})]
+        WedofClient(api_key="key", session=session).get_current_organism()
+        sleep.assert_called_once_with(15)
+        for status in (401, 403, 404):
+            session = Mock(); session.get.return_value = response(status)
+            with self.assertRaises(WedofApiError):
+                WedofClient(api_key="key", session=session).check_registration_folders_access()
+            self.assertEqual(session.get.call_count, 1)
+
+    @patch("wedof_service.time.sleep")
+    def test_exhausted_timeout_is_structured(self, sleep):
+        session = Mock(); session.get.side_effect = requests.Timeout("private")
+        with self.assertRaises(WedofApiError) as raised:
+            WedofClient(api_key="key", session=session).get_current_organism()
+        self.assertEqual((raised.exception.code, raised.exception.retryable), ("wedof_timeout", True))
+        self.assertEqual(session.get.call_count, 3)
+
+    def test_numeric_configuration_is_bounded_and_page_default_is_50(self):
+        session = Mock(); page = response(payload=[]); page.headers = {}
+        session.get.return_value = page
+        with patch.dict(os.environ, {"WEDOF_CONNECT_TIMEOUT_SECONDS": "8", "WEDOF_READ_TIMEOUT_SECONDS": "60",
+                                    "WEDOF_GET_MAX_ATTEMPTS": "4", "WEDOF_PAGE_LIMIT": "75"}, clear=False):
+            configured = WedofClient(api_key="key", session=session)
+            self.assertEqual(configured._timeout, (8.0, 60.0))
+        with patch.dict(os.environ, {"WEDOF_CONNECT_TIMEOUT_SECONDS": "bad", "WEDOF_READ_TIMEOUT_SECONDS": "999",
+                                    "WEDOF_GET_MAX_ATTEMPTS": "0", "WEDOF_PAGE_LIMIT": "bad"}, clear=False):
+            client = WedofClient(api_key="key", session=session)
+            self.assertEqual(client._timeout, (5, 45))
+            client.list_registration_folders("accepted")
+            self.assertEqual(session.get.call_args.kwargs["params"]["limit"], 50)
 
 
 class WedofAdminRouteTests(unittest.TestCase):
