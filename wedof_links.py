@@ -7,7 +7,9 @@ from typing import Any, Dict, Iterable, Optional
 from wedof_matching import normalize_date
 
 
-ALLOWED_STATES = {"accepted", "inTraining"}
+ALLOWED_STATES = {
+    "accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated",
+}
 
 
 def evaluate_wedof_link_date_consistency(

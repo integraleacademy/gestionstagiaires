@@ -69,7 +69,7 @@
   {% set st = wedof_dashboard.stats %}
   <div class="wedof-counters" aria-label="Compteurs WEDOF">
   {% for key, label in [('accepted','Accepté'),('training','En formation'),('service','Service fait déclaré'),('anomaly','Anomalies'),('planned','Automatisations prévues'),('entry_success','Entrées en formation déclarées'),('service_success','Services faits déclarés'),('unlinked','Dossiers non rattachés localement')] %}
-    <div class="wedof-counter"><strong>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong><span>{{ label }}</span></div>
+    <div class="wedof-counter"{% if key == 'unlinked' %} data-wedof-unlinked-counter{% endif %}><strong{% if key == 'unlinked' %} id="wedof-unlinked-count"{% endif %}>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong><span>{{ label }}</span></div>
   {% endfor %}
   </div>
   <div class="wedof-tabs" role="tablist" aria-label="États des dossiers WEDOF">
@@ -100,13 +100,14 @@
             {% if item.entry_success %}<span class="wedof-badge is-success">Entrée en formation déclarée ✅</span>{% elif item.state == 'inTraining' %}<span class="wedof-badge is-info">En formation (état WEDOF)</span>{% endif %}
             {% if item.service_success %}<span class="wedof-badge is-success">Service fait déclaré ✅</span>{% elif item.state in ['serviceDoneDeclared','serviceDoneValidated'] %}<span class="wedof-badge is-info">{{ item.wedof_state_label }}</span>{% endif %}
           </div></td>
-          <td data-label="Association locale" data-local-association><span class="wedof-badge {{ 'is-danger' if item.association_orphan else 'is-warning' if not item.linked else 'is-neutral' }}">{{ item.association }}</span></td>
+          <td data-label="Association locale" data-local-association><span class="wedof-badge {{ 'is-danger' if item.association_orphan else 'is-warning' if not item.linked else 'is-neutral' }}" data-local-association-badge>{{ item.association }}</span>
+            {% if item.external_id and not item.linked and item.wedof_type == 'cpf' and item.state in ['accepted','inTraining','serviceDoneDeclared','serviceDoneValidated'] %}<div style="margin-top:6px"><button type="button" class="btn btn-blue" data-manual-link data-external-id="{{ item.external_id|e }}" data-state="{{ item.state|e }}" data-identity="{{ ((item.last_name or '') ~ ' ' ~ (item.first_name or ''))|trim|e }}" data-email="{{ item.email|e }}" data-phone="{{ item.phone|e }}" data-date-start="{{ item.wedof_date_start|e }}" data-date-end="{{ item.wedof_date_end|e }}">Associer manuellement</button></div>{% endif %}
+          </td>
           {% if item.matching_status == 'exact_match' %}<td hidden>Correspondance fiable</td>{% endif %}
           <td data-label="Action"><div class="wedof-actions">
             {% if item.external_id %}<form method="post" action="{{ url_for('admin_wedof_automation_block') }}">
               <input type="hidden" name="external_id" value="{{ item.external_id|e }}"><input type="hidden" name="action" value="{{ 'entry_training' if item.state == 'accepted' else 'service_done' }}"><input type="hidden" name="reason_code" value="other">
               <button class="btn btn-outline" type="submit">Bloquer l’automatisation</button></form>{% endif %}
-            {% if item.external_id and not item.linked and item.matching_status in ['no_session_match','no_trainee_match','ambiguous_match','missing_wedof_data'] %}<button type="button" class="btn btn-blue" data-manual-link data-external-id="{{ item.external_id|e }}" data-state="{{ item.state|e }}" data-identity="{{ ((item.last_name or '') ~ ' ' ~ (item.first_name or ''))|trim|e }}" data-email="{{ item.email|e }}" data-phone="{{ item.phone|e }}" data-date-start="{{ item.start_date|e }}" data-date-end="{{ item.end_date|e }}">Associer manuellement</button>{% endif %}
             <details><summary class="btn btn-outline">Voir détails</summary><div class="wedof-details"><strong>État WEDOF :</strong> {{ item.state or '—' }}<br><strong>Date de début WEDOF :</strong> {{ item.wedof_date_start|format_date_fr }}<br><strong>Date de fin WEDOF :</strong> {{ item.wedof_date_end|format_date_fr }}<br><strong>Session locale :</strong> {{ item.session }}<br><strong>Stagiaire local :</strong> {{ item.trainee }}<br><strong>Source de l’association :</strong> {{ item.association }}<br><strong>Identifiant de session local :</strong> {{ item.session_id or '—' }}<br><strong>Identifiant de stagiaire local :</strong> {{ item.trainee_id or '—' }}{% if item.anomaly_reasons %}<br><strong>Blocage :</strong> {{ item.anomaly_reasons|join(' · ') }}{% endif %}</div></details>
           </div></td>
         </tr>
@@ -139,7 +140,6 @@
   </tbody></table></div>
 </div>{% endif %}
 
-{% if matching_preview %}
 <dialog id="wedof-manual-modal" class="wedof-modal">
  <form id="wedof-manual-form" class="wedof-modal-body" method="post" action="{{ url_for('admin_wedof_manual_link') }}">
   <h2 style="margin:0">Associer manuellement un dossier WEDOF</h2>
@@ -157,8 +157,8 @@
   <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn btn-outline" id="wedof-modal-cancel">Annuler</button><button type="submit" class="btn btn-blue">Enregistrer l’association</button></div>
  </form>
 </dialog>
-<script src="{{ url_for('static', filename='js/wedof-manual-links.js') }}"></script>
-{% endif %}
+<div id="wedof-manual-feedback" class="card" role="status" hidden></div>
+<script src="{{ url_for('static', filename='js/wedof-manual-links.js') }}" defer></script>
 
 <div class="card" style="margin-bottom:12px;">
   <div class="card-title">Connexion API WEDOF</div>
