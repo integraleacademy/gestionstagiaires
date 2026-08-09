@@ -13,7 +13,7 @@ ALLOWED_STATES = {"accepted", "inTraining"}
 def evaluate_wedof_link_date_consistency(
     link: Dict[str, Any], local_session: Dict[str, Any], current_wedof_folder: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-    """Calcule le contrôle de dates sans écriture ni appel HTTP."""
+    """Compare les dates pour l'affichage uniquement, sans décision métier."""
     local_start = normalize_date(local_session.get("date_start") or local_session.get("date_debut"))
     local_end = normalize_date(local_session.get("date_end") or local_session.get("date_fin"))
     folder = current_wedof_folder if isinstance(current_wedof_folder, dict) else None
@@ -29,23 +29,15 @@ def evaluate_wedof_link_date_consistency(
         "wedof_date_start": remote_start, "wedof_date_end": remote_end,
     }
     if not all((local_start, local_end, remote_start, remote_end)):
-        result.update(status="dates_unverifiable", date_gate_ok=False,
-                      block_reason="wedof_dates_unverifiable")
+        result.update(status="dates_unverifiable", dates_differ=None,
+                      informational_only=True)
     elif (local_start, local_end) != (remote_start, remote_end):
-        result.update(status="date_mismatch", date_gate_ok=False,
-                      block_reason="wedof_local_dates_mismatch")
+        result.update(status="date_mismatch", dates_differ=True,
+                      informational_only=True)
     else:
-        result.update(status="dates_match", date_gate_ok=True, block_reason=None)
+        result.update(status="dates_match", dates_differ=False,
+                      informational_only=True)
     return result
-
-
-def evaluate_wedof_date_gate(link: Dict[str, Any], session: Dict[str, Any],
-                             current_wedof_folder: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Retourne la barrière réutilisable des futures automatisations."""
-    consistency = evaluate_wedof_link_date_consistency(link, session, current_wedof_folder)
-    # La validation des dates ne suffit pas à autoriser une déclaration : le futur
-    # traitement vérifiera aussi l’état WEDOF, démarrage, assiduité, sortie et idempotence.
-    return {"allowed": consistency["date_gate_ok"], "reason": consistency["block_reason"]}
 
 
 def _now_iso() -> str:
@@ -92,6 +84,8 @@ def sync_exact_wedof_links(
             if by_external is by_registration and by_external is not None:
                 old_state = by_external.get("wedof_state")
                 by_external["wedof_state"] = state
+                by_external["wedof_date_start"] = str(result.get("start_date") or "")[:10]
+                by_external["wedof_date_end"] = str(result.get("end_date") or "")[:10]
                 by_external["updated_at"] = timestamp
                 by_external["last_seen_at"] = timestamp
                 summary["already_linked"] += 1
@@ -156,6 +150,8 @@ def save_manual_wedof_link(data: Dict[str, Any], *, external_id: str, session_id
     if by_external or by_registration:
         if by_external is by_registration and by_external is not None:
             by_external["wedof_state"] = state
+            by_external["wedof_date_start"] = date_start
+            by_external["wedof_date_end"] = date_end
             by_external["updated_at"] = timestamp
             by_external["last_seen_at"] = timestamp
             return "already_linked"

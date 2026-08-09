@@ -106,6 +106,16 @@ class ManualLinkTests(unittest.TestCase):
         self.assertEqual((link["source"], link["matching_rule"]), ("manual_admin", "manual_selection"))
         self.assertFalse(set(link) & {"first_name", "last_name", "email", "phone", "raw_payload", "headers"})
 
+    def test_manual_link_allows_different_local_dates_and_keeps_wedof_dates(self):
+        payload = {"external_id": "W1", "session_id": "S2", "trainee_id": "T2",
+                   "confirm_manual_link": "1", "confirm_date_mismatch": "1"}
+        response, saved = self._post(payload)
+        self.assertEqual(response.status_code, 200)
+        link = saved["wedof_links"][0]
+        self.assertEqual((link["session_id"], link["trainee_id"]), ("S2", "T2"))
+        self.assertEqual((link["wedof_date_start"], link["wedof_date_end"]),
+                         ("2026-09-07", "2026-10-09"))
+
     def test_non_javascript_fallback_redirects_with_flash(self):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "data.json")

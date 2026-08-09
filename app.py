@@ -7744,6 +7744,7 @@ def _empty_data_payload() -> Dict[str, Any]:
     return {
         "sessions": [],
         "wedof_links": [],
+        "wedof_automation_exceptions": [],
         "crm_integration_requests": [],
         "crm_prefill_transfers": [],
         "afc": {},
@@ -7806,6 +7807,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
             if loaded is not None:
                 if not isinstance(loaded.get("wedof_links"), list):
                     loaded["wedof_links"] = []
+                if not isinstance(loaded.get("wedof_automation_exceptions"), list):
+                    loaded["wedof_automation_exceptions"] = []
                 _ensure_multi_partner_payload(loaded)
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
@@ -7835,6 +7838,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     # elle seule une réécriture du fichier lors d'une simple lecture.
     if not isinstance(data.get("wedof_links"), list):
         data["wedof_links"] = []
+    if not isinstance(data.get("wedof_automation_exceptions"), list):
+        data["wedof_automation_exceptions"] = []
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
     changed = False
@@ -15936,7 +15941,7 @@ def admin_wedof_requests():
         wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
         wedof_links=displayed_links,
-        wedof_date_anomalies=[row for row in displayed_links if not row["date_consistency"]["date_gate_ok"]],
+        wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
     )
 
@@ -16018,7 +16023,7 @@ def admin_wedof_matching_preview():
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
         matching_preview=preview,
         wedof_links=displayed_links,
-        wedof_date_anomalies=[row for row in displayed_links if not row["date_consistency"]["date_gate_ok"]],
+        wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
     )
 
@@ -21407,10 +21412,12 @@ def api_update_session(session_id: str):
     _sync_aps_period_dates(s)
     s["updated_at"] = _now_iso()
     save_data(data)
-    anomalies = sum(not evaluate_wedof_link_date_consistency(link, s)["date_gate_ok"] for link in active_links)
-    message = (f"Dates de la session modifiées. {anomalies} dossier(s) WEDOF présentent désormais des dates "
-               "incohérentes. Les associations sont conservées et aucune déclaration n’a été envoyée à WEDOF.") if dates_changed and active_links else ""
-    return jsonify({"ok": True, "message": message, "wedof_date_anomalies": anomalies})
+    differences = sum(evaluate_wedof_link_date_consistency(link, s)["dates_differ"] is not False
+                      for link in active_links)
+    message = (f"Dates de la session modifiées. {differences} dossier(s) ont désormais des dates locales "
+               "différentes ou non vérifiables. Les liens sont conservés et les automatisations continueront "
+               "à utiliser les dates WEDOF.") if dates_changed and active_links else ""
+    return jsonify({"ok": True, "message": message, "wedof_date_differences": differences})
 
 
 @app.post("/api/sessions/<session_id>/delete")
