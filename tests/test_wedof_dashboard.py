@@ -117,6 +117,28 @@ class WedofDashboardViewTests(unittest.TestCase):
         for method in ("post", "put", "patch", "delete"):
             getattr(remote, method).assert_not_called()
 
+    def test_snapshot_rows_offer_manual_link_without_matching_preview(self):
+        statuses = [
+            {"external_id": state, "wedof_state": state, "wedof_type": "cpf",
+             "wedof_date_start": "2026-09-07", "wedof_date_end": "2026-10-09"}
+            for state in ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated")
+        ]
+        statuses.extend([
+            {"external_id": "OTHER", "wedof_state": "accepted", "wedof_type": "other"},
+            {"external_id": "", "wedof_state": "accepted", "wedof_type": "cpf"},
+        ])
+        data = {"sessions": [], "wedof_links": [], "wedof_automation_status": statuses,
+                "wedof_automation_runs": [{"status": "success"}], "wedof_automation_sync": {}}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]):
+            html = self.client.get("/admin/wedof").get_data(as_text=True)
+        self.assertEqual(html.count("Associer manuellement</button>"), 4)
+        self.assertNotIn('data-external-id="OTHER"', html)
+        self.assertIn('id="wedof-manual-modal"', html)
+        self.assertEqual(html.count("js/wedof-manual-links.js"), 1)
+        self.assertIn('data-date-start="2026-09-07"', html)
+        self.assertIn('id="wedof-unlinked-count"', html)
+
     def test_french_date_filter_is_safe(self):
         self.assertEqual(gestion_app.format_date_fr("2026-09-07"), "07/09/2026")
         self.assertEqual(gestion_app.format_date_fr("2026-09-07T12:00:00+02:00"), "07/09/2026")

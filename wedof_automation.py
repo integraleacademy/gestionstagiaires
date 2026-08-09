@@ -309,7 +309,8 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         date_end = (history.get("wedof_date_end") or normalize_date(remote.get("end_date")) or
                     (link or {}).get("wedof_date_end"))
         linked = link is not None
-        rows.append({**remote, "tab": "anomaly" if anomaly else {"accepted":"accepted", "inTraining":"training"}.get(state, "service"),
+        rows.append({**remote, "wedof_type": remote.get("type") or "",
+                     "tab": "anomaly" if anomaly else {"accepted":"accepted", "inTraining":"training"}.get(state, "service"),
                      "wedof_date_start": date_start, "wedof_date_end": date_end,
                      "start_date": date_start, "end_date": date_end,
                      "automation_status": value, "automation_planned": value == "planned",
@@ -334,7 +335,8 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
         date_start = status.get("wedof_date_start") or (link or {}).get("wedof_date_start")
         date_end = status.get("wedof_date_end") or (link or {}).get("wedof_date_end")
-        rows.append({**status, "state": state, "tab": tab, "automation_status": value, "automation_planned": value == "planned",
+        rows.append({**status, "state": state, "wedof_type": status.get("wedof_type") or "",
+                     "tab": tab, "automation_status": value, "automation_planned": value == "planned",
                      "wedof_date_start": date_start, "wedof_date_end": date_end,
                      "start_date": date_start, "end_date": date_end,
                      "planned_date": action.get("planned_date"), "planned_time": action.get("planned_time"),

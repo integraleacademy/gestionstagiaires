@@ -59,7 +59,7 @@ from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
 from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
-from wedof_links import (evaluate_wedof_link_date_consistency, local_association_status,
+from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, local_association_status,
                          save_manual_wedof_link, sync_exact_wedof_links)
 from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
                               next_automatic_attempt,
@@ -16260,6 +16260,32 @@ def admin_wedof_manual_trainees():
     return jsonify({"items": items[:20]})
 
 
+@app.get("/admin/wedof/matching/manual/folder")
+@admin_login_required
+def admin_wedof_manual_folder():
+    """Relit un dossier pour la modale sans exposer son contenu WEDOF brut."""
+    external_id = str(request.args.get("external_id") or "").strip()
+    if not external_id:
+        return jsonify({"ok": False, "message": "Le numéro WEDOF est obligatoire."}), 400
+    try:
+        wedof = extract_folder(WedofClient().get_registration_folder(external_id))
+    except (WedofConfigurationError, WedofApiError):
+        return jsonify({"ok": False, "message": "Les informations WEDOF sont temporairement indisponibles."}), 503
+    if str(wedof.get("external_id") or "") != external_id:
+        return jsonify({"ok": False, "message": "L’identifiant retourné par WEDOF ne correspond pas au dossier demandé."}), 400
+    return jsonify({
+        "external_id": external_id,
+        "state": str(wedof.get("state") or ""),
+        "type": str(wedof.get("type") or ""),
+        "first_name": str(wedof.get("first_name") or ""),
+        "last_name": str(wedof.get("last_name") or ""),
+        "email": str(wedof.get("email") or ""),
+        "phone": str(wedof.get("phone") or ""),
+        "date_start": normalize_date(wedof.get("start_date")),
+        "date_end": normalize_date(wedof.get("end_date")),
+    })
+
+
 def _manual_link_response(message: str, status: int, *, result: Optional[Dict[str, Any]] = None):
     if request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         body = {"ok": status < 400, "message": message}
@@ -16288,7 +16314,7 @@ def admin_wedof_manual_link():
     if str(wedof.get("type") or "").strip().casefold() != "cpf":
         return _manual_link_response("Ce dossier WEDOF n’est pas de type CPF.", 400)
     state = str(wedof.get("state") or "").strip()
-    if state not in {"accepted", "inTraining"}:
+    if state not in ALLOWED_STATES:
         return _manual_link_response(f"Association refusée : le dossier WEDOF est désormais dans l’état {state or 'inconnu'}.", 400)
     result: Dict[str, Any] = {}
 
@@ -16313,10 +16339,15 @@ def admin_wedof_manual_link():
         outcome = save_manual_wedof_link(canonical, external_id=external_id, session_id=session_id,
                                          trainee_id=trainee_id, state=state, date_start=wedof_dates[0],
                                          date_end=wedof_dates[1])
+        active_external_ids = {str(item.get("external_id") or "") for item in canonical.get("wedof_links", [])
+                               if isinstance(item, dict) and item.get("active") is True}
+        eligible_status_ids = {str(item.get("external_id") or "") for item in canonical.get("wedof_automation_status", [])
+                               if isinstance(item, dict) and item.get("external_id")
+                               and item.get("wedof_type") == "cpf" and item.get("wedof_state") in ALLOWED_STATES}
         result.update(outcome=outcome, session=_session_label_for_wedof(local_session),
                       trainee=" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or ""),
                                                       str(trainee.get("last_name") or trainee.get("nom") or "")])),
-                      count=sum(item.get("active") is True for item in canonical.get("wedof_links", []) if isinstance(item, dict)))
+                      unlinked_count=len(eligible_status_ids - active_external_ids))
         return canonical
 
     _write_json_with_backups(DATA_FILE, {}, _data_lock, payload_transform=merge_under_file_lock)
@@ -16325,7 +16356,9 @@ def admin_wedof_manual_link():
     if result.get("outcome") == "conflict":
         return _manual_link_response("Conflit avec une association existante. Aucun lien n’a été remplacé.", 409)
     message = "Association locale enregistrée. Aucune déclaration n’a été envoyée à WEDOF."
-    return _manual_link_response(message, 200, result=result)
+    public_result = {key: result[key] for key in ("session", "trainee", "unlinked_count")}
+    public_result["association"] = "Association manuelle administrateur"
+    return _manual_link_response(message, 200, result=public_result)
 
 
 @app.post("/admin/wedof/matching/sync-exact")

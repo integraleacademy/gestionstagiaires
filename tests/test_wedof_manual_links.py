@@ -47,7 +47,26 @@ class ManualLinkTests(unittest.TestCase):
     def test_authentication_is_required(self):
         anonymous = gestion_app.app.test_client()
         self.assertEqual(anonymous.get("/admin/wedof/matching/manual/sessions").status_code, 302)
+        self.assertEqual(anonymous.get("/admin/wedof/matching/manual/folder?external_id=W1").status_code, 302)
         self.assertEqual(anonymous.post("/admin/wedof/matching/manual-link").status_code, 302)
+
+    def test_folder_detail_is_minimal_get_only_and_handles_unavailability(self):
+        remote = Mock(); remote.get_registration_folder.return_value = remote_folder(
+            attendee={"firstName": "Stéphane", "lastName": "BERTIN", "email": "s@example.fr",
+                      "phoneNumber": "0612345678", "address": "secret"}, financialData={"price": 1000})
+        with patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.get("/admin/wedof/matching/manual/folder?external_id=W1")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(set(response.json), {"external_id", "state", "type", "first_name", "last_name",
+                                              "email", "phone", "date_start", "date_end"})
+        remote.get_registration_folder.assert_called_once_with("W1")
+        for method in ("post", "put", "patch", "delete"):
+            getattr(remote, method).assert_not_called()
+        unavailable = Mock(); unavailable.get_registration_folder.side_effect = gestion_app.WedofApiError("indisponible")
+        with patch.object(gestion_app, "WedofClient", return_value=unavailable):
+            failed = self.client.get("/admin/wedof/matching/manual/folder?external_id=W1")
+        self.assertEqual(failed.status_code, 503)
+        self.assertEqual(failed.json["message"], "Les informations WEDOF sont temporairement indisponibles.")
 
     def test_preview_buttons_only_for_eligible_unlinked_rows(self):
         folders = [
@@ -122,6 +141,14 @@ class ManualLinkTests(unittest.TestCase):
         self.assertEqual((link["session_id"], link["trainee_id"]), ("S2", "T2"))
         self.assertEqual((link["wedof_date_start"], link["wedof_date_end"]),
                          ("2026-09-07", "2026-10-09"))
+
+    def test_all_local_link_states_are_allowed(self):
+        payload = {"external_id": "W1", "session_id": "S1", "trainee_id": "T1", "confirm_manual_link": "1"}
+        for state in ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated"):
+            with self.subTest(state=state):
+                response, saved = self._post(payload, remote_folder(state=state))
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(saved["wedof_links"][0]["wedof_state"], state)
 
     def test_non_javascript_fallback_redirects_with_flash(self):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)

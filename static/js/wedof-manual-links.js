@@ -1,50 +1,181 @@
 (() => {
   const modal = document.querySelector('#wedof-manual-modal');
-  if (!modal) return;
   const form = document.querySelector('#wedof-manual-form');
+  if (!modal || !form) return;
+
   const sessionSearch = document.querySelector('#wedof-session-search');
   const traineeSearch = document.querySelector('#wedof-trainee-search');
   const sessionResults = document.querySelector('#wedof-session-results');
   const traineeResults = document.querySelector('#wedof-trainee-results');
-  let folder = {}, chosenSession = null, chosenTrainee = null, currentRow = null, timer;
-  const esc = value => String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fr = value => value ? value.slice(0, 10).split('-').reverse().join('/') : '—';
-  async function json(url) {
+  const feedback = document.querySelector('#wedof-manual-feedback');
+  let folder = {};
+  let chosenSession = null;
+  let chosenTrainee = null;
+  let currentRow = null;
+  let timer;
+
+  const esc = value => String(value || '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[character]));
+  const fr = value => value ? String(value).slice(0, 10).split('-').reverse().join('/') : '—';
+  const showFeedback = (message, error = false) => {
+    if (!feedback) return;
+    feedback.hidden = false;
+    feedback.style.background = error ? '#fee2e2' : '#dcfce7';
+    feedback.textContent = message;
+  };
+  async function getJson(url) {
+    const response = await fetch(url, {headers: {Accept: 'application/json'}});
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.message || 'Recherche indisponible.');
+    return payload;
+  }
+  function renderFolder() {
+    const identity = [folder.firstName, folder.lastName].filter(Boolean).join(' ') || folder.identity || '—';
+    document.querySelector('#wedof-folder-summary').innerHTML =
+      `<strong>Numéro WEDOF :</strong> ${esc(folder.externalId)}<br>` +
+      `<strong>État :</strong> ${esc(folder.state) || '—'}<br>` +
+      `<strong>Identité :</strong> ${esc(identity)}<br>` +
+      `<strong>Email :</strong> ${esc(folder.email) || '—'}<br>` +
+      `<strong>Téléphone :</strong> ${esc(folder.phone) || '—'}<br>` +
+      `<strong>Dates WEDOF :</strong> ${fr(folder.dateStart)} — ${fr(folder.dateEnd)}`;
+    document.querySelector('#wedof-confirm-folder').textContent = `${folder.externalId} — ${identity}`;
+  }
+  function dateWarnings() {
+    const mismatch = Boolean(chosenSession) &&
+      (chosenSession.date_start !== folder.dateStart || chosenSession.date_end !== folder.dateEnd);
+    document.querySelector('#wedof-date-warning').hidden = !mismatch;
+    const confirmation = document.querySelector('#wedof-date-confirm');
+    confirmation.hidden = !mismatch;
+    confirmation.querySelector('input').required = mismatch;
+    document.querySelector('#wedof-archive-warning').hidden = !(chosenSession && chosenSession.archived);
+    document.querySelector('#wedof-date-comparison').hidden = !chosenSession;
+    document.querySelector('#wedof-remote-dates').textContent = `du ${fr(folder.dateStart)} au ${fr(folder.dateEnd)}`;
+    document.querySelector('#wedof-local-dates').textContent = chosenSession
+      ? `du ${fr(chosenSession.date_start)} au ${fr(chosenSession.date_end)}` : '—';
+  }
+  async function sessions(query = '') {
+    const payload = await getJson(`/admin/wedof/matching/manual/sessions?q=${encodeURIComponent(query)}`);
+    sessionResults.innerHTML = '';
+    payload.items.forEach(item => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'wedof-choice';
+      button.innerHTML = `<strong>${esc(item.name)}</strong> — du ${fr(item.date_start)} au ${fr(item.date_end)}` +
+        (item.archived ? ' — <strong>Session archivée</strong>' : '');
+      button.addEventListener('click', () => selectSession(item, button));
+      sessionResults.append(button);
+    });
+    return payload.items;
+  }
+  async function selectSession(item, button) {
+    chosenSession = item;
+    chosenTrainee = null;
+    form.elements.session_id.value = item.id;
+    form.elements.trainee_id.value = '';
+    traineeSearch.disabled = false;
+    traineeResults.innerHTML = '';
+    sessionResults.querySelectorAll('button').forEach(element => element.classList.toggle('selected', element === button));
+    document.querySelector('#wedof-confirm-session').textContent = item.name;
+    document.querySelector('#wedof-confirm-trainee').textContent = '—';
+    dateWarnings();
+    try { await trainees(''); } catch (error) { showFeedback(error.message, true); }
+  }
+  async function trainees(query = '') {
+    if (!chosenSession) return;
+    const payload = await getJson(`/admin/wedof/matching/manual/trainees?session_id=${encodeURIComponent(chosenSession.id)}&q=${encodeURIComponent(query)}`);
+    traineeResults.innerHTML = '';
+    payload.items.forEach(item => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'wedof-choice';
+      button.textContent = `${item.first_name} ${item.last_name} — ${item.email || '—'} — ${item.phone || '—'}`;
+      button.addEventListener('click', () => {
+        chosenTrainee = item;
+        form.elements.trainee_id.value = item.id;
+        traineeResults.querySelectorAll('button').forEach(element => element.classList.toggle('selected', element === button));
+        document.querySelector('#wedof-confirm-trainee').textContent = `${item.first_name} ${item.last_name}`;
+      });
+      traineeResults.append(button);
+    });
+  }
+  async function openManualModal(button) {
+    form.reset();
+    chosenSession = chosenTrainee = null;
+    currentRow = button.closest('tr');
+    folder = {
+      externalId: button.dataset.externalId, state: button.dataset.state,
+      identity: button.dataset.identity, email: button.dataset.email, phone: button.dataset.phone,
+      dateStart: button.dataset.dateStart, dateEnd: button.dataset.dateEnd,
+    };
+    form.elements.external_id.value = folder.externalId;
+    traineeSearch.disabled = true;
+    sessionResults.innerHTML = traineeResults.innerHTML = '';
+    document.querySelector('#wedof-confirm-session').textContent = '—';
+    document.querySelector('#wedof-confirm-trainee').textContent = '—';
+    renderFolder();
+    dateWarnings();
+    modal.showModal();
     window.WedofLoading?.show();
     try {
-      const response = await fetch(url, {headers:{Accept:'application/json'}});
-      if (!response.ok) throw new Error('Recherche indisponible.');
-      return response.json();
+      const [items, detail] = await Promise.all([
+        sessions(''),
+        getJson(`/admin/wedof/matching/manual/folder?external_id=${encodeURIComponent(folder.externalId)}`),
+      ]);
+      folder = {...folder, state: detail.state || folder.state, firstName: detail.first_name,
+        lastName: detail.last_name, email: detail.email, phone: detail.phone,
+        dateStart: detail.date_start || folder.dateStart, dateEnd: detail.date_end || folder.dateEnd};
+      renderFolder();
+      dateWarnings();
+      const preset = items.find(item => item.id === button.dataset.sessionId);
+      if (preset) selectSession(preset, sessionResults.children[items.indexOf(preset)]);
+    } catch (error) {
+      showFeedback(`${error.message} La recherche locale reste disponible.`, true);
+      try { await sessions(''); } catch (sessionError) { showFeedback(sessionError.message, true); }
     } finally {
       window.WedofLoading?.hide();
     }
   }
-  function dateWarnings() {
-    const mismatch = !!chosenSession && (chosenSession.date_start !== folder.dateStart || chosenSession.date_end !== folder.dateEnd);
-    document.querySelector('#wedof-date-warning').hidden = !mismatch;
-    const label = document.querySelector('#wedof-date-confirm'); label.hidden = !mismatch; label.querySelector('input').required = mismatch;
-    document.querySelector('#wedof-archive-warning').hidden = !(chosenSession && chosenSession.archived);
-    const comparison=document.querySelector('#wedof-date-comparison'); comparison.hidden=!chosenSession;
-    document.querySelector('#wedof-remote-dates').textContent=`du ${fr(folder.dateStart)} au ${fr(folder.dateEnd)}`;
-    document.querySelector('#wedof-local-dates').textContent=chosenSession?`du ${fr(chosenSession.date_start)} au ${fr(chosenSession.date_end)}`:'—';
-  }
-  async function sessions(q='') {
-    const payload = await json(`/admin/wedof/matching/manual/sessions?q=${encodeURIComponent(q)}`);
-    sessionResults.innerHTML = '';
-    payload.items.forEach(item => { const button=document.createElement('button'); button.type='button'; button.className='wedof-choice'; button.innerHTML=`<strong>${esc(item.name)}</strong> — du ${fr(item.date_start)} au ${fr(item.date_end)}${item.archived?' — <strong>Session archivée</strong>':''}`; button.onclick=()=>selectSession(item, button); sessionResults.append(button); });
-    return payload.items;
-  }
-  async function selectSession(item, button) {
-    chosenSession=item; chosenTrainee=null; form.session_id.value=item.id; form.trainee_id.value=''; traineeSearch.disabled=false; traineeResults.innerHTML='';
-    sessionResults.querySelectorAll('button').forEach(x=>x.classList.toggle('selected',x===button)); document.querySelector('#wedof-confirm-session').textContent=item.name; document.querySelector('#wedof-confirm-trainee').textContent='—'; dateWarnings(); await trainees('');
-  }
-  async function trainees(q='') {
-    if (!chosenSession) return; const payload=await json(`/admin/wedof/matching/manual/trainees?session_id=${encodeURIComponent(chosenSession.id)}&q=${encodeURIComponent(q)}`); traineeResults.innerHTML='';
-    payload.items.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='wedof-choice';button.textContent=`${item.last_name} ${item.first_name} — ${item.email || '—'} — ${item.phone || '—'}`;button.onclick=()=>{chosenTrainee=item;form.trainee_id.value=item.id;traineeResults.querySelectorAll('button').forEach(x=>x.classList.toggle('selected',x===button));document.querySelector('#wedof-confirm-trainee').textContent=`${item.first_name} ${item.last_name}`;};traineeResults.append(button);});
-  }
-  document.querySelectorAll('[data-manual-link]').forEach(button=>button.addEventListener('click',async()=>{
-    form.reset(); chosenSession=chosenTrainee=null; currentRow=button.closest('tr'); folder={externalId:button.dataset.externalId,state:button.dataset.state,identity:button.dataset.identity,email:button.dataset.email,phone:button.dataset.phone,dateStart:button.dataset.dateStart,dateEnd:button.dataset.dateEnd};form.external_id.value=folder.externalId;traineeSearch.disabled=true;traineeResults.innerHTML='';document.querySelector('#wedof-folder-summary').innerHTML=`<strong>Numéro WEDOF :</strong> ${esc(folder.externalId)}<br><strong>État :</strong> ${esc(folder.state)}<br><strong>Identité :</strong> ${esc(folder.identity)}<br><strong>Email :</strong> ${esc(folder.email)||'—'}<br><strong>Téléphone :</strong> ${esc(folder.phone)||'—'}<br><strong>Dates de formation :</strong> ${fr(folder.dateStart)} — ${fr(folder.dateEnd)}`;document.querySelector('#wedof-confirm-folder').textContent=`${folder.externalId} — ${folder.identity}`;document.querySelector('#wedof-confirm-session').textContent='—';document.querySelector('#wedof-confirm-trainee').textContent='—';dateWarnings();modal.showModal();const items=await sessions('');const preset=items.find(x=>x.id===button.dataset.sessionId);if(preset){const buttons=[...sessionResults.children];selectSession(preset,buttons[items.indexOf(preset)]);}
-  }));
-  sessionSearch.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>sessions(sessionSearch.value),180)}); traineeSearch.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>trainees(traineeSearch.value),180)});document.querySelector('#wedof-modal-cancel').onclick=()=>modal.close();
-  form.addEventListener('submit',async event=>{if(!chosenSession||!chosenTrainee){event.preventDefault();alert('Sélectionnez une session et un stagiaire.');return;}event.preventDefault();const response=await fetch(form.action,{method:'POST',headers:{Accept:'application/json','X-Requested-With':'XMLHttpRequest'},body:new FormData(form)});const payload=await response.json();if(!response.ok){alert(payload.message);return;}currentRow.querySelector('[data-local-session]').textContent=payload.session;currentRow.querySelector('[data-local-trainee]').textContent=payload.trainee;currentRow.querySelector('[data-local-association]').textContent='Associée manuellement';currentRow.querySelector('[data-manual-link]').remove();document.querySelector('#wedof-links-count').textContent=payload.count;const feedback=document.querySelector('#wedof-manual-feedback');feedback.hidden=false;feedback.className='card';feedback.style.background='#dcfce7';feedback.textContent=payload.message;modal.close();});
+
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-manual-link]');
+    if (button) openManualModal(button);
+  });
+  sessionSearch.addEventListener('input', () => {
+    clearTimeout(timer); timer = setTimeout(() => sessions(sessionSearch.value).catch(error => showFeedback(error.message, true)), 180);
+  });
+  traineeSearch.addEventListener('input', () => {
+    clearTimeout(timer); timer = setTimeout(() => trainees(traineeSearch.value).catch(error => showFeedback(error.message, true)), 180);
+  });
+  document.querySelector('#wedof-modal-cancel').addEventListener('click', () => modal.close());
+  form.addEventListener('submit', async event => {
+    if (!chosenSession || !chosenTrainee) {
+      event.preventDefault();
+      showFeedback('Sélectionnez une session et un stagiaire.', true);
+      return;
+    }
+    event.preventDefault();
+    window.WedofLoading?.show();
+    try {
+      const response = await fetch(form.action, {method: 'POST', headers: {
+        Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest',
+      }, body: new FormData(form)});
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Association impossible.');
+      currentRow.querySelector('[data-local-session]').textContent = payload.session;
+      currentRow.querySelector('[data-local-trainee]').textContent = payload.trainee;
+      const badge = currentRow.querySelector('[data-local-association-badge]');
+      badge.textContent = payload.association;
+      badge.className = 'wedof-badge is-neutral';
+      currentRow.querySelector('[data-manual-link]')?.parentElement.remove();
+      const counter = document.querySelector('#wedof-unlinked-count');
+      if (counter) counter.textContent = payload.unlinked_count;
+      showFeedback(payload.message);
+      modal.close();
+    } catch (error) {
+      showFeedback(error.message, true);
+    } finally {
+      window.WedofLoading?.hide();
+    }
+  });
 })();
