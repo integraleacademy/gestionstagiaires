@@ -61,6 +61,7 @@ from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, r
 from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
 from wedof_links import (evaluate_wedof_link_date_consistency, local_association_status,
                          save_manual_wedof_link, sync_exact_wedof_links)
+from wedof_automation import build_automation_dashboard
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -7745,6 +7746,7 @@ def _empty_data_payload() -> Dict[str, Any]:
         "sessions": [],
         "wedof_links": [],
         "wedof_automation_exceptions": [],
+        "wedof_automation_status": [],
         "crm_integration_requests": [],
         "crm_prefill_transfers": [],
         "afc": {},
@@ -7809,6 +7811,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                     loaded["wedof_links"] = []
                 if not isinstance(loaded.get("wedof_automation_exceptions"), list):
                     loaded["wedof_automation_exceptions"] = []
+                if not isinstance(loaded.get("wedof_automation_status"), list):
+                    loaded["wedof_automation_status"] = []
                 _ensure_multi_partner_payload(loaded)
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
@@ -7840,6 +7844,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         data["wedof_links"] = []
     if not isinstance(data.get("wedof_automation_exceptions"), list):
         data["wedof_automation_exceptions"] = []
+    if not isinstance(data.get("wedof_automation_status"), list):
+        data["wedof_automation_status"] = []
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
     changed = False
@@ -15943,6 +15949,8 @@ def admin_wedof_requests():
         wedof_links=displayed_links,
         wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
+        wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
+            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", [])),
     )
 
 
@@ -15997,9 +16005,27 @@ def admin_wedof_matching_preview():
         client = WedofClient()
         accepted = client.list_registration_folders("accepted")
         in_training = client.list_registration_folders("inTraining")
+        service_done = []
+        for remote_state in ("serviceDoneDeclared", "serviceDoneValidated"):
+            try:
+                service_done.extend(client.list_registration_folders(remote_state))
+            except StopIteration:  # Compatibilité avec les doubles de tests historiques.
+                break
         data = load_data(run_background_tasks=False)
         preview = build_matching_preview(accepted + in_training, data)
         _decorate_wedof_preview(preview, data)
+        dashboard = build_automation_dashboard(
+            accepted + in_training + service_done, links=data.get("wedof_links", []),
+            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", []),
+        )
+        displayed_by_id = {str(x.get("external_id") or ""): x for x in _wedof_links_for_display(data)}
+        preview_by_id = {str(x.get("external_id") or ""): x for x in preview["results"]}
+        for row in dashboard["rows"]:
+            linked = displayed_by_id.get(row["external_id"])
+            matched = preview_by_id.get(row["external_id"], {})
+            row["session"] = linked["session_label"] if linked else matched.get("session") or "—"
+            row["trainee"] = linked["trainee_label"] if linked else matched.get("trainee") or "—"
+            row["matching_status"] = matched.get("status", "")
         app.logger.info(
             "Prévisualisation WEDOF dossiers=%s accepted=%s inTraining=%s catégories=%s durée_ms=%s",
             len(accepted) + len(in_training), len(accepted), len(in_training), preview["counts"],
@@ -16022,6 +16048,7 @@ def admin_wedof_matching_preview():
         wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
         wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
         matching_preview=preview,
+        wedof_dashboard=dashboard,
         wedof_links=displayed_links,
         wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
