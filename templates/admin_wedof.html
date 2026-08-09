@@ -145,8 +145,9 @@
   <h2 style="margin:0">Associer manuellement un dossier WEDOF</h2>
   <div id="wedof-folder-summary"></div>
   <input type="hidden" name="external_id"><input type="hidden" name="session_id"><input type="hidden" name="trainee_id">
-  <label><strong>Rechercher une session</strong><input id="wedof-session-search" class="form-control" autocomplete="off"></label>
+  <div><strong>Sessions où ce stagiaire est inscrit</strong><div class="muted" id="wedof-session-help">Sélectionnez une session proposée : le stagiaire correspondant sera sélectionné automatiquement.</div></div>
   <div id="wedof-session-results" class="wedof-modal-results"></div><div id="wedof-archive-warning" class="wedof-warning" hidden>Cette session est archivée. Elle ne pourra pas servir au déclenchement automatique futur sans règle spécifique.</div>
+  <label><strong>Rechercher une autre session</strong><input id="wedof-session-search" class="form-control" autocomplete="off" placeholder="Nom ou dates de session"></label>
   <label><strong>Rechercher un stagiaire dans cette session</strong><input id="wedof-trainee-search" class="form-control" autocomplete="off" disabled></label>
   <div id="wedof-trainee-results" class="wedof-modal-results"></div>
   <div id="wedof-date-comparison" class="wedof-date-comparison" hidden><div><strong>Dates WEDOF :</strong><br><span id="wedof-remote-dates"></span></div><div><strong>Dates de la session sélectionnée :</strong><br><span id="wedof-local-dates"></span></div></div>

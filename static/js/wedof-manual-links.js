@@ -54,9 +54,21 @@
     document.querySelector('#wedof-local-dates').textContent = chosenSession
       ? `du ${fr(chosenSession.date_start)} au ${fr(chosenSession.date_end)}` : '—';
   }
-  async function sessions(query = '') {
-    const payload = await getJson(`/admin/wedof/matching/manual/sessions?q=${encodeURIComponent(query)}`);
+  async function sessions(query = '', suggested = false) {
+    const params = new URLSearchParams({q: query});
+    if (suggested) {
+      params.set('suggest_for_trainee', '1');
+      params.set('email', folder.email || '');
+      params.set('phone', folder.phone || '');
+      params.set('first_name', folder.firstName || '');
+      params.set('last_name', folder.lastName || '');
+    }
+    const payload = await getJson(`/admin/wedof/matching/manual/sessions?${params}`);
     sessionResults.innerHTML = '';
+    const help = document.querySelector('#wedof-session-help');
+    help.textContent = suggested && !payload.items.length
+      ? 'Aucune inscription locale correspondante trouvée. Utilisez la recherche ci-dessous.'
+      : 'Sélectionnez une session proposée : le stagiaire correspondant sera sélectionné automatiquement.';
     payload.items.forEach(item => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -79,7 +91,17 @@
     document.querySelector('#wedof-confirm-session').textContent = item.name;
     document.querySelector('#wedof-confirm-trainee').textContent = '—';
     dateWarnings();
-    try { await trainees(''); } catch (error) { showFeedback(error.message, true); }
+    try {
+      await trainees('');
+      if (item.suggested_trainee) selectTrainee(item.suggested_trainee);
+    } catch (error) { showFeedback(error.message, true); }
+  }
+  function selectTrainee(item) {
+    chosenTrainee = item;
+    form.elements.trainee_id.value = item.id;
+    traineeResults.querySelectorAll('button').forEach(element =>
+      element.classList.toggle('selected', element.dataset.traineeId === item.id));
+    document.querySelector('#wedof-confirm-trainee').textContent = `${item.first_name} ${item.last_name}`;
   }
   async function trainees(query = '') {
     if (!chosenSession) return;
@@ -89,13 +111,9 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'wedof-choice';
+      button.dataset.traineeId = item.id;
       button.textContent = `${item.first_name} ${item.last_name} — ${item.email || '—'} — ${item.phone || '—'}`;
-      button.addEventListener('click', () => {
-        chosenTrainee = item;
-        form.elements.trainee_id.value = item.id;
-        traineeResults.querySelectorAll('button').forEach(element => element.classList.toggle('selected', element === button));
-        document.querySelector('#wedof-confirm-trainee').textContent = `${item.first_name} ${item.last_name}`;
-      });
+      button.addEventListener('click', () => selectTrainee(item));
       traineeResults.append(button);
     });
   }
@@ -118,15 +136,13 @@
     modal.showModal();
     window.WedofLoading?.show();
     try {
-      const [items, detail] = await Promise.all([
-        sessions(''),
-        getJson(`/admin/wedof/matching/manual/folder?external_id=${encodeURIComponent(folder.externalId)}`),
-      ]);
+      const detail = await getJson(`/admin/wedof/matching/manual/folder?external_id=${encodeURIComponent(folder.externalId)}`);
       folder = {...folder, state: detail.state || folder.state, firstName: detail.first_name,
         lastName: detail.last_name, email: detail.email, phone: detail.phone,
         dateStart: detail.date_start || folder.dateStart, dateEnd: detail.date_end || folder.dateEnd};
       renderFolder();
       dateWarnings();
+      const items = await sessions('', true);
       const preset = items.find(item => item.id === button.dataset.sessionId);
       if (preset) selectSession(preset, sessionResults.children[items.indexOf(preset)]);
     } catch (error) {
