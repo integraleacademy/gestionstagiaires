@@ -58,7 +58,8 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
-from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
+from wedof_matching import (build_matching_preview, extract_folder, normalize_date, normalize_email,
+                            normalize_name, normalize_phone)
 from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, local_association_status,
                          save_manual_wedof_link, sync_exact_wedof_links)
 from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
@@ -16215,10 +16216,38 @@ def _manual_session_item(item: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _manual_trainee_item(trainee: Dict[str, Any]) -> Dict[str, str]:
+    return {"id": str(trainee.get("id") or ""),
+            "first_name": str(trainee.get("first_name") or trainee.get("prenom") or ""),
+            "last_name": str(trainee.get("last_name") or trainee.get("nom") or ""),
+            "email": str(trainee.get("email") or trainee.get("mail") or ""),
+            "phone": str(trainee.get("phone") or trainee.get("telephone") or trainee.get("phone_number") or "")}
+
+
+def _manual_trainee_matches(trainee: Dict[str, str], *, email: str, phone: str,
+                            first_name: str, last_name: str) -> bool:
+    """Return a conservative identity match without merging names on shared contact details."""
+    local_email = normalize_email(trainee["email"])
+    local_phone = normalize_phone(trainee["phone"])
+    contact_match = bool((email and local_email == email) or (phone and local_phone == phone))
+    if first_name and last_name:
+        # A phone number or mailbox can be shared by relatives. When WEDOF gives
+        # us a complete identity, never let a shared contact override a different
+        # first or last name.
+        return (normalize_name(trainee["first_name"]) == first_name
+                and normalize_name(trainee["last_name"]) == last_name)
+    return contact_match
+
+
 @app.get("/admin/wedof/matching/manual/sessions")
 @admin_login_required
 def admin_wedof_manual_sessions():
     query = normalize_name(request.args.get("q"))
+    suggest_for_trainee = request.args.get("suggest_for_trainee") in {"1", "true", "on"}
+    email = normalize_email(request.args.get("email"))
+    phone = normalize_phone(request.args.get("phone"))
+    first_name = normalize_name(request.args.get("first_name"))
+    last_name = normalize_name(request.args.get("last_name"))
     try:
         limit = max(1, min(int(request.args.get("limit", 20)), 20))
     except ValueError:
@@ -16228,6 +16257,16 @@ def admin_wedof_manual_sessions():
         if not isinstance(session_obj, dict) or _is_wedof_leads_session(session_obj):
             continue
         item = _manual_session_item(session_obj)
+        matching_trainee = next((_manual_trainee_item(trainee)
+                                 for trainee in session_obj.get("trainees", []) or []
+                                 if isinstance(trainee, dict)
+                                 and _manual_trainee_matches(_manual_trainee_item(trainee), email=email,
+                                                             phone=phone, first_name=first_name,
+                                                             last_name=last_name)), None)
+        if suggest_for_trainee and matching_trainee is None:
+            continue
+        if matching_trainee is not None:
+            item["suggested_trainee"] = matching_trainee
         searchable = normalize_name(" ".join(str(item.get(key) or "") for key in
                                              ("name", "training_type", "date_start", "date_end")))
         if not query or query in searchable:
@@ -16249,11 +16288,7 @@ def admin_wedof_manual_trainees():
     for trainee in local_session.get("trainees", []) or []:
         if not isinstance(trainee, dict):
             continue
-        item = {"id": str(trainee.get("id") or ""),
-                "first_name": str(trainee.get("first_name") or trainee.get("prenom") or ""),
-                "last_name": str(trainee.get("last_name") or trainee.get("nom") or ""),
-                "email": str(trainee.get("email") or trainee.get("mail") or ""),
-                "phone": str(trainee.get("phone") or trainee.get("telephone") or trainee.get("phone_number") or "")}
+        item = _manual_trainee_item(trainee)
         searchable = normalize_name(" ".join(item.values()))
         if not query or query in searchable or normalize_phone(query) in normalize_phone(item["phone"]):
             items.append(item)

@@ -139,6 +139,51 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertIn('data-date-start="2026-09-07"', html)
         self.assertIn('id="wedof-unlinked-count"', html)
 
+    def test_manual_session_suggestions_only_include_trainee_enrolments(self):
+        data = {"sessions": [
+            {"id": "S1", "name": "APS SEPTEMBRE", "date_start": "2026-09-01",
+             "trainees": [{"id": "T1", "first_name": "Alexandre", "last_name": "Sanseverino",
+                            "email": "alexandre@example.fr", "phone": "07 67 39 74 89"}]},
+            {"id": "S2", "name": "VTC OCTOBRE", "date_start": "2026-10-01",
+             "trainees": [{"id": "T2", "first_name": "Arthur", "last_name": "Sanseverino",
+                            "email": "autre@example.fr", "phone": "+33 7 67 39 74 89"}]},
+        ]}
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get(
+                "/admin/wedof/matching/manual/sessions",
+                query_string={"suggest_for_trainee": "1", "email": "ALEXANDRE@example.fr",
+                              "phone": "+33 7 67 39 74 89", "first_name": "Alexandre",
+                              "last_name": "Sanseverino"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["items"], [{
+            "id": "S1", "name": "APS SEPTEMBRE", "training_type": "",
+            "date_start": "2026-09-01", "date_end": None, "archived": False,
+            "suggested_trainee": {"id": "T1", "first_name": "Alexandre", "last_name": "Sanseverino",
+                                  "email": "alexandre@example.fr", "phone": "07 67 39 74 89"},
+        }])
+
+    def test_shared_phone_never_suggests_a_different_first_name(self):
+        data = {"sessions": [{
+            "id": "S1", "name": "A3P SEPTEMBRE",
+            "trainees": [{"id": "T1", "first_name": "Arthur", "last_name": "Sanseverino",
+                           "phone": "+33 7 67 39 74 89"}],
+        }]}
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get(
+                "/admin/wedof/matching/manual/sessions",
+                query_string={"suggest_for_trainee": "1", "phone": "0767397489",
+                              "first_name": "Alexandre", "last_name": "Sanseverino"},
+            )
+        self.assertEqual(response.get_json()["items"], [])
+
+    def test_manual_session_search_remains_available_without_identity_match(self):
+        data = {"sessions": [{"id": "S1", "name": "APS SEPTEMBRE", "date_start": "2026-09-01",
+                              "trainees": []}]}
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get("/admin/wedof/matching/manual/sessions?q=APS")
+        self.assertEqual([item["id"] for item in response.get_json()["items"]], ["S1"])
+
     def test_french_date_filter_is_safe(self):
         self.assertEqual(gestion_app.format_date_fr("2026-09-07"), "07/09/2026")
         self.assertEqual(gestion_app.format_date_fr("2026-09-07T12:00:00+02:00"), "07/09/2026")
