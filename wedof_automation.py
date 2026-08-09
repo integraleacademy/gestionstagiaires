@@ -237,6 +237,8 @@ def run_dry_run(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime]
                         "service_done": _action_record("not_applicable", None, "23:00", current)}
                     continue
                 row = {"external_id": external_id, "wedof_state": state, "wedof_type": remote.get("type") or "",
+                       "wedof_date_start": normalize_date(remote.get("start_date")),
+                       "wedof_date_end": normalize_date(remote.get("end_date")),
                        "last_checked_at": started, "local_link_status": "linked" if external_id in links else "unlinked"}
                 row["entry_training"] = _action_record("not_applicable", normalize_date(remote.get("start_date")), "18:00", current)
                 row["service_done"] = _action_record("not_applicable", normalize_date(remote.get("end_date")), "23:00", current)
@@ -282,8 +284,13 @@ def run_dry_run(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime]
 
 
 def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iterable[Dict[str, Any]] = (),
-                               statuses: Iterable[Dict[str, Any]] = (), exceptions: Iterable[Dict[str, Any]] = ()) -> Dict[str, Any]:
-    links_by_id = {str(x.get("external_id") or "") for x in links if isinstance(x, dict) and x.get("active") is True}
+                               statuses: Iterable[Dict[str, Any]] = (), exceptions: Iterable[Dict[str, Any]] = (),
+                               local_associations: Iterable[Dict[str, Any]] = ()) -> Dict[str, Any]:
+    """Construit les lignes sans accès réseau et sans déduire de dates depuis les sessions locales."""
+    links_by_id = {str(x.get("external_id") or ""): x for x in links
+                   if isinstance(x, dict) and x.get("active") is True}
+    associations_by_id = {str(x.get("external_id") or ""): x for x in local_associations
+                          if isinstance(x, dict)}
     rows = []
     status_by_id = {str(x.get("external_id") or ""): x for x in statuses if isinstance(x, dict)}
     seen = set()
@@ -296,12 +303,23 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         anomaly = (state not in AUTOMATABLE_STATES | SERVICE_DONE_STATES or not external_id or
                    remote.get("type", "").casefold() != "cpf" or not normalize_date(remote.get("start_date")) or
                    not normalize_date(remote.get("end_date")) or value in {"anomaly", "blocked", "dry_run_due_late"})
+        link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
+        date_start = (history.get("wedof_date_start") or normalize_date(remote.get("start_date")) or
+                      (link or {}).get("wedof_date_start"))
+        date_end = (history.get("wedof_date_end") or normalize_date(remote.get("end_date")) or
+                    (link or {}).get("wedof_date_end"))
+        linked = link is not None
         rows.append({**remote, "tab": "anomaly" if anomaly else {"accepted":"accepted", "inTraining":"training"}.get(state, "service"),
+                     "wedof_date_start": date_start, "wedof_date_end": date_end,
+                     "start_date": date_start, "end_date": date_end,
                      "automation_status": value, "automation_planned": value == "planned",
                      "planned_date": action.get("planned_date") or (remote.get("start_date") if state == "accepted" else remote.get("end_date")),
                      "planned_time": action.get("planned_time") or ("18:00" if state == "accepted" else "23:00"),
-                     "linked": external_id in links_by_id or bool(item.get("linked")),
-                     "association": str(item.get("local_association") or "À rattacher localement"), "matching_status": item.get("status"),
+                     "session_id": (link or {}).get("session_id"), "session": association.get("session_label", "Non rattachée"),
+                     "trainee_id": (link or {}).get("trainee_id"), "trainee": association.get("trainee_label", "Non rattaché"),
+                     "linked": linked, "association": association.get("association_label", "À rattacher localement"),
+                     "association_source": (link or {}).get("source"),
+                     "association_orphan": bool(association.get("orphaned")), "matching_status": item.get("status"),
                      "entry_success": history.get("entry_training", {}).get("status") == "success",
                      "service_success": history.get("service_done", {}).get("status") == "success",
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
@@ -312,9 +330,19 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         action = status.get("entry_training", {}) if state == "accepted" else status.get("service_done", {})
         value = action.get("status", "not_applicable")
         tab = "anomaly" if value in {"anomaly", "blocked", "dry_run_due_late"} else {"accepted":"accepted", "inTraining":"training"}.get(state, "service")
+        external_id = str(status.get("external_id") or "")
+        link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
+        date_start = status.get("wedof_date_start") or (link or {}).get("wedof_date_start")
+        date_end = status.get("wedof_date_end") or (link or {}).get("wedof_date_end")
         rows.append({**status, "state": state, "tab": tab, "automation_status": value, "automation_planned": value == "planned",
+                     "wedof_date_start": date_start, "wedof_date_end": date_end,
+                     "start_date": date_start, "end_date": date_end,
                      "planned_date": action.get("planned_date"), "planned_time": action.get("planned_time"),
-                     "linked": status.get("external_id") in links_by_id, "association": "Associé localement" if status.get("external_id") in links_by_id else "À rattacher localement",
+                     "session_id": (link or {}).get("session_id"), "session": association.get("session_label", "Non rattachée"),
+                     "trainee_id": (link or {}).get("trainee_id"), "trainee": association.get("trainee_label", "Non rattaché"),
+                     "linked": link is not None, "association": association.get("association_label", "À rattacher localement"),
+                     "association_source": (link or {}).get("source"),
+                     "association_orphan": bool(association.get("orphaned")),
                      "entry_success": status.get("entry_training", {}).get("status") == "success", "service_success": status.get("service_done", {}).get("status") == "success",
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     stats = {"accepted":sum(x["tab"]=="accepted" for x in rows), "training":sum(x["tab"]=="training" for x in rows),
