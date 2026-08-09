@@ -7749,6 +7749,7 @@ def _empty_data_payload() -> Dict[str, Any]:
         "wedof_automation_status": [],
         "wedof_automation_blocks": [],
         "wedof_automation_runs": [],
+        "wedof_automation_sync": {"states": {}},
         "crm_integration_requests": [],
         "crm_prefill_transfers": [],
         "afc": {},
@@ -7817,6 +7818,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                     loaded["wedof_automation_status"] = []
                 if not isinstance(loaded.get("wedof_automation_blocks"), list): loaded["wedof_automation_blocks"] = []
                 if not isinstance(loaded.get("wedof_automation_runs"), list): loaded["wedof_automation_runs"] = []
+                if not isinstance(loaded.get("wedof_automation_sync"), dict): loaded["wedof_automation_sync"] = {"states": {}}
                 _ensure_multi_partner_payload(loaded)
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
@@ -7852,6 +7854,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         data["wedof_automation_status"] = []
     if not isinstance(data.get("wedof_automation_blocks"), list): data["wedof_automation_blocks"] = []
     if not isinstance(data.get("wedof_automation_runs"), list): data["wedof_automation_runs"] = []
+    if not isinstance(data.get("wedof_automation_sync"), dict): data["wedof_automation_sync"] = {"states": {}}
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
     changed = False
@@ -15958,6 +15961,7 @@ def admin_wedof_requests():
         wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", [])),
         wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
+        wedof_sync=data.get("wedof_automation_sync", {}),
     )
 
 
@@ -16001,8 +16005,10 @@ def run_wedof_automation_dry_run() -> Dict[str, Any]:
         working = load_data()
         summary = run_dry_run(WedofClient(), working)
         statuses, runs = working["wedof_automation_status"], working["wedof_automation_runs"]
+        sync = working.get("wedof_automation_sync", {"states": {}})
         def persist(canonical):
             canonical["wedof_automation_status"], canonical["wedof_automation_runs"] = statuses, runs[-100:]
+            canonical["wedof_automation_sync"] = sync
             return canonical
         _atomic_update_data(persist)
         return summary
@@ -16018,8 +16024,26 @@ def admin_wedof_automation_analyze():
     if not read_env_bool("WEDOF_DRY_RUN", default=False):
         flash("Le mode test WEDOF doit être explicitement activé.", "error")
     else:
-        result = run_wedof_automation_dry_run()
-        flash("Analyse WEDOF terminée en mode test." if result.get("ok") else "Une analyse WEDOF est déjà en cours.", "success" if result.get("ok") else "error")
+        try:
+            result = run_wedof_automation_dry_run()
+            if result.get("status") == "partial_success":
+                labels = {"accepted": "Accepté", "inTraining": "En formation",
+                          "serviceDoneDeclared": "Service fait déclaré", "serviceDoneValidated": "Service fait validé"}
+                failed = ", ".join(labels.get(x, x) for x in result.get("failed_states", []))
+                flash("Analyse WEDOF partielle : certains états n’ont pas pu être actualisés. "
+                      "Les dernières données connues ont été conservées. États concernés : " + failed, "warning")
+            elif result.get("status") == "failed":
+                flash("L’API WEDOF est temporairement indisponible. Aucune donnée existante n’a été supprimée. Réessayez ultérieurement.", "error")
+            elif result.get("ok"):
+                flash("Analyse WEDOF terminée avec succès.", "success")
+            else:
+                flash("Une analyse WEDOF est déjà en cours.", "error")
+        except (WedofConfigurationError, WedofApiError) as exc:
+            app.logger.warning("Analyse WEDOF impossible erreur=%s", getattr(exc, "code", "wedof_configuration_error"))
+            flash("L’API WEDOF est temporairement indisponible. Aucune donnée existante n’a été supprimée. Réessayez ultérieurement.", "error")
+        except Exception:
+            app.logger.exception("Erreur technique nettoyée pendant l’analyse WEDOF")
+            flash("L’API WEDOF est temporairement indisponible. Aucune donnée existante n’a été supprimée. Réessayez ultérieurement.", "error")
     return redirect(url_for("admin_wedof_requests"))
 
 
@@ -33192,8 +33216,16 @@ def internal_cron_wedof_automation():
         return jsonify({"ok": False, "error": "forbidden"}), 403
     if not read_env_bool("WEDOF_DRY_RUN", default=False):
         return jsonify({"ok": False, "status": "dry_run_required"}), 409
-    result = run_wedof_automation_dry_run()
-    return jsonify(result), (409 if result.get("status") == "already_running" else 200)
+    try:
+        result = run_wedof_automation_dry_run()
+    except (WedofConfigurationError, WedofApiError) as exc:
+        app.logger.warning("Cron WEDOF indisponible erreur=%s", getattr(exc, "code", "wedof_configuration_error"))
+        result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
+    except Exception:
+        app.logger.exception("Erreur technique nettoyée du cron WEDOF")
+        result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
+    status_code = 409 if result.get("status") == "already_running" else 503 if result.get("status") == "failed" else 200
+    return jsonify(result), status_code
 
 
 @app.post("/internal/cron/cash-payment-reminders")

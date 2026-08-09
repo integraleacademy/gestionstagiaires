@@ -21,6 +21,23 @@ class WedofConfigurationError(RuntimeError):
 class WedofApiError(RuntimeError):
     """Erreur volontairement nettoyée renvoyée par le client WEDOF."""
 
+    def __init__(self, message: str, code: str = "wedof_api_error", retryable: bool = False) -> None:
+        super().__init__(message)
+        self.code = code
+        self.user_message = message
+        self.retryable = retryable
+
+
+def _bounded_env(name: str, default: float, minimum: float, maximum: float, *, integer: bool = False):
+    """Lit un nombre borné sans rendre le démarrage dépendant de l'environnement."""
+    try:
+        value = int(os.environ[name]) if integer else float(os.environ[name])
+        if not minimum <= value <= maximum:
+            raise ValueError
+        return value
+    except (KeyError, TypeError, ValueError):
+        return int(default) if integer else default
+
 
 def read_env_bool(name: str, default: bool = False) -> bool:
     """Lit un booléen d'environnement en mode fail-closed."""
@@ -44,39 +61,72 @@ class WedofClient:
             raise WedofConfigurationError("La variable WEDOF_API_KEY est absente.")
         self._session = session or requests.Session()
         self._headers = {"Accept": "application/json", "X-Api-Key": key}
-        self._timeout = (5, 20)
+        self._timeout = (
+            _bounded_env("WEDOF_CONNECT_TIMEOUT_SECONDS", 5, 1, 30),
+            _bounded_env("WEDOF_READ_TIMEOUT_SECONDS", 45, 10, 120),
+        )
+        self._max_attempts = _bounded_env("WEDOF_GET_MAX_ATTEMPTS", 3, 1, 4, integer=True)
+        self._backoff = _bounded_env("WEDOF_GET_BACKOFF_SECONDS", 1, 0, 10)
+        self._page_limit = _bounded_env("WEDOF_PAGE_LIMIT", 50, 10, 100, integer=True)
 
     def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Tuple[Any, Any]:
-        try:
-            for attempt in range(3):
+        response = None
+        for attempt in range(1, self._max_attempts + 1):
+            started = time.monotonic()
+            try:
                 response = self._session.get(f"{WEDOF_BASE_URL}{path}", headers=self._headers,
                                              params=params, timeout=self._timeout)
-                if response.status_code != 429 or attempt == 2:
-                    break
-                time.sleep(min(2 ** attempt, 4))
-        except requests.Timeout as exc:
-            raise WedofApiError("L’API WEDOF n’a pas répondu dans le délai prévu.") from exc
-        except requests.RequestException as exc:
-            raise WedofApiError("Impossible de se connecter à l’API WEDOF.") from exc
+            except requests.Timeout as exc:
+                logger.warning("WEDOF GET path=%s etat=%s page=%s tentative=%s erreur=timeout duree=%.3f",
+                               path, (params or {}).get("state"), (params or {}).get("page"), attempt,
+                               time.monotonic() - started)
+                if attempt == self._max_attempts:
+                    raise WedofApiError("L’API WEDOF n’a pas répondu dans le délai prévu.", "wedof_timeout", True) from exc
+                time.sleep(self._backoff * (2 ** (attempt - 1)))
+                continue
+            except requests.ConnectionError as exc:
+                logger.warning("WEDOF GET path=%s etat=%s page=%s tentative=%s erreur=connexion duree=%.3f",
+                               path, (params or {}).get("state"), (params or {}).get("page"), attempt,
+                               time.monotonic() - started)
+                if attempt == self._max_attempts:
+                    raise WedofApiError("Impossible de se connecter à l’API WEDOF.", "wedof_connection_error", True) from exc
+                time.sleep(self._backoff * (2 ** (attempt - 1)))
+                continue
+            except requests.RequestException as exc:
+                raise WedofApiError("Impossible de se connecter à l’API WEDOF.", "wedof_connection_error") from exc
+
+            retryable_status = response.status_code in {429, 500, 502, 503, 504}
+            logger.info("WEDOF GET path=%s etat=%s page=%s tentative=%s code_http=%s duree=%.3f",
+                        path, (params or {}).get("state"), (params or {}).get("page"), attempt,
+                        response.status_code, time.monotonic() - started)
+            if not retryable_status or attempt == self._max_attempts:
+                break
+            delay = self._backoff * (2 ** (attempt - 1))
+            if response.status_code in {429, 503}:
+                try:
+                    delay = min(15, max(0, float((getattr(response, "headers", {}) or {}).get("Retry-After"))))
+                except (TypeError, ValueError):
+                    pass
+            time.sleep(delay)
 
         if response.status_code == 401:
-            raise WedofApiError("La clé API WEDOF est invalide ou refusée.")
+            raise WedofApiError("La clé API WEDOF est invalide ou refusée.", "wedof_unauthorized")
         if response.status_code == 403:
             if path == "/registrationFolders":
-                raise WedofApiError("L’abonnement ou le jeton ne permet pas d’accéder aux dossiers WEDOF.")
-            raise WedofApiError("La clé API WEDOF ne permet pas d’accéder à cet organisme.")
+                raise WedofApiError("L’abonnement ou le jeton ne permet pas d’accéder aux dossiers WEDOF.", "wedof_forbidden")
+            raise WedofApiError("La clé API WEDOF ne permet pas d’accéder à cet organisme.", "wedof_forbidden")
         if response.status_code == 404:
-            raise WedofApiError("La ressource WEDOF demandée est introuvable.")
+            raise WedofApiError("La ressource WEDOF demandée est introuvable.", "wedof_not_found")
         if response.status_code == 429:
-            raise WedofApiError("L’API WEDOF reçoit trop de demandes. Réessayez plus tard.")
+            raise WedofApiError("L’API WEDOF reçoit trop de demandes. Réessayez plus tard.", "wedof_rate_limited", True)
         if response.status_code >= 500:
-            raise WedofApiError("L’API WEDOF est temporairement indisponible.")
+            raise WedofApiError("L’API WEDOF est temporairement indisponible.", "wedof_server_error", True)
         if not 200 <= response.status_code < 300:
             raise WedofApiError("L’API WEDOF a refusé la demande de vérification.")
         try:
             return response.json(), response
         except (ValueError, TypeError) as exc:
-            raise WedofApiError("L’API WEDOF a renvoyé une réponse non JSON.") from exc
+            raise WedofApiError("L’API WEDOF a renvoyé une réponse non JSON.", "wedof_invalid_response") from exc
 
     def _get_json(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Any:
         return self._get_json_response(path, params=params)[0]
@@ -93,11 +143,11 @@ class WedofClient:
             raise WedofApiError("La réponse WEDOF concernant les dossiers est inattendue.")
         return [item for item in items if isinstance(item, dict)]
 
-    def list_registration_folders(self, state: str, *, limit: int = 100, max_pages: int = 100) -> List[Dict[str, Any]]:
+    def list_registration_folders(self, state: str, *, limit: Optional[int] = None, max_pages: int = 100) -> List[Dict[str, Any]]:
         """Liste paginée en lecture seule les dossiers d'un état WEDOF."""
         if state not in {"accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated"}:
             raise ValueError("État WEDOF non autorisé pour la prévisualisation.")
-        limit = max(1, min(int(limit), 100))
+        limit = self._page_limit if limit is None else max(1, min(int(limit), 100))
         results: List[Dict[str, Any]] = []
         for page in range(1, max_pages + 1):
             payload, response = self._get_json_response(

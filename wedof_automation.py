@@ -106,66 +106,88 @@ def build_automation_candidate(folder: Dict[str, Any], action: str, *, now: Opti
 
 
 def run_dry_run(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime] = None) -> Dict[str, Any]:
-    """Lit les quatre états, pré-vérifie les actions dues et met à jour ``data``."""
+    """Analyse chaque état indépendamment et conserve les dernières données connues."""
     current = (now or dt.datetime.now(PARIS_TZ)).astimezone(PARIS_TZ)
     started = current.isoformat()
     run_id = "WRUN-" + uuid.uuid4().hex[:12].upper()
-    folders_by_state = {state: client.list_registration_folders(state, limit=100) for state in ALL_STATES}
-    links = {str(x.get("external_id") or "") for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active") is True}
-    blocks = data.get("wedof_automation_blocks", data.get("wedof_automation_exceptions", []))
+    folders_by_state: Dict[str, Any] = {}
+    state_errors: Dict[str, str] = {}
+    sync = data.setdefault("wedof_automation_sync", {})
+    sync_states = sync.setdefault("states", {})
+    for state in ALL_STATES:
+        state_sync = sync_states.setdefault(state, {"status": "unknown", "last_attempt_at": None,
+                                                      "last_success_at": None, "last_error_code": None})
+        state_sync["last_attempt_at"] = started
+        try:
+            folders_by_state[state] = client.list_registration_folders(state)
+            state_sync.update(status="success", last_success_at=started, last_error_code=None)
+        except Exception as exc:
+            code = getattr(exc, "code", "wedof_api_error")
+            state_errors[state] = code if isinstance(code, str) else "wedof_api_error"
+            state_sync.update(status="error", last_error_code=state_errors[state])
+            logger.warning("Analyse WEDOF état=%s erreur=%s", state, state_errors[state])
+
+    failed_states = [state for state in ALL_STATES if state in state_errors]
+    succeeded_states = set(ALL_STATES) - set(failed_states)
     existing = {str(x.get("external_id") or ""): x for x in data.get("wedof_automation_status", []) if isinstance(x, dict)}
-    prepared = []  # transient only: deliberately never persisted
-    for state, folders in folders_by_state.items():
-        for folder in folders:
-            remote = extract_folder(folder)
-            external_id = str(remote.get("external_id") or "").strip()
-            # Invalid identifiers cannot form an idempotent persistent key, but are counted below.
-            if not external_id:
-                existing["__anomaly_" + uuid.uuid4().hex] = {"external_id": "", "wedof_state": state,
-                    "wedof_type": remote.get("type") or "", "last_checked_at": current.isoformat(),
-                    "local_link_status": "unlinked", "entry_training": _action_record("anomaly", None, "18:00", current, "missing_external_id"),
-                    "service_done": _action_record("not_applicable", None, "23:00", current)}
-                continue
-            row = existing.get(external_id, {})
-            row.update({"external_id": external_id, "wedof_state": state, "wedof_type": remote.get("type") or "",
-                        "last_checked_at": current.isoformat(), "local_link_status": "linked" if external_id in links else "unlinked"})
-            row["entry_training"] = _action_record("not_applicable", normalize_date(remote.get("start_date")), "18:00", current)
-            row["service_done"] = _action_record("not_applicable", normalize_date(remote.get("end_date")), "23:00", current)
-            action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
-            if action:
-                record, payload = evaluate_action(folder, action, now=current, blocks=blocks)
-                if record["status"].startswith("dry_run_due"):
-                    try:
-                        reread = client.get_registration_folder(external_id)
-                        check = extract_folder(reread)
-                        if str(check.get("external_id") or "") != external_id:
-                            raise ValueError("external_id_conflict")
-                        record, payload = evaluate_action(reread, action, now=current, blocks=blocks)
-                    except Exception:
-                        record = _action_record("anomaly", record["planned_date"], record["planned_time"], current, "remote_reread_failed")
-                        payload = None
-                row[action] = record
-                if payload is not None:
-                    prepared.append({"external_id": external_id, "action": action, "payload": payload})
-            existing[external_id] = row
-    statuses = list(existing.values())
-    data["wedof_automation_status"] = statuses
+    if succeeded_states:
+        # Un état actualisé remplace son ancien instantané; un état indisponible reste intact.
+        existing = {key: row for key, row in existing.items() if row.get("wedof_state") not in succeeded_states}
+        links = {str(x.get("external_id") or "") for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active") is True}
+        blocks = data.get("wedof_automation_blocks", data.get("wedof_automation_exceptions", []))
+        for state, folders in folders_by_state.items():
+            for folder in folders:
+                remote = extract_folder(folder)
+                external_id = str(remote.get("external_id") or "").strip()
+                if not external_id:
+                    existing["__anomaly_" + uuid.uuid4().hex] = {"external_id": "", "wedof_state": state,
+                        "wedof_type": remote.get("type") or "", "last_checked_at": started,
+                        "local_link_status": "unlinked", "entry_training": _action_record("anomaly", None, "18:00", current, "missing_external_id"),
+                        "service_done": _action_record("not_applicable", None, "23:00", current)}
+                    continue
+                row = {"external_id": external_id, "wedof_state": state, "wedof_type": remote.get("type") or "",
+                       "last_checked_at": started, "local_link_status": "linked" if external_id in links else "unlinked"}
+                row["entry_training"] = _action_record("not_applicable", normalize_date(remote.get("start_date")), "18:00", current)
+                row["service_done"] = _action_record("not_applicable", normalize_date(remote.get("end_date")), "23:00", current)
+                action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
+                if action:
+                    record, payload = evaluate_action(folder, action, now=current, blocks=blocks)
+                    if record["status"].startswith("dry_run_due"):
+                        try:
+                            reread = client.get_registration_folder(external_id)
+                            check = extract_folder(reread)
+                            if str(check.get("external_id") or "") != external_id:
+                                raise ValueError("external_id_conflict")
+                            record, payload = evaluate_action(reread, action, now=current, blocks=blocks)
+                        except Exception:
+                            record = _action_record("anomaly", record["planned_date"], record["planned_time"], current, "remote_reread_failed")
+                    row[action] = record
+                existing[external_id] = row
+        data["wedof_automation_status"] = list(existing.values())
+
+    statuses = data.get("wedof_automation_status", [])
     counts = {"planned": 0, "due": 0, "late": 0, "blocked": 0, "anomalies": 0}
     for row in statuses:
         for action in ("entry_training", "service_done"):
-            status = row.get(action, {}).get("status")
-            key = {"dry_run_due": "due", "dry_run_due_late": "late", "anomaly": "anomalies"}.get(status, status)
+            value = row.get(action, {}).get("status")
+            key = {"dry_run_due": "due", "dry_run_due_late": "late", "anomaly": "anomalies"}.get(value, value)
             if key in counts: counts[key] += 1
-    summary = {"ok": True, "mode": "dry_run", "accepted": len(folders_by_state["accepted"]),
-               "in_training": len(folders_by_state["inTraining"]),
-               "service_done_declared": len(folders_by_state["serviceDoneDeclared"]),
-               "service_done_validated": len(folders_by_state["serviceDoneValidated"]), **counts}
+    total_failure = len(failed_states) == len(ALL_STATES)
+    partial = bool(failed_states) and not total_failure
+    status = "failed" if total_failure else "partial_success" if partial else "success"
     finished = dt.datetime.now(PARIS_TZ).isoformat()
     run = {"run_id": run_id, "started_at": started, "finished_at": finished, "mode": "dry_run",
-           "folders_by_state": {k: len(v) for k, v in folders_by_state.items()}, **counts,
-           "status": "success", "technical_error": None}
+           "folders_by_state": {state: len(folders_by_state.get(state, [])) for state in ALL_STATES}, **counts,
+           "status": status, "failed_states": failed_states, "state_errors": state_errors,
+           "technical_error": None}
     data["wedof_automation_runs"] = (data.get("wedof_automation_runs", []) + [run])[-RUN_HISTORY_LIMIT:]
-    return summary
+    sync.update(last_attempt_at=started, status=status)
+    return {"ok": not total_failure, "partial": partial, "status": status, "mode": "dry_run",
+            "failed_states": failed_states, "state_errors": state_errors,
+            "accepted": len(folders_by_state.get("accepted", [])),
+            "in_training": len(folders_by_state.get("inTraining", [])),
+            "service_done_declared": len(folders_by_state.get("serviceDoneDeclared", [])),
+            "service_done_validated": len(folders_by_state.get("serviceDoneValidated", [])), **counts}
 
 
 def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iterable[Dict[str, Any]] = (),
