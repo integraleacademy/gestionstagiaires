@@ -54,6 +54,17 @@ services:
       - key: AFC_IMPORT_VISION_MODEL
         value: gpt-4.1-mini
   - type: cron
+    name: gestionstagiaires-wedof-automation
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "5 * * * *"
+    dockerCommand: python scripts/run_wedof_automation.py
+    envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
+      - key: WEDOF_AUTOMATION_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/wedof-automation
+  - type: cron
     name: gestionstagiaires-convocation-reminders
     runtime: docker
     dockerfilePath: ./Dockerfile

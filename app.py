@@ -61,7 +61,7 @@ from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, r
 from wedof_matching import build_matching_preview, extract_folder, normalize_date, normalize_name, normalize_phone
 from wedof_links import (evaluate_wedof_link_date_consistency, local_association_status,
                          save_manual_wedof_link, sync_exact_wedof_links)
-from wedof_automation import build_automation_dashboard
+from wedof_automation import build_automation_dashboard, run_dry_run
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -7747,6 +7747,8 @@ def _empty_data_payload() -> Dict[str, Any]:
         "wedof_links": [],
         "wedof_automation_exceptions": [],
         "wedof_automation_status": [],
+        "wedof_automation_blocks": [],
+        "wedof_automation_runs": [],
         "crm_integration_requests": [],
         "crm_prefill_transfers": [],
         "afc": {},
@@ -7813,6 +7815,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                     loaded["wedof_automation_exceptions"] = []
                 if not isinstance(loaded.get("wedof_automation_status"), list):
                     loaded["wedof_automation_status"] = []
+                if not isinstance(loaded.get("wedof_automation_blocks"), list): loaded["wedof_automation_blocks"] = []
+                if not isinstance(loaded.get("wedof_automation_runs"), list): loaded["wedof_automation_runs"] = []
                 _ensure_multi_partner_payload(loaded)
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
@@ -7846,6 +7850,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         data["wedof_automation_exceptions"] = []
     if not isinstance(data.get("wedof_automation_status"), list):
         data["wedof_automation_status"] = []
+    if not isinstance(data.get("wedof_automation_blocks"), list): data["wedof_automation_blocks"] = []
+    if not isinstance(data.get("wedof_automation_runs"), list): data["wedof_automation_runs"] = []
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
     changed = False
@@ -15950,7 +15956,8 @@ def admin_wedof_requests():
         wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
         wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
-            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", [])),
+            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", [])),
+        wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
     )
 
 
@@ -15977,6 +15984,80 @@ def _wedof_links_for_display(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _session_label_for_wedof(session_obj: Dict[str, Any]) -> str:
     return str(session_obj.get("name") or session_obj.get("title") or session_obj.get("training_type") or session_obj.get("id") or "—")
+
+
+WEDOF_AUTOMATION_LOCK_FILE = os.path.join(PERSIST_DIR, "wedof_automation.lock")
+
+
+def run_wedof_automation_dry_run() -> Dict[str, Any]:
+    """Exécute une analyse GET-only sous verrou interprocessus non bloquant."""
+    os.makedirs(PERSIST_DIR, exist_ok=True)
+    lock_file = open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return {"ok": False, "status": "already_running"}
+        working = load_data()
+        summary = run_dry_run(WedofClient(), working)
+        statuses, runs = working["wedof_automation_status"], working["wedof_automation_runs"]
+        def persist(canonical):
+            canonical["wedof_automation_status"], canonical["wedof_automation_runs"] = statuses, runs[-100:]
+            return canonical
+        _atomic_update_data(persist)
+        return summary
+    finally:
+        try: fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally: lock_file.close()
+
+
+@app.post("/admin/wedof/automation/analyze")
+@admin_login_required
+@admin_write_required
+def admin_wedof_automation_analyze():
+    if not read_env_bool("WEDOF_DRY_RUN", default=False):
+        flash("Le mode test WEDOF doit être explicitement activé.", "error")
+    else:
+        result = run_wedof_automation_dry_run()
+        flash("Analyse WEDOF terminée en mode test." if result.get("ok") else "Une analyse WEDOF est déjà en cours.", "success" if result.get("ok") else "error")
+    return redirect(url_for("admin_wedof_requests"))
+
+
+@app.post("/admin/wedof/automation/block")
+@admin_login_required
+@admin_write_required
+def admin_wedof_automation_block():
+    external_id, action = str(request.form.get("external_id") or "").strip(), str(request.form.get("action") or "").strip()
+    reason, comment = str(request.form.get("reason_code") or "").strip(), str(request.form.get("comment") or "").strip()
+    if (not external_id or len(external_id) > 200 or action not in {"entry_training", "service_done", "both"}
+            or reason not in {"no_show", "postponed", "abandonment", "partial_completion", "administrative_issue", "other"} or len(comment) > 500):
+        return jsonify({"ok": False, "error": "invalid_block"}), 400
+    now = datetime.datetime.now(ZoneInfo("Europe/Paris")).isoformat()
+    def mutate(data):
+        blocks = data.setdefault("wedof_automation_blocks", [])
+        current = next((x for x in blocks if x.get("external_id") == external_id and x.get("action") == action), None)
+        if current: current.update(active=True, reason_code=reason, comment=comment, updated_at=now)
+        else: blocks.append({"id": "WBLOCK-" + secrets.token_hex(4).upper(), "external_id": external_id,
+                             "action": action, "active": True, "reason_code": reason, "comment": comment,
+                             "created_at": now, "updated_at": now})
+        return data
+    _atomic_update_data(mutate)
+    return redirect(url_for("admin_wedof_requests"))
+
+
+@app.post("/admin/wedof/automation/unblock")
+@admin_login_required
+@admin_write_required
+def admin_wedof_automation_unblock():
+    external_id, action = str(request.form.get("external_id") or "").strip(), str(request.form.get("action") or "").strip()
+    if not external_id or action not in {"entry_training", "service_done", "both"}: return jsonify({"ok": False, "error": "invalid_block"}), 400
+    now = datetime.datetime.now(ZoneInfo("Europe/Paris")).isoformat()
+    def mutate(data):
+        for block in data.setdefault("wedof_automation_blocks", []):
+            if block.get("external_id") == external_id and block.get("action") == action: block.update(active=False, updated_at=now)
+        return data
+    _atomic_update_data(mutate)
+    return redirect(url_for("admin_wedof_requests"))
 
 
 def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> None:
@@ -33101,6 +33182,18 @@ def internal_cron_convocation_signature_reminders():
     result = run_convocation_signature_reminders()
     convocation_reminders = run_training_convocation_reminders()
     return jsonify({"ok": True, **result, "training_convocations": convocation_reminders})
+
+
+@app.post("/internal/cron/wedof-automation")
+def internal_cron_wedof_automation():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if not expected or not provided or not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not read_env_bool("WEDOF_DRY_RUN", default=False):
+        return jsonify({"ok": False, "status": "dry_run_required"}), 409
+    result = run_wedof_automation_dry_run()
+    return jsonify(result), (409 if result.get("status") == "already_running" else 200)
 
 
 @app.post("/internal/cron/cash-payment-reminders")

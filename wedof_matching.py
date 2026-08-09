@@ -67,6 +67,7 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
         "start_date": _nested(folder, "trainingActionInfo.sessionStartDate", "trainingActionInfo.startDate", "trainingActionInfo.session.startDate", "data.trainingActionInfo.sessionStartDate", "session.startDate", "session.sessionStartDate", "session.dateStart", "startDate", "dateStart"),
         "end_date": _nested(folder, "trainingActionInfo.sessionEndDate", "trainingActionInfo.endDate", "trainingActionInfo.session.endDate", "data.trainingActionInfo.sessionEndDate", "session.endDate", "session.sessionEndDate", "session.dateEnd", "endDate", "dateEnd"),
         "training_title": _nested(folder, "trainingActionInfo.title", "trainingActionInfo.name", "data.trainingActionInfo.title", "session.title", "trainingTitle"),
+        "training_duration": _nested(folder, "trainingActionInfo.trainingDuration", "trainingActionInfo.duration", "data.trainingActionInfo.trainingDuration", "trainingDuration"),
     }
 
 

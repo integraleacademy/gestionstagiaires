@@ -48,12 +48,12 @@ class WedofClient:
 
     def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Tuple[Any, Any]:
         try:
-            response = self._session.get(
-                f"{WEDOF_BASE_URL}{path}",
-                headers=self._headers,
-                params=params,
-                timeout=self._timeout,
-            )
+            for attempt in range(3):
+                response = self._session.get(f"{WEDOF_BASE_URL}{path}", headers=self._headers,
+                                             params=params, timeout=self._timeout)
+                if response.status_code != 429 or attempt == 2:
+                    break
+                time.sleep(min(2 ** attempt, 4))
         except requests.Timeout as exc:
             raise WedofApiError("L’API WEDOF n’a pas répondu dans le délai prévu.") from exc
         except requests.RequestException as exc:
@@ -95,7 +95,7 @@ class WedofClient:
 
     def list_registration_folders(self, state: str, *, limit: int = 100, max_pages: int = 100) -> List[Dict[str, Any]]:
         """Liste paginée en lecture seule les dossiers d'un état WEDOF."""
-        if state not in {"accepted", "inTraining"}:
+        if state not in {"accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated"}:
             raise ValueError("État WEDOF non autorisé pour la prévisualisation.")
         limit = max(1, min(int(limit), 100))
         results: List[Dict[str, Any]] = []
