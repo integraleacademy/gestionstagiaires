@@ -9,7 +9,16 @@
   let folder = {}, chosenSession = null, chosenTrainee = null, currentRow = null, timer;
   const esc = value => String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fr = value => value ? value.slice(0, 10).split('-').reverse().join('/') : '—';
-  async function json(url) { const response = await fetch(url, {headers:{Accept:'application/json'}}); if (!response.ok) throw new Error('Recherche indisponible.'); return response.json(); }
+  async function json(url) {
+    window.WedofLoading?.show();
+    try {
+      const response = await fetch(url, {headers:{Accept:'application/json'}});
+      if (!response.ok) throw new Error('Recherche indisponible.');
+      return response.json();
+    } finally {
+      window.WedofLoading?.hide();
+    }
+  }
   function dateWarnings() {
     const mismatch = !!chosenSession && (chosenSession.date_start !== folder.dateStart || chosenSession.date_end !== folder.dateEnd);
     document.querySelector('#wedof-date-warning').hidden = !mismatch;

@@ -66,6 +66,13 @@ class ManualLinkTests(unittest.TestCase):
         self.assertEqual(html.count("Associer manuellement</button>"), 4)
         self.assertNotIn('data-external-id="NONCPF"', html)
 
+    def test_wedof_page_includes_modern_loading_modal(self):
+        with patch.object(gestion_app, "load_data", return_value=local_data()), patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]):
+            html = self.client.get("/admin/wedof").get_data(as_text=True)
+        self.assertIn('id="wedof-loading-modal"', html)
+        self.assertIn("Mise à jour des dossiers WEDOF en cours", html)
+        self.assertIn("js/wedof-loading.js", html)
+
     def test_client_detail_is_get_only_with_api_key(self):
         response = Mock(status_code=200, headers={}); response.json.return_value = remote_folder()
         http = Mock(); http.get.return_value = response
