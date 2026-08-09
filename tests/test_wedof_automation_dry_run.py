@@ -6,7 +6,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import app as gestion_app
-from wedof_automation import (evaluate_action, is_wedof_maintenance_window,
+from wedof_automation import (automation_dashboard_state, evaluate_action, is_wedof_maintenance_window,
                               record_maintenance_skip, run_dry_run)
 from wedof_service import WedofApiError
 
@@ -37,8 +37,8 @@ class FailingClient(FakeClient):
 class WedofDryRunTests(unittest.TestCase):
     def test_maintenance_window_boundaries_and_no_business_mutation(self):
         paris = ZoneInfo("Europe/Paris")
-        expected = [(4, 59, False), (5, 0, True), (6, 10, True), (7, 5, True),
-                    (7, 29, True), (7, 30, False)]
+        expected = [(4, 59, False), (5, 0, True), (6, 10, True), (6, 59, True),
+                    (7, 0, False), (7, 5, False)]
         with patch.dict(os.environ, {}, clear=False):
             for hour, minute, active in expected:
                 with self.subTest(hour=hour, minute=minute):
@@ -71,7 +71,7 @@ class WedofDryRunTests(unittest.TestCase):
                                      "WEDOF_MAINTENANCE_END_TIME": "25:00"}, clear=False):
             result = is_wedof_maintenance_window(at_six)
             self.assertEqual((result["active"], result["start_time"], result["end_time"]),
-                             (True, "05:00", "07:30"))
+                             (True, "05:00", "07:00"))
         with patch.dict(os.environ, {"WEDOF_MAINTENANCE_START_TIME": "23:00",
                                      "WEDOF_MAINTENANCE_END_TIME": "02:00"}, clear=False):
             self.assertTrue(is_wedof_maintenance_window(dt.datetime(2026, 1, 1, 23, 30, tzinfo=paris))["active"])
@@ -79,7 +79,7 @@ class WedofDryRunTests(unittest.TestCase):
             self.assertFalse(is_wedof_maintenance_window(dt.datetime(2026, 1, 2, 2, 0, tzinfo=paris))["active"])
         # UTC instants are converted to Paris correctly on either side of DST.
         with patch.dict(os.environ, {"WEDOF_MAINTENANCE_START_TIME": "05:00",
-                                     "WEDOF_MAINTENANCE_END_TIME": "07:30"}, clear=False):
+                                     "WEDOF_MAINTENANCE_END_TIME": "07:00"}, clear=False):
             self.assertTrue(is_wedof_maintenance_window(dt.datetime(2026, 1, 10, 5, 10, tzinfo=dt.timezone.utc))["active"])
             self.assertTrue(is_wedof_maintenance_window(dt.datetime(2026, 7, 10, 4, 10, tzinfo=dt.timezone.utc))["active"])
 
@@ -88,7 +88,7 @@ class WedofDryRunTests(unittest.TestCase):
                      "wedof_automation_runs": [], "wedof_links": [{"external_id": "PRIVATE"}]}
         def atomic_update(mutator):
             mutator(canonical)
-        window = {"active": True, "start_time": "05:00", "end_time": "07:30", "timezone": "Europe/Paris"}
+        window = {"active": True, "start_time": "05:00", "end_time": "07:00", "timezone": "Europe/Paris"}
         with patch.object(gestion_app, "is_wedof_maintenance_window", return_value=window), \
              patch.object(gestion_app, "_atomic_update_data", side_effect=atomic_update), \
              patch.object(gestion_app, "WedofClient") as client_class:
@@ -176,14 +176,14 @@ class WedofDryRunTests(unittest.TestCase):
         client = gestion_app.app.test_client()
         with client.session_transaction() as flask_session: flask_session["admin_logged_in"] = True
         skipped = {"ok": True, "partial": False, "status": "skipped_maintenance_window", "mode": "dry_run",
-                   "maintenance_window": {"start_time": "05:00", "end_time": "07:30", "timezone": "Europe/Paris"}}
+                   "maintenance_window": {"start_time": "05:00", "end_time": "07:00", "timezone": "Europe/Paris"}}
         env = {"WEDOF_DRY_RUN": "true", "CRON_SECRET": "secret"}
         with patch.dict(os.environ, env, clear=False), patch.object(gestion_app, "run_wedof_automation_dry_run", return_value=skipped):
             admin = client.post("/admin/wedof/automation/analyze")
             self.assertEqual((admin.status_code, admin.headers["Location"].endswith("/admin/wedof")), (302, True))
             with client.session_transaction() as flask_session:
                 flashes = flask_session.get("_flashes", [])
-            self.assertTrue(any(category == "info" and "Analyse WEDOF suspendue entre 05:00 et 07:30" in message
+            self.assertTrue(any(category == "info" and "Analyse WEDOF suspendue entre 05:00 et 07:00" in message
                                 for category, message in flashes))
             cron = client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"})
             self.assertEqual(cron.status_code, 200)
@@ -197,6 +197,15 @@ class WedofDryRunTests(unittest.TestCase):
              patch("requests.post", return_value=Response()) as post:
             runpy.run_path("scripts/run_wedof_automation.py", run_name="__main__")
             post.assert_called_once()
+
+    def test_dashboard_global_states_follow_reliable_run_history(self):
+        self.assertEqual(automation_dashboard_state({"wedof_links": [{"external_id": "LOCAL"}]}),
+                         "never_synchronized")
+        cases = [("success", "synchronized"), ("partial_success", "partial_sync"),
+                 ("failed", "stale"), ("skipped_maintenance_window", "maintenance_skipped")]
+        for last_status, expected in cases:
+            data = {"wedof_automation_runs": [{"status": "success"}, {"status": last_status}]}
+            self.assertEqual(automation_dashboard_state(data), expected)
 
 
 if __name__ == "__main__": unittest.main()

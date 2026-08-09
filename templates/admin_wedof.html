@@ -23,16 +23,26 @@
     </div>
   </div>
   <p><strong>Dernière analyse automatique :</strong> {{ wedof_last_run.finished_at if wedof_last_run else 'Aucune analyse' }} (Europe/Paris)</p>
-  {% if wedof_last_run and wedof_last_run.status == 'skipped_maintenance_window' %}
+  {% if wedof_dashboard_state == 'never_synchronized' %}
+  <div class="card" role="status" style="background:#fef3c7;color:#92400e">
+    <strong>Données WEDOF non encore synchronisées.</strong>
+    {% if wedof_maintenance.active %}
+    <p>Première synchronisation en attente. L’analyse WEDOF est suspendue de 05:00 à 07:00, heure de Paris. La prochaine analyse automatique aura lieu après cette fenêtre.</p>
+    {% if wedof_next_attempt %}<p>Prochaine tentative automatique prévue à {{ wedof_next_attempt.strftime('%H:%M') }}.</p>{% endif %}
+    {% else %}<p>Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.</p>{% endif %}
+    {% if wedof_preview %}<p>Les lignes ci-dessous sont une prévisualisation temporaire et ne constituent pas l’instantané persistant de l’automatisation.</p>{% endif %}
+  </div>
+  {% endif %}
+  {% if wedof_dashboard_state == 'maintenance_skipped' %}
   <div class="card" role="status" style="background:#dbeafe;color:#1e3a8a">
-    <strong>Analyse WEDOF temporairement suspendue pendant la fenêtre habituelle d’indisponibilité de l’API, de 05:00 à 07:30, heure de Paris.</strong>
+    <strong>Analyse WEDOF temporairement suspendue entre 05:00 et 07:00, heure de Paris.</strong>
     <p>Les dernières données synchronisées restent affichées.</p>
     <div>Dernière tentative : {{ wedof_last_run.started_at or '—' }} (Europe/Paris)</div>
     <div>Dernière synchronisation réussie :
       {% set successes = (wedof_sync.states or {}).values() | selectattr('last_success_at') | map(attribute='last_success_at') | list %}
       {{ successes | max if successes else 'Jamais' }} (Europe/Paris)
     </div>
-    <div>Prochaine analyse automatique prévue : au premier cron horaire suivant la fin de la fenêtre.</div>
+    <div>Prochaine tentative automatique : {% if wedof_next_attempt %}{{ wedof_next_attempt.strftime('%H:%M') }}{% else %}au prochain cron horaire{% endif %}.</div>
   </div>
   {% endif %}
   {% if wedof_last_run and wedof_last_run.status == 'partial_success' %}
@@ -45,17 +55,26 @@
     {% endfor %}</ul>
   </div>
   {% endif %}
+  {% if wedof_dashboard_state == 'stale' %}
+  <div class="card" role="alert" style="background:#ffedd5;color:#9a3412">
+    <strong>Les données WEDOF affichées ne sont pas actualisées.</strong>
+    <p>La dernière tentative a échoué ; le dernier instantané synchronisé est conservé.</p>
+    <div>Dernière tentative : {{ wedof_sync.last_attempt_at or wedof_last_run.started_at or '—' }} (Europe/Paris)</div>
+    {% set successes = (wedof_sync.states or {}).values() | selectattr('last_success_at') | map(attribute='last_success_at') | list %}
+    <div>Dernière synchronisation réussie : {{ successes | max if successes else '—' }} (Europe/Paris)</div>
+  </div>
+  {% endif %}
   <p class="wedof-readonly"><strong>Mode lecture seule :</strong> aucune déclaration d’entrée en formation ou de service fait n’est envoyée à WEDOF.</p>
   <p class="wedof-readonly">La déclaration automatique supposera une réalisation totale, sauf blocage ou exception enregistrée avant son exécution.</p>
   {% set st = wedof_dashboard.stats %}
   <div class="wedof-counters" aria-label="Compteurs WEDOF">
   {% for key, label in [('accepted','Accepté'),('training','En formation'),('service','Service fait déclaré'),('anomaly','Anomalies'),('planned','Automatisations prévues'),('entry_success','Entrées en formation déclarées'),('service_success','Services faits déclarés'),('unlinked','Dossiers non rattachés localement')] %}
-    <div class="wedof-counter"><strong>{{ st[key] }}</strong><span>{{ label }}</span></div>
+    <div class="wedof-counter"><strong>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong><span>{{ label }}</span></div>
   {% endfor %}
   </div>
   <div class="wedof-tabs" role="tablist" aria-label="États des dossiers WEDOF">
   {% for key, label in [('accepted','Accepté'),('training','En formation'),('service','Service fait déclaré'),('anomaly','Anomalie')] %}
-    <button type="button" role="tab" class="wedof-tab{% if loop.first %} is-active{% endif %}" data-wedof-tab="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">{{ label }} <span>{{ st[key] }}</span></button>
+    <button type="button" role="tab" class="wedof-tab{% if loop.first %} is-active{% endif %}" data-wedof-tab="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">{{ label }}{% if wedof_dashboard_state != 'never_synchronized' %} <span>{{ st[key] }}</span>{% endif %}</button>
   {% endfor %}
   </div>
   <p class="muted wedof-scroll-hint">Faites défiler le tableau horizontalement si votre écran ne permet pas d’afficher toutes les colonnes.</p>
@@ -91,7 +110,7 @@
             <details><summary class="btn btn-outline">Voir détails</summary><div class="wedof-details"><strong>État WEDOF :</strong> {{ item.state or '—' }}<br><strong>Formation :</strong> {{ item.training_title or '—' }}<br><strong>Email :</strong> {{ item.email or '—' }}<br><strong>Téléphone :</strong> {{ item.phone or '—' }}{% if item.anomaly_reasons %}<br><strong>Blocage :</strong> {{ item.anomaly_reasons|join(' · ') }}{% endif %}</div></details>
           </div></td>
         </tr>
-      {% else %}<tr data-wedof-empty><td colspan="8" class="muted">Lancez l’analyse pour charger les dossiers WEDOF.</td></tr>{% endfor %}
+      {% else %}<tr data-wedof-empty><td colspan="8" class="muted">{% if wedof_dashboard_state == 'never_synchronized' %}Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.{% else %}Aucun dossier WEDOF dans cet instantané synchronisé.{% endif %}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

@@ -78,6 +78,36 @@ class WedofDashboardViewTests(unittest.TestCase):
         for method in ("post", "put", "patch", "delete"):
             getattr(remote, method).assert_not_called()
 
+    def test_never_synchronized_uses_dashes_and_explains_empty_snapshot(self):
+        data = {"sessions": [], "wedof_links": [], "wedof_automation_status": [],
+                "wedof_automation_runs": [], "wedof_automation_sync": {}}
+        maintenance = {"active": False, "start_time": "05:00", "end_time": "07:00",
+                       "timezone": "Europe/Paris"}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "is_wedof_maintenance_window", return_value=maintenance):
+            html = self.client.get("/admin/wedof").get_data(as_text=True)
+        self.assertIn("Données WEDOF non encore synchronisées.", html)
+        self.assertIn("Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.", html)
+        self.assertIn("<strong>—</strong>", html)
+        self.assertNotIn("Accepté <span>0</span>", html)
+
+    def test_successful_empty_snapshot_displays_real_zero(self):
+        data = {"sessions": [], "wedof_links": [], "wedof_automation_status": [],
+                "wedof_automation_runs": [{"status": "success", "started_at": "2026-08-09T07:05:00+02:00",
+                                             "finished_at": "2026-08-09T07:05:01+02:00"}],
+                "wedof_automation_sync": {"states": {state: {"last_success_at": "2026-08-09T07:05:00+02:00"}
+                                                       for state in ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated")}}}
+        maintenance = {"active": False, "start_time": "05:00", "end_time": "07:00",
+                       "timezone": "Europe/Paris"}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "is_wedof_maintenance_window", return_value=maintenance):
+            html = self.client.get("/admin/wedof").get_data(as_text=True)
+        self.assertNotIn("Données WEDOF non encore synchronisées.", html)
+        self.assertIn("Accepté <span>0</span>", html)
+        self.assertIn("<strong>0</strong><span>Accepté</span>", html)
+
 
 if __name__ == "__main__":
     unittest.main()
