@@ -2314,7 +2314,7 @@
       });
       let res = await r.json();
       if(r.status === 409 && res.error === "wedof_date_change_confirmation_required"){
-        const ok = await AppModal.confirm({type:"warning", title:"Dates et dossiers WEDOF", message:`Cette session est liée à ${res.wedof_links_count} dossier(s) WEDOF. Modifier les dates locales ne modifiera pas WEDOF et pourra bloquer les déclarations automatiques. Je confirme la modification sans modification automatique dans WEDOF.`, primaryText:"Je confirme"});
+        const ok = await AppModal.confirm({type:"warning", title:"Dates et dossiers WEDOF", message:`Cette session est liée à ${res.wedof_links_count} dossier(s) WEDOF. Les dates modifiées ici ne modifieront pas les dates WEDOF. Les automatisations continueront à utiliser les dates enregistrées dans WEDOF.`, primaryText:"Je confirme"});
         if(!ok) return;
         payload.confirm_wedof_date_change = true;
         r = await fetch(`/api/sessions/${currentEditSessionId}/update`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
