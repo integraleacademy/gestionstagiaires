@@ -69,28 +69,33 @@ class WedofClient:
         self._backoff = _bounded_env("WEDOF_GET_BACKOFF_SECONDS", 1, 0, 10)
         self._page_limit = _bounded_env("WEDOF_PAGE_LIMIT", 50, 10, 100, integer=True)
 
-    def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Tuple[Any, Any]:
+    def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None,
+                           timeout: Optional[Tuple[float, float]] = None,
+                           max_attempts: Optional[int] = None, backoff: Optional[float] = None) -> Tuple[Any, Any]:
         response = None
-        for attempt in range(1, self._max_attempts + 1):
+        request_timeout = timeout or self._timeout
+        attempts = self._max_attempts if max_attempts is None else max(1, int(max_attempts))
+        retry_backoff = self._backoff if backoff is None else max(0, float(backoff))
+        for attempt in range(1, attempts + 1):
             started = time.monotonic()
             try:
                 response = self._session.get(f"{WEDOF_BASE_URL}{path}", headers=self._headers,
-                                             params=params, timeout=self._timeout)
+                                             params=params, timeout=request_timeout)
             except requests.Timeout as exc:
                 logger.warning("WEDOF GET path=%s etat=%s page=%s tentative=%s erreur=timeout duree=%.3f",
                                path, (params or {}).get("state"), (params or {}).get("page"), attempt,
                                time.monotonic() - started)
-                if attempt == self._max_attempts:
+                if attempt == attempts:
                     raise WedofApiError("L’API WEDOF n’a pas répondu dans le délai prévu.", "wedof_timeout", True) from exc
-                time.sleep(self._backoff * (2 ** (attempt - 1)))
+                time.sleep(retry_backoff * (2 ** (attempt - 1)))
                 continue
             except requests.ConnectionError as exc:
                 logger.warning("WEDOF GET path=%s etat=%s page=%s tentative=%s erreur=connexion duree=%.3f",
                                path, (params or {}).get("state"), (params or {}).get("page"), attempt,
                                time.monotonic() - started)
-                if attempt == self._max_attempts:
+                if attempt == attempts:
                     raise WedofApiError("Impossible de se connecter à l’API WEDOF.", "wedof_connection_error", True) from exc
-                time.sleep(self._backoff * (2 ** (attempt - 1)))
+                time.sleep(retry_backoff * (2 ** (attempt - 1)))
                 continue
             except requests.RequestException as exc:
                 raise WedofApiError("Impossible de se connecter à l’API WEDOF.", "wedof_connection_error") from exc
@@ -99,9 +104,9 @@ class WedofClient:
             logger.info("WEDOF GET path=%s etat=%s page=%s tentative=%s code_http=%s duree=%.3f",
                         path, (params or {}).get("state"), (params or {}).get("page"), attempt,
                         response.status_code, time.monotonic() - started)
-            if not retryable_status or attempt == self._max_attempts:
+            if not retryable_status or attempt == attempts:
                 break
-            delay = self._backoff * (2 ** (attempt - 1))
+            delay = retry_backoff * (2 ** (attempt - 1))
             if response.status_code in {429, 503}:
                 try:
                     delay = min(15, max(0, float((getattr(response, "headers", {}) or {}).get("Retry-After"))))
@@ -178,6 +183,18 @@ class WedofClient:
         if not identifier or "/" in identifier:
             raise WedofApiError("L’identifiant du dossier WEDOF est invalide.")
         payload = self._get_json(f"/registrationFolders/{identifier}")
+        if not isinstance(payload, dict):
+            raise WedofApiError("La réponse WEDOF concernant le dossier est inattendue.")
+        return payload
+
+    def get_registration_folder_interactive(self, external_id: str) -> Dict[str, Any]:
+        """Lecture utilisateur bornée, sans retry ni attente Retry-After."""
+        identifier = str(external_id or "").strip()
+        if not identifier or "/" in identifier:
+            raise WedofApiError("L’identifiant du dossier WEDOF est invalide.")
+        payload = self._get_json_response(
+            f"/registrationFolders/{identifier}", timeout=(3, 8), max_attempts=1, backoff=0
+        )[0]
         if not isinstance(payload, dict):
             raise WedofApiError("La réponse WEDOF concernant le dossier est inattendue.")
         return payload

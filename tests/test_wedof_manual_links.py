@@ -51,7 +51,7 @@ class ManualLinkTests(unittest.TestCase):
         self.assertEqual(anonymous.post("/admin/wedof/matching/manual-link").status_code, 302)
 
     def test_folder_detail_is_minimal_get_only_and_handles_unavailability(self):
-        remote = Mock(); remote.get_registration_folder.return_value = remote_folder(
+        remote = Mock(); remote.get_registration_folder_interactive.return_value = remote_folder(
             attendee={"firstName": "Stéphane", "lastName": "BERTIN", "email": "s@example.fr",
                       "phoneNumber": "0612345678", "address": "secret"}, financialData={"price": 1000})
         with patch.object(gestion_app, "WedofClient", return_value=remote):
@@ -59,10 +59,10 @@ class ManualLinkTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(set(response.json), {"external_id", "state", "type", "first_name", "last_name",
                                               "email", "phone", "date_start", "date_end"})
-        remote.get_registration_folder.assert_called_once_with("W1")
+        remote.get_registration_folder_interactive.assert_called_once_with("W1")
         for method in ("post", "put", "patch", "delete"):
             getattr(remote, method).assert_not_called()
-        unavailable = Mock(); unavailable.get_registration_folder.side_effect = gestion_app.WedofApiError("indisponible")
+        unavailable = Mock(); unavailable.get_registration_folder_interactive.side_effect = gestion_app.WedofApiError("indisponible")
         with patch.object(gestion_app, "WedofClient", return_value=unavailable):
             failed = self.client.get("/admin/wedof/matching/manual/folder?external_id=W1")
         self.assertEqual(failed.status_code, 503)
@@ -102,11 +102,19 @@ class ManualLinkTests(unittest.TestCase):
         for method in ("post", "put", "patch", "delete"):
             getattr(http, method).assert_not_called()
 
+    def test_interactive_client_has_short_timeout_and_one_attempt(self):
+        response = Mock(status_code=503, headers={})
+        http = Mock(); http.get.return_value = response
+        with self.assertRaises(gestion_app.WedofApiError):
+            WedofClient(api_key="test-key", session=http).get_registration_folder_interactive("W1")
+        self.assertEqual(http.get.call_count, 1)
+        self.assertEqual(http.get.call_args.kwargs["timeout"], (3, 8))
+
     def _post(self, payload, folder=None):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "data.json")
         with open(path, "w", encoding="utf-8") as stream: json.dump(local_data(), stream)
-        remote = Mock(); remote.get_registration_folder.return_value = folder or remote_folder()
+        remote = Mock(); remote.get_registration_folder_interactive.return_value = folder or remote_folder()
         patches = [patch.object(gestion_app, "DATA_FILE", path), patch.object(gestion_app, "BACKUP_DIR", tmp.name),
                    patch.object(gestion_app, "WedofClient", return_value=remote)]
         for item in patches: item.start(); self.addCleanup(item.stop)
@@ -154,10 +162,40 @@ class ManualLinkTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         path = os.path.join(tmp.name, "data.json")
         with open(path, "w", encoding="utf-8") as stream: json.dump(local_data(), stream)
-        remote = Mock(); remote.get_registration_folder.return_value = remote_folder()
+        remote = Mock(); remote.get_registration_folder_interactive.return_value = remote_folder()
         with patch.object(gestion_app, "DATA_FILE", path), patch.object(gestion_app, "BACKUP_DIR", tmp.name), patch.object(gestion_app, "WedofClient", return_value=remote):
             response = self.client.post("/admin/wedof/matching/manual-link", data={"external_id":"W1", "session_id":"S1", "trainee_id":"T1", "confirm_manual_link":"1"})
         self.assertEqual(response.status_code, 302)
+
+    def test_manual_link_falls_back_to_reliable_snapshot(self):
+        tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "data.json")
+        data = local_data()
+        data["wedof_automation_status"] = [{"external_id": "W1", "wedof_type": "cpf",
+            "wedof_state": "accepted", "wedof_date_start": "2026-09-07", "wedof_date_end": "2026-10-09",
+            "last_checked_at": "2026-08-10T08:00:00+02:00"}]
+        with open(path, "w", encoding="utf-8") as stream: json.dump(data, stream)
+        remote = Mock(); remote.get_registration_folder_interactive.side_effect = gestion_app.WedofApiError("timeout")
+        with patch.object(gestion_app, "DATA_FILE", path), patch.object(gestion_app, "BACKUP_DIR", tmp.name), \
+             patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.post("/admin/wedof/matching/manual-link", data={"external_id": "W1",
+                "session_id": "S1", "trainee_id": "T1", "confirm_manual_link": "1"},
+                headers={"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["verification_source"], "cached_wedof_snapshot")
+        self.assertIn("dernier instantané", response.json["message"])
+
+    def test_manual_link_refuses_unreliable_snapshot(self):
+        tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
+        path = os.path.join(tmp.name, "data.json")
+        with open(path, "w", encoding="utf-8") as stream: json.dump(local_data(), stream)
+        remote = Mock(); remote.get_registration_folder_interactive.side_effect = gestion_app.WedofApiError("timeout")
+        with patch.object(gestion_app, "DATA_FILE", path), patch.object(gestion_app, "BACKUP_DIR", tmp.name), \
+             patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.post("/admin/wedof/matching/manual-link", data={"external_id": "W1",
+                "session_id": "S1", "trainee_id": "T1", "confirm_manual_link": "1"},
+                headers={"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"})
+        self.assertEqual(response.status_code, 503)
 
 
 if __name__ == "__main__":

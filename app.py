@@ -16296,16 +16296,23 @@ def admin_wedof_manual_trainees():
 @admin_login_required
 def admin_wedof_manual_folder():
     """Relit un dossier pour la modale sans exposer son contenu WEDOF brut."""
+    started_at = time.monotonic()
     external_id = str(request.args.get("external_id") or "").strip()
+    reference = hashlib.sha256(external_id.encode("utf-8")).hexdigest()[:10] if external_id else "missing"
+    app.logger.info("WEDOF interactif début route=manual_folder external_ref=%s", reference)
     if not external_id:
         return jsonify({"ok": False, "message": "Le numéro WEDOF est obligatoire."}), 400
     try:
-        wedof = extract_folder(WedofClient().get_registration_folder(external_id))
-    except (WedofConfigurationError, WedofApiError):
-        return jsonify({"ok": False, "message": "Les informations WEDOF sont temporairement indisponibles."}), 503
+        wedof = extract_folder(WedofClient().get_registration_folder_interactive(external_id))
+    except (WedofConfigurationError, WedofApiError) as exc:
+        app.logger.warning("WEDOF interactif fin route=manual_folder succès=false code=%s external_ref=%s durée_ms=%s",
+                           getattr(exc, "code", "wedof_configuration_error"), reference,
+                           round((time.monotonic() - started_at) * 1000))
+        return jsonify({"ok": False, "code": "wedof_temporarily_unavailable",
+                        "message": "Les informations WEDOF sont temporairement indisponibles."}), 503
     if str(wedof.get("external_id") or "") != external_id:
         return jsonify({"ok": False, "message": "L’identifiant retourné par WEDOF ne correspond pas au dossier demandé."}), 400
-    return jsonify({
+    response = jsonify({
         "external_id": external_id,
         "state": str(wedof.get("state") or ""),
         "type": str(wedof.get("type") or ""),
@@ -16316,6 +16323,9 @@ def admin_wedof_manual_folder():
         "date_start": normalize_date(wedof.get("start_date")),
         "date_end": normalize_date(wedof.get("end_date")),
     })
+    app.logger.info("WEDOF interactif fin route=manual_folder succès=true code=ok source=live external_ref=%s durée_ms=%s",
+                    reference, round((time.monotonic() - started_at) * 1000))
+    return response
 
 
 def _manual_link_response(message: str, status: int, *, result: Optional[Dict[str, Any]] = None):
@@ -16331,16 +16341,29 @@ def _manual_link_response(message: str, status: int, *, result: Optional[Dict[st
 @app.post("/admin/wedof/matching/manual-link")
 @admin_login_required
 def admin_wedof_manual_link():
+    started_at = time.monotonic()
     external_id = str(request.form.get("external_id") or "").strip()
     session_id = str(request.form.get("session_id") or "").strip()
     trainee_id = str(request.form.get("trainee_id") or "").strip()
     if request.form.get("confirm_manual_link") not in {"1", "true", "on"}:
         return _manual_link_response("La confirmation manuelle est obligatoire.", 400)
+    verification_source = "live_wedof"
     try:
-        folder = WedofClient().get_registration_folder(external_id)
+        folder = WedofClient().get_registration_folder_interactive(external_id)
         wedof = extract_folder(folder)
-    except (WedofConfigurationError, WedofApiError) as exc:
-        return _manual_link_response(str(exc), 400)
+    except (WedofConfigurationError, WedofApiError):
+        snapshot_data = load_data(run_background_tasks=False)
+        snapshot = next((item for item in snapshot_data.get("wedof_automation_status", [])
+                         if isinstance(item, dict) and str(item.get("external_id") or "") == external_id
+                         and item.get("last_checked_at")), None)
+        if snapshot is None:
+            app.logger.warning("WEDOF interactif route=manual_link succès=false code=no_reliable_snapshot durée_ms=%s",
+                               round((time.monotonic() - started_at) * 1000))
+            return _manual_link_response("WEDOF est indisponible et aucun instantané fiable n’existe pour ce dossier.", 503)
+        verification_source = "cached_wedof_snapshot"
+        wedof = {"external_id": snapshot.get("external_id"), "type": snapshot.get("wedof_type"),
+                 "state": snapshot.get("wedof_state"), "start_date": snapshot.get("wedof_date_start"),
+                 "end_date": snapshot.get("wedof_date_end")}
     if str(wedof.get("external_id") or "") != external_id:
         return _manual_link_response("L’identifiant retourné par WEDOF ne correspond pas au dossier demandé.", 400)
     if str(wedof.get("type") or "").strip().casefold() != "cpf":
@@ -16387,9 +16410,15 @@ def admin_wedof_manual_link():
         return _manual_link_response(result["error"], 400)
     if result.get("outcome") == "conflict":
         return _manual_link_response("Conflit avec une association existante. Aucun lien n’a été remplacé.", 409)
-    message = "Association locale enregistrée. Aucune déclaration n’a été envoyée à WEDOF."
+    message = ("Association locale enregistrée à partir du dernier instantané WEDOF connu. "
+               "Aucune déclaration n’a été envoyée à WEDOF." if verification_source == "cached_wedof_snapshot" else
+               "Association locale enregistrée. Aucune déclaration n’a été envoyée à WEDOF.")
     public_result = {key: result[key] for key in ("session", "trainee", "unlinked_count")}
     public_result["association"] = "Association manuelle administrateur"
+    public_result["verification_source"] = verification_source
+    app.logger.info("WEDOF interactif route=manual_link succès=true code=ok source=%s external_ref=%s durée_ms=%s",
+                    verification_source, hashlib.sha256(external_id.encode("utf-8")).hexdigest()[:10],
+                    round((time.monotonic() - started_at) * 1000))
     return _manual_link_response(message, 200, result=public_result)
 
 

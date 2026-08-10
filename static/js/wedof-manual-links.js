@@ -24,11 +24,30 @@
     feedback.style.background = error ? '#fee2e2' : '#dcfce7';
     feedback.textContent = message;
   };
-  async function getJson(url) {
-    const response = await fetch(url, {headers: {Accept: 'application/json'}});
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.message || 'Recherche indisponible.');
-    return payload;
+  async function getJson(url, {timeoutMs = 15000, ...options} = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {...options, signal: controller.signal,
+        headers: {Accept: 'application/json', ...(options.headers || {})}});
+      let payload;
+      try { payload = await response.json(); } catch (_) { throw new Error('Réponse serveur illisible. Réessayez.'); }
+      if (!response.ok) {
+        const error = new Error(payload.message || 'Recherche indisponible.');
+        error.code = payload.code || `http_${response.status}`;
+        throw error;
+      }
+      return payload;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error('La recherche locale n’a pas répondu dans le délai prévu. Réessayez.');
+        timeoutError.code = 'client_timeout';
+        throw timeoutError;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
   function renderFolder() {
     const identity = [folder.firstName, folder.lastName].filter(Boolean).join(' ') || folder.identity || '—';
@@ -63,7 +82,7 @@
       params.set('first_name', folder.firstName || '');
       params.set('last_name', folder.lastName || '');
     }
-    const payload = await getJson(`/admin/wedof/matching/manual/sessions?${params}`);
+    const payload = await getJson(`/admin/wedof/matching/manual/sessions?${params}`, {timeoutMs: 15000});
     sessionResults.innerHTML = '';
     const help = document.querySelector('#wedof-session-help');
     help.textContent = suggested && !payload.items.length
@@ -105,7 +124,7 @@
   }
   async function trainees(query = '') {
     if (!chosenSession) return;
-    const payload = await getJson(`/admin/wedof/matching/manual/trainees?session_id=${encodeURIComponent(chosenSession.id)}&q=${encodeURIComponent(query)}`);
+    const payload = await getJson(`/admin/wedof/matching/manual/trainees?session_id=${encodeURIComponent(chosenSession.id)}&q=${encodeURIComponent(query)}`, {timeoutMs: 15000});
     traineeResults.innerHTML = '';
     payload.items.forEach(item => {
       const button = document.createElement('button');
@@ -134,23 +153,33 @@
     renderFolder();
     dateWarnings();
     modal.showModal();
-    window.WedofLoading?.show();
-    try {
-      const detail = await getJson(`/admin/wedof/matching/manual/folder?external_id=${encodeURIComponent(folder.externalId)}`);
+    sessionSearch.disabled = false;
+    const liveStatus = document.querySelector('#wedof-live-status');
+    liveStatus.textContent = 'Récupération des informations WEDOF…';
+    liveStatus.hidden = false;
+
+    const localPromise = sessions('').then(items => {
+      const preset = items.find(item => item.id === button.dataset.sessionId);
+      if (preset) return selectSession(preset, sessionResults.children[items.indexOf(preset)]);
+      return null;
+    }).catch(error => { showFeedback(error.message, true); });
+    const remotePromise = getJson(
+      `/admin/wedof/matching/manual/folder?external_id=${encodeURIComponent(folder.externalId)}`,
+      {timeoutMs: 8000}
+    ).then(async detail => {
       folder = {...folder, state: detail.state || folder.state, firstName: detail.first_name,
         lastName: detail.last_name, email: detail.email, phone: detail.phone,
         dateStart: detail.date_start || folder.dateStart, dateEnd: detail.date_end || folder.dateEnd};
       renderFolder();
       dateWarnings();
-      const items = await sessions('', true);
-      const preset = items.find(item => item.id === button.dataset.sessionId);
-      if (preset) selectSession(preset, sessionResults.children[items.indexOf(preset)]);
-    } catch (error) {
-      showFeedback(`${error.message} La recherche locale reste disponible.`, true);
-      try { await sessions(''); } catch (sessionError) { showFeedback(sessionError.message, true); }
-    } finally {
-      window.WedofLoading?.hide();
-    }
+      liveStatus.textContent = 'Vérification WEDOF en direct effectuée.';
+    }).catch(error => {
+      liveStatus.textContent = error.code === 'client_timeout'
+        ? 'WEDOF met trop de temps à répondre. La recherche locale reste disponible.'
+        : 'Vérification WEDOF en direct indisponible — dernier instantané utilisé.';
+      showFeedback('Les informations détaillées WEDOF n’ont pas pu être actualisées. Vous pouvez continuer le rattachement à partir du dernier instantané connu.', true);
+    });
+    await Promise.allSettled([localPromise, remotePromise]);
   }
 
   document.addEventListener('click', event => {
@@ -171,13 +200,12 @@
       return;
     }
     event.preventDefault();
-    window.WedofLoading?.show();
+    window.WedofLoading?.forceHide();
+    const loadingToken = window.WedofLoading?.show();
     try {
-      const response = await fetch(form.action, {method: 'POST', headers: {
+      const payload = await getJson(form.action, {timeoutMs: 30000, method: 'POST', headers: {
         Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest',
       }, body: new FormData(form)});
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || 'Association impossible.');
       currentRow.querySelector('[data-local-session]').textContent = payload.session;
       currentRow.querySelector('[data-local-trainee]').textContent = payload.trainee;
       const badge = currentRow.querySelector('[data-local-association-badge]');
@@ -191,7 +219,8 @@
     } catch (error) {
       showFeedback(error.message, true);
     } finally {
-      window.WedofLoading?.hide();
+      if (loadingToken) window.WedofLoading?.hide(loadingToken);
     }
   });
+  window.addEventListener('pagehide', () => window.WedofLoading?.forceHide());
 })();
