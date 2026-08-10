@@ -32317,6 +32317,97 @@ def api_billing_create_mandate():
         _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': False, 'error': format_qonto_error_for_front(exc)}), 400
 
+
+@app.post('/api/billing/reschedule-rejected-debit')
+@admin_login_required
+@admin_write_required
+def api_billing_reschedule_rejected_debit():
+    """Replace a rejected SEPA collection with a new one-off collection."""
+    data = load_data()
+    payload = request.get_json(silent=True) or {}
+    line = _line_from_payload(data, payload)
+    if not line:
+        return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+
+    installments = line.get('directDebitInstallments')
+    try:
+        installment_index = int(payload.get('installmentIndex'))
+    except (TypeError, ValueError):
+        installment_index = -1
+    if not isinstance(installments, list) or not (0 <= installment_index < len(installments)):
+        return jsonify({'ok': False, 'error': 'Prélèvement rejeté introuvable'}), 400
+
+    installment = installments[installment_index]
+    rejected_statuses = {'failed', 'returned', 'rejected', 'refunded'}
+    if str(installment.get('status') or '').lower() not in rejected_statuses:
+        return jsonify({'ok': False, 'error': 'Ce prélèvement n’est pas rejeté'}), 400
+
+    collection_date = str(payload.get('collectionDate') or '')[:10]
+    parsed_date = _parse_date_safe(collection_date)
+    if not parsed_date or parsed_date <= datetime.date.today():
+        return jsonify({'ok': False, 'error': 'Choisissez une date de prélèvement future'}), 400
+
+    mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '').strip()
+    client_id = str(line.get('qontoClientId') or line.get('qontoCustomerId') or '').strip()
+    if not mandate_id or not client_id:
+        return jsonify({'ok': False, 'error': 'Mandat ou client Qonto introuvable'}), 400
+
+    try:
+        _ensure_qonto_oauth_ready()
+        amount = _money(installment.get('amount'))
+        invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
+        reference = f"{invoice_ref} - reprogrammation échéance {installment_index + 1}/{len(installments)}"
+        response = create_qonto_direct_debit_subscription({
+            'client_id': client_id,
+            'bank_account_id': get_qonto_bank_account_id(),
+            'initial_collection_date': collection_date,
+            'amount': {'value': f'{amount:.2f}', 'currency': 'EUR'},
+            'reference': reference,
+            'notify_client': True,
+            'schedule_type': 'one_off',
+            'direct_debit_mandate_id': mandate_id,
+            'send_mandate_signature_email': True,
+        })
+        subscription = response.get('direct_debit_subscription') or response.get('subscription') or response
+        subscription_id = str(subscription.get('id') or '').strip() if isinstance(subscription, dict) else ''
+        if not subscription_id:
+            raise RuntimeError('Qonto n’a pas confirmé la reprogrammation du prélèvement')
+
+        history = installment.get('reprogramming_history')
+        if not isinstance(history, list):
+            history = []
+        history.append({
+            'date': installment.get('due_date') or installment.get('date') or '',
+            'status': installment.get('status') or '',
+            'failureReason': installment.get('failureReason') or installment.get('status_reason') or '',
+            'qonto_direct_debit_subscription_id': installment.get('qonto_direct_debit_subscription_id') or '',
+            'reprogrammed_at': _now_iso(),
+        })
+        installment.update({
+            'date': collection_date,
+            'due_date': collection_date,
+            'status': 'scheduled',
+            'failureReason': '',
+            'status_reason': '',
+            'qonto_direct_debit_subscription_id': subscription_id,
+            'reprogramming_history': history,
+            'updated_at': _now_iso(),
+        })
+        _sync_sepa_aliases(line)
+        _billing_log(line, 'Prélèvement rejeté reprogrammé', 'success', reference, subscription_id)
+        _save_billing_line(data, line)
+        save_data(data)
+        return jsonify({
+            'ok': True,
+            'message': f'Prélèvement reprogrammé le {fr_date(collection_date)}',
+            'line': _find_billing_line(data, line['id']),
+        })
+    except Exception as exc:
+        _billing_log(line, 'Erreur reprogrammation prélèvement rejeté', 'error', _sanitize_qonto_error(str(exc)))
+        _save_billing_line(data, line)
+        save_data(data)
+        return jsonify({'ok': False, 'error': format_qonto_error_for_front(exc)}), 400
+
 @app.post('/api/billing/sync-qonto')
 @admin_login_required
 @admin_write_required
