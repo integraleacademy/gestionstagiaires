@@ -132,9 +132,24 @@ def _action_record(status: str, date_value: Optional[str], time_value: str, now:
 
 
 def _is_blocked(blocks: Iterable[Dict[str, Any]], external_id: str, action: str) -> bool:
+    if isinstance(blocks, dict):
+        return bool(_indexed_block(blocks, external_id, action))
     return any(isinstance(x, dict) and x.get("active") is True
                and str(x.get("external_id") or "") == external_id
                and x.get("action") in {action, "both"} for x in blocks)
+
+
+def _active_blocks_by_key(blocks: Iterable[Dict[str, Any]]) -> Dict[tuple[str, str], Dict[str, Any]]:
+    """Indexe les blocages actifs; ``both`` est résolu lors de la lecture."""
+    return {(str(block.get("external_id") or ""), str(block.get("action") or "")): block
+            for block in blocks if isinstance(block, dict) and block.get("active") is True}
+
+
+def _indexed_block(index: Dict[tuple[str, str], Dict[str, Any]], external_id: str,
+                   action: Optional[str]) -> Optional[Dict[str, Any]]:
+    if not action:
+        return None
+    return index.get((external_id, action)) or index.get((external_id, "both"))
 
 
 def evaluate_action(folder: Dict[str, Any], action: str, *, now: Optional[dt.datetime] = None,
@@ -226,7 +241,8 @@ def run_dry_run(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime]
         # Un état actualisé remplace son ancien instantané; un état indisponible reste intact.
         existing = {key: row for key, row in existing.items() if row.get("wedof_state") not in succeeded_states}
         links = {str(x.get("external_id") or "") for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active") is True}
-        blocks = data.get("wedof_automation_blocks", data.get("wedof_automation_exceptions", []))
+        blocks = _active_blocks_by_key(
+            data.get("wedof_automation_blocks", data.get("wedof_automation_exceptions", [])))
         for state, folders in folders_by_state.items():
             for folder in folders:
                 remote = extract_folder(folder)
@@ -325,7 +341,6 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         data["wedof_automation_runs"][-1]["mode"] = "live"
         return result
     actions = data.setdefault("wedof_automation_actions", [])
-    blocks = data.get("wedof_automation_blocks", data.get("wedof_automation_exceptions", []))
     counts = {"entry_success": 0, "service_done_success": 0, "already_done": 0,
               "blocked": 0, "errors": 0, "uncertain": 0}
     # Listing selects candidates only. Every mutation is guarded by a fresh per-folder GET.
@@ -339,8 +354,18 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         external_id = str(extract_folder(listed).get("external_id") or "").strip()
         if not external_id:
             continue
+        # La donnée persistante est relue avant toute réservation et même avant le GET distant.
+        block = _indexed_block(_active_blocks_by_key(data.get("wedof_automation_blocks", [])), external_id, action)
         existing = next((x for x in actions if isinstance(x, dict) and
                          x.get("external_id") == external_id and x.get("action") == action), None)
+        if block:
+            journal = existing or _new_action(external_id, action, "", current)
+            if not existing:
+                actions.append(journal)
+            if journal.get("status") not in {"success", "already_done"}:
+                journal.update(status="blocked", updated_at=current.isoformat(), last_error_code="manual_block")
+                counts["blocked"] += 1
+            continue
         expected_done = ENTRY_DONE_STATES if action == "entry_training" else SERVICE_DONE_STATES
         try:
             fresh = client.get_registration_folder(external_id)
@@ -362,7 +387,8 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             _set_dashboard_action(data, external_id, action, fresh, journal, current)
             counts["already_done"] += 1
             continue
-        record, payload = evaluate_action(fresh, action, now=current, blocks=blocks)
+        record, payload = evaluate_action(fresh, action, now=current,
+                                          blocks=data.get("wedof_automation_blocks", []))
         if record["status"] == "planned" or record["status"] == "anomaly":
             continue
         business_date = record.get("planned_date") or ""
@@ -388,6 +414,13 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         _set_dashboard_action(data, external_id, action, fresh, journal, current)
         if persist_reservation:
             persist_reservation(data)
+        # Un administrateur peut bloquer entre la sélection/réservation et la mutation distante.
+        if _indexed_block(_active_blocks_by_key(data.get("wedof_automation_blocks", [])), external_id, action):
+            journal.update(status="blocked", updated_at=current.isoformat(), last_error_code="manual_block",
+                           processing_started_at=None)
+            _set_dashboard_action(data, external_id, action, fresh, journal, current)
+            counts["blocked"] += 1
+            continue
         try:
             if action == "entry_training":
                 client.declare_registration_folder_in_training(external_id, business_date)
@@ -444,6 +477,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                           if isinstance(x, dict)}
     rows = []
     status_by_id = {str(x.get("external_id") or ""): x for x in statuses if isinstance(x, dict)}
+    blocks_by_key = _active_blocks_by_key(exceptions)
     seen = set()
     for item in folders:
         if not isinstance(item, dict): continue
@@ -451,6 +485,11 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         state, history = remote.get("state", ""), status_by_id.get(external_id, {})
         action = history.get("entry_training", {}) if state == "accepted" else history.get("service_done", {})
         value = action.get("status") or "planned"
+        automation_action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
+        block = _indexed_block(blocks_by_key, external_id, automation_action)
+        underlying = value
+        if block:
+            value = "blocked"
         anomaly = (state not in AUTOMATABLE_STATES | SERVICE_DONE_STATES or not external_id or
                    remote.get("type", "").casefold() != "cpf" or not normalize_date(remote.get("start_date")) or
                    not normalize_date(remote.get("end_date")) or value in {"anomaly", "blocked", "dry_run_due_late"})
@@ -465,6 +504,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "wedof_date_start": date_start, "wedof_date_end": date_end,
                      "start_date": date_start, "end_date": date_end,
                      "automation_status": value, "automation_planned": value == "planned",
+                     "automation_action": automation_action, "automation_blocked": bool(block),
+                     "active_block": block, "underlying_automation_status": underlying if block else None,
+                     "block_reason_code": (block or {}).get("reason_code"), "block_comment": (block or {}).get("comment"),
+                     "block_created_at": (block or {}).get("created_at"), "block_updated_at": (block or {}).get("updated_at"),
                      "planned_date": action.get("planned_date") or (remote.get("start_date") if state == "accepted" else remote.get("end_date")),
                      "planned_time": action.get("planned_time") or ("18:00" if state == "accepted" else "23:00"),
                      "session_id": (link or {}).get("session_id"), "session": association.get("session_label", "Non rattachée"),
@@ -481,13 +524,21 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         state = status.get("wedof_state")
         action = status.get("entry_training", {}) if state == "accepted" else status.get("service_done", {})
         value = action.get("status", "not_applicable")
+        automation_action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
+        block = _indexed_block(blocks_by_key, str(status.get("external_id") or ""), automation_action)
+        underlying = value
+        if block: value = "blocked"
         tab = "anomaly" if value in {"anomaly", "blocked", "dry_run_due_late"} else {"accepted":"accepted", "inTraining":"training"}.get(state, "service")
         external_id = str(status.get("external_id") or "")
         link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
         date_start = status.get("wedof_date_start") or (link or {}).get("wedof_date_start")
         date_end = status.get("wedof_date_end") or (link or {}).get("wedof_date_end")
         rows.append({**status, "state": state, "wedof_type": status.get("wedof_type") or "",
-                     "tab": tab, "automation_status": value, "automation_planned": value == "planned",
+                     "tab": "anomaly" if block else tab, "automation_status": value, "automation_planned": value == "planned",
+                     "automation_action": automation_action, "automation_blocked": bool(block),
+                     "active_block": block, "underlying_automation_status": underlying if block else None,
+                     "block_reason_code": (block or {}).get("reason_code"), "block_comment": (block or {}).get("comment"),
+                     "block_created_at": (block or {}).get("created_at"), "block_updated_at": (block or {}).get("updated_at"),
                      "wedof_date_start": date_start, "wedof_date_end": date_end,
                      "start_date": date_start, "end_date": date_end,
                      "planned_date": action.get("planned_date"), "planned_time": action.get("planned_time"),
@@ -501,5 +552,6 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
     stats = {"accepted":sum(x["tab"]=="accepted" for x in rows), "training":sum(x["tab"]=="training" for x in rows),
              "service":sum(x["tab"]=="service" for x in rows), "anomaly":sum(x["tab"]=="anomaly" for x in rows),
              "planned":sum(x["automation_status"]=="planned" for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
+             "blocked":sum(x["automation_blocked"] for x in rows),
              "unlinked":sum(not x["linked"] for x in rows)}
     return {"rows": rows, "stats": stats}

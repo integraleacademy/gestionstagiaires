@@ -68,7 +68,7 @@
   <p class="wedof-readonly">La déclaration automatique supposera une réalisation totale, sauf blocage ou exception enregistrée avant son exécution.</p>
   {% set st = wedof_dashboard.stats %}
   <div class="wedof-counters" aria-label="Compteurs WEDOF">
-  {% for key, label in [('accepted','Accepté'),('training','En formation'),('service','Service fait déclaré'),('anomaly','Anomalies'),('planned','Automatisations prévues'),('entry_success','Entrées en formation déclarées'),('service_success','Services faits déclarés'),('unlinked','Dossiers non rattachés localement')] %}
+  {% for key, label in [('accepted','Accepté'),('training','En formation'),('service','Service fait déclaré'),('anomaly','Anomalies'),('planned','Automatisations prévues'),('blocked','Automatisations bloquées'),('entry_success','Entrées en formation déclarées'),('service_success','Services faits déclarés'),('unlinked','Dossiers non rattachés localement')] %}
     <div class="wedof-counter"{% if key == 'unlinked' %} data-wedof-unlinked-counter{% endif %}><strong{% if key == 'unlinked' %} id="wedof-unlinked-count"{% endif %}>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong><span>{{ label }}</span></div>
   {% endfor %}
   </div>
@@ -98,7 +98,7 @@
             {% elif item.automation_status == 'uncertain_after_timeout' %}<span class="wedof-badge is-warning">Résultat incertain après timeout</span>
             {% elif item.automation_status == 'blocked' %}<span class="wedof-badge is-danger">Automatisation bloquée</span>
             {% elif item.automation_status == 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
-            {% if item.planned_date %}<small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>{% endif %}
+            {% if item.planned_date and not item.automation_blocked %}<small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>{% endif %}
             {% if item.tab == 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
             {% if item.entry_success %}<span class="wedof-badge is-success">Entrée en formation déclarée ✅</span>{% elif item.state == 'inTraining' %}<span class="wedof-badge is-info">En formation (état WEDOF)</span>{% endif %}
             {% if item.service_success %}<span class="wedof-badge is-success">Service fait déclaré ✅</span>{% elif item.state in ['serviceDoneDeclared','serviceDoneValidated'] %}<span class="wedof-badge is-info">{{ item.wedof_state_label }}</span>{% endif %}
@@ -108,10 +108,13 @@
           </td>
           {% if item.matching_status == 'exact_match' %}<td hidden>Correspondance fiable</td>{% endif %}
           <td data-label="Action"><div class="wedof-actions">
-            {% if item.external_id %}<form method="post" action="{{ url_for('admin_wedof_automation_block') }}">
-              <input type="hidden" name="external_id" value="{{ item.external_id|e }}"><input type="hidden" name="action" value="{{ 'entry_training' if item.state == 'accepted' else 'service_done' }}"><input type="hidden" name="reason_code" value="other">
+            {% if item.automation_blocked %}<form method="post" action="{{ url_for('admin_wedof_automation_unblock') }}">
+              <input type="hidden" name="external_id" value="{{ item.external_id|e }}"><input type="hidden" name="action" value="{{ item.active_block.action|e }}"><input type="hidden" name="tab" value="anomaly">
+              <button class="btn btn-outline" type="submit">Réactiver l’automatisation</button></form>
+            {% elif item.external_id and item.automation_action %}<form method="post" action="{{ url_for('admin_wedof_automation_block') }}">
+              <input type="hidden" name="external_id" value="{{ item.external_id|e }}"><input type="hidden" name="action" value="{{ item.automation_action|e }}"><input type="hidden" name="reason_code" value="other"><input type="hidden" name="tab" value="{{ item.tab|e }}">
               <button class="btn btn-outline" type="submit">Bloquer l’automatisation</button></form>{% endif %}
-            <details><summary class="btn btn-outline">Voir détails</summary><div class="wedof-details"><strong>État WEDOF :</strong> {{ item.state or '—' }}<br><strong>Date de début WEDOF :</strong> {{ item.wedof_date_start|format_date_fr }}<br><strong>Date de fin WEDOF :</strong> {{ item.wedof_date_end|format_date_fr }}<br><strong>Session locale :</strong> {{ item.session }}<br><strong>Stagiaire local :</strong> {{ item.trainee }}<br><strong>Source de l’association :</strong> {{ item.association }}<br><strong>Identifiant de session local :</strong> {{ item.session_id or '—' }}<br><strong>Identifiant de stagiaire local :</strong> {{ item.trainee_id or '—' }}{% if item.anomaly_reasons %}<br><strong>Blocage :</strong> {{ item.anomaly_reasons|join(' · ') }}{% endif %}</div></details>
+            <details><summary class="btn btn-outline">Voir détails</summary><div class="wedof-details"><strong>État WEDOF :</strong> {{ item.state or '—' }}<br><strong>Date de début WEDOF :</strong> {{ item.wedof_date_start|format_date_fr }}<br><strong>Date de fin WEDOF :</strong> {{ item.wedof_date_end|format_date_fr }}{% if item.automation_blocked %}<br><strong>Action bloquée :</strong> {{ 'Entrée en formation' if item.automation_action == 'entry_training' else 'Service fait' }}<br><strong>Motif :</strong> {{ {'no_show':'Stagiaire non présenté','postponed':'Formation reportée','abandonment':'Abandon','partial_completion':'Réalisation partielle','administrative_issue':'Anomalie administrative','other':'Autre motif'}.get(item.block_reason_code, item.block_reason_code or '—') }}{% if item.block_comment %}<br><strong>Commentaire :</strong> {{ item.block_comment }}{% endif %}<br><strong>Date du blocage :</strong> {{ item.block_created_at|format_date_fr }}<br><strong>Statut sans blocage :</strong> {{ item.underlying_automation_status or '—' }}{% endif %}<br><strong>Session locale :</strong> {{ item.session }}<br><strong>Stagiaire local :</strong> {{ item.trainee }}<br><strong>Source de l’association :</strong> {{ item.association }}<br><strong>Identifiant de session local :</strong> {{ item.session_id or '—' }}<br><strong>Identifiant de stagiaire local :</strong> {{ item.trainee_id or '—' }}{% if item.anomaly_reasons %}<br><strong>Blocage :</strong> {{ item.anomaly_reasons|join(' · ') }}{% endif %}</div></details>
           </div></td>
         </tr>
       {% else %}<tr data-wedof-empty><td colspan="8" class="muted">{% if wedof_dashboard_state == 'never_synchronized' %}Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.{% else %}Aucun dossier WEDOF dans cet instantané synchronisé.{% endif %}</td></tr>{% endfor %}

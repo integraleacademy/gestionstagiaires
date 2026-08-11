@@ -14,6 +14,22 @@ def folder(external_id, state="accepted", **changes):
 
 
 class WedofDashboardUnitTests(unittest.TestCase):
+    def test_active_block_is_an_immediate_overlay_and_recomputes_counters(self):
+        dashboard = build_automation_dashboard([], statuses=[{
+            "external_id": "GENERIC-LATE", "wedof_state": "accepted", "wedof_type": "cpf",
+            "wedof_date_start": "2026-08-01", "wedof_date_end": "2026-08-10",
+            "entry_training": {"status": "dry_run_due_late", "planned_date": "2026-08-01"},
+        }], exceptions=[{"external_id": "GENERIC-LATE", "action": "both", "active": True,
+                        "reason_code": "postponed", "comment": "Nouvelle date attendue",
+                        "created_at": "2026-08-11T10:00:00+02:00"}])
+        row = dashboard["rows"][0]
+        self.assertEqual(row["automation_status"], "blocked")
+        self.assertEqual(row["underlying_automation_status"], "dry_run_due_late")
+        self.assertEqual(row["automation_action"], "entry_training")
+        self.assertFalse(row["automation_planned"])
+        self.assertEqual(row["tab"], "anomaly")
+        self.assertEqual((dashboard["stats"]["planned"], dashboard["stats"]["blocked"]), (0, 1))
+
     def test_local_associations_dates_and_orphans_are_explicit(self):
         links = [
             {"external_id": "AUTO", "active": True, "session_id": "S1", "trainee_id": "T1",
@@ -116,6 +132,56 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertNotIn("Règle de rapprochement</th>", html)
         for method in ("post", "put", "patch", "delete"):
             getattr(remote, method).assert_not_called()
+
+    def test_blocked_snapshot_shows_only_reactivation_and_terminal_rows_have_no_block_button(self):
+        data = {"sessions": [], "wedof_links": [], "wedof_automation_runs": [{"status": "success"}],
+                "wedof_automation_status": [
+                    {"external_id": "GENERIC-LATE", "wedof_state": "accepted", "wedof_type": "cpf",
+                     "wedof_date_start": "2026-08-01", "wedof_date_end": "2026-08-10",
+                     "entry_training": {"status": "dry_run_due_late"}},
+                    {"external_id": "GENERIC-DONE", "wedof_state": "serviceDoneValidated", "wedof_type": "cpf"}],
+                "wedof_automation_blocks": [{"external_id": "GENERIC-LATE", "action": "entry_training",
+                    "active": True, "reason_code": "no_show", "created_at": "2026-08-11T10:00:00+02:00"}]}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]):
+            html = self.client.get("/admin/wedof").get_data(as_text=True)
+        self.assertIn("Automatisation bloquée", html)
+        self.assertIn("Réactiver l’automatisation", html)
+        self.assertIn("Stagiaire non présenté", html)
+        self.assertNotIn("En retard — prête en mode test", html)
+        self.assertNotIn("Bloquer l’automatisation", html)
+
+    def test_block_and_unblock_routes_are_idempotent_local_operations_with_flashes(self):
+        data = {"wedof_automation_status": [{"external_id": "GENERIC-ROUTE", "wedof_state": "accepted"}],
+                "wedof_automation_blocks": []}
+
+        def atomic(mutator):
+            return mutator(data)
+
+        form = {"external_id": "GENERIC-ROUTE", "action": "entry_training",
+                "reason_code": "other", "comment": "Contrôle administratif"}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_atomic_update_data", side_effect=atomic), \
+             patch.object(gestion_app, "WedofClient") as remote:
+            first = self.client.post("/admin/wedof/automation/block", data=form, follow_redirects=False)
+            second = self.client.post("/admin/wedof/automation/block", data=form, follow_redirects=False)
+            self.assertEqual(len(data["wedof_automation_blocks"]), 1)
+            self.assertTrue(data["wedof_automation_blocks"][0]["active"])
+            self.assertIn("tab=anomaly", first.location)
+            with self.client.session_transaction() as session:
+                self.assertTrue(any("Aucune déclaration ne sera envoyée" in message
+                                    for _category, message in session.get("_flashes", [])))
+            response = self.client.post("/admin/wedof/automation/unblock",
+                                        data={"external_id": "GENERIC-ROUTE", "action": "entry_training"})
+            self.assertFalse(data["wedof_automation_blocks"][0]["active"])
+            self.assertEqual(response.status_code, 302)
+            remote.assert_not_called()
+
+    def test_block_route_requires_authentication(self):
+        anonymous = gestion_app.app.test_client()
+        response = anonymous.post("/admin/wedof/automation/block", data={
+            "external_id": "GENERIC-AUTH", "action": "entry_training", "reason_code": "other"})
+        self.assertIn(response.status_code, {302, 401, 403})
 
     def test_snapshot_rows_offer_manual_link_without_matching_preview(self):
         statuses = [
