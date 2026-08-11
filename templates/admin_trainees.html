@@ -113,6 +113,9 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    {% if is_desp_initial %}
+      <a class="btn btn-primary" id="btnManageDespExam" href="{{ url_for('admin_exam_detail', session_id=session.id) }}">🎓 Gestion examen</a>
+    {% endif %}
     <div class="trainee-search-field" role="search">
       <span class="trainee-search-field__icon" aria-hidden="true">🔎</span>
       <label for="traineeNameSearch" class="sr-only">Rechercher un stagiaire par nom ou prénom</label>
