@@ -203,8 +203,8 @@ class DailyRecapTests(unittest.TestCase):
         self.data["sessions"] = [{
             "training_type": "DIRIGEANT VAE", "date_start": "2026-01-01",
             "trainees": [
-                {"created_at": "2026-07-27T10:00:00Z", "vae_action_dates": {"livret_1_validated": "27/07/2026"}},
-                {"created_at": "2026-07-20", "vae_action_dates": {"livret_2_validated": "2026-07-27", "diplome_obtenu": "27/07/2026 à 16h30"}},
+                {"first_name": "Ada", "last_name": "Lovelace", "created_at": "2026-07-27T10:00:00Z", "vae_action_dates": {"livret_1_validated": "27/07/2026"}},
+                {"first_name": "Grace", "last_name": "Hopper", "created_at": "2026-07-20", "vae_action_dates": {"livret_2_validated": "2026-07-27", "diplome_obtenu": "27/07/2026 à 16h30"}},
             ],
         }]
         report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
@@ -212,10 +212,18 @@ class DailyRecapTests(unittest.TestCase):
             "new_requests": 1, "livret_1_validated": 1,
             "livret_2_validated": 1, "certification_obtained": 1,
         })
+        self.assertEqual(report["vae_follow_up_people"], {
+            "new_requests": ["Ada LOVELACE"],
+            "livret_1_validated": ["Ada LOVELACE"],
+            "livret_2_validated": ["Grace HOPPER"],
+            "certification_obtained": ["Grace HOPPER"],
+        })
         _subject, body = app.build_daily_recap_email(report)
         self.assertIn("Suivi des VAE", body)
         self.assertIn("Nouvelles demandes VAE", body)
         self.assertIn("Certifications obtenues", body)
+        self.assertEqual(body.count("Ada LOVELACE"), 2)
+        self.assertEqual(body.count("Grace HOPPER"), 2)
         badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
         self.assertIn(f'{badge_style}">1</span>', body)
         self.assertNotIn("background:#ecfdf5;color:#047857", body)
