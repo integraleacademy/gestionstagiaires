@@ -149,7 +149,7 @@
               data-wedof-blocked="{{ 'true' if item.automation_blocked else 'false' }}"
               data-wedof-entry-success="{{ 'true' if item.entry_success else 'false' }}"
               data-wedof-service-success="{{ 'true' if item.service_success else 'false' }}"
-              data-wedof-unlinked="{{ 'true' if not item.linked else 'false' }}"
+              data-wedof-unlinked="{{ 'true' if item.unlinked_since_tracking_start else 'false' }}"
               data-wedof-row="{{ item.external_id|e }}"
               {% if item.tab != 'accepted' %}hidden{% endif %}
             >
