@@ -135,7 +135,9 @@ class WedofDryRunTests(unittest.TestCase):
         client = gestion_app.app.test_client()
         with patch.dict(os.environ, {"CRON_SECRET": "secret", "WEDOF_DRY_RUN": "false", "WEDOF_AUTOMATION_ENABLED": "false"}, clear=False):
             self.assertEqual(client.post("/internal/cron/wedof-automation").status_code, 403)
-            self.assertEqual(client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"}).status_code, 409)
+            # Fail-closed now falls back to GET-only simulation instead of rejecting the cron.
+            with patch.object(gestion_app, "run_wedof_automation_dry_run", return_value={"ok": True, "mode": "dry_run"}):
+                self.assertEqual(client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"}).status_code, 200)
         with patch.dict(os.environ, {"CRON_SECRET": "secret", "WEDOF_DRY_RUN": "true", "WEDOF_AUTOMATION_ENABLED": "false"}, clear=False), patch.object(gestion_app, "run_wedof_automation_dry_run", return_value={"ok": True, "mode": "dry_run"}):
             response = client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"})
             self.assertEqual(response.status_code, 200)
