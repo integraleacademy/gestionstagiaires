@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import app as gestion_app
@@ -135,9 +136,16 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertIn('data-wedof-entry-success="true"', html)
         self.assertIn('data-wedof-service-success="true"', html)
         self.assertIn('data-wedof-unlinked="true"', html)
-        self.assertIn("counter.addEventListener('click'", html)
-        self.assertIn("table?.scrollIntoView", html)
+        self.assertIn("js/admin-wedof-dashboard.js", html)
+        dashboard_script = Path("static/js/admin-wedof-dashboard.js").read_text(encoding="utf-8")
+        self.assertIn("row.dataset.wedofEntrySuccess === 'true'", dashboard_script)
+        self.assertIn("row.dataset.wedofServiceSuccess === 'true'", dashboard_script)
+        self.assertIn("row.dataset.wedofUnlinked === 'true'", dashboard_script)
+        self.assertIn("counter.addEventListener('click'", dashboard_script)
+        self.assertIn("table?.scrollIntoView", dashboard_script)
         self.assertIn("admin-sidebar", html)
+        self.assertIn("css/admin-wedof.css", html)
+        self.assertIn("Pilotage des dossiers CPF", html)
         self.assertNotIn("Règle de rapprochement</th>", html)
         for method in ("post", "put", "patch", "delete"):
             getattr(remote, method).assert_not_called()
@@ -262,8 +270,7 @@ class WedofDashboardViewTests(unittest.TestCase):
             html = self.client.get("/admin/wedof").get_data(as_text=True)
         self.assertIn("Données WEDOF non encore synchronisées.", html)
         self.assertIn("Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.", html)
-        self.assertIn("<strong>—</strong>", html)
-        self.assertNotIn("Accepté <span>0</span>", html)
+        self.assertRegex(html, r'data-wedof-counter="accepted"[^>]*>\s*<strong>—</strong>')
 
     def test_successful_empty_snapshot_displays_real_zero(self):
         data = {"sessions": [], "wedof_links": [], "wedof_automation_status": [],
@@ -278,8 +285,7 @@ class WedofDashboardViewTests(unittest.TestCase):
              patch.object(gestion_app, "is_wedof_maintenance_window", return_value=maintenance):
             html = self.client.get("/admin/wedof").get_data(as_text=True)
         self.assertNotIn("Données WEDOF non encore synchronisées.", html)
-        self.assertIn("Accepté <span>0</span>", html)
-        self.assertIn("<strong>0</strong><span>Accepté</span>", html)
+        self.assertRegex(html, r'data-wedof-counter="accepted"[^>]*>\s*<strong>0</strong>\s*<span>Acceptés</span>')
 
 
 if __name__ == "__main__":

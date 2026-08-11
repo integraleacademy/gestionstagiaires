@@ -178,6 +178,52 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertEqual(summary["paid_total_cents"], 36500)
         self.assertEqual(summary["remaining_total_cents"], 0)
         self.assertEqual(summary["payment_status"], "paid")
+
+    def test_impossible_qonto_amount_does_not_override_300_cash_paid_on_902_due(self):
+        trainee = {
+            "id": "T1",
+            "personal_amount": 902,
+            "cpf_amount": 78,
+            "cash_payment_enabled": True,
+            "cash_payment_amount": 902,
+            "cash_payment_installments": [{"amount": 300, "date": "2026-08-11"}],
+        }
+        lines = [{
+            "traineeId": "T1",
+            "financingType": "PERSONNEL",
+            "qontoInvoiceId": "inv-stale",
+            "qontoInvoiceNumber": "FL-STALE",
+            "qonto_total_amount_cents": 90200,
+            "qonto_amount_paid_cents": 165000,
+            "qonto_status": "paid",
+            "amount": 902,
+        }]
+
+        summary = gestion_app.calculate_trainee_financial_summary(trainee, lines)
+
+        self.assertEqual(summary["planned_total_cents"], 90200)
+        self.assertEqual(summary["invoiced_total_cents"], 90200)
+        self.assertEqual(summary["qonto_paid_total_cents"], 0)
+        self.assertEqual(summary["cash_paid_total_cents"], 30000)
+        self.assertEqual(summary["paid_total_cents"], 30000)
+        self.assertEqual(summary["remaining_total_cents"], 60200)
+        self.assertEqual(summary["payment_status"], "partially_paid")
+        self.assertEqual(summary["by_financer"]["PERSONNEL"]["paid_amount_cents"], 30000)
+
+    def test_qonto_normalizer_rejects_paid_amount_above_invoice_total(self):
+        normalized = gestion_app.normalize_qonto_invoice_payment_data({
+            "number": "FL-STALE",
+            "status": "paid",
+            "total_amount": {"value": "902.00"},
+            "amount_paid": {"value": "1650.00"},
+            "remaining_amount": {"value": "0.00"},
+        })
+
+        self.assertEqual(normalized["qonto_total_amount_cents"], 90200)
+        self.assertEqual(normalized["qonto_amount_paid_cents"], 0)
+        self.assertEqual(normalized["qonto_remaining_amount_cents"], 90200)
+        self.assertEqual(normalized["qonto_payment_status"], "unpaid")
+
     def test_canceled_excluded(self):
         s=gestion_app.calculate_trainee_financial_summary({"id":"T1","personal_amount":1650},[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"A","qontoTotalAmountCents":165000,"qontoAmountPaidCents":165000,"invoiceStatus":"canceled"}])
         self.assertEqual(s['invoiced_amount_cents'],0); self.assertEqual(s['paid_amount_cents'],0)

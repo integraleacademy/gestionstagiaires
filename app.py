@@ -1522,6 +1522,28 @@ def _cents_first_non_null(*values: Any) -> int:
     return 0
 
 
+def _validate_qonto_paid_cents(total_amount_cents: int, paid_amount_cents: int, invoice_reference: str = "") -> Tuple[int, bool]:
+    """Reject impossible Qonto paid amounts instead of treating them as cash.
+
+    A client invoice cannot have more money paid than its own total.  When a
+    stale amount from another invoice survives locally, counting it would mark
+    the trainee as overpaid and would also be added to any cash installments.
+    Treat that value as unverified until the invoice is synchronized again.
+    """
+    total_cents = max(int(total_amount_cents or 0), 0)
+    paid_cents = int(paid_amount_cents or 0)
+    is_consistent = paid_cents >= 0 and not (total_cents > 0 and paid_cents > total_cents)
+    if is_consistent:
+        return paid_cents, True
+    app.logger.warning(
+        "QONTO_PAYMENT_AMOUNT_IGNORED invoice=%s total_amount_cents=%s paid_amount_cents=%s",
+        invoice_reference or "unknown",
+        total_cents,
+        paid_cents,
+    )
+    return 0, False
+
+
 def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, Any]:
     """Return the single canonical Qonto invoice shape sent to the frontend."""
     total_amount_cents = _cents_first_non_null(
@@ -1531,11 +1553,16 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
         invoice.get("totalAmountCents"),
         money_value_to_cents(invoice.get("amountTTC") or invoice.get("amount") or 0) if invoice.get("amountTTC") is not None or invoice.get("amount") is not None else None,
     )
-    paid_amount_cents = _cents_first_non_null(
+    raw_paid_amount_cents = _cents_first_non_null(
         invoice.get("qonto_amount_paid_cents"),
         invoice.get("paid_amount_cents"),
         invoice.get("qontoAmountPaidCents"),
         invoice.get("paidAmountCents"),
+    )
+    paid_amount_cents, _ = _validate_qonto_paid_cents(
+        total_amount_cents,
+        raw_paid_amount_cents,
+        str(invoice.get("qontoInvoiceNumber") or invoice.get("invoice_number") or invoice.get("invoiceNumber") or invoice.get("number") or ""),
     )
     remaining_amount_cents = max(total_amount_cents - paid_amount_cents, 0)
     payment_percentage = 0 if total_amount_cents == 0 else float(min((Decimal(paid_amount_cents) / Decimal(total_amount_cents) * Decimal('100')), Decimal('100')).quantize(Decimal('0.01')))
@@ -1649,7 +1676,14 @@ def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], local_i
     else:
         amount_paid_cents = 0 if amount_paid is None else money_value_to_cents(amount_paid)
     qonto_status = (client_invoice.get("status") or local_invoice.get("qonto_status") or local_invoice.get("qontoStatus") or local_invoice.get("qonto_invoice_status") or "").strip() or "unpaid"
-    if remaining_amount is not None:
+    amount_paid_cents, paid_amount_is_consistent = _validate_qonto_paid_cents(
+        total_cents,
+        amount_paid_cents,
+        str(client_invoice.get("number") or client_invoice.get("invoice_number") or local_invoice.get("qontoInvoiceNumber") or ""),
+    )
+    if not paid_amount_is_consistent:
+        remaining_cents = total_cents
+    elif remaining_amount is not None:
         remaining_cents = max(money_value_to_cents(remaining_amount), 0)
     elif client_invoice.get("remaining_amount_cents") is not None:
         remaining_cents = max(int(client_invoice.get("remaining_amount_cents") or 0), 0)
@@ -16288,6 +16322,142 @@ def _manual_trainee_matches(trainee: Dict[str, str], *, email: str, phone: str,
                       and normalize_name(trainee["first_name"]) == first_name
                       and normalize_name(trainee["last_name"]) == last_name)
     return contact_match or name_match
+
+
+def _manual_trainee_enrolment_score(
+    trainee: Dict[str, str],
+    session_obj: Dict[str, Any],
+    *,
+    query: str,
+    email: str,
+    phone: str,
+    first_name: str,
+    last_name: str,
+    date_start: Optional[str],
+    date_end: Optional[str],
+) -> Optional[Tuple[int, str]]:
+    """Classe une inscription locale sans faire de rapprochement approximatif silencieux."""
+    local_email = normalize_email(trainee["email"])
+    local_phone = normalize_phone(trainee["phone"])
+    local_first_name = normalize_name(trainee["first_name"])
+    local_last_name = normalize_name(trainee["last_name"])
+    local_full_name = " ".join(part for part in (local_first_name, local_last_name) if part)
+    local_reverse_name = " ".join(part for part in (local_last_name, local_first_name) if part)
+
+    query_phone = normalize_phone(query)
+    query_match = bool(
+        query
+        and (
+            query in normalize_name(" ".join((local_full_name, local_reverse_name, trainee["email"])))
+            or (query_phone and query_phone in local_phone)
+        )
+    )
+    if query and not query_match:
+        return None
+
+    email_match = bool(email and local_email == email)
+    phone_match = bool(phone and local_phone == phone)
+    name_match = bool(
+        first_name
+        and last_name
+        and local_first_name == first_name
+        and local_last_name == last_name
+    )
+    if not query and not (email_match or phone_match or name_match):
+        return None
+
+    score = 200 if query_match else 0
+    reasons = []
+    if email_match:
+        score += 600
+        reasons.append("Même adresse e-mail")
+    if phone_match:
+        score += 500
+        reasons.append("Même téléphone")
+    if name_match:
+        score += 400
+        reasons.append("Même nom et prénom")
+
+    session_start = normalize_date(session_obj.get("date_start") or session_obj.get("date_debut"))
+    session_end = normalize_date(session_obj.get("date_end") or session_obj.get("date_fin"))
+    if date_start and date_end and session_start == date_start and session_end == date_end:
+        score += 120
+        reasons.append("Mêmes dates de formation")
+    elif date_start and session_start == date_start:
+        score += 40
+    if not bool(session_obj.get("archived") or session_obj.get("is_archived")):
+        score += 10
+
+    return score, " · ".join(reasons) if reasons else "Résultat trouvé dans la base"
+
+
+@app.get("/admin/wedof/matching/manual/enrolments")
+@admin_login_required
+def admin_wedof_manual_enrolments():
+    """Recherche un stagiaire dans toutes les sessions et retourne ses inscriptions cliquables."""
+    raw_query = str(request.args.get("q") or "").strip()
+    query = normalize_name(raw_query)
+    email = normalize_email(request.args.get("email"))
+    phone = normalize_phone(request.args.get("phone"))
+    first_name = normalize_name(request.args.get("first_name"))
+    last_name = normalize_name(request.args.get("last_name"))
+    date_start = normalize_date(request.args.get("date_start"))
+    date_end = normalize_date(request.args.get("date_end"))
+    try:
+        limit = max(1, min(int(request.args.get("limit", 20)), 30))
+    except ValueError:
+        limit = 20
+
+    matches = []
+    for session_obj in load_data(run_background_tasks=False).get("sessions", []):
+        if not isinstance(session_obj, dict) or _is_wedof_leads_session(session_obj):
+            continue
+        session_item = _manual_session_item(session_obj)
+        trainees = session_obj.get("trainees", session_obj.get("stagiaires", [])) or []
+        for trainee_obj in trainees:
+            if not isinstance(trainee_obj, dict):
+                continue
+            trainee = _manual_trainee_item(trainee_obj)
+            ranked = _manual_trainee_enrolment_score(
+                trainee,
+                session_obj,
+                query=query,
+                email=email,
+                phone=phone,
+                first_name=first_name,
+                last_name=last_name,
+                date_start=date_start,
+                date_end=date_end,
+            )
+            if ranked is None:
+                continue
+            score, match_reason = ranked
+            matches.append({
+                "score": score,
+                "match_reason": match_reason,
+                "session_id": session_item["id"],
+                "session_name": session_item["name"],
+                "session_training_type": session_item["training_type"],
+                "session_date_start": session_item["date_start"],
+                "session_date_end": session_item["date_end"],
+                "session_archived": session_item["archived"],
+                "trainee_id": trainee["id"],
+                "first_name": trainee["first_name"],
+                "last_name": trainee["last_name"],
+                "email": trainee["email"],
+                "phone": trainee["phone"],
+            })
+
+    matches.sort(key=lambda item: (
+        -item["score"],
+        item["session_archived"],
+        item["session_date_start"] or "9999-12-31",
+        normalize_name(item["last_name"]),
+        normalize_name(item["first_name"]),
+    ))
+    public_items = [{key: value for key, value in item.items() if key != "score"}
+                    for item in matches[:limit]]
+    return jsonify({"items": public_items, "total": len(matches)})
 
 
 @app.get("/admin/wedof/matching/manual/sessions")
@@ -31096,6 +31266,15 @@ QONTO_REJECTED_COLLECTION_STATUSES = {'failed', 'returned', 'rejected', 'refunde
 QONTO_PAID_COLLECTION_STATUSES = {'completed', 'paid', 'succeeded', 'success'}
 
 
+def _positive_installment_int(value: Any) -> int:
+    """Return a positive integer for permissive legacy billing values."""
+    try:
+        number = int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+    return number if number > 0 else 0
+
+
 def _installment_is_rejected(installment: Dict[str, Any]) -> bool:
     return str(installment.get('status') or '').strip().lower() in QONTO_REJECTED_COLLECTION_STATUSES
 
@@ -31111,10 +31290,6 @@ def _installment_counts_toward_schedule(installment: Dict[str, Any]) -> bool:
     )
 
 
-def _effective_sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
-    return [item for item in _sepa_installments(line) if _installment_counts_toward_schedule(item)]
-
-
 def _installment_schedule_position(installment: Dict[str, Any], fallback: int) -> int:
     for value in (installment.get('schedule_index'), installment.get('index'), fallback):
         try:
@@ -31124,6 +31299,125 @@ def _installment_schedule_position(installment: Dict[str, Any], fallback: int) -
         if number > 0:
             return number
     return max(1, fallback)
+
+
+def _installment_attempt_time(installment: Dict[str, Any]) -> str:
+    """Return the creation time used to order attempts for one schedule slot."""
+    return str(
+        installment.get('created_at') or installment.get('reprogrammed_at')
+        or installment.get('updated_at') or ''
+    )
+
+
+def _installment_attempt_authority(installment: Dict[str, Any]) -> int:
+    """Rank duplicate records for the same Qonto subscription.
+
+    A collection result is more authoritative than the initial ``scheduled``
+    subscription state.  This only resolves duplicates sharing the same Qonto
+    id; ordering between distinct retry attempts is handled separately.
+    """
+    status = str(installment.get('status') or '').strip().lower()
+    if status in QONTO_PAID_COLLECTION_STATUSES:
+        return 4
+    if status in QONTO_REJECTED_COLLECTION_STATUSES:
+        return 3
+    if status in {'cancelled', 'canceled'}:
+        return 2
+    return 1
+
+
+def _current_installment_for_slot(candidates: List[Tuple[int, Dict[str, Any]]]) -> Dict[str, Any]:
+    """Choose the single financial attempt that represents one instalment.
+
+    Qonto can contain several one-off retry subscriptions for the same logical
+    instalment.  They remain visible as history, but only the latest attempt is
+    part of the contractual schedule.  A paid attempt always wins because the
+    corresponding obligation is already settled.
+    """
+    attempts: Dict[str, Tuple[int, Dict[str, Any]]] = {}
+    for order, installment in candidates:
+        subscription_id = str(installment.get('qonto_direct_debit_subscription_id') or '').strip()
+        attempt_key = f'qonto:{subscription_id}' if subscription_id else f'row:{order}'
+        current = attempts.get(attempt_key)
+        candidate_key = (
+            _installment_attempt_authority(installment),
+            bool(installment.get('qonto_direct_debit_collection_id')),
+            str(installment.get('updated_at') or ''),
+            order,
+        )
+        current_key = (
+            _installment_attempt_authority(current[1]),
+            bool(current[1].get('qonto_direct_debit_collection_id')),
+            str(current[1].get('updated_at') or ''),
+            current[0],
+        ) if current else None
+        if current is None or candidate_key > current_key:
+            attempts[attempt_key] = (order, installment)
+
+    attempt_rows = list(attempts.values())
+    paid_attempts = [
+        row for row in attempt_rows
+        if str(row[1].get('status') or '').strip().lower() in QONTO_PAID_COLLECTION_STATUSES
+    ]
+    pool = paid_attempts or attempt_rows
+    return max(pool, key=lambda row: (_installment_attempt_time(row[1]), row[0]))[1]
+
+
+def _effective_sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return one current row per contractual instalment position."""
+    installments = _sepa_installments(line)
+    by_position: Dict[int, List[Tuple[int, Dict[str, Any]]]] = {}
+    for order, item in enumerate(installments, start=1):
+        if not _installment_counts_toward_schedule(item):
+            continue
+        position = _installment_schedule_position(item, order)
+        by_position.setdefault(position, []).append((order, item))
+    return [
+        _current_installment_for_slot(by_position[position])
+        for position in sorted(by_position)
+    ]
+
+
+def _sepa_schedule_total(line: Dict[str, Any], installments: Optional[List[Dict[str, Any]]] = None) -> int:
+    """Resolve the contractual count, independently from retry-history rows."""
+    installments = installments if installments is not None else _sepa_installments(line)
+    payment_plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
+    stored_plan = line.get('sepa_payment_plan') if isinstance(line.get('sepa_payment_plan'), dict) else {}
+
+    normalized_count = 0
+    schedule = payment_plan.get('schedule') if isinstance(payment_plan.get('schedule'), list) else []
+    if schedule:
+        normalized_count = len(schedule)
+    if not normalized_count:
+        normalized_count = _positive_installment_int(payment_plan.get('installments'))
+
+    explicit_totals: Dict[int, int] = {}
+    for item in installments:
+        values = [item.get('schedule_total')]
+        _, reference_total, _ = _qonto_reference_schedule_position(item.get('reference'))
+        values.append(reference_total)
+        for value in values:
+            total = _positive_installment_int(value)
+            if total > 0:
+                explicit_totals[total] = explicit_totals.get(total, 0) + 1
+    explicit_count = min(
+        (total for total, frequency in explicit_totals.items()
+         if frequency == max(explicit_totals.values(), default=0)),
+        default=0,
+    )
+
+    stored_count = _positive_installment_int(stored_plan.get('total_installments'))
+    base_positions = [
+        _installment_schedule_position(item, order)
+        for order, item in enumerate(installments, start=1)
+        if not item.get('is_rejection_retry')
+    ]
+    base_count = max(base_positions, default=0)
+    effective_count = len(_effective_sepa_installments(line))
+    # A normalized plan and its original (non-retry) positions describe the
+    # contract.  Retry-history rows must never increase that denominator.
+    contractual_count = normalized_count or base_count or explicit_count or stored_count
+    return contractual_count or effective_count
 
 
 def _qonto_subscription_reference(subscription: Dict[str, Any]) -> str:
@@ -31268,7 +31562,16 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
         if due_date:
             installment['due_date'] = due_date
             installment['date'] = due_date
-    effective_installments = [item for item in installments if _installment_counts_toward_schedule(item)]
+    effective_installments = _effective_sepa_installments(line)
+    current_ids = {id(item) for item in effective_installments}
+    schedule_total = _sepa_schedule_total(line, installments)
+    for installment in installments:
+        is_current = id(installment) in current_ids
+        installment['is_current_schedule_attempt'] = is_current
+        if schedule_total:
+            installment['schedule_total'] = schedule_total
+        if installment.get('is_rejection_retry'):
+            installment['retry_superseded'] = not is_current
     total_due = round(sum(_money(item.get('amount')) for item in effective_installments), 2)
     total_paid = round(sum(
         _money(item.get('amount')) for item in effective_installments
@@ -31278,10 +31581,7 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
         1 for item in effective_installments
         if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
     )
-    failed = any(
-        _installment_is_rejected(item) and not _installment_rejection_is_treated(item)
-        for item in installments
-    )
+    failed = any(_installment_is_rejected(item) for item in effective_installments)
     treated = any(_installment_rejection_is_treated(item) for item in installments)
     if not effective_installments:
         status = 'pending_signature'
@@ -31301,11 +31601,12 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
     plan.update({
         'status': status,
         'installments': installments,
+        'total_installments': schedule_total,
         'total_due': total_due,
         'total_paid': total_paid,
         'total_remaining': round(max(total_due - total_paid, 0), 2),
         'paid_installments': paid_count,
-        'remaining_installments': max(len(effective_installments) - paid_count, 0),
+        'remaining_installments': max(schedule_total - paid_count, 0),
         'updated_at': _now_iso(),
     })
     line['sepa_payment_plan'] = plan
@@ -31520,43 +31821,94 @@ def _recover_missing_qonto_rejection_retries(line: Dict[str, Any], mandate_id: s
     return added
 
 
+def _repair_sepa_schedule_slot_totals(line: Dict[str, Any]) -> bool:
+    """Persist logical totals when retry history created duplicate slot rows."""
+    installments = _sepa_installments(line)
+    raw_effective = [item for item in installments if _installment_counts_toward_schedule(item)]
+    effective = _effective_sepa_installments(line)
+    if len(raw_effective) == len(effective):
+        return False
+
+    schedule_total = _sepa_schedule_total(line, installments)
+    total_due = round(sum(_money(item.get('amount')) for item in effective), 2)
+    total_paid = round(sum(
+        _money(item.get('amount')) for item in effective
+        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+    ), 2)
+    paid_count = sum(
+        1 for item in effective
+        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+    )
+    plan = line.get('sepa_payment_plan') if isinstance(line.get('sepa_payment_plan'), dict) else {}
+    current_ids = {id(item) for item in effective}
+    markers_match = all(
+        bool(item.get('is_current_schedule_attempt')) == (id(item) in current_ids)
+        and _positive_installment_int(item.get('schedule_total')) == schedule_total
+        for item in installments
+    )
+    totals_match = (
+        _positive_installment_int(plan.get('total_installments')) == schedule_total
+        and abs(_money(plan.get('total_due')) - total_due) < 0.01
+        and abs(_money(plan.get('total_paid')) - total_paid) < 0.01
+        and abs(_money(plan.get('total_remaining')) - max(total_due - total_paid, 0)) < 0.01
+        and _positive_installment_int(plan.get('paid_installments')) == paid_count
+        and _positive_installment_int(plan.get('remaining_installments')) == max(schedule_total - paid_count, 0)
+        and str(line.get('qontoPaymentGlobalStatus') or '') == _qonto_payment_global_status(line)
+    )
+    if markers_match and totals_match:
+        return False
+    _sync_sepa_aliases(line)
+    return True
+
+
 def _repair_logged_qonto_rejection_retries(data: Dict[str, Any], lines: List[Dict[str, Any]]) -> int:
-    """Repair the one historical alias-loss case without polling every line."""
+    """Repair historical retry persistence and logical schedule totals."""
     repaired = 0
+    changed = False
     for line in lines:
+        line_changed = False
         mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '').strip()
-        if not mandate_id:
-            continue
-        known_ids = {
-            str(item.get('qonto_direct_debit_subscription_id') or '')
-            for item in _sepa_installments(line) if item.get('qonto_direct_debit_subscription_id')
-        }
-        missing_logged_retry = any(
-            str(entry.get('action') or '') == 'Prélèvement rejeté reprogrammé'
-            and str(entry.get('result') or 'success') == 'success'
-            and str(entry.get('qonto_id') or '').strip()
-            and str(entry.get('qonto_id') or '').strip() not in known_ids
-            for entry in (line.get('logs') or []) if isinstance(entry, dict)
-        )
-        if not missing_logged_retry:
-            continue
-        try:
-            added = _recover_missing_qonto_rejection_retries(line, mandate_id)
-        except Exception as exc:
-            app.logger.warning(
-                '[QONTO] réparation locale du prélèvement reprogrammé impossible mandate_id=%s error=%s',
-                mandate_id, _sanitize_qonto_error(str(exc)),
+        if mandate_id:
+            known_ids = {
+                str(item.get('qonto_direct_debit_subscription_id') or '')
+                for item in _sepa_installments(line) if item.get('qonto_direct_debit_subscription_id')
+            }
+            missing_logged_retry = any(
+                str(entry.get('action') or '') == 'Prélèvement rejeté reprogrammé'
+                and str(entry.get('result') or 'success') == 'success'
+                and str(entry.get('qonto_id') or '').strip()
+                and str(entry.get('qonto_id') or '').strip() not in known_ids
+                for entry in (line.get('logs') or []) if isinstance(entry, dict)
             )
-            continue
-        if added:
+            if missing_logged_retry:
+                try:
+                    added = _recover_missing_qonto_rejection_retries(line, mandate_id)
+                except Exception as exc:
+                    app.logger.warning(
+                        '[QONTO] réparation locale du prélèvement reprogrammé impossible mandate_id=%s error=%s',
+                        mandate_id, _sanitize_qonto_error(str(exc)),
+                    )
+                    added = 0
+                if added:
+                    _billing_log(
+                        line, 'Nouveau prélèvement suite à rejet restauré depuis Qonto', 'success',
+                        f'{added} prélèvement(s)', mandate_id,
+                    )
+                    _mark_line_qonto_rejection_notifications_treated(data, line)
+                    repaired += added
+                    line_changed = True
+
+        if _repair_sepa_schedule_slot_totals(line):
             _billing_log(
-                line, 'Nouveau prélèvement suite à rejet restauré depuis Qonto', 'success',
-                f'{added} prélèvement(s)', mandate_id,
+                line, 'Comptage des mensualités corrigé', 'success',
+                f'{_sepa_schedule_total(line)} mensualité(s) contractuelle(s)', mandate_id,
             )
-            _mark_line_qonto_rejection_notifications_treated(data, line)
+            line_changed = True
+
+        if line_changed:
             _save_billing_line(data, line)
-            repaired += added
-    if repaired:
+            changed = True
+    if changed:
         save_data(data)
     return repaired
 
@@ -31695,11 +32047,11 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
         line.get('mandateStatus') or line.get('qonto_mandate_status') or 'pending'
     )
     all_installments = _sepa_installments(line)
-    installments = [item for item in all_installments if _installment_counts_toward_schedule(item)]
+    installments = _effective_sepa_installments(line)
     statuses = [str(i.get('status') or '').lower() for i in installments]
     if not line.get('qonto_direct_debit_mandate_id') or mandate not in {'active', 'signed'}:
         return 'Mandat à signer'
-    if any(_installment_is_rejected(item) and not _installment_rejection_is_treated(item) for item in all_installments): return 'Rejeté'
+    if any(_installment_is_rejected(item) for item in installments): return 'Rejeté'
     if statuses and all(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Payé'
     if any(_installment_rejection_is_treated(item) for item in all_installments): return 'Rejet traité'
     if any(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Paiement partiel'

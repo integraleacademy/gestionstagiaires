@@ -43,10 +43,39 @@ class ManualLinkTests(unittest.TestCase):
             trainees = self.client.get("/admin/wedof/matching/manual/trainees?session_id=S1&q=bertin").json["items"]
             self.assertEqual([item["id"] for item in trainees], ["T1"])
             self.assertEqual(self.client.get("/admin/wedof/matching/manual/trainees?session_id=missing").status_code, 404)
+            enrolments = self.client.get("/admin/wedof/matching/manual/enrolments?q=bertin").json["items"]
+            self.assertEqual([(item["trainee_id"], item["session_id"]) for item in enrolments], [("T1", "S1")])
+            self.assertEqual(set(enrolments[0]), {
+                "match_reason", "session_id", "session_name", "session_training_type",
+                "session_date_start", "session_date_end", "session_archived", "trainee_id",
+                "first_name", "last_name", "email", "phone",
+            })
+
+    def test_global_trainee_suggestions_rank_identity_and_wedof_dates(self):
+        data = local_data()
+        data["sessions"].append({
+            "id": "S3", "name": "APS OCTOBRE 2026", "training_type": "APS",
+            "date_start": "2026-10-12", "date_end": "2026-11-13", "trainees": [{
+                "id": "T3", "first_name": "Stéphane", "last_name": "BERTIN",
+                "email": "sbertin@example.fr", "phone": "0612345678",
+            }],
+        })
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get("/admin/wedof/matching/manual/enrolments", query_string={
+                "email": "SBERTIN@example.fr", "phone": "+33 6 12 34 56 78",
+                "first_name": "Stéphane", "last_name": "BERTIN",
+                "date_start": "2026-09-07", "date_end": "2026-10-09",
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["total"], 2)
+        self.assertEqual([item["session_id"] for item in response.json["items"]], ["S1", "S3"])
+        self.assertIn("Mêmes dates de formation", response.json["items"][0]["match_reason"])
+        self.assertNotIn("score", response.json["items"][0])
 
     def test_authentication_is_required(self):
         anonymous = gestion_app.app.test_client()
         self.assertEqual(anonymous.get("/admin/wedof/matching/manual/sessions").status_code, 302)
+        self.assertEqual(anonymous.get("/admin/wedof/matching/manual/enrolments?q=bertin").status_code, 302)
         self.assertEqual(anonymous.get("/admin/wedof/matching/manual/folder?external_id=W1").status_code, 302)
         self.assertEqual(anonymous.post("/admin/wedof/matching/manual-link").status_code, 302)
 
@@ -91,6 +120,8 @@ class ManualLinkTests(unittest.TestCase):
         self.assertIn('id="wedof-loading-modal"', html)
         self.assertIn("Mise à jour des dossiers WEDOF en cours", html)
         self.assertIn("js/wedof-loading.js", html)
+        self.assertIn('id="wedof-global-trainee-search"', html)
+        self.assertIn("tous les stagiaires enregistrés dans la base", html)
 
     def test_client_detail_is_get_only_with_api_key(self):
         response = Mock(status_code=200, headers={}); response.json.return_value = remote_folder()

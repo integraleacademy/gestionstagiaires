@@ -12,6 +12,63 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
 
+    def _urbanik_line_with_two_retry_attempts(self):
+        installments = []
+        for index in range(1, 8):
+            item = {
+                "index": index,
+                "date": f"2026-{index + 3:02d}-05",
+                "due_date": f"2026-{index + 3:02d}-05",
+                "amount": 600,
+                "status": "completed" if index <= 4 else "scheduled",
+                "qonto_direct_debit_subscription_id": f"sub-{index}",
+            }
+            if index == 5:
+                item.update({
+                    "status": "failed",
+                    "failureReason": "insufficient_funds",
+                    "rejection_treated": True,
+                    "rejection_treated_at": "2026-08-11T08:00:00Z",
+                    "excluded_from_schedule_totals": True,
+                })
+            installments.append(item)
+        installments.extend([
+            {
+                "index": 5, "schedule_index": 5, "schedule_total": 7,
+                "date": "2026-08-12", "due_date": "2026-08-12", "amount": 600,
+                "status": "scheduled", "is_rejection_retry": True,
+                "qonto_direct_debit_subscription_id": "sub-retry-old",
+                "reference": "bill_42 - reprogrammation échéance 5/7",
+                "created_at": "2026-08-11T08:30:00Z",
+            },
+            {
+                "index": 5, "schedule_index": 5, "schedule_total": 7,
+                "date": "2026-08-12", "due_date": "2026-08-12", "amount": 600,
+                "status": "failed", "failureReason": "unknown", "is_rejection_retry": True,
+                "qonto_direct_debit_subscription_id": "sub-retry-current",
+                "reference": "bill_42 - reprogrammation échéance 5/7",
+                "created_at": "2026-08-11T09:00:00Z",
+            },
+        ])
+        return {
+            "id": "line-urbanik", "traineeId": "TRN-F2E04324",
+            "traineeFirstName": "Anthony", "traineeLastName": "Urbanik",
+            "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "mandate-urbanik",
+            "qonto_mandate_status": "active", "mandateStatus": "active",
+            "paymentPlan": {
+                "mode": "sepa_direct_debit", "installments": 7,
+                "schedule": [{"date": f"2026-{index + 3:02d}-05", "amount": 600} for index in range(1, 8)],
+            },
+            "directDebitInstallments": installments,
+            "sepa_payment_plan": {
+                "installments": installments,
+                "total_due": 4800, "total_paid": 2400, "total_remaining": 2400,
+                "paid_installments": 4, "remaining_installments": 4,
+            },
+            "qontoPaymentGlobalStatus": "Rejet traité",
+        }
+
     def test_searches_every_page_by_exact_rum_and_persists_uuid_and_rum(self):
         trainee = {"id": "trainee-1", "first_name": "Anne", "last_name": "Test"}
         data = {"sessions": [{"id": "session-1", "trainees": [trainee]}]}
@@ -201,6 +258,48 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
 
         self.assertEqual([item["status"] for item in installments], ["completed", "failed", "scheduled"])
         self.assertEqual(installments[1]["failureReason"], "blocked_account")
+
+    def test_retry_attempts_share_one_of_seven_contractual_slots(self):
+        line = self._urbanik_line_with_two_retry_attempts()
+
+        gestion_app._sync_sepa_aliases(line)
+
+        effective = gestion_app._effective_sepa_installments(line)
+        plan = line["sepa_payment_plan"]
+        self.assertEqual(len(line["directDebitInstallments"]), 9)
+        self.assertEqual(len(effective), 7)
+        self.assertEqual([gestion_app._installment_schedule_position(item, 0) for item in effective], list(range(1, 8)))
+        self.assertEqual(effective[4]["qonto_direct_debit_subscription_id"], "sub-retry-current")
+        self.assertEqual(plan["total_installments"], 7)
+        self.assertEqual(plan["total_due"], 4200)
+        self.assertEqual(plan["total_paid"], 2400)
+        self.assertEqual(plan["total_remaining"], 1800)
+        self.assertEqual(plan["paid_installments"], 4)
+        self.assertEqual(plan["remaining_installments"], 3)
+        self.assertEqual(line["qontoPaymentGlobalStatus"], "Rejeté")
+        old_retry, current_retry = line["directDebitInstallments"][-2:]
+        self.assertFalse(old_retry["is_current_schedule_attempt"])
+        self.assertTrue(old_retry["retry_superseded"])
+        self.assertTrue(current_retry["is_current_schedule_attempt"])
+        self.assertFalse(current_retry["retry_superseded"])
+        self.assertTrue(all(item["schedule_total"] == 7 for item in line["directDebitInstallments"]))
+
+    def test_trainee_billing_load_persists_corrected_urbanik_totals_without_qonto_write(self):
+        line = self._urbanik_line_with_two_retry_attempts()
+        data = {"billing_lines": [line]}
+
+        with patch.object(gestion_app, "save_data") as save_mock, \
+             patch.object(gestion_app, "_save_billing_line") as save_line_mock, \
+             patch.object(gestion_app, "list_qonto_direct_debit_subscriptions") as qonto_mock:
+            recovered = gestion_app._repair_logged_qonto_rejection_retries(data, [line])
+
+        self.assertEqual(recovered, 0)
+        qonto_mock.assert_not_called()
+        save_line_mock.assert_called_once_with(data, line)
+        save_mock.assert_called_once_with(data)
+        self.assertEqual(line["sepa_payment_plan"]["total_installments"], 7)
+        self.assertEqual(line["sepa_payment_plan"]["total_due"], 4200)
+        self.assertEqual(line["sepa_payment_plan"]["total_remaining"], 1800)
 
     def test_sync_recovers_retry_created_by_the_previous_alias_bug(self):
         installments = [
