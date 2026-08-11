@@ -1144,6 +1144,7 @@
         </div>
         <div class="trainee-session-results" id="traineeSessionSearchResults" role="listbox" aria-label="Sessions correspondant à la recherche"></div>
         <div class="trainee-session-search__status" id="traineeSessionSearchStatus" aria-live="polite"></div>
+        <div id="crmPrefillStatus" class="hint" role="status" aria-live="polite" style="display:none;margin-top:10px;font-weight:800;color:#b91c1c;"></div>
       </div>
 
       <label class="trainee-create-section" style="margin-bottom:14px;display:block;">
@@ -1486,6 +1487,8 @@
 
 <script>
   const availableSessionsForCreate = {{ sessions|tojson }};
+  const crmPrefillTransfer = {{ crm_prefill|tojson }};
+  const crmPrefillRequested = {{ crm_prefill_requested|tojson }};
   function normalizeTrainingChoice(value){
     const v = (value || "").trim().toUpperCase();
     if(v.startsWith("APS")) return "APS";
@@ -1570,6 +1573,7 @@
       city: (document.getElementById("sessionTCity")?.value || "").trim(),
       vtc_real_training_dates: (document.getElementById("sessionTVtcRealTrainingDates")?.value || "").trim(),
       carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
+      crm_prefill: crmPrefillTransfer?.id || "",
     };
   }
 
@@ -1742,7 +1746,7 @@
     const select = document.getElementById("traineeTargetSession");
     if(!select) return;
 
-    const futureOnlyTrainings = new Set(["APS", "A3P", "SSIAP", "DIRIGEANT initial", "VTC"]);
+    const futureOnlyTrainings = new Set(["APS", "A3P", "SSIAP", "DIRIGEANT initial"]);
     const matching = availableSessionsForCreate.filter(s => {
       if(normalizeTrainingChoice(s.training_type) !== selectedTrainingForCreate) return false;
       return !futureOnlyTrainings.has(selectedTrainingForCreate) || (s.status_key === "upcoming" && !!s.date_start);
@@ -1819,6 +1823,46 @@
     refreshSessionChoices();
   }
 
+  function applyCrmPrefillFromSessions(){
+    if(!crmPrefillRequested) return;
+    initializeTraineeCreateFromSessions();
+    const status = document.getElementById("crmPrefillStatus");
+    if(!crmPrefillTransfer){
+      if(status){ status.textContent = "Ce transfert CRM est introuvable ou a expiré."; status.style.display = "block"; }
+      openModal("createTraineeFromSessionsModal");
+      return;
+    }
+    const fields = crmPrefillTransfer.payload || {};
+    selectedTrainingForCreate = crmPrefillTransfer.training_type || "";
+    refreshTrainingButtons();
+    refreshVtcRealTrainingDatesVisibility();
+    refreshSessionChoices();
+    const inputs = {
+      sessionTLastName: fields.nom,
+      sessionTFirstName: fields.prenom,
+      sessionTEmail: fields.email,
+      sessionTPhone: fields.telephone
+    };
+    Object.entries(inputs).forEach(([id, value])=>{ const input = document.getElementById(id); if(input) input.value = value || ""; });
+    const select = document.getElementById("traineeTargetSession");
+    const targetId = crmPrefillTransfer.matched_session_id || "";
+    const target = availableSessionsForCreate.find(item => item.id === targetId);
+    if(select && target){
+      if(!Array.from(select.options).some(option => option.value === targetId)){
+        select.add(new Option(sessionDisplayName(target), targetId));
+      }
+      select.disabled = false;
+      select.value = targetId;
+      if(status){ status.textContent = `Session sélectionnée : ${sessionDisplayName(target)}`; status.style.display = "block"; status.style.color = "#166534"; }
+    }else if(select){
+      select.innerHTML = '<option value="">Session correspondante introuvable</option>';
+      select.value = "";
+      select.disabled = true;
+      if(status){ status.textContent = "Session correspondante introuvable"; status.style.display = "block"; }
+    }
+    openModal("createTraineeFromSessionsModal");
+  }
+
   document.querySelectorAll("#trainingChooser .training-choice").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       selectedTrainingForCreate = btn.getAttribute("data-training") || "";
@@ -1884,6 +1928,21 @@
     if(!await window.confirmMailSmsSend?.()) return;
     await createTraineeFromSessions(true);
   });
+
+  function startCrmPrefillWhenReady(){
+    if(!crmPrefillRequested) return;
+    if(typeof window.openModal !== "function"){
+      window.setTimeout(startCrmPrefillWhenReady, 50);
+      return;
+    }
+    applyCrmPrefillFromSessions();
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", startCrmPrefillWhenReady, {once:true});
+  }else{
+    startCrmPrefillWhenReady();
+  }
 
   const importFromSessionsBtn = document.getElementById("btnImportTraineeInfosFromSessions");
   const importFromSessionsInput = document.getElementById("importTraineeInfosFromSessionsInput");
@@ -2234,10 +2293,7 @@
     btn.disabled = true;
 
     try{
-      const r = await fetch(`/api/sessions/${currentEditSessionId}/update`, {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
+      const payload = {
           date_start: isDespTraining(document.getElementById("editSessionTrainingType").value) ? resolveDirigeantSessionDates("edit").dateStart : (document.getElementById("editDateStart").value || "").trim(),
           date_end: isDespTraining(document.getElementById("editSessionTrainingType").value) ? resolveDirigeantSessionDates("edit").dateEnd : (document.getElementById("editDateEnd").value || "").trim(),
           exam_date: (document.getElementById("editExamDate").value || "").trim(),
@@ -2250,9 +2306,20 @@
           dirigeant_remote_end: (document.getElementById("editDirigeantRemoteEnd").value || "").trim(),
           dirigeant_in_person_start: (document.getElementById("editDirigeantInPersonStart").value || "").trim(),
           dirigeant_in_person_end: (document.getElementById("editDirigeantInPersonEnd").value || "").trim()
-        })
+      };
+      let r = await fetch(`/api/sessions/${currentEditSessionId}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
       });
-      const res = await r.json();
+      let res = await r.json();
+      if(r.status === 409 && res.error === "wedof_date_change_confirmation_required"){
+        const ok = await AppModal.confirm({type:"warning", title:"Dates et dossiers WEDOF", message:`Cette session est liée à ${res.wedof_links_count} dossier(s) WEDOF. Les dates modifiées ici ne modifieront pas les dates WEDOF. Les automatisations continueront à utiliser les dates enregistrées dans WEDOF.`, primaryText:"Je confirme"});
+        if(!ok) return;
+        payload.confirm_wedof_date_change = true;
+        r = await fetch(`/api/sessions/${currentEditSessionId}/update`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+        res = await r.json();
+      }
       if(!r.ok || !res.ok){
         alert("Erreur mise à jour session");
         return;

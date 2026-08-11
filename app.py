@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import datetime
 import calendar
+import math
 import html
 import unicodedata
 import threading
@@ -57,6 +58,15 @@ import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
+import afc_import
+from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
+from wedof_matching import (build_matching_preview, extract_folder, normalize_date, normalize_email,
+                            normalize_name, normalize_phone)
+from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, local_association_status,
+                         save_manual_wedof_link, sync_exact_wedof_links)
+from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
+                              next_automatic_attempt,
+                              record_maintenance_skip, run_dry_run, run_live_automation)
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -2656,7 +2666,9 @@ def admin_login_required(view):
         if not session.get("admin_logged_in"):
             if _request_expects_json():
                 return jsonify({"ok": False, "error": "Session administrateur expirée. Reconnectez-vous."}), 401
-            return redirect(url_for("admin_login", next=request.path))
+            # Keep the query string: CRM prefill links must survive authentication.
+            next_url = request.full_path.rstrip("?")
+            return redirect(url_for("admin_login", next=next_url))
         return view(*args, **kwargs)
     return wrapped
 
@@ -3000,6 +3012,16 @@ def fr_date(value: str) -> str:
     except Exception:
         return value
 
+def format_date_fr(value: Any) -> str:
+    """Affiche une date ISO en français, sans jamais exposer une valeur invalide."""
+    try:
+        raw = str(value or "").strip()
+        if not raw:
+            return "—"
+        return datetime.date.fromisoformat(raw[:10]).strftime("%d/%m/%Y")
+    except (TypeError, ValueError):
+        return "—"
+
 def _fr_date_offset(value: str, *, months: int = 0, days: int = 0) -> str:
     """Format an ISO date after applying calendar-month and day offsets."""
     s = str(value or "").strip()
@@ -3067,6 +3089,7 @@ def history_datetime(value: str) -> str:
 # ✅ Filtres utilisables dans tous tes templates
 app.add_template_filter(fr_date, "frdate")
 app.add_template_filter(fr_datetime, "frdatetime")
+app.add_template_filter(format_date_fr, "format_date_fr")
 
 
 # =========================
@@ -3226,6 +3249,7 @@ def _int_env(name: str, default: int) -> int:
 MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 
 _data_lock = threading.RLock()
+_cnaps_public_annuaire_monitor_lock = threading.Lock()
 _wedof_webhook_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
 _storage_startup_logged = False
@@ -3877,14 +3901,22 @@ def _iter_corrupt_candidates(path: str) -> Iterable[str]:
 
 
 def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            loaded = json.load(f)
-        if isinstance(loaded, dict):
-            return loaded
-    except Exception:
+    lock = _data_lock if "_data_lock" in globals() and path == globals().get("DATA_FILE") else None
+
+    def _read() -> Optional[Dict[str, Any]]:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                return loaded
+        except Exception:
+            return None
         return None
-    return None
+
+    if lock is not None:
+        with lock:
+            return _read()
+    return _read()
 
 
 def _recover_data_file(path: str) -> Optional[str]:
@@ -4196,7 +4228,22 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
     }
 
     try:
-        response = get_func(endpoint, headers=headers, timeout=10)
+        response = get_func(endpoint, headers=headers, timeout=(3, 10))
+    except requests.ConnectTimeout:
+        rows, error = _cnapsv3_tracking_error("timeout connexion")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except requests.ReadTimeout:
+        rows, error = _cnapsv3_tracking_error("timeout lecture")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except requests.ConnectionError:
+        rows, error = _cnapsv3_tracking_error("erreur connexion")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
     except requests.Timeout:
         rows, error = _cnapsv3_tracking_error("timeout réseau")
         if use_cache:
@@ -4308,7 +4355,7 @@ def sync_cnapsv3_lookup_identifier(
     backoff_seconds = [1, 2, 4]
     for attempt, delay in enumerate(backoff_seconds, start=1):
         try:
-            response = post_func(endpoint, headers=headers, json=payload, timeout=8)
+            response = post_func(endpoint, headers=headers, json=payload, timeout=(3, 10))
         except requests.RequestException as exc:
             app.logger.warning(
                 "[CNAPSV3_LOOKUP] Erreur réseau tentative=%s/%s payload=%s error=%s",
@@ -4440,7 +4487,7 @@ def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
         return False
 
     try:
-        response = requests.get(endpoint, timeout=10)
+        response = requests.get(endpoint, timeout=(3, 10))
         response.raise_for_status()
         payload = response.json() or {}
     except Exception:
@@ -5122,6 +5169,31 @@ def _normalize_afc_email(raw_email: Any) -> str:
     return normalized
 
 
+def _create_afc_candidate(payload: Dict[str, Any], *, import_source: str = "") -> Dict[str, Any]:
+    """Unique factory shared by manual creation and confirmed image imports."""
+    nom = str(payload.get("nom") or "").strip()
+    prenom = str(payload.get("prenom") or "").strip()
+    cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
+    candidate = {
+        "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
+        "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
+        "nom": nom, "prenom": prenom,
+        "email": str(payload.get("email") or "").strip(),
+        "telephone": str(payload.get("telephone") or "").strip(),
+        "decision": "", "notification_status": "",
+        "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
+        "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
+        "motif_refus": "", "complement_refus": "", "complement_refus_autre": "",
+        "modules": {"formation_technique": 0, "remise_niveau": 0, "soutien_personnalise": 0, "paf": 0},
+        "dates_formation": "", "test_francais_reussi": None, "cnaps_priority": False,
+        "presence_afc": False, "presence_afc_status": "A_CONVOQUER",
+        "test_results_comment": "", "created_at": _now_iso(),
+    }
+    if import_source:
+        candidate["source"] = import_source
+    return candidate
+
+
 
 import base64
 
@@ -5447,34 +5519,61 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
 
 def run_cnaps_public_annuaire_monitor() -> Dict[str, Any]:
     """Check tracked CNAPS files without requiring an administrator page visit."""
-    rows, fetch_error = fetch_cnapsv3_tracking_requests()
-    if fetch_error:
-        raise RuntimeError(fetch_error)
-    data = load_data(run_background_tasks=False)
+    job_started_at = time.monotonic()
+    app.logger.info("[CNAPS_MONITOR] JOB_BEGIN")
+    rows: List[Dict[str, Any]] = []
     checked = notified = errors = 0
-    seen: Set[str] = set()
-    for row in rows:
-        last_name = str(row.get("last_name") or "").strip()
-        first_name = str(row.get("first_name") or "").strip()
-        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
-        key = _cnaps_public_annuaire_status_key(last_name, nub)
-        if not last_name or len(nub) != 7 or key in seen:
-            continue
-        seen.add(key)
-        result = fetch_cnaps_public_annuaire(last_name, nub)
-        if result.get("check_status") != "success":
-            errors += 1
-            continue
-        checked += 1
-        if _record_cnaps_public_annuaire_status(
-            data, first_name=first_name, last_name=last_name, nub=nub, result=result,
-        ):
-            notified += 1
-        if CNAPS_MONITOR_REQUEST_DELAY_SECONDS:
-            time.sleep(CNAPS_MONITOR_REQUEST_DELAY_SECONDS)
-    if checked:
-        save_data(data)
-    return {"checked": checked, "notified": notified, "errors": errors}
+    try:
+        step_started_at = time.monotonic()
+        app.logger.info("[CNAPS_MONITOR] CANDIDATE_SELECTION_BEGIN")
+        rows, fetch_error = fetch_cnapsv3_tracking_requests()
+        if fetch_error:
+            app.logger.warning("[CNAPS_MONITOR] CANDIDATE_SELECTION_ERROR duration_ms=%s error=%s", int((time.monotonic() - step_started_at) * 1000), fetch_error)
+            return {"checked": 0, "notified": 0, "errors": 1, "status": "fetch_error", "error": str(fetch_error)[:160]}
+        app.logger.info("[CNAPS_MONITOR] CANDIDATE_SELECTION_END duration_ms=%s candidates=%s", int((time.monotonic() - step_started_at) * 1000), len(rows))
+
+        seen: Set[str] = set()
+        successful_results: List[Tuple[str, str, str, Dict[str, Any]]] = []
+        for index, row in enumerate(rows, start=1):
+            candidate_started_at = time.monotonic()
+            last_name = str(row.get("last_name") or "").strip()
+            first_name = str(row.get("first_name") or "").strip()
+            nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+            key = _cnaps_public_annuaire_status_key(last_name, nub)
+            app.logger.info("[CNAPS_MONITOR] CANDIDATE_BEGIN index=%s key=%s nub_masked=%s", index, key, _mask_cnaps_nub(nub))
+            if not last_name or len(nub) != 7 or key in seen:
+                app.logger.info("[CNAPS_MONITOR] CANDIDATE_END index=%s skipped=true duration_ms=%s", index, int((time.monotonic() - candidate_started_at) * 1000))
+                continue
+            seen.add(key)
+            call_started_at = time.monotonic()
+            app.logger.info("[CNAPS_MONITOR] CNAPS_CALL_BEGIN index=%s key=%s", index, key)
+            result = fetch_cnaps_public_annuaire(last_name, nub)
+            app.logger.info("[CNAPS_MONITOR] CNAPS_CALL_END index=%s key=%s status=%s duration_ms=%s", index, key, result.get("check_status"), int((time.monotonic() - call_started_at) * 1000))
+            if result.get("check_status") != "success":
+                errors += 1
+                app.logger.info("[CNAPS_MONITOR] CANDIDATE_END index=%s error=true duration_ms=%s", index, int((time.monotonic() - candidate_started_at) * 1000))
+                continue
+            checked += 1
+            successful_results.append((first_name, last_name, nub, result))
+            if CNAPS_MONITOR_REQUEST_DELAY_SECONDS:
+                time.sleep(CNAPS_MONITOR_REQUEST_DELAY_SECONDS)
+            app.logger.info("[CNAPS_MONITOR] CANDIDATE_END index=%s duration_ms=%s", index, int((time.monotonic() - candidate_started_at) * 1000))
+        if successful_results:
+            save_started_at = time.monotonic()
+            app.logger.info("[CNAPS_MONITOR] SAVE_BEGIN")
+
+            def merge_cnaps_results(latest_data: Dict[str, Any]) -> int:
+                merged_notified = 0
+                for first_name, last_name, nub, result in successful_results:
+                    if _record_cnaps_public_annuaire_status(latest_data, first_name=first_name, last_name=last_name, nub=nub, result=result):
+                        merged_notified += 1
+                return merged_notified
+
+            notified = update_data(merge_cnaps_results, run_background_tasks=False)
+            app.logger.info("[CNAPS_MONITOR] SAVE_END duration_ms=%s", int((time.monotonic() - save_started_at) * 1000))
+        return {"checked": checked, "notified": notified, "errors": errors, "status": "done"}
+    finally:
+        app.logger.info("[CNAPS_MONITOR] JOB_END duration_ms=%s candidates=%s checked=%s notified=%s errors=%s", int((time.monotonic() - job_started_at) * 1000), len(rows), checked, notified, errors)
 
 def brevo_send_email(
     to_email: str,
@@ -5682,7 +5781,7 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
           <li>conseils méthodologiques pour optimiser votre passage devant le jury.</li>
         </ul>
 
-        <p style="margin:0 0 10px 0;">Vous recevrez prochainement par mail votre convocation à la formation pratique, ainsi que le document officiel de prêt du véhicule à doubles commandes.<br>
+        <p style="margin:0 0 10px 0;">Vous trouverez en pièce-jointe votre convocation à la formation pratique, ainsi que le document officiel de prêt du véhicule à doubles commandes.<br>
         ⚠️ Il est impératif de présenter ce document le jour de l’examen : en son absence, le jury peut prononcer un ajournement.</p>
 
         <p style="margin:0 0 10px 0;">Nous restons à votre disposition si vous avez la moindre question.<br>
@@ -6398,12 +6497,24 @@ def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dic
     subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
     sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
 
-    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if (send_notifications and email) else False
+    docx_path, pdf_path = _generate_aps_convocation_files(
+        session_obj, trainee, str(session_obj.get("id") or ""), str(trainee.get("id") or "")
+    )
+    with open(pdf_path, "rb") as fh:
+        attachment = {"name": os.path.basename(pdf_path), "content": base64.b64encode(fh.read()).decode("ascii")}
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee, attachments=[attachment]) if (send_notifications and email) else False
     sms_ok = brevo_send_sms(phone, sms) if (send_notifications and phone) else False
 
     trainee["vtc_theory_exam_sent_at"] = _now_iso()
     trainee["vtc_theory_exam_email_ok"] = bool(email_ok)
     trainee["vtc_theory_exam_sms_ok"] = bool(sms_ok)
+    trainee["convocation_aps_status"] = "sent" if email_ok else "generated"
+    trainee["convocation_aps_generated_at"] = trainee["vtc_theory_exam_sent_at"]
+    trainee["convocation_aps_sent_at"] = trainee["vtc_theory_exam_sent_at"] if email_ok else ""
+    trainee["convocation_aps_pdf_path"] = pdf_path
+    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
+    trainee["convocation_aps_last_error"] = ""
     trainee["updated_at"] = _now_iso()
 
     return {
@@ -7649,6 +7760,15 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
 def _empty_data_payload() -> Dict[str, Any]:
     return {
         "sessions": [],
+        "wedof_links": [],
+        "wedof_automation_exceptions": [],
+        "wedof_automation_status": [],
+        "wedof_automation_actions": [],
+        "wedof_automation_blocks": [],
+        "wedof_automation_runs": [],
+        "wedof_automation_sync": {"states": {}},
+        "crm_integration_requests": [],
+        "crm_prefill_transfers": [],
         "afc": {},
         "positioning_tests": [],
         "notifications_edof": [],
@@ -7707,6 +7827,16 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         if recovered_from:
             loaded = _load_valid_json_payload(DATA_FILE)
             if loaded is not None:
+                if not isinstance(loaded.get("wedof_links"), list):
+                    loaded["wedof_links"] = []
+                if not isinstance(loaded.get("wedof_automation_exceptions"), list):
+                    loaded["wedof_automation_exceptions"] = []
+                if not isinstance(loaded.get("wedof_automation_status"), list):
+                    loaded["wedof_automation_status"] = []
+                if not isinstance(loaded.get("wedof_automation_actions"), list): loaded["wedof_automation_actions"] = []
+                if not isinstance(loaded.get("wedof_automation_blocks"), list): loaded["wedof_automation_blocks"] = []
+                if not isinstance(loaded.get("wedof_automation_runs"), list): loaded["wedof_automation_runs"] = []
+                if not isinstance(loaded.get("wedof_automation_sync"), dict): loaded["wedof_automation_sync"] = {"states": {}}
                 _ensure_multi_partner_payload(loaded)
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
@@ -7731,6 +7861,19 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
             _log_storage_state(base)
             _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
             return base
+
+    # Compatibilité ascendante : exposer une collection vide sans provoquer à
+    # elle seule une réécriture du fichier lors d'une simple lecture.
+    if not isinstance(data.get("wedof_links"), list):
+        data["wedof_links"] = []
+    if not isinstance(data.get("wedof_automation_exceptions"), list):
+        data["wedof_automation_exceptions"] = []
+    if not isinstance(data.get("wedof_automation_status"), list):
+        data["wedof_automation_status"] = []
+    if not isinstance(data.get("wedof_automation_actions"), list): data["wedof_automation_actions"] = []
+    if not isinstance(data.get("wedof_automation_blocks"), list): data["wedof_automation_blocks"] = []
+    if not isinstance(data.get("wedof_automation_runs"), list): data["wedof_automation_runs"] = []
+    if not isinstance(data.get("wedof_automation_sync"), dict): data["wedof_automation_sync"] = {"states": {}}
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
     changed = False
@@ -7867,6 +8010,41 @@ def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> Non
 
     transform = preserve_canonical_oauth if preserve_qonto_oauth else None
     _write_json_with_backups(DATA_FILE, data, _data_lock, payload_transform=transform)
+
+
+def update_data(
+    mutator: Callable[[Dict[str, Any]], Any],
+    *,
+    run_background_tasks: bool = False,
+    preserve_qonto_oauth: bool = True,
+) -> Any:
+    """Apply one logical read-modify-write transaction to data.json.
+
+    The shared RLock stays held from the canonical file read through the atomic
+    replace so gthread requests cannot overwrite each other's changes with a
+    stale in-memory copy. Do not perform network I/O or sleeps inside mutator.
+    """
+    with _data_lock:
+        data = load_data(run_background_tasks=run_background_tasks)
+        result = mutator(data)
+        save_data(data, preserve_qonto_oauth=preserve_qonto_oauth)
+        return data if result is None else result
+
+def _atomic_update_data(mutator: Callable[[Dict[str, Any]], Dict[str, Any]]) -> Dict[str, Any]:
+    """Apply a business mutation while holding the JSON store's process/file locks."""
+    result: Dict[str, Any] = {}
+
+    def transform(caller_payload: Dict[str, Any]) -> Dict[str, Any]:
+        nonlocal result
+        canonical = _load_valid_json_payload(DATA_FILE)
+        payload = canonical if isinstance(canonical, dict) else caller_payload
+        _ensure_multi_partner_payload(payload)
+        result = mutator(payload)
+        return payload
+
+    seed = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+    _write_json_with_backups(DATA_FILE, seed, _data_lock, payload_transform=transform)
+    return result
 
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
     if not os.path.exists(WEDOF_WEBHOOK_FILE):
@@ -9023,7 +9201,6 @@ def _apply_vtc_manual_exam_status(trainee: Dict[str, Any], mode: str, status: st
         if normalized_status == "success":
             trainee["vtc_theory_result"] = "admissible"
             trainee["vtc_theory_result_label"] = "admissible"
-            trainee["vtc_theory_exam_sent_at"] = trainee.get("vtc_theory_exam_sent_at") or now
         elif normalized_status == "failed":
             trainee["vtc_theory_result"] = "non_admissible"
             trainee["vtc_theory_result_label"] = "échec examen théorique"
@@ -9469,7 +9646,7 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str, previous_success: Optional[D
         page = 0
         while page < min(total_pages, CNAPS_PUBLIC_ANNUAIRE_MAX_PAGES):
             payload = _build_cnaps_public_annuaire_payload(normalized_nom, normalized_nub, page)
-            response = session.post(endpoint, json=payload, headers=headers, timeout=(5, 15), allow_redirects=True)
+            response = session.post(endpoint, json=payload, headers=headers, timeout=(3, 10), allow_redirects=True)
             data = _validate_cnaps_json_response(response)
             rows.extend(_extract_cnaps_public_annuaire_results(data))
             total_elements = int(data.get("totalElements") or total_elements or 0)
@@ -12077,7 +12254,11 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
                     "file_tokens": file_tokens,
                 })
 
-            latest_vae = _vae_find_latest_for_trainee(str(t.get("id") or ""))
+            # Administrative projections must not create an absent VAE store during reads.
+            latest_vae = (
+                _vae_find_latest_for_trainee(str(t.get("id") or ""))
+                if os.path.exists(VAE_DATA_FILE) else None
+            )
             vae_justificatifs = latest_vae.get("justificatifs_experience") if isinstance(latest_vae, dict) and isinstance(latest_vae.get("justificatifs_experience"), list) else []
 
             item_data = {
@@ -12507,7 +12688,7 @@ def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]
                 "tone": "orange",
             }
         return {
-            "label": "EN ATTENTE DOCUMENTS COMPLEMENTAIRES",
+            "label": "En attente documents complémentaires",
             "tone": "warning",
         }
     if not scotia_status:
@@ -12516,6 +12697,22 @@ def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]
             "tone": "danger",
         }
     return {}
+
+
+def _scotia_admin_status_for_trainee(
+    scotia_items: List[Dict[str, Any]], session_id: Any, trainee_id: Any,
+) -> Dict[str, str]:
+    """Return the admin-list SCOTIA badge for one trainee without mutating inputs."""
+    wanted_key = (str(session_id or ""), str(trainee_id or ""))
+    item = next(
+        (
+            candidate for candidate in scotia_items
+            if isinstance(candidate, dict)
+            and (str(candidate.get("session_id") or ""), str(candidate.get("trainee_id") or "")) == wanted_key
+        ),
+        None,
+    )
+    return _scotia_admin_status_badge(item)
 
 
 def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
@@ -13756,7 +13953,8 @@ PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
     "admin_financement_refuse_submit",
     "admin_afc",
     "api_admin_afc_create_candidate",
-    "api_admin_afc_import_from_image",
+    "api_admin_afc_import_image_preview",
+    "api_admin_afc_import_image_confirm",
     "api_admin_afc_save_mail_templates",
     "api_admin_afc_save_modules",
     "api_admin_afc_update_candidate",
@@ -14411,6 +14609,26 @@ def admin_sessions():
     admin_sessions_started_at = time.monotonic()
     _log_memory_stage("ADMIN_SESSIONS_BEGIN", admin_sessions_started_at, "/admin/sessions")
     data = load_data()
+    crm_prefill_id = (request.args.get("crm_prefill") or "").strip()
+    crm_prefill = None
+    if crm_prefill_id:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        transfers = data.setdefault("crm_prefill_transfers", [])
+        retained = []
+        for item in transfers:
+            try:
+                expires_at = datetime.datetime.fromisoformat(str(item.get("expires_at") or ""))
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+            except (TypeError, ValueError):
+                expires_at = now
+            if expires_at > now:
+                retained.append(item)
+                if hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id):
+                    crm_prefill = copy.deepcopy(item)
+        if len(retained) != len(transfers):
+            data["crm_prefill_transfers"] = retained
+            save_data(data)
     _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
     wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
     out_sessions = []
@@ -14652,6 +14870,8 @@ def admin_sessions():
         yearly_training_counts=yearly_training_counts,
         dashboard_training_labels=dashboard_training_labels,
         wedof_new_requests_count=wedof_new_requests_count,
+        crm_prefill=crm_prefill,
+        crm_prefill_requested=bool(crm_prefill_id),
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     _log_memory_stage("ADMIN_SESSIONS_AFTER_RENDER", getattr(request, _REQUEST_STARTED_AT_KEY, None), "/admin/sessions")
@@ -15740,16 +15960,571 @@ def admin_sessions_automations():
 @app.get("/admin/wedof")
 @admin_login_required
 def admin_wedof_requests():
+    data = load_data(run_background_tasks=False)
     wedof_webhooks = _load_wedof_webhooks()[:100]
     for item in wedof_webhooks:
         if isinstance(item, dict):
             item["display_fields"] = _wedof_entry_display_fields(item)
     wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
+    displayed_links = _wedof_links_for_display(data)
+    maintenance = is_wedof_maintenance_window()
     return render_template(
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=wedof_new_requests_count,
+        wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
+        wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
+        wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
+        wedof_links=displayed_links,
+        wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
+        wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
+        wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
+            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", []),
+            local_associations=displayed_links),
+        wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
+        wedof_sync=data.get("wedof_automation_sync", {}),
+        wedof_dashboard_state=automation_dashboard_state(data),
+        wedof_maintenance=maintenance,
+        wedof_next_attempt=next_automatic_attempt() if maintenance["active"] else None,
     )
+
+
+def _wedof_links_for_display(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    sessions = {str(item.get("id") or ""): item for item in data.get("sessions", []) if isinstance(item, dict)}
+    trainees = {
+        (session_id, str(trainee.get("id") or "")): trainee
+        for session_id, session in sessions.items()
+        for trainee in (session.get("trainees", session.get("stagiaires", [])) or [])
+        if isinstance(trainee, dict)
+    }
+    displayed = []
+    for link in data.get("wedof_links", []) or []:
+        if not isinstance(link, dict) or link.get("active") is not True:
+            continue
+        row = dict(link)
+        local_session = sessions.get(str(link.get("session_id") or ""))
+        trainee = trainees.get((str(link.get("session_id") or ""), str(link.get("trainee_id") or "")))
+        row["orphaned"] = not local_session or not trainee
+        row["session_label"] = _session_label_for_wedof(local_session) if local_session else "Session introuvable"
+        row["trainee_label"] = (" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or "").strip(), str(trainee.get("last_name") or trainee.get("nom") or "").strip()])) if trainee else "Stagiaire introuvable")
+        row["source_label"] = ({"automatic_exact_match": "Association automatique fiable",
+                                "manual_admin": "Association manuelle administrateur"}.get(
+                                    str(link.get("source") or ""), str(link.get("source") or "—")))
+        row["association_label"] = ("Association locale orpheline — session introuvable" if not local_session
+                                    else "Association locale orpheline — stagiaire introuvable" if not trainee
+                                    else row["source_label"])
+        row["date_consistency"] = evaluate_wedof_link_date_consistency(link, local_session or {})
+        displayed.append(row)
+    return displayed
+
+
+def _session_label_for_wedof(session_obj: Dict[str, Any]) -> str:
+    return str(session_obj.get("name") or session_obj.get("title") or session_obj.get("training_type") or session_obj.get("id") or "—")
+
+
+WEDOF_AUTOMATION_LOCK_FILE = os.path.join(PERSIST_DIR, "wedof_automation.lock")
+
+
+def run_wedof_automation_dry_run() -> Dict[str, Any]:
+    """Exécute une analyse GET-only sous verrou interprocessus non bloquant."""
+    maintenance = is_wedof_maintenance_window()
+    if maintenance["active"]:
+        summary = None
+        def persist_skip(canonical):
+            nonlocal summary
+            summary = record_maintenance_skip(canonical)
+            return canonical
+        _atomic_update_data(persist_skip)
+        return summary
+    os.makedirs(PERSIST_DIR, exist_ok=True)
+    lock_file = open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return {"ok": False, "status": "already_running"}
+        working = load_data()
+        summary = run_dry_run(WedofClient(), working)
+        statuses, runs = working["wedof_automation_status"], working["wedof_automation_runs"]
+        sync = working.get("wedof_automation_sync", {"states": {}})
+        def persist(canonical):
+            canonical["wedof_automation_status"], canonical["wedof_automation_runs"] = statuses, runs[-100:]
+            canonical["wedof_automation_sync"] = sync
+            return canonical
+        _atomic_update_data(persist)
+        return summary
+    finally:
+        try: fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally: lock_file.close()
+
+
+def _wedof_live_mode_enabled() -> bool:
+    """Fail closed: seules les deux chaînes canoniques autorisent une mutation."""
+    return (os.environ.get("WEDOF_AUTOMATION_ENABLED") or "").strip().casefold() == "true" and \
+           (os.environ.get("WEDOF_DRY_RUN") or "").strip().casefold() == "false"
+
+
+def run_wedof_automation_live() -> Dict[str, Any]:
+    """Exécute et persiste le live sous un verrou interprocessus exclusif."""
+    if not _wedof_live_mode_enabled():
+        return run_wedof_automation_dry_run()
+    os.makedirs(PERSIST_DIR, exist_ok=True)
+    lock_file = open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return {"ok": False, "status": "already_running", "mode": "live"}
+        working = load_data()
+        def persist(snapshot):
+            def update(canonical):
+                canonical["wedof_automation_actions"] = snapshot.get("wedof_automation_actions", [])
+                canonical["wedof_automation_status"] = snapshot.get("wedof_automation_status", [])
+                return canonical
+            _atomic_update_data(update)
+        summary = run_live_automation(WedofClient(), working, persist_reservation=persist)
+        def persist_final(canonical):
+            for key in ("wedof_automation_actions", "wedof_automation_status", "wedof_automation_runs"):
+                canonical[key] = working.get(key, [])
+            return canonical
+        _atomic_update_data(persist_final)
+        return summary
+    finally:
+        try: fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally: lock_file.close()
+
+
+@app.post("/admin/wedof/automation/analyze")
+@admin_login_required
+@admin_write_required
+def admin_wedof_automation_analyze():
+    if not read_env_bool("WEDOF_DRY_RUN", default=False):
+        flash("Le mode test WEDOF doit être explicitement activé.", "error")
+    else:
+        try:
+            result = run_wedof_automation_dry_run()
+            if result.get("status") == "skipped_maintenance_window":
+                window = result["maintenance_window"]
+                flash(f"Analyse WEDOF suspendue entre {window['start_time']} et {window['end_time']}, heure de Paris, "
+                      "en raison de l’indisponibilité habituelle de l’API. Les dernières données connues restent "
+                      "affichées. La prochaine analyse reprendra automatiquement.", "info")
+            elif result.get("status") == "partial_success":
+                labels = {"accepted": "Accepté", "inTraining": "En formation",
+                          "serviceDoneDeclared": "Service fait déclaré", "serviceDoneValidated": "Service fait validé"}
+                failed = ", ".join(labels.get(x, x) for x in result.get("failed_states", []))
+                flash("Analyse WEDOF partielle : certains états n’ont pas pu être actualisés. "
+                      "Les dernières données connues ont été conservées. États concernés : " + failed, "warning")
+            elif result.get("status") == "failed":
+                flash("L’API WEDOF est temporairement indisponible. Aucune donnée existante n’a été supprimée. Réessayez ultérieurement.", "error")
+            elif result.get("ok"):
+                flash("Analyse WEDOF terminée avec succès.", "success")
+            else:
+                flash("Une analyse WEDOF est déjà en cours.", "error")
+        except (WedofConfigurationError, WedofApiError) as exc:
+            app.logger.warning("Analyse WEDOF impossible erreur=%s", getattr(exc, "code", "wedof_configuration_error"))
+            flash("L’API WEDOF est temporairement indisponible. Aucune donnée existante n’a été supprimée. Réessayez ultérieurement.", "error")
+        except Exception:
+            app.logger.exception("Erreur technique nettoyée pendant l’analyse WEDOF")
+            flash("L’API WEDOF est temporairement indisponible. Aucune donnée existante n’a été supprimée. Réessayez ultérieurement.", "error")
+    return redirect(url_for("admin_wedof_requests"))
+
+
+@app.post("/admin/wedof/automation/block")
+@admin_login_required
+@admin_write_required
+def admin_wedof_automation_block():
+    external_id, action = str(request.form.get("external_id") or "").strip(), str(request.form.get("action") or "").strip()
+    reason, comment = str(request.form.get("reason_code") or "").strip(), str(request.form.get("comment") or "").strip()
+    if (not external_id or len(external_id) > 200 or action not in {"entry_training", "service_done", "both"}
+            or reason not in {"no_show", "postponed", "abandonment", "partial_completion", "administrative_issue", "other"} or len(comment) > 500):
+        return jsonify({"ok": False, "error": "invalid_block"}), 400
+    snapshot = load_data()
+    known = next((row for row in snapshot.get("wedof_automation_status", [])
+                  if isinstance(row, dict) and str(row.get("external_id") or "") == external_id), None)
+    if known is None:
+        known = next((row for row in snapshot.get("wedof_links", [])
+                      if isinstance(row, dict) and str(row.get("external_id") or "") == external_id), None)
+    state = (known or {}).get("wedof_state") or (known or {}).get("state")
+    expected = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
+    if known is None or expected is None or action not in {expected, "both"}:
+        return jsonify({"ok": False, "error": "inconsistent_block"}), 400
+    now = datetime.datetime.now(ZoneInfo("Europe/Paris")).isoformat()
+    def mutate(data):
+        blocks = data.setdefault("wedof_automation_blocks", [])
+        current = next((x for x in blocks if x.get("external_id") == external_id and x.get("action") == action), None)
+        if current: current.update(active=True, reason_code=reason, comment=comment, updated_at=now)
+        else: blocks.append({"id": "WBLOCK-" + secrets.token_hex(4).upper(), "external_id": external_id,
+                             "action": action, "active": True, "reason_code": reason, "comment": comment,
+                             "created_at": now, "updated_at": now})
+        return data
+    _atomic_update_data(mutate)
+    flash("Automatisation WEDOF bloquée. Aucune déclaration ne sera envoyée pour cette action tant que le blocage restera actif.", "success")
+    return redirect(url_for("admin_wedof_requests", tab=request.form.get("tab") or "anomaly"))
+
+
+@app.post("/admin/wedof/automation/unblock")
+@admin_login_required
+@admin_write_required
+def admin_wedof_automation_unblock():
+    external_id, action = str(request.form.get("external_id") or "").strip(), str(request.form.get("action") or "").strip()
+    if not external_id or action not in {"entry_training", "service_done", "both"}: return jsonify({"ok": False, "error": "invalid_block"}), 400
+    now = datetime.datetime.now(ZoneInfo("Europe/Paris")).isoformat()
+    def mutate(data):
+        for block in data.setdefault("wedof_automation_blocks", []):
+            if block.get("external_id") == external_id and block.get("action") == action: block.update(active=False, updated_at=now)
+        return data
+    _atomic_update_data(mutate)
+    flash("Automatisation WEDOF réactivée. Le dossier sera réévalué lors de la prochaine analyse automatique.", "success")
+    return redirect(url_for("admin_wedof_requests", tab=request.form.get("tab") or "anomaly"))
+
+
+def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> None:
+    """Priorise tout lien actif, notamment manuel, sur le résultat automatique."""
+    displayed = {str(item.get("external_id") or ""): item for item in _wedof_links_for_display(data)}
+    sessions = {str(item.get("id") or ""): item for item in data.get("sessions", []) if isinstance(item, dict)}
+    for result in preview["results"]:
+        result["local_association"] = local_association_status(result, data.get("wedof_links", []))
+        linked = displayed.get(str(result.get("external_id") or ""))
+        if linked:
+            result["session"] = linked["session_label"]
+            result["trainee"] = linked["trainee_label"]
+            result["linked"] = True
+            result["date_consistency"] = evaluate_wedof_link_date_consistency(linked, sessions.get(str(linked.get("session_id") or ""), {}), result)
+        else:
+            result["linked"] = False
+            matched_session = sessions.get(str(result.get("session_id") or ""), {})
+            result["date_consistency"] = evaluate_wedof_link_date_consistency({}, matched_session, result)
+
+
+@app.post("/admin/wedof/matching/preview")
+@admin_login_required
+def admin_wedof_matching_preview():
+    started_at = time.monotonic()
+    try:
+        client = WedofClient()
+        accepted = client.list_registration_folders("accepted")
+        in_training = client.list_registration_folders("inTraining")
+        service_done = []
+        for remote_state in ("serviceDoneDeclared", "serviceDoneValidated"):
+            try:
+                service_done.extend(client.list_registration_folders(remote_state))
+            except StopIteration:  # Compatibilité avec les doubles de tests historiques.
+                break
+        data = load_data(run_background_tasks=False)
+        preview = build_matching_preview(accepted + in_training, data)
+        _decorate_wedof_preview(preview, data)
+        dashboard = build_automation_dashboard(
+            accepted + in_training + service_done, links=data.get("wedof_links", []),
+            statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", []),
+            local_associations=_wedof_links_for_display(data),
+        )
+        displayed_by_id = {str(x.get("external_id") or ""): x for x in _wedof_links_for_display(data)}
+        preview_by_id = {str(x.get("external_id") or ""): x for x in preview["results"]}
+        for row in dashboard["rows"]:
+            linked = displayed_by_id.get(row["external_id"])
+            matched = preview_by_id.get(row["external_id"], {})
+            row["matching_status"] = matched.get("status", "")
+        app.logger.info(
+            "Prévisualisation WEDOF dossiers=%s accepted=%s inTraining=%s catégories=%s durée_ms=%s",
+            len(accepted) + len(in_training), len(accepted), len(in_training), preview["counts"],
+            round((time.monotonic() - started_at) * 1000),
+        )
+    except (WedofConfigurationError, WedofApiError) as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("admin_wedof_requests"))
+
+    wedof_webhooks = _load_wedof_webhooks()[:100]
+    for item in wedof_webhooks:
+        if isinstance(item, dict):
+            item["display_fields"] = _wedof_entry_display_fields(item)
+    displayed_links = _wedof_links_for_display(data)
+    return render_template(
+        "admin_wedof.html",
+        wedof_webhooks=wedof_webhooks,
+        wedof_new_requests_count=sum(1 for item in wedof_webhooks if not bool(item.get("processed"))),
+        wedof_api_key_configured=True,
+        wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
+        wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
+        matching_preview=preview,
+        wedof_dashboard=dashboard,
+        wedof_links=displayed_links,
+        wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
+        wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
+        wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
+        wedof_sync=data.get("wedof_automation_sync", {}),
+        wedof_dashboard_state=automation_dashboard_state(data),
+        wedof_maintenance=is_wedof_maintenance_window(),
+        wedof_next_attempt=next_automatic_attempt() if is_wedof_maintenance_window()["active"] else None,
+        wedof_preview=True,
+    )
+
+
+def _manual_session_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "id": str(item.get("id") or ""), "name": _session_label_for_wedof(item),
+        "training_type": str(item.get("training_type") or item.get("type_formation") or ""),
+        "date_start": normalize_date(item.get("date_start") or item.get("date_debut")),
+        "date_end": normalize_date(item.get("date_end") or item.get("date_fin")),
+        "archived": bool(item.get("archived") or item.get("is_archived")),
+    }
+
+
+def _manual_trainee_item(trainee: Dict[str, Any]) -> Dict[str, str]:
+    return {"id": str(trainee.get("id") or ""),
+            "first_name": str(trainee.get("first_name") or trainee.get("prenom") or ""),
+            "last_name": str(trainee.get("last_name") or trainee.get("nom") or ""),
+            "email": str(trainee.get("email") or trainee.get("mail") or ""),
+            "phone": str(trainee.get("phone") or trainee.get("telephone") or trainee.get("phone_number") or "")}
+
+
+def _manual_trainee_matches(trainee: Dict[str, str], *, email: str, phone: str,
+                            first_name: str, last_name: str) -> bool:
+    """Return a conservative local identity match for suggested sessions."""
+    local_email = normalize_email(trainee["email"])
+    local_phone = normalize_phone(trainee["phone"])
+    contact_match = bool((email and local_email == email) or (phone and local_phone == phone))
+    name_match = bool(first_name and last_name
+                      and normalize_name(trainee["first_name"]) == first_name
+                      and normalize_name(trainee["last_name"]) == last_name)
+    return contact_match or name_match
+
+
+@app.get("/admin/wedof/matching/manual/sessions")
+@admin_login_required
+def admin_wedof_manual_sessions():
+    query = normalize_name(request.args.get("q"))
+    suggest_for_trainee = request.args.get("suggest_for_trainee") in {"1", "true", "on"}
+    email = normalize_email(request.args.get("email"))
+    phone = normalize_phone(request.args.get("phone"))
+    first_name = normalize_name(request.args.get("first_name"))
+    last_name = normalize_name(request.args.get("last_name"))
+    try:
+        limit = max(1, min(int(request.args.get("limit", 20)), 20))
+    except ValueError:
+        limit = 20
+    items = []
+    for session_obj in load_data(run_background_tasks=False).get("sessions", []):
+        if not isinstance(session_obj, dict) or _is_wedof_leads_session(session_obj):
+            continue
+        item = _manual_session_item(session_obj)
+        matching_trainee = next((_manual_trainee_item(trainee)
+                                 for trainee in session_obj.get("trainees", []) or []
+                                 if isinstance(trainee, dict)
+                                 and _manual_trainee_matches(_manual_trainee_item(trainee), email=email,
+                                                             phone=phone, first_name=first_name,
+                                                             last_name=last_name)), None)
+        if suggest_for_trainee and matching_trainee is None:
+            continue
+        if matching_trainee is not None:
+            item["suggested_trainee"] = matching_trainee
+        searchable = normalize_name(" ".join(str(item.get(key) or "") for key in
+                                             ("name", "training_type", "date_start", "date_end")))
+        if not query or query in searchable:
+            items.append(item)
+    items.sort(key=lambda item: (item["date_start"] or "", item["name"]))
+    return jsonify({"items": items[:limit]})
+
+
+@app.get("/admin/wedof/matching/manual/trainees")
+@admin_login_required
+def admin_wedof_manual_trainees():
+    session_id = str(request.args.get("session_id") or "").strip()
+    local_session = next((item for item in load_data(run_background_tasks=False).get("sessions", [])
+                          if isinstance(item, dict) and str(item.get("id") or "") == session_id), None)
+    if local_session is None:
+        return jsonify({"error": "Session locale introuvable."}), 404
+    query = normalize_name(request.args.get("q"))
+    items = []
+    for trainee in local_session.get("trainees", []) or []:
+        if not isinstance(trainee, dict):
+            continue
+        item = _manual_trainee_item(trainee)
+        searchable = normalize_name(" ".join(item.values()))
+        if not query or query in searchable or normalize_phone(query) in normalize_phone(item["phone"]):
+            items.append(item)
+    return jsonify({"items": items[:20]})
+
+
+@app.get("/admin/wedof/matching/manual/folder")
+@admin_login_required
+def admin_wedof_manual_folder():
+    """Relit un dossier pour la modale sans exposer son contenu WEDOF brut."""
+    started_at = time.monotonic()
+    external_id = str(request.args.get("external_id") or "").strip()
+    reference = hashlib.sha256(external_id.encode("utf-8")).hexdigest()[:10] if external_id else "missing"
+    app.logger.info("WEDOF interactif début route=manual_folder external_ref=%s", reference)
+    if not external_id:
+        return jsonify({"ok": False, "message": "Le numéro WEDOF est obligatoire."}), 400
+    try:
+        wedof = extract_folder(WedofClient().get_registration_folder_interactive(external_id))
+    except (WedofConfigurationError, WedofApiError) as exc:
+        app.logger.warning("WEDOF interactif fin route=manual_folder succès=false code=%s external_ref=%s durée_ms=%s",
+                           getattr(exc, "code", "wedof_configuration_error"), reference,
+                           round((time.monotonic() - started_at) * 1000))
+        return jsonify({"ok": False, "code": "wedof_temporarily_unavailable",
+                        "message": "Les informations WEDOF sont temporairement indisponibles."}), 503
+    if str(wedof.get("external_id") or "") != external_id:
+        return jsonify({"ok": False, "message": "L’identifiant retourné par WEDOF ne correspond pas au dossier demandé."}), 400
+    response = jsonify({
+        "external_id": external_id,
+        "state": str(wedof.get("state") or ""),
+        "type": str(wedof.get("type") or ""),
+        "first_name": str(wedof.get("first_name") or ""),
+        "last_name": str(wedof.get("last_name") or ""),
+        "email": str(wedof.get("email") or ""),
+        "phone": str(wedof.get("phone") or ""),
+        "date_start": normalize_date(wedof.get("start_date")),
+        "date_end": normalize_date(wedof.get("end_date")),
+    })
+    app.logger.info("WEDOF interactif fin route=manual_folder succès=true code=ok source=live external_ref=%s durée_ms=%s",
+                    reference, round((time.monotonic() - started_at) * 1000))
+    return response
+
+
+def _manual_link_response(message: str, status: int, *, result: Optional[Dict[str, Any]] = None):
+    if request.accept_mimetypes.best == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        body = {"ok": status < 400, "message": message}
+        if result:
+            body.update(result)
+        return jsonify(body), status
+    flash(message, "success" if status < 400 else "error")
+    return redirect(url_for("admin_wedof_requests"))
+
+
+@app.post("/admin/wedof/matching/manual-link")
+@admin_login_required
+def admin_wedof_manual_link():
+    started_at = time.monotonic()
+    external_id = str(request.form.get("external_id") or "").strip()
+    session_id = str(request.form.get("session_id") or "").strip()
+    trainee_id = str(request.form.get("trainee_id") or "").strip()
+    if request.form.get("confirm_manual_link") not in {"1", "true", "on"}:
+        return _manual_link_response("La confirmation manuelle est obligatoire.", 400)
+    verification_source = "live_wedof"
+    try:
+        folder = WedofClient().get_registration_folder_interactive(external_id)
+        wedof = extract_folder(folder)
+    except (WedofConfigurationError, WedofApiError):
+        snapshot_data = load_data(run_background_tasks=False)
+        snapshot = next((item for item in snapshot_data.get("wedof_automation_status", [])
+                         if isinstance(item, dict) and str(item.get("external_id") or "") == external_id
+                         and item.get("last_checked_at")), None)
+        if snapshot is None:
+            app.logger.warning("WEDOF interactif route=manual_link succès=false code=no_reliable_snapshot durée_ms=%s",
+                               round((time.monotonic() - started_at) * 1000))
+            return _manual_link_response("WEDOF est indisponible et aucun instantané fiable n’existe pour ce dossier.", 503)
+        verification_source = "cached_wedof_snapshot"
+        wedof = {"external_id": snapshot.get("external_id"), "type": snapshot.get("wedof_type"),
+                 "state": snapshot.get("wedof_state"), "start_date": snapshot.get("wedof_date_start"),
+                 "end_date": snapshot.get("wedof_date_end")}
+    if str(wedof.get("external_id") or "") != external_id:
+        return _manual_link_response("L’identifiant retourné par WEDOF ne correspond pas au dossier demandé.", 400)
+    if str(wedof.get("type") or "").strip().casefold() != "cpf":
+        return _manual_link_response("Ce dossier WEDOF n’est pas de type CPF.", 400)
+    state = str(wedof.get("state") or "").strip()
+    if state not in ALLOWED_STATES:
+        return _manual_link_response(f"Association refusée : le dossier WEDOF est désormais dans l’état {state or 'inconnu'}.", 400)
+    result: Dict[str, Any] = {}
+
+    def merge_under_file_lock(_: Dict[str, Any]) -> Dict[str, Any]:
+        canonical = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+        local_session = next((item for item in canonical.get("sessions", []) if isinstance(item, dict)
+                              and str(item.get("id") or "") == session_id), None)
+        if local_session is None:
+            result.update(error="Session locale introuvable.")
+            return canonical
+        trainee = next((item for item in local_session.get("trainees", []) or [] if isinstance(item, dict)
+                        and str(item.get("id") or "") == trainee_id), None)
+        if trainee is None:
+            result.update(error="Le stagiaire n’appartient pas à la session sélectionnée.")
+            return canonical
+        local_dates = (normalize_date(local_session.get("date_start") or local_session.get("date_debut")),
+                       normalize_date(local_session.get("date_end") or local_session.get("date_fin")))
+        wedof_dates = (normalize_date(wedof.get("start_date")), normalize_date(wedof.get("end_date")))
+        if local_dates != wedof_dates and request.form.get("confirm_date_mismatch") not in {"1", "true", "on"}:
+            result.update(error="La confirmation de la différence de dates est obligatoire.")
+            return canonical
+        outcome = save_manual_wedof_link(canonical, external_id=external_id, session_id=session_id,
+                                         trainee_id=trainee_id, state=state, date_start=wedof_dates[0],
+                                         date_end=wedof_dates[1])
+        active_external_ids = {str(item.get("external_id") or "") for item in canonical.get("wedof_links", [])
+                               if isinstance(item, dict) and item.get("active") is True}
+        eligible_status_ids = {str(item.get("external_id") or "") for item in canonical.get("wedof_automation_status", [])
+                               if isinstance(item, dict) and item.get("external_id")
+                               and item.get("wedof_type") == "cpf" and item.get("wedof_state") in ALLOWED_STATES}
+        result.update(outcome=outcome, session=_session_label_for_wedof(local_session),
+                      trainee=" ".join(filter(None, [str(trainee.get("first_name") or trainee.get("prenom") or ""),
+                                                      str(trainee.get("last_name") or trainee.get("nom") or "")])),
+                      unlinked_count=len(eligible_status_ids - active_external_ids))
+        return canonical
+
+    _write_json_with_backups(DATA_FILE, {}, _data_lock, payload_transform=merge_under_file_lock)
+    if result.get("error"):
+        return _manual_link_response(result["error"], 400)
+    if result.get("outcome") == "conflict":
+        return _manual_link_response("Conflit avec une association existante. Aucun lien n’a été remplacé.", 409)
+    message = ("Association locale enregistrée à partir du dernier instantané WEDOF connu. "
+               "Aucune déclaration n’a été envoyée à WEDOF." if verification_source == "cached_wedof_snapshot" else
+               "Association locale enregistrée. Aucune déclaration n’a été envoyée à WEDOF.")
+    public_result = {key: result[key] for key in ("session", "trainee", "unlinked_count")}
+    public_result["association"] = "Association manuelle administrateur"
+    public_result["verification_source"] = verification_source
+    app.logger.info("WEDOF interactif route=manual_link succès=true code=ok source=%s external_ref=%s durée_ms=%s",
+                    verification_source, hashlib.sha256(external_id.encode("utf-8")).hexdigest()[:10],
+                    round((time.monotonic() - started_at) * 1000))
+    return _manual_link_response(message, 200, result=public_result)
+
+
+@app.post("/admin/wedof/matching/sync-exact")
+@admin_login_required
+def admin_wedof_matching_sync_exact():
+    started_at = time.monotonic()
+    try:
+        client = WedofClient()
+        folders = client.list_registration_folders("accepted") + client.list_registration_folders("inTraining")
+        # Le rapprochement est recalculé côté serveur. Aucun champ du formulaire
+        # n'est consulté et seules les requêtes GET du client lecture seule sont utilisées.
+        summary: Dict[str, int] = {}
+        exact_count = 0
+
+        def merge_under_file_lock(_: Dict[str, Any]) -> Dict[str, Any]:
+            nonlocal summary, exact_count
+            canonical = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+            preview = build_matching_preview(folders, canonical)
+            exact_count = preview["counts"]["exact_match"]
+            summary = sync_exact_wedof_links(canonical, preview["results"])
+            return canonical
+
+        _write_json_with_backups(DATA_FILE, {}, _data_lock, payload_transform=merge_under_file_lock)
+        app.logger.info(
+            "Synchronisation WEDOF dossiers=%s exacts=%s créés=%s existants=%s conflits=%s ignorés=%s durée_ms=%s",
+            len(folders), exact_count, summary["created"], summary["already_linked"], summary["conflicts"], summary["skipped"],
+            round((time.monotonic() - started_at) * 1000),
+        )
+        flash(
+            f"Associations WEDOF enregistrées : {summary['created']} nouvelles, "
+            f"{summary['already_linked']} déjà existantes, {summary['conflicts']} conflit(s). "
+            "Aucune déclaration n’a été envoyée à WEDOF.", "success",
+        )
+    except (WedofConfigurationError, WedofApiError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("admin_wedof_requests"))
+
+
+@app.post("/admin/wedof/api/test")
+@admin_login_required
+def admin_test_wedof_api():
+    try:
+        result = WedofClient().test_connection()
+        organism = result["organism"]
+        flash(
+            f"Connexion WEDOF réussie — organisme : {organism['name']} — "
+            f"SIRET : {organism['siret']} — accès aux dossiers confirmé.",
+            "success",
+        )
+    except (WedofConfigurationError, WedofApiError) as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("admin_wedof_requests"))
 
 @app.post("/admin/wedof/mark-treated/<entry_id>")
 @admin_login_required
@@ -16592,9 +17367,15 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _afc_render_mail_template(template: str, candidate: Dict[str, Any]) -> str:
+    raw_date_icop = str(candidate.get("date_icop") or "").strip()
+    try:
+        date_icop = datetime.date.fromisoformat(raw_date_icop).strftime("%d/%m/%Y")
+    except ValueError:
+        date_icop = raw_date_icop
     values = {
         "nom": (candidate.get("nom") or "").strip(),
         "prenom": (candidate.get("prenom") or "").strip(),
+        "date_icop": date_icop,
         "motif_refus": (candidate.get("motif_refus") or "").strip(),
         "complement_refus": (
             (candidate.get("complement_refus_autre") or "").strip()
@@ -16645,7 +17426,13 @@ def _afc_find_latest_positioning_score(candidate: Dict[str, Any], positioning_te
 def admin_afc():
     data = load_data()
     bucket = _afc_bucket(data)
-    candidates = bucket.get("candidates", [])
+    all_candidates = bucket.get("candidates", [])
+    show_archived = request.args.get("archives") == "1"
+    archived_count = sum(1 for candidate in all_candidates if candidate.get("archived"))
+    candidates = [
+        candidate for candidate in all_candidates
+        if bool(candidate.get("archived")) == show_archived
+    ]
     positioning_tests = list(data.get("positioning_tests") or [])
     changed = False
     for candidate in candidates:
@@ -16678,6 +17465,8 @@ def admin_afc():
         "admin_afc.html",
         afc=bucket,
         candidates=ordered_candidates,
+        show_archived=show_archived,
+        archived_count=archived_count,
         afc_presence_status_labels=AFC_PRESENCE_STATUS_LABELS,
         refusal_reasons=AFC_REFUSAL_REASONS,
         refusal_complements=AFC_REFUSAL_COMPLEMENTS,
@@ -16689,132 +17478,148 @@ def api_admin_afc_create_candidate():
     data = load_data()
     bucket = _afc_bucket(data)
     payload = request.get_json(silent=True) or {}
-    nom = str(payload.get("nom") or "").strip()
-    prenom = str(payload.get("prenom") or "").strip()
-    email = str(payload.get("email") or "").strip()
-    telephone = str(payload.get("telephone") or "").strip()
-    if not nom or not prenom:
+    if not str(payload.get("nom") or "").strip() or not str(payload.get("prenom") or "").strip():
         return jsonify({"ok": False, "error": "Nom et prénom obligatoires"}), 400
-    cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
-    candidate = {
-        "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
-        "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
-        "nom": nom,
-        "prenom": prenom,
-        "email": email,
-        "telephone": telephone,
-        "decision": "",
-        "notification_status": "",
-        "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
-        "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
-        "motif_refus": "",
-        "complement_refus": "",
-        "complement_refus_autre": "",
-        "modules": {
-            "formation_technique": 0,
-            "remise_niveau": 0,
-            "soutien_personnalise": 0,
-            "paf": 0,
-        },
-        "dates_formation": "",
-        "test_francais_reussi": None,
-        "cnaps_priority": False,
-        "presence_afc": False,
-        "presence_afc_status": "A_CONVOQUER",
-        "test_results_comment": "",
-        "created_at": _now_iso(),
-    }
+    candidate = _create_afc_candidate(payload)
     bucket["candidates"].append(candidate)
     save_data(data)
     return jsonify({"ok": True, "candidate": candidate})
 
 
-@app.post("/api/admin/afc/import-from-image")
-def api_admin_afc_import_from_image():
-    f = request.files.get("file")
-    if not f:
-        return jsonify({"ok": False, "error": "missing_file"}), 400
-
-    filename = (f.filename or "import.png").strip()
-    lower = filename.lower()
-    allowed = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
-    if not lower.endswith(allowed):
-        return jsonify({"ok": False, "error": "invalid_file_type"}), 400
-
-    file_bytes = f.read()
-    if not file_bytes:
-        return jsonify({"ok": False, "error": "empty_file"}), 400
-
-    text, ocr_error = _ocr_extract_text_from_image(file_bytes, filename, f.mimetype or "")
-    if not text:
-        return jsonify({"ok": False, "error": "ocr_failed", "detail": ocr_error}), 422
-
-    parsed_candidates = _extract_afc_candidates_from_ocr_text(text)
-    if not parsed_candidates:
-        return jsonify({"ok": False, "error": "no_candidate_found"}), 422
-
-    data = load_data()
-    bucket = _afc_bucket(data)
-    existing = bucket.get("candidates") or []
-    existing_keys = {_afc_candidate_dedup_key(candidate) for candidate in existing}
-
-    imported: List[Dict[str, Any]] = []
-    skipped_count = 0
-    for parsed in parsed_candidates:
-        dedup_key = _afc_candidate_dedup_key(parsed)
-        if dedup_key in existing_keys:
-            skipped_count += 1
+def _afc_existing_indexes(candidates: List[Dict[str, Any]]) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    indexes = {"ft": {}, "email": {}, "phone": {}}
+    for existing in candidates:
+        # Une fiche archivée appartient à un ancien cycle AFC : elle ne doit pas
+        # empêcher une nouvelle convocation/importation du même candidat.
+        if existing.get("archived"):
             continue
+        normalized = afc_import.normalize_candidate(existing)
+        for key, value in (("ft", normalized["_keys"]["ft"]), ("email", normalized["email"]), ("phone", normalized["_keys"]["phone"])):
+            if value:
+                indexes[key].setdefault(value, existing)
+    return indexes
 
-        nom = str(parsed.get("nom") or "").strip()
-        prenom = str(parsed.get("prenom") or "").strip()
-        if not nom or not prenom:
-            skipped_count += 1
-            continue
 
-        cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
-        candidate = {
-            "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
-            "identifiant_ft": str(parsed.get("identifiant_ft") or "").strip(),
-            "nom": nom,
-            "prenom": prenom,
-            "email": str(parsed.get("email") or "").strip(),
-            "telephone": str(parsed.get("telephone") or "").strip(),
-            "decision": "",
-            "notification_status": "",
-            "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
-            "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
-            "motif_refus": "",
-            "complement_refus": "",
-            "complement_refus_autre": "",
-            "modules": {
-                "formation_technique": 0,
-                "remise_niveau": 0,
-                "soutien_personnalise": 0,
-                "paf": 0,
-            },
-            "dates_formation": "",
-            "test_francais_reussi": None,
-            "cnaps_priority": False,
-            "presence_afc": False,
-            "presence_afc_status": "A_CONVOQUER",
-            "test_results_comment": "",
-            "created_at": _now_iso(),
-        }
-        existing.append(candidate)
-        existing_keys.add(dedup_key)
-        imported.append(candidate)
+def _afc_classify_import_candidates(raw_candidates: List[Dict[str, Any]], existing: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    indexes = _afc_existing_indexes(existing)
+    batch_seen = {"ft": {}, "email": {}, "phone": {}}
+    results = []
+    reasons = {"ft": "Identifiant France Travail déjà présent", "email": "Adresse e-mail déjà présente", "phone": "Numéro de téléphone déjà présent"}
+    for position, raw in enumerate(raw_candidates):
+        candidate = afc_import.normalize_candidate(raw if isinstance(raw, dict) else {})
+        errors = afc_import.validation_errors(candidate)
+        matches = []
+        keys = {"ft": candidate["_keys"]["ft"], "email": candidate["email"], "phone": candidate["_keys"]["phone"]}
+        for kind, value in keys.items():
+            if value and value in indexes[kind]:
+                matches.append((kind, indexes[kind][value]))
+            elif value and value in batch_seen[kind]:
+                matches.append((kind, batch_seen[kind][value]))
+        matched_ids = {str(item.get("id") or f"batch-{id(item)}") for _, item in matches}
+        if len(matched_ids) > 1:
+            status, reason = "conflict", "Conflit entre plusieurs fiches existantes"
+        elif matches:
+            status, reason = "duplicate", reasons[matches[0][0]]
+        elif errors:
+            status, reason = "invalid", " ; ".join(errors)
+        else:
+            status, reason = "ready", ""
+        for kind, value in keys.items():
+            if value and value not in batch_seen[kind]:
+                batch_seen[kind][value] = {"id": f"batch-{position}"}
+        candidate.pop("_keys", None)
+        candidate.update({"status": status, "reason": reason, "selected": status == "ready"})
+        if has_request_context() and matches and matches[0][1].get("id") and not str(matches[0][1].get("id")).startswith("batch-"):
+            candidate["existing_url"] = url_for("admin_afc_candidate_sheet", candidate_id=matches[0][1]["id"])
+        results.append(candidate)
+    return results
 
-    if imported:
-        save_data(data)
 
-    return jsonify({
-        "ok": True,
-        "imported": imported,
-        "imported_count": len(imported),
-        "skipped_count": skipped_count,
-        "parsed_count": len(parsed_candidates),
-    })
+def _afc_import_summary(candidates: List[Dict[str, Any]]) -> Dict[str, int]:
+    return {"detected": len(candidates), "ready": sum(c["status"] == "ready" for c in candidates),
+            "duplicates": sum(c["status"] == "duplicate" for c in candidates),
+            "invalid": sum(c["status"] == "invalid" for c in candidates),
+            "conflicts": sum(c["status"] == "conflict" for c in candidates)}
+
+
+@app.post("/admin/afc/import-image/preview")
+def api_admin_afc_import_image_preview():
+    started = time.monotonic()
+    upload = request.files.get("image") or request.files.get("file")
+    if not upload:
+        return jsonify({"success": False, "message": "Sélectionnez une image à analyser."}), 400
+    declared_length = request.content_length or 0
+    if declared_length > afc_import.MAX_IMAGE_BYTES + 65536:
+        return jsonify({"success": False, "message": "L’image dépasse la taille maximale de 10 Mo."}), 413
+    raw = upload.stream.read(afc_import.MAX_IMAGE_BYTES + 1)
+    try:
+        prepared, mime = afc_import.prepare_image(raw)
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    try:
+        extracted = afc_import.analyze_image(prepared, mime)
+    except afc_import.AfcVisionError as exc:
+        app.logger.warning("afc_vision_preview error_type=%s duration_ms=%d", type(exc.__cause__).__name__ if exc.__cause__ else type(exc).__name__, int((time.monotonic()-started)*1000))
+        return jsonify({"success": False, "message": str(exc)}), 422
+    if not extracted:
+        return jsonify({"success": False, "message": "Aucun candidat n’a été détecté dans cette image."}), 422
+    existing = _afc_bucket(load_data()).get("candidates", [])
+    candidates = _afc_classify_import_candidates(extracted, existing)
+    app.logger.info("afc_vision_preview detected=%d duration_ms=%d", len(candidates), int((time.monotonic()-started)*1000))
+    return jsonify({"success": True, "candidates": candidates, "summary": _afc_import_summary(candidates)})
+
+
+@app.post("/admin/afc/import-image/confirm")
+def api_admin_afc_import_image_confirm():
+    payload = request.get_json(silent=True) or {}
+    selected = payload.get("candidates")
+    if not isinstance(selected, list):
+        return jsonify({"success": False, "message": "Données d’import invalides."}), 400
+    date_icop = str(payload.get("date_icop") or "").strip()
+    try:
+        datetime.date.fromisoformat(date_icop)
+    except ValueError:
+        return jsonify({"success": False, "message": "Sélectionnez une date ICOP valide."}), 400
+
+    def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
+        bucket = _afc_bucket(data)
+        classified = _afc_classify_import_candidates(selected, bucket["candidates"])
+        imported, skipped, errors, notification_failures = [], 0, [], 0
+        for row in classified:
+            if row["status"] != "ready":
+                skipped += row["status"] in {"duplicate", "conflict"}
+                if row["status"] == "invalid": errors.append(row["reason"])
+                continue
+            candidate = _create_afc_candidate({"identifiant_ft": row["france_travail_id"], "nom": row["last_name"],
+                "prenom": row["first_names"], "telephone": row["phone"], "email": row["email"],
+                "date_icop": date_icop, "presence_afc_status": "CONVOQUE"}, import_source="Import image France Travail")
+            candidate["date_icop"] = date_icop
+            candidate["presence_afc_status"] = "CONVOQUE"
+            candidate["presence_afc"] = False
+            notified, notification_error = _send_afc_convocation_notification(bucket, candidate)
+            if notified:
+                candidate["notification_status"] = "ENVOYEE"
+                candidate["notification_sent_at"] = _now_iso()
+            else:
+                notification_failures += 1
+                errors.append(f"{candidate.get('prenom', '')} {candidate.get('nom', '')} : {notification_error}")
+            bucket["candidates"].append(candidate)
+            imported.append(candidate)
+        if imported:
+            _append_activity_log(data, "afc_candidates_image_imported", "afc", details={"imported_count": len(imported), "skipped_count": skipped})
+        return {"imported": len(imported), "duplicates_skipped": skipped, "notification_failures": notification_failures, "errors": errors}
+
+    result = _atomic_update_data(mutate)
+    imported, skipped = result.get("imported", 0), result.get("duplicates_skipped", 0)
+    message = f"{imported} candidat{'s' if imported != 1 else ''} importé{'s' if imported != 1 else ''}."
+    if skipped:
+        message += f" {skipped} candidat{'s' if skipped != 1 else ''} déjà existant{'s' if skipped != 1 else ''} {'ont' if skipped != 1 else 'a'} été ignoré{'s' if skipped != 1 else ''}."
+    failures = result.get("notification_failures", 0)
+    if failures:
+        message += f" L’envoi de la convocation a échoué pour {failures} candidat{'s' if failures != 1 else ''}."
+    elif imported:
+        message += " Les convocations e-mail et SMS ont été envoyées."
+    return jsonify({"success": True, **result, "message": message})
 
 
 @app.post("/api/admin/afc/mail-templates")
@@ -16962,6 +17767,42 @@ def api_admin_afc_delete_all_candidates():
     return jsonify({"ok": True, "deleted": deleted})
 
 
+@app.post("/api/admin/afc/candidates/archive-all")
+def api_admin_afc_archive_all_candidates():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    archived = 0
+    archived_at = _now_iso()
+    for candidate in bucket.get("candidates") or []:
+        if candidate.get("archived"):
+            continue
+        candidate["archived"] = True
+        candidate["archived_at"] = archived_at
+        archived += 1
+    if archived:
+        save_data(data)
+    return jsonify({"ok": True, "archived": archived})
+
+
+@app.post("/api/admin/afc/candidates/<candidate_id>/unarchive")
+def api_admin_afc_unarchive_candidate(candidate_id: str):
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidate = next(
+        (candidate for candidate in bucket.get("candidates", []) if str(candidate.get("id") or "") == candidate_id),
+        None,
+    )
+    if not candidate:
+        return jsonify({"ok": False, "error": "Candidat introuvable"}), 404
+
+    restored = bool(candidate.get("archived"))
+    if restored:
+        candidate["archived"] = False
+        candidate.pop("archived_at", None)
+        save_data(data)
+    return jsonify({"ok": True, "restored": restored})
+
+
 @app.post("/api/admin/afc/candidates/<candidate_id>/notify")
 def api_admin_afc_notify_candidate(candidate_id: str):
     data = load_data()
@@ -17024,6 +17865,7 @@ def _send_afc_convocation_notification(bucket: dict, candidate: dict) -> tuple[b
         candidate,
     )
 
+    sent_at = _now_iso()
     email_ok = True
     if email:
         html = mail_layout("<p>" + "</p><p>".join([line for line in raw_mail.splitlines() if line.strip()]) + "</p>")
@@ -17033,8 +17875,12 @@ def _send_afc_convocation_notification(bucket: dict, candidate: dict) -> tuple[b
     if phone:
         sms_ok = brevo_send_sms(phone, raw_sms)
 
-    candidate["convocation_email_sent_at"] = _now_iso() if email_ok and email else ""
-    candidate["convocation_sms_sent_at"] = _now_iso() if sms_ok and phone else ""
+    # These statuses mean that Brevo accepted the send request.  Actual delivery
+    # (or opening for e-mail) requires provider webhooks and must not be implied.
+    candidate["convocation_email_status"] = "ACCEPTE" if email and email_ok else ("ECHEC" if email else "ABSENT")
+    candidate["convocation_sms_status"] = "ACCEPTE" if phone and sms_ok else ("ECHEC" if phone else "ABSENT")
+    candidate["convocation_email_sent_at"] = sent_at if email_ok and email else ""
+    candidate["convocation_sms_sent_at"] = sent_at if sms_ok and phone else ""
 
     if (email and not email_ok) or (phone and not sms_ok):
         return False, "Échec envoi convocation"
@@ -17051,6 +17897,9 @@ def api_admin_afc_notify_pending_candidates():
     skipped = 0
     failed = 0
     for candidate in candidates:
+        if candidate.get("archived"):
+            skipped += 1
+            continue
         status = (candidate.get("notification_status") or "").strip().upper()
         if status == "ENVOYEE":
             skipped += 1
@@ -17105,7 +17954,7 @@ def admin_afc_candidate_sheet(candidate_id: str):
 def admin_afc_export():
     data = load_data()
     bucket = _afc_bucket(data)
-    candidates = bucket.get("candidates", [])
+    candidates = [c for c in bucket.get("candidates", []) if not c.get("archived")]
     prioritized = [c for c in candidates if c.get("cnaps_priority")]
     non_prioritized = [c for c in candidates if not c.get("cnaps_priority")]
     retained = [c for c in non_prioritized if (c.get("decision") or "").strip().upper() == "RETENU"]
@@ -19684,13 +20533,11 @@ def admin_trainees(session_id: str):
             unread_summary = _scotia_unread_thread_summary(t)
             t["scotia_unread_thread_count"] = int(unread_summary.get("count") or 0) if unread_summary else 0
 
-        scotia_items_by_trainee = {
-            (str(item.get("session_id") or ""), str(item.get("trainee_id") or "")): item
-            for item in _all_scotia_items(data, include_archived=True)
-        }
+        scotia_items = _all_scotia_items(data, include_archived=True)
         for t in trainees:
-            key = (str(session_view["id"] or ""), str(t.get("id") or ""))
-            t["scotia_admin_status"] = _scotia_admin_status_badge(scotia_items_by_trainee.get(key))
+            t["scotia_admin_status"] = _scotia_admin_status_for_trainee(
+                scotia_items, session_view["id"], t.get("id"),
+            )
 
     if session_view["training_type"] in {"APS", "A3P"}:
         _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
@@ -19942,6 +20789,178 @@ def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List
     }
 
 
+def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]) -> Dict[str, Any]:
+    """Build the printable, per-trainee financial view for one session."""
+    session_id = str(session_item.get("id") or "")
+    lines_by_trainee: Dict[str, List[Dict[str, Any]]] = {}
+    for line in _billing_lines_for_session(data, session_id):
+        lines_by_trainee.setdefault(str(line.get("traineeId") or ""), []).append(line)
+
+    default_price = default_training_price(_session_get(session_item, "training_type", "") or "")
+    rows = []
+    totals = {"revenue": 0, "cpf": 0, "personal": 0, "other": 0, "funding": 0, "gap": 0, "paid": 0,
+              "remaining": 0, "cpf_remaining": 0, "other_remaining": 0}
+    known_paid_total = 0
+    unknown_payment_count = 0
+
+    for trainee in _session_trainees_list(session_item):
+        trainee_id = str(trainee.get("id") or "")
+        price = max(_parse_financial_amount(trainee.get("training_price")), 0)
+        if price <= 0 and default_price is not None:
+            price = float(default_price)
+        cpf = max(_parse_financial_amount(trainee.get("cpf_amount")), 0)
+        personal = max(_parse_financial_amount(trainee.get("personal_amount")), 0)
+        other = max(_parse_financial_amount(trainee.get("other_financing_amount") or trainee.get("other_amount")), 0)
+        funding = cpf + personal + other
+        gap = price - funding
+        trainee_lines = lines_by_trainee.get(trainee_id, [])
+        # Reuse the same rollup as the trainee's "Financement" tab.  Besides
+        # Qonto invoice amounts, it includes cash instalments, manual payments
+        # and paid direct-debit instalments.  The session report previously
+        # looked only at invoice fields, so it could say "Montant inconnu"
+        # while the trainee sheet correctly said that the balance was paid.
+        financial_summary = calculate_trainee_financial_summary(trainee, trainee_lines)
+        paid_by_financer = financial_summary.get("by_financer") or {}
+        personal_paid = int((paid_by_financer.get("PERSONNEL") or {}).get("paid_amount_cents") or 0) / 100
+        cpf_paid = int((paid_by_financer.get("CPF") or {}).get("paid_amount_cents") or 0) / 100
+        other_paid = int((paid_by_financer.get("AUTRE") or {}).get("paid_amount_cents") or 0) / 100
+        personal_remaining = max(personal - personal_paid, 0)
+        cpf_remaining = max(cpf - cpf_paid, 0)
+        other_remaining = max(other - other_paid, 0)
+        summary_paid_cents = int(financial_summary.get("paid_total_cents") or 0)
+        invoices = []
+        row_paid_cents = 0
+        row_has_unknown_payment = False
+        for line in trainee_lines:
+            invoice_status = _normalize_billing_invoice_status(line.get("invoiceStatus") or "not_invoiced")
+            external = invoice_status == "external_generated"
+            invoice_id = line.get("qontoInvoiceId") or line.get("qontoDraftId")
+            has_invoice = bool(invoice_id) or external
+            external_paid_sources = (
+                line.get("qonto_amount_paid_cents"), line.get("paid_amount_cents"),
+                line.get("qontoAmountPaidCents"),
+            )
+            external_paid_is_known = any(value is not None for value in external_paid_sources)
+            external_paid_value = _cents_first_non_null(*external_paid_sources)
+            payment_known = (bool(invoice_id) and not external) or (external and external_paid_is_known)
+            paid_cents = 0
+            total_cents = money_value_to_cents(line.get("amount") or 0)
+            remaining_cents = total_cents
+            payment_status = "unknown" if external else "not_applicable"
+            if payment_known and external:
+                paid_cents = int(external_paid_value or 0)
+                total_cents = int(_cents_first_non_null(
+                    line.get("qonto_total_amount_cents"), line.get("total_amount_cents"), total_cents,
+                ) or total_cents)
+                remaining_cents = int(_cents_first_non_null(
+                    line.get("qonto_remaining_amount_cents"), line.get("remaining_amount_cents"),
+                    max(total_cents - paid_cents, 0),
+                ) or 0)
+                payment_status = str(line.get("qonto_payment_status") or line.get("payment_status") or line.get("paymentStatus") or ("paid" if remaining_cents == 0 else "partially_paid" if paid_cents else "unpaid"))
+                row_paid_cents += paid_cents
+            elif payment_known:
+                invoice = line.get("qonto_invoice") if isinstance(line.get("qonto_invoice"), dict) else serialize_qonto_invoice_for_frontend(line)
+                paid_cents = int(invoice.get("paid_amount_cents") or 0)
+                total_cents = int(invoice.get("total_amount_cents") or total_cents)
+                remaining_cents = int(invoice.get("remaining_amount_cents") or max(total_cents - paid_cents, 0))
+                payment_status = str(invoice.get("payment_status") or line.get("paymentStatus") or "unpaid")
+                row_paid_cents += paid_cents
+            elif external:
+                row_has_unknown_payment = True
+            invoices.append({
+                "number": str(line.get("qontoInvoiceNumber") or ("Facture externe" if external else "—")),
+                "status": invoice_status if has_invoice else "not_invoiced",
+                "payment_status": payment_status,
+                "paid": paid_cents / 100,
+                "total": total_cents / 100,
+                "remaining": remaining_cents / 100,
+                "payment_percentage": round(min(max(paid_cents / total_cents * 100, 0), 100), 1) if total_cents else 0,
+                "payment_known": payment_known,
+                "external": external,
+            })
+
+        # Attribute payments known by the centralized rollup but not attached
+        # to a Qonto invoice (cash/manual/direct debit) to external invoices.
+        # This removes false unknowns without inventing more than the amount
+        # actually recorded as collected.
+        unallocated_paid_cents = max(summary_paid_cents - row_paid_cents, 0)
+        for invoice in invoices:
+            if not invoice["external"] or invoice["payment_known"] or unallocated_paid_cents <= 0:
+                continue
+            invoice_total_cents = int(round(invoice["total"] * 100))
+            allocated_cents = min(unallocated_paid_cents, invoice_total_cents)
+            invoice["paid"] = allocated_cents / 100
+            invoice["remaining"] = max(invoice_total_cents - allocated_cents, 0) / 100
+            invoice["payment_known"] = True
+            invoice["payment_status"] = "paid" if allocated_cents >= invoice_total_cents else "partially_paid"
+            invoice["payment_percentage"] = round(min(max(allocated_cents / invoice_total_cents * 100, 0), 100), 1) if invoice_total_cents else 0
+            row_paid_cents += allocated_cents
+            unallocated_paid_cents -= allocated_cents
+
+        row_has_unknown_payment = any(
+            invoice["external"] and not invoice["payment_known"] for invoice in invoices
+        )
+        if not invoices:
+            payment_known = summary_paid_cents > 0
+            funding_cents = int(round(funding * 100))
+            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": funding, "remaining": max(funding_cents - summary_paid_cents, 0) / 100, "payment_percentage": round(min(max(summary_paid_cents / funding_cents * 100, 0), 100), 1) if funding_cents else 0, "payment_known": payment_known, "external": False})
+
+        # Keep the KPI consistent with the trainee sheet, including payments
+        # which cannot sensibly be assigned to one invoice row.
+        row_paid_cents = max(row_paid_cents, summary_paid_cents)
+        paid = row_paid_cents / 100
+        known_paid_total += paid
+        unknown_payment_count += int(row_has_unknown_payment)
+        row = {
+            "trainee_id": trainee_id,
+            "last_name": normalize_last_name(trainee.get("last_name") or ""),
+            "first_name": normalize_first_name(trainee.get("first_name") or ""),
+            "price": round(price, 2), "cpf": round(cpf, 2), "personal": round(personal, 2),
+            "other": round(other, 2), "funding": round(funding, 2), "gap": round(gap, 2),
+            "paid": round(paid, 2), "payment_unknown": row_has_unknown_payment, "invoices": invoices,
+            "personal_remaining": round(personal_remaining, 2),
+            "cpf_remaining": round(cpf_remaining, 2),
+            "other_remaining": round(other_remaining, 2),
+            "cash_payment_enabled": bool(trainee.get("cash_payment_enabled")),
+            "cash_payment_amount": _cash_amount_value(trainee.get("cash_payment_amount")),
+            "cash_payment_settled": bool(trainee.get("cash_payment_settled")),
+        }
+        rows.append(row)
+        totals["revenue"] += row["price"]
+        for key in ("cpf", "personal", "other", "funding", "gap"):
+            totals[key] += row[key]
+        totals["remaining"] += row["personal_remaining"]
+        totals["cpf_remaining"] += row["cpf_remaining"]
+        totals["other_remaining"] += row["other_remaining"]
+
+    rows.sort(key=_trainee_alpha_sort_key)
+    totals["paid"] = round(known_paid_total, 2)
+    for key in totals:
+        totals[key] = round(totals[key], 2)
+    totals["collection_pct"] = round((totals["paid"] / totals["revenue"] * 100), 1) if totals["revenue"] else 0
+    return {"rows": rows, "totals": totals, "unknown_payment_count": unknown_payment_count}
+
+
+@app.get("/admin/sessions/<session_id>/trainees/financial")
+@admin_login_required
+def admin_session_financial_report(session_id: str):
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item:
+        abort(404)
+    session_view = {
+        "id": session_item.get("id"), "name": _session_get(session_item, "name", ""),
+        "training_type": _session_get(session_item, "training_type", ""),
+        "date_start": _session_get(session_item, "date_start", ""),
+        "date_end": _session_get(session_item, "date_end", ""),
+    }
+    return render_template(
+        "admin_session_financial_report.html",
+        session=session_view,
+        report=_session_financial_report(data, session_item),
+    )
+
+
 def _easter_date(year: int) -> datetime.date:
     a = year % 19
     b = year // 100
@@ -20108,6 +21127,487 @@ def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
     )
 
 
+CRM_REQUIRED_FIELDS = ("source", "crm_contact_id", "prenom", "nom", "email", "formation", "centre", "session")
+CRM_OPTIONAL_FIELDS = ("telephone", "parcours", "commentaires")
+# Keep CRM links aligned with the application's single public URL configuration.
+CRM_RESPONSE_BASE_URL = PUBLIC_BASE_URL.rstrip("/")
+CRM_PREFILL_TTL = datetime.timedelta(minutes=15)
+
+
+class _CrmIntegrationError(Exception):
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+
+
+def _crm_integration_token_required(view):
+    """Apply the CRM shared-secret authentication rule to an integration route."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        expected = os.environ.get("CRM_INTEGRATION_API_TOKEN", "")
+        authorization = request.headers.get("Authorization", "")
+        supplied = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if not expected or not supplied or not hmac.compare_digest(supplied, expected):
+            return jsonify({"error": "Authentification invalide"}), 401
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def _crm_training_type(payload: Dict[str, str]) -> str:
+    formation = payload["formation"].strip().upper()
+    parcours = payload.get("parcours", "").strip().upper()
+    if formation == "APS": return "APS"
+    if formation == "A3P": return "A3P"
+    if formation in {"SSIAP", "SSIAP 1"}: return "SSIAP"
+    if formation == "DESP" and parcours == "INITIAL": return "DIRIGEANT initial"
+    if formation == "DESP" and parcours == "VAE": return "DIRIGEANT VAE"
+    if formation in {"CHAUFFEUR VTC", "VTC"}: return "VTC"
+    raise _CrmIntegrationError(422, "Formation ou parcours CRM non pris en charge")
+
+
+@app.post("/api/integrations/crm/stagiaires")
+@_crm_integration_token_required
+def api_crm_prepare_trainee():
+    raw = request.get_json(silent=True)
+    if not isinstance(raw, dict):
+        return jsonify({"error": "Corps JSON invalide"}), 400
+    allowed = set(CRM_REQUIRED_FIELDS + CRM_OPTIONAL_FIELDS)
+    if any(key not in allowed for key in raw) or any(not isinstance(value, str) for value in raw.values()):
+        return jsonify({"error": "Tous les champs doivent être des chaînes et seuls les champs du contrat sont acceptés"}), 400
+    missing = [key for key in CRM_REQUIRED_FIELDS if not isinstance(raw.get(key), str) or not raw[key].strip()]
+    if missing:
+        return jsonify({"error": "Champs obligatoires manquants ou vides : " + ", ".join(missing)}), 400
+    payload = {key: raw.get(key, "") for key in CRM_REQUIRED_FIELDS + CRM_OPTIONAL_FIELDS}
+    try:
+        training_type = _crm_training_type(payload)
+        transfer_id = secrets.token_urlsafe(32)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        def prepare(data):
+            matches = [s for s in data.get("sessions", []) if isinstance(s, dict)
+                       and str(_session_get(s, "training_type", "")) == training_type
+                       and str(s.get("crm_center") or s.get("center") or s.get("centre") or "") == payload["centre"]
+                       and str(_session_get(s, "name", "")) == payload["session"]]
+            data.setdefault("crm_prefill_transfers", []).append({
+                "id": transfer_id, "created_at": now.isoformat(),
+                "expires_at": (now + CRM_PREFILL_TTL).isoformat(),
+                "training_type": training_type,
+                "matched_session_id": str(matches[0].get("id") or "") if len(matches) == 1 else "",
+                "payload": payload,
+            })
+            return {"id": transfer_id}
+        _atomic_update_data(prepare)
+    except _CrmIntegrationError as exc:
+        return jsonify({"error": str(exc)}), exc.status
+    except Exception:
+        app.logger.exception("Échec de préparation de l’intégration CRM")
+        return jsonify({"error": "Impossible de préparer le transfert"}), 500
+    return jsonify({"url": f"{CRM_RESPONSE_BASE_URL}/admin/sessions?crm_prefill={transfer_id}"}), 201
+
+
+def _crm_trainee_nub(trainee: Dict[str, Any]) -> str:
+    for key in ("nub", "cnaps_nub", "cnaps_tracking_nub", "pre_number"):
+        value = str(trainee.get(key) or "").strip()
+        if not value:
+            continue
+        extracted = extract_nub_from_pre_car(value)
+        normalized = re.sub(r"\D+", "", value)
+        nub = extracted or (normalized[-7:] if len(normalized) >= 7 else "")
+        if nub:
+            return nub
+    return ""
+
+
+def _crm_card_pro_payload(trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Dict[str, Any]:
+    nub = _crm_trainee_nub(trainee)
+    if not nub:
+        return {"check_status": "missing_nub", "checked_at": None, "message": "NUB absent", "titles": []}
+
+    result = fetch_cnaps_public_annuaire(str(trainee.get("last_name") or "").strip(), nub)
+    check_status = str(result.get("check_status") or "success")
+    if check_status == "error":
+        return {
+            "check_status": "error",
+            "checked_at": result.get("checked_at"),
+            "message": result.get("message") or "Vérification CNAPS impossible",
+            "titles": [],
+        }
+
+    session_start = str(_session_get(session_obj, "date_start", "") or "")
+    titles = []
+    for title in result.get("titles", []):
+        if not isinstance(title, dict):
+            continue
+        code = str(title.get("code") or "").strip()
+        if code not in CNAPS_TITLE_ORDER:
+            continue
+        status = str(title.get("status") or title.get("validity") or "").strip().upper()
+        valid_until = str(title.get("valid_until") or title.get("date_fin_validite") or "").strip()
+        display_status = _cnaps_display_status(code, status)
+        titles.append({
+            "code": code,
+            "label": str(title.get("label") or title.get("activity") or CNAPS_ACTIVITY_LABELS.get(code) or "").strip(),
+            "status": status,
+            "display_status": display_status,
+            "valid_until": valid_until,
+            # Same rule as the existing UI: exact AP SH ACTIF status and an ISO
+            # expiration date lexically earlier than the ISO training start date.
+            "expires_before_training": bool(
+                display_status == "AP SH ACTIF"
+                and re.match(r"^\d{4}-\d{2}-\d{2}", valid_until)
+                and re.match(r"^\d{4}-\d{2}-\d{2}", session_start)
+                and valid_until[:10] < session_start[:10]
+            ),
+        })
+    return {
+        "check_status": "success",
+        "checked_at": result.get("checked_at"),
+        "message": result.get("message"),
+        "titles": titles,
+    }
+
+
+VAE_CRM_PROGRESS = {
+    "livret_1_todo": 10, "livret_1_analysis": 20, "non_recevable": 20,
+    "complement_requested": 20, "livret_1_validated": 30,
+    "financement_validated": 40, "livret_2_todo": 50,
+    "livret_2_analysis": 65, "livret_2_validated": 75,
+    "financement_l2_validated": 85, "jury": 95, "certified": 100,
+}
+VAE_CRM_NEXT_ACTIONS = {
+    "livret_1_todo": ("complete_livret_1", "Compléter le Livret 1"),
+    "livret_1_analysis": ("analyse_livret_1", "Analyser le Livret 1"),
+    "complement_requested": ("provide_complements", "Transmettre les compléments demandés"),
+    "livret_1_validated": ("validate_financing", "Valider le financement"),
+    "financement_validated": ("complete_livret_2", "Compléter le Livret 2"),
+    "livret_2_todo": ("complete_livret_2", "Compléter le Livret 2"),
+    "livret_2_analysis": ("analyse_livret_2", "Analyser le Livret 2"),
+    "livret_2_validated": ("validate_livret_2_financing", "Valider le financement du Livret 2"),
+    "financement_l2_validated": ("schedule_jury", "Planifier le passage devant le jury"),
+    "jury": ("jury", "Passage devant le jury"),
+}
+
+
+def get_vae_crm_progress(status_code: str) -> Dict[str, Any]:
+    """Return computed CRM progress and outcome flags for a canonical status."""
+    status_code = vae_status_view(status_code)["key"]
+    return {
+        "progress_percent": VAE_CRM_PROGRESS[status_code],
+        "is_terminal": status_code in {"non_recevable", "certified"},
+        "is_success": status_code == "certified",
+        "is_blocked": status_code in {"non_recevable", "complement_requested"},
+    }
+
+
+def get_vae_crm_next_action(status_code: str, trainee=None, dossier=None) -> Optional[Dict[str, str]]:
+    """Return the stable next CRM action; dates never mutate this mapping."""
+    action = VAE_CRM_NEXT_ACTIONS.get(vae_status_view(status_code)["key"])
+    return {"code": action[0], "label": action[1]} if action else None
+
+
+def _crm_nullable(value: Any) -> Any:
+    return value if value not in (None, "") else None
+
+
+def _crm_date_sort_value(value: Any) -> float:
+    raw = str(value or "").strip()
+    if not raw:
+        return float("-inf")
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        return datetime.datetime.fromisoformat(normalized).timestamp()
+    except (ValueError, OverflowError):
+        pass
+    match = re.match(r"^(\d{2})/(\d{2})/(\d{4})(?:\s+à\s+(\d{2})h(\d{2}))?", raw)
+    if match:
+        day, month, year, hour, minute = match.groups()
+        return datetime.datetime(int(year), int(month), int(day), int(hour or 0), int(minute or 0), tzinfo=datetime.timezone.utc).timestamp()
+    return float("-inf")
+
+
+def get_vae_crm_recevabilite(status_code: str, dossier: Optional[Dict[str, Any]], trainee: Dict[str, Any]) -> Dict[str, Any]:
+    dossier_status = str((dossier or {}).get("statut_dossier") or "").strip().lower()
+    code = "non_recevable" if status_code == "non_recevable" else (dossier_status or None)
+    labels = {"non_recevable": "Non recevable", "recevable": "Recevable", "refuse": "Refusé", "soumis": "Soumis", "brouillon": "Brouillon"}
+    deliverables = trainee.get("deliverables") if isinstance(trainee.get("deliverables"), dict) else {}
+    return {
+        "status_code": code,
+        "status_label": labels.get(code) if code else None,
+        "attestation_available": bool(deliverables.get("attestation_recevabilite")),
+    }
+
+
+def _crm_vae_payload(
+    trainee: Dict[str, Any], session_obj: Dict[str, Any], data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    if str(_session_get(session_obj, "training_type", "") or "") != "DIRIGEANT VAE":
+        return {"applicable": False}
+
+    trainee_id, session_id = str(trainee.get("id") or ""), str(session_obj.get("id") or "")
+    # Do not let this read-only endpoint create an absent data file.
+    vae_data = _vae_load_all() if os.path.exists(VAE_DATA_FILE) else {"dossiers": []}
+    exact_session_dossiers = []
+    legacy_dossiers = []
+    for item in vae_data.get("dossiers", []):
+        if not isinstance(item, dict):
+            continue
+        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+        if str(meta.get("trainee_id") or "") != trainee_id:
+            continue
+        linked_session = str(meta.get("session_id") or "")
+        if linked_session and linked_session == session_id:
+            exact_session_dossiers.append(item)
+        elif not linked_session:
+            legacy_dossiers.append(item)
+
+    selected_dossiers = exact_session_dossiers or legacy_dossiers
+
+    def canonical_sort_key(index_and_item):
+        index, item = index_and_item
+        meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+        # The source order is the final stable tie-breaker after stable identifiers.
+        return (
+            _crm_date_sort_value(item.get("updated_at") or item.get("created_at")),
+            str(item.get("id") or ""), str(meta.get("linkage_id") or ""), index,
+        )
+
+    dossier = max(enumerate(selected_dossiers), key=canonical_sort_key)[1] if selected_dossiers else None
+    dossier_count = 1 if dossier else 0
+    scotia_items = _all_scotia_items(data or {"sessions": [session_obj]}, include_archived=True)
+    scotia_status = _scotia_admin_status_for_trainee(scotia_items, session_id, trainee_id)
+    status = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))
+    status_code = status["key"]
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    date_fields = {
+        "livret_1_received_at": "livret_1_received", "livret_1_validated_at": "livret_1_validated",
+        "livret_1_transmitted_scotia_at": "livret_1_transmitted_scotia", "livret_2_received_at": "livret_2_received",
+        "livret_2_validated_at": "livret_2_validated", "livret_2_transmitted_scotia_at": "livret_2_transmitted_scotia",
+        "diploma_obtained_at": "diplome_obtenu",
+    }
+    crm_dates = {output: _crm_nullable(action_dates.get(source)) for output, source in date_fields.items()}
+    jury_date = _crm_nullable(trainee.get("vae_jury_date") or action_dates.get("jury_date"))
+    update_candidates = [dossier.get("updated_at") or dossier.get("created_at") if dossier else None, jury_date, *action_dates.values()]
+    reliable = [(value, _crm_date_sort_value(value)) for value in update_candidates if _crm_date_sort_value(value) != float("-inf")]
+    updated_at = max(reliable, key=lambda pair: pair[1])[0] if reliable else None
+    progress = get_vae_crm_progress(status_code)
+    certified = status_code == "certified"
+    dossier_status = str((dossier or {}).get("statut_dossier") or "").strip().lower() or None
+    dossier_labels = {"brouillon": "Brouillon", "soumis": "Soumis", "recevable": "Recevable", "refuse": "Refusé"}
+    return {
+        "applicable": True, "training_type": "DIRIGEANT VAE", "status_code": status_code,
+        "status_label": status["label"], **progress,
+        "next_action": get_vae_crm_next_action(status_code, trainee, dossier), "updated_at": updated_at,
+        "action_dates": crm_dates,
+        "recevabilite": get_vae_crm_recevabilite(status_code, dossier, trainee),
+        "jury": {"scheduled": bool(jury_date), "date": jury_date, "location": None},
+        "final_result": {"code": "certified" if certified else None, "label": "Diplôme obtenu" if certified else None,
+                         "diploma_obtained_at": crm_dates["diploma_obtained_at"] if certified else None},
+        "complements": {"requested": status_code == "complement_requested", "missing_items_supported": False,
+                        "missing_items_count": None, "missing_items": []},
+        "scotia": {"status_label": scotia_status.get("label", ""),
+                   "status_tone": scotia_status.get("tone", "grey"),
+                   "comment": trainee.get("comment") if trainee.get("comment") is not None else ""},
+        "dossier": {"found": bool(dossier), "id": str(dossier.get("id")) if dossier else None,
+                    "status_code": dossier_status, "status_label": dossier_labels.get(dossier_status),
+                    "updated_at": _crm_nullable(dossier.get("updated_at") or dossier.get("created_at")) if dossier else None,
+                    "dossier_count": dossier_count, "multiple_dossiers": False,
+                    "admin_url": f"{CRM_RESPONSE_BASE_URL}/admin/vae/{dossier.get('id')}" if dossier else None},
+        "trainee_admin_url": f"{CRM_RESPONSE_BASE_URL}/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+    }
+
+
+def _crm_trainee_response(
+    session_obj: Dict[str, Any], trainee: Dict[str, Any], crm_contact_id: str,
+    data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build the single, privacy-filtered trainee representation exposed to the CRM."""
+    trainee_id = str(trainee.get("id") or "")
+    history = trainee.get("cnaps_history")
+    return {
+        "ok": True,
+        "linked": True,
+        "crm_contact_id": crm_contact_id,
+        "trainee": {
+            "id": trainee_id,
+            "url": f"{CRM_RESPONSE_BASE_URL}/stagiaires/{trainee_id}",
+            "session_name": str(_session_get(session_obj, "name", "") or ""),
+            "session_start": str(_session_get(session_obj, "date_start", "") or ""),
+        },
+        "cnaps": {
+            "status": trainee.get("cnaps") if trainee.get("cnaps") not in (None, "") else "INCONNU",
+            "history": history if isinstance(history, list) else [],
+        },
+        "card_pro": _crm_card_pro_payload(trainee, session_obj),
+        "vae": _crm_vae_payload(trainee, session_obj, data),
+    }
+
+
+def _crm_matching_email(value: Any) -> str:
+    return re.sub(r"\s+", "", str(value or "")).lower()
+
+
+def _crm_matching_phone(value: Any) -> str:
+    digits = re.sub(r"\D+", "", str(value or ""))
+    french_international = False
+    if digits.startswith("0033"):
+        digits = digits[4:]
+        french_international = True
+    elif digits.startswith("33"):
+        digits = digits[2:]
+        french_international = True
+    if french_international and digits and not digits.startswith("0"):
+        digits = "0" + digits
+    return digits
+
+
+def _crm_matching_name(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or "").strip().lower())
+    return "".join(character for character in normalized if not unicodedata.combining(character))
+
+
+def _crm_link_error(status: int, reason: str, message: str):
+    return jsonify({"ok": False, "reason": reason, "error": message}), status
+
+
+@app.post("/api/integrations/crm/stagiaires/link-existing")
+@_crm_integration_token_required
+def api_crm_link_existing_trainee():
+    raw = request.get_json(silent=True)
+    allowed = {"crm_contact_id", "prenom", "nom", "email", "telephone", "source"}
+    if not isinstance(raw, dict) or any(key not in allowed for key in raw):
+        return _crm_link_error(400, "invalid_request", "Corps JSON invalide")
+    if any(not isinstance(value, str) for value in raw.values()):
+        return _crm_link_error(400, "invalid_request", "Tous les champs doivent être des chaînes")
+    required = ("crm_contact_id", "prenom", "nom")
+    if any(not raw.get(key, "").strip() for key in required):
+        return _crm_link_error(400, "invalid_request", "crm_contact_id, prenom et nom sont obligatoires")
+    if not raw.get("email", "").strip() and not raw.get("telephone", "").strip():
+        return _crm_link_error(400, "invalid_request", "email ou telephone est obligatoire")
+
+    crm_contact_id = raw["crm_contact_id"].strip()
+    wanted_email = _crm_matching_email(raw.get("email"))
+    wanted_phone = _crm_matching_phone(raw.get("telephone"))
+    wanted_first_name = _crm_matching_name(raw["prenom"])
+    wanted_last_name = _crm_matching_name(raw["nom"])
+
+    def link(data):
+        accessible = []
+        for session_obj in data.get("sessions", []):
+            if not isinstance(session_obj, dict):
+                continue
+            if str(session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != INTEGRALE_PARTNER_ID:
+                continue
+            for trainee in _session_trainees_list(session_obj):
+                if isinstance(trainee, dict):
+                    accessible.append((session_obj, trainee))
+
+        already_linked = [(session_obj, trainee) for session_obj, trainee in accessible
+                          if str(trainee.get("crm_contact_id") or "") == crm_contact_id]
+        if already_linked:
+            if len(already_linked) == 1:
+                session_obj, trainee = already_linked[0]
+                same_identity = (_crm_matching_name(trainee.get("first_name")) == wanted_first_name
+                                 and _crm_matching_name(trainee.get("last_name")) == wanted_last_name)
+                same_contact = bool(wanted_email or wanted_phone)
+                if wanted_email:
+                    same_contact = same_contact and _crm_matching_email(trainee.get("email")) == wanted_email
+                if wanted_phone:
+                    same_contact = same_contact and (
+                        _crm_matching_phone(trainee.get("phone") or trainee.get("telephone")) == wanted_phone
+                    )
+                if same_identity and same_contact:
+                    return {"outcome": "success", "created": False, "session": session_obj, "trainee": trainee}
+            return {"outcome": "crm_contact_id_already_used"}
+
+        email_matches = [(session_obj, trainee) for session_obj, trainee in accessible
+                         if wanted_email and _crm_matching_email(trainee.get("email")) == wanted_email]
+        phone_matches = [(session_obj, trainee) for session_obj, trainee in accessible
+                         if wanted_phone and _crm_matching_phone(trainee.get("phone") or trainee.get("telephone")) == wanted_phone]
+        email_ids = {id(trainee) for _, trainee in email_matches}
+        phone_ids = {id(trainee) for _, trainee in phone_matches}
+        if email_ids and phone_ids and email_ids != phone_ids:
+            return {"outcome": "conflicting_matches"}
+
+        matches = email_matches if email_matches else phone_matches
+        if not matches:
+            return {"outcome": "trainee_not_found"}
+        if len(matches) != 1:
+            return {"outcome": "ambiguous_match"}
+        session_obj, trainee = matches[0]
+        if (_crm_matching_name(trainee.get("first_name")) != wanted_first_name
+                or _crm_matching_name(trainee.get("last_name")) != wanted_last_name):
+            return {"outcome": "identity_mismatch"}
+        existing_contact_id = str(trainee.get("crm_contact_id") or "").strip()
+        if existing_contact_id and existing_contact_id != crm_contact_id:
+            return {"outcome": "trainee_already_linked"}
+
+        trainee["crm_contact_id"] = crm_contact_id
+        if not str(trainee.get("crm_source") or "").strip():
+            trainee["crm_source"] = "integrale_connect"
+        append_trainee_history_event(trainee, "Liaison avec la piste CRM créée")
+        return {"outcome": "success", "created": True, "session": session_obj, "trainee": trainee}
+
+    try:
+        result = _atomic_update_data(link)
+    except Exception:
+        app.logger.exception("Échec de liaison d’un stagiaire avec le CRM")
+        return _crm_link_error(500, "storage_error", "Impossible d’enregistrer la liaison")
+
+    errors = {
+        "conflicting_matches": (409, "L’adresse e-mail et le téléphone désignent des stagiaires différents"),
+        "ambiguous_match": (409, "Plusieurs stagiaires correspondent"),
+        "identity_mismatch": (409, "Le nom ou le prénom ne correspond pas"),
+        "trainee_not_found": (404, "Aucun stagiaire ne correspond"),
+        "crm_contact_id_already_used": (409, "Cet identifiant CRM est déjà utilisé"),
+        "trainee_already_linked": (409, "Ce stagiaire est déjà lié à un autre identifiant CRM"),
+    }
+    if result.get("outcome") != "success":
+        status, message = errors.get(result.get("outcome"), (500, "Impossible d’enregistrer la liaison"))
+        return _crm_link_error(status, result.get("outcome") or "storage_error", message)
+    response = _crm_trainee_response(result["session"], result["trainee"], crm_contact_id)
+    response["link_created"] = bool(result["created"])
+    return jsonify(response), 200
+
+
+@app.get("/api/integrations/crm/stagiaires")
+@_crm_integration_token_required
+def api_crm_get_trainee():
+    crm_contact_id = request.args.get("crm_contact_id")
+    if crm_contact_id is None or crm_contact_id == "":
+        return jsonify({"error": "crm_contact_id est obligatoire"}), 400
+
+    # Unlike the administrative loader, this integration read must not persist
+    # schema normalization or create backups as a side effect of a GET.
+    data = _load_valid_json_payload(DATA_FILE) if os.path.exists(DATA_FILE) else None
+    data = data if isinstance(data, dict) else _empty_data_payload()
+    matches = []
+    for session_obj in data.get("sessions", []):
+        if not isinstance(session_obj, dict):
+            continue
+        if str(session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != INTEGRALE_PARTNER_ID:
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            if isinstance(trainee, dict) and trainee.get("crm_contact_id") == crm_contact_id:
+                matches.append((session_obj, trainee))
+    if not matches:
+        return jsonify({"error": "Stagiaire lié introuvable"}), 404
+    if len(matches) > 1:
+        return jsonify({"error": "Plusieurs stagiaires utilisent ce crm_contact_id"}), 409
+
+    session_obj, trainee = matches[0]
+    response = jsonify(_crm_trainee_response(session_obj, trainee, crm_contact_id, data))
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/stagiaires/<trainee_id>")
+def crm_trainee_sheet_redirect(trainee_id: str):
+    data = load_data()
+    for session_obj in data.get("sessions", []):
+        if any(item.get("id") == trainee_id for item in _session_trainees_list(session_obj)):
+            return redirect(url_for("admin_trainee_page", session_id=session_obj.get("id"), trainee_id=trainee_id))
+    abort(404)
+
+
 # =========================
 # API - Sessions (used by your modal JS)
 # =========================
@@ -20147,6 +21647,7 @@ def api_create_session():
         "id": session_id,
         "name": name,
         "training_type": training_type,
+        "crm_center": (payload.get("crm_center") or payload.get("center") or "").strip(),
         "date_start": date_start,
         "date_end": date_end,
         "exam_date": exam_date,
@@ -20190,6 +21691,16 @@ def api_update_session(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    old_dates = (normalize_date(s.get("date_start") or s.get("date_debut")),
+                 normalize_date(s.get("date_end") or s.get("date_fin")))
+    requested_dates = (normalize_date(payload.get("date_start", old_dates[0])),
+                       normalize_date(payload.get("date_end", old_dates[1])))
+    dates_changed = requested_dates != old_dates
+    active_links = [link for link in data.get("wedof_links", []) if isinstance(link, dict)
+                    and link.get("active") is True and str(link.get("session_id") or "") == session_id]
+    if dates_changed and active_links and payload.get("confirm_wedof_date_change") is not True:
+        return jsonify({"ok": False, "error": "wedof_date_change_confirmation_required",
+                        "wedof_links_count": len(active_links)}), 409
     if "name" in payload:
         next_name = (payload.get("name") or "").strip()
         if not next_name:
@@ -20197,6 +21708,7 @@ def api_update_session(session_id: str):
         s["name"] = next_name
 
     for key in (
+        "crm_center",
         "date_start",
         "date_end",
         "exam_date",
@@ -20225,7 +21737,12 @@ def api_update_session(session_id: str):
     _sync_aps_period_dates(s)
     s["updated_at"] = _now_iso()
     save_data(data)
-    return jsonify({"ok": True})
+    differences = sum(evaluate_wedof_link_date_consistency(link, s)["dates_differ"] is not False
+                      for link in active_links)
+    message = (f"Dates de la session modifiées. {differences} dossier(s) ont désormais des dates locales "
+               "différentes ou non vérifiables. Les liens sont conservés et les automatisations continueront "
+               "à utiliser les dates WEDOF.") if dates_changed and active_links else ""
+    return jsonify({"ok": True, "message": message, "wedof_date_differences": differences})
 
 
 @app.post("/api/sessions/<session_id>/delete")
@@ -20284,6 +21801,23 @@ def api_create_trainee(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    crm_prefill_id = str(payload.get("crm_prefill") or "").strip()
+    crm_transfer = None
+    if crm_prefill_id:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        crm_transfer = next((item for item in data.get("crm_prefill_transfers", [])
+                             if hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)), None)
+        if not crm_transfer:
+            return jsonify({"ok": False, "error": "crm_prefill_not_found"}), 410
+        try:
+            expires_at = datetime.datetime.fromisoformat(str(crm_transfer.get("expires_at") or ""))
+            if expires_at.tzinfo is None: expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+        except (TypeError, ValueError):
+            expires_at = now
+        if expires_at <= now:
+            return jsonify({"ok": False, "error": "crm_prefill_expired"}), 410
+        if crm_transfer.get("matched_session_id") != session_id:
+            return jsonify({"ok": False, "error": "crm_session_mismatch"}), 409
     last_name = normalize_last_name(payload.get("last_name") or "")
     first_name = normalize_first_name(payload.get("first_name") or "")
     birth_date = (payload.get("birth_date") or "").strip()
@@ -20380,6 +21914,12 @@ def api_create_trainee(session_id: str):
         "ypareo_cursus_id": "",
         "ypareo_cursus_erreur": "",
     }
+    if crm_transfer:
+        crm_payload = crm_transfer.get("payload") or {}
+        t["crm_contact_id"] = str(crm_payload.get("crm_contact_id") or "")
+        t["crm_source"] = str(crm_payload.get("source") or "")
+        t["crm_parcours"] = str(crm_payload.get("parcours") or "")
+        t["comment"] = str(crm_payload.get("commentaires") or "")
 
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
     ensure_documents_schema_for_trainee(t, training_type)
@@ -20403,6 +21943,9 @@ def api_create_trainee(session_id: str):
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
+    if crm_transfer:
+        data["crm_prefill_transfers"] = [item for item in data.get("crm_prefill_transfers", [])
+                                           if not hmac.compare_digest(str(item.get("id") or ""), crm_prefill_id)]
     increment_partner_trainee_usage(data, s.get("partner_id") or _current_partner_id() or INTEGRALE_PARTNER_ID, t)
     save_data(data)
 
@@ -20598,6 +22141,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    previous_trainee = copy.deepcopy(t)
+    previous_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
     cnaps_remote_history = payload.pop("statut_cnaps_history", None)
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
     previous_elearning_link = (t.get("elearning_link") or "").strip()
@@ -21014,6 +22559,32 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     if "VTC" in ((_session_get(s, "training_type", "") or "").upper()):
         _sync_vtc_book_notification(data, s, t)
+
+    theory_notification = None
+    requested_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
+    if (
+        "vtc_theory_status_manual" in payload
+        and requested_vtc_theory_status == "success"
+        and previous_vtc_theory_status != "success"
+    ):
+        try:
+            theory_notification = _send_vtc_theory_exam_notification(s, t, send_notifications=True)
+            if (t.get("email") or "").strip() and not theory_notification.get("email_ok"):
+                raise RuntimeError("L'envoi email de la convocation pratique a échoué")
+            _add_vtc_practice_convocation_notification(data, s, t)
+            if theory_notification.get("email_ok"):
+                t["vtc_practice_convocation_sent_at"] = theory_notification.get("sent_at") or _now_iso()
+        except Exception:
+            app.logger.exception(
+                "Impossible d'envoyer la convocation pratique VTC après validation de la théorie "
+                "(session=%s, stagiaire=%s)",
+                session_id,
+                trainee_id,
+            )
+            t.clear()
+            t.update(previous_trainee)
+            return jsonify({"ok": False, "error": "Échec de l’envoi de la convocation pratique"}), 502
+
     save_data(data)
     return jsonify({
         "ok": True,
@@ -21025,6 +22596,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "elearning_link_sms_ok": bool(t.get("elearning_link_sms_ok")),
         "vtc_theory_status_manual": t.get("vtc_theory_status_manual") or "",
         "vtc_practice_status_manual": t.get("vtc_practice_status_manual") or "",
+        "vtc_practice_convocation_sent_at": t.get("vtc_practice_convocation_sent_at") or "",
+        "vtc_theory_notification": theory_notification,
     })
 
 
@@ -21815,11 +23388,16 @@ def internal_cnaps_public_annuaire_monitor():
     supplied_token = request.headers.get("X-CNAPS-Monitor-Token", "")
     if not CNAPS_MONITOR_TOKEN or not hmac.compare_digest(supplied_token, CNAPS_MONITOR_TOKEN):
         abort(401)
+    if not _cnaps_public_annuaire_monitor_lock.acquire(blocking=False):
+        app.logger.info("[CNAPS_MONITOR] already_running")
+        return jsonify({"ok": True, "status": "already_running"})
     try:
         return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor()})
     except Exception as exc:
         app.logger.exception("[CNAPS_MONITOR] execution failed")
-        return jsonify({"ok": False, "error": str(exc)[:160]}), 502
+        return jsonify({"ok": True, "status": "failed", "error": str(exc)[:160]})
+    finally:
+        _cnaps_public_annuaire_monitor_lock.release()
 
 
 # =========================
@@ -26244,7 +27822,7 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     if "A3P" in text:
         return {"enabled": True, "slug": "a3p", "label": "A3P", "convention_template": "conventiona3p.docx", "entry_template": "attestationentreea3p.docx", "end_template": "attestationfina3p.docx", "convocation_template": "convocationa3p.docx"}
     if "VTC" in text:
-        return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "entry_template": ""}
+        return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "convocation_template": "convocationvtc.docx", "entry_template": ""}
     if "DIRIGEANT" in text or "DESP" in text:
         if "PARIS" in text:
             return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
@@ -27746,7 +29324,7 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
         (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
     ]
-    if not is_dirigeant:
+    if not is_dirigeant and str(config.get("slug") or "") != "vtc":
         required.append((_session_get(session_obj, "exam_date", ""), "date d’examen manquante"))
     for value, message in required:
         if not str(value or "").strip():
@@ -27775,10 +29353,27 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
     trainee_space_url = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire"
     date_start = str(_session_get(session_obj, "date_start", "")).strip()
     date_end = str(_session_get(session_obj, "date_end", "")).strip()
-    exam_date = str(_session_get(session_obj, "exam_date", "") or (in_person_end if is_dirigeant else "")).strip()
+    exam_date = str(
+        _session_get(session_obj, "exam_date", "")
+        or (_session_get(session_obj, "exam_practice_date", "") if str(config.get("slug") or "") == "vtc" else "")
+        or (in_person_end if is_dirigeant else "")
+    ).strip()
     convocation_time = str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30"
     exam_time = str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00"
     place = f"{APS_CONVOCATION_CENTER_NAME} - {APS_CONVOCATION_CENTER_ADDRESS} - {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}"
+    practice_training_date = str(
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    ).strip()
+    theory_exam_date = str(
+        _session_get(session_obj, "exam_theory_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    ).strip()
+    practice_exam_date = str(
+        _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    ).strip()
     return {
         "civilite": civility, "prenom": first_name, "nom": last_name, "nom_complet": full_name,
         "adresse_ligne1": address_lines[0], "adresse_ligne2": address_lines[1], "adresse_ligne3": address_lines[2], "adresse_ligne4": address_lines[3],
@@ -27796,6 +29391,13 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "lieu_formation": place, "lieu_examen": place, "espace_stagiaire_url": trainee_space_url,
         "modalites_suivi": "Suivi pédagogique et administratif assuré par l’équipe Intégrale Academy.",
         "date_ouverture": fr_date(remote_start),
+        # Variables VTC.  Les alias permettent de choisir des noms explicites
+        # dans Word tout en conservant les variables communes aux convocations.
+        "date_formation_pratique": fr_date(practice_training_date),
+        "date_formation_pratique_vtc": fr_date(practice_training_date),
+        "date_examen_theorique": fr_date(theory_exam_date),
+        "date_examen_pratique": fr_date(practice_exam_date),
+        "heure_formation_pratique": str(_session_get(session_obj, "practice_training_time", "") or "08h30").strip(),
         "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
 
@@ -28316,6 +29918,9 @@ def _store_public_file_token(path: str) -> str:
 
 def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> bool:
     """Generate, send by email, and expose the convocation once the convention is signed."""
+    if str(_automation_document_config(session_obj).get("slug") or "") == "vtc":
+        # En VTC, seule la réussite à la théorie déclenche la convocation.
+        return False
     automation = _build_trainee_automation_status(session_obj, trainee, session_id, trainee_id)
     if (automation.get("convention") or {}).get("status") != "signed":
         trainee["convocation_auto_last_error"] = "En attente de signature de la convention"
@@ -28413,7 +30018,15 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_status = "not_generated"
 
-    if not has_generated_convention:
+    config = _automation_document_config(session_obj)
+    automation_slug = str(config.get("slug") or "")
+    is_vtc_automation = automation_slug == "vtc"
+    theory_succeeded = bool(trainee.get("vtc_theory_exam_sent_at"))
+    if is_vtc_automation and not theory_succeeded:
+        convocation_block_reason = "En attente de réussite à l’examen théorique"
+    elif is_vtc_automation:
+        convocation_block_reason = ""
+    elif not has_generated_convention:
         convocation_block_reason = "En attente de génération de la convention"
     elif not convention_sent:
         convocation_block_reason = "En attente d’envoi de la convention"
@@ -28422,8 +30035,6 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_block_reason = ""
 
-    config = _automation_document_config(session_obj)
-    automation_slug = str(config.get("slug") or "")
     is_vae_automation = automation_slug == "vae"
     is_aps_automation = _is_aps_session(session_obj)
     can_send_convocation_without_signed_convention = _can_send_convocation_without_signed_convention(session_obj)
@@ -28439,7 +30050,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         timeline = [
             convention_sent_step,
             convention_signed_step,
-            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")} if is_aps_automation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
+            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if ((is_vtc_automation and not theory_succeeded) or (not is_vtc_automation and not convention_signed)) else "pending")} if is_aps_automation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
         ]
@@ -28515,13 +30126,13 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         },
         "convocation": {
             "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
-            "can_generate": True, "can_send": (convention_signed or can_send_convocation_without_signed_convention) and convocation_status in {"generated", "sent"}, "block_reason": "" if can_send_convocation_without_signed_convention else convocation_block_reason,
+            "can_generate": theory_succeeded if is_vtc_automation else True, "can_send": (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) and convocation_status in {"generated", "sent"}, "block_reason": "" if (is_vtc_automation and theory_succeeded) or can_send_convocation_without_signed_convention else convocation_block_reason,
             "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
             "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
             "error": convocation_error,
             "timeline_steps": [
-                {"label": "Convention validée", "value": "Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué")), "state": "done" if (convention_signed or can_send_convocation_without_signed_convention) else "blocked"},
+                {"label": "Examen théorique" if is_vtc_automation else "Convention validée", "value": ("Réussi" if theory_succeeded else convocation_block_reason) if is_vtc_automation else ("Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué"))), "state": "done" if (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) else "blocked"},
                 {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else "pending"},
                 {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
             ],
@@ -29230,6 +30841,8 @@ def _notify_rejected_qonto_debit(data: Dict[str, Any], line: Dict[str, Any], ins
         "session_id": line.get('sessionId') or "", "training": line.get('formationName') or line.get('sessionName') or "",
         "date_start": line.get('dateStart') or "", "date_end": line.get('dateEnd') or "",
         "amount": installment.get('amount'), "scheduled_date": due_date, "collection_id": collection_id,
+        "billing_line_id": line.get('id') or "",
+        "subscription_id": installment.get('qonto_direct_debit_subscription_id') or "",
     })
     subject = f"[Alerte] Prélèvement rejeté — {trainee_name} — {_format_euro(installment.get('amount'))}"
     brevo_send_email(QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[0], subject, _build_rejected_debit_alert_html(line, installment), cc_emails=[QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[1]])
@@ -29237,7 +30850,7 @@ def _notify_rejected_qonto_debit(data: Dict[str, Any], line: Dict[str, Any], ins
 
 
 def _qonto_mandate_schedule(line: Dict[str, Any]) -> List[Dict[str, Any]]:
-    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    installments = _effective_sepa_installments(line)
     if installments:
         return [item for item in installments if isinstance(item, dict)]
     plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
@@ -29321,7 +30934,177 @@ def _sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
     installments = plan.get('installments') if isinstance(plan.get('installments'), list) else []
     if not installments:
         installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
-    return [item for item in installments if isinstance(item, dict)]
+    # Callers append collection/retry records to this list before syncing both
+    # persistence aliases.  Keep the canonical list object instead of returning
+    # a copy, otherwise the subsequent alias sync can silently restore the old
+    # schedule and discard a retry that Qonto already accepted.
+    installments[:] = [item for item in installments if isinstance(item, dict)]
+    return installments
+
+
+QONTO_REJECTED_COLLECTION_STATUSES = {'failed', 'returned', 'rejected', 'refunded', 'declined'}
+QONTO_PAID_COLLECTION_STATUSES = {'completed', 'paid', 'succeeded', 'success'}
+
+
+def _installment_is_rejected(installment: Dict[str, Any]) -> bool:
+    return str(installment.get('status') or '').strip().lower() in QONTO_REJECTED_COLLECTION_STATUSES
+
+
+def _installment_rejection_is_treated(installment: Dict[str, Any]) -> bool:
+    return bool(installment.get('rejection_treated') or installment.get('rejection_treated_at'))
+
+
+def _installment_counts_toward_schedule(installment: Dict[str, Any]) -> bool:
+    return not bool(
+        installment.get('excluded_from_schedule_totals')
+        or _installment_rejection_is_treated(installment)
+    )
+
+
+def _effective_sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [item for item in _sepa_installments(line) if _installment_counts_toward_schedule(item)]
+
+
+def _installment_schedule_position(installment: Dict[str, Any], fallback: int) -> int:
+    for value in (installment.get('schedule_index'), installment.get('index'), fallback):
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if number > 0:
+            return number
+    return max(1, fallback)
+
+
+def _qonto_subscription_reference(subscription: Dict[str, Any]) -> str:
+    return str(
+        subscription.get('reference') or subscription.get('payment_reference')
+        or subscription.get('label') or subscription.get('name') or ''
+    ).strip()
+
+
+def _qonto_reference_schedule_position(reference: Any) -> Tuple[int, int, bool]:
+    raw = unicodedata.normalize('NFKD', str(reference or ''))
+    normalized = ''.join(character for character in raw if not unicodedata.combining(character)).lower()
+    match = re.search(r'\becheance\s+(\d+)\s*/\s*(\d+)\b', normalized)
+    if not match:
+        return 0, 0, 'reprogrammation' in normalized
+    return int(match.group(1)), int(match.group(2)), 'reprogrammation' in normalized
+
+
+def _mark_rejection_retry_source(installments: List[Dict[str, Any]], retry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    schedule_index = _installment_schedule_position(retry, 0)
+    source = next((
+        item for reverse_position, item in enumerate(reversed(installments), start=1)
+        if item is not retry
+        and _installment_schedule_position(item, len(installments) - reverse_position + 1) == schedule_index
+        and _installment_is_rejected(item)
+        and not _installment_rejection_is_treated(item)
+    ), None)
+    if source is None:
+        source = next((
+            item for item in installments
+            if item is not retry and _installment_is_rejected(item) and not _installment_rejection_is_treated(item)
+        ), None)
+    if source is None:
+        return None
+    treated_at = retry.get('reprogrammed_at') or retry.get('created_at') or _now_iso()
+    source['rejection_treated'] = True
+    source['rejection_treated_at'] = source.get('rejection_treated_at') or treated_at
+    source['excluded_from_schedule_totals'] = True
+    source['replaced_by_direct_debit_subscription_id'] = (
+        retry.get('qonto_direct_debit_subscription_id')
+        or source.get('replaced_by_direct_debit_subscription_id') or ''
+    )
+    retry['reprogrammed_from_subscription_id'] = (
+        retry.get('reprogrammed_from_subscription_id')
+        or source.get('qonto_direct_debit_subscription_id') or ''
+    )
+    retry['reprogrammed_from_collection_id'] = (
+        retry.get('reprogrammed_from_collection_id')
+        or source.get('qonto_direct_debit_collection_id') or ''
+    )
+    retry['reprogrammed_from_due_date'] = (
+        retry.get('reprogrammed_from_due_date')
+        or source.get('due_date') or source.get('date') or ''
+    )
+    return source
+
+
+def _mark_qonto_rejection_notification_treated(
+    data: Dict[str, Any],
+    line: Dict[str, Any],
+    source: Dict[str, Any],
+    retry: Dict[str, Any],
+) -> int:
+    """Resolve the global rejection alert once its replacement exists."""
+    notifications = data.get('notifications_admin')
+    if not isinstance(notifications, list):
+        return 0
+    line_id = str(line.get('id') or '')
+    trainee_id = str(line.get('traineeId') or '')
+    session_id = str(line.get('sessionId') or '')
+    collection_id = str(source.get('qonto_direct_debit_collection_id') or '')
+    source_date = str(source.get('due_date') or source.get('date') or '')[:10]
+    source_amount = _money(source.get('amount'))
+    retry_id = str(retry.get('qonto_direct_debit_subscription_id') or '')
+    retry_date = str(retry.get('due_date') or retry.get('date') or '')[:10]
+    trainee_name = (
+        f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip()
+        or 'Stagiaire non renseigné'
+    )
+    treated_at = str(source.get('rejection_treated_at') or retry.get('reprogrammed_at') or _now_iso())
+    updated = 0
+    for entry in notifications:
+        if not isinstance(entry, dict):
+            continue
+        meta = entry.get('meta') if isinstance(entry.get('meta'), dict) else {}
+        if str(meta.get('kind') or '') != 'qonto_direct_debit_rejected':
+            continue
+        if line_id and meta.get('billing_line_id') and str(meta.get('billing_line_id')) != line_id:
+            continue
+        if trainee_id and str(meta.get('trainee_id') or '') != trainee_id:
+            continue
+        if session_id and str(meta.get('session_id') or '') != session_id:
+            continue
+        notification_collection_id = str(meta.get('collection_id') or '')
+        exact_collection = bool(collection_id and notification_collection_id == collection_id)
+        same_date_and_amount = (
+            str(meta.get('scheduled_date') or '')[:10] == source_date
+            and abs(_money(meta.get('amount')) - source_amount) < 0.01
+        )
+        if not (exact_collection or same_date_and_amount):
+            continue
+        entry['done'] = True
+        entry['done_at'] = entry.get('done_at') or treated_at
+        entry['label'] = f"🟢 Rejet traité — {trainee_name} — {_format_euro(source.get('amount'))}"
+        meta.update({
+            'rejection_status': 'treated',
+            'rejection_treated_at': treated_at,
+            'replacement_subscription_id': retry_id,
+            'replacement_scheduled_date': retry_date,
+            'replacement_amount': retry.get('amount'),
+        })
+        entry['meta'] = meta
+        updated += 1
+    return updated
+
+
+def _mark_line_qonto_rejection_notifications_treated(data: Dict[str, Any], line: Dict[str, Any]) -> int:
+    installments = _sepa_installments(line)
+    retries_by_id = {
+        str(item.get('qonto_direct_debit_subscription_id') or ''): item
+        for item in installments if item.get('is_rejection_retry') and item.get('qonto_direct_debit_subscription_id')
+    }
+    updated = 0
+    for source in installments:
+        if not (_installment_is_rejected(source) and _installment_rejection_is_treated(source)):
+            continue
+        retry_id = str(source.get('replaced_by_direct_debit_subscription_id') or '')
+        retry = retries_by_id.get(retry_id)
+        if retry:
+            updated += _mark_qonto_rejection_notification_treated(data, line, source, retry)
+    return updated
 
 
 def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
@@ -29335,19 +31118,32 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
         if due_date:
             installment['due_date'] = due_date
             installment['date'] = due_date
-    total_due = round(sum(_money(item.get('amount')) for item in installments), 2)
-    total_paid = round(sum(_money(item.get('amount')) for item in installments if item.get('status') == 'completed'), 2)
-    paid_count = sum(1 for item in installments if item.get('status') == 'completed')
-    failed = any(item.get('status') in {'failed', 'returned', 'refunded'} for item in installments)
-    if not installments:
+    effective_installments = [item for item in installments if _installment_counts_toward_schedule(item)]
+    total_due = round(sum(_money(item.get('amount')) for item in effective_installments), 2)
+    total_paid = round(sum(
+        _money(item.get('amount')) for item in effective_installments
+        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+    ), 2)
+    paid_count = sum(
+        1 for item in effective_installments
+        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+    )
+    failed = any(
+        _installment_is_rejected(item) and not _installment_rejection_is_treated(item)
+        for item in installments
+    )
+    treated = any(_installment_rejection_is_treated(item) for item in installments)
+    if not effective_installments:
         status = 'pending_signature'
     elif failed:
         status = 'failed'
-    elif paid_count == len(installments):
+    elif paid_count == len(effective_installments):
         status = 'paid'
+    elif treated:
+        status = 'rejection_treated'
     elif paid_count:
         status = 'partially_paid'
-    elif all(item.get('qonto_direct_debit_subscription_id') for item in installments):
+    elif all(item.get('qonto_direct_debit_subscription_id') for item in effective_installments):
         status = 'scheduled'
     else:
         status = 'pending_signature'
@@ -29359,7 +31155,7 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
         'total_paid': total_paid,
         'total_remaining': round(max(total_due - total_paid, 0), 2),
         'paid_installments': paid_count,
-        'remaining_installments': max(len(installments) - paid_count, 0),
+        'remaining_installments': max(len(effective_installments) - paid_count, 0),
         'updated_at': _now_iso(),
     })
     line['sepa_payment_plan'] = plan
@@ -29408,6 +31204,8 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
         subscription_id = str(subscription.get('id') or '')
         if not subscription_id:
             continue
+        reference = _qonto_subscription_reference(subscription)
+        schedule_index, schedule_total, is_rejection_retry = _qonto_reference_schedule_position(reference)
         amount = subscription.get('amount')
         if isinstance(amount, dict):
             amount = amount.get('value') if amount.get('value') is not None else amount.get('amount')
@@ -29466,20 +31264,151 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
                 'status': subscription_status if offset == 0 or subscription_status not in {'failed', 'returned', 'refunded'} else 'scheduled',
                 'qonto_direct_debit_subscription_id': subscription_id,
                 'qonto_subscription_occurrence': offset + 1,
+                'reference': reference,
                 'updated_at': _now_iso(),
             })
+            if schedule_index:
+                current['schedule_index'] = schedule_index
+            if schedule_total:
+                current['schedule_total'] = schedule_total
+            if is_rejection_retry:
+                current['is_rejection_retry'] = True
+                current['reprogrammed_at'] = subscription.get('created_at') or subscription.get('updated_at') or _now_iso()
             recovered.append(current)
     if not recovered:
         return 0
     recovered.sort(key=lambda item: (item.get('due_date') or '', item.get('index') or 0))
     for index, item in enumerate(recovered, start=1):
         item['index'] = index
+    for retry in (item for item in recovered if item.get('is_rejection_retry')):
+        _mark_rejection_retry_source(recovered, retry)
     line['paymentMode'] = 'sepa_direct_debit'
     line['directDebitInstallments'] = recovered
     line['sepa_payment_plan'] = {'installments': recovered}
     line['qonto_direct_debit_subscription_id'] = recovered[0]['qonto_direct_debit_subscription_id']
     _sync_sepa_aliases(line)
     return len(recovered)
+
+
+def _recover_missing_qonto_rejection_retries(line: Dict[str, Any], mandate_id: str) -> int:
+    """Import retry subscriptions created before their local display was persisted.
+
+    Older versions updated the legacy direct-debit alias and then immediately
+    replaced it with the stale SEPA-plan alias.  Qonto still contains the
+    successfully created one-off subscription, whose reference explicitly
+    identifies it as a reprogrammed installment.  Reconcile only those missing
+    retries so a normal Qonto sync repairs existing trainee files safely.
+    """
+    installments = _sepa_installments(line)
+    known_subscription_ids = {
+        str(item.get('qonto_direct_debit_subscription_id') or '')
+        for item in installments if item.get('qonto_direct_debit_subscription_id')
+    }
+    added = 0
+    page, per_page = 1, 100
+    while True:
+        response = list_qonto_direct_debit_subscriptions(mandate_id, page=page, per_page=per_page)
+        items = _qonto_direct_debit_subscription_items(response)
+        for subscription in items:
+            subscription_id = str(subscription.get('id') or '').strip()
+            if not subscription_id or subscription_id in known_subscription_ids:
+                continue
+            if str(subscription.get('direct_debit_mandate_id') or mandate_id) != str(mandate_id):
+                continue
+            reference = _qonto_subscription_reference(subscription)
+            schedule_index, schedule_total, is_rejection_retry = _qonto_reference_schedule_position(reference)
+            if not is_rejection_retry:
+                continue
+            raw_amount = subscription.get('amount')
+            if isinstance(raw_amount, dict):
+                raw_amount = raw_amount.get('value') if raw_amount.get('value') is not None else raw_amount.get('amount')
+            due_date = str(
+                subscription.get('initial_collection_date') or subscription.get('start_date')
+                or subscription.get('first_collection_date') or subscription.get('collection_date')
+                or subscription.get('scheduled_at') or subscription.get('due_date')
+                or subscription.get('date') or ''
+            )[:10]
+            retry = {
+                'index': schedule_index or len(_effective_sepa_installments(line)) + 1,
+                'schedule_index': schedule_index or len(_effective_sepa_installments(line)) + 1,
+                'schedule_total': schedule_total or len(_effective_sepa_installments(line)),
+                'amount': _money(raw_amount),
+                'date': due_date,
+                'due_date': due_date,
+                'status': _map_collection_status(subscription.get('status')),
+                'qonto_direct_debit_subscription_id': subscription_id,
+                'reference': reference,
+                'is_rejection_retry': True,
+                'reprogrammed_at': subscription.get('created_at') or subscription.get('updated_at') or _now_iso(),
+                'created_at': subscription.get('created_at') or _now_iso(),
+                'updated_at': _now_iso(),
+            }
+            installments.append(retry)
+            _mark_rejection_retry_source(installments, retry)
+            known_subscription_ids.add(subscription_id)
+            added += 1
+        meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
+        total_pages = meta.get('total_pages') or meta.get('totalPages')
+        next_page = meta.get('next_page') or meta.get('nextPage')
+        if next_page:
+            try:
+                next_number = int(next_page)
+            except (TypeError, ValueError):
+                next_number = page + 1
+        elif total_pages:
+            try:
+                next_number = page + 1 if page < int(total_pages) else 0
+            except (TypeError, ValueError):
+                next_number = 0
+        else:
+            next_number = page + 1 if len(items) >= per_page else 0
+        if not next_number or next_number <= page:
+            break
+        page = next_number
+    if added:
+        _sync_sepa_aliases(line)
+    return added
+
+
+def _repair_logged_qonto_rejection_retries(data: Dict[str, Any], lines: List[Dict[str, Any]]) -> int:
+    """Repair the one historical alias-loss case without polling every line."""
+    repaired = 0
+    for line in lines:
+        mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '').strip()
+        if not mandate_id:
+            continue
+        known_ids = {
+            str(item.get('qonto_direct_debit_subscription_id') or '')
+            for item in _sepa_installments(line) if item.get('qonto_direct_debit_subscription_id')
+        }
+        missing_logged_retry = any(
+            str(entry.get('action') or '') == 'Prélèvement rejeté reprogrammé'
+            and str(entry.get('result') or 'success') == 'success'
+            and str(entry.get('qonto_id') or '').strip()
+            and str(entry.get('qonto_id') or '').strip() not in known_ids
+            for entry in (line.get('logs') or []) if isinstance(entry, dict)
+        )
+        if not missing_logged_retry:
+            continue
+        try:
+            added = _recover_missing_qonto_rejection_retries(line, mandate_id)
+        except Exception as exc:
+            app.logger.warning(
+                '[QONTO] réparation locale du prélèvement reprogrammé impossible mandate_id=%s error=%s',
+                mandate_id, _sanitize_qonto_error(str(exc)),
+            )
+            continue
+        if added:
+            _billing_log(
+                line, 'Nouveau prélèvement suite à rejet restauré depuis Qonto', 'success',
+                f'{added} prélèvement(s)', mandate_id,
+            )
+            _mark_line_qonto_rejection_notifications_treated(data, line)
+            _save_billing_line(data, line)
+            repaired += added
+    if repaired:
+        save_data(data)
+    return repaired
 
 
 def _prepare_sepa_payment_plan(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
@@ -29586,7 +31515,7 @@ def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, A
         _sync_sepa_aliases(line)
         return {'created': 0, 'pending_signature': True}
     bank_account_id = get_qonto_bank_account_id()
-    installments = _sepa_installments(line)
+    installments = _effective_sepa_installments(line)
     total = len(installments)
     created_count = 0
     invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
@@ -29615,13 +31544,15 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
     mandate = _map_mandate_status(
         line.get('mandateStatus') or line.get('qonto_mandate_status') or 'pending'
     )
-    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
-    statuses = [i.get('status') for i in installments]
+    all_installments = _sepa_installments(line)
+    installments = [item for item in all_installments if _installment_counts_toward_schedule(item)]
+    statuses = [str(i.get('status') or '').lower() for i in installments]
     if not line.get('qonto_direct_debit_mandate_id') or mandate not in {'active', 'signed'}:
         return 'Mandat à signer'
-    if any(s in {'failed','returned','refunded'} for s in statuses): return 'Rejeté'
-    if statuses and all(s == 'completed' for s in statuses): return 'Payé'
-    if any(s == 'completed' for s in statuses): return 'Paiement partiel'
+    if any(_installment_is_rejected(item) and not _installment_rejection_is_treated(item) for item in all_installments): return 'Rejeté'
+    if statuses and all(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Payé'
+    if any(_installment_rejection_is_treated(item) for item in all_installments): return 'Rejet traité'
+    if any(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Paiement partiel'
     return 'Prélèvements programmés'
 
 def _normalize_billing_invoice_status(status: Any) -> str:
@@ -30219,8 +32150,8 @@ def admin_direct_debits():
 @app.get('/api/admin/billing-lines')
 @admin_login_required
 def api_admin_billing_lines():
-    # Read-only local state: webhook-driven updates are already persisted in data.
     data = load_data()
+    _repair_logged_qonto_rejection_retries(data, _billing_lines(data))
     return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': 0, 'sync_warning': ''})
 
 
@@ -30367,6 +32298,8 @@ def _billing_lines_for_trainee_session(data: Dict[str, Any], trainee_id: str, se
 def api_billing_session(session_id: str):
     data = load_data()
     lines = _billing_lines_for_session(data, session_id)
+    _repair_logged_qonto_rejection_retries(data, lines)
+    lines = _billing_lines_for_session(data, session_id)
     if _qonto_is_configured():
         changed = False
         for line in lines:
@@ -30385,6 +32318,7 @@ def api_billing_session(session_id: str):
 def api_billing_trainee_session(trainee_id: str, session_id: str):
     data = load_data()
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    _repair_logged_qonto_rejection_retries(data, lines)
     trainee = None
     for sess in data.get('sessions', []):
         if str(sess.get('id')) != str(session_id):
@@ -30609,6 +32543,19 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
                 if result.get('created'):
                     _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)
             _sync_sepa_aliases(line)
+    if mandate_id:
+        try:
+            recovered_retries = _recover_missing_qonto_rejection_retries(line, mandate_id)
+            if recovered_retries:
+                _billing_log(
+                    line, 'Nouveau prélèvement suite à rejet retrouvé sur Qonto', 'success',
+                    f'{recovered_retries} prélèvement(s)', mandate_id,
+                )
+        except Exception as exc:
+            app.logger.warning(
+                '[QONTO] récupération des prélèvements reprogrammés impossible mandate_id=%s error=%s',
+                mandate_id, _sanitize_qonto_error(str(exc)),
+            )
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
     for item in installments:
         sid = item.get('qonto_direct_debit_subscription_id')
@@ -30658,6 +32605,8 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         line['paymentStatus'] = 'partial'
     elif line['qontoPaymentGlobalStatus'] == 'Rejeté':
         line['paymentStatus'] = 'failed'
+    elif line['qontoPaymentGlobalStatus'] in {'Rejet traité', 'Prélèvements programmés'}:
+        line['paymentStatus'] = 'unpaid'
 
 
 def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) -> bool:
@@ -30703,6 +32652,7 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
             if line['qontoPaymentGlobalStatus'] == 'Payé': line['paymentStatus'] = 'paid'
             elif line['qontoPaymentGlobalStatus'] == 'Paiement partiel': line['paymentStatus'] = 'partial'
             elif line['qontoPaymentGlobalStatus'] == 'Rejeté': line['paymentStatus'] = 'failed'
+            elif line['qontoPaymentGlobalStatus'] in {'Rejet traité', 'Prélèvements programmés'}: line['paymentStatus'] = 'unpaid'
             if inst['status'] in {'failed', 'returned', 'refunded'} and previous_status not in {'failed', 'returned', 'refunded'}:
                 _notify_rejected_qonto_debit(data, line, inst, collection_id)
             _save_billing_line(data, line)
@@ -30802,6 +32752,157 @@ def api_billing_create_mandate():
         _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': False, 'error': format_qonto_error_for_front(exc)}), 400
 
+
+@app.post('/api/billing/reschedule-rejected-debit')
+@admin_login_required
+@admin_write_required
+def api_billing_reschedule_rejected_debit():
+    """Replace one or more rejected SEPA collections with one-off collections."""
+    data = load_data()
+    payload = request.get_json(silent=True) or {}
+    collection_date = str(payload.get('collectionDate') or '')[:10]
+    parsed_date = _parse_date_safe(collection_date)
+    if not parsed_date or parsed_date <= datetime.date.today():
+        return jsonify({'ok': False, 'error': 'Choisissez une date de prélèvement future'}), 400
+
+    requested_items = payload.get('items')
+    if not isinstance(requested_items, list):
+        requested_items = [payload]
+    if not requested_items:
+        return jsonify({'ok': False, 'error': 'Sélectionnez au moins un prélèvement rejeté'}), 400
+
+    selections = []
+    for item in requested_items:
+        item_payload = {**payload, **item} if isinstance(item, dict) else payload
+        line = _line_from_payload(data, item_payload)
+        if not line:
+            return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+        # ``sepa_payment_plan.installments`` is the persisted source of truth.
+        # Using the legacy alias here made a successful Qonto retry disappear
+        # as soon as aliases were synchronized again.
+        installments = _sepa_installments(line)
+        try:
+            installment_index = int(item_payload.get('installmentIndex'))
+        except (TypeError, ValueError):
+            installment_index = -1
+        subscription_id = str(item_payload.get('subscriptionId') or '').strip()
+        collection_id = str(item_payload.get('collectionId') or '').strip()
+        due_date = str(item_payload.get('dueDate') or '')[:10]
+        matched_installment = next((
+            installment for installment in installments
+            if subscription_id
+            and str(installment.get('qonto_direct_debit_subscription_id') or '') == subscription_id
+            and (not collection_id or str(installment.get('qonto_direct_debit_collection_id') or '') == collection_id)
+            and (not due_date or str(installment.get('due_date') or installment.get('date') or '')[:10] == due_date)
+        ), None)
+        if matched_installment is not None:
+            installment_index = installments.index(matched_installment)
+        if not isinstance(installments, list) or not (0 <= installment_index < len(installments)):
+            return jsonify({'ok': False, 'error': 'Prélèvement rejeté introuvable'}), 400
+        installment = installments[installment_index]
+        if not _installment_is_rejected(installment):
+            return jsonify({'ok': False, 'error': 'Ce prélèvement n’est pas rejeté'}), 400
+        if _installment_rejection_is_treated(installment):
+            return jsonify({'ok': False, 'error': 'Ce rejet a déjà été traité par un nouveau prélèvement'}), 400
+        amount = _money(item_payload.get('amount') if item_payload.get('amount') is not None else installment.get('amount'))
+        if not math.isfinite(amount) or amount <= 0:
+            return jsonify({'ok': False, 'error': 'Indiquez un montant de prélèvement supérieur à zéro'}), 400
+        mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '').strip()
+        client_id = str(line.get('qontoClientId') or line.get('qontoCustomerId') or '').strip()
+        if not mandate_id or not client_id:
+            return jsonify({'ok': False, 'error': 'Mandat ou client Qonto introuvable'}), 400
+        effective_installments = [candidate for candidate in installments if _installment_counts_toward_schedule(candidate)]
+        schedule_index = _installment_schedule_position(installment, installment_index + 1)
+        schedule_total = int(installment.get('schedule_total') or len(effective_installments) or len(installments))
+        selections.append((
+            line, installments, installment_index, installment, amount,
+            mandate_id, client_id, schedule_index, schedule_total,
+        ))
+
+    try:
+        _ensure_qonto_oauth_ready()
+        touched_lines = {}
+        subscription_ids = []
+        for line, installments, installment_index, installment, amount, mandate_id, client_id, schedule_index, schedule_total in selections:
+            invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
+            reference = f"{invoice_ref} - reprogrammation échéance {schedule_index}/{schedule_total}"
+            response = create_qonto_direct_debit_subscription({
+                'client_id': client_id, 'bank_account_id': get_qonto_bank_account_id(),
+                'initial_collection_date': collection_date,
+                'amount': {'value': f'{amount:.2f}', 'currency': 'EUR'},
+                'reference': reference, 'notify_client': True, 'schedule_type': 'one_off',
+                'direct_debit_mandate_id': mandate_id, 'send_mandate_signature_email': True,
+            })
+            subscription = response.get('direct_debit_subscription') or response.get('subscription') or response
+            subscription_id = str(subscription.get('id') or '').strip() if isinstance(subscription, dict) else ''
+            if not subscription_id:
+                raise RuntimeError('Qonto n’a pas confirmé la reprogrammation du prélèvement')
+            subscription_ids.append(subscription_id)
+            now = _now_iso()
+            history = installment.get('reprogramming_history')
+            if not isinstance(history, list): history = []
+            history.append({
+                'date': installment.get('due_date') or installment.get('date') or '',
+                'amount': installment.get('amount'), 'status': installment.get('status') or '',
+                'failureReason': installment.get('failureReason') or installment.get('status_reason') or '',
+                'qonto_direct_debit_subscription_id': installment.get('qonto_direct_debit_subscription_id') or '',
+                'replacement_subscription_id': subscription_id,
+                'replacement_date': collection_date,
+                'replacement_amount': amount,
+                'reprogrammed_at': now,
+            })
+            installment.update({
+                'rejection_treated': True,
+                'rejection_treated_at': now,
+                'excluded_from_schedule_totals': True,
+                'replaced_by_direct_debit_subscription_id': subscription_id,
+                'reprogramming_history': history,
+                'updated_at': now,
+            })
+            retry = {
+                'index': schedule_index,
+                'schedule_index': schedule_index,
+                'schedule_total': schedule_total,
+                'amount': amount,
+                'date': collection_date,
+                'due_date': collection_date,
+                'status': 'scheduled',
+                'failureReason': '',
+                'status_reason': '',
+                'qonto_direct_debit_subscription_id': subscription_id,
+                'reference': reference,
+                'is_rejection_retry': True,
+                'reprogrammed_from_subscription_id': installment.get('qonto_direct_debit_subscription_id') or '',
+                'reprogrammed_from_collection_id': installment.get('qonto_direct_debit_collection_id') or '',
+                'reprogrammed_from_due_date': installment.get('due_date') or installment.get('date') or '',
+                'reprogrammed_at': now,
+                'created_at': now,
+                'updated_at': now,
+            }
+            installments.append(retry)
+            _mark_qonto_rejection_notification_treated(data, line, installment, retry)
+            _sync_sepa_aliases(line)
+            _billing_log(line, 'Prélèvement rejeté reprogrammé', 'success', reference, subscription_id)
+            touched_lines[str(line.get('id'))] = line
+        for line in touched_lines.values():
+            _save_billing_line(data, line)
+        save_data(data)
+        count = len(selections)
+        return jsonify({
+            'ok': True,
+            'message': f'{count} prélèvement{"s" if count > 1 else ""} reprogrammé{"s" if count > 1 else ""} le {fr_date(collection_date)}',
+            'count': count,
+            'collectionDate': collection_date,
+            'subscriptionIds': subscription_ids,
+            'line': _find_billing_line(data, selections[0][0]['id']),
+        })
+    except Exception as exc:
+        for line in {str(selection[0].get('id')): selection[0] for selection in selections}.values():
+            _billing_log(line, 'Erreur reprogrammation prélèvement rejeté', 'error', _sanitize_qonto_error(str(exc)))
+            _save_billing_line(data, line)
+        save_data(data)
+        return jsonify({'ok': False, 'error': format_qonto_error_for_front(exc)}), 400
+
 @app.post('/api/billing/sync-qonto')
 @admin_login_required
 @admin_write_required
@@ -30824,6 +32925,7 @@ def api_billing_sync_qonto():
                 reset, _ = _sync_billing_line_with_qonto(data, line)
             if line.get('paymentMode') == 'sepa_direct_debit':
                 _sync_qonto_direct_debit_line(line)
+                _mark_line_qonto_rejection_notifications_treated(data, line)
             _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1; last_line = line
         except Exception as exc:
             errors.append({'id': line.get('id'), 'message': _sanitize_qonto_error(str(exc))})
@@ -31487,8 +33589,11 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    is_vtc = str(_automation_document_config(s).get("slug") or "") == "vtc"
+    if is_vtc and not t.get("vtc_theory_exam_sent_at"):
+        return jsonify({"ok": False, "error": "En attente de réussite à l’examen théorique"}), 400
     can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
-    if not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
+    if not is_vtc and not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
         return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
@@ -31496,7 +33601,10 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             raise Exception("Le PDF de convocation APS n’a pas été généré.")
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s)
+        if is_vtc:
+            subject, html_content = build_vtc_practice_convocation_email(str(t.get("first_name") or ""), _session_get(s, "practice_training_date", "") or _session_get(s, "exam_practice_date", ""))
+        else:
+            subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s)
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
@@ -31795,6 +33903,27 @@ def internal_cron_convocation_signature_reminders():
     result = run_convocation_signature_reminders()
     convocation_reminders = run_training_convocation_reminders()
     return jsonify({"ok": True, **result, "training_convocations": convocation_reminders})
+
+
+@app.post("/internal/cron/wedof-automation")
+def internal_cron_wedof_automation():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if not expected or not provided or not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    try:
+        result = run_wedof_automation_live() if _wedof_live_mode_enabled() else run_wedof_automation_dry_run()
+    except (WedofConfigurationError, WedofApiError) as exc:
+        app.logger.warning("Cron WEDOF indisponible erreur=%s", getattr(exc, "code", "wedof_configuration_error"))
+        result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
+    except Exception:
+        app.logger.exception("Erreur technique nettoyée du cron WEDOF")
+        result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
+    if result.get("status") == "skipped_maintenance_window":
+        result = {"ok": True, "status": "skipped_maintenance_window", "mode": result.get("mode", "dry_run"),
+                  "next_action": "automatic_retry_on_next_cron"}
+    status_code = 409 if result.get("status") == "already_running" else 503 if result.get("status") == "failed" else 200
+    return jsonify(result), status_code
 
 
 @app.post("/internal/cron/cash-payment-reminders")
@@ -32334,6 +34463,8 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
         for installment in _sepa_installments(line):
             if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
                 continue
+            if _installment_rejection_is_treated(installment):
+                continue
             event_date = _daily_recap_date(installment.get("rejected_at") or installment.get("failed_at") or installment.get("updated_at") or installment.get("updatedAt") or installment.get("date") or installment.get("due_date"))
             if event_date == report_date:
                 name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire"
@@ -32410,6 +34541,7 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
         )
 
     sales = report["sales"]
+    revenue_label = "Chiffres d'affaires vendredi" if display_date.weekday() == 0 else "Chiffre d’affaires de la veille"
     comparisons = report.get("comparison_sales") or {"previous_year": report["prior_sales"]}
     comparison_labels = {"previous_day": "jour précédent", "previous_week": "semaine précédente", "previous_month": "mois précédent", "previous_year": "année précédente"}
     comparison_cards = []
@@ -32468,12 +34600,12 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     ]
     visible_vae_metrics = [(label, int(count or 0)) for label, count in vae_metrics if int(count or 0) > 0]
     if visible_vae_metrics:
-        vae_rows = "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right;background:#ecfdf5;color:#047857;border-radius:99px;padding:4px 10px;font-weight:900">{count}</span></div>' for label, count in visible_vae_metrics)
+        vae_rows = "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right">{section_count_badge(count)}</span></div>' for label, count in visible_vae_metrics)
         cards = f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">🎓&nbsp; Suivi des VAE</h2>{vae_rows}</div></td></tr>' + cards
     greeting = ""
     if recipient and greeting_context:
         greeting = _daily_recap_greeting_html(recipient, greeting_context)
-    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><h1 style="margin:24px 0 8px;font-size:30px">DAILY OPERATIONS</h1><div style="opacity:.86">{html.escape(fr_date(display_date.isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><div style="background:linear-gradient(145deg,#ffffff,#eff6ff);border:1px solid #bfdbfe;border-radius:22px;padding:22px;box-shadow:0 12px 30px rgba(37,99,235,.08)"><div style="font-size:12px;color:#1e40af;font-weight:900;text-transform:uppercase;letter-spacing:.06em">📈 Performance commerciale</div><table role="presentation" width="100%" style="margin-top:10px"><tr><td width="54%" style="vertical-align:top;padding-right:16px;border-right:1px solid #dbeafe"><div style="color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:34px;font-weight:950;color:#0f172a;margin-top:3px">{html.escape(_format_euro(sales['revenue']))}</div><div style="margin-top:5px;color:#475569;font-size:12px">{sales['count']} vente{'s' if sales['count'] != 1 else ''} enregistrée{'s' if sales['count'] != 1 else ''}</div>{objective_visual}</td><td width="46%" style="vertical-align:top;padding-left:16px"><div style="color:#92400e;font-size:11px;font-weight:800;text-transform:uppercase">Formations vendues</div><div style="margin-top:8px">{formation_mix}</div></td></tr></table>{comparison}</div></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé les jours ouvrés à 08h00</td></tr></table></td></tr></table></body></html>'''
+    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><h1 style="margin:24px 0 8px;font-size:30px">DAILY OPERATIONS</h1><div style="opacity:.86">{html.escape(fr_date(display_date.isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><div style="background:linear-gradient(145deg,#ffffff,#eff6ff);border:1px solid #bfdbfe;border-radius:22px;padding:22px;box-shadow:0 12px 30px rgba(37,99,235,.08)"><div style="font-size:12px;color:#1e40af;font-weight:900;text-transform:uppercase;letter-spacing:.06em">📈 Performance commerciale</div><table role="presentation" width="100%" style="margin-top:10px"><tr><td width="54%" style="vertical-align:top;padding-right:16px;border-right:1px solid #dbeafe"><div style="color:#64748b;font-size:11px;font-weight:800;text-transform:uppercase">{html.escape(revenue_label)}</div><div style="font-size:34px;font-weight:950;color:#0f172a;margin-top:3px">{html.escape(_format_euro(sales['revenue']))}</div><div style="margin-top:5px;color:#475569;font-size:12px">{sales['count']} vente{'s' if sales['count'] != 1 else ''} enregistrée{'s' if sales['count'] != 1 else ''}</div>{objective_visual}</td><td width="46%" style="vertical-align:top;padding-left:16px"><div style="color:#92400e;font-size:11px;font-weight:800;text-transform:uppercase">Formations vendues</div><div style="margin-top:8px">{formation_mix}</div></td></tr></table>{comparison}</div></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé les jours ouvrés à 08h00</td></tr></table></td></tr></table></body></html>'''
     return "DAILY OPERATIONS", body
 
 

@@ -44,6 +44,7 @@
   .afc-cnaps-statuses{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0;max-width:360px;font-size:11px;line-height:1;font-weight:900;}
   .afc-cnaps-status-chip{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;border:1px solid var(--line);border-radius:999px;padding:7px 9px;white-space:nowrap;letter-spacing:.02em;}
   .afc-cnaps-status-chip.is-active,.afc-cnaps-status-chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
+  .afc-cnaps-status-chip.is-progress{background:#2563eb;border-color:#2563eb;color:#fff;}
   .afc-cnaps-status-chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
   .afc-cnaps-status-chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
   .afc-cnaps-status-chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
@@ -61,6 +62,12 @@
     color:#0a8f50;
     background:#eaf9f1;
   }
+  .afc-notification-details{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:145px;}
+  .afc-delivery-badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:800;white-space:nowrap;}
+  .afc-delivery-badge.accepted{background:#dcfce7;color:#166534;}
+  .afc-delivery-badge.failed{background:#fee2e2;color:#991b1b;}
+  .afc-delivery-badge.missing{background:#f1f5f9;color:#64748b;}
+  .afc-delivery-help{font-size:10px;color:#64748b;white-space:normal;line-height:1.25;max-width:190px;}
   .afc-filters{
     display:flex;
     flex-wrap:wrap;
@@ -104,18 +111,39 @@
   #afcTable tbody tr.afc-row-enrolled:hover td{
     background:#dcfce7 !important;
   }
+  .afc-import-modal{max-width:1500px;width:calc(100vw - 32px);height:calc(100vh - 32px);max-height:none;display:flex;flex-direction:column;overflow:hidden;}
+  .afc-import-modal .modal-body{flex:1;overflow:auto;}
+  .afc-import-date{display:flex;align-items:center;gap:14px;margin:0 0 18px;padding:14px 16px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;}
+  .afc-import-date label{font-weight:800;color:#1e3a8a;}
+  .afc-import-date input{min-height:40px;padding:0 12px;border:1px solid #94a3b8;border-radius:8px;background:#fff;}
+  .afc-dropzone{border:2px dashed #94a3b8;border-radius:16px;padding:32px;text-align:center;background:#f8fafc;transition:.2s;}
+  .afc-dropzone.drag{border-color:#f97316;background:#fff7ed;}
+  .afc-import-preview{max-width:220px;max-height:160px;border-radius:10px;margin-top:14px;object-fit:contain;}
+  .afc-import-table{width:100%;min-width:980px;border-collapse:collapse;}
+  .afc-import-table th,.afc-import-table td{padding:8px;border-bottom:1px solid #e2e8f0;vertical-align:top;}
+  .afc-import-table input[type=text],.afc-import-table input[type=email]{width:100%;min-width:120px;}
+  .afc-status{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;white-space:nowrap;}
+  .afc-status-ready{background:#dcfce7;color:#166534}.afc-status-duplicate{background:#e2e8f0;color:#475569}
+  .afc-status-invalid{background:#ffedd5;color:#9a3412}.afc-status-conflict{background:#fee2e2;color:#991b1b}
+  @media(max-width:700px){.afc-import-modal{width:100vw;max-width:100vw;max-height:100vh;border-radius:0}.afc-dropzone{padding:20px 10px}}
 </style>
 
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-    <h1 style="margin:0;">Gestion des AFC</h1>
+    <h1 style="margin:0;">{{ 'Candidats AFC archivés' if show_archived else 'Gestion des AFC' }}</h1>
     <div style="display:flex;gap:8px;">
+      {% if show_archived %}
+      <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">← Retour aux candidats actifs</a>
+      {% else %}
+      <a class="btn btn-outline" href="{{ url_for('admin_afc', archives=1) }}">Archives ({{ archived_count }})</a>
       <a class="btn btn-outline" href="{{ url_for('admin_positioning_tests') }}">Tests de positionnement</a>
+      <button class="btn btn-outline" id="btnArchiveAllCandidates" type="button">Archiver tous les candidats</button>
       <button class="btn btn-danger" id="btnDeleteAllCandidates" type="button">Supprimer toutes les lignes</button>
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
       <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
-      <button class="btn btn-orange" id="btnImportCandidates" type="button">Importer</button>
+      <button class="btn btn-orange" id="btnImportCandidates" type="button">↥ Importer</button>
       <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -131,6 +159,7 @@
     Modèles de mail
   </button>
   <div id="mailTemplatesPanel" style="display:none;">
+    <p style="margin:0 0 10px;color:#475569;">Variables disponibles : <code>{{'{{nom}}'}}</code>, <code>{{'{{prenom}}'}}</code> et <code>{{'{{date_icop}}'}}</code> (date ICOP du candidat).</p>
     <label>Mail candidat retenu</label>
     <textarea id="tmplRetained" rows="10" style="width:100%;">{{ afc.mail_templates.retained }}</textarea>
     <label style="margin-top:10px;display:block;">Mail candidat non retenu (variables: {{'{{motif_refus}}'}} {{'{{complement_refus}}'}})</label>
@@ -212,10 +241,24 @@
           </button>
         </td>
         <td>
-          <button type="button" class="afc-toggle {{ 'on' if (c.notification_status or '')|upper == 'ENVOYEE' else '' }}" data-toggle-notification>
+          {% set email_status = (c.convocation_email_status or ('ACCEPTE' if c.convocation_email_sent_at else ''))|upper %}
+          {% set sms_status = (c.convocation_sms_status or ('ACCEPTE' if c.convocation_sms_sent_at else ''))|upper %}
+          {% if email_status or sms_status %}
+          <div class="afc-notification-details">
+            <span class="afc-delivery-badge {{ 'accepted' if email_status == 'ACCEPTE' else ('failed' if email_status == 'ECHEC' else 'missing') }}" title="{{ ('Demande acceptée par Brevo le ' ~ c.convocation_email_sent_at) if email_status == 'ACCEPTE' else ('Échec de la demande d’envoi' if email_status == 'ECHEC' else 'Aucune adresse e-mail') }}">
+              {{ '✅ E-mail accepté' if email_status == 'ACCEPTE' else ('❌ E-mail en échec' if email_status == 'ECHEC' else '— E-mail absent') }}
+            </span>
+            <span class="afc-delivery-badge {{ 'accepted' if sms_status == 'ACCEPTE' else ('failed' if sms_status == 'ECHEC' else 'missing') }}" title="{{ ('Demande acceptée par Brevo le ' ~ c.convocation_sms_sent_at) if sms_status == 'ACCEPTE' else ('Échec de la demande d’envoi' if sms_status == 'ECHEC' else 'Aucun numéro de téléphone') }}">
+              {{ '✅ SMS accepté' if sms_status == 'ACCEPTE' else ('❌ SMS en échec' if sms_status == 'ECHEC' else '— SMS absent') }}
+            </span>
+            <small class="afc-delivery-help">Accepté par Brevo, sans garantie de lecture.</small>
+          </div>
+          {% else %}
             {% set notification_status = (c.notification_status or '')|upper %}
-            {{ '🟢 Envoyée' if notification_status == 'ENVOYEE' else ('🔴 Non envoyée' if notification_status else '🟡 En attente') }}
-          </button>
+            <span class="afc-delivery-badge {{ 'accepted' if notification_status == 'ENVOYEE' else ('failed' if notification_status == 'NON ENVOYEE' else 'missing') }}">
+              {{ '✅ Notification envoyée' if notification_status == 'ENVOYEE' else ('❌ Non envoyée' if notification_status == 'NON ENVOYEE' else '⏳ En attente') }}
+            </span>
+          {% endif %}
         </td>
         <td>
           <div class="afc-cnaps-wrap">
@@ -225,14 +268,47 @@
         </td>
         <td><a class="btn btn-outline" href="{{ url_for('admin_afc_candidate_sheet', candidate_id=c.id) }}">Fiche candidat</a></td>
         <td>
+          {% if show_archived %}
+          <button type="button" class="btn btn-primary" data-restore-candidate>Restaurer</button>
+          {% else %}
           <button type="button" class="btn btn-outline" data-delete-candidate>Supprimer</button>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
-<input type="file" id="afcImportInput" accept="image/png,image/jpeg,image/webp,image/bmp" style="display:none;">
+<div class="modal-backdrop" id="afcImportModal" aria-hidden="true">
+  <div class="modal afc-import-modal" role="dialog" aria-modal="true" aria-labelledby="afcImportTitle">
+    <div class="modal-head"><div class="modal-title" id="afcImportTitle">Importer des candidats France Travail</div></div>
+    <div class="modal-body">
+      <div id="afcImportStep1">
+        <div class="afc-dropzone" id="afcDropzone">
+          <strong>Glissez-déposez votre capture ici</strong><br><small>PNG, JPG, JPEG ou WEBP — 10 Mo maximum</small><br><br>
+          <button class="btn btn-outline" id="afcChooseImage" type="button">Choisir une image</button>
+          <input type="file" id="afcImportInput" accept="image/png,image/jpeg,image/webp" hidden>
+          <div><img id="afcImagePreview" class="afc-import-preview" alt="Aperçu de la capture" hidden></div>
+        </div>
+        <p id="afcImportError" style="color:#b91c1c;font-weight:700" role="alert"></p>
+      </div>
+      <div id="afcImportStep2" hidden>
+        <div class="afc-import-date">
+          <label for="afcImportIcopDate">Date de l’ICOP à attribuer aux candidats</label>
+          <input id="afcImportIcopDate" type="date" required>
+        </div>
+        <p id="afcImportSummary" style="font-weight:800"></p>
+        <div style="overflow-x:auto"><table class="afc-import-table"><thead><tr><th>✓</th><th>Identifiant France Travail</th><th>Nom</th><th>Prénom(s)</th><th>Téléphone</th><th>E-mail</th><th>Statut</th><th>Action</th></tr></thead><tbody id="afcImportRows"></tbody></table></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="afcReplaceImage" type="button" hidden>Remplacer l’image</button>
+      <button class="btn" id="afcCancelImport" type="button">Annuler</button>
+      <button class="btn btn-primary" id="afcAnalyzeImage" type="button" disabled>Analyser l’image</button>
+      <button class="btn btn-primary" id="afcConfirmImport" type="button" hidden disabled>Importer 0 candidat</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="candidateModal" aria-hidden="true">
   <div class="modal" style="max-width:520px;">
@@ -258,10 +334,19 @@ const newNom = document.getElementById('newNom');
 const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
 const newTel = document.getElementById('newTel');
+const btnArchiveAllCandidates = document.getElementById('btnArchiveAllCandidates');
 const btnDeleteAllCandidates = document.getElementById('btnDeleteAllCandidates');
 const btnImportCandidates = document.getElementById('btnImportCandidates');
 const btnNotifyPending = document.getElementById('btnNotifyPending');
 const afcImportInput = document.getElementById('afcImportInput');
+const afcImportModal = document.getElementById('afcImportModal');
+const afcDropzone = document.getElementById('afcDropzone');
+const afcAnalyzeImage = document.getElementById('afcAnalyzeImage');
+const afcConfirmImport = document.getElementById('afcConfirmImport');
+const afcImportIcopDate = document.getElementById('afcImportIcopDate');
+const afcImportRows = document.getElementById('afcImportRows');
+let afcSelectedFile = null;
+let afcCandidates = [];
 const afcSearchInput = document.getElementById('afcSearchInput');
 const afcDecisionFilter = document.getElementById('afcDecisionFilter');
 const afcPresenceFilter = document.getElementById('afcPresenceFilter');
@@ -319,15 +404,32 @@ function afcCnapsChipClass(status){
   if(text.includes('INACTIF') || text.includes('EXPIR') || text.includes('REFUS')) return 'is-inactive';
   if(text.startsWith('AP ') || text.includes('AUTORISATION PR')) return 'is-ap';
   if(text.startsWith('CP ') || text.includes('CARTE PROFESSIONNELLE')) return 'is-cp';
+  if(text.includes('TRANSM') || text.includes('ENREG') || text.includes('INSTRU') || text.includes('DOC')) return 'is-progress';
   if(text.includes('ACTIF') || text.includes('ACCEPT')) return 'is-active';
   return 'is-unknown';
+}
+
+function afcCnapsDisplayEntries(status, history){
+  const rawStatus = String(status || '').trim().toUpperCase() || 'INCONNU';
+  const entries = normalizeAfcCnapsHistory(history);
+  const titleEntries = entries.length ? entries : afcCnapsStatusFallbackEntries(rawStatus);
+  const displayEntries = [...titleEntries];
+  // Le statut du dossier (TRANSMIS, ACCEPTÉ, etc.) et les titres détectés
+  // (AP/CP SH ACTIF) sont deux informations distinctes : afficher les deux.
+  const normalizedRawStatus = rawStatus.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const alreadyDisplayed = displayEntries.some((entry) => (
+    String(entry.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normalizedRawStatus
+  ));
+  if(rawStatus !== 'INCONNU' && !alreadyDisplayed){
+    displayEntries.unshift({ status: rawStatus, date: '' });
+  }
+  return { entries, displayEntries };
 }
 
 function renderAfcCnapsStatuses(span, status, history){
   if(!span) return;
   const rawStatus = String(status || '').trim().toUpperCase() || 'INCONNU';
-  const entries = normalizeAfcCnapsHistory(history);
-  const displayEntries = entries.length ? entries : afcCnapsStatusFallbackEntries(rawStatus);
+  const { entries, displayEntries } = afcCnapsDisplayEntries(rawStatus, history);
   span.dataset.cnapsStatus = rawStatus;
   span.dataset.cnapsHistory = JSON.stringify(entries);
   if(displayEntries.length){
@@ -476,12 +578,31 @@ function updateCandidateCount(){
 
 
 
-btnImportCandidates.addEventListener('click', ()=>{
-  afcImportInput.value = '';
-  afcImportInput.click();
-});
+function resetAfcImport(){
+  afcSelectedFile=null; afcCandidates=[]; afcImportInput.value=''; afcImportIcopDate.value=''; afcImportRows.innerHTML='';
+  document.getElementById('afcImagePreview').hidden=true; document.getElementById('afcImportError').textContent='';
+  document.getElementById('afcImportStep1').hidden=false; document.getElementById('afcImportStep2').hidden=true;
+  document.getElementById('afcReplaceImage').hidden=true; afcAnalyzeImage.hidden=false; afcAnalyzeImage.disabled=true;
+  afcConfirmImport.hidden=true;
+}
+function openAfcImport(){resetAfcImport();afcImportModal.classList.add('show');afcImportModal.setAttribute('aria-hidden','false');}
+function closeAfcImport(){afcImportModal.classList.remove('show');afcImportModal.setAttribute('aria-hidden','true');resetAfcImport();}
+function chooseAfcFile(file){
+  const error=document.getElementById('afcImportError'); error.textContent='';
+  if(!file)return; if(file.size>10*1024*1024){error.textContent='L’image dépasse la taille maximale de 10 Mo.';return;}
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)){error.textContent='Format non autorisé. Utilisez PNG, JPG, JPEG ou WEBP.';return;}
+  afcSelectedFile=file; afcAnalyzeImage.disabled=false; const img=document.getElementById('afcImagePreview');img.src=URL.createObjectURL(file);img.hidden=false;
+}
+btnImportCandidates.addEventListener('click',openAfcImport);
+document.getElementById('afcChooseImage').addEventListener('click',()=>afcImportInput.click());
+afcImportInput.addEventListener('change',()=>chooseAfcFile(afcImportInput.files?.[0]));
+['dragenter','dragover'].forEach(e=>afcDropzone.addEventListener(e,x=>{x.preventDefault();afcDropzone.classList.add('drag')}));
+['dragleave','drop'].forEach(e=>afcDropzone.addEventListener(e,x=>{x.preventDefault();afcDropzone.classList.remove('drag')}));
+afcDropzone.addEventListener('drop',e=>chooseAfcFile(e.dataTransfer.files?.[0]));
+document.getElementById('afcCancelImport').addEventListener('click',closeAfcImport);
+document.getElementById('afcReplaceImage').addEventListener('click',resetAfcImport);
 
-btnNotifyPending.addEventListener('click', async ()=>{
+btnNotifyPending?.addEventListener('click', async ()=>{
   if(!confirm('Envoyer la notification à tous les candidats "non envoyée" ?')) return;
   btnNotifyPending.disabled = true;
   try{
@@ -502,7 +623,27 @@ btnNotifyPending.addEventListener('click', async ()=>{
   }
 });
 
-btnDeleteAllCandidates.addEventListener('click', async ()=>{
+btnArchiveAllCandidates?.addEventListener('click', async ()=>{
+  if(!confirm('Archiver tous les candidats actuellement affichés dans Gestion des AFC ?')) return;
+  btnArchiveAllCandidates.disabled = true;
+  try{
+    const res = await fetch('/api/admin/afc/candidates/archive-all', { method:'POST' });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok || !body.ok){
+      alert('Erreur lors de l’archivage global');
+      return;
+    }
+    alert(`Archivage terminé : ${body.archived || 0} candidat(s) archivé(s).`);
+    document.querySelectorAll('#afcTable tbody tr').forEach((tr)=> tr.remove());
+    applyAfcFilters();
+  }catch(_err){
+    alert('Erreur lors de l’archivage global');
+  }finally{
+    btnArchiveAllCandidates.disabled = false;
+  }
+});
+
+btnDeleteAllCandidates?.addEventListener('click', async ()=>{
   if(!confirm('Supprimer toutes les lignes de Gestion des AFC ?')) return;
   btnDeleteAllCandidates.disabled = true;
   try{
@@ -522,39 +663,44 @@ btnDeleteAllCandidates.addEventListener('click', async ()=>{
   }
 });
 
-afcImportInput.addEventListener('change', async ()=>{
-  const file = afcImportInput.files && afcImportInput.files[0];
-  if(!file) return;
-
-  const formData = new FormData();
-  formData.append('file', file);
-
+afcAnalyzeImage.addEventListener('click', async ()=>{
+  if(!afcSelectedFile)return; afcAnalyzeImage.disabled=true; afcAnalyzeImage.textContent='Analyse en cours…';
+  const fd=new FormData();fd.append('image',afcSelectedFile);
   try{
-    const res = await fetch('/api/admin/afc/import-from-image', {
-      method:'POST',
-      body: formData
-    });
-    const body = await res.json().catch(()=>({}));
-    if(!res.ok || !body.ok){
-      const code = body.error || 'import_failed';
-      if(code === 'no_candidate_found'){
-        alert('Aucun candidat détecté dans cette image.');
-      }else if(code === 'ocr_failed'){
-        alert("Impossible de lire l'image (OCR). Réessayez avec une capture plus nette.");
-      }else{
-        alert('Erreur import: ' + code);
-      }
-      return;
-    }
-
-    alert(`Import terminé : ${body.imported_count || 0} ajouté(s), ${body.skipped_count || 0} ignoré(s) (doublons).`);
-    if((body.imported_count || 0) > 0){
-      location.reload();
-    }
-  }catch(_err){
-    alert('Erreur import image');
-  }
+    const res=await fetch('/admin/afc/import-image/preview',{method:'POST',body:fd});const body=await res.json().catch(()=>({}));
+    if(!res.ok||!body.success)throw new Error(body.message||"L’image n’a pas pu être analysée. Vérifiez qu’elle est suffisamment nette puis réessayez.");
+    afcCandidates=body.candidates; renderAfcImportRows(); document.getElementById('afcImportStep1').hidden=true;document.getElementById('afcImportStep2').hidden=false;
+    document.getElementById('afcReplaceImage').hidden=false;afcAnalyzeImage.hidden=true;afcConfirmImport.hidden=false;
+  }catch(err){document.getElementById('afcImportError').textContent=err.message;}
+  finally{afcAnalyzeImage.textContent='Analyser l’image';if(!afcAnalyzeImage.hidden)afcAnalyzeImage.disabled=false;}
 });
+function renderAfcImportRows(){
+  const labels={ready:'Prêt à importer',duplicate:'Déjà présent',invalid:'À corriger',conflict:'Conflit à vérifier'};
+  afcImportRows.innerHTML=afcCandidates.map((c,i)=>`<tr data-index="${i}"><td><input type="checkbox" data-select ${c.selected?'checked':''} ${c.status==='ready'?'':'disabled'}></td>
+    ${[['france_travail_id','text'],['last_name','text'],['first_names','text'],['phone','text'],['email','email']].map(([f,t])=>`<td><input type="${t}" data-import-field="${f}" value="${escapeHtml(c[f]||'')}"></td>`).join('')}
+    <td><span class="afc-status afc-status-${c.status}">${labels[c.status]}</span><small style="display:block">${escapeHtml(c.reason||'')}${c.existing_url?` · <a href="${escapeHtml(c.existing_url)}" target="_blank">Voir la fiche existante</a>`:''}</small></td>
+    <td><button class="btn btn-outline" type="button" data-remove>Supprimer</button></td></tr>`).join('');
+  updateAfcImportCount();
+}
+function updateAfcImportCount(){
+  const s=afcImportRows.querySelectorAll('[data-select]:checked').length;afcConfirmImport.disabled=s===0||!afcImportIcopDate.value;afcConfirmImport.textContent=`Importer ${s} candidat${s>1?'s':''}`;
+  const counts={ready:0,duplicate:0,invalid:0,conflict:0};afcCandidates.forEach(c=>counts[c.status]++);
+  document.getElementById('afcImportSummary').textContent=`${afcCandidates.length} candidats détectés — ${counts.ready} importables — ${counts.duplicate} déjà présents — ${counts.invalid} à corriger${counts.conflict?` — ${counts.conflict} conflits`:''}`;
+}
+function afcLocallyValid(c){
+  const ft=String(c.france_travail_id||'').replace(/[\s-]+/g,'').toUpperCase();
+  const phone=String(c.phone||'').replace(/[\s.()\-]/g,'').replace(/^\+33/,'0').replace(/^0033/,'0');
+  return /^\d{7}[A-Z](?:\d{3})?$/.test(ft)&&c.last_name.trim()&&c.first_names.trim()&&/^0\d{9}$/.test(phone)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email);
+}
+afcImportRows.addEventListener('change',e=>{const tr=e.target.closest('tr');if(!tr)return;const c=afcCandidates[+tr.dataset.index];if(e.target.dataset.importField){c[e.target.dataset.importField]=e.target.value;if(c.status==='invalid'&&afcLocallyValid(c)){c.status='ready';c.reason='';c.selected=true;renderAfcImportRows();return;}if(c.status==='ready'&&!afcLocallyValid(c)){c.status='invalid';c.reason='Champs obligatoires invalides';c.selected=false;renderAfcImportRows();return;}}if(e.target.matches('[data-select]'))c.selected=e.target.checked;updateAfcImportCount();});
+afcImportRows.addEventListener('click',e=>{if(!e.target.matches('[data-remove]'))return;afcCandidates.splice(+e.target.closest('tr').dataset.index,1);renderAfcImportRows();});
+afcImportIcopDate.addEventListener('change',updateAfcImportCount);
+afcConfirmImport.addEventListener('click',async()=>{
+  const rows=afcCandidates.filter(c=>c.selected&&c.status==='ready');if(!rows.length||!afcImportIcopDate.value)return;afcConfirmImport.disabled=true;afcConfirmImport.textContent='Import et envoi en cours…';
+  try{const res=await fetch('/admin/afc/import-image/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidates:rows,date_icop:afcImportIcopDate.value})});const body=await res.json().catch(()=>({}));if(!res.ok||!body.success)throw new Error(body.message||'Import impossible.');alert(body.message);closeAfcImport();location.reload();}
+  catch(err){alert(err.message);updateAfcImportCount();}
+});
+
 
 document.getElementById('btnAddCandidate').addEventListener('click', openModal);
 document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
@@ -620,6 +766,21 @@ document.querySelectorAll('[data-delete-candidate]').forEach((btn)=>{
   });
 });
 
+document.querySelectorAll('[data-restore-candidate]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const tr = e.currentTarget.closest('tr');
+    const fullName = `${getCandidateFieldValue(tr, 'prenom')} ${getCandidateFieldValue(tr, 'nom')}`.trim();
+    if(!confirm(`Restaurer le candidat ${fullName} dans la liste active ?`)) return;
+    const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}/unarchive`, { method:'POST' });
+    if(!res.ok){
+      alert('Erreur lors de la restauration');
+      return;
+    }
+    tr.remove();
+    applyAfcFilters();
+  });
+});
+
 async function patchCandidate(tr, payload){
   const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}`, {
     method:'PATCH',
@@ -676,22 +837,6 @@ document.querySelectorAll('[data-toggle-fr]').forEach((btn)=>{
       applyAfcFilters();
     }catch(_err){
       alert('Erreur sauvegarde test de français');
-    }
-  });
-});
-
-document.querySelectorAll('[data-toggle-notification]').forEach((btn)=>{
-  btn.addEventListener('click', async (e)=>{
-    const target = e.currentTarget;
-    const tr = target.closest('tr');
-    const enabled = target.classList.contains('on');
-    const notification_status = enabled ? 'NON ENVOYEE' : 'ENVOYEE';
-    try{
-      await patchCandidate(tr, { notification_status });
-      target.classList.toggle('on', !enabled);
-      target.textContent = !enabled ? '🟢 Envoyée' : '🔴 Non envoyée';
-    }catch(_err){
-      alert('Erreur sauvegarde notification');
     }
   });
 });

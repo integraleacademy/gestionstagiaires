@@ -43,8 +43,14 @@ class AdminDirectDebitsSidebarTests(unittest.TestCase):
         self.assertIn("'returned','refunded'", html)
         self.assertIn("failureReason||it.status_reason||it.rejectReason", html)
         self.assertIn("it.date||it.due_date", html)
+        self.assertIn("Rejet traité", html)
+        self.assertIn("Nouveau prélèvement suite à rejet", html)
+        self.assertIn("b-treated", html)
+        self.assertIn("b-retry", html)
+        self.assertIn("d.status==='rejected'", html)
+        self.assertNotIn("d.status==='rejected'||!!d.failureReason", html)
         # An installment rejection must take precedence over a stale paid
         # status stored on the parent invoice.
-        rejected_check = html.index("if(failureReason||['reject'")
+        rejected_check = html.index("if(rejected)return")
         paid_check = html.index("if(['paid','settled'", rejected_check)
         self.assertLess(rejected_check, paid_check)

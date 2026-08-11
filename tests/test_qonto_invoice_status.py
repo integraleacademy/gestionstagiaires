@@ -239,7 +239,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertIn("function lineHasValidatedMandate(line)", template)
         self.assertIn(
-            "lineHasValidatedMandate(l)?(l.directDebitInstallments||[])",
+            "if(!lineHasValidatedMandate(l))return [];",
             template,
         )
         self.assertIn(

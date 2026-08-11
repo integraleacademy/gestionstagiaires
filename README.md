@@ -1,5 +1,32 @@
 # Gestion stagiaires
 
+## Import AFC depuis une capture France Travail
+
+L'analyse structurée de la modale `/admin/afc` est réalisée exclusivement côté serveur. Variables à configurer sur Render :
+
+- `OPENAI_API_KEY` : clé secrète du fournisseur (jamais exposée au navigateur) ;
+- `AFC_IMPORT_VISION_MODEL` : modèle vision compatible JSON structuré (défaut : `gpt-4.1-mini`).
+
+La capture est validée et réorientée en mémoire, sans conservation sur disque. La prévisualisation ne crée aucune fiche : seules les lignes confirmées sont revalidées et enregistrées.
+
+## Intégration CRM Intégrale Connect
+
+Le endpoint `POST /api/integrations/crm/stagiaires` est protégé par un jeton Bearer.
+Configurer `CRM_INTEGRATION_API_TOKEN` avec un secret long partagé avec le CRM. Il ne
+crée pas de stagiaire : il conserve le préremplissage pendant 15 minutes et renvoie
+une URL d'administration contenant uniquement un identifiant temporaire opaque. Le
+stagiaire n'est créé qu'après authentification et validation de la modale existante.
+
+Après déploiement, appliquer si nécessaire la migration historique du stockage JSON avec :
+
+```bash
+python scripts/migrate_crm_integration.py
+```
+
+La migration crée une sauvegarde, initialise l'ancien registre d'idempotence et ajoute le
+champ structuré `crm_center` aux sessions sans tenter de déduire un centre depuis leur
+nom. Les sessions destinées au CRM doivent avoir ce champ renseigné exactement.
+
 ## Lancer en local
 
 ```bash
@@ -29,6 +56,9 @@ python app.py
 - `CNAPSV3_API_TOKEN` (obligatoire sur le service web pour que le suivi automatique lise les dossiers CNAPS)
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
+- `WEDOF_MAINTENANCE_WINDOW_ENABLED` (facultatif, `true` par défaut ; seules les valeurs `false`, `0`, `no` et `off` désactivent la suspension)
+- `WEDOF_MAINTENANCE_START_TIME` (facultatif, heure de Paris au format `HH:MM`, `05:00` par défaut)
+- `WEDOF_MAINTENANCE_END_TIME` (facultatif, heure de Paris au format `HH:MM`, `07:00` par défaut ; la borne de fin est exclue)
 - `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
 - `DOCS_TO_CONTROL_TRUSTED_USER_AGENT` (optionnel : User-Agent exact autorisé pour le dashboard externe historique si aucun token public n’est configuré ; défaut `plateformegestion/1.0 (+https://plateformegestion.onrender.com)`)
 - `MAX_JSON_BACKUP_BYTES` (optionnel, défaut `52428800` : limite de copie d'un JSON sauvegardé automatiquement si la création de snapshot par lien dur n'est pas disponible)

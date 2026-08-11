@@ -49,6 +49,31 @@ services:
         sync: false
       - key: BREVO_API_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AFC_IMPORT_VISION_MODEL
+        value: gpt-4.1-mini
+      - key: WEDOF_AUTOMATION_ENABLED
+        value: "false"
+      - key: WEDOF_DRY_RUN
+        value: "true"
+      - key: WEDOF_MAINTENANCE_WINDOW_ENABLED
+        value: "true"
+      - key: WEDOF_MAINTENANCE_START_TIME
+        value: "05:00"
+      - key: WEDOF_MAINTENANCE_END_TIME
+        value: "07:00"
+  - type: cron
+    name: gestionstagiaires-wedof-automation
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "5 * * * *"
+    dockerCommand: python scripts/run_wedof_automation.py
+    envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
+      - key: WEDOF_AUTOMATION_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/wedof-automation
   - type: cron
     name: gestionstagiaires-convocation-reminders
     runtime: docker
