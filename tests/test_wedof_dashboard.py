@@ -85,6 +85,21 @@ class WedofDashboardUnitTests(unittest.TestCase):
         self.assertTrue(row["automation_planned"])
         self.assertEqual(row["association"], "À rattacher localement")
 
+    def test_unlinked_counter_only_tracks_trainings_starting_june_2026(self):
+        dashboard = build_automation_dashboard([
+            folder("BEFORE", trainingActionInfo={"startDate": "2026-05-31", "endDate": "2026-06-30"}),
+            folder("BOUNDARY", trainingActionInfo={"startDate": "2026-06-01", "endDate": "2026-06-30"}),
+            folder("AFTER"),
+            folder("MISSING", trainingActionInfo={"endDate": "2026-06-30"}),
+        ], links=[{"external_id": "AFTER", "active": True}])
+
+        rows = {row["external_id"]: row for row in dashboard["rows"]}
+        self.assertEqual(dashboard["stats"]["unlinked"], 1)
+        self.assertFalse(rows["BEFORE"]["unlinked_since_tracking_start"])
+        self.assertTrue(rows["BOUNDARY"]["unlinked_since_tracking_start"])
+        self.assertFalse(rows["AFTER"]["unlinked_since_tracking_start"])
+        self.assertFalse(rows["MISSING"]["unlinked_since_tracking_start"])
+
     def test_anomalies_and_successes_come_from_server_data(self):
         dashboard = build_automation_dashboard(
             [folder("BAD", trainingActionInfo={}), folder("T", "inTraining"), folder("D", "serviceDoneDeclared")],

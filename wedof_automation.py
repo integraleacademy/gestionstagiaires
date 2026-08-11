@@ -549,9 +549,20 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "association_orphan": bool(association.get("orphaned")),
                      "entry_success": status.get("entry_training", {}).get("status") == "success", "service_success": status.get("service_done", {}).get("status") == "success",
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
+    # Le suivi des rattachements a démarré avec les formations de juin 2026. Les
+    # dossiers antérieurs restent consultables dans leurs onglets WEDOF, mais ne
+    # doivent pas gonfler l'indicateur opérationnel des rattachements à traiter.
+    unlinked_tracking_start = "2026-06-01"
+    for row in rows:
+        row["unlinked_since_tracking_start"] = (
+            not row["linked"]
+            and bool(row.get("wedof_date_start"))
+            and row["wedof_date_start"] >= unlinked_tracking_start
+        )
+
     stats = {"accepted":sum(x["tab"]=="accepted" for x in rows), "training":sum(x["tab"]=="training" for x in rows),
              "service":sum(x["tab"]=="service" for x in rows), "anomaly":sum(x["tab"]=="anomaly" for x in rows),
              "planned":sum(x["automation_status"]=="planned" for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
              "blocked":sum(x["automation_blocked"] for x in rows),
-             "unlinked":sum(not x["linked"] for x in rows)}
+             "unlinked":sum(x["unlinked_since_tracking_start"] for x in rows)}
     return {"rows": rows, "stats": stats}
