@@ -556,6 +556,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
     for row in rows:
         row["unlinked_since_tracking_start"] = (
             not row["linked"]
+            # Un dossier terminé reste dans l'historique WEDOF, mais son
+            # rattachement n'est plus une opération à traiter. L'indicateur
+            # doit donc refléter les seuls dossiers encore actifs.
+            and row.get("state") in {"accepted", "inTraining"}
             and bool(row.get("wedof_date_start"))
             and row["wedof_date_start"] >= unlinked_tracking_start
         )
