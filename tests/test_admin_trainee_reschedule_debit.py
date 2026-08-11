@@ -28,6 +28,10 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
         self.assertIn("Nouveau prélèvement suite à rejet", template)
         self.assertIn("Rejet traité", template)
         self.assertIn("finance-line--retry", template)
+        self.assertIn("logicalInstallmentsForLine", template)
+        self.assertIn("Plan contractuel", template)
+        self.assertIn("Tentative précédente · non comptabilisée", template)
+        self.assertIn("montantTotalEcheancier", template)
 
     def test_endpoint_keeps_rejection_as_treated_and_adds_a_distinct_retry(self):
         direct_alias_installment = {

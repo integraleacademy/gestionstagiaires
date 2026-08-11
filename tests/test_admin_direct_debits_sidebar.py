@@ -47,6 +47,8 @@ class AdminDirectDebitsSidebarTests(unittest.TestCase):
         self.assertIn("Nouveau prélèvement suite à rejet", html)
         self.assertIn("b-treated", html)
         self.assertIn("b-retry", html)
+        self.assertIn("logicalDebitContext", html)
+        self.assertIn("Tentative précédente · non comptabilisée", html)
         self.assertIn("d.status==='rejected'", html)
         self.assertNotIn("d.status==='rejected'||!!d.failureReason", html)
         # An installment rejection must take precedence over a stale paid
