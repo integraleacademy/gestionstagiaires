@@ -33262,11 +33262,6 @@ def api_billing_reschedule_rejected_debit():
     """Replace one or more rejected SEPA collections with one-off collections."""
     data = load_data()
     payload = request.get_json(silent=True) or {}
-    collection_date = str(payload.get('collectionDate') or '')[:10]
-    parsed_date = _parse_date_safe(collection_date)
-    if not parsed_date or parsed_date <= datetime.date.today():
-        return jsonify({'ok': False, 'error': 'Choisissez une date de prélèvement future'}), 400
-
     requested_items = payload.get('items')
     if not isinstance(requested_items, list):
         requested_items = [payload]
@@ -33276,6 +33271,10 @@ def api_billing_reschedule_rejected_debit():
     selections = []
     for item in requested_items:
         item_payload = {**payload, **item} if isinstance(item, dict) else payload
+        collection_date = str(item_payload.get('collectionDate') or '')[:10]
+        parsed_date = _parse_date_safe(collection_date)
+        if not parsed_date or parsed_date <= datetime.date.today():
+            return jsonify({'ok': False, 'error': 'Choisissez une date future pour chaque prélèvement sélectionné'}), 400
         line = _line_from_payload(data, item_payload)
         if not line:
             return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
@@ -33318,14 +33317,14 @@ def api_billing_reschedule_rejected_debit():
         schedule_total = int(installment.get('schedule_total') or len(effective_installments) or len(installments))
         selections.append((
             line, installments, installment_index, installment, amount,
-            mandate_id, client_id, schedule_index, schedule_total,
+            mandate_id, client_id, schedule_index, schedule_total, collection_date,
         ))
 
     try:
         _ensure_qonto_oauth_ready()
         touched_lines = {}
         subscription_ids = []
-        for line, installments, installment_index, installment, amount, mandate_id, client_id, schedule_index, schedule_total in selections:
+        for line, installments, installment_index, installment, amount, mandate_id, client_id, schedule_index, schedule_total, collection_date in selections:
             invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
             reference = f"{invoice_ref} - reprogrammation échéance {schedule_index}/{schedule_total}"
             response = create_qonto_direct_debit_subscription({
@@ -33390,11 +33389,15 @@ def api_billing_reschedule_rejected_debit():
             _save_billing_line(data, line)
         save_data(data)
         count = len(selections)
+        collection_dates = [selection[-1] for selection in selections]
+        unique_collection_dates = list(dict.fromkeys(collection_dates))
+        date_message = f'le {fr_date(unique_collection_dates[0])}' if len(unique_collection_dates) == 1 else 'aux dates indiquées'
         return jsonify({
             'ok': True,
-            'message': f'{count} prélèvement{"s" if count > 1 else ""} reprogrammé{"s" if count > 1 else ""} le {fr_date(collection_date)}',
+            'message': f'{count} prélèvement{"s" if count > 1 else ""} reprogrammé{"s" if count > 1 else ""} {date_message}',
             'count': count,
-            'collectionDate': collection_date,
+            'collectionDate': unique_collection_dates[0] if len(unique_collection_dates) == 1 else '',
+            'collectionDates': collection_dates,
             'subscriptionIds': subscription_ids,
             'line': _find_billing_line(data, selections[0][0]['id']),
         })

@@ -22,6 +22,7 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
         self.assertIn("/api/billing/reschedule-rejected-debit", template)
         self.assertIn("data-rejected-debit-check", template)
         self.assertIn("data-rejected-debit-amount", template)
+        self.assertIn("data-rejected-debit-date", template)
         self.assertIn("Reprogrammer la sélection", template)
         self.assertIn("Nouveau prélèvement en cours de transmission", template)
         self.assertIn("Nouveau prélèvement mis en place avec succès", template)
@@ -138,10 +139,9 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
              patch.object(gestion_app, "_save_billing_line"), \
              patch.object(gestion_app, "save_data"):
             response = self.client.post("/api/billing/reschedule-rejected-debit", json={
-                "collectionDate": "2099-10-20",
                 "items": [
-                    {"lineId": "line-1", "installmentIndex": 0, "amount": 75.25},
-                    {"lineId": "line-1", "installmentIndex": 1, "amount": 150},
+                    {"lineId": "line-1", "installmentIndex": 0, "amount": 75.25, "collectionDate": "2099-10-20"},
+                    {"lineId": "line-1", "installmentIndex": 1, "amount": 150, "collectionDate": "2099-10-27"},
                 ],
             })
 
@@ -150,6 +150,9 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
         self.assertEqual(create_mock.call_count, 2)
         self.assertEqual(create_mock.call_args_list[0].args[0]["amount"]["value"], "75.25")
         self.assertEqual(create_mock.call_args_list[1].args[0]["amount"]["value"], "150.00")
+        self.assertEqual(create_mock.call_args_list[0].args[0]["initial_collection_date"], "2099-10-20")
+        self.assertEqual(create_mock.call_args_list[1].args[0]["initial_collection_date"], "2099-10-27")
+        self.assertEqual(response.get_json()["collectionDates"], ["2099-10-20", "2099-10-27"])
         self.assertEqual([item["amount"] for item in installments[:2]], [100, 200])
         self.assertEqual([item["amount"] for item in installments[2:]], [75.25, 150.0])
         self.assertTrue(all(item["rejection_treated"] for item in installments[:2]))
@@ -187,6 +190,24 @@ class AdminTraineeRescheduleDebitTests(unittest.TestCase):
             })
         self.assertEqual(response.status_code, 400)
         self.assertIn("Sélectionnez", response.get_json()["error"])
+
+    def test_endpoint_requires_a_date_for_each_selected_debit(self):
+        installment = {"amount": 100, "date": "2026-07-01", "status": "failed"}
+        line = {
+            "id": "line-1", "qontoClientId": "client-1",
+            "qonto_direct_debit_mandate_id": "mandate-1",
+            "directDebitInstallments": [installment],
+        }
+        with patch.object(gestion_app, "load_data", return_value={"billing_lines": [line]}), \
+             patch.object(gestion_app, "_billing_lines", return_value=[line]), \
+             patch.object(gestion_app, "create_qonto_direct_debit_subscription") as create_mock:
+            response = self.client.post("/api/billing/reschedule-rejected-debit", json={
+                "items": [{"lineId": "line-1", "installmentIndex": 0, "amount": 100}],
+            })
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("chaque prélèvement", response.get_json()["error"])
+        create_mock.assert_not_called()
 
 
 if __name__ == "__main__":

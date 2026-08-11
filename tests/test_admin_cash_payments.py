@@ -78,6 +78,16 @@ class AdminCashPaymentsTests(unittest.TestCase):
         gestion_app.save_data = self.original_save_data
         gestion_app.brevo_send_email = self.original_brevo_send_email
 
+    def test_trainee_finance_summary_highlights_cash_payment_progress(self):
+        with open("templates/admin_trainee.html", encoding="utf-8") as template_file:
+            template = template_file.read()
+
+        self.assertIn("label:'Espèces',icon:'💶'", template)
+        self.assertIn("réglés en espèces", template)
+        self.assertIn("Reste en espèces", template)
+        self.assertIn("cashPaymentCount", template)
+        self.assertIn("window.refreshFinanceDashboard?.();", template)
+
     def test_dashboard_stats_and_rows_include_cash_details(self):
         response = self.client.get("/admin/sessions/paiement-especes")
 
