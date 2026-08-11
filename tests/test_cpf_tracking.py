@@ -62,3 +62,7 @@ def test_template_keeps_automation_and_places_cpf_before_elearning():
     assert source.index("id=\"cpfTracking\"") > source.index("id=\"automationHub\"")
     assert source.index("id=\"cpfTracking\"") < source.index("Identifiants e-learning APS")
     assert "{% if cpf_tracking %}" in source
+    assert '<details class="cpf-panel" id="cpfTracking">' in source
+    assert '<summary class="cpf-panel__summary"' in source
+    assert "cpf-panel__current-label" in source
+    assert '<details class="cpf-panel" id="cpfTracking" open' not in source
