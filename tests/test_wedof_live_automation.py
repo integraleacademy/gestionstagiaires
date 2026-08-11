@@ -83,6 +83,23 @@ def test_manual_block_and_maintenance_prevent_all_mutations():
         assert result.get("blocked", 0) == 1 or result["status"] == "skipped_maintenance_window"
 
 
+def test_block_added_after_reservation_is_rechecked_before_post():
+    client = Client(folder(), folder(state="inTraining"))
+    data = {"wedof_automation_blocks": [], "wedof_automation_actions": [],
+            "wedof_automation_status": [], "wedof_automation_runs": []}
+
+    def block_during_reservation(current):
+        current["wedof_automation_blocks"].append(
+            {"external_id": "GENERIC-1", "action": "entry_training", "active": True})
+
+    result = run_live_automation(client, data, now=dt.datetime(2026, 8, 11, 19, tzinfo=PARIS),
+                                 persist_reservation=block_during_reservation)
+    assert not client.posts
+    assert result["blocked"] == 1
+    assert data["wedof_automation_actions"][0]["status"] == "blocked"
+    assert data["wedof_automation_actions"][0]["last_error_code"] == "manual_block"
+
+
 def test_double_run_and_old_processing_never_post_twice():
     initial, after = folder(), folder(state="inTraining")
     client = Client(initial, after)

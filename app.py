@@ -16137,6 +16137,16 @@ def admin_wedof_automation_block():
     if (not external_id or len(external_id) > 200 or action not in {"entry_training", "service_done", "both"}
             or reason not in {"no_show", "postponed", "abandonment", "partial_completion", "administrative_issue", "other"} or len(comment) > 500):
         return jsonify({"ok": False, "error": "invalid_block"}), 400
+    snapshot = load_data()
+    known = next((row for row in snapshot.get("wedof_automation_status", [])
+                  if isinstance(row, dict) and str(row.get("external_id") or "") == external_id), None)
+    if known is None:
+        known = next((row for row in snapshot.get("wedof_links", [])
+                      if isinstance(row, dict) and str(row.get("external_id") or "") == external_id), None)
+    state = (known or {}).get("wedof_state") or (known or {}).get("state")
+    expected = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
+    if known is None or expected is None or action not in {expected, "both"}:
+        return jsonify({"ok": False, "error": "inconsistent_block"}), 400
     now = datetime.datetime.now(ZoneInfo("Europe/Paris")).isoformat()
     def mutate(data):
         blocks = data.setdefault("wedof_automation_blocks", [])
@@ -16147,7 +16157,8 @@ def admin_wedof_automation_block():
                              "created_at": now, "updated_at": now})
         return data
     _atomic_update_data(mutate)
-    return redirect(url_for("admin_wedof_requests"))
+    flash("Automatisation WEDOF bloquée. Aucune déclaration ne sera envoyée pour cette action tant que le blocage restera actif.", "success")
+    return redirect(url_for("admin_wedof_requests", tab=request.form.get("tab") or "anomaly"))
 
 
 @app.post("/admin/wedof/automation/unblock")
@@ -16162,7 +16173,8 @@ def admin_wedof_automation_unblock():
             if block.get("external_id") == external_id and block.get("action") == action: block.update(active=False, updated_at=now)
         return data
     _atomic_update_data(mutate)
-    return redirect(url_for("admin_wedof_requests"))
+    flash("Automatisation WEDOF réactivée. Le dossier sera réévalué lors de la prochaine analyse automatique.", "success")
+    return redirect(url_for("admin_wedof_requests", tab=request.form.get("tab") or "anomaly"))
 
 
 def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> None:
