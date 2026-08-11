@@ -202,6 +202,88 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertEqual([item["status"] for item in installments], ["completed", "failed", "scheduled"])
         self.assertEqual(installments[1]["failureReason"], "blocked_account")
 
+    def test_sync_recovers_retry_created_by_the_previous_alias_bug(self):
+        installments = [
+            {"index": 1, "date": "2026-07-05", "due_date": "2026-07-05", "amount": 600, "status": "completed", "qonto_direct_debit_subscription_id": "sub-1"},
+            {"index": 2, "date": "2026-08-05", "due_date": "2026-08-05", "amount": 600, "status": "failed", "failureReason": "insufficient_funds", "qonto_direct_debit_subscription_id": "sub-2"},
+            {"index": 3, "date": "2026-09-05", "due_date": "2026-09-05", "amount": 600, "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-3"},
+        ]
+        line = {
+            "id": "line-1", "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "mandate-123", "qonto_mandate_status": "active",
+            "directDebitInstallments": installments,
+            "sepa_payment_plan": {"installments": installments},
+        }
+        subscriptions = {"direct_debit_subscriptions": [{
+            "id": "sub-retry", "direct_debit_mandate_id": "mandate-123",
+            "initial_collection_date": "2026-08-12", "amount": {"value": "600.00"},
+            "status": "pending",
+            "reference": "bill_42a418abb669 - reprogrammation échéance 2/3",
+            "created_at": "2026-08-11T08:00:00Z",
+        }]}
+
+        with patch.object(gestion_app, "list_qonto_direct_debit_subscriptions", return_value=subscriptions):
+            recovered = gestion_app._recover_missing_qonto_rejection_retries(line, "mandate-123")
+
+        self.assertEqual(recovered, 1)
+        self.assertEqual(len(installments), 4)
+        original, retry = installments[1], installments[-1]
+        self.assertTrue(original["rejection_treated"])
+        self.assertEqual(original["replaced_by_direct_debit_subscription_id"], "sub-retry")
+        self.assertTrue(retry["is_rejection_retry"])
+        self.assertEqual(retry["schedule_index"], 2)
+        self.assertEqual(retry["schedule_total"], 3)
+        self.assertEqual(retry["date"], "2026-08-12")
+        self.assertEqual(retry["qonto_direct_debit_subscription_id"], "sub-retry")
+        self.assertEqual(line["sepa_payment_plan"]["total_due"], 1800)
+        self.assertEqual(line["sepa_payment_plan"]["remaining_installments"], 2)
+        self.assertEqual(line["qontoPaymentGlobalStatus"], "Rejet traité")
+
+        with patch.object(gestion_app, "list_qonto_direct_debit_subscriptions", return_value=subscriptions):
+            self.assertEqual(gestion_app._recover_missing_qonto_rejection_retries(line, "mandate-123"), 0)
+
+    def test_logged_alias_loss_is_repaired_and_its_notification_is_resolved(self):
+        installment = {
+            "index": 5, "date": "2026-08-05", "due_date": "2026-08-05",
+            "amount": 600, "status": "failed", "failureReason": "insufficient_funds",
+            "qonto_direct_debit_subscription_id": "sub-old",
+        }
+        line = {
+            "id": "line-1", "traineeId": "trainee-1", "sessionId": "session-1",
+            "traineeFirstName": "Anthony", "traineeLastName": "Urbanik",
+            "paymentMode": "sepa_direct_debit", "qonto_direct_debit_mandate_id": "mandate-123",
+            "qonto_mandate_status": "active", "directDebitInstallments": [installment],
+            "sepa_payment_plan": {"installments": [installment]},
+            "logs": [{
+                "action": "Prélèvement rejeté reprogrammé", "result": "success",
+                "qonto_id": "sub-retry",
+            }],
+        }
+        notification = {
+            "id": "notification-1", "done": False, "label": "Prélèvement rejeté",
+            "meta": {
+                "kind": "qonto_direct_debit_rejected", "trainee_id": "trainee-1",
+                "session_id": "session-1", "scheduled_date": "2026-08-05", "amount": 600,
+            },
+        }
+        data = {"billing_lines": [line], "notifications_admin": [notification]}
+        subscriptions = {"direct_debit_subscriptions": [{
+            "id": "sub-retry", "direct_debit_mandate_id": "mandate-123",
+            "initial_collection_date": "2026-08-12", "amount": {"value": "600.00"},
+            "status": "pending", "reference": "bill_42 - reprogrammation échéance 5/7",
+        }]}
+
+        with patch.object(gestion_app, "list_qonto_direct_debit_subscriptions", return_value=subscriptions), \
+             patch.object(gestion_app, "save_data") as save_mock:
+            repaired = gestion_app._repair_logged_qonto_rejection_retries(data, [line])
+
+        self.assertEqual(repaired, 1)
+        self.assertTrue(notification["done"])
+        self.assertIn("Rejet traité", notification["label"])
+        self.assertEqual(notification["meta"]["replacement_subscription_id"], "sub-retry")
+        self.assertEqual(len(data["billing_lines"][0]["directDebitInstallments"]), 2)
+        save_mock.assert_called_once_with(data)
+
 
 if __name__ == "__main__":
     unittest.main()
