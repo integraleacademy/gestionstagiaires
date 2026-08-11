@@ -1,134 +1,426 @@
 {% extends "base.html" %}
 {% block content %}
-{% for category, message in get_flashed_messages(with_categories=true) %}
-  <div class="card" role="status" style="margin-bottom:12px;background:{{ '#fee2e2' if category == 'error' else '#ffedd5' if category == 'warning' else '#dbeafe' if category == 'info' else '#dcfce7' }};">
-    {{ message }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260811-redesign') }}">
+{% set st = wedof_dashboard.stats %}
+{% set state_labels = {
+  'accepted': 'Accepté',
+  'inTraining': 'En formation',
+  'serviceDoneDeclared': 'Service fait déclaré',
+  'serviceDoneValidated': 'Service fait validé'
+} %}
+
+<div class="wedof-page">
+  {% set flashes = get_flashed_messages(with_categories=true) %}
+  {% if flashes %}
+    <div class="wedof-flash-stack" aria-live="polite">
+      {% for category, message in flashes %}
+        <div class="wedof-flash is-{{ category if category in ['error', 'warning', 'info', 'success'] else 'info' }}" role="status">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <header class="wedof-hero">
+    <div class="wedof-hero-copy">
+      <span class="wedof-eyebrow">CPF · WEDOF</span>
+      <h1>Pilotage des dossiers CPF</h1>
+      <p>Suivez l’avancement WEDOF, contrôlez les automatisations et rattachez chaque dossier au bon stagiaire sans mélanger les informations techniques.</p>
+      <div class="wedof-hero-meta">
+        {% if wedof_automation_enabled and not wedof_dry_run %}
+          <span class="wedof-status-pill is-live">Automatisation active</span>
+        {% else %}
+          <span class="wedof-status-pill is-test">Mode test · aucun envoi</span>
+        {% endif %}
+        <span class="wedof-status-pill is-sync">Dernière analyse : {{ (wedof_last_run.finished_at|frdatetime) if wedof_last_run and wedof_last_run.finished_at else 'jamais' }}</span>
+        <span class="wedof-status-pill">{{ wedof_new_requests_count or 0 }} nouvelle{{ 's' if (wedof_new_requests_count or 0) > 1 else '' }} demande{{ 's' if (wedof_new_requests_count or 0) > 1 else '' }}</span>
+      </div>
+    </div>
+    <div class="wedof-hero-actions" aria-label="Actions WEDOF">
+      <form method="post" action="{{ url_for('admin_wedof_matching_preview') }}">
+        <button class="btn wedof-primary-action" type="submit">Réanalyser les dossiers</button>
+      </form>
+      <form method="post" action="{{ url_for('admin_wedof_matching_sync_exact') }}">
+        <button class="btn btn-outline" type="submit">Enregistrer les associations fiables</button>
+      </form>
+      <form method="post" action="{{ url_for('admin_wedof_automation_analyze') }}">
+        <button class="btn btn-outline" type="submit">Tester les automatisations</button>
+      </form>
+    </div>
+  </header>
+
+  {% if wedof_dashboard_state == 'never_synchronized' %}
+    <div class="wedof-notice is-warning" role="status">
+      <strong>Données WEDOF non encore synchronisées.</strong>
+      {% if wedof_maintenance.active %}
+        <span>La première synchronisation reprendra après la fenêtre d’indisponibilité WEDOF de 05h00 à 07h00, heure de Paris{% if wedof_next_attempt %}, vers {{ wedof_next_attempt.strftime('%Hh%M') }}{% endif %}.</span>
+      {% else %}
+        <span>Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.</span>
+      {% endif %}
+    </div>
+  {% elif wedof_dashboard_state == 'maintenance_skipped' %}
+    <div class="wedof-notice is-info" role="status">
+      <strong>Analyse temporairement suspendue entre 05h00 et 07h00</strong>
+      <span>Les dernières données synchronisées restent affichées. Prochaine tentative : {% if wedof_next_attempt %}{{ wedof_next_attempt.strftime('%Hh%M') }}{% else %}au prochain passage automatique{% endif %}.</span>
+    </div>
+  {% endif %}
+
+  {% if wedof_last_run and wedof_last_run.status == 'partial_success' %}
+    <div class="wedof-notice is-warning" role="alert">
+      <strong>Actualisation partielle : les dernières données connues sont conservées</strong>
+      <ul>
+        {% for state, label in [('accepted','Accepté'),('inTraining','En formation'),('serviceDoneDeclared','Service fait déclaré'),('serviceDoneValidated','Service fait validé')] %}
+          {% set state_sync = (wedof_sync.states or {}).get(state, {}) %}
+          <li>{{ label }} : {{ (state_sync.last_success_at|frdatetime) if state_sync.last_success_at else 'jamais synchronisé' }}{% if state_sync.status == 'error' %} · momentanément indisponible{% endif %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% elif wedof_dashboard_state == 'stale' %}
+    <div class="wedof-notice is-danger" role="alert">
+      <strong>Les données affichées ne sont pas actualisées</strong>
+      <span>La dernière tentative a échoué. Le dernier instantané fiable a été conservé.</span>
+    </div>
+  {% endif %}
+
+  <div class="wedof-notice is-neutral">
+    <strong>Règle d’automatisation</strong>
+    <span>La déclaration automatique suppose une réalisation totale, sauf blocage ou exception enregistrée avant son exécution. Le rattachement local sert uniquement au suivi interne.</span>
   </div>
-{% endfor %}
-<div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-  <h1 style="margin:0">Demandes WeDoF CPF/EDOF</h1>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;">
-    <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour aux sessions</a>
-    <span class="btn btn-violet" style="pointer-events:none;">Nouvelles demandes : {{ wedof_new_requests_count or 0 }}</span>
+
+  <section class="wedof-panel" aria-labelledby="wedof-overview-title">
+    <div class="wedof-panel-header">
+      <div>
+        <span class="wedof-section-label">Vue d’ensemble</span>
+        <h2 id="wedof-overview-title">État des dossiers</h2>
+        <p>Cliquez sur un indicateur pour afficher immédiatement les dossiers concernés.</p>
+      </div>
+    </div>
+    <div class="wedof-counters" aria-label="États WEDOF">
+      {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits'),('anomaly','Anomalies')] %}
+        <button type="button" class="wedof-counter" data-wedof-counter="{{ key }}" aria-label="Afficher les dossiers : {{ label }}">
+          <strong>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong>
+          <span>{{ label }}</span>
+        </button>
+      {% endfor %}
+    </div>
+    <div class="wedof-operations" aria-label="Suivi des automatisations et rattachements">
+      {% for key, label in [('planned','Automatisations prévues'),('blocked','Automatisations bloquées'),('entry_success','Entrées déclarées'),('service_success','Services faits déclarés'),('unlinked','Dossiers non rattachés localement')] %}
+        <button type="button" class="wedof-operation" data-wedof-counter="{{ key }}" aria-label="Afficher : {{ label }}"{% if key == 'unlinked' %} data-wedof-unlinked-counter{% endif %}>
+          <strong{% if key == 'unlinked' %} id="wedof-unlinked-count"{% endif %}>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong>
+          <span>{{ label }}</span>
+        </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="wedof-panel wedof-table-panel" aria-labelledby="wedof-list-title">
+    <div class="wedof-panel-header">
+      <div>
+        <span class="wedof-section-label">Dossiers synchronisés</span>
+        <h2 id="wedof-list-title">Dossiers WEDOF</h2>
+        <p>Les coordonnées WEDOF et le rattachement local sont volontairement séparés.</p>
+      </div>
+    </div>
+    <div class="wedof-table-topbar">
+      <div class="wedof-tabs" role="tablist" aria-label="Filtrer par état WEDOF">
+        {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits'),('anomaly','Anomalies')] %}
+          <button type="button" role="tab" class="wedof-tab{% if loop.first %} is-active{% endif %}" data-wedof-tab="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">
+            {{ label }}{% if wedof_dashboard_state != 'never_synchronized' %}<span>{{ st[key] }}</span>{% endif %}
+          </button>
+        {% endfor %}
+      </div>
+      <span class="wedof-result-summary" id="wedof-visible-results">0 dossier</span>
+    </div>
+    <div class="wedof-table-wrap wedof-preview-table-wrap" role="region" aria-label="Dossiers WEDOF filtrés" tabindex="0">
+      <table class="wedof-table">
+        <thead>
+          <tr>
+            <th>Dossier</th>
+            <th>Candidat WEDOF</th>
+            <th>Période</th>
+            <th>Automatisation</th>
+            <th>Rattachement local</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in wedof_dashboard.rows %}
+            <tr
+              data-wedof-panel="{{ item.tab }}"
+              data-wedof-planned="{{ 'true' if item.automation_status == 'planned' else 'false' }}"
+              data-wedof-blocked="{{ 'true' if item.automation_blocked else 'false' }}"
+              data-wedof-entry-success="{{ 'true' if item.entry_success else 'false' }}"
+              data-wedof-service-success="{{ 'true' if item.service_success else 'false' }}"
+              data-wedof-unlinked="{{ 'true' if not item.linked else 'false' }}"
+              data-wedof-row="{{ item.external_id|e }}"
+              {% if item.tab != 'accepted' %}hidden{% endif %}
+            >
+              <td data-label="Dossier">
+                <div class="wedof-folder-ref">
+                  <strong>{{ item.external_id or '—' }}</strong>
+                  <span class="wedof-state-label">{{ state_labels.get(item.state, item.state or 'État inconnu') }}</span>
+                </div>
+              </td>
+              <td data-label="Candidat WEDOF">
+                <div class="wedof-person-cell">
+                  <strong>{{ item.first_name or '—' }} {{ item.last_name or '' }}</strong>
+                  {% if item.email %}<span>{{ item.email }}</span>{% endif %}
+                  {% if item.phone %}<span>{{ item.phone }}</span>{% endif %}
+                </div>
+              </td>
+              <td data-label="Période">
+                <div class="wedof-date-range">
+                  <span>Du <strong>{{ item.wedof_date_start|format_date_fr }}</strong></span>
+                  <span>au <strong>{{ item.wedof_date_end|format_date_fr }}</strong></span>
+                </div>
+              </td>
+              <td data-label="Automatisation">
+                <div class="wedof-badges">
+                  {% if item.automation_status == 'planned' %}
+                    <span class="wedof-badge is-success">{{ 'Automatisation prévue' if wedof_automation_enabled else 'Simulation prévue' }}</span>
+                  {% elif item.automation_status == 'dry_run_due' %}
+                    <span class="wedof-badge is-warning">Prête en mode test</span>
+                  {% elif item.automation_status == 'dry_run_due_late' %}
+                    <span class="wedof-badge is-danger">En retard · prête en mode test</span>
+                  {% elif item.automation_status == 'already_done' %}
+                    <span class="wedof-badge is-info">Déjà réalisé dans WEDOF</span>
+                  {% elif item.automation_status == 'error' %}
+                    <span class="wedof-badge is-danger">Erreur de déclaration</span>
+                  {% elif item.automation_status == 'uncertain_after_timeout' %}
+                    <span class="wedof-badge is-warning">Résultat incertain après délai</span>
+                  {% elif item.automation_status == 'blocked' %}
+                    <span class="wedof-badge is-danger">Automatisation bloquée</span>
+                  {% elif item.automation_status == 'anomaly' %}
+                    <span class="wedof-badge is-danger">Anomalie</span>
+                  {% endif %}
+                  {% if item.tab == 'anomaly' and item.automation_status != 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
+                  {% if item.planned_date and not item.automation_blocked %}
+                    <small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>
+                  {% endif %}
+                  {% if item.entry_success %}
+                    <span class="wedof-badge is-success">Entrée en formation déclarée ✅</span>
+                  {% elif item.state == 'inTraining' %}
+                    <span class="wedof-badge is-info">En formation dans WEDOF</span>
+                  {% endif %}
+                  {% if item.service_success %}
+                    <span class="wedof-badge is-success">Service fait déclaré ✅</span>
+                  {% elif item.state in ['serviceDoneDeclared','serviceDoneValidated'] %}
+                    <span class="wedof-badge is-info">{{ item.wedof_state_label }}</span>
+                  {% endif %}
+                </div>
+              </td>
+              <td data-label="Rattachement local">
+                <div class="wedof-link-cell">
+                  <strong data-local-trainee>{{ item.trainee }}</strong>
+                  <span data-local-session>{{ item.session }}</span>
+                  <span class="wedof-badge {{ 'is-danger' if item.association_orphan else 'is-warning' if not item.linked else 'is-neutral' }}" data-local-association-badge>{{ item.association }}</span>
+                  {% if item.external_id and not item.linked and item.wedof_type == 'cpf' and item.state in ['accepted','inTraining','serviceDoneDeclared','serviceDoneValidated'] %}
+                    <div class="wedof-manual-action">
+                      <button
+                        type="button"
+                        class="btn btn-blue"
+                        data-manual-link
+                        data-external-id="{{ item.external_id|e }}"
+                        data-state="{{ item.state|e }}"
+                        data-identity="{{ ((item.first_name or '') ~ ' ' ~ (item.last_name or ''))|trim|e }}"
+                        data-first-name="{{ item.first_name|e }}"
+                        data-last-name="{{ item.last_name|e }}"
+                        data-email="{{ item.email|e }}"
+                        data-phone="{{ item.phone|e }}"
+                        data-date-start="{{ item.wedof_date_start|e }}"
+                        data-date-end="{{ item.wedof_date_end|e }}"
+                      >Associer manuellement</button>
+                    </div>
+                  {% endif %}
+                </div>
+              </td>
+              <td data-label="Actions">
+                <div class="wedof-actions">
+                  {% if item.automation_blocked %}
+                    <form method="post" action="{{ url_for('admin_wedof_automation_unblock') }}">
+                      <input type="hidden" name="external_id" value="{{ item.external_id|e }}">
+                      <input type="hidden" name="action" value="{{ item.active_block.action|e }}">
+                      <input type="hidden" name="tab" value="anomaly">
+                      <button class="btn btn-outline" type="submit">Réactiver l’automatisation</button>
+                    </form>
+                  {% elif item.external_id and item.automation_action %}
+                    <form method="post" action="{{ url_for('admin_wedof_automation_block') }}">
+                      <input type="hidden" name="external_id" value="{{ item.external_id|e }}">
+                      <input type="hidden" name="action" value="{{ item.automation_action|e }}">
+                      <input type="hidden" name="reason_code" value="other">
+                      <input type="hidden" name="tab" value="{{ item.tab|e }}">
+                      <button class="btn btn-outline" type="submit">Bloquer</button>
+                    </form>
+                  {% endif %}
+                  <details>
+                    <summary class="btn btn-outline">Détails</summary>
+                    <div class="wedof-details">
+                      <strong>État WEDOF :</strong> {{ state_labels.get(item.state, item.state or '—') }}<br>
+                      <strong>Dates WEDOF :</strong> du {{ item.wedof_date_start|format_date_fr }} au {{ item.wedof_date_end|format_date_fr }}
+                      {% if item.automation_blocked %}
+                        <br><strong>Action bloquée :</strong> {{ 'Entrée en formation' if item.automation_action == 'entry_training' else 'Service fait' }}
+                        <br><strong>Motif :</strong> {{ {'no_show':'Stagiaire non présenté','postponed':'Formation reportée','abandonment':'Abandon','partial_completion':'Réalisation partielle','administrative_issue':'Anomalie administrative','other':'Autre motif'}.get(item.block_reason_code, item.block_reason_code or '—') }}
+                        {% if item.block_comment %}<br><strong>Commentaire :</strong> {{ item.block_comment }}{% endif %}
+                        <br><strong>Date du blocage :</strong> {{ item.block_created_at|frdatetime }}
+                      {% endif %}
+                      <br><strong>Session locale :</strong> {{ item.session }}
+                      <br><strong>Stagiaire local :</strong> {{ item.trainee }}
+                      <br><strong>Source :</strong> {{ item.association }}
+                      {% if item.anomaly_reasons %}<br><strong>Blocage :</strong> {{ item.anomaly_reasons|join(' · ') }}{% endif %}
+                    </div>
+                  </details>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr data-wedof-empty>
+              <td colspan="6" class="wedof-empty-row">
+                {% if wedof_dashboard_state == 'never_synchronized' %}Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.{% else %}Aucun dossier WEDOF dans cet instantané synchronisé.{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          <tr data-wedof-filter-empty hidden>
+            <td colspan="6" class="wedof-empty-row">Aucun dossier ne correspond à ce filtre.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="wedof-secondary-grid">
+    <details class="wedof-disclosure">
+      <summary>
+        <div>
+          <strong>Écarts entre les dates WEDOF et locales</strong>
+          <small>Information uniquement · les automatisations utilisent toujours les dates WEDOF</small>
+        </div>
+        <span class="wedof-summary-badge">{{ wedof_date_differences|length }} écart{{ 's' if wedof_date_differences|length > 1 else '' }}</span>
+      </summary>
+      <div class="wedof-disclosure-body">
+        {% if wedof_date_differences %}
+          <div class="wedof-subtable-wrap">
+            <table class="table">
+              <thead><tr><th>Numéro WEDOF</th><th>Session locale</th><th>Stagiaire</th><th>Dates WEDOF</th><th>Dates locales</th><th>Constat</th></tr></thead>
+              <tbody>
+                {% for link in wedof_date_differences %}
+                  <tr>
+                    <td><strong>{{ link.external_id }}</strong></td>
+                    <td>{{ link.session_label }}</td>
+                    <td>{{ link.trainee_label }}</td>
+                    <td>Du {{ link.date_consistency.wedof_date_start|format_date_fr }} au {{ link.date_consistency.wedof_date_end|format_date_fr }}</td>
+                    <td>Du {{ link.date_consistency.local_date_start|format_date_fr }} au {{ link.date_consistency.local_date_end|format_date_fr }}</td>
+                    <td>{{ 'Dates différentes' if link.date_consistency.status == 'date_mismatch' else 'Dates locales non disponibles' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="wedof-empty-search"><strong>Aucun écart détecté</strong><span>Les dates des rattachements locaux correspondent aux dates WEDOF.</span></div>
+        {% endif %}
+      </div>
+    </details>
+
+    <details class="wedof-disclosure">
+      <summary>
+        <div>
+          <strong>Connexion et paramètres techniques</strong>
+          <small>Configuration API et mode d’exécution</small>
+        </div>
+        <span class="wedof-summary-badge">Technique</span>
+      </summary>
+      <div class="wedof-disclosure-body">
+        <div class="wedof-technical-list">
+          <div><span>Clé API configurée</span><strong>{{ 'Oui' if wedof_api_key_configured else 'Non' }}</strong></div>
+          <div><span>Automatisation active</span><strong>{{ 'Oui' if wedof_automation_enabled else 'Non' }}</strong></div>
+          <div><span>Mode test sans envoi</span><strong>{{ 'Oui' if wedof_dry_run else 'Non' }}</strong></div>
+        </div>
+        <form method="post" action="{{ url_for('admin_test_wedof_api') }}">
+          <button class="btn btn-outline" type="submit">Tester la connexion API</button>
+        </form>
+      </div>
+    </details>
   </div>
+
+  <details class="wedof-disclosure">
+    <summary>
+      <div>
+        <strong>Demandes entrantes WeDoF CPF / EDOF</strong>
+        <small>Webhooks, notifications et transmission Salesforce · {{ public_base_url }}/api/webhooks/wedof</small>
+      </div>
+      <span class="wedof-summary-badge">{{ wedof_webhooks|length }} demande{{ 's' if wedof_webhooks|length > 1 else '' }}</span>
+    </summary>
+    <div class="wedof-disclosure-body">
+      <div class="wedof-subtable-wrap">
+        <table class="table">
+          <thead><tr><th>Nom</th><th>Prénom</th><th>E-mail</th><th>Téléphone</th><th>Formation</th><th>Dates sélectionnées</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for item in wedof_webhooks %}
+              {% set p = item.payload or {} %}
+              {% set attendee = p.attendee or {} %}
+              {% set training = p.trainingActionInfo or {} %}
+              {% set display = item.display_fields or {} %}
+              <tr>
+                <td>{{ display.last_name or attendee.lastName or '—' }}</td>
+                <td>{{ display.first_name or attendee.firstName or '—' }}</td>
+                <td>{{ display.email or attendee.email or '—' }}</td>
+                <td>{{ display.phone or attendee.phoneNumber or '—' }}</td>
+                <td>{{ display.training_title or training.title or '—' }}</td>
+                <td>
+                  {% if display.training_date and display.training_end_date %}
+                    Du <strong>{{ display.training_date|frdate }}</strong><br>au <strong>{{ display.training_end_date|frdate }}</strong>
+                  {% elif display.training_date %}
+                    <strong>{{ display.training_date|frdate }}</strong>
+                  {% elif display.training_end_date %}
+                    Jusqu’au <strong>{{ display.training_end_date|frdate }}</strong>
+                  {% else %}
+                    <span class="muted">Non renseignées</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button
+                    class="btn {{ 'btn-outline' if item.processed else 'btn-blue' }}"
+                    type="button"
+                    data-wedof-notify
+                    data-entry-id="{{ item.id }}"
+                    data-last-name="{{ attendee.lastName or '' }}"
+                    data-first-name="{{ attendee.firstName or '' }}"
+                    data-phone="{{ attendee.phoneNumber or '' }}"
+                    data-email="{{ attendee.email or '' }}"
+                    data-training="{{ training.title or '' }}"
+                    {% if item.processed %}disabled{% endif %}
+                  >{{ 'Notifié ✅' if item.processed else 'Notifier' }}</button>
+                  <div class="hint" data-wedof-feedback></div>
+                  <button class="btn {{ 'btn-outline' if item.salesforce_sent else 'btn-violet' }}" type="button" data-salesforce-send data-entry-id="{{ item.id }}">
+                    {{ 'Renvoyer Salesforce' if item.salesforce_sent else 'Réessayer Salesforce' }}
+                  </button>
+                  {% if item.salesforce_sent_at %}
+                    <div class="hint">Envoyé à Salesforce le {{ item.salesforce_sent_at }}{% if item.salesforce_send_count %} · {{ item.salesforce_send_count }} envoi{{ 's' if item.salesforce_send_count > 1 else '' }}{% endif %}</div>
+                  {% elif item.salesforce_last_error %}
+                    <div class="hint" style="color:#b91c1c">Envoi automatique échoué : {{ item.salesforce_last_error }}</div>
+                  {% endif %}
+                  <details>
+                    <summary class="btn btn-outline">JSON brut</summary>
+                    <pre>{{ item.raw_payload or (item.payload|tojson(indent=2)) }}</pre>
+                  </details>
+                  {% if not item.processed %}
+                    <form method="post" action="{{ url_for('admin_mark_wedof_treated', entry_id=item.id) }}">
+                      <button class="btn btn-outline" type="submit">Marquer comme traité</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" action="{{ url_for('admin_delete_wedof_entry', entry_id=item.id) }}" onsubmit="return confirm('Supprimer cette demande WeDoF ?');">
+                    <button class="btn btn-danger" type="submit">Supprimer</button>
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="7" class="wedof-empty-row">Aucune demande WeDoF reçue.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
 </div>
 
-<section class="wedof-dashboard" aria-labelledby="wedof-dashboard-title">
-  <div class="wedof-toolbar card">
-    <div><h2 id="wedof-dashboard-title">Pilotage des dossiers WEDOF</h2><p class="muted">WEDOF pilote les automatisations. Le rattachement local reste informatif.</p></div>
-    <div class="wedof-toolbar-actions">
-      <form method="post" action="{{ url_for('admin_wedof_automation_analyze') }}"><button class="btn btn-violet" type="submit">Analyser maintenant en mode test</button></form>
-      <form method="post" action="{{ url_for('admin_wedof_matching_preview') }}"><button class="btn btn-violet" type="submit">Réanalyser les dossiers</button></form>
-      <form method="post" action="{{ url_for('admin_wedof_matching_sync_exact') }}"><button class="btn btn-blue" type="submit">Enregistrer les associations fiables</button></form>
-    </div>
-  </div>
-  <p><strong>Dernière analyse automatique :</strong> {{ wedof_last_run.finished_at if wedof_last_run else 'Aucune analyse' }} (Europe/Paris)</p>
-  {% if wedof_dashboard_state == 'never_synchronized' %}
-  <div class="card" role="status" style="background:#fef3c7;color:#92400e">
-    <strong>Données WEDOF non encore synchronisées.</strong>
-    {% if wedof_maintenance.active %}
-    <p>Première synchronisation en attente. L’analyse WEDOF est suspendue de 05:00 à 07:00, heure de Paris. La prochaine analyse automatique aura lieu après cette fenêtre.</p>
-    {% if wedof_next_attempt %}<p>Prochaine tentative automatique prévue à {{ wedof_next_attempt.strftime('%H:%M') }}.</p>{% endif %}
-    {% else %}<p>Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.</p>{% endif %}
-    {% if wedof_preview %}<p>Les lignes ci-dessous sont une prévisualisation temporaire et ne constituent pas l’instantané persistant de l’automatisation.</p>{% endif %}
-  </div>
-  {% endif %}
-  {% if wedof_dashboard_state == 'maintenance_skipped' %}
-  <div class="card" role="status" style="background:#dbeafe;color:#1e3a8a">
-    <strong>Analyse WEDOF temporairement suspendue entre 05:00 et 07:00, heure de Paris.</strong>
-    <p>Les dernières données synchronisées restent affichées.</p>
-    <div>Dernière tentative : {{ wedof_last_run.started_at or '—' }} (Europe/Paris)</div>
-    <div>Dernière synchronisation réussie :
-      {% set successes = (wedof_sync.states or {}).values() | selectattr('last_success_at') | map(attribute='last_success_at') | list %}
-      {{ successes | max if successes else 'Jamais' }} (Europe/Paris)
-    </div>
-    <div>Prochaine tentative automatique : {% if wedof_next_attempt %}{{ wedof_next_attempt.strftime('%H:%M') }}{% else %}au prochain cron horaire{% endif %}.</div>
-  </div>
-  {% endif %}
-  {% if wedof_last_run and wedof_last_run.status == 'partial_success' %}
-  <div class="card" role="alert" style="background:#ffedd5;color:#9a3412">
-    <strong>Certaines données WEDOF n’ont pas pu être actualisées. Les dernières données connues restent affichées.</strong>
-    <div>Dernière tentative : {{ wedof_sync.last_attempt_at or wedof_last_run.started_at or '—' }} (Europe/Paris)</div>
-    <ul>{% for state, label in [('accepted','Accepté'),('inTraining','En formation'),('serviceDoneDeclared','Service fait déclaré'),('serviceDoneValidated','Service fait validé')] %}
-      {% set state_sync = (wedof_sync.states or {}).get(state, {}) %}
-      <li>{{ label }} — dernière synchronisation réussie : {{ state_sync.last_success_at or 'Jamais' }}{% if state_sync.status == 'error' %} — momentanément indisponible{% endif %}</li>
-    {% endfor %}</ul>
-  </div>
-  {% endif %}
-  {% if wedof_dashboard_state == 'stale' %}
-  <div class="card" role="alert" style="background:#ffedd5;color:#9a3412">
-    <strong>Les données WEDOF affichées ne sont pas actualisées.</strong>
-    <p>La dernière tentative a échoué ; le dernier instantané synchronisé est conservé.</p>
-    <div>Dernière tentative : {{ wedof_sync.last_attempt_at or wedof_last_run.started_at or '—' }} (Europe/Paris)</div>
-    {% set successes = (wedof_sync.states or {}).values() | selectattr('last_success_at') | map(attribute='last_success_at') | list %}
-    <div>Dernière synchronisation réussie : {{ successes | max if successes else '—' }} (Europe/Paris)</div>
-  </div>
-  {% endif %}
-  {% if not wedof_automation_enabled %}<p class="wedof-readonly"><strong>Mode test — aucune déclaration ne sera envoyée.</strong></p>{% endif %}
-  <p class="wedof-readonly">La déclaration automatique supposera une réalisation totale, sauf blocage ou exception enregistrée avant son exécution.</p>
-  {% set st = wedof_dashboard.stats %}
-  <div class="wedof-counters" aria-label="Compteurs WEDOF">
-  {% for key, label in [('accepted','Accepté'),('training','En formation'),('service','Service fait déclaré'),('anomaly','Anomalies'),('planned','Automatisations prévues'),('blocked','Automatisations bloquées'),('entry_success','Entrées en formation déclarées'),('service_success','Services faits déclarés'),('unlinked','Dossiers non rattachés localement')] %}
-    <button type="button" class="wedof-counter" data-wedof-counter="{{ key }}" aria-label="Afficher les dossiers : {{ label }}"{% if key == 'unlinked' %} data-wedof-unlinked-counter{% endif %}><strong{% if key == 'unlinked' %} id="wedof-unlinked-count"{% endif %}>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong><span>{{ label }}</span></button>
-  {% endfor %}
-  </div>
-  <div class="wedof-tabs" role="tablist" aria-label="États des dossiers WEDOF">
-  {% for key, label in [('accepted','Accepté'),('training','En formation'),('service','Service fait déclaré'),('anomaly','Anomalie')] %}
-    <button type="button" role="tab" class="wedof-tab{% if loop.first %} is-active{% endif %}" data-wedof-tab="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">{{ label }}{% if wedof_dashboard_state != 'never_synchronized' %} <span>{{ st[key] }}</span>{% endif %}</button>
-  {% endfor %}
-  </div>
-  <p class="muted wedof-scroll-hint">Faites défiler le tableau horizontalement si votre écran ne permet pas d’afficher toutes les colonnes.</p>
-  <div class="wedof-table-wrap wedof-preview-table-wrap" role="region" aria-label="Prévisualisation des correspondances WEDOF" tabindex="0">
-    <table class="table wedof-table">
-      <thead><tr><th>Numéro WEDOF</th><th>Identité WEDOF</th><th>Dates WEDOF</th><th>Session locale</th><th>Stagiaire local</th><th>Statut automatisation</th><th>Association locale</th><th>Action</th></tr></thead>
-      <tbody>
-      {% for item in wedof_dashboard.rows %}
-        <tr data-wedof-panel="{{ item.tab }}" data-wedof-planned="{{ 'true' if item.automation_status == 'planned' else 'false' }}" data-wedof-blocked="{{ 'true' if item.automation_blocked else 'false' }}" data-wedof-entry-success="{{ 'true' if item.entry_success else 'false' }}" data-wedof-service-success="{{ 'true' if item.service_success else 'false' }}" data-wedof-unlinked="{{ 'true' if not item.linked else 'false' }}"{% if item.tab != 'accepted' %} hidden{% endif %} data-wedof-row="{{ item.external_id|e }}">
-          <td data-label="Numéro WEDOF"><strong>{{ item.external_id or '—' }}</strong></td>
-          <td data-label="Identité WEDOF">{{ item.last_name or '—' }} {{ item.first_name or '' }}</td>
-          <td data-label="Dates WEDOF" class="wedof-dates"><div class="wedof-date-range"><span><strong>Début :</strong> {{ item.wedof_date_start|format_date_fr }}</span><span><strong>Fin :</strong> {{ item.wedof_date_end|format_date_fr }}</span></div></td>
-          <td data-label="Session locale" data-local-session>{{ item.session }}</td>
-          <td data-label="Stagiaire local" data-local-trainee>{{ item.trainee }}</td>
-          <td data-label="Statut automatisation"><div class="wedof-badges">
-            {% if item.automation_status == 'planned' %}<span class="wedof-badge is-success">{{ 'Automatisation prévue' if wedof_automation_enabled else 'Simulation prévue' }}</span>
-            {% elif item.automation_status == 'dry_run_due' %}<span class="wedof-badge is-warning">Prête en mode test</span>
-            {% elif item.automation_status == 'dry_run_due_late' %}<span class="wedof-badge is-danger">En retard — prête en mode test</span>
-            {% elif item.automation_status == 'already_done' %}<span class="wedof-badge is-info">Déjà réalisé dans WEDOF</span>
-            {% elif item.automation_status == 'error' %}<span class="wedof-badge is-danger">Erreur de déclaration</span>
-            {% elif item.automation_status == 'uncertain_after_timeout' %}<span class="wedof-badge is-warning">Résultat incertain après timeout</span>
-            {% elif item.automation_status == 'blocked' %}<span class="wedof-badge is-danger">Automatisation bloquée</span>
-            {% elif item.automation_status == 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
-            {% if item.planned_date and not item.automation_blocked %}<small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>{% endif %}
-            {% if item.tab == 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
-            {% if item.entry_success %}<span class="wedof-badge is-success">Entrée en formation déclarée ✅</span>{% elif item.state == 'inTraining' %}<span class="wedof-badge is-info">En formation (état WEDOF)</span>{% endif %}
-            {% if item.service_success %}<span class="wedof-badge is-success">Service fait déclaré ✅</span>{% elif item.state in ['serviceDoneDeclared','serviceDoneValidated'] %}<span class="wedof-badge is-info">{{ item.wedof_state_label }}</span>{% endif %}
-          </div></td>
-          <td data-label="Association locale" data-local-association><span class="wedof-badge {{ 'is-danger' if item.association_orphan else 'is-warning' if not item.linked else 'is-neutral' }}" data-local-association-badge>{{ item.association }}</span>
-            {% if item.external_id and not item.linked and item.wedof_type == 'cpf' and item.state in ['accepted','inTraining','serviceDoneDeclared','serviceDoneValidated'] %}<div style="margin-top:6px"><button type="button" class="btn btn-blue" data-manual-link data-external-id="{{ item.external_id|e }}" data-state="{{ item.state|e }}" data-identity="{{ ((item.last_name or '') ~ ' ' ~ (item.first_name or ''))|trim|e }}" data-email="{{ item.email|e }}" data-phone="{{ item.phone|e }}" data-date-start="{{ item.wedof_date_start|e }}" data-date-end="{{ item.wedof_date_end|e }}">Associer manuellement</button></div>{% endif %}
-          </td>
-          {% if item.matching_status == 'exact_match' %}<td hidden>Correspondance fiable</td>{% endif %}
-          <td data-label="Action"><div class="wedof-actions">
-            {% if item.automation_blocked %}<form method="post" action="{{ url_for('admin_wedof_automation_unblock') }}">
-              <input type="hidden" name="external_id" value="{{ item.external_id|e }}"><input type="hidden" name="action" value="{{ item.active_block.action|e }}"><input type="hidden" name="tab" value="anomaly">
-              <button class="btn btn-outline" type="submit">Réactiver l’automatisation</button></form>
-            {% elif item.external_id and item.automation_action %}<form method="post" action="{{ url_for('admin_wedof_automation_block') }}">
-              <input type="hidden" name="external_id" value="{{ item.external_id|e }}"><input type="hidden" name="action" value="{{ item.automation_action|e }}"><input type="hidden" name="reason_code" value="other"><input type="hidden" name="tab" value="{{ item.tab|e }}">
-              <button class="btn btn-outline" type="submit">Bloquer l’automatisation</button></form>{% endif %}
-            <details><summary class="btn btn-outline">Voir détails</summary><div class="wedof-details"><strong>État WEDOF :</strong> {{ item.state or '—' }}<br><strong>Date de début WEDOF :</strong> {{ item.wedof_date_start|format_date_fr }}<br><strong>Date de fin WEDOF :</strong> {{ item.wedof_date_end|format_date_fr }}{% if item.automation_blocked %}<br><strong>Action bloquée :</strong> {{ 'Entrée en formation' if item.automation_action == 'entry_training' else 'Service fait' }}<br><strong>Motif :</strong> {{ {'no_show':'Stagiaire non présenté','postponed':'Formation reportée','abandonment':'Abandon','partial_completion':'Réalisation partielle','administrative_issue':'Anomalie administrative','other':'Autre motif'}.get(item.block_reason_code, item.block_reason_code or '—') }}{% if item.block_comment %}<br><strong>Commentaire :</strong> {{ item.block_comment }}{% endif %}<br><strong>Date du blocage :</strong> {{ item.block_created_at|format_date_fr }}<br><strong>Statut sans blocage :</strong> {{ item.underlying_automation_status or '—' }}{% endif %}<br><strong>Session locale :</strong> {{ item.session }}<br><strong>Stagiaire local :</strong> {{ item.trainee }}<br><strong>Source de l’association :</strong> {{ item.association }}<br><strong>Identifiant de session local :</strong> {{ item.session_id or '—' }}<br><strong>Identifiant de stagiaire local :</strong> {{ item.trainee_id or '—' }}{% if item.anomaly_reasons %}<br><strong>Blocage :</strong> {{ item.anomaly_reasons|join(' · ') }}{% endif %}</div></details>
-          </div></td>
-        </tr>
-      {% else %}<tr data-wedof-empty><td colspan="8" class="muted">{% if wedof_dashboard_state == 'never_synchronized' %}Lancez une première analyse après la fenêtre d’indisponibilité WEDOF.{% else %}Aucun dossier WEDOF dans cet instantané synchronisé.{% endif %}</td></tr>{% endfor %}
-        <tr data-wedof-filter-empty hidden><td colspan="8" class="muted">Aucun dossier ne correspond à ce compteur.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-<style>
-.wedof-dashboard{display:grid;gap:14px}.wedof-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px}.wedof-toolbar h2{margin:0}.wedof-toolbar-actions{display:flex;gap:8px;flex-wrap:wrap}.wedof-readonly{margin:0;padding:10px 14px;border-radius:10px;background:#fff7ed;color:#9a3412}.wedof-counters{display:grid;grid-template-columns:repeat(4,minmax(145px,1fr));gap:10px}.wedof-counter{padding:13px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;display:flex;gap:9px;align-items:center;text-align:left;font:inherit;cursor:pointer}.wedof-counter:hover{border-color:#818cf8;background:#f8faff}.wedof-counter:focus-visible{outline:3px solid #a5b4fc;outline-offset:2px}.wedof-counter.is-active{border-color:#4f46e5;background:#eef2ff;box-shadow:0 0 0 1px #4f46e5}.wedof-counter strong{font-size:1.55rem;color:#4338ca}.wedof-counter span{font-size:.86rem;line-height:1.2}.wedof-tabs{display:flex;gap:8px;overflow-x:auto}.wedof-tab{border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:9px 14px;font-weight:800;white-space:nowrap;cursor:pointer}.wedof-tab span{display:inline-block;min-width:22px;padding:2px 6px;margin-left:5px;border-radius:99px;background:#e2e8f0}.wedof-tab.is-active{background:#312e81;color:#fff;border-color:#312e81}.wedof-table-wrap{width:100%;max-height:calc(100vh - 340px);overflow:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px}.wedof-table{width:100%;min-width:1120px}.wedof-table th,.wedof-table td{vertical-align:top;white-space:normal;overflow-wrap:normal;word-break:normal}.wedof-table th{white-space:nowrap;position:sticky;top:0;background:#f8fafc;z-index:2}.wedof-dates{white-space:nowrap!important}.wedof-date-range{display:grid;gap:3px}.wedof-date-range span{white-space:nowrap}.wedof-badges{display:flex;flex-wrap:wrap;gap:5px}.wedof-badge{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:.78rem;line-height:1.2;font-weight:800}.wedof-badge.is-success{background:#dcfce7;color:#166534}.wedof-badge.is-danger{background:#fee2e2;color:#991b1b}.wedof-badge.is-warning{background:#ffedd5;color:#9a3412}.wedof-badge.is-neutral,.wedof-badge.is-info{background:#e2e8f0;color:#334155}.wedof-actions{display:grid;gap:6px}.wedof-actions summary{cursor:pointer;white-space:nowrap}.wedof-details{margin-top:7px;padding:9px;width:280px;background:#f8fafc;border-radius:8px;line-height:1.55}.wedof-modal{border:0;border-radius:14px;width:min(760px,calc(100% - 24px));max-height:90vh;padding:0}.wedof-modal::backdrop{background:rgba(15,23,42,.65)}.wedof-modal-body{padding:20px;display:grid;gap:14px}.wedof-modal-results{display:grid;gap:6px;max-height:180px;overflow:auto}.wedof-choice{width:100%;text-align:left;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}.wedof-choice.selected{border:2px solid #4f46e5;background:#eef2ff}.wedof-warning{background:#fee2e2;color:#991b1b;border:2px solid #dc2626;border-radius:8px;padding:10px;font-weight:700}.wedof-date-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.wedof-date-comparison>div{padding:10px;border:1px solid #cbd5e1;border-radius:8px}
-.wedof-loading{width:min(440px,calc(100% - 32px));border:0;border-radius:24px;padding:0;overflow:hidden;background:rgba(255,255,255,.98);box-shadow:0 24px 80px rgba(15,23,42,.28)}.wedof-loading::backdrop{background:rgba(15,23,42,.58);backdrop-filter:blur(5px)}.wedof-loading-card{position:relative;display:grid;justify-items:center;gap:16px;padding:40px 34px 34px;text-align:center}.wedof-loading-mark{position:relative;width:72px;height:72px;display:grid;place-items:center;border-radius:22px;background:linear-gradient(145deg,#eef2ff,#f5f3ff);box-shadow:inset 0 0 0 1px rgba(99,102,241,.12)}.wedof-loading-spinner{width:38px;height:38px;border:4px solid #c7d2fe;border-top-color:#4f46e5;border-radius:50%;animation:wedof-spin .85s linear infinite}.wedof-loading-pulse{position:absolute;inset:0;border:1px solid rgba(79,70,229,.28);border-radius:22px;animation:wedof-pulse 1.8s ease-out infinite}.wedof-loading h2{margin:0;color:#172554;font-size:1.25rem;line-height:1.35}.wedof-loading p{margin:0;color:#64748b;font-size:.94rem}.wedof-loading-progress{width:100%;height:5px;overflow:hidden;border-radius:99px;background:#e2e8f0}.wedof-loading-progress::after{content:"";display:block;width:42%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#6366f1,#8b5cf6);animation:wedof-progress 1.25s ease-in-out infinite}@keyframes wedof-spin{to{transform:rotate(360deg)}}@keyframes wedof-pulse{70%,100%{opacity:0;transform:scale(1.25)}}@keyframes wedof-progress{from{transform:translateX(-110%)}to{transform:translateX(340%)}}@media(prefers-reduced-motion:reduce){.wedof-loading-spinner,.wedof-loading-pulse,.wedof-loading-progress::after{animation-duration:2.5s}}
-@media(max-width:900px){.wedof-counters{grid-template-columns:repeat(2,minmax(0,1fr))}.wedof-toolbar{align-items:flex-start;flex-direction:column}.wedof-table{min-width:0}.wedof-table thead{display:none}.wedof-table tbody,.wedof-table tr,.wedof-table td{display:block}.wedof-table tr{padding:12px;border-bottom:1px solid #e2e8f0}.wedof-table td{display:grid;grid-template-columns:minmax(110px,38%) 1fr;gap:8px;padding:6px!important;border:0!important}.wedof-table td::before{content:attr(data-label);font-weight:800;color:#475569}.wedof-details{width:auto;grid-column:1/-1}}
-@media(max-width:500px){.wedof-counters{grid-template-columns:1fr}.wedof-toolbar-actions,.wedof-toolbar-actions form,.wedof-toolbar-actions .btn{width:100%}.wedof-date-comparison{grid-template-columns:1fr}.wedof-modal-body{padding:14px}}
-</style>
 <dialog id="wedof-loading-modal" class="wedof-loading" aria-labelledby="wedof-loading-title" aria-describedby="wedof-loading-description">
   <div class="wedof-loading-card" role="status" aria-live="polite">
     <div class="wedof-loading-mark" aria-hidden="true"><span class="wedof-loading-spinner"></span><span class="wedof-loading-pulse"></span></div>
@@ -138,277 +430,127 @@
     <button id="wedof-loading-close" type="button" class="btn btn-outline" hidden>Fermer et continuer</button>
   </div>
 </dialog>
-<script>document.addEventListener('DOMContentLoaded',()=>{
-  const tabs=[...document.querySelectorAll('[data-wedof-tab]')];
-  const counters=[...document.querySelectorAll('[data-wedof-counter]')];
-  const rows=[...document.querySelectorAll('[data-wedof-panel]')];
-  const empty=document.querySelector('[data-wedof-filter-empty]');
-  const table=document.querySelector('.wedof-preview-table-wrap');
-  const tabFilters=new Set(['accepted','training','service','anomaly']);
-  const show=(filter,source)=>{
-    let visible=0;
-    rows.forEach(row=>{const matches=tabFilters.has(filter)?row.dataset.wedofPanel===filter:row.dataset[filter.replace(/_([a-z])/g,(_,letter)=>letter.toUpperCase())]==='true';row.hidden=!matches;if(matches)visible++});
-    tabs.forEach(tab=>{const on=source==='tab'&&tab.dataset.wedofTab===filter;tab.classList.toggle('is-active',on);tab.setAttribute('aria-selected',on?'true':'false')});
-    counters.forEach(counter=>{const on=source==='counter'&&counter.dataset.wedofCounter===filter;counter.classList.toggle('is-active',on);counter.setAttribute('aria-pressed',on?'true':'false')});
-    if(empty)empty.hidden=visible!==0;
-    table?.scrollIntoView({behavior:'smooth',block:'nearest'});
-  };
-  tabs.forEach(tab=>tab.addEventListener('click',()=>show(tab.dataset.wedofTab,'tab')));
-  counters.forEach(counter=>{counter.setAttribute('aria-pressed','false');counter.addEventListener('click',()=>show(counter.dataset.wedofCounter,'counter'))});
-});</script>
-<script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
 
-{% if wedof_date_differences %}<div class="card" style="margin-bottom:12px;">
-  <div class="card-title">Informations sur les différences de dates</div>
-  <div style="overflow-x:auto"><table class="table"><thead><tr><th>Numéro WEDOF</th><th>Session locale</th><th>Stagiaire local</th><th>Dates WEDOF</th><th>Dates locales</th><th>Type d’anomalie</th><th>Conséquence</th></tr></thead><tbody>
-  {% for link in wedof_date_differences %}<tr><td>{{ link.external_id }}</td><td>{{ link.session_label }}</td><td>{{ link.trainee_label }}</td><td>du {{ link.date_consistency.wedof_date_start|format_date_fr }} au {{ link.date_consistency.wedof_date_end|format_date_fr }}</td><td>du {{ link.date_consistency.local_date_start|format_date_fr }} au {{ link.date_consistency.local_date_end|format_date_fr }}</td><td>{{ 'Dates locales différentes des dates WEDOF' if link.date_consistency.status == 'date_mismatch' else 'Dates locales non disponibles' }}</td><td>Information uniquement — les automatisations utilisent les dates WEDOF</td></tr>{% endfor %}
-  </tbody></table></div>
-</div>{% endif %}
-
-<dialog id="wedof-manual-modal" class="wedof-modal">
- <form id="wedof-manual-form" data-wedof-loading-managed="manual" class="wedof-modal-body" method="post" action="{{ url_for('admin_wedof_manual_link') }}">
-  <h2 style="margin:0">Associer manuellement un dossier WEDOF</h2>
-  <div id="wedof-folder-summary"></div>
-  <div id="wedof-live-status" class="muted" role="status">Récupération des informations WEDOF…</div>
-  <input type="hidden" name="external_id"><input type="hidden" name="session_id"><input type="hidden" name="trainee_id">
-  <div><strong>Sessions où ce stagiaire est inscrit</strong><div class="muted" id="wedof-session-help">Sélectionnez une session proposée : le stagiaire correspondant sera sélectionné automatiquement.</div></div>
-  <div id="wedof-session-results" class="wedof-modal-results"></div><div id="wedof-archive-warning" class="wedof-warning" hidden>Cette session est archivée. Elle ne pourra pas servir au déclenchement automatique futur sans règle spécifique.</div>
-  <label><strong>Rechercher une autre session</strong><input id="wedof-session-search" class="form-control" autocomplete="off" placeholder="Nom ou dates de session"></label>
-  <label><strong>Rechercher un stagiaire dans cette session</strong><input id="wedof-trainee-search" class="form-control" autocomplete="off" disabled></label>
-  <div id="wedof-trainee-results" class="wedof-modal-results"></div>
-  <div id="wedof-date-comparison" class="wedof-date-comparison" hidden><div><strong>Dates WEDOF :</strong><br><span id="wedof-remote-dates"></span></div><div><strong>Dates de la session sélectionnée :</strong><br><span id="wedof-local-dates"></span></div></div>
-  <div id="wedof-date-warning" class="wedof-warning" hidden>Attention : les dates de la session locale sont différentes des dates WEDOF.<br><br>La déclaration automatique utilisera les dates WEDOF et non les dates locales.</div>
-  <div><strong>Dossier WEDOF :</strong> <span id="wedof-confirm-folder"></span><br><strong>Sera associé à :</strong><br><span id="wedof-confirm-session">—</span><br><span id="wedof-confirm-trainee">—</span></div>
-  <label><input type="checkbox" name="confirm_manual_link" value="1" required> Je confirme que ce dossier WEDOF appartient à ce stagiaire et à cette session.</label>
-  <label id="wedof-date-confirm" hidden><input type="checkbox" name="confirm_date_mismatch" value="1"> Je confirme l’association malgré la différence de dates et j’ai compris que les automatisations utiliseront les dates WEDOF.</label>
-  <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn btn-outline" id="wedof-modal-cancel">Annuler</button><button type="submit" class="btn btn-blue">Enregistrer l’association</button></div>
- </form>
-</dialog>
-<div id="wedof-manual-feedback" class="card" role="status" hidden></div>
-<script src="{{ url_for('static', filename='js/wedof-manual-links.js') }}" defer></script>
-
-<div class="card" style="margin-bottom:12px;">
-  <div class="card-title">Connexion API WEDOF</div>
-  <div style="display:grid;gap:6px;margin:10px 0 14px;">
-    <div>Clé API configurée : <strong>{{ 'Oui' if wedof_api_key_configured else 'Non' }}</strong></div>
-    <div>Automatisation active : <strong>{{ 'Oui' if wedof_automation_enabled else 'Non' }}</strong></div>
-    <div>Mode test sans envoi : <strong>{{ 'Oui' if wedof_dry_run else 'Non' }}</strong></div>
-  </div>
-  <form method="post" action="{{ url_for('admin_test_wedof_api') }}">
-    <button class="btn btn-violet" type="submit">Tester la connexion API WEDOF</button>
-  </form>
-</div>
-
-<div class="card" style="margin-bottom:12px;">
-  <div class="card-row" style="justify-content:space-between;align-items:center;">
-    <div>
-      <div class="card-title">Demandes WeDoF CPF/EDOF</div>
-      <div class="muted">Webhook URL: {{ public_base_url }}/api/webhooks/wedof</div>
+<dialog id="wedof-manual-modal" class="wedof-modal" aria-labelledby="wedof-manual-title">
+  <form id="wedof-manual-form" data-wedof-loading-managed="manual" class="wedof-modal-body" method="post" action="{{ url_for('admin_wedof_manual_link') }}">
+    <input type="hidden" name="external_id">
+    <input type="hidden" name="session_id">
+    <input type="hidden" name="trainee_id">
+    <input type="hidden" name="confirm_manual_link" value="1">
+    <input type="hidden" name="confirm_date_mismatch" value="">
+    <header class="wedof-modal-header">
+      <div>
+        <span class="wedof-section-label">Rattachement local</span>
+        <h2 id="wedof-manual-title">Rechercher le stagiaire à associer</h2>
+        <p>La recherche porte directement sur tous les stagiaires enregistrés dans la base.</p>
+      </div>
+      <button type="button" class="wedof-modal-close" id="wedof-modal-cancel" aria-label="Fermer">×</button>
+    </header>
+    <div class="wedof-modal-scroll">
+      <div id="wedof-folder-summary" class="wedof-folder-summary"></div>
+      <div id="wedof-live-status" class="wedof-live-status is-loading" role="status">Vérification du dossier WEDOF en cours…</div>
+      <div class="wedof-search-block">
+        <label for="wedof-global-trainee-search">Nom, e-mail ou téléphone du stagiaire</label>
+        <div class="wedof-search-input-wrap">
+          <input id="wedof-global-trainee-search" autocomplete="off" placeholder="Commencez à saisir pour rechercher dans toute la base">
+        </div>
+        <p class="wedof-search-help">Les correspondances WEDOF sont proposées automatiquement. Chaque résultat indique la session exacte et ses dates.</p>
+      </div>
+      <div id="wedof-enrolment-status" class="wedof-enrolment-status" role="status"></div>
+      <div id="wedof-enrolment-results" class="wedof-enrolment-results" aria-live="polite"></div>
+      <div id="wedof-modal-alert" class="wedof-modal-alert is-info" role="alert" hidden></div>
+      <section id="wedof-association-review" class="wedof-association-review" hidden>
+        <h3 id="wedof-association-review-title">Vérification nécessaire</h3>
+        <div class="wedof-review-grid">
+          <div><span>Stagiaire sélectionné</span><strong id="wedof-review-trainee">—</strong></div>
+          <div><span>Session sélectionnée</span><strong id="wedof-review-session">—</strong></div>
+          <div><span>Dates WEDOF</span><strong id="wedof-review-remote-dates">—</strong></div>
+          <div><span>Dates locales</span><strong id="wedof-review-local-dates">—</strong></div>
+        </div>
+        <div class="wedof-review-actions"><button type="button" class="btn btn-blue" id="wedof-review-confirm">Confirmer l’association</button></div>
+      </section>
+      <p class="wedof-modal-note">Cette opération crée uniquement un rattachement interne. Elle n’envoie aucune déclaration à WEDOF.</p>
     </div>
-  </div>
-  <div style="overflow:auto;margin-top:10px;">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Nom</th><th>Prénom</th><th>Email</th><th>Téléphone</th><th>Formation</th><th>Dates sélectionnées</th><th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in wedof_webhooks %}
-          {% set p = item.payload or {} %}
-          {% set attendee = p.attendee or {} %}
-          {% set training = p.trainingActionInfo or {} %}
-          {% set display = item.display_fields or {} %}
-          <tr>
-            <td>{{ display.last_name or attendee.lastName or '-' }}</td>
-            <td>{{ display.first_name or attendee.firstName or '-' }}</td>
-            <td>{{ display.email or attendee.email or '-' }}</td>
-            <td>{{ display.phone or attendee.phoneNumber or '-' }}</td>
-            <td>{{ display.training_title or training.title or '-' }}</td>
-            <td>
-              {% if display.training_date and display.training_end_date %}
-                Du <strong>{{ display.training_date|frdate }}</strong><br>au <strong>{{ display.training_end_date|frdate }}</strong>
-              {% elif display.training_date %}
-                <strong>{{ display.training_date|frdate }}</strong>
-              {% elif display.training_end_date %}
-                Jusqu'au <strong>{{ display.training_end_date|frdate }}</strong>
-              {% else %}
-                <span class="muted">Non renseignées</span>
-              {% endif %}
-            </td>
-            <td>
-              <button
-                class="btn {% if item.processed %}btn-outline{% else %}btn-blue{% endif %}"
-                type="button"
-                data-wedof-notify
-                data-entry-id="{{ item.id }}"
-                data-last-name="{{ attendee.lastName or '' }}"
-                data-first-name="{{ attendee.firstName or '' }}"
-                data-phone="{{ attendee.phoneNumber or '' }}"
-                data-email="{{ attendee.email or '' }}"
-                data-training="{{ training.title or '' }}"
-                style="margin-bottom:6px;"
-                {% if item.processed %}disabled{% endif %}
-              >{% if item.processed %}Notifié ✅{% else %}Notifier{% endif %}</button>
-              <div class="hint" data-wedof-feedback style="margin:6px 0 8px 0;"></div>
-              <button
-                class="btn {% if item.salesforce_sent %}btn-outline{% else %}btn-violet{% endif %}"
-                type="button"
-                data-salesforce-send
-                data-entry-id="{{ item.id }}"
-                style="margin-bottom:6px;"
-              >{% if item.salesforce_sent %}Renvoyer Salesforce{% else %}Réessayer Salesforce{% endif %}</button>
-              {% if item.salesforce_sent_at %}
-                <div class="hint" style="margin:2px 0 8px 0;">
-                  Envoyé automatiquement à Salesforce le {{ item.salesforce_sent_at }}{% if item.salesforce_send_count %} ({{ item.salesforce_send_count }} envoi{% if item.salesforce_send_count > 1 %}s{% endif %}){% endif %}
-                </div>
-              {% elif item.salesforce_last_error %}
-                <div class="hint" style="margin:2px 0 8px 0;color:#b91c1c;">
-                  Envoi automatique échoué : {{ item.salesforce_last_error }}
-                </div>
-              {% endif %}
-              <details style="margin-bottom:6px;">
-                <summary class="btn btn-outline" style="display:inline-block;cursor:pointer;">Voir JSON brut</summary>
-                <pre style="white-space:pre-wrap;max-width:700px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;padding:8px;border-radius:8px;">{{ item.raw_payload or (item.payload|tojson(indent=2)) }}</pre>
-              </details>
-              {% if item.processed %}
-                <span class="badge-ok">Traité</span>
-              {% else %}
-                <form method="post" action="{{ url_for('admin_mark_wedof_treated', entry_id=item.id) }}">
-                  <button class="btn btn-outline" type="submit">Marquer comme traité</button>
-                </form>
-              {% endif %}
-              <form method="post" action="{{ url_for('admin_delete_wedof_entry', entry_id=item.id) }}" onsubmit="return confirm('Supprimer cette demande WeDoF ?');" style="margin-top:6px;">
-                <button class="btn" type="submit" style="background:#dc2626;color:#fff;border-color:#dc2626;">Supprimer</button>
-              </form>
-            </td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7" class="muted">Aucune demande WeDoF reçue.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
+  </form>
+</dialog>
+
+<div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
+
+<script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260811-counter-fix') }}" defer></script>
+<script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20260811-global-search') }}" defer></script>
 
 <script>
-  (function initWedofNotifyButtons(){
+  (() => {
     const trainingMap = [
-      { value: "A3P", match: ["a3p", "protection physique"] },
-      { value: "APS", match: ["aps", "prévention", "prevention", "sécurité", "securite"] },
-      { value: "VTC", match: ["vtc"] },
-      { value: "DESP", match: ["desp", "dirigeant"] },
+      {value: 'A3P', match: ['a3p', 'protection physique']},
+      {value: 'APS', match: ['aps', 'prévention', 'prevention', 'sécurité', 'securite']},
+      {value: 'VTC', match: ['vtc']},
+      {value: 'DESP', match: ['desp', 'dirigeant']},
     ];
-
-    function normalize(str){
-      return (str || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-    }
-
-    function guessTrainingValue(rawTraining){
-      const candidate = normalize(rawTraining);
-      const found = trainingMap.find((entry)=>entry.match.some((token)=>candidate.includes(token)));
-      return found ? found.value : "";
-    }
-
-    async function submitEdof(payload){
-      const res = await fetch("/admin/edof/submit", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if(!res.ok || !data.ok){
-        throw new Error(data.error || "Erreur lors de l’envoi.");
+    const normalize = value => (value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const guessTrainingValue = raw => {
+      const candidate = normalize(raw);
+      const found = trainingMap.find(entry => entry.match.some(token => candidate.includes(token)));
+      return found ? found.value : '';
+    };
+    async function jsonRequest(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.ok === false || data.success === false) {
+        throw new Error(data.error || data.salesforce_response_preview || 'L’opération a échoué.');
       }
       return data;
     }
-
-    async function markWedofTreated(entryId){
-      if(!entryId) return;
-      await fetch(`/admin/wedof/mark-treated/${entryId}`, {
-        method: "POST",
-        headers: {"X-Requested-With": "XMLHttpRequest"},
-      });
-    }
-
-    document.querySelectorAll("[data-wedof-notify]").forEach((btn)=>{
-      btn.addEventListener("click", async ()=>{
+    document.querySelectorAll('[data-wedof-notify]').forEach(button => {
+      button.addEventListener('click', async () => {
         const payload = {
-          last_name: btn.dataset.lastName || "",
-          first_name: btn.dataset.firstName || "",
-          phone: btn.dataset.phone || "",
-          email: btn.dataset.email || "",
-          training: guessTrainingValue(btn.dataset.training || ""),
+          last_name: button.dataset.lastName || '',
+          first_name: button.dataset.firstName || '',
+          phone: button.dataset.phone || '',
+          email: button.dataset.email || '',
+          training: guessTrainingValue(button.dataset.training || ''),
         };
-        const feedback = btn.parentElement?.querySelector("[data-wedof-feedback]");
-
-        if(!payload.last_name || !payload.first_name || !payload.phone || !payload.email || !payload.training){
-          if(feedback) feedback.textContent = "Données incomplètes pour notifier automatiquement.";
+        const feedback = button.parentElement?.querySelector('[data-wedof-feedback]');
+        if (!payload.last_name || !payload.first_name || !payload.phone || !payload.email || !payload.training) {
+          if (feedback) feedback.textContent = 'Données incomplètes pour notifier automatiquement.';
           return;
         }
-
-        if(typeof window.confirmMailSmsSend === "function"){
-          const ok = await window.confirmMailSmsSend();
-          if(!ok) return;
-        }
-
-        if(feedback) feedback.textContent = "Envoi en cours…";
-        btn.disabled = true;
-        try{
-          const result = await submitEdof(payload);
-          await markWedofTreated(btn.dataset.entryId || "");
-
-          btn.disabled = true;
-          btn.classList.remove("btn-blue");
-          btn.classList.add("btn-outline");
-          btn.textContent = "Notifié ✅";
-
-          if(feedback){
-            const smsState = result.sms_ok ? "SMS ✅" : "SMS ⚠️";
-            const mailState = result.email_ok ? "Mail ✅" : "Mail ⚠️";
-            feedback.textContent = `Demande envoyée ✅ (${mailState} • ${smsState})`;
-          }
-        }catch(err){
-          if(feedback) feedback.textContent = err.message || "Erreur lors de l’envoi.";
-        }finally{
-          if(!btn.textContent.includes("Notifié")) btn.disabled = false;
+        if (typeof window.confirmMailSmsSend === 'function' && !(await window.confirmMailSmsSend())) return;
+        button.disabled = true;
+        if (feedback) feedback.textContent = 'Envoi en cours…';
+        try {
+          const result = await jsonRequest('/admin/edof/submit', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload),
+          });
+          await fetch(`/admin/wedof/mark-treated/${button.dataset.entryId || ''}`, {
+            method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'},
+          });
+          button.className = 'btn btn-outline';
+          button.textContent = 'Notifié ✅';
+          if (feedback) feedback.textContent = `Demande envoyée ✅ (${result.email_ok ? 'Mail ✅' : 'Mail ⚠️'} · ${result.sms_ok ? 'SMS ✅' : 'SMS ⚠️'})`;
+        } catch (error) {
+          if (feedback) feedback.textContent = error.message;
+          button.disabled = false;
         }
       });
     });
-
-    async function sendToSalesforce(entryId){
-      const res = await fetch(`/api/send-to-salesforce/${entryId}`, {
-        method: "POST",
-        headers: {"X-Requested-With": "XMLHttpRequest"},
-      });
-      const data = await res.json().catch(()=>({}));
-      if(!res.ok || !data.success){
-        const exact = data.error || data.salesforce_response_preview || "Erreur lors de l’envoi vers Salesforce.";
-        throw new Error(exact);
-      }
-      return data;
-    }
-
-    document.querySelectorAll("[data-salesforce-send]").forEach((btn)=>{
-      btn.addEventListener("click", async ()=>{
-        const entryId = btn.dataset.entryId || "";
-        const feedback = btn.parentElement?.querySelector("[data-wedof-feedback]");
-        if(!entryId) return;
-        if(btn.disabled) return;
-        btn.disabled = true;
-        if(feedback) feedback.textContent = "Envoi vers Salesforce…";
-        try{
-          await sendToSalesforce(entryId);
-          btn.classList.remove("btn-violet");
-          btn.classList.add("btn-outline");
-          btn.textContent = "Renvoyer Salesforce";
-          if(feedback) feedback.textContent = "Envoi Salesforce réussi ✅";
-        }catch(err){
-          if(feedback) feedback.textContent = err.message || "Erreur lors de l’envoi Salesforce.";
-          btn.disabled = false;
+    document.querySelectorAll('[data-salesforce-send]').forEach(button => {
+      button.addEventListener('click', async () => {
+        if (button.disabled || !button.dataset.entryId) return;
+        const feedback = button.parentElement?.querySelector('[data-wedof-feedback]');
+        button.disabled = true;
+        if (feedback) feedback.textContent = 'Envoi vers Salesforce…';
+        try {
+          await jsonRequest(`/api/send-to-salesforce/${button.dataset.entryId}`, {
+            method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'},
+          });
+          button.className = 'btn btn-outline';
+          button.textContent = 'Renvoyer Salesforce';
+          if (feedback) feedback.textContent = 'Envoi Salesforce réussi ✅';
+        } catch (error) {
+          if (feedback) feedback.textContent = error.message;
+          button.disabled = false;
         }
       });
     });

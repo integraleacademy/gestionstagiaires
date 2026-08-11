@@ -16324,6 +16324,142 @@ def _manual_trainee_matches(trainee: Dict[str, str], *, email: str, phone: str,
     return contact_match or name_match
 
 
+def _manual_trainee_enrolment_score(
+    trainee: Dict[str, str],
+    session_obj: Dict[str, Any],
+    *,
+    query: str,
+    email: str,
+    phone: str,
+    first_name: str,
+    last_name: str,
+    date_start: Optional[str],
+    date_end: Optional[str],
+) -> Optional[Tuple[int, str]]:
+    """Classe une inscription locale sans faire de rapprochement approximatif silencieux."""
+    local_email = normalize_email(trainee["email"])
+    local_phone = normalize_phone(trainee["phone"])
+    local_first_name = normalize_name(trainee["first_name"])
+    local_last_name = normalize_name(trainee["last_name"])
+    local_full_name = " ".join(part for part in (local_first_name, local_last_name) if part)
+    local_reverse_name = " ".join(part for part in (local_last_name, local_first_name) if part)
+
+    query_phone = normalize_phone(query)
+    query_match = bool(
+        query
+        and (
+            query in normalize_name(" ".join((local_full_name, local_reverse_name, trainee["email"])))
+            or (query_phone and query_phone in local_phone)
+        )
+    )
+    if query and not query_match:
+        return None
+
+    email_match = bool(email and local_email == email)
+    phone_match = bool(phone and local_phone == phone)
+    name_match = bool(
+        first_name
+        and last_name
+        and local_first_name == first_name
+        and local_last_name == last_name
+    )
+    if not query and not (email_match or phone_match or name_match):
+        return None
+
+    score = 200 if query_match else 0
+    reasons = []
+    if email_match:
+        score += 600
+        reasons.append("Même adresse e-mail")
+    if phone_match:
+        score += 500
+        reasons.append("Même téléphone")
+    if name_match:
+        score += 400
+        reasons.append("Même nom et prénom")
+
+    session_start = normalize_date(session_obj.get("date_start") or session_obj.get("date_debut"))
+    session_end = normalize_date(session_obj.get("date_end") or session_obj.get("date_fin"))
+    if date_start and date_end and session_start == date_start and session_end == date_end:
+        score += 120
+        reasons.append("Mêmes dates de formation")
+    elif date_start and session_start == date_start:
+        score += 40
+    if not bool(session_obj.get("archived") or session_obj.get("is_archived")):
+        score += 10
+
+    return score, " · ".join(reasons) if reasons else "Résultat trouvé dans la base"
+
+
+@app.get("/admin/wedof/matching/manual/enrolments")
+@admin_login_required
+def admin_wedof_manual_enrolments():
+    """Recherche un stagiaire dans toutes les sessions et retourne ses inscriptions cliquables."""
+    raw_query = str(request.args.get("q") or "").strip()
+    query = normalize_name(raw_query)
+    email = normalize_email(request.args.get("email"))
+    phone = normalize_phone(request.args.get("phone"))
+    first_name = normalize_name(request.args.get("first_name"))
+    last_name = normalize_name(request.args.get("last_name"))
+    date_start = normalize_date(request.args.get("date_start"))
+    date_end = normalize_date(request.args.get("date_end"))
+    try:
+        limit = max(1, min(int(request.args.get("limit", 20)), 30))
+    except ValueError:
+        limit = 20
+
+    matches = []
+    for session_obj in load_data(run_background_tasks=False).get("sessions", []):
+        if not isinstance(session_obj, dict) or _is_wedof_leads_session(session_obj):
+            continue
+        session_item = _manual_session_item(session_obj)
+        trainees = session_obj.get("trainees", session_obj.get("stagiaires", [])) or []
+        for trainee_obj in trainees:
+            if not isinstance(trainee_obj, dict):
+                continue
+            trainee = _manual_trainee_item(trainee_obj)
+            ranked = _manual_trainee_enrolment_score(
+                trainee,
+                session_obj,
+                query=query,
+                email=email,
+                phone=phone,
+                first_name=first_name,
+                last_name=last_name,
+                date_start=date_start,
+                date_end=date_end,
+            )
+            if ranked is None:
+                continue
+            score, match_reason = ranked
+            matches.append({
+                "score": score,
+                "match_reason": match_reason,
+                "session_id": session_item["id"],
+                "session_name": session_item["name"],
+                "session_training_type": session_item["training_type"],
+                "session_date_start": session_item["date_start"],
+                "session_date_end": session_item["date_end"],
+                "session_archived": session_item["archived"],
+                "trainee_id": trainee["id"],
+                "first_name": trainee["first_name"],
+                "last_name": trainee["last_name"],
+                "email": trainee["email"],
+                "phone": trainee["phone"],
+            })
+
+    matches.sort(key=lambda item: (
+        -item["score"],
+        item["session_archived"],
+        item["session_date_start"] or "9999-12-31",
+        normalize_name(item["last_name"]),
+        normalize_name(item["first_name"]),
+    ))
+    public_items = [{key: value for key, value in item.items() if key != "score"}
+                    for item in matches[:limit]]
+    return jsonify({"items": public_items, "total": len(matches)})
+
+
 @app.get("/admin/wedof/matching/manual/sessions")
 @admin_login_required
 def admin_wedof_manual_sessions():
