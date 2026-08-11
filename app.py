@@ -1522,6 +1522,28 @@ def _cents_first_non_null(*values: Any) -> int:
     return 0
 
 
+def _validate_qonto_paid_cents(total_amount_cents: int, paid_amount_cents: int, invoice_reference: str = "") -> Tuple[int, bool]:
+    """Reject impossible Qonto paid amounts instead of treating them as cash.
+
+    A client invoice cannot have more money paid than its own total.  When a
+    stale amount from another invoice survives locally, counting it would mark
+    the trainee as overpaid and would also be added to any cash installments.
+    Treat that value as unverified until the invoice is synchronized again.
+    """
+    total_cents = max(int(total_amount_cents or 0), 0)
+    paid_cents = int(paid_amount_cents or 0)
+    is_consistent = paid_cents >= 0 and not (total_cents > 0 and paid_cents > total_cents)
+    if is_consistent:
+        return paid_cents, True
+    app.logger.warning(
+        "QONTO_PAYMENT_AMOUNT_IGNORED invoice=%s total_amount_cents=%s paid_amount_cents=%s",
+        invoice_reference or "unknown",
+        total_cents,
+        paid_cents,
+    )
+    return 0, False
+
+
 def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, Any]:
     """Return the single canonical Qonto invoice shape sent to the frontend."""
     total_amount_cents = _cents_first_non_null(
@@ -1531,11 +1553,16 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
         invoice.get("totalAmountCents"),
         money_value_to_cents(invoice.get("amountTTC") or invoice.get("amount") or 0) if invoice.get("amountTTC") is not None or invoice.get("amount") is not None else None,
     )
-    paid_amount_cents = _cents_first_non_null(
+    raw_paid_amount_cents = _cents_first_non_null(
         invoice.get("qonto_amount_paid_cents"),
         invoice.get("paid_amount_cents"),
         invoice.get("qontoAmountPaidCents"),
         invoice.get("paidAmountCents"),
+    )
+    paid_amount_cents, _ = _validate_qonto_paid_cents(
+        total_amount_cents,
+        raw_paid_amount_cents,
+        str(invoice.get("qontoInvoiceNumber") or invoice.get("invoice_number") or invoice.get("invoiceNumber") or invoice.get("number") or ""),
     )
     remaining_amount_cents = max(total_amount_cents - paid_amount_cents, 0)
     payment_percentage = 0 if total_amount_cents == 0 else float(min((Decimal(paid_amount_cents) / Decimal(total_amount_cents) * Decimal('100')), Decimal('100')).quantize(Decimal('0.01')))
@@ -1649,7 +1676,14 @@ def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], local_i
     else:
         amount_paid_cents = 0 if amount_paid is None else money_value_to_cents(amount_paid)
     qonto_status = (client_invoice.get("status") or local_invoice.get("qonto_status") or local_invoice.get("qontoStatus") or local_invoice.get("qonto_invoice_status") or "").strip() or "unpaid"
-    if remaining_amount is not None:
+    amount_paid_cents, paid_amount_is_consistent = _validate_qonto_paid_cents(
+        total_cents,
+        amount_paid_cents,
+        str(client_invoice.get("number") or client_invoice.get("invoice_number") or local_invoice.get("qontoInvoiceNumber") or ""),
+    )
+    if not paid_amount_is_consistent:
+        remaining_cents = total_cents
+    elif remaining_amount is not None:
         remaining_cents = max(money_value_to_cents(remaining_amount), 0)
     elif client_invoice.get("remaining_amount_cents") is not None:
         remaining_cents = max(int(client_invoice.get("remaining_amount_cents") or 0), 0)
