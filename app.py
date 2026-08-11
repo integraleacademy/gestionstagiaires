@@ -67,6 +67,7 @@ from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, l
 from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
                               next_automatic_attempt,
                               record_maintenance_skip, run_dry_run, run_live_automation)
+from cpf_tracking import build_cpf_view, has_cpf_financing
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -30292,9 +30293,158 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
         automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
         financing_module_locked=not _financing_partner_module_enabled(),
+        cpf_tracking=build_cpf_view(t, s, data),
+        cpf_association_preview=(session.get("cpf_association_preview") or {})
+            if (session.get("cpf_association_preview") or {}).get("trainee_id") == trainee_id else None,
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
+
+
+def _cpf_local_registration(data: Dict[str, Any], session_id: str, trainee_id: str):
+    local_session = find_session(data, session_id)
+    if not local_session:
+        return None, None
+    trainee = next((x for x in _session_trainees_list(local_session)
+                    if str(x.get("id")) == str(trainee_id)), None)
+    return local_session, trainee
+
+
+def _cpf_identity_mismatches(remote: Dict[str, Any], local_session: Dict[str, Any], trainee: Dict[str, Any]) -> List[str]:
+    mismatches = []
+    pairs = (("prénom", remote.get("first_name"), trainee.get("first_name") or trainee.get("prenom"), normalize_name),
+             ("nom", remote.get("last_name"), trainee.get("last_name") or trainee.get("nom"), normalize_name),
+             ("adresse e-mail", remote.get("email"), trainee.get("email") or trainee.get("mail"), normalize_email))
+    for label, remote_value, local_value, normalizer in pairs:
+        if remote_value and local_value and normalizer(remote_value) != normalizer(local_value):
+            mismatches.append(label)
+    remote_dates = (normalize_date(remote.get("start_date")), normalize_date(remote.get("end_date")))
+    local_dates = (normalize_date(_session_get(local_session, "date_start", "")), normalize_date(_session_get(local_session, "date_end", "")))
+    if all(remote_dates) and all(local_dates) and remote_dates != local_dates:
+        mismatches.append("dates de session")
+    return mismatches
+
+
+def _cpf_public_snapshot(remote: Dict[str, Any]) -> Dict[str, Any]:
+    now = _now_iso()
+    allowed = ("external_id", "state", "type", "first_name", "last_name", "email", "start_date", "end_date",
+               "training_title", "total_amount", "cpf_amount", "france_travail_amount", "candidate_amount",
+               "created_at", "updated_at", "waiting_reason", "step_dates")
+    snapshot = {key: remote.get(key) for key in allowed if remote.get(key) not in (None, "")}
+    url = str(remote.get("wedof_url") or "").strip()
+    parsed = urlparse(url)
+    if parsed.scheme == "https" and (parsed.hostname or "").casefold().endswith("wedof.fr"):
+        snapshot["wedof_url"] = url
+    snapshot["synced_at"] = now
+    return snapshot
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/refresh")
+@admin_login_required
+@admin_write_required
+def admin_trainee_cpf_refresh(session_id: str, trainee_id: str):
+    data = load_data(run_background_tasks=False)
+    local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
+    if not trainee or not has_cpf_financing(trainee):
+        abort(404)
+    link = next((x for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active") is True
+                 and str(x.get("session_id")) == session_id and str(x.get("trainee_id")) == trainee_id), None)
+    if not link:
+        flash("Aucun dossier CPF n’est associé à ce stagiaire.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+    try:
+        remote = extract_folder(WedofClient().get_registration_folder_interactive(str(link.get("external_id") or "")))
+        if str(remote.get("type") or "").casefold() != "cpf":
+            raise WedofApiError("Le dossier retourné n’est pas un dossier CPF.")
+        link["cpf_snapshot"] = _cpf_public_snapshot(remote)
+        link["wedof_state"] = remote.get("state") or link.get("wedof_state")
+        link["last_seen_at"] = _now_iso()
+        link.pop("cpf_sync_error", None)
+        save_data(data)
+        flash("Données WEDOF actualisées.", "success")
+    except (WedofApiError, WedofConfigurationError):
+        link["cpf_sync_error"] = "Synchronisation momentanément indisponible"
+        save_data(data)  # conserve expressément le dernier instantané
+        flash("Synchronisation momentanément indisponible. Les dernières données sont conservées.", "error")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/search")
+@admin_login_required
+@admin_write_required
+def admin_trainee_cpf_search(session_id: str, trainee_id: str):
+    data = load_data(run_background_tasks=False)
+    local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
+    if not trainee or not has_cpf_financing(trainee):
+        abort(404)
+    external_id = str(request.form.get("external_id") or "").strip()
+    try:
+        remote = extract_folder(WedofClient().get_registration_folder_interactive(external_id))
+        if str(remote.get("external_id")) != external_id or str(remote.get("type") or "").casefold() != "cpf":
+            raise WedofApiError("Dossier CPF introuvable.", "wedof_not_found")
+    except (WedofApiError, WedofConfigurationError) as exc:
+        flash("Numéro de dossier CPF inexistant ou WEDOF momentanément indisponible." if getattr(exc, "code", "") == "wedof_not_found" else "Synchronisation momentanément indisponible.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+    mismatches = _cpf_identity_mismatches(remote, local_session, trainee)
+    session["cpf_association_preview"] = {"session_id": session_id, "trainee_id": trainee_id,
+                                           "external_id": external_id, "snapshot": _cpf_public_snapshot(remote),
+                                           "mismatches": mismatches}
+    if mismatches:
+        flash("Association bloquée : incohérence détectée sur " + ", ".join(mismatches) + ".", "error")
+    else:
+        flash("Dossier trouvé. Vérifiez le récapitulatif avant de l’associer.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/associate")
+@admin_login_required
+@admin_write_required
+def admin_trainee_cpf_associate(session_id: str, trainee_id: str):
+    preview = session.get("cpf_association_preview") or {}
+    if preview.get("session_id") != session_id or preview.get("trainee_id") != trainee_id or preview.get("mismatches"):
+        flash("Association refusée : la vérification du dossier doit être relancée.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+    data = load_data(run_background_tasks=False)
+    local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
+    if not trainee:
+        abort(404)
+    snap = preview.get("snapshot") or {}
+    outcome = save_manual_wedof_link(data, external_id=str(preview.get("external_id")), session_id=session_id,
+                                     trainee_id=trainee_id, state=str(snap.get("state") or ""),
+                                     date_start=normalize_date(snap.get("start_date")), date_end=normalize_date(snap.get("end_date")))
+    if outcome == "conflict":
+        flash("Ce dossier est déjà associé à un autre stagiaire.", "error")
+    else:
+        link = next(x for x in data["wedof_links"] if x.get("active") is True and str(x.get("external_id")) == str(preview.get("external_id")))
+        link["cpf_snapshot"] = snap
+        link.setdefault("association_history", []).append({"at": _now_iso(), "admin": session.get("admin_username") or "admin",
+            "old_external_id": None, "new_external_id": preview.get("external_id"), "source": "manual"})
+        save_data(data)
+        session.pop("cpf_association_preview", None)
+        flash("Dossier CPF associé au stagiaire.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/unlink")
+@admin_login_required
+@admin_write_required
+def admin_trainee_cpf_unlink(session_id: str, trainee_id: str):
+    if request.form.get("confirm_unlink") != "UNLINK":
+        flash("Confirmation de correction invalide.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+    data = load_data(run_background_tasks=False)
+    link = next((x for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active") is True
+                 and str(x.get("session_id")) == session_id and str(x.get("trainee_id")) == trainee_id), None)
+    if not link:
+        flash("Aucune association active à corriger.", "error")
+    else:
+        link["active"] = False
+        link["updated_at"] = _now_iso()
+        link.setdefault("association_history", []).append({"at": _now_iso(), "admin": session.get("admin_username") or "admin",
+            "old_external_id": link.get("external_id"), "new_external_id": None, "source": "manual_correction"})
+        save_data(data)
+        flash("Association CPF retirée avec traçabilité. Vous pouvez rechercher le bon dossier.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
 
 
 

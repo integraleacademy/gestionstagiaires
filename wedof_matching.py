@@ -68,6 +68,15 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
         "end_date": _nested(folder, "trainingActionInfo.sessionEndDate", "trainingActionInfo.endDate", "trainingActionInfo.session.endDate", "data.trainingActionInfo.sessionEndDate", "session.endDate", "session.sessionEndDate", "session.dateEnd", "endDate", "dateEnd"),
         "training_title": _nested(folder, "trainingActionInfo.title", "trainingActionInfo.name", "data.trainingActionInfo.title", "session.title", "trainingTitle"),
         "training_duration": _nested(folder, "trainingActionInfo.trainingDuration", "trainingActionInfo.duration", "data.trainingActionInfo.trainingDuration", "trainingDuration"),
+        "total_amount": _nested(folder, "pricing.totalAmount", "financing.totalAmount", "trainingActionInfo.price", "totalAmount"),
+        "cpf_amount": _nested(folder, "pricing.cpfAmount", "financing.cpfAmount", "cpfAmount"),
+        "france_travail_amount": _nested(folder, "pricing.franceTravailAmount", "financing.franceTravailAmount", "franceTravailAmount"),
+        "candidate_amount": _nested(folder, "pricing.attendeeAmount", "financing.remainingAmount", "attendeeAmount", "remainingAmount"),
+        "created_at": _nested(folder, "createdAt", "dateCreated", "data.createdAt"),
+        "updated_at": _nested(folder, "updatedAt", "data.updatedAt"),
+        "wedof_url": _nested(folder, "url", "links.web", "_links.web.href"),
+        "waiting_reason": _nested(folder, "waitingReason", "pendingReason", "data.waitingReason"),
+        "step_dates": _nested(folder, "stateDates", "statusHistory", "data.stateDates"),
     }
 
 
