@@ -16432,8 +16432,16 @@ def admin_wedof_manual_enrolments():
             if ranked is None:
                 continue
             score, match_reason = ranked
+            exact_identity_match = bool(
+                email and phone and first_name and last_name
+                and normalize_email(trainee["email"]) == email
+                and normalize_phone(trainee["phone"]) == phone
+                and normalize_name(trainee["first_name"]) == first_name
+                and normalize_name(trainee["last_name"]) == last_name
+            )
             matches.append({
                 "score": score,
+                "exact_identity_match": exact_identity_match,
                 "match_reason": match_reason,
                 "session_id": session_item["id"],
                 "session_name": session_item["name"],

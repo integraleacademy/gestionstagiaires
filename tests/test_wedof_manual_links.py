@@ -49,6 +49,7 @@ class ManualLinkTests(unittest.TestCase):
                 "match_reason", "session_id", "session_name", "session_training_type",
                 "session_date_start", "session_date_end", "session_archived", "trainee_id",
                 "first_name", "last_name", "email", "phone",
+                "exact_identity_match",
             })
 
     def test_global_trainee_suggestions_rank_identity_and_wedof_dates(self):
@@ -71,6 +72,26 @@ class ManualLinkTests(unittest.TestCase):
         self.assertEqual([item["session_id"] for item in response.json["items"]], ["S1", "S3"])
         self.assertIn("Mêmes dates de formation", response.json["items"][0]["match_reason"])
         self.assertNotIn("score", response.json["items"][0])
+        self.assertTrue(response.json["items"][0]["exact_identity_match"])
+
+    def test_exact_identity_requires_name_email_and_phone(self):
+        with patch.object(gestion_app, "load_data", return_value=local_data()):
+            complete = self.client.get("/admin/wedof/matching/manual/enrolments", query_string={
+                "email": "SBERTIN@example.fr", "phone": "+33 6 12 34 56 78",
+                "first_name": "Stéphane", "last_name": "BERTIN",
+            }).json["items"][0]
+            missing_phone = self.client.get("/admin/wedof/matching/manual/enrolments", query_string={
+                "email": "sbertin@example.fr", "first_name": "Stéphane", "last_name": "BERTIN",
+            }).json["items"][0]
+        self.assertTrue(complete["exact_identity_match"])
+        self.assertFalse(missing_phone["exact_identity_match"])
+
+    def test_javascript_only_auto_links_one_exact_live_match(self):
+        with open("static/js/wedof-manual-links.js", encoding="utf-8") as stream:
+            script = stream.read()
+        self.assertIn("total === 1 && items.length === 1 && items[0].exact_identity_match", script)
+        self.assertIn("automatic: true, autoAssociate: true", script)
+        self.assertIn("submitAssociation(items[0], button, hasDateMismatch(items[0]))", script)
 
     def test_authentication_is_required(self):
         anonymous = gestion_app.app.test_client()
