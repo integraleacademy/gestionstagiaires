@@ -65,7 +65,7 @@ from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, l
                          save_manual_wedof_link, sync_exact_wedof_links)
 from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
                               next_automatic_attempt,
-                              record_maintenance_skip, run_dry_run)
+                              record_maintenance_skip, run_dry_run, run_live_automation)
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -7762,6 +7762,7 @@ def _empty_data_payload() -> Dict[str, Any]:
         "wedof_links": [],
         "wedof_automation_exceptions": [],
         "wedof_automation_status": [],
+        "wedof_automation_actions": [],
         "wedof_automation_blocks": [],
         "wedof_automation_runs": [],
         "wedof_automation_sync": {"states": {}},
@@ -7831,6 +7832,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                     loaded["wedof_automation_exceptions"] = []
                 if not isinstance(loaded.get("wedof_automation_status"), list):
                     loaded["wedof_automation_status"] = []
+                if not isinstance(loaded.get("wedof_automation_actions"), list): loaded["wedof_automation_actions"] = []
                 if not isinstance(loaded.get("wedof_automation_blocks"), list): loaded["wedof_automation_blocks"] = []
                 if not isinstance(loaded.get("wedof_automation_runs"), list): loaded["wedof_automation_runs"] = []
                 if not isinstance(loaded.get("wedof_automation_sync"), dict): loaded["wedof_automation_sync"] = {"states": {}}
@@ -7867,6 +7869,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         data["wedof_automation_exceptions"] = []
     if not isinstance(data.get("wedof_automation_status"), list):
         data["wedof_automation_status"] = []
+    if not isinstance(data.get("wedof_automation_actions"), list): data["wedof_automation_actions"] = []
     if not isinstance(data.get("wedof_automation_blocks"), list): data["wedof_automation_blocks"] = []
     if not isinstance(data.get("wedof_automation_runs"), list): data["wedof_automation_runs"] = []
     if not isinstance(data.get("wedof_automation_sync"), dict): data["wedof_automation_sync"] = {"states": {}}
@@ -16048,6 +16051,42 @@ def run_wedof_automation_dry_run() -> Dict[str, Any]:
             canonical["wedof_automation_sync"] = sync
             return canonical
         _atomic_update_data(persist)
+        return summary
+    finally:
+        try: fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally: lock_file.close()
+
+
+def _wedof_live_mode_enabled() -> bool:
+    """Fail closed: seules les deux chaînes canoniques autorisent une mutation."""
+    return (os.environ.get("WEDOF_AUTOMATION_ENABLED") or "").strip().casefold() == "true" and \
+           (os.environ.get("WEDOF_DRY_RUN") or "").strip().casefold() == "false"
+
+
+def run_wedof_automation_live() -> Dict[str, Any]:
+    """Exécute et persiste le live sous un verrou interprocessus exclusif."""
+    if not _wedof_live_mode_enabled():
+        return run_wedof_automation_dry_run()
+    os.makedirs(PERSIST_DIR, exist_ok=True)
+    lock_file = open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return {"ok": False, "status": "already_running", "mode": "live"}
+        working = load_data()
+        def persist(snapshot):
+            def update(canonical):
+                canonical["wedof_automation_actions"] = snapshot.get("wedof_automation_actions", [])
+                canonical["wedof_automation_status"] = snapshot.get("wedof_automation_status", [])
+                return canonical
+            _atomic_update_data(update)
+        summary = run_live_automation(WedofClient(), working, persist_reservation=persist)
+        def persist_final(canonical):
+            for key in ("wedof_automation_actions", "wedof_automation_status", "wedof_automation_runs"):
+                canonical[key] = working.get(key, [])
+            return canonical
+        _atomic_update_data(persist_final)
         return summary
     finally:
         try: fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
@@ -33450,10 +33489,8 @@ def internal_cron_wedof_automation():
     provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
     if not expected or not provided or not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
-    if not read_env_bool("WEDOF_DRY_RUN", default=False):
-        return jsonify({"ok": False, "status": "dry_run_required"}), 409
     try:
-        result = run_wedof_automation_dry_run()
+        result = run_wedof_automation_live() if _wedof_live_mode_enabled() else run_wedof_automation_dry_run()
     except (WedofConfigurationError, WedofApiError) as exc:
         app.logger.warning("Cron WEDOF indisponible erreur=%s", getattr(exc, "code", "wedof_configuration_error"))
         result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
@@ -33461,7 +33498,7 @@ def internal_cron_wedof_automation():
         app.logger.exception("Erreur technique nettoyée du cron WEDOF")
         result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
     if result.get("status") == "skipped_maintenance_window":
-        result = {"ok": True, "status": "skipped_maintenance_window", "mode": "dry_run",
+        result = {"ok": True, "status": "skipped_maintenance_window", "mode": result.get("mode", "dry_run"),
                   "next_action": "automatic_retry_on_next_cron"}
     status_code = 409 if result.get("status") == "already_running" else 503 if result.get("status") == "failed" else 200
     return jsonify(result), status_code

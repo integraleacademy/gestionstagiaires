@@ -1,4 +1,4 @@
-"""Client en lecture seule pour vérifier la connexion à l'API WEDOF."""
+"""Client HTTP WEDOF : lectures résilientes et mutations sans retry."""
 
 import logging
 import os
@@ -21,11 +21,14 @@ class WedofConfigurationError(RuntimeError):
 class WedofApiError(RuntimeError):
     """Erreur volontairement nettoyée renvoyée par le client WEDOF."""
 
-    def __init__(self, message: str, code: str = "wedof_api_error", retryable: bool = False) -> None:
+    def __init__(self, message: str, code: str = "wedof_api_error", retryable: bool = False,
+                 http_status: Optional[int] = None, ambiguous: bool = False) -> None:
         super().__init__(message)
         self.code = code
         self.user_message = message
         self.retryable = retryable
+        self.http_status = http_status
+        self.ambiguous = ambiguous
 
 
 def _bounded_env(name: str, default: float, minimum: float, maximum: float, *, integer: bool = False):
@@ -49,7 +52,7 @@ def read_env_bool(name: str, default: bool = False) -> bool:
 
 
 class WedofClient:
-    """Client WEDOF strictement limité aux lectures nécessaires."""
+    """Client WEDOF dont les deux seules mutations sont explicites et sans retry."""
 
     def __init__(
         self,
@@ -61,6 +64,7 @@ class WedofClient:
             raise WedofConfigurationError("La variable WEDOF_API_KEY est absente.")
         self._session = session or requests.Session()
         self._headers = {"Accept": "application/json", "X-Api-Key": key}
+        self._mutation_headers = {**self._headers, "Content-Type": "application/json"}
         self._timeout = (
             _bounded_env("WEDOF_CONNECT_TIMEOUT_SECONDS", 5, 1, 30),
             _bounded_env("WEDOF_READ_TIMEOUT_SECONDS", 45, 10, 120),
@@ -135,6 +139,65 @@ class WedofClient:
 
     def _get_json(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Any:
         return self._get_json_response(path, params=params)[0]
+
+    def _post_json_response(self, path: str, payload: Mapping[str, Any]) -> Tuple[Any, Any]:
+        """Envoie exactement une fois une mutation; le moteur réconcilie toute ambiguïté."""
+        try:
+            response = self._session.post(f"{WEDOF_BASE_URL}{path}", headers=self._mutation_headers,
+                                          json=dict(payload), timeout=self._timeout)
+        except requests.Timeout as exc:
+            raise WedofApiError("Réponse WEDOF incertaine après envoi.", "wedof_timeout", False,
+                                ambiguous=True) from exc
+        except requests.ConnectionError as exc:
+            raise WedofApiError("Résultat WEDOF incertain après une erreur de connexion.",
+                                "wedof_connection_error", False, ambiguous=True) from exc
+        except requests.RequestException as exc:
+            raise WedofApiError("Impossible d’envoyer la déclaration à WEDOF.",
+                                "wedof_connection_error", False, ambiguous=True) from exc
+        status = response.status_code
+        if not 200 <= status < 300:
+            codes = {400: "wedof_bad_request", 401: "wedof_unauthorized", 403: "wedof_forbidden",
+                     404: "wedof_not_found", 409: "wedof_conflict", 429: "wedof_rate_limited"}
+            code = codes.get(status, "wedof_server_error" if status >= 500 else "wedof_api_error")
+            raise WedofApiError("La déclaration WEDOF a été refusée.", code,
+                                status == 429 or status >= 500, status)
+        try:
+            return (response.json() if getattr(response, "content", b"") else {}), response
+        except (ValueError, TypeError):
+            return {}, response
+
+    @staticmethod
+    def _identifier(external_id: str) -> str:
+        identifier = str(external_id or "").strip()
+        if not identifier or "/" in identifier:
+            raise WedofApiError("L’identifiant du dossier WEDOF est invalide.")
+        return identifier
+
+    def declare_registration_folder_in_training(self, external_id: str, date: str) -> Any:
+        identifier = self._identifier(external_id)
+        business_date = self._validated_date(date)
+        return self._post_json_response(f"/registrationFolders/{identifier}/inTraining",
+                                        {"date": business_date})[0]
+
+    def declare_registration_folder_service_done(self, external_id: str, date: str,
+                                                  absence_duration: float = 0,
+                                                  force_majeure_absence: bool = False,
+                                                  training_duration: Optional[float] = None) -> Any:
+        identifier = self._identifier(external_id)
+        payload: Dict[str, Any] = {"absenceDuration": absence_duration,
+                                  "forceMajeureAbsence": bool(force_majeure_absence),
+                                  "date": self._validated_date(date)}
+        if isinstance(training_duration, (int, float)) and not isinstance(training_duration, bool) and training_duration >= 0:
+            payload["trainingDuration"] = training_duration
+        return self._post_json_response(f"/registrationFolders/{identifier}/serviceDone", payload)[0]
+
+    @staticmethod
+    def _validated_date(value: str) -> str:
+        import datetime as dt
+        try:
+            return dt.date.fromisoformat(str(value)).isoformat()
+        except (TypeError, ValueError) as exc:
+            raise WedofApiError("La date métier WEDOF est invalide.", "invalid_business_date") from exc
 
     @staticmethod
     def _folder_items(payload: Any) -> List[Dict[str, Any]]:

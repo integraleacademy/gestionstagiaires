@@ -105,7 +105,7 @@ class WedofDashboardViewTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         for text in ("Accepté", "En formation", "Service fait déclaré", "Anomalie",
-                     "Automatisation prévue", "Entrée en formation déclarée ✅",
+                     "Simulation prévue", "Entrée en formation déclarée ✅",
                      "Service fait déclaré ✅", "À rattacher localement", "Dossiers non rattachés localement"):
             self.assertIn(text, html)
         self.assertIn('data-wedof-panel="accepted"', html)

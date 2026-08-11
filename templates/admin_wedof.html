@@ -64,7 +64,7 @@
     <div>Dernière synchronisation réussie : {{ successes | max if successes else '—' }} (Europe/Paris)</div>
   </div>
   {% endif %}
-  <p class="wedof-readonly"><strong>Mode lecture seule :</strong> aucune déclaration d’entrée en formation ou de service fait n’est envoyée à WEDOF.</p>
+  {% if not wedof_automation_enabled %}<p class="wedof-readonly"><strong>Mode test — aucune déclaration ne sera envoyée.</strong></p>{% endif %}
   <p class="wedof-readonly">La déclaration automatique supposera une réalisation totale, sauf blocage ou exception enregistrée avant son exécution.</p>
   {% set st = wedof_dashboard.stats %}
   <div class="wedof-counters" aria-label="Compteurs WEDOF">
@@ -90,9 +90,12 @@
           <td data-label="Session locale" data-local-session>{{ item.session }}</td>
           <td data-label="Stagiaire local" data-local-trainee>{{ item.trainee }}</td>
           <td data-label="Statut automatisation"><div class="wedof-badges">
-            {% if item.automation_status == 'planned' %}<span class="wedof-badge is-success">Automatisation prévue</span>
+            {% if item.automation_status == 'planned' %}<span class="wedof-badge is-success">{{ 'Automatisation prévue' if wedof_automation_enabled else 'Simulation prévue' }}</span>
             {% elif item.automation_status == 'dry_run_due' %}<span class="wedof-badge is-warning">Prête en mode test</span>
-            {% elif item.automation_status == 'dry_run_due_late' %}<span class="wedof-badge is-danger">Automatisation en retard — mode test</span>
+            {% elif item.automation_status == 'dry_run_due_late' %}<span class="wedof-badge is-danger">En retard — prête en mode test</span>
+            {% elif item.automation_status == 'already_done' %}<span class="wedof-badge is-info">Déjà réalisé dans WEDOF</span>
+            {% elif item.automation_status == 'error' %}<span class="wedof-badge is-danger">Erreur de déclaration</span>
+            {% elif item.automation_status == 'uncertain_after_timeout' %}<span class="wedof-badge is-warning">Résultat incertain après timeout</span>
             {% elif item.automation_status == 'blocked' %}<span class="wedof-badge is-danger">Automatisation bloquée</span>
             {% elif item.automation_status == 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
             {% if item.planned_date %}<small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>{% endif %}
