@@ -30775,6 +30775,8 @@ def _notify_rejected_qonto_debit(data: Dict[str, Any], line: Dict[str, Any], ins
         "session_id": line.get('sessionId') or "", "training": line.get('formationName') or line.get('sessionName') or "",
         "date_start": line.get('dateStart') or "", "date_end": line.get('dateEnd') or "",
         "amount": installment.get('amount'), "scheduled_date": due_date, "collection_id": collection_id,
+        "billing_line_id": line.get('id') or "",
+        "subscription_id": installment.get('qonto_direct_debit_subscription_id') or "",
     })
     subject = f"[Alerte] Prélèvement rejeté — {trainee_name} — {_format_euro(installment.get('amount'))}"
     brevo_send_email(QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[0], subject, _build_rejected_debit_alert_html(line, installment), cc_emails=[QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[1]])
@@ -30782,7 +30784,7 @@ def _notify_rejected_qonto_debit(data: Dict[str, Any], line: Dict[str, Any], ins
 
 
 def _qonto_mandate_schedule(line: Dict[str, Any]) -> List[Dict[str, Any]]:
-    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    installments = _effective_sepa_installments(line)
     if installments:
         return [item for item in installments if isinstance(item, dict)]
     plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
@@ -30866,7 +30868,177 @@ def _sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
     installments = plan.get('installments') if isinstance(plan.get('installments'), list) else []
     if not installments:
         installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
-    return [item for item in installments if isinstance(item, dict)]
+    # Callers append collection/retry records to this list before syncing both
+    # persistence aliases.  Keep the canonical list object instead of returning
+    # a copy, otherwise the subsequent alias sync can silently restore the old
+    # schedule and discard a retry that Qonto already accepted.
+    installments[:] = [item for item in installments if isinstance(item, dict)]
+    return installments
+
+
+QONTO_REJECTED_COLLECTION_STATUSES = {'failed', 'returned', 'rejected', 'refunded', 'declined'}
+QONTO_PAID_COLLECTION_STATUSES = {'completed', 'paid', 'succeeded', 'success'}
+
+
+def _installment_is_rejected(installment: Dict[str, Any]) -> bool:
+    return str(installment.get('status') or '').strip().lower() in QONTO_REJECTED_COLLECTION_STATUSES
+
+
+def _installment_rejection_is_treated(installment: Dict[str, Any]) -> bool:
+    return bool(installment.get('rejection_treated') or installment.get('rejection_treated_at'))
+
+
+def _installment_counts_toward_schedule(installment: Dict[str, Any]) -> bool:
+    return not bool(
+        installment.get('excluded_from_schedule_totals')
+        or _installment_rejection_is_treated(installment)
+    )
+
+
+def _effective_sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [item for item in _sepa_installments(line) if _installment_counts_toward_schedule(item)]
+
+
+def _installment_schedule_position(installment: Dict[str, Any], fallback: int) -> int:
+    for value in (installment.get('schedule_index'), installment.get('index'), fallback):
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if number > 0:
+            return number
+    return max(1, fallback)
+
+
+def _qonto_subscription_reference(subscription: Dict[str, Any]) -> str:
+    return str(
+        subscription.get('reference') or subscription.get('payment_reference')
+        or subscription.get('label') or subscription.get('name') or ''
+    ).strip()
+
+
+def _qonto_reference_schedule_position(reference: Any) -> Tuple[int, int, bool]:
+    raw = unicodedata.normalize('NFKD', str(reference or ''))
+    normalized = ''.join(character for character in raw if not unicodedata.combining(character)).lower()
+    match = re.search(r'\becheance\s+(\d+)\s*/\s*(\d+)\b', normalized)
+    if not match:
+        return 0, 0, 'reprogrammation' in normalized
+    return int(match.group(1)), int(match.group(2)), 'reprogrammation' in normalized
+
+
+def _mark_rejection_retry_source(installments: List[Dict[str, Any]], retry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    schedule_index = _installment_schedule_position(retry, 0)
+    source = next((
+        item for reverse_position, item in enumerate(reversed(installments), start=1)
+        if item is not retry
+        and _installment_schedule_position(item, len(installments) - reverse_position + 1) == schedule_index
+        and _installment_is_rejected(item)
+        and not _installment_rejection_is_treated(item)
+    ), None)
+    if source is None:
+        source = next((
+            item for item in installments
+            if item is not retry and _installment_is_rejected(item) and not _installment_rejection_is_treated(item)
+        ), None)
+    if source is None:
+        return None
+    treated_at = retry.get('reprogrammed_at') or retry.get('created_at') or _now_iso()
+    source['rejection_treated'] = True
+    source['rejection_treated_at'] = source.get('rejection_treated_at') or treated_at
+    source['excluded_from_schedule_totals'] = True
+    source['replaced_by_direct_debit_subscription_id'] = (
+        retry.get('qonto_direct_debit_subscription_id')
+        or source.get('replaced_by_direct_debit_subscription_id') or ''
+    )
+    retry['reprogrammed_from_subscription_id'] = (
+        retry.get('reprogrammed_from_subscription_id')
+        or source.get('qonto_direct_debit_subscription_id') or ''
+    )
+    retry['reprogrammed_from_collection_id'] = (
+        retry.get('reprogrammed_from_collection_id')
+        or source.get('qonto_direct_debit_collection_id') or ''
+    )
+    retry['reprogrammed_from_due_date'] = (
+        retry.get('reprogrammed_from_due_date')
+        or source.get('due_date') or source.get('date') or ''
+    )
+    return source
+
+
+def _mark_qonto_rejection_notification_treated(
+    data: Dict[str, Any],
+    line: Dict[str, Any],
+    source: Dict[str, Any],
+    retry: Dict[str, Any],
+) -> int:
+    """Resolve the global rejection alert once its replacement exists."""
+    notifications = data.get('notifications_admin')
+    if not isinstance(notifications, list):
+        return 0
+    line_id = str(line.get('id') or '')
+    trainee_id = str(line.get('traineeId') or '')
+    session_id = str(line.get('sessionId') or '')
+    collection_id = str(source.get('qonto_direct_debit_collection_id') or '')
+    source_date = str(source.get('due_date') or source.get('date') or '')[:10]
+    source_amount = _money(source.get('amount'))
+    retry_id = str(retry.get('qonto_direct_debit_subscription_id') or '')
+    retry_date = str(retry.get('due_date') or retry.get('date') or '')[:10]
+    trainee_name = (
+        f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip()
+        or 'Stagiaire non renseigné'
+    )
+    treated_at = str(source.get('rejection_treated_at') or retry.get('reprogrammed_at') or _now_iso())
+    updated = 0
+    for entry in notifications:
+        if not isinstance(entry, dict):
+            continue
+        meta = entry.get('meta') if isinstance(entry.get('meta'), dict) else {}
+        if str(meta.get('kind') or '') != 'qonto_direct_debit_rejected':
+            continue
+        if line_id and meta.get('billing_line_id') and str(meta.get('billing_line_id')) != line_id:
+            continue
+        if trainee_id and str(meta.get('trainee_id') or '') != trainee_id:
+            continue
+        if session_id and str(meta.get('session_id') or '') != session_id:
+            continue
+        notification_collection_id = str(meta.get('collection_id') or '')
+        exact_collection = bool(collection_id and notification_collection_id == collection_id)
+        same_date_and_amount = (
+            str(meta.get('scheduled_date') or '')[:10] == source_date
+            and abs(_money(meta.get('amount')) - source_amount) < 0.01
+        )
+        if not (exact_collection or same_date_and_amount):
+            continue
+        entry['done'] = True
+        entry['done_at'] = entry.get('done_at') or treated_at
+        entry['label'] = f"🟢 Rejet traité — {trainee_name} — {_format_euro(source.get('amount'))}"
+        meta.update({
+            'rejection_status': 'treated',
+            'rejection_treated_at': treated_at,
+            'replacement_subscription_id': retry_id,
+            'replacement_scheduled_date': retry_date,
+            'replacement_amount': retry.get('amount'),
+        })
+        entry['meta'] = meta
+        updated += 1
+    return updated
+
+
+def _mark_line_qonto_rejection_notifications_treated(data: Dict[str, Any], line: Dict[str, Any]) -> int:
+    installments = _sepa_installments(line)
+    retries_by_id = {
+        str(item.get('qonto_direct_debit_subscription_id') or ''): item
+        for item in installments if item.get('is_rejection_retry') and item.get('qonto_direct_debit_subscription_id')
+    }
+    updated = 0
+    for source in installments:
+        if not (_installment_is_rejected(source) and _installment_rejection_is_treated(source)):
+            continue
+        retry_id = str(source.get('replaced_by_direct_debit_subscription_id') or '')
+        retry = retries_by_id.get(retry_id)
+        if retry:
+            updated += _mark_qonto_rejection_notification_treated(data, line, source, retry)
+    return updated
 
 
 def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
@@ -30880,19 +31052,32 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
         if due_date:
             installment['due_date'] = due_date
             installment['date'] = due_date
-    total_due = round(sum(_money(item.get('amount')) for item in installments), 2)
-    total_paid = round(sum(_money(item.get('amount')) for item in installments if item.get('status') == 'completed'), 2)
-    paid_count = sum(1 for item in installments if item.get('status') == 'completed')
-    failed = any(item.get('status') in {'failed', 'returned', 'refunded'} for item in installments)
-    if not installments:
+    effective_installments = [item for item in installments if _installment_counts_toward_schedule(item)]
+    total_due = round(sum(_money(item.get('amount')) for item in effective_installments), 2)
+    total_paid = round(sum(
+        _money(item.get('amount')) for item in effective_installments
+        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+    ), 2)
+    paid_count = sum(
+        1 for item in effective_installments
+        if str(item.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES
+    )
+    failed = any(
+        _installment_is_rejected(item) and not _installment_rejection_is_treated(item)
+        for item in installments
+    )
+    treated = any(_installment_rejection_is_treated(item) for item in installments)
+    if not effective_installments:
         status = 'pending_signature'
     elif failed:
         status = 'failed'
-    elif paid_count == len(installments):
+    elif paid_count == len(effective_installments):
         status = 'paid'
+    elif treated:
+        status = 'rejection_treated'
     elif paid_count:
         status = 'partially_paid'
-    elif all(item.get('qonto_direct_debit_subscription_id') for item in installments):
+    elif all(item.get('qonto_direct_debit_subscription_id') for item in effective_installments):
         status = 'scheduled'
     else:
         status = 'pending_signature'
@@ -30904,7 +31089,7 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
         'total_paid': total_paid,
         'total_remaining': round(max(total_due - total_paid, 0), 2),
         'paid_installments': paid_count,
-        'remaining_installments': max(len(installments) - paid_count, 0),
+        'remaining_installments': max(len(effective_installments) - paid_count, 0),
         'updated_at': _now_iso(),
     })
     line['sepa_payment_plan'] = plan
@@ -30953,6 +31138,8 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
         subscription_id = str(subscription.get('id') or '')
         if not subscription_id:
             continue
+        reference = _qonto_subscription_reference(subscription)
+        schedule_index, schedule_total, is_rejection_retry = _qonto_reference_schedule_position(reference)
         amount = subscription.get('amount')
         if isinstance(amount, dict):
             amount = amount.get('value') if amount.get('value') is not None else amount.get('amount')
@@ -31011,20 +31198,151 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
                 'status': subscription_status if offset == 0 or subscription_status not in {'failed', 'returned', 'refunded'} else 'scheduled',
                 'qonto_direct_debit_subscription_id': subscription_id,
                 'qonto_subscription_occurrence': offset + 1,
+                'reference': reference,
                 'updated_at': _now_iso(),
             })
+            if schedule_index:
+                current['schedule_index'] = schedule_index
+            if schedule_total:
+                current['schedule_total'] = schedule_total
+            if is_rejection_retry:
+                current['is_rejection_retry'] = True
+                current['reprogrammed_at'] = subscription.get('created_at') or subscription.get('updated_at') or _now_iso()
             recovered.append(current)
     if not recovered:
         return 0
     recovered.sort(key=lambda item: (item.get('due_date') or '', item.get('index') or 0))
     for index, item in enumerate(recovered, start=1):
         item['index'] = index
+    for retry in (item for item in recovered if item.get('is_rejection_retry')):
+        _mark_rejection_retry_source(recovered, retry)
     line['paymentMode'] = 'sepa_direct_debit'
     line['directDebitInstallments'] = recovered
     line['sepa_payment_plan'] = {'installments': recovered}
     line['qonto_direct_debit_subscription_id'] = recovered[0]['qonto_direct_debit_subscription_id']
     _sync_sepa_aliases(line)
     return len(recovered)
+
+
+def _recover_missing_qonto_rejection_retries(line: Dict[str, Any], mandate_id: str) -> int:
+    """Import retry subscriptions created before their local display was persisted.
+
+    Older versions updated the legacy direct-debit alias and then immediately
+    replaced it with the stale SEPA-plan alias.  Qonto still contains the
+    successfully created one-off subscription, whose reference explicitly
+    identifies it as a reprogrammed installment.  Reconcile only those missing
+    retries so a normal Qonto sync repairs existing trainee files safely.
+    """
+    installments = _sepa_installments(line)
+    known_subscription_ids = {
+        str(item.get('qonto_direct_debit_subscription_id') or '')
+        for item in installments if item.get('qonto_direct_debit_subscription_id')
+    }
+    added = 0
+    page, per_page = 1, 100
+    while True:
+        response = list_qonto_direct_debit_subscriptions(mandate_id, page=page, per_page=per_page)
+        items = _qonto_direct_debit_subscription_items(response)
+        for subscription in items:
+            subscription_id = str(subscription.get('id') or '').strip()
+            if not subscription_id or subscription_id in known_subscription_ids:
+                continue
+            if str(subscription.get('direct_debit_mandate_id') or mandate_id) != str(mandate_id):
+                continue
+            reference = _qonto_subscription_reference(subscription)
+            schedule_index, schedule_total, is_rejection_retry = _qonto_reference_schedule_position(reference)
+            if not is_rejection_retry:
+                continue
+            raw_amount = subscription.get('amount')
+            if isinstance(raw_amount, dict):
+                raw_amount = raw_amount.get('value') if raw_amount.get('value') is not None else raw_amount.get('amount')
+            due_date = str(
+                subscription.get('initial_collection_date') or subscription.get('start_date')
+                or subscription.get('first_collection_date') or subscription.get('collection_date')
+                or subscription.get('scheduled_at') or subscription.get('due_date')
+                or subscription.get('date') or ''
+            )[:10]
+            retry = {
+                'index': schedule_index or len(_effective_sepa_installments(line)) + 1,
+                'schedule_index': schedule_index or len(_effective_sepa_installments(line)) + 1,
+                'schedule_total': schedule_total or len(_effective_sepa_installments(line)),
+                'amount': _money(raw_amount),
+                'date': due_date,
+                'due_date': due_date,
+                'status': _map_collection_status(subscription.get('status')),
+                'qonto_direct_debit_subscription_id': subscription_id,
+                'reference': reference,
+                'is_rejection_retry': True,
+                'reprogrammed_at': subscription.get('created_at') or subscription.get('updated_at') or _now_iso(),
+                'created_at': subscription.get('created_at') or _now_iso(),
+                'updated_at': _now_iso(),
+            }
+            installments.append(retry)
+            _mark_rejection_retry_source(installments, retry)
+            known_subscription_ids.add(subscription_id)
+            added += 1
+        meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
+        total_pages = meta.get('total_pages') or meta.get('totalPages')
+        next_page = meta.get('next_page') or meta.get('nextPage')
+        if next_page:
+            try:
+                next_number = int(next_page)
+            except (TypeError, ValueError):
+                next_number = page + 1
+        elif total_pages:
+            try:
+                next_number = page + 1 if page < int(total_pages) else 0
+            except (TypeError, ValueError):
+                next_number = 0
+        else:
+            next_number = page + 1 if len(items) >= per_page else 0
+        if not next_number or next_number <= page:
+            break
+        page = next_number
+    if added:
+        _sync_sepa_aliases(line)
+    return added
+
+
+def _repair_logged_qonto_rejection_retries(data: Dict[str, Any], lines: List[Dict[str, Any]]) -> int:
+    """Repair the one historical alias-loss case without polling every line."""
+    repaired = 0
+    for line in lines:
+        mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '').strip()
+        if not mandate_id:
+            continue
+        known_ids = {
+            str(item.get('qonto_direct_debit_subscription_id') or '')
+            for item in _sepa_installments(line) if item.get('qonto_direct_debit_subscription_id')
+        }
+        missing_logged_retry = any(
+            str(entry.get('action') or '') == 'Prélèvement rejeté reprogrammé'
+            and str(entry.get('result') or 'success') == 'success'
+            and str(entry.get('qonto_id') or '').strip()
+            and str(entry.get('qonto_id') or '').strip() not in known_ids
+            for entry in (line.get('logs') or []) if isinstance(entry, dict)
+        )
+        if not missing_logged_retry:
+            continue
+        try:
+            added = _recover_missing_qonto_rejection_retries(line, mandate_id)
+        except Exception as exc:
+            app.logger.warning(
+                '[QONTO] réparation locale du prélèvement reprogrammé impossible mandate_id=%s error=%s',
+                mandate_id, _sanitize_qonto_error(str(exc)),
+            )
+            continue
+        if added:
+            _billing_log(
+                line, 'Nouveau prélèvement suite à rejet restauré depuis Qonto', 'success',
+                f'{added} prélèvement(s)', mandate_id,
+            )
+            _mark_line_qonto_rejection_notifications_treated(data, line)
+            _save_billing_line(data, line)
+            repaired += added
+    if repaired:
+        save_data(data)
+    return repaired
 
 
 def _prepare_sepa_payment_plan(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
@@ -31131,7 +31449,7 @@ def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, A
         _sync_sepa_aliases(line)
         return {'created': 0, 'pending_signature': True}
     bank_account_id = get_qonto_bank_account_id()
-    installments = _sepa_installments(line)
+    installments = _effective_sepa_installments(line)
     total = len(installments)
     created_count = 0
     invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
@@ -31160,13 +31478,15 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
     mandate = _map_mandate_status(
         line.get('mandateStatus') or line.get('qonto_mandate_status') or 'pending'
     )
-    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
-    statuses = [i.get('status') for i in installments]
+    all_installments = _sepa_installments(line)
+    installments = [item for item in all_installments if _installment_counts_toward_schedule(item)]
+    statuses = [str(i.get('status') or '').lower() for i in installments]
     if not line.get('qonto_direct_debit_mandate_id') or mandate not in {'active', 'signed'}:
         return 'Mandat à signer'
-    if any(s in {'failed','returned','refunded'} for s in statuses): return 'Rejeté'
-    if statuses and all(s == 'completed' for s in statuses): return 'Payé'
-    if any(s == 'completed' for s in statuses): return 'Paiement partiel'
+    if any(_installment_is_rejected(item) and not _installment_rejection_is_treated(item) for item in all_installments): return 'Rejeté'
+    if statuses and all(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Payé'
+    if any(_installment_rejection_is_treated(item) for item in all_installments): return 'Rejet traité'
+    if any(s in QONTO_PAID_COLLECTION_STATUSES for s in statuses): return 'Paiement partiel'
     return 'Prélèvements programmés'
 
 def _normalize_billing_invoice_status(status: Any) -> str:
@@ -31764,8 +32084,8 @@ def admin_direct_debits():
 @app.get('/api/admin/billing-lines')
 @admin_login_required
 def api_admin_billing_lines():
-    # Read-only local state: webhook-driven updates are already persisted in data.
     data = load_data()
+    _repair_logged_qonto_rejection_retries(data, _billing_lines(data))
     return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': 0, 'sync_warning': ''})
 
 
@@ -31912,6 +32232,8 @@ def _billing_lines_for_trainee_session(data: Dict[str, Any], trainee_id: str, se
 def api_billing_session(session_id: str):
     data = load_data()
     lines = _billing_lines_for_session(data, session_id)
+    _repair_logged_qonto_rejection_retries(data, lines)
+    lines = _billing_lines_for_session(data, session_id)
     if _qonto_is_configured():
         changed = False
         for line in lines:
@@ -31930,6 +32252,7 @@ def api_billing_session(session_id: str):
 def api_billing_trainee_session(trainee_id: str, session_id: str):
     data = load_data()
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    _repair_logged_qonto_rejection_retries(data, lines)
     trainee = None
     for sess in data.get('sessions', []):
         if str(sess.get('id')) != str(session_id):
@@ -32154,6 +32477,19 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
                 if result.get('created'):
                     _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)
             _sync_sepa_aliases(line)
+    if mandate_id:
+        try:
+            recovered_retries = _recover_missing_qonto_rejection_retries(line, mandate_id)
+            if recovered_retries:
+                _billing_log(
+                    line, 'Nouveau prélèvement suite à rejet retrouvé sur Qonto', 'success',
+                    f'{recovered_retries} prélèvement(s)', mandate_id,
+                )
+        except Exception as exc:
+            app.logger.warning(
+                '[QONTO] récupération des prélèvements reprogrammés impossible mandate_id=%s error=%s',
+                mandate_id, _sanitize_qonto_error(str(exc)),
+            )
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
     for item in installments:
         sid = item.get('qonto_direct_debit_subscription_id')
@@ -32203,6 +32539,8 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         line['paymentStatus'] = 'partial'
     elif line['qontoPaymentGlobalStatus'] == 'Rejeté':
         line['paymentStatus'] = 'failed'
+    elif line['qontoPaymentGlobalStatus'] in {'Rejet traité', 'Prélèvements programmés'}:
+        line['paymentStatus'] = 'unpaid'
 
 
 def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) -> bool:
@@ -32248,6 +32586,7 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
             if line['qontoPaymentGlobalStatus'] == 'Payé': line['paymentStatus'] = 'paid'
             elif line['qontoPaymentGlobalStatus'] == 'Paiement partiel': line['paymentStatus'] = 'partial'
             elif line['qontoPaymentGlobalStatus'] == 'Rejeté': line['paymentStatus'] = 'failed'
+            elif line['qontoPaymentGlobalStatus'] in {'Rejet traité', 'Prélèvements programmés'}: line['paymentStatus'] = 'unpaid'
             if inst['status'] in {'failed', 'returned', 'refunded'} and previous_status not in {'failed', 'returned', 'refunded'}:
                 _notify_rejected_qonto_debit(data, line, inst, collection_id)
             _save_billing_line(data, line)
@@ -32355,7 +32694,6 @@ def api_billing_reschedule_rejected_debit():
     """Replace one or more rejected SEPA collections with one-off collections."""
     data = load_data()
     payload = request.get_json(silent=True) or {}
-    rejected_statuses = {'failed', 'returned', 'rejected', 'refunded'}
     collection_date = str(payload.get('collectionDate') or '')[:10]
     parsed_date = _parse_date_safe(collection_date)
     if not parsed_date or parsed_date <= datetime.date.today():
@@ -32373,16 +32711,33 @@ def api_billing_reschedule_rejected_debit():
         line = _line_from_payload(data, item_payload)
         if not line:
             return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
-        installments = line.get('directDebitInstallments')
+        # ``sepa_payment_plan.installments`` is the persisted source of truth.
+        # Using the legacy alias here made a successful Qonto retry disappear
+        # as soon as aliases were synchronized again.
+        installments = _sepa_installments(line)
         try:
             installment_index = int(item_payload.get('installmentIndex'))
         except (TypeError, ValueError):
             installment_index = -1
+        subscription_id = str(item_payload.get('subscriptionId') or '').strip()
+        collection_id = str(item_payload.get('collectionId') or '').strip()
+        due_date = str(item_payload.get('dueDate') or '')[:10]
+        matched_installment = next((
+            installment for installment in installments
+            if subscription_id
+            and str(installment.get('qonto_direct_debit_subscription_id') or '') == subscription_id
+            and (not collection_id or str(installment.get('qonto_direct_debit_collection_id') or '') == collection_id)
+            and (not due_date or str(installment.get('due_date') or installment.get('date') or '')[:10] == due_date)
+        ), None)
+        if matched_installment is not None:
+            installment_index = installments.index(matched_installment)
         if not isinstance(installments, list) or not (0 <= installment_index < len(installments)):
             return jsonify({'ok': False, 'error': 'Prélèvement rejeté introuvable'}), 400
         installment = installments[installment_index]
-        if str(installment.get('status') or '').lower() not in rejected_statuses:
+        if not _installment_is_rejected(installment):
             return jsonify({'ok': False, 'error': 'Ce prélèvement n’est pas rejeté'}), 400
+        if _installment_rejection_is_treated(installment):
+            return jsonify({'ok': False, 'error': 'Ce rejet a déjà été traité par un nouveau prélèvement'}), 400
         amount = _money(item_payload.get('amount') if item_payload.get('amount') is not None else installment.get('amount'))
         if not math.isfinite(amount) or amount <= 0:
             return jsonify({'ok': False, 'error': 'Indiquez un montant de prélèvement supérieur à zéro'}), 400
@@ -32390,14 +32745,21 @@ def api_billing_reschedule_rejected_debit():
         client_id = str(line.get('qontoClientId') or line.get('qontoCustomerId') or '').strip()
         if not mandate_id or not client_id:
             return jsonify({'ok': False, 'error': 'Mandat ou client Qonto introuvable'}), 400
-        selections.append((line, installments, installment_index, installment, amount, mandate_id, client_id))
+        effective_installments = [candidate for candidate in installments if _installment_counts_toward_schedule(candidate)]
+        schedule_index = _installment_schedule_position(installment, installment_index + 1)
+        schedule_total = int(installment.get('schedule_total') or len(effective_installments) or len(installments))
+        selections.append((
+            line, installments, installment_index, installment, amount,
+            mandate_id, client_id, schedule_index, schedule_total,
+        ))
 
     try:
         _ensure_qonto_oauth_ready()
         touched_lines = {}
-        for line, installments, installment_index, installment, amount, mandate_id, client_id in selections:
+        subscription_ids = []
+        for line, installments, installment_index, installment, amount, mandate_id, client_id, schedule_index, schedule_total in selections:
             invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
-            reference = f"{invoice_ref} - reprogrammation échéance {installment_index + 1}/{len(installments)}"
+            reference = f"{invoice_ref} - reprogrammation échéance {schedule_index}/{schedule_total}"
             response = create_qonto_direct_debit_subscription({
                 'client_id': client_id, 'bank_account_id': get_qonto_bank_account_id(),
                 'initial_collection_date': collection_date,
@@ -32409,6 +32771,8 @@ def api_billing_reschedule_rejected_debit():
             subscription_id = str(subscription.get('id') or '').strip() if isinstance(subscription, dict) else ''
             if not subscription_id:
                 raise RuntimeError('Qonto n’a pas confirmé la reprogrammation du prélèvement')
+            subscription_ids.append(subscription_id)
+            now = _now_iso()
             history = installment.get('reprogramming_history')
             if not isinstance(history, list): history = []
             history.append({
@@ -32416,13 +32780,41 @@ def api_billing_reschedule_rejected_debit():
                 'amount': installment.get('amount'), 'status': installment.get('status') or '',
                 'failureReason': installment.get('failureReason') or installment.get('status_reason') or '',
                 'qonto_direct_debit_subscription_id': installment.get('qonto_direct_debit_subscription_id') or '',
-                'reprogrammed_at': _now_iso(),
+                'replacement_subscription_id': subscription_id,
+                'replacement_date': collection_date,
+                'replacement_amount': amount,
+                'reprogrammed_at': now,
             })
             installment.update({
-                'amount': amount, 'date': collection_date, 'due_date': collection_date, 'status': 'scheduled',
-                'failureReason': '', 'status_reason': '', 'qonto_direct_debit_subscription_id': subscription_id,
-                'reprogramming_history': history, 'updated_at': _now_iso(),
+                'rejection_treated': True,
+                'rejection_treated_at': now,
+                'excluded_from_schedule_totals': True,
+                'replaced_by_direct_debit_subscription_id': subscription_id,
+                'reprogramming_history': history,
+                'updated_at': now,
             })
+            retry = {
+                'index': schedule_index,
+                'schedule_index': schedule_index,
+                'schedule_total': schedule_total,
+                'amount': amount,
+                'date': collection_date,
+                'due_date': collection_date,
+                'status': 'scheduled',
+                'failureReason': '',
+                'status_reason': '',
+                'qonto_direct_debit_subscription_id': subscription_id,
+                'reference': reference,
+                'is_rejection_retry': True,
+                'reprogrammed_from_subscription_id': installment.get('qonto_direct_debit_subscription_id') or '',
+                'reprogrammed_from_collection_id': installment.get('qonto_direct_debit_collection_id') or '',
+                'reprogrammed_from_due_date': installment.get('due_date') or installment.get('date') or '',
+                'reprogrammed_at': now,
+                'created_at': now,
+                'updated_at': now,
+            }
+            installments.append(retry)
+            _mark_qonto_rejection_notification_treated(data, line, installment, retry)
             _sync_sepa_aliases(line)
             _billing_log(line, 'Prélèvement rejeté reprogrammé', 'success', reference, subscription_id)
             touched_lines[str(line.get('id'))] = line
@@ -32434,6 +32826,8 @@ def api_billing_reschedule_rejected_debit():
             'ok': True,
             'message': f'{count} prélèvement{"s" if count > 1 else ""} reprogrammé{"s" if count > 1 else ""} le {fr_date(collection_date)}',
             'count': count,
+            'collectionDate': collection_date,
+            'subscriptionIds': subscription_ids,
             'line': _find_billing_line(data, selections[0][0]['id']),
         })
     except Exception as exc:
@@ -32465,6 +32859,7 @@ def api_billing_sync_qonto():
                 reset, _ = _sync_billing_line_with_qonto(data, line)
             if line.get('paymentMode') == 'sepa_direct_debit':
                 _sync_qonto_direct_debit_line(line)
+                _mark_line_qonto_rejection_notifications_treated(data, line)
             _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1; last_line = line
         except Exception as exc:
             errors.append({'id': line.get('id'), 'message': _sanitize_qonto_error(str(exc))})
@@ -34003,6 +34398,8 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
                 }
         for installment in _sepa_installments(line):
             if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
+                continue
+            if _installment_rejection_is_treated(installment):
                 continue
             event_date = _daily_recap_date(installment.get("rejected_at") or installment.get("failed_at") or installment.get("updated_at") or installment.get("updatedAt") or installment.get("date") or installment.get("due_date"))
             if event_date == report_date:
