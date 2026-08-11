@@ -104,7 +104,7 @@
     return `/admin/wedof/matching/manual/enrolments?${params}`;
   }
 
-  function renderResults(items, {automatic = false, total = items.length} = {}) {
+  function renderResults(items, {automatic = false, autoAssociate = false, total = items.length} = {}) {
     results.innerHTML = '';
     results.setAttribute('aria-busy', 'false');
     if (!items.length) {
@@ -136,9 +136,14 @@
       });
       results.append(card);
     });
+    if (automatic && autoAssociate && total === 1 && items.length === 1 && items[0].exact_identity_match) {
+      resultsStatus.textContent = 'Correspondance exacte unique trouvée. Association automatique en cours…';
+      const button = results.querySelector('.wedof-associate-button');
+      submitAssociation(items[0], button, hasDateMismatch(items[0]));
+    }
   }
 
-  async function searchEnrolments(query = '', {automatic = false} = {}) {
+  async function searchEnrolments(query = '', {automatic = false, autoAssociate = false} = {}) {
     const sequence = ++searchSequence;
     selectedEnrolment = null;
     review.hidden = true;
@@ -149,7 +154,11 @@
     try {
       const payload = await getJson(buildSearchUrl(query), {timeoutMs: 15000});
       if (sequence !== searchSequence) return;
-      renderResults(payload.items || [], {automatic, total: payload.total ?? (payload.items || []).length});
+      renderResults(payload.items || [], {
+        automatic,
+        autoAssociate,
+        total: payload.total ?? (payload.items || []).length,
+      });
     } catch (error) {
       if (sequence !== searchSequence) return;
       results.setAttribute('aria-busy', 'false');
@@ -280,7 +289,7 @@
       renderFolder();
       if (!searchWasEdited) {
         searchInput.value = [folder.firstName, folder.lastName].filter(Boolean).join(' ').trim() || folder.identity || '';
-        await searchEnrolments('', {automatic: true});
+        await searchEnrolments('', {automatic: true, autoAssociate: true});
       }
       liveStatus.textContent = 'Informations WEDOF vérifiées en direct';
       liveStatus.className = 'wedof-live-status is-success';
