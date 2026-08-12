@@ -642,6 +642,22 @@ class YousignSignatureEmailTests(unittest.TestCase):
         self.assertIn("https://sign.example.test/sign", sent_payload["textContent"])
 
 class ApsConvocationSchedulingTests(unittest.TestCase):
+    def test_timer_callback_runs_inside_flask_application_context(self):
+        from flask import has_app_context
+
+        observed_contexts = []
+
+        def load_data_in_context():
+            observed_contexts.append(has_app_context())
+            return {"sessions": []}
+
+        app._aps_convocation_auto_send_timers.add("session-1:trainee-1")
+        with mock.patch.object(app, "load_data", side_effect=load_data_in_context):
+            app._send_scheduled_convocation_after_convention_signed("session-1", "trainee-1")
+
+        self.assertEqual(observed_contexts, [True])
+        app._aps_convocation_auto_send_timers.clear()
+
     def test_convention_signature_schedules_convocation_five_minutes_later(self):
         session = {"id": "session-1", "training_type": "APS", "trainees": []}
         trainee = {"id": "trainee-1", "convention_signature": {"status": "ongoing"}}
