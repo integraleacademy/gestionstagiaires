@@ -66,7 +66,8 @@ from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, l
                          save_manual_wedof_link, sync_exact_wedof_links)
 from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
                               next_automatic_attempt,
-                              record_maintenance_skip, run_dry_run, run_live_automation)
+                              record_maintenance_skip, run_dry_run, run_live_automation,
+                              sync_folder_automation_status)
 from cpf_tracking import build_cpf_view, has_cpf_financing
 
 
@@ -30722,6 +30723,7 @@ def _persist_trainee_cpf_match(
         link["cpf_snapshot"] = _cpf_public_snapshot(candidate)
         link["wedof_state"] = candidate.get("state") or link.get("wedof_state")
         link["last_seen_at"] = _now_iso()
+        sync_folder_automation_status(canonical, remote_folder)
         if outcome == "created":
             link.setdefault("association_history", []).append({
                 "at": _now_iso(),
@@ -30867,15 +30869,17 @@ def admin_trainee_cpf_refresh(session_id: str, trainee_id: str):
         flash("Aucun dossier CPF n’est associé à ce stagiaire.", "error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
     try:
-        remote = extract_folder(WedofClient().get_registration_folder_interactive(str(link.get("external_id") or "")))
+        remote_folder = WedofClient().get_registration_folder_interactive(str(link.get("external_id") or ""))
+        remote = extract_folder(remote_folder)
         if str(remote.get("type") or "").casefold() != "cpf":
             raise WedofApiError("Le dossier retourné n’est pas un dossier CPF.")
         link["cpf_snapshot"] = _cpf_public_snapshot(remote)
         link["wedof_state"] = remote.get("state") or link.get("wedof_state")
         link["last_seen_at"] = _now_iso()
         link.pop("cpf_sync_error", None)
+        sync_folder_automation_status(data, remote_folder)
         save_data(data)
-        flash("Données WEDOF actualisées.", "success")
+        flash("Données WEDOF et automatisations actualisées.", "success")
     except (WedofApiError, WedofConfigurationError):
         link["cpf_sync_error"] = "Synchronisation momentanément indisponible"
         save_data(data)  # conserve expressément le dernier instantané
@@ -30931,6 +30935,7 @@ def admin_trainee_cpf_associate(session_id: str, trainee_id: str):
     else:
         link = next(x for x in data["wedof_links"] if x.get("active") is True and str(x.get("external_id")) == str(preview.get("external_id")))
         link["cpf_snapshot"] = snap
+        sync_folder_automation_status(data, snap)
         link.setdefault("association_history", []).append({"at": _now_iso(), "admin": session.get("admin_username") or "admin",
             "old_external_id": None, "new_external_id": preview.get("external_id"), "source": "manual"})
         save_data(data)

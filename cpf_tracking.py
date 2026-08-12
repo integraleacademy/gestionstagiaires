@@ -92,18 +92,67 @@ def build_steps(snapshot: Dict[str, Any]) -> Dict[str, Any]:
             "waiting_reason": waiting_reason(snapshot) if index == 0 else ""}
 
 
-def automation_view(external_id: str, statuses: Iterable[Dict[str, Any]], runs: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
+def automation_view(external_id: str, statuses: Iterable[Dict[str, Any]], runs: Iterable[Dict[str, Any]],
+                    snapshot: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     row = next((x for x in statuses if isinstance(x, dict) and str(x.get("external_id") or "") == external_id), {})
+    remote_state = str(row.get("wedof_state") or (snapshot or {}).get("state") or "")
     actions = [("entry_training", "Déclaration d’entrée en formation"), ("service_done", "Déclaration du service fait")]
     actual = []
     for key, label in actions:
         action = row.get(key) if isinstance(row.get(key), dict) else {}
         status = str(action.get("status") or "")
-        display = ({"planned": "Programmée", "executed": "Exécutée", "success": "Exécutée",
-                    "pending": "En attente", "anomaly": "Échec", "failed": "Échec"}.get(status, "Non programmée"))
-        actual.append({"action": label, "status": display, "tone": {"Programmée":"blue", "Exécutée":"green", "En attente":"orange", "Échec":"red"}.get(display,"gray"),
-                       "planned_at": format_paris_datetime(action.get("planned_at")), "executed_at": format_paris_datetime(action.get("executed_at")),
-                       "error": action.get("last_error_message") or action.get("last_error_code") or "",
+        planned_at = format_paris_datetime(action.get("planned_at"))
+        executed_at = format_paris_datetime(action.get("executed_at"))
+        error = action.get("last_error_message") or action.get("last_error_code") or ""
+        if not status and key == "service_done" and remote_state == "accepted":
+            display, tone = "À venir", "gray"
+            detail = "Sera programmée lorsque le dossier passera « En formation »."
+        elif status == "planned":
+            display, tone = "Programmée", "blue"
+            detail = f"Prévue le {planned_at}."
+        elif status in {"executed", "success"}:
+            display, tone = "Exécutée", "green"
+            detail = (f"Exécutée automatiquement le {executed_at}." if executed_at != "Non communiqué"
+                      else "Exécutée automatiquement.")
+        elif status in {"already_done", "completed_in_wedof"}:
+            display, tone = "Étape franchie", "green"
+            detail = "Déjà réalisée dans WEDOF."
+        elif status == "waiting_for_in_training" or (
+            status == "not_applicable" and key == "service_done" and remote_state == "accepted"
+        ):
+            display, tone = "À venir", "gray"
+            detail = "Sera programmée lorsque le dossier passera « En formation »."
+            if planned_at != "Non communiqué":
+                detail += f" Date cible : {planned_at}."
+        elif status == "not_applicable" and key == "entry_training" and remote_state in {
+            "inTraining", "serviceDoneDeclared", "serviceDoneValidated", "terminated",
+        }:
+            display, tone = "Étape franchie", "green"
+            detail = "Le dossier a déjà dépassé cette étape dans WEDOF."
+        elif status in {"pending", "processing"}:
+            display, tone = "En cours", "orange"
+            detail = "Traitement WEDOF en cours."
+        elif status in {"dry_run_due", "dry_run_due_late"}:
+            display, tone = "À traiter", "orange" if status == "dry_run_due" else "red"
+            detail = "Échéance atteinte : traitement au prochain passage automatique."
+        elif status == "blocked":
+            display, tone = "Suspendue", "red"
+            detail = "Automatisation suspendue par un administrateur."
+        elif status == "uncertain_after_timeout":
+            display, tone = "À vérifier", "red"
+            detail = "WEDOF n’a pas confirmé le résultat de la dernière tentative."
+        elif status in {"anomaly", "failed", "error"}:
+            display, tone = "Échec", "red"
+            detail = str(error or "Une anomalie empêche le traitement automatique.")
+        elif not status:
+            display, tone = "À calculer", "gray"
+            detail = "Programmation en attente du prochain contrôle WEDOF."
+        else:
+            display, tone = "Non applicable", "gray"
+            detail = "Cette automatisation ne s’applique pas au statut WEDOF actuel."
+        actual.append({"action": label, "status": display, "tone": tone,
+                       "planned_at": planned_at, "executed_at": executed_at,
+                       "detail": detail, "error": error,
                        "retry_at": format_paris_datetime(action.get("next_attempt_at"))})
     relevant_runs = [r for r in runs if isinstance(r, dict) and (not r.get("external_id") or str(r.get("external_id")) == external_id)]
     return {"actions": actual, "last_run": relevant_runs[-1] if relevant_runs else None}
@@ -122,7 +171,10 @@ def build_cpf_view(trainee: Dict[str, Any], session_obj: Dict[str, Any], data: D
         snapshot.setdefault("end_date", link.get("wedof_date_end"))
     result = {"found": bool(link), "snapshot": snapshot, "link": link, "sync_error": (link or {}).get("cpf_sync_error") or ""}
     result.update(build_steps(snapshot))
-    result["automation"] = automation_view(str(snapshot.get("external_id") or ""), data.get("wedof_automation_status", []), data.get("wedof_automation_runs", []))
+    result["automation"] = automation_view(
+        str(snapshot.get("external_id") or ""), data.get("wedof_automation_status", []),
+        data.get("wedof_automation_runs", []), snapshot,
+    )
     result["money"] = {k: format_euro(snapshot.get(k)) for k in ("total_amount", "cpf_amount", "france_travail_amount", "candidate_amount")}
     result["last_sync_label"] = format_paris_datetime(snapshot.get("synced_at") or (link or {}).get("last_seen_at"))
     return result

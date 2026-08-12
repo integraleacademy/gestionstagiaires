@@ -182,6 +182,8 @@
                     <span class="wedof-badge is-danger">En retard · prête en mode test</span>
                   {% elif item.automation_status == 'already_done' %}
                     <span class="wedof-badge is-info">Déjà réalisé dans WEDOF</span>
+                  {% elif item.automation_status == 'completed_in_wedof' %}
+                    <span class="wedof-badge is-info">Étape déjà réalisée dans WEDOF</span>
                   {% elif item.automation_status == 'error' %}
                     <span class="wedof-badge is-danger">Erreur de déclaration</span>
                   {% elif item.automation_status == 'uncertain_after_timeout' %}
@@ -192,7 +194,7 @@
                     <span class="wedof-badge is-danger">Anomalie</span>
                   {% endif %}
                   {% if item.tab == 'anomaly' and item.automation_status != 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
-                  {% if item.planned_date and not item.automation_blocked %}
+                  {% if item.planned_date and item.automation_status in ['planned','dry_run_due','dry_run_due_late'] and not item.automation_blocked %}
                     <small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>
                   {% endif %}
                   {% if item.entry_success %}

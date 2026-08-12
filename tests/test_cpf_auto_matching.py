@@ -143,6 +143,12 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         self.assertEqual((link["source"], link["matching_rule"]),
                          ("automatic_exact_match", "email_phone_identity_dates"))
         self.assertEqual(link["cpf_snapshot"]["external_id"], "CPF-1")
+        automation = saved["wedof_automation_status"][0]
+        self.assertEqual(automation["external_id"], "CPF-1")
+        self.assertIn(automation["entry_training"]["status"], {
+            "planned", "dry_run_due", "dry_run_due_late",
+        })
+        self.assertEqual(automation["service_done"]["status"], "waiting_for_in_training")
         self.assertEqual(
             [call.args[0] for call in remote.list_registration_folders.call_args_list],
             list(gestion_app.CPF_ASSOCIATION_STATES),

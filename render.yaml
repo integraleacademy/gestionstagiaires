@@ -54,9 +54,9 @@ services:
       - key: AFC_IMPORT_VISION_MODEL
         value: gpt-4.1-mini
       - key: WEDOF_AUTOMATION_ENABLED
-        value: "false"
-      - key: WEDOF_DRY_RUN
         value: "true"
+      - key: WEDOF_DRY_RUN
+        value: "false"
       - key: WEDOF_MAINTENANCE_WINDOW_ENABLED
         value: "true"
       - key: WEDOF_MAINTENANCE_START_TIME

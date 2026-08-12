@@ -1,4 +1,4 @@
-"""Appelle exclusivement le endpoint interne WEDOF dry-run du Web Service."""
+"""Appelle le endpoint interne WEDOF dans le mode configuré sur le Web Service."""
 import os
 import requests
 
