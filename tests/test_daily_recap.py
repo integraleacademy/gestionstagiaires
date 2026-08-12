@@ -212,13 +212,33 @@ class DailyRecapTests(unittest.TestCase):
             "new_requests": 1, "livret_1_validated": 1,
             "livret_2_validated": 1, "certification_obtained": 1,
         })
+        self.assertEqual(report["vae_follow_up_names"]["new_requests"], ["Stagiaire"])
+        self.assertEqual(report["vae_follow_up_names"]["livret_2_validated"], ["Stagiaire"])
         _subject, body = app.build_daily_recap_email(report)
         self.assertIn("Suivi des VAE", body)
         self.assertIn("Nouvelles demandes VAE", body)
         self.assertIn("Certifications obtenues", body)
+        self.assertIn("Stagiaire", body)
         badge_style = 'display:inline-block;min-width:22px;padding:7px 9px;background:#4f46e5;color:#fff;border-radius:12px;text-align:center;font-size:12px;font-weight:900'
         self.assertIn(f'{badge_style}">1</span>', body)
         self.assertNotIn("background:#ecfdf5;color:#047857", body)
+
+    def test_vae_follow_up_displays_each_trainee_name(self):
+        self.data["sessions"][0].update({"training_type": "DIRIGEANT VAE", "date_start": "2026-01-01"})
+        self.data["sessions"][0]["trainees"][0]["vae_action_dates"] = {"livret_2_validated": "27/07/2026"}
+
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        _subject, body = app.build_daily_recap_email(report)
+
+        self.assertEqual(report["vae_follow_up_names"]["livret_2_validated"], ["Ada LOVELACE"])
+        self.assertIn("Ada LOVELACE", body)
+
+    def test_quote_is_different_on_each_of_the_365_calendar_days(self):
+        first_day = datetime.date(2025, 1, 1)
+        quotes = [app._daily_recap_quote(first_day + datetime.timedelta(days=offset))["text"] for offset in range(365)]
+
+        self.assertEqual(len(quotes), 365)
+        self.assertEqual(len(set(quotes)), 365)
 
     def test_monday_email_labels_revenue_as_fridays_figures(self):
         report = app.build_daily_recap_data({"sessions": [], "billing_lines": []}, datetime.date(2026, 7, 31))

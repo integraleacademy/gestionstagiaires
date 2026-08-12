@@ -34474,20 +34474,31 @@ DAILY_RECAP_WEATHER_LOCATIONS = {
     "puget": {"label": "Puget sur Argens", "latitude": 43.455, "longitude": 6.685},
     "aurillac": {"label": "Aurillac", "latitude": 44.926, "longitude": 2.441},
 }
-DAILY_RECAP_QUOTES = (
-    ("Seuls ceux qui sont assez fous pour penser qu’ils peuvent changer le monde y parviennent.", "Steve Jobs"),
-    ("Le succès, c’est d’aller d’échec en échec sans perdre son enthousiasme.", "Winston Churchill"),
-    ("Ils ne savaient pas que c’était impossible, alors ils l’ont fait.", "Mark Twain"),
-    ("La meilleure façon de prédire l’avenir est de le créer.", "Peter Drucker"),
-    ("Le seul endroit où le succès précède le travail est dans le dictionnaire.", "Vidal Sassoon"),
-    ("Faites de votre vie un rêve, et d’un rêve, une réalité.", "Antoine de Saint-Exupéry"),
-    ("Le courage n’est pas l’absence de peur, mais la capacité de la vaincre.", "Nelson Mandela"),
-    ("La simplicité est la sophistication suprême.", "Léonard de Vinci"),
-    ("On ne voit bien qu’avec le cœur. L’essentiel est invisible pour les yeux.", "Antoine de Saint-Exupéry"),
-    ("Il n’y a qu’une façon d’échouer, c’est d’abandonner avant d’avoir réussi.", "Georges Clemenceau"),
-    ("La vie, c’est comme une bicyclette, il faut avancer pour ne pas perdre l’équilibre.", "Albert Einstein"),
-    ("Choisissez un travail que vous aimez et vous n’aurez pas à travailler un seul jour de votre vie.", "Confucius"),
+_DAILY_RECAP_QUOTE_SUBJECTS = (
+    "Chaque progrès", "Un objectif clair", "La persévérance", "Un petit pas", "L’envie d’apprendre",
+    "Le travail d’équipe", "Une idée partagée", "La confiance", "Le courage d’essayer", "Une action utile",
+    "La constance", "Un regard neuf", "L’écoute", "La curiosité", "Une décision assumée",
+    "L’enthousiasme", "La patience", "Un défi relevé", "La créativité", "L’attention aux autres",
 )
+_DAILY_RECAP_QUOTE_PREDICATES = (
+    "ouvre la voie aux réussites de demain", "transforme les obstacles en possibilités",
+    "donne du sens aux efforts du jour", "fait grandir les ambitions collectives",
+    "rapproche un peu plus de l’excellence", "permet d’aller plus loin ensemble",
+    "construit une réussite durable", "révèle des ressources insoupçonnées",
+    "rend les grands projets accessibles", "fait naître de nouvelles opportunités",
+    "change une intention en résultat", "éclaire le prochain pas à accomplir",
+    "renforce ce que nous bâtissons ensemble", "prépare les belles victoires",
+    "fait avancer même les projets les plus exigeants", "invite à dépasser les habitudes",
+    "crée l’élan nécessaire pour réussir", "donne de la valeur à chaque expérience",
+    "nous rapproche du but avec confiance",
+)
+# 20 x 19 formulations donnent un réservoir de 380 pensées originales. Les
+# 365 premières garantissent une citation distincte chaque jour de l'année.
+DAILY_RECAP_QUOTES = tuple(
+    (f"{subject} {predicate}.", "Intégrale Academy")
+    for subject in _DAILY_RECAP_QUOTE_SUBJECTS
+    for predicate in _DAILY_RECAP_QUOTE_PREDICATES
+)[:365]
 
 # This calendar is deliberately kept in the application instead of depending on
 # Nominis: the 08:00 cron must still display the celebration when an external
@@ -34516,7 +34527,10 @@ def _daily_recap_nameday(value: datetime.date) -> str:
 
 def _daily_recap_quote(value: datetime.date) -> Dict[str, str]:
     """Return a stable quote for a delivery date, shared by preview and email."""
-    quote, author = DAILY_RECAP_QUOTES[value.toordinal() % len(DAILY_RECAP_QUOTES)]
+    # Anchor on a non-leap year so a given calendar day keeps the same quote
+    # from one year to another. February 29 deliberately shares February 28's.
+    calendar_day = datetime.date(2001, value.month, min(value.day, 28) if value.month == 2 else value.day)
+    quote, author = DAILY_RECAP_QUOTES[(calendar_day - datetime.date(2001, 1, 1)).days]
     return {"text": quote, "author": author}
 
 
@@ -34820,6 +34834,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
         "livret_2_validated": 0,
         "certification_obtained": 0,
     }
+    vae_follow_up_names = {key: [] for key in vae_follow_up}
     today = report_date + datetime.timedelta(days=1)
 
     validated_cnaps = {"valide", "validé", "validee", "validée", "accepted", "accepte", "accepté", "active", "actif", "favorable", "done"}
@@ -34862,6 +34877,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             if "VAE" in training_type.upper():
                 if _daily_recap_date(trainee.get("created_at")) == report_date:
                     vae_follow_up["new_requests"] += 1
+                    vae_follow_up_names["new_requests"].append(name)
                 action_dates = trainee.get("vae_action_dates") or {}
                 if isinstance(action_dates, dict):
                     for action_key, metric_key in (
@@ -34871,6 +34887,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
                     ):
                         if _daily_recap_date(action_dates.get(action_key)) == report_date:
                             vae_follow_up[metric_key] += 1
+                            vae_follow_up_names[metric_key].append(name)
             if not excluded_from_sales and sale_date and sale_date.year == report_date.year and sale_date.month == report_date.month and sale_date <= report_date:
                 month_revenue += price
             if not excluded_from_sales and sale_date == report_date:
@@ -35006,7 +35023,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
     month_objective = _parse_positive_int(monthly_objectives.get(str(report_date.month), 0) if isinstance(monthly_objectives, dict) else 0)
     month_progress_ratio = (month_revenue / month_objective) if month_objective > 0 else 0
     month_remaining = max(month_objective - month_revenue, 0) if month_objective > 0 else 0
-    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "cnaps_changes": changes, "rejected": rejected, "pending_mandates": list(pending_mandates_by_trainee.values()), "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
+    return {"date": report_date, "sales": sales, "comparison_sales": comparison_sales, "prior_sales": comparison_sales["previous_year"], "month_kpi": {"revenue": month_revenue, "objective": month_objective, "progress_ratio": month_progress_ratio, "remaining": month_remaining}, "key_dates": key_dates, "vae_follow_up": vae_follow_up, "vae_follow_up_names": vae_follow_up_names, "cnaps_changes": changes, "rejected": rejected, "pending_mandates": list(pending_mandates_by_trainee.values()), "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
 
 
 def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", greeting_context: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
@@ -35113,7 +35130,13 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     ]
     visible_vae_metrics = [(label, int(count or 0)) for label, count in vae_metrics if int(count or 0) > 0]
     if visible_vae_metrics:
-        vae_rows = "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right">{section_count_badge(count)}</span></div>' for label, count in visible_vae_metrics)
+        vae_metric_keys = dict(zip((label for label, _count in vae_metrics), vae_follow_up))
+        vae_names = report.get("vae_follow_up_names") or {}
+        vae_rows = "".join(
+            f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(label)}</strong><span style="float:right">{section_count_badge(count)}</span>'
+            f'<div style="margin-top:6px;color:#64748b;font-size:13px">{html.escape(", ".join(vae_names.get(vae_metric_keys[label], [])))}</div></div>'
+            for label, count in visible_vae_metrics
+        )
         cards = f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">🎓&nbsp; Suivi des VAE</h2>{vae_rows}</div></td></tr>' + cards
     greeting = ""
     if recipient and greeting_context:
