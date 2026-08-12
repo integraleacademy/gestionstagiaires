@@ -20144,10 +20144,14 @@ def _exam_dossier_training() -> str:
     return "APS" if "/aps-exam-dossiers" in request.path else "A3P"
 
 
-def _exam_dossier_profile(training: str) -> Dict[str, str]:
+def _exam_dossier_profile(training: str) -> Dict[str, Any]:
     slug = training.lower()
     return {"training": training, "slug": slug, "storage_key": f"{slug}_exam_dossier",
             "template": "dossierexamenaps.docx" if training == "APS" else "docexamena3p.docx",
+            # The APS Word model has one more rendered page than the A3P model.
+            # Keeping this constraint in the profile prevents APS generation from
+            # being rejected by the historical A3P-only six-page validation.
+            "expected_pages": 7 if training == "APS" else 6,
             "output_dir": APS_EXAM_DOSSIER_DIR if training == "APS" else A3P_EXAM_DOSSIER_DIR}
 
 
@@ -20350,18 +20354,21 @@ def _assert_calibri_font_substitution() -> None:
         raise RuntimeError(f"Fontconfig invalide : Calibri correspond à {matched_family or 'aucune police'}, pas à Carlito.")
 
 
-def _validate_a3p_pdf(pdf_path: str) -> None:
+def _validate_a3p_pdf(pdf_path: str, training: str = "A3P", expected_pages: int = 6) -> None:
     """Reject a conversion with altered pagination, blank pages or bad fonts."""
     reader = PdfReader(pdf_path)
-    if len(reader.pages) != 6:
-        raise RuntimeError(f"Le dossier A3P doit faire exactement 6 pages (obtenu : {len(reader.pages)}).")
+    if len(reader.pages) != expected_pages:
+        raise RuntimeError(
+            f"Le dossier {training} doit faire exactement {expected_pages} pages "
+            f"(obtenu : {len(reader.pages)})."
+        )
     font_names, embedded_fonts = set(), set()
     for page_number, page in enumerate(reader.pages, 1):
         resources = page.get("/Resources") or {}
         xobjects = resources.get("/XObject") or {}
         has_image = any((obj.get_object().get("/Subtype") == "/Image") for obj in xobjects.values())
         if not (page.extract_text() or "").strip() and not has_image:
-            raise RuntimeError(f"Le dossier A3P contient une page blanche (page {page_number}).")
+            raise RuntimeError(f"Le dossier {training} contient une page blanche (page {page_number}).")
         for font_ref in (resources.get("/Font") or {}).values():
             font = font_ref.get_object()
             name = str(font.get("/BaseFont") or "")
@@ -20376,9 +20383,9 @@ def _validate_a3p_pdf(pdf_path: str) -> None:
                     embedded_fonts.add(name)
     normalized = " ".join(font_names).lower()
     if "dejavusans" in normalized or "dejavuserif" in normalized:
-        raise RuntimeError("Le PDF A3P utilise encore DejaVu Sans/Serif.")
+        raise RuntimeError(f"Le PDF {training} utilise encore DejaVu Sans/Serif.")
     if not any("carlito" in name.lower() for name in embedded_fonts):
-        raise RuntimeError("Carlito n'est pas intégrée dans le PDF A3P.")
+        raise RuntimeError(f"Carlito n'est pas intégrée dans le PDF {training}.")
 
 
 @app.post("/api/admin/sessions/<session_id>/a3p-exam-dossiers/generate")
@@ -20435,7 +20442,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
             pdf_path = os.path.join(output_dir, safe_base + ".pdf")
             if not os.path.isfile(pdf_path):
                 raise RuntimeError(result.stderr or "Le PDF n'a pas été créé.")
-            _validate_a3p_pdf(pdf_path)
+            _validate_a3p_pdf(pdf_path, profile["training"], profile["expected_pages"])
             pdf_paths.append((pdf_path, base_name + ".pdf"))
             os.remove(docx_path)
         os.remove(prepared_template_path)

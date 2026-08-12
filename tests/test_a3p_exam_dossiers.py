@@ -51,6 +51,22 @@ class A3pExamDossierTests(unittest.TestCase):
         self.assertEqual(response.get_json()["epi_training_date"], "2026-08-12")
         self.assertEqual(forbidden.status_code, 400)
         self.assertEqual(gestion_app._exam_dossier_profile("APS")["template"], "dossierexamenaps.docx")
+        self.assertEqual(gestion_app._exam_dossier_profile("APS")["expected_pages"], 7)
+        self.assertEqual(gestion_app._exam_dossier_profile("A3P")["expected_pages"], 6)
+
+    @patch.object(gestion_app, "PdfReader")
+    def test_aps_pdf_validation_accepts_its_seven_page_layout(self, pdf_reader):
+        page = unittest.mock.MagicMock()
+        page.extract_text.return_value = "Contenu"
+        page.get.return_value = {}
+        pdf_reader.return_value.pages = [page] * 7
+
+        with self.assertRaisesRegex(RuntimeError, "Carlito.*PDF APS"):
+            gestion_app._validate_a3p_pdf("dossier.pdf", "APS", 7)
+
+        pdf_reader.return_value.pages = [page] * 6
+        with self.assertRaisesRegex(RuntimeError, "dossier APS doit faire exactement 7 pages"):
+            gestion_app._validate_a3p_pdf("dossier.pdf", "APS", 7)
 
     def test_context_exposes_all_word_variables(self):
         context = gestion_app._a3p_exam_context(
