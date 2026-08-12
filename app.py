@@ -29124,6 +29124,19 @@ _aps_convocation_auto_send_timers_lock = threading.Lock()
 
 
 def _send_scheduled_convocation_after_convention_signed(session_id: str, trainee_id: str) -> None:
+    """Run the timer callback with the Flask context used by request handlers.
+
+    ``threading.Timer`` executes in a separate thread, so Flask does not copy
+    the application context from the webhook request that scheduled it.
+    Several helpers used below rely on that context (configuration, logging,
+    and URL/file helpers), and otherwise Flask raises ``Working outside of
+    application context`` before the convocation can be generated.
+    """
+    with app.app_context():
+        _send_scheduled_convocation_after_convention_signed_in_context(session_id, trainee_id)
+
+
+def _send_scheduled_convocation_after_convention_signed_in_context(session_id: str, trainee_id: str) -> None:
     data = load_data()
     sess, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
     if not sess or not trainee:
