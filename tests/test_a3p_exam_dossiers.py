@@ -20,7 +20,7 @@ class A3pExamDossierTests(unittest.TestCase):
             "trainees": [{"id": "T1", "first_name": "alice", "last_name": "martin", "city": "Nice"}],
         }
 
-    def test_admin_page_only_displays_exam_dossier_button_for_a3p(self):
+    def test_admin_page_displays_exam_dossier_button_for_a3p_and_aps(self):
         aps = {**self.a3p_session, "id": "APS-1", "name": "APS été", "training_type": "APS"}
         with patch.object(gestion_app, "load_data", return_value={"sessions": [self.a3p_session, aps]}), \
              patch.object(gestion_app, "save_data"):
@@ -28,7 +28,9 @@ class A3pExamDossierTests(unittest.TestCase):
             aps_html = self.client.get("/admin/sessions/APS-1/trainees").get_data(as_text=True)
         self.assertIn('id="btnA3pExamDossier"', a3p_html)
         self.assertIn("Dossiers d’examen en cours de création", a3p_html)
-        self.assertNotIn('id="btnA3pExamDossier"', aps_html)
+        self.assertIn('id="btnA3pExamDossier"', aps_html)
+        self.assertIn("Dossier examen APS", aps_html)
+        self.assertIn("/api/admin/sessions/APS-1/aps-exam-dossiers", aps_html)
 
     def test_config_prefills_session_dates_and_rejects_non_a3p(self):
         aps = {**self.a3p_session, "id": "APS-1", "training_type": "APS", "name": "APS"}
@@ -39,6 +41,16 @@ class A3pExamDossierTests(unittest.TestCase):
         self.assertEqual(response.get_json()["training_start_date"], "2026-08-03")
         self.assertEqual(response.get_json()["exam_date"], "2026-09-28")
         self.assertEqual(forbidden.status_code, 400)
+
+    def test_aps_config_uses_dedicated_storage_and_rejects_a3p(self):
+        aps = {**self.a3p_session, "id": "APS-1", "training_type": "APS", "name": "APS", "aps_exam_dossier": {"epi_training_date": "2026-08-12"}}
+        with patch.object(gestion_app, "load_data", return_value={"sessions": [self.a3p_session, aps]}):
+            response = self.client.get("/api/admin/sessions/APS-1/aps-exam-dossiers")
+            forbidden = self.client.get("/api/admin/sessions/A3P-1/aps-exam-dossiers")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["epi_training_date"], "2026-08-12")
+        self.assertEqual(forbidden.status_code, 400)
+        self.assertEqual(gestion_app._exam_dossier_profile("APS")["template"], "dossierexamenaps.docx")
 
     def test_context_exposes_all_word_variables(self):
         context = gestion_app._a3p_exam_context(
