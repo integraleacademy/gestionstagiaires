@@ -3,6 +3,9 @@
 {% set read_only_attr = "disabled" if is_read_only else "" %}
 {% set is_vtc_header = "VTC" in (session.training_type or "")|upper %}
 {% set is_a3p_header = ("A3P" in (session.training_type or "")|upper) or ("A3P" in (session.name or "")|upper) %}
+{% set is_aps_header = ("APS" in (session.training_type or "")|upper) or ("APS" in (session.name or "")|upper) %}
+{% set exam_dossier_slug = "aps" if is_aps_header else "a3p" %}
+{% set exam_dossier_label = "APS" if is_aps_header else "A3P" %}
 {% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
 {% set vtc_practice_training_date = session.practice_training_date %}
@@ -176,13 +179,15 @@
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
     {% endif %}
-    {% if is_a3p_header %}
+    {% if is_a3p_header or is_aps_header %}
     {% if not is_read_only %}
     <button class="btn btn-primary" id="btnA3pExamDossier" type="button">📁 Dossier examen</button>
     {% endif %}
+    {% if is_a3p_header %}
     <a class="btn btn-outline" id="btnTshirtList"
        href="{{ url_for('admin_tshirt_list', session_id=session.id, **request.args) }}"
        target="_blank" rel="noopener">👕 Liste t-shirts</a>
+    {% endif %}
     {% endif %}
     {% if not is_read_only %}
       {% if not is_all_vtc and not is_vtc and not show_vae and not is_dirigeant %}
@@ -782,12 +787,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 {% endif %}
 
 
-{% if is_a3p_header and not is_read_only %}
+{% if (is_a3p_header or is_aps_header) and not is_read_only %}
 <div class="modal-backdrop" id="a3pExamDossierModal" aria-hidden="true">
   <div class="modal a3p-exam-modal" role="dialog" aria-modal="true" aria-labelledby="a3pExamDossierTitle">
     <div class="a3p-exam-hero">
       <span class="a3p-exam-icon">📁</span>
-      <div><div class="modal-title" id="a3pExamDossierTitle">Dossier examen A3P</div><p>Préparez en quelques clics les dossiers prêts à imprimer.</p></div>
+      <div><div class="modal-title" id="a3pExamDossierTitle">Dossier examen {{ exam_dossier_label }}</div><p>Préparez en quelques clics les dossiers prêts à imprimer.</p></div>
       <button class="icon-btn" type="button" data-close-modal="a3pExamDossierModal">✕</button>
     </div>
     <form id="a3pExamDossierForm">
@@ -808,7 +813,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <label class="a3p-candidate"><input type="checkbox" name="trainee_ids" value="{{ trainee.id }}" checked><span class="a3p-avatar">{{ (trainee.first_name or '?')[:1] }}{{ (trainee.last_name or '?')[:1] }}</span><span><b>{{ trainee.last_name }} {{ trainee.first_name }}</b><small>{{ trainee.email or 'Aucun e-mail renseigné' }}</small></span><i>✓</i></label>
           {% endfor %}
         </div>
-        <div class="a3p-previous" id="a3pPreviousGeneration" hidden><span>✓</span><div><b>Une génération est déjà disponible</b><small id="a3pPreviousMeta"></small></div><a class="btn btn-outline" href="{{ url_for('admin_download_a3p_exam_dossiers', session_id=session.id) }}">Retélécharger</a></div>
+        <div class="a3p-previous" id="a3pPreviousGeneration" hidden><span>✓</span><div><b>Une génération est déjà disponible</b><small id="a3pPreviousMeta"></small></div><a class="btn btn-outline" href="{{ url_for('admin_download_aps_exam_dossiers' if is_aps_header else 'admin_download_a3p_exam_dossiers', session_id=session.id) }}">Retélécharger</a></div>
       </div>
       <div class="modal-foot"><button class="btn" type="button" data-close-modal="a3pExamDossierModal">Annuler</button><button class="btn btn-primary" type="submit">Générer les dossiers examen →</button></div>
     </form>
@@ -4260,7 +4265,7 @@ applyRowFilters();
 @media(max-width:680px){.a3p-date-grid,.a3p-candidate-list{grid-template-columns:1fr}.a3p-candidates-head{align-items:flex-start;gap:8px}.a3p-progress-modal .modal-body{padding:28px 18px}}
 
 </style>
-{% if is_a3p_header and not is_read_only %}
+{% if (is_a3p_header or is_aps_header) and not is_read_only %}
 <script>
 (()=>{
   const openButton=document.getElementById("btnA3pExamDossier"), modal=document.getElementById("a3pExamDossierModal"), form=document.getElementById("a3pExamDossierForm");
@@ -4271,7 +4276,7 @@ applyRowFilters();
   document.getElementById("a3pToggleCandidates").addEventListener("click",()=>{const select=!checks().some(input=>input.checked);checks().forEach(input=>input.checked=select);refreshCount();});
   openButton.addEventListener("click",async()=>{
     modal.classList.add("show");modal.setAttribute("aria-hidden","false");
-    try{const response=await fetch(`/api/admin/sessions/{{ session.id }}/a3p-exam-dossiers`),data=await response.json();if(!response.ok)throw new Error(data.message);
+    try{const response=await fetch(`/api/admin/sessions/{{ session.id }}/{{ exam_dossier_slug }}-exam-dossiers`),data=await response.json();if(!response.ok)throw new Error(data.message);
       ["training_start_date","training_end_date","exam_date","epi_training_date"].forEach(name=>form.elements[name].value=data[name]||"");
       if(data.selected_trainee_ids?.length){const selected=new Set(data.selected_trainee_ids.map(String));checks().forEach(input=>input.checked=selected.has(input.value));}
       if(data.generation?.available){document.getElementById("a3pPreviousGeneration").hidden=false;document.getElementById("a3pPreviousMeta").textContent=`${data.generation.candidate_count} candidat(s) · prêt à retélécharger`;}
@@ -4282,7 +4287,7 @@ applyRowFilters();
     modal.classList.remove("show");const progress=document.getElementById("a3pExamProgressModal"),box=progress.querySelector(".a3p-progress-modal"),bar=document.getElementById("a3pProgressBar");progress.classList.add("show");progress.setAttribute("aria-hidden","false");box.classList.remove("is-done","is-error");bar.style.width="18%";document.getElementById("a3pProgressActions").hidden=true;
     const timer=setInterval(()=>{bar.style.width=Math.min(parseInt(bar.style.width||"18")+9,88)+"%";},500);
     const payload={selected_trainee_ids:selected};["training_start_date","training_end_date","exam_date","epi_training_date"].forEach(name=>payload[name]=form.elements[name].value);
-    try{const response=await fetch(`/api/admin/sessions/{{ session.id }}/a3p-exam-dossiers/generate`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}),data=await response.json();if(!response.ok)throw new Error(data.message||"Génération impossible");clearInterval(timer);bar.style.width="100%";box.classList.add("is-done");document.getElementById("a3pProgressTitle").textContent="Vos dossiers d’examen sont prêts !";document.getElementById("a3pProgressText").textContent=`${data.candidate_count} dossier(s) individuel(s) et le PDF complet ont été créés.`;document.getElementById("a3pDownloadButton").href=data.download_url;document.getElementById("a3pProgressActions").hidden=false;
+    try{const response=await fetch(`/api/admin/sessions/{{ session.id }}/{{ exam_dossier_slug }}-exam-dossiers/generate`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}),data=await response.json();if(!response.ok)throw new Error(data.message||"Génération impossible");clearInterval(timer);bar.style.width="100%";box.classList.add("is-done");document.getElementById("a3pProgressTitle").textContent="Vos dossiers d’examen sont prêts !";document.getElementById("a3pProgressText").textContent=`${data.candidate_count} dossier(s) individuel(s) et le PDF complet ont été créés.`;document.getElementById("a3pDownloadButton").href=data.download_url;document.getElementById("a3pProgressActions").hidden=false;
     }catch(error){clearInterval(timer);box.classList.add("is-error");document.getElementById("a3pProgressTitle").textContent="La génération a échoué";document.getElementById("a3pProgressText").textContent=error.message;document.getElementById("a3pProgressActions").hidden=false;document.getElementById("a3pDownloadButton").style.display="none";}
   });
 })();
