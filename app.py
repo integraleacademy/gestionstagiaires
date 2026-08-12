@@ -30275,7 +30275,13 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     end_sent = bool(trainee.get("attestation_fin_aps_sent_at"))
     convention_sent_step = {"label": "Convention envoyée", "state": "complete" if convention_sent else ("error" if convention_status == "error" else "pending" if has_generated_convention else "blocked")}
     convention_signed_step = {"label": "Convention signée", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")}
-    if is_vae_automation:
+    if is_vtc_automation:
+        timeline = [
+            convention_sent_step,
+            convention_signed_step,
+            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not theory_succeeded else "pending")},
+        ]
+    elif is_vae_automation:
         timeline = [convention_sent_step, convention_signed_step]
     else:
         timeline = [
