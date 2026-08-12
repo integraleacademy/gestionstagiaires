@@ -66,3 +66,7 @@ def test_template_keeps_automation_and_places_cpf_before_elearning():
     assert '<summary class="cpf-panel__summary"' in source
     assert "cpf-panel__current-label" in source
     assert '<details class="cpf-panel" id="cpfTracking" open' not in source
+    assert "data-cpf-auto-match" in source
+    assert "admin_trainee_cpf_auto_match" in source
+    assert "admin_trainee_cpf_associate_match" in source
+    assert "js/cpf-auto-match.js" in source

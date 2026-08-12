@@ -109,6 +109,100 @@ def _trainee_rule(wedof: Dict[str, Any], trainee: Dict[str, Any]) -> Optional[st
     return None
 
 
+def find_trainee_cpf_candidates(
+    folders: Iterable[Dict[str, Any]],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    allowed_states: Optional[Iterable[str]] = None,
+) -> List[Dict[str, Any]]:
+    """Retourne les dossiers CPF ayant exactement le même e-mail et téléphone.
+
+    La fonction reste pure et ne conserve que les champs explicitement extraits
+    par :func:`extract_folder`. Une association automatique n'est considérée
+    sûre que si l'identité *et* les deux dates concordent également.
+    """
+    local_email = normalize_email(trainee.get("email") or trainee.get("mail"))
+    local_phone = normalize_phone(
+        trainee.get("phone") or trainee.get("telephone") or trainee.get("phone_number")
+    )
+    if not local_email or not local_phone:
+        return []
+
+    local_first_name = normalize_name(trainee.get("first_name") or trainee.get("prenom"))
+    local_last_name = normalize_name(trainee.get("last_name") or trainee.get("nom"))
+    local_start = normalize_date(session_obj.get("date_start") or session_obj.get("date_debut"))
+    local_end = normalize_date(session_obj.get("date_end") or session_obj.get("date_fin"))
+    permitted = {str(value) for value in allowed_states} if allowed_states is not None else None
+
+    candidates: List[Dict[str, Any]] = []
+    for folder in folders:
+        if not isinstance(folder, dict):
+            continue
+        remote = extract_folder(folder)
+        state = str(remote.get("state") or "").strip()
+        if (
+            str(remote.get("type") or "").strip().casefold() != "cpf"
+            or not str(remote.get("external_id") or "").strip()
+            or (permitted is not None and state not in permitted)
+        ):
+            continue
+
+        email_match = normalize_email(remote.get("email")) == local_email
+        phone_match = normalize_phone(remote.get("phone")) == local_phone
+        if not email_match or not phone_match:
+            continue
+
+        remote_first_name = normalize_name(remote.get("first_name"))
+        remote_last_name = normalize_name(remote.get("last_name"))
+        identity_complete = bool(
+            local_first_name and local_last_name and remote_first_name and remote_last_name
+        )
+        identity_match = bool(
+            identity_complete
+            and remote_first_name == local_first_name
+            and remote_last_name == local_last_name
+        )
+        remote_start = normalize_date(remote.get("start_date"))
+        remote_end = normalize_date(remote.get("end_date"))
+        dates_complete = bool(local_start and local_end and remote_start and remote_end)
+        dates_match = bool(
+            dates_complete and remote_start == local_start and remote_end == local_end
+        )
+        mismatches = []
+        if not identity_match:
+            mismatches.append("Identité WEDOF incomplète" if not identity_complete else "Identité différente")
+        if not dates_match:
+            mismatches.append("Dates WEDOF incomplètes" if not dates_complete else "Dates de formation différentes")
+
+        candidates.append({
+            **remote,
+            "start_date": remote_start,
+            "end_date": remote_end,
+            "email_match": True,
+            "phone_match": True,
+            "identity_match": identity_match,
+            "dates_match": dates_match,
+            "all_fields_match": bool(identity_match and dates_match),
+            "match_reasons": [
+                "Même e-mail",
+                "Même téléphone",
+                *(["Même identité"] if identity_match else []),
+                *(["Mêmes dates de formation"] if dates_match else []),
+            ],
+            "mismatches": mismatches,
+        })
+
+    candidates.sort(key=lambda item: (
+        not item["all_fields_match"],
+        not item["dates_match"],
+        not item["identity_match"],
+        str(item.get("start_date") or "9999-12-31"),
+        str(item.get("external_id") or ""),
+    ))
+    return candidates
+
+
 def match_folder(folder: Dict[str, Any], sessions: Iterable[Dict[str, Any]]) -> Dict[str, Any]:
     wedof = extract_folder(folder)
     result = {**wedof, "session": "—", "trainee": "—", "rule": "—", "status": "", "explanation": ""}

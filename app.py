@@ -60,8 +60,8 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
-from wedof_matching import (build_matching_preview, extract_folder, normalize_date, normalize_email,
-                            normalize_name, normalize_phone)
+from wedof_matching import (build_matching_preview, extract_folder, find_trainee_cpf_candidates,
+                            normalize_date, normalize_email, normalize_name, normalize_phone)
 from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, local_association_status,
                          save_manual_wedof_link, sync_exact_wedof_links)
 from wedof_automation import (automation_dashboard_state, build_automation_dashboard, is_wedof_maintenance_window,
@@ -30573,6 +30573,284 @@ def _cpf_public_snapshot(remote: Dict[str, Any]) -> Dict[str, Any]:
         snapshot["wedof_url"] = url
     snapshot["synced_at"] = now
     return snapshot
+
+
+CPF_ASSOCIATION_STATES = (
+    "accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated",
+)
+
+
+def _cpf_fetch_matchable_folders() -> List[Dict[str, Any]]:
+    """Relit les dossiers CPF associables sans effectuer de mutation WEDOF."""
+    client = WedofClient()
+    folders_by_id: Dict[str, Dict[str, Any]] = {}
+    for state in CPF_ASSOCIATION_STATES:
+        for folder in client.list_registration_folders(state):
+            if not isinstance(folder, dict):
+                continue
+            external_id = str(extract_folder(folder).get("external_id") or "").strip()
+            if external_id:
+                folders_by_id[external_id] = folder
+    return list(folders_by_id.values())
+
+
+def _cpf_active_link(data: Dict[str, Any], *, session_id: str, trainee_id: str) -> Optional[Dict[str, Any]]:
+    return next((
+        item for item in data.get("wedof_links", [])
+        if isinstance(item, dict) and item.get("active") is True
+        and str(item.get("session_id") or "") == str(session_id)
+        and str(item.get("trainee_id") or "") == str(trainee_id)
+    ), None)
+
+
+def _cpf_candidate_payload(
+    candidate: Dict[str, Any], data: Dict[str, Any], *, session_id: str, trainee_id: str
+) -> Dict[str, Any]:
+    external_id = str(candidate.get("external_id") or "")
+    linked = next((
+        item for item in data.get("wedof_links", [])
+        if isinstance(item, dict) and item.get("active") is True
+        and str(item.get("external_id") or "") == external_id
+    ), None)
+    linked_here = bool(
+        linked
+        and str(linked.get("session_id") or "") == str(session_id)
+        and str(linked.get("trainee_id") or "") == str(trainee_id)
+    )
+    return {
+        "external_id": external_id,
+        "state": str(candidate.get("state") or ""),
+        "first_name": str(candidate.get("first_name") or ""),
+        "last_name": str(candidate.get("last_name") or ""),
+        "email": str(candidate.get("email") or ""),
+        "phone": str(candidate.get("phone") or ""),
+        "training_title": str(candidate.get("training_title") or ""),
+        "start_date": candidate.get("start_date"),
+        "end_date": candidate.get("end_date"),
+        "match_reasons": list(candidate.get("match_reasons") or []),
+        "mismatches": list(candidate.get("mismatches") or []),
+        "all_fields_match": bool(candidate.get("all_fields_match")),
+        "can_associate": linked is None or linked_here,
+        "linked_elsewhere": bool(linked and not linked_here),
+    }
+
+
+def _persist_trainee_cpf_match(
+    remote_folder: Dict[str, Any], *, session_id: str, trainee_id: str, automatic: bool
+) -> Dict[str, Any]:
+    """Enregistre atomiquement une suggestion vérifiée côté serveur."""
+    remote_external_id = str(extract_folder(remote_folder).get("external_id") or "").strip()
+
+    def mutate(canonical: Dict[str, Any]) -> Dict[str, Any]:
+        local_session, trainee = _cpf_local_registration(canonical, session_id, trainee_id)
+        if not local_session or not trainee or not has_cpf_financing(trainee):
+            return {"status": "not_found", "message": "Stagiaire CPF introuvable."}
+
+        candidates = find_trainee_cpf_candidates(
+            [remote_folder], local_session, trainee, allowed_states=CPF_ASSOCIATION_STATES,
+        )
+        if not candidates or str(candidates[0].get("external_id") or "") != remote_external_id:
+            return {
+                "status": "contact_mismatch",
+                "message": "Le dossier ne correspond plus à l’e-mail et au téléphone du stagiaire.",
+            }
+        candidate = candidates[0]
+        if automatic and not candidate.get("all_fields_match"):
+            return {
+                "status": "manual_confirmation_required",
+                "message": "Une confirmation administrateur reste nécessaire pour ce dossier.",
+            }
+
+        existing_registration = _cpf_active_link(
+            canonical, session_id=session_id, trainee_id=trainee_id,
+        )
+        if existing_registration and str(existing_registration.get("external_id") or "") != remote_external_id:
+            return {
+                "status": "conflict",
+                "message": "Ce stagiaire possède déjà une autre association CPF active.",
+            }
+
+        if automatic:
+            summary = sync_exact_wedof_links(canonical, [{
+                "status": "exact_match",
+                "external_id": remote_external_id,
+                "session_id": str(session_id),
+                "trainee_id": str(trainee_id),
+                "type": "cpf",
+                "state": str(candidate.get("state") or ""),
+                "rule": "email_phone_identity_dates",
+                "start_date": candidate.get("start_date"),
+                "end_date": candidate.get("end_date"),
+            }])
+            if summary.get("conflicts"):
+                return {
+                    "status": "conflict",
+                    "message": "Ce dossier CPF est déjà associé à une autre inscription.",
+                }
+            outcome = "created" if summary.get("created") else "already_linked"
+            history_source = "automatic_all_fields_match"
+        else:
+            outcome = save_manual_wedof_link(
+                canonical,
+                external_id=remote_external_id,
+                session_id=session_id,
+                trainee_id=trainee_id,
+                state=str(candidate.get("state") or ""),
+                date_start=normalize_date(candidate.get("start_date")),
+                date_end=normalize_date(candidate.get("end_date")),
+            )
+            if outcome == "conflict":
+                return {
+                    "status": "conflict",
+                    "message": "Ce dossier CPF est déjà associé à une autre inscription.",
+                }
+            history_source = "manual_contact_suggestion"
+
+        link = next((
+            item for item in canonical.get("wedof_links", [])
+            if isinstance(item, dict) and item.get("active") is True
+            and str(item.get("external_id") or "") == remote_external_id
+            and str(item.get("session_id") or "") == str(session_id)
+            and str(item.get("trainee_id") or "") == str(trainee_id)
+        ), None)
+        if link is None:
+            return {
+                "status": "conflict",
+                "message": "L’association n’a pas pu être enregistrée en toute sécurité.",
+            }
+
+        link["cpf_snapshot"] = _cpf_public_snapshot(candidate)
+        link["wedof_state"] = candidate.get("state") or link.get("wedof_state")
+        link["last_seen_at"] = _now_iso()
+        if outcome == "created":
+            link.setdefault("association_history", []).append({
+                "at": _now_iso(),
+                "admin": session.get("admin_username") or "admin",
+                "old_external_id": None,
+                "new_external_id": remote_external_id,
+                "source": history_source,
+            })
+        return {
+            "status": "associated",
+            "outcome": outcome,
+            "external_id": remote_external_id,
+            "automatic": automatic,
+        }
+
+    return _atomic_update_data(mutate)
+
+
+def _cpf_match_json_error(message: str, status_code: int):
+    return jsonify({"ok": False, "status": "error", "message": message}), status_code
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/auto-match")
+@admin_login_required
+@admin_write_required
+def admin_trainee_cpf_auto_match(session_id: str, trainee_id: str):
+    data = load_data(run_background_tasks=False)
+    local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
+    if not trainee or not has_cpf_financing(trainee):
+        abort(404)
+
+    existing = _cpf_active_link(data, session_id=session_id, trainee_id=trainee_id)
+    redirect_url = url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking"
+    if existing:
+        session.pop("cpf_association_preview", None)
+        return jsonify({
+            "ok": True, "status": "associated", "automatic": False,
+            "external_id": existing.get("external_id"), "redirect_url": redirect_url,
+        })
+
+    try:
+        folders = _cpf_fetch_matchable_folders()
+    except (WedofConfigurationError, WedofApiError):
+        return _cpf_match_json_error(
+            "La recherche WEDOF est momentanément indisponible. Vous pouvez la relancer ou saisir le numéro du dossier.",
+            503,
+        )
+
+    candidates = find_trainee_cpf_candidates(
+        folders, local_session, trainee, allowed_states=CPF_ASSOCIATION_STATES,
+    )
+    exact = [item for item in candidates if item.get("all_fields_match")]
+    if len(exact) == 1:
+        remote_folder = next(
+            folder for folder in folders
+            if str(extract_folder(folder).get("external_id") or "") == str(exact[0].get("external_id") or "")
+        )
+        result = _persist_trainee_cpf_match(
+            remote_folder, session_id=session_id, trainee_id=trainee_id, automatic=True,
+        )
+        if result.get("status") == "associated":
+            session.pop("cpf_association_preview", None)
+            return jsonify({
+                "ok": True, **result, "redirect_url": redirect_url,
+                "message": "Dossier CPF associé automatiquement : toutes les informations concordent.",
+            })
+        if result.get("status") != "conflict":
+            return _cpf_match_json_error(
+                str(result.get("message") or "L’association automatique n’a pas pu être enregistrée."), 409,
+            )
+        # Une autre requête a pu créer le lien pendant la lecture WEDOF.
+        # Relire l'état canonique permet de désactiver correctement la suggestion.
+        data = load_data(run_background_tasks=False)
+
+    public_candidates = [
+        _cpf_candidate_payload(item, data, session_id=session_id, trainee_id=trainee_id)
+        for item in candidates
+    ]
+    status = "suggestions" if public_candidates else "no_match"
+    message = (
+        "Un dossier correspondant a été trouvé. Vérifiez-le puis cliquez sur « Associer ce dossier »."
+        if len(public_candidates) == 1
+        else f"{len(public_candidates)} dossiers correspondent à l’e-mail et au téléphone. Choisissez le bon dossier."
+        if public_candidates
+        else "Aucun dossier WEDOF ne correspond actuellement à la fois à l’e-mail et au téléphone du stagiaire."
+    )
+    return jsonify({
+        "ok": True, "status": status, "message": message,
+        "candidates": public_candidates,
+    })
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/associate-match")
+@admin_login_required
+@admin_write_required
+def admin_trainee_cpf_associate_match(session_id: str, trainee_id: str):
+    external_id = str(request.form.get("external_id") or "").strip()
+    if not external_id:
+        return _cpf_match_json_error("Le numéro du dossier CPF est obligatoire.", 400)
+    data = load_data(run_background_tasks=False)
+    local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
+    if not trainee or not has_cpf_financing(trainee):
+        abort(404)
+    try:
+        remote_folder = WedofClient().get_registration_folder_interactive(external_id)
+    except (WedofConfigurationError, WedofApiError):
+        return _cpf_match_json_error(
+            "WEDOF est momentanément indisponible. L’association n’a pas été modifiée.", 503,
+        )
+    remote = extract_folder(remote_folder)
+    if str(remote.get("external_id") or "") != external_id:
+        return _cpf_match_json_error("Le dossier retourné par WEDOF ne correspond pas au numéro demandé.", 409)
+
+    result = _persist_trainee_cpf_match(
+        remote_folder, session_id=session_id, trainee_id=trainee_id, automatic=False,
+    )
+    if result.get("status") != "associated":
+        code = 409 if result.get("status") in {
+            "contact_mismatch", "conflict", "manual_confirmation_required",
+        } else 404
+        return _cpf_match_json_error(
+            str(result.get("message") or "Le dossier CPF n’a pas pu être associé."), code,
+        )
+    session.pop("cpf_association_preview", None)
+    return jsonify({
+        "ok": True, **result,
+        "message": "Dossier CPF associé au stagiaire.",
+        "redirect_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking",
+    })
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/refresh")
