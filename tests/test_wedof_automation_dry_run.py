@@ -6,8 +6,10 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import app as gestion_app
-from wedof_automation import (automation_dashboard_state, evaluate_action, is_wedof_maintenance_window,
-                              record_maintenance_skip, run_dry_run)
+from wedof_automation import (automation_dashboard_state, build_folder_automation_status,
+                              evaluate_action, is_wedof_maintenance_window,
+                              record_maintenance_skip, run_dry_run,
+                              sync_folder_automation_status)
 from wedof_service import WedofApiError
 
 
@@ -106,6 +108,44 @@ class WedofDryRunTests(unittest.TestCase):
         self.assertEqual((entry["status"], entry["planned_time"], payload), ("dry_run_due", "18:00", {"date": "2026-09-07"}))
         self.assertEqual(service["status"], "dry_run_due")
         self.assertEqual(service_payload, {"absenceDuration": 0, "forceMajeureAbsence": False, "date": "2026-10-09", "trainingDuration": 35})
+
+    def test_verified_folder_materializes_both_automation_states_immediately(self):
+        paris = ZoneInfo("Europe/Paris")
+        now = dt.datetime(2026, 8, 12, 15, 25, tzinfo=paris)
+        accepted = folder("CPF-1", start="2026-09-07", end="2026-10-09")
+        accepted["attendee"] = {"email": "private@example.fr", "phoneNumber": "0600000000"}
+        row = build_folder_automation_status(accepted, now=now, linked=True)
+        self.assertEqual(row["entry_training"]["status"], "planned")
+        self.assertEqual(row["entry_training"]["planned_at"], "2026-09-07T18:00:00+02:00")
+        self.assertEqual(row["service_done"]["status"], "waiting_for_in_training")
+        self.assertEqual(row["service_done"]["planned_at"], "2026-10-09T23:00:00+02:00")
+        self.assertEqual(row["local_link_status"], "linked")
+        self.assertNotIn("private@example.fr", repr(row))
+
+        training = build_folder_automation_status(
+            folder("CPF-1", state="inTraining"), now=now, linked=True,
+        )
+        self.assertEqual(training["entry_training"]["status"], "completed_in_wedof")
+        self.assertEqual(training["service_done"]["status"], "planned")
+
+        completed = build_folder_automation_status(
+            folder("CPF-1", state="serviceDoneDeclared"), now=now, linked=True,
+        )
+        self.assertEqual(
+            [completed[action]["status"] for action in ("entry_training", "service_done")],
+            ["completed_in_wedof", "completed_in_wedof"],
+        )
+
+    def test_status_sync_is_idempotent_and_accepts_public_snapshot(self):
+        data = {"wedof_links": [{"external_id": "CPF-1", "active": True}],
+                "wedof_automation_status": []}
+        snapshot = {"external_id": "CPF-1", "state": "accepted", "type": "cpf",
+                    "start_date": "2026-09-07", "end_date": "2026-10-09"}
+        now = dt.datetime(2026, 8, 12, 15, 25, tzinfo=ZoneInfo("Europe/Paris"))
+        sync_folder_automation_status(data, snapshot, now=now)
+        sync_folder_automation_status(data, snapshot, now=now)
+        self.assertEqual(len(data["wedof_automation_status"]), 1)
+        self.assertEqual(data["wedof_automation_status"][0]["entry_training"]["status"], "planned")
 
     def test_future_late_unlinked_blocks_and_idempotence(self):
         client = FakeClient({"accepted": [folder("FUTURE", start="2026-09-08"), folder("LATE", start="2026-09-01")], "inTraining": [], "serviceDoneDeclared": [], "serviceDoneValidated": []})

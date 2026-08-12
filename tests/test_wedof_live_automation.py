@@ -59,6 +59,20 @@ def test_entry_due_and_not_before_target_using_only_wedof_date():
         assert result["entry_success"] == expected
 
 
+def test_future_live_action_is_persisted_as_planned_without_remote_mutation():
+    client = Client(folder(start="2026-09-07", end="2026-10-09"))
+    data = {"wedof_links": [{"external_id": "GENERIC-1", "active": True}],
+            "wedof_automation_actions": [], "wedof_automation_status": [],
+            "wedof_automation_runs": []}
+    run_live_automation(client, data, now=dt.datetime(2026, 8, 12, 15, 25, tzinfo=PARIS))
+    assert not client.posts
+    assert len(data["wedof_automation_status"]) == 1
+    status = data["wedof_automation_status"][0]
+    assert status["entry_training"]["status"] == "planned"
+    assert status["service_done"]["status"] == "waiting_for_in_training"
+    assert status["local_link_status"] == "linked"
+
+
 def test_generic_late_service_done_uses_previous_day_and_is_journalled_for_dashboard():
     initial = folder(state="inTraining", end="2026-08-10")
     client = Client(initial, folder(state="serviceDoneDeclared", end="2026-08-10"))

@@ -78,6 +78,11 @@ class WedofDashboardUnitTests(unittest.TestCase):
         self.assertEqual([row["tab"] for row in dashboard["rows"]],
                          ["accepted", "training", "service", "service"])
         self.assertEqual((dashboard["stats"]["accepted"], dashboard["stats"]["training"], dashboard["stats"]["service"]), (1, 1, 2))
+        self.assertEqual(
+            [row["automation_status"] for row in dashboard["rows"][2:]],
+            ["completed_in_wedof", "completed_in_wedof"],
+        )
+        self.assertTrue(all(not row["automation_planned"] for row in dashboard["rows"][2:]))
 
     def test_unlinked_folder_stays_automatable(self):
         row = build_automation_dashboard([folder("A")])["rows"][0]

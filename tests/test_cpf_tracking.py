@@ -45,10 +45,24 @@ def test_real_automation_states_are_not_inferred_from_theoretical_dates():
     view = automation_view("D1", statuses, [])
     assert [a["status"] for a in view["actions"]] == ["Programmée", "Échec"]
     assert view["actions"][1]["error"] == "remote_error"
-    empty = automation_view("D1", [], [])
-    assert all(a["status"] == "Non programmée" for a in empty["actions"])
+    empty = automation_view("D1", [], [], {"state": "accepted"})
+    assert [a["status"] for a in empty["actions"]] == ["À calculer", "À venir"]
+    assert "prochain contrôle WEDOF" in empty["actions"][0]["detail"]
+    assert "passera « En formation »" in empty["actions"][1]["detail"]
     executed = automation_view("D1", [{"external_id": "D1", "entry_training": {"status": "executed", "executed_at": "2026-10-10T18:05:00+02:00"}}], [])
     assert executed["actions"][0]["status"] == "Exécutée"
+
+
+def test_waiting_service_done_has_an_explicit_target_without_false_alert():
+    statuses = [{
+        "external_id": "D1", "wedof_state": "accepted",
+        "entry_training": {"status": "planned", "planned_at": "2026-09-07T18:00:00+02:00"},
+        "service_done": {"status": "waiting_for_in_training", "planned_at": "2026-10-09T23:00:00+02:00"},
+    }]
+    view = automation_view("D1", statuses, [])
+    assert [action["status"] for action in view["actions"]] == ["Programmée", "À venir"]
+    assert "07/09/2026 à 18h00" in view["actions"][0]["detail"]
+    assert "09/10/2026 à 23h00" in view["actions"][1]["detail"]
 
 
 def test_french_money_and_paris_datetime_formats():
@@ -70,6 +84,8 @@ def test_template_keeps_automation_and_places_cpf_before_elearning():
     assert "admin_trainee_cpf_auto_match" in source
     assert "admin_trainee_cpf_associate_match" in source
     assert "js/cpf-auto-match.js" in source
+    assert "{{ action.detail }}" in source
+    assert "Automatisation attendue mais non programmée" not in source
 
 
 def test_successful_cpf_association_reloads_the_current_trainee_page():

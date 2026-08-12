@@ -193,6 +193,143 @@ def evaluate_action(folder: Dict[str, Any], action: str, *, now: Optional[dt.dat
     return _action_record(status, date_value, target_text, current), payload
 
 
+def _automation_remote_snapshot(folder: Dict[str, Any]) -> Dict[str, Any]:
+    """Accepte un dossier WEDOF brut ou son instantané déjà extrait."""
+    remote = extract_folder(folder)
+    if remote.get("external_id") or not isinstance(folder, dict):
+        return remote
+    allowed = (
+        "external_id", "state", "type", "start_date", "end_date",
+        "training_duration",
+    )
+    return {key: folder.get(key) for key in allowed}
+
+
+def _automation_evaluation_folder(remote: Dict[str, Any]) -> Dict[str, Any]:
+    """Reconstruit le sous-ensemble WEDOF minimal attendu par evaluate_action."""
+    training_info = {
+        "startDate": remote.get("start_date"),
+        "endDate": remote.get("end_date"),
+    }
+    if remote.get("training_duration") not in (None, ""):
+        training_info["trainingDuration"] = remote.get("training_duration")
+    return {
+        "externalId": remote.get("external_id"),
+        "state": remote.get("state"),
+        "type": remote.get("type"),
+        "trainingActionInfo": training_info,
+    }
+
+
+def build_folder_automation_status(
+    folder: Dict[str, Any], *, now: Optional[dt.datetime] = None,
+    blocks: Iterable[Dict[str, Any]] = (), linked: bool = False,
+    existing: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Matérialise les deux étapes d'automatisation depuis un GET WEDOF vérifié.
+
+    Le statut ``planned`` est ainsi une donnée persistante réelle, créée à
+    partir des dates WEDOF. Le service fait reste explicitement en attente du
+    passage à ``inTraining`` au lieu d'être présenté comme une programmation
+    manquante.
+    """
+    current = now or dt.datetime.now(PARIS_TZ)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=PARIS_TZ)
+    current = current.astimezone(PARIS_TZ)
+    remote = _automation_remote_snapshot(folder)
+    external_id = str(remote.get("external_id") or "").strip()
+    if not external_id:
+        return None
+
+    start_date = normalize_date(remote.get("start_date"))
+    end_date = normalize_date(remote.get("end_date"))
+    _, entry_time = _target_time("WEDOF_ENTRY_TARGET_TIME", "18:00")
+    _, service_time = _target_time("WEDOF_SERVICE_DONE_TARGET_TIME", "23:00")
+    state = str(remote.get("state") or "").strip()
+    row = {
+        "external_id": external_id,
+        "wedof_state": state,
+        "wedof_type": str(remote.get("type") or ""),
+        "wedof_date_start": start_date,
+        "wedof_date_end": end_date,
+        "last_checked_at": current.isoformat(),
+        "local_link_status": "linked" if linked else "unlinked",
+    }
+    evaluation_folder = _automation_evaluation_folder(remote)
+    previous = existing if isinstance(existing, dict) else {}
+
+    def keep_confirmed(action: str, fallback: Dict[str, Any]) -> Dict[str, Any]:
+        known = previous.get(action) if isinstance(previous.get(action), dict) else {}
+        if str(known.get("status") or "") in {"success", "executed", "already_done"}:
+            return dict(known)
+        return fallback
+
+    if str(remote.get("type") or "").strip().casefold() != "cpf":
+        row["entry_training"] = _action_record("anomaly", start_date, entry_time, current, "invalid_type")
+        row["service_done"] = _action_record("anomaly", end_date, service_time, current, "invalid_type")
+    elif state == "accepted":
+        entry, _ = evaluate_action(evaluation_folder, "entry_training", now=current, blocks=blocks)
+        waiting = _action_record("waiting_for_in_training", end_date, service_time, current)
+        row["entry_training"] = keep_confirmed("entry_training", entry)
+        row["service_done"] = keep_confirmed("service_done", waiting)
+    elif state == "inTraining":
+        completed = _action_record("completed_in_wedof", start_date, entry_time, current)
+        service, _ = evaluate_action(evaluation_folder, "service_done", now=current, blocks=blocks)
+        row["entry_training"] = keep_confirmed("entry_training", completed)
+        row["service_done"] = keep_confirmed("service_done", service)
+    elif state in SERVICE_DONE_STATES or state == "terminated":
+        row["entry_training"] = keep_confirmed(
+            "entry_training", _action_record("completed_in_wedof", start_date, entry_time, current),
+        )
+        row["service_done"] = keep_confirmed(
+            "service_done", _action_record("completed_in_wedof", end_date, service_time, current),
+        )
+    else:
+        row["entry_training"] = _action_record("not_applicable", start_date, entry_time, current)
+        row["service_done"] = _action_record("not_applicable", end_date, service_time, current)
+    return row
+
+
+def sync_folder_automation_status(
+    data: Dict[str, Any], folder: Dict[str, Any], *, now: Optional[dt.datetime] = None,
+) -> Optional[Dict[str, Any]]:
+    """Insère ou actualise atomiquement l'état local d'un dossier déjà relu."""
+    remote = _automation_remote_snapshot(folder)
+    external_id = str(remote.get("external_id") or "").strip()
+    if not external_id:
+        return None
+    rows = data.setdefault("wedof_automation_status", [])
+    if not isinstance(rows, list):
+        rows = []
+        data["wedof_automation_status"] = rows
+    existing = next((
+        item for item in rows
+        if isinstance(item, dict) and str(item.get("external_id") or "") == external_id
+    ), None)
+    linked = any(
+        isinstance(link, dict) and link.get("active") is True
+        and str(link.get("external_id") or "") == external_id
+        for link in data.get("wedof_links", [])
+    )
+    row = build_folder_automation_status(
+        folder,
+        now=now,
+        blocks=data.get("wedof_automation_blocks", data.get("wedof_automation_exceptions", [])),
+        linked=linked,
+        existing=existing,
+    )
+    if row is None:
+        return None
+    if existing is None:
+        rows.append(row)
+    else:
+        existing.clear()
+        existing.update(row)
+        row = existing
+    return row
+
+
 def build_automation_candidate(folder: Dict[str, Any], action: str, *, now: Optional[dt.datetime] = None,
                                exceptions: Iterable[Dict[str, Any]] = ()) -> Dict[str, Any]:
     """API de compatibilité du contrat initial."""
@@ -253,25 +390,31 @@ def run_dry_run(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime]
                         "local_link_status": "unlinked", "entry_training": _action_record("anomaly", None, "18:00", current, "missing_external_id"),
                         "service_done": _action_record("not_applicable", None, "23:00", current)}
                     continue
-                row = {"external_id": external_id, "wedof_state": state, "wedof_type": remote.get("type") or "",
-                       "wedof_date_start": normalize_date(remote.get("start_date")),
-                       "wedof_date_end": normalize_date(remote.get("end_date")),
-                       "last_checked_at": started, "local_link_status": "linked" if external_id in links else "unlinked"}
-                row["entry_training"] = _action_record("not_applicable", normalize_date(remote.get("start_date")), "18:00", current)
-                row["service_done"] = _action_record("not_applicable", normalize_date(remote.get("end_date")), "23:00", current)
+                row = build_folder_automation_status(
+                    folder, now=current, blocks=blocks, linked=external_id in links,
+                )
+                if row is None:
+                    continue
                 action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
                 if action:
-                    record, payload = evaluate_action(folder, action, now=current, blocks=blocks)
+                    record = row[action]
                     if record["status"].startswith("dry_run_due"):
                         try:
                             reread = client.get_registration_folder(external_id)
                             check = extract_folder(reread)
                             if str(check.get("external_id") or "") != external_id:
                                 raise ValueError("external_id_conflict")
-                            record, payload = evaluate_action(reread, action, now=current, blocks=blocks)
+                            refreshed = build_folder_automation_status(
+                                reread, now=current, blocks=blocks, linked=external_id in links,
+                            )
+                            if refreshed is None:
+                                raise ValueError("missing_external_id")
+                            row = refreshed
                         except Exception:
-                            record = _action_record("anomaly", record["planned_date"], record["planned_time"], current, "remote_reread_failed")
-                    row[action] = record
+                            row[action] = _action_record(
+                                "anomaly", record["planned_date"], record["planned_time"],
+                                current, "remote_reread_failed",
+                            )
                 existing[external_id] = row
         data["wedof_automation_status"] = list(existing.values())
 
@@ -365,6 +508,7 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             if journal.get("status") not in {"success", "already_done"}:
                 journal.update(status="blocked", updated_at=current.isoformat(), last_error_code="manual_block")
                 counts["blocked"] += 1
+            sync_folder_automation_status(data, listed, now=current)
             continue
         expected_done = ENTRY_DONE_STATES if action == "entry_training" else SERVICE_DONE_STATES
         try:
@@ -375,6 +519,7 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             continue
         # Reconcile durable success/uncertainty/processing before considering a POST.
         if existing and existing.get("status") in {"success", "already_done"}:
+            sync_folder_automation_status(data, fresh, now=current)
             continue
         if existing and existing.get("status") == "error" and existing.get("last_http_status") in {400, 401, 403, 404}:
             continue
@@ -385,11 +530,13 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             journal.update(status="already_done", updated_at=current.isoformat(),
                            wedof_state_after=remote.get("state"), last_error_code=None)
             _set_dashboard_action(data, external_id, action, fresh, journal, current)
+            sync_folder_automation_status(data, fresh, now=current)
             counts["already_done"] += 1
             continue
         record, payload = evaluate_action(fresh, action, now=current,
                                           blocks=data.get("wedof_automation_blocks", []))
         if record["status"] == "planned" or record["status"] == "anomaly":
+            sync_folder_automation_status(data, fresh, now=current)
             continue
         business_date = record.get("planned_date") or ""
         journal = existing or _new_action(external_id, action, business_date, current)
@@ -397,6 +544,7 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         if record["status"] == "blocked":
             journal.update(status="blocked", updated_at=current.isoformat(), last_error_code="manual_block")
             _set_dashboard_action(data, external_id, action, fresh, journal, current)
+            sync_folder_automation_status(data, fresh, now=current)
             counts["blocked"] += 1
             continue
         # An uncertain or abandoned processing action is always reconciled above; unchanged state
@@ -436,6 +584,7 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
                            wedof_state_after=after, last_error_code=None)
             counts["entry_success" if action == "entry_training" else "service_done_success"] += 1
             _set_dashboard_action(data, external_id, action, verified, journal, current)
+            sync_folder_automation_status(data, verified, now=current)
         except Exception as exc:
             http_status = getattr(exc, "http_status", None)
             code = getattr(exc, "code", "wedof_state_not_confirmed")
@@ -457,6 +606,8 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
                     journal["status"] = "uncertain_after_timeout" if getattr(exc, "ambiguous", False) else "error"
                     counts["uncertain" if getattr(exc, "ambiguous", False) else "errors"] += 1
                 _set_dashboard_action(data, external_id, action, verified, journal, current)
+                if journal.get("status") in {"success", "already_done"}:
+                    sync_folder_automation_status(data, verified, now=current)
             else:
                 journal["status"] = "error"
                 counts["errors"] += 1
@@ -483,8 +634,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         if not isinstance(item, dict): continue
         remote = extract_folder(item); external_id = str(remote.get("external_id") or ""); seen.add(external_id)
         state, history = remote.get("state", ""), status_by_id.get(external_id, {})
-        action = history.get("entry_training", {}) if state == "accepted" else history.get("service_done", {})
-        value = action.get("status") or "planned"
+        action = (history.get("entry_training", {}) if state == "accepted"
+                  else history.get("service_done", {}) if state in {"inTraining", *SERVICE_DONE_STATES}
+                  else {})
+        value = action.get("status") or ("completed_in_wedof" if state in SERVICE_DONE_STATES else "planned")
         automation_action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
         block = _indexed_block(blocks_by_key, external_id, automation_action)
         underlying = value
@@ -522,8 +675,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         if not isinstance(status, dict): continue
         if str(status.get("external_id") or "") in seen: continue
         state = status.get("wedof_state")
-        action = status.get("entry_training", {}) if state == "accepted" else status.get("service_done", {})
-        value = action.get("status", "not_applicable")
+        action = (status.get("entry_training", {}) if state == "accepted"
+                  else status.get("service_done", {}) if state in {"inTraining", *SERVICE_DONE_STATES}
+                  else {})
+        value = action.get("status") or ("completed_in_wedof" if state in SERVICE_DONE_STATES else "not_applicable")
         automation_action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
         block = _indexed_block(blocks_by_key, str(status.get("external_id") or ""), automation_action)
         underlying = value
