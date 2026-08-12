@@ -28,6 +28,27 @@
     retry.hidden = !showRetry;
   }
 
+  function refreshAfterAssociation(redirectUrl) {
+    try {
+      const current = new URL(window.location.href);
+      const target = new URL(redirectUrl || current.href, current.href);
+      const samePage = target.origin === current.origin
+        && target.pathname === current.pathname
+        && target.search === current.search;
+      if (!samePage) {
+        window.location.assign(target.href);
+        return;
+      }
+      // Changer uniquement l'ancre ne recharge pas la fiche : les suggestions
+      // et le bouton resteraient donc figés malgré l'association enregistrée.
+      window.history.replaceState(null, '', target.href);
+    } catch (_error) {
+      // Une URL de redirection absente ou invalide ne doit pas empêcher le
+      // rechargement de l'état désormais enregistré côté serveur.
+    }
+    window.location.reload();
+  }
+
   async function post(url, body = null) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 90000);
@@ -103,8 +124,9 @@
       const body = new URLSearchParams({external_id: externalId});
       const payload = await post(root.dataset.associateUrl, body);
       setStatus('success', payload.message || 'Dossier CPF associé.');
+      button.textContent = 'Dossier associé';
       suggestions.querySelectorAll('button').forEach(item => { item.disabled = true; });
-      window.setTimeout(() => window.location.assign(payload.redirect_url), 500);
+      window.setTimeout(() => refreshAfterAssociation(payload.redirect_url), 300);
     } catch (error) {
       button.disabled = false;
       button.textContent = original;
@@ -123,7 +145,7 @@
       const payload = await post(root.dataset.searchUrl);
       if (payload.status === 'associated') {
         setStatus('success', payload.message || 'Le bon dossier CPF a été associé automatiquement.');
-        window.setTimeout(() => window.location.assign(payload.redirect_url), 500);
+        window.setTimeout(() => refreshAfterAssociation(payload.redirect_url), 300);
         return;
       }
       const items = Array.isArray(payload.candidates) ? payload.candidates : [];
