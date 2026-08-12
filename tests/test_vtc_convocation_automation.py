@@ -66,6 +66,11 @@ class VtcConvocationAutomationTests(unittest.TestCase):
             )
 
         self.assertTrue(status["has_convocation"])
+        self.assertEqual(
+            [step["label"] for step in status["timeline"]],
+            ["Convention envoyée", "Convention signée", "Convocation"],
+        )
+        self.assertEqual(status["total_documents"], 3)
         self.assertFalse(status["convocation"]["can_generate"])
         self.assertEqual(status["convocation"]["block_reason"], "En attente de réussite à l’examen théorique")
         self.assertEqual(status["convocation"]["timeline_steps"][0]["label"], "Examen théorique")
