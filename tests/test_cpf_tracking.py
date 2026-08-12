@@ -70,3 +70,12 @@ def test_template_keeps_automation_and_places_cpf_before_elearning():
     assert "admin_trainee_cpf_auto_match" in source
     assert "admin_trainee_cpf_associate_match" in source
     assert "js/cpf-auto-match.js" in source
+
+
+def test_successful_cpf_association_reloads_the_current_trainee_page():
+    source = open("static/js/cpf-auto-match.js", encoding="utf-8").read()
+    assert "function refreshAfterAssociation" in source
+    assert "window.history.replaceState(null, '', target.href)" in source
+    assert "window.location.reload()" in source
+    assert source.count("refreshAfterAssociation(payload.redirect_url)") == 2
+    assert "window.location.assign(payload.redirect_url)" not in source
