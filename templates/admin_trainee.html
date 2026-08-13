@@ -4076,9 +4076,16 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     return `${hasQonto?badge('QONTO','black'):''}${hasExternal?badge('Générée ailleurs','purple'):''}`;
   }
   function lineAmount(l){const e=canonicalInvoiceEntry(l);return e?Number(e.total_amount_cents ?? 0)/100:Number(l.amountTTC||l.amount||0)}
-  function linePaid(l){const e=canonicalInvoiceEntry(l);if(e)return Number(e.paid_amount_cents ?? 0)/100;const paidStatuses=new Set(['completed','paid','succeeded','success']);return logicalInstallmentsForLine(l).filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((total,i)=>total+Number(i.amount||0),0)}
-  function lineRemaining(l){const e=canonicalInvoiceEntry(l);return e?Number(e.remaining_amount_cents ?? 0)/100:Math.max(lineAmount(l)-linePaid(l),0)}
-  function linePaymentStatus(l){const e=canonicalInvoiceEntry(l);return e?.payment_status||'unpaid'}
+  function linePaid(l){
+    const e=canonicalInvoiceEntry(l),rawInstallments=Array.isArray(l?.directDebitInstallments)?l.directDebitInstallments:[],installments=logicalInstallmentsForLine(l),paidStatuses=new Set(['completed','paid','succeeded','success']),terminalStatuses=new Set([...paidStatuses,'failed','returned','rejected','refunded','declined']);
+    const installmentPaid=installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((total,i)=>total+Number(i.amount||0),0);
+    // Once Qonto has reported a terminal collection, the SEPA history is the
+    // authority. This also covers collections completed before the invoice.
+    if(rawInstallments.some(i=>terminalStatuses.has(String(i.status||'').toLowerCase())))return installmentPaid;
+    return e?Number(e.paid_amount_cents ?? 0)/100:installmentPaid;
+  }
+  function lineRemaining(l){return Math.max(lineAmount(l)-linePaid(l),0)}
+  function linePaymentStatus(l){const e=canonicalInvoiceEntry(l),amount=lineAmount(l),paid=linePaid(l),raw=String(e?.payment_status||'unpaid').toLowerCase();if(['canceled','cancelled','control'].includes(raw))return raw;if(amount>0&&paid>=amount)return 'paid';if(paid>0)return 'partially_paid';return raw;}
   // The payment plan is persisted while the mandate is awaiting signature so
   // subscriptions can be created afterwards.  It must not be presented as a
   // programmed debit schedule until Qonto confirms the mandate.

@@ -1560,6 +1560,12 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
         invoice.get("qontoAmountPaidCents"),
         invoice.get("paidAmountCents"),
     )
+    # A SEPA collection may have been completed before the client invoice was
+    # created. In that case Qonto legitimately returns ``amount_paid = 0`` on
+    # the new invoice even though money has already been collected for this
+    # billing line. Reconcile the invoice snapshot with the collection
+    # history before exposing it to the finance widget.
+    raw_paid_amount_cents = _reconciled_qonto_paid_cents(invoice, raw_paid_amount_cents)
     paid_amount_cents, _ = _validate_qonto_paid_cents(
         total_amount_cents,
         raw_paid_amount_cents,
@@ -1605,12 +1611,19 @@ def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -
     least one collection has reached a terminal state so pending legacy plans
     do not erase a valid non-SEPA payment.
     """
-    if invoice.get("paymentMode") != "sepa_direct_debit":
+    all_installments = _sepa_installments(invoice)
+    # Historical mandate-only lines did not always persist ``paymentMode``.
+    # The presence of a real SEPA schedule is sufficient proof that these are
+    # direct-debit collections and prevents a later-created invoice from
+    # hiding them.
+    if not all_installments:
         return fallback_cents
-    installments = _sepa_installments(invoice)
     terminal = {"completed", "paid", "succeeded", "success", "failed", "returned", "rejected", "refunded"}
-    if not any(str(item.get("status") or "").lower() in terminal for item in installments):
+    if not any(str(item.get("status") or "").lower() in terminal for item in all_installments):
         return fallback_cents
+    # Keep rejected/reprogrammed history for the authority decision above, but
+    # count only one current attempt per contractual installment below.
+    installments = _effective_sepa_installments(invoice)
     paid = sum(
         money_value_to_cents(item.get("amount") or 0)
         for item in installments
@@ -33297,10 +33310,18 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
         if invoice_id:
             frontend_invoice = line.get('qonto_invoice') if isinstance(line.get('qonto_invoice'), dict) else serialize_qonto_invoice_for_frontend(line)
             total_cents = int(frontend_invoice['total_amount_cents'])
-            paid_cents = int(frontend_invoice['paid_amount_cents'])
-            remaining_cents = int(frontend_invoice['remaining_amount_cents'])
+            paid_cents = _reconciled_qonto_paid_cents(line, int(frontend_invoice['paid_amount_cents']))
+            paid_cents, _ = _validate_qonto_paid_cents(
+                total_cents,
+                paid_cents,
+                str(frontend_invoice.get('invoice_number') or invoice_id),
+            )
+            remaining_cents = max(total_cents - paid_cents, 0)
             qonto_status = str(frontend_invoice.get('qonto_status') or '').lower()
-            status = str(frontend_invoice['payment_status'])
+            status = (
+                'paid' if total_cents > 0 and paid_cents >= total_cents
+                else ('partially_paid' if paid_cents > 0 else str(frontend_invoice['payment_status']))
+            )
             invoiced_total_cents += total_cents
             qonto_paid_total_cents += paid_cents
             by_financer[financer]['invoiced_amount_cents'] += total_cents
@@ -33329,8 +33350,8 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
         # Direct-debit collections can be reported before (or independently
         # from) a client-invoice payment amount.  The schedule is then the only
         # source of truth available for the money already collected.
-        installments = line.get('directDebitInstallments')
-        if isinstance(installments, list):
+        installments = _effective_sepa_installments(line)
+        if installments:
             paid_statuses = {'completed', 'paid', 'succeeded', 'success'}
             installment_paid_cents = sum(
                 money_value_to_cents(item.get('amount') or 0)
@@ -33504,6 +33525,27 @@ def _refresh_billing_line_invoice_from_qonto(line: Dict[str, Any], fallback_invo
 
 def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: Dict[str, Any]) -> None:
     normalized = normalize_qonto_invoice_payment_data(invoice, line)
+    reconciled_paid_cents = _reconciled_qonto_paid_cents(
+        line,
+        normalized['qonto_amount_paid_cents'],
+    )
+    reconciled_paid_cents, _ = _validate_qonto_paid_cents(
+        normalized['qonto_total_amount_cents'],
+        reconciled_paid_cents,
+        str(_qonto_invoice_number(invoice) or line.get('qontoInvoiceNumber') or ''),
+    )
+    normalized['qonto_amount_paid_cents'] = reconciled_paid_cents
+    normalized['qonto_remaining_amount_cents'] = max(
+        normalized['qonto_total_amount_cents'] - reconciled_paid_cents,
+        0,
+    )
+    if normalized['qonto_status'] not in {'canceled', 'cancelled'}:
+        normalized['qonto_payment_status'] = (
+            'paid'
+            if normalized['qonto_total_amount_cents'] > 0
+            and reconciled_paid_cents >= normalized['qonto_total_amount_cents']
+            else ('partially_paid' if reconciled_paid_cents > 0 else normalized['qonto_payment_status'])
+        )
     app.logger.info(
         "Qonto invoice sync: invoice_id=%s number=%s status=%s total_amount=%.2f amount_paid=%.2f",
         invoice.get('id') or line.get('qontoInvoiceId') or line.get('qontoDraftId') or '',
