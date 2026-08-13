@@ -30416,6 +30416,17 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
+    # Le suivi CPF doit refléter WEDOF dès l'ouverture de la fiche. Le bouton
+    # d'actualisation reste utile pour relancer manuellement une API indisponible,
+    # mais il ne doit pas être nécessaire pour voir une transition d'état.
+    if has_cpf_financing(t):
+        cpf_link = _cpf_active_link(data, session_id=session_id, trainee_id=trainee_id)
+        if cpf_link:
+            try:
+                _refresh_cpf_link_from_wedof(data, cpf_link)
+            except (WedofApiError, WedofConfigurationError):
+                cpf_link["cpf_sync_error"] = "Synchronisation momentanément indisponible"
+
     _remember_admin_trainee_consultation(session_id, trainee_id)
 
     training_type = session_view["training_type"]
@@ -30574,6 +30585,20 @@ def _cpf_public_snapshot(remote: Dict[str, Any]) -> Dict[str, Any]:
         snapshot["wedof_url"] = url
     snapshot["synced_at"] = now
     return snapshot
+
+
+def _refresh_cpf_link_from_wedof(data: Dict[str, Any], link: Dict[str, Any]) -> Dict[str, Any]:
+    """Actualise en lecture seule le cache d'un lien CPF depuis WEDOF."""
+    remote_folder = WedofClient().get_registration_folder_interactive(str(link.get("external_id") or ""))
+    remote = extract_folder(remote_folder)
+    if str(remote.get("type") or "").casefold() != "cpf":
+        raise WedofApiError("Le dossier retourné n’est pas un dossier CPF.")
+    link["cpf_snapshot"] = _cpf_public_snapshot(remote)
+    link["wedof_state"] = remote.get("state") or link.get("wedof_state")
+    link["last_seen_at"] = _now_iso()
+    link.pop("cpf_sync_error", None)
+    sync_folder_automation_status(data, remote_folder)
+    return remote
 
 
 CPF_ASSOCIATION_STATES = (
@@ -30869,15 +30894,7 @@ def admin_trainee_cpf_refresh(session_id: str, trainee_id: str):
         flash("Aucun dossier CPF n’est associé à ce stagiaire.", "error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
     try:
-        remote_folder = WedofClient().get_registration_folder_interactive(str(link.get("external_id") or ""))
-        remote = extract_folder(remote_folder)
-        if str(remote.get("type") or "").casefold() != "cpf":
-            raise WedofApiError("Le dossier retourné n’est pas un dossier CPF.")
-        link["cpf_snapshot"] = _cpf_public_snapshot(remote)
-        link["wedof_state"] = remote.get("state") or link.get("wedof_state")
-        link["last_seen_at"] = _now_iso()
-        link.pop("cpf_sync_error", None)
-        sync_folder_automation_status(data, remote_folder)
+        _refresh_cpf_link_from_wedof(data, link)
         save_data(data)
         flash("Données WEDOF et automatisations actualisées.", "success")
     except (WedofApiError, WedofConfigurationError):

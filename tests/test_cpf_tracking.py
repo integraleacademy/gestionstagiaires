@@ -1,5 +1,7 @@
 import datetime as dt
+from unittest.mock import Mock
 
+import app as application
 from cpf_tracking import (CPF_STEPS, automation_view, build_cpf_view, build_steps,
                           format_euro, format_paris_datetime, has_cpf_financing,
                           map_wedof_status, waiting_reason)
@@ -95,3 +97,35 @@ def test_successful_cpf_association_reloads_the_current_trainee_page():
     assert "window.location.reload()" in source
     assert source.count("refreshAfterAssociation(payload.redirect_url)") == 2
     assert "window.location.assign(payload.redirect_url)" not in source
+
+
+def test_refresh_cpf_link_updates_status_snapshot_and_automation(monkeypatch):
+    remote_folder = {
+        "externalId": "CPF-42",
+        "type": "CPF",
+        "state": "serviceDoneDeclared",
+        "trainingActionInfo": {"sessionStartDate": "2026-07-13", "sessionEndDate": "2026-08-12"},
+    }
+    client = Mock()
+    client.get_registration_folder_interactive.return_value = remote_folder
+    automation_sync = Mock()
+    monkeypatch.setattr(application, "WedofClient", lambda: client)
+    monkeypatch.setattr(application, "sync_folder_automation_status", automation_sync)
+    monkeypatch.setattr(application, "_now_iso", lambda: "2026-08-13T10:00:00+00:00")
+    data = {"wedof_automation_status": []}
+    link = {
+        "external_id": "CPF-42",
+        "wedof_state": "inTraining",
+        "cpf_snapshot": {"state": "inTraining"},
+        "cpf_sync_error": "ancienne erreur",
+    }
+
+    application._refresh_cpf_link_from_wedof(data, link)
+
+    client.get_registration_folder_interactive.assert_called_once_with("CPF-42")
+    assert link["wedof_state"] == "serviceDoneDeclared"
+    assert link["cpf_snapshot"]["state"] == "serviceDoneDeclared"
+    assert link["cpf_snapshot"]["synced_at"] == "2026-08-13T10:00:00+00:00"
+    assert link["last_seen_at"] == "2026-08-13T10:00:00+00:00"
+    assert "cpf_sync_error" not in link
+    automation_sync.assert_called_once_with(data, remote_folder)
