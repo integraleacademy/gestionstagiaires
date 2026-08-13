@@ -116,19 +116,19 @@ def find_trainee_cpf_candidates(
     *,
     allowed_states: Optional[Iterable[str]] = None,
 ) -> List[Dict[str, Any]]:
-    """Retourne les dossiers CPF ayant exactement le même e-mail et téléphone.
+    """Retourne les dossiers CPF qui ressemblent à l'inscription locale.
 
     La fonction reste pure et ne conserve que les champs explicitement extraits
-    par :func:`extract_folder`. Une association automatique n'est considérée
-    sûre que si l'identité *et* les deux dates concordent également.
+    par :func:`extract_folder`. Le nom et le prénom participent à la recherche,
+    même quand les coordonnées WEDOF diffèrent. Une association automatique
+    n'est considérée sûre que si l'identité, les deux dates et au moins une
+    coordonnée (e-mail ou téléphone) concordent. Les correspondances moins
+    certaines restent proposées pour confirmation manuelle.
     """
     local_email = normalize_email(trainee.get("email") or trainee.get("mail"))
     local_phone = normalize_phone(
         trainee.get("phone") or trainee.get("telephone") or trainee.get("phone_number")
     )
-    if not local_email or not local_phone:
-        return []
-
     local_first_name = normalize_name(trainee.get("first_name") or trainee.get("prenom"))
     local_last_name = normalize_name(trainee.get("last_name") or trainee.get("nom"))
     local_start = normalize_date(session_obj.get("date_start") or session_obj.get("date_debut"))
@@ -148,10 +148,10 @@ def find_trainee_cpf_candidates(
         ):
             continue
 
-        email_match = normalize_email(remote.get("email")) == local_email
-        phone_match = normalize_phone(remote.get("phone")) == local_phone
-        if not email_match or not phone_match:
-            continue
+        remote_email = normalize_email(remote.get("email"))
+        remote_phone = normalize_phone(remote.get("phone"))
+        email_match = bool(local_email and remote_email and remote_email == local_email)
+        phone_match = bool(local_phone and remote_phone and remote_phone == local_phone)
 
         remote_first_name = normalize_name(remote.get("first_name"))
         remote_last_name = normalize_name(remote.get("last_name"))
@@ -169,9 +169,43 @@ def find_trainee_cpf_candidates(
         dates_match = bool(
             dates_complete and remote_start == local_start and remote_end == local_end
         )
+
+        # Le nom/prénom doit pouvoir retrouver un dossier lorsque l'adresse
+        # utilisée sur Mon Compte Formation n'est pas celle de la fiche locale.
+        # Sans identité commune, deux signaux indépendants restent nécessaires
+        # pour afficher une suggestion et éviter les rapprochements trop larges.
+        is_candidate = bool(
+            identity_match
+            or (email_match and phone_match)
+            or (dates_match and (email_match or phone_match))
+        )
+        if not is_candidate:
+            continue
+
+        automatic_match = bool(
+            identity_match and dates_match and (email_match or phone_match)
+        )
+        if automatic_match:
+            if email_match and phone_match:
+                matching_rule = "email_phone_identity_dates"
+            elif email_match:
+                matching_rule = "email_identity_dates"
+            else:
+                matching_rule = "phone_identity_dates"
+        else:
+            matching_rule = "manual_review_required"
+
         mismatches = []
         if not identity_match:
             mismatches.append("Identité WEDOF incomplète" if not identity_complete else "Identité différente")
+        if not email_match:
+            mismatches.append(
+                "E-mail différent" if local_email and remote_email else "E-mail non comparable"
+            )
+        if not phone_match:
+            mismatches.append(
+                "Téléphone différent" if local_phone and remote_phone else "Téléphone non comparable"
+            )
         if not dates_match:
             mismatches.append("Dates WEDOF incomplètes" if not dates_complete else "Dates de formation différentes")
 
@@ -179,24 +213,29 @@ def find_trainee_cpf_candidates(
             **remote,
             "start_date": remote_start,
             "end_date": remote_end,
-            "email_match": True,
-            "phone_match": True,
+            "email_match": email_match,
+            "phone_match": phone_match,
             "identity_match": identity_match,
             "dates_match": dates_match,
-            "all_fields_match": bool(identity_match and dates_match),
+            "all_fields_match": bool(
+                email_match and phone_match and identity_match and dates_match
+            ),
+            "automatic_match": automatic_match,
+            "matching_rule": matching_rule,
             "match_reasons": [
-                "Même e-mail",
-                "Même téléphone",
-                *(["Même identité"] if identity_match else []),
+                *(["Même nom et prénom"] if identity_match else []),
+                *(["Même e-mail"] if email_match else []),
+                *(["Même téléphone"] if phone_match else []),
                 *(["Mêmes dates de formation"] if dates_match else []),
             ],
             "mismatches": mismatches,
         })
 
     candidates.sort(key=lambda item: (
-        not item["all_fields_match"],
-        not item["dates_match"],
+        not item["automatic_match"],
         not item["identity_match"],
+        not item["dates_match"],
+        -(int(item["email_match"]) + int(item["phone_match"])),
         str(item.get("start_date") or "9999-12-31"),
         str(item.get("external_id") or ""),
     ))

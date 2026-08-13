@@ -30708,6 +30708,7 @@ def _cpf_candidate_payload(
         "match_reasons": list(candidate.get("match_reasons") or []),
         "mismatches": list(candidate.get("mismatches") or []),
         "all_fields_match": bool(candidate.get("all_fields_match")),
+        "automatic_match": bool(candidate.get("automatic_match")),
         "can_associate": linked is None or linked_here,
         "linked_elsewhere": bool(linked and not linked_here),
     }
@@ -30730,10 +30731,13 @@ def _persist_trainee_cpf_match(
         if not candidates or str(candidates[0].get("external_id") or "") != remote_external_id:
             return {
                 "status": "contact_mismatch",
-                "message": "Le dossier ne correspond plus à l’e-mail et au téléphone du stagiaire.",
+                "message": (
+                    "Le dossier ne correspond plus suffisamment au nom, au prénom, "
+                    "aux coordonnées ou à la session du stagiaire."
+                ),
             }
         candidate = candidates[0]
-        if automatic and not candidate.get("all_fields_match"):
+        if automatic and not candidate.get("automatic_match"):
             return {
                 "status": "manual_confirmation_required",
                 "message": "Une confirmation administrateur reste nécessaire pour ce dossier.",
@@ -30756,7 +30760,7 @@ def _persist_trainee_cpf_match(
                 "trainee_id": str(trainee_id),
                 "type": "cpf",
                 "state": str(candidate.get("state") or ""),
-                "rule": "email_phone_identity_dates",
+                "rule": str(candidate.get("matching_rule") or "identity_dates_contact"),
                 "start_date": candidate.get("start_date"),
                 "end_date": candidate.get("end_date"),
             }])
@@ -30766,7 +30770,7 @@ def _persist_trainee_cpf_match(
                     "message": "Ce dossier CPF est déjà associé à une autre inscription.",
                 }
             outcome = "created" if summary.get("created") else "already_linked"
-            history_source = "automatic_all_fields_match"
+            history_source = "automatic_identity_dates_contact"
         else:
             outcome = save_manual_wedof_link(
                 canonical,
@@ -30852,11 +30856,21 @@ def admin_trainee_cpf_auto_match(session_id: str, trainee_id: str):
     candidates = find_trainee_cpf_candidates(
         folders, local_session, trainee, allowed_states=CPF_ASSOCIATION_STATES,
     )
-    exact = [item for item in candidates if item.get("all_fields_match")]
-    if len(exact) == 1:
+    automatic_candidates = [item for item in candidates if item.get("automatic_match")]
+    # Un dossier peut être associé sans reprendre exactement le même e-mail,
+    # mais jamais si un autre dossier partage lui aussi un signal fort sur les
+    # mêmes dates. Dans ce cas, l'administrateur doit choisir explicitement.
+    credible_on_session_dates = [
+        item for item in candidates
+        if item.get("dates_match") and (
+            item.get("identity_match") or item.get("email_match") or item.get("phone_match")
+        )
+    ]
+    if len(automatic_candidates) == 1 and len(credible_on_session_dates) == 1:
         remote_folder = next(
             folder for folder in folders
-            if str(extract_folder(folder).get("external_id") or "") == str(exact[0].get("external_id") or "")
+            if str(extract_folder(folder).get("external_id") or "")
+            == str(automatic_candidates[0].get("external_id") or "")
         )
         result = _persist_trainee_cpf_match(
             remote_folder, session_id=session_id, trainee_id=trainee_id, automatic=True,
@@ -30865,7 +30879,10 @@ def admin_trainee_cpf_auto_match(session_id: str, trainee_id: str):
             session.pop("cpf_association_preview", None)
             return jsonify({
                 "ok": True, **result, "redirect_url": redirect_url,
-                "message": "Dossier CPF associé automatiquement : toutes les informations concordent.",
+                "message": (
+                    "Dossier CPF associé automatiquement : le nom, le prénom, les dates "
+                    "et au moins une coordonnée concordent."
+                ),
             })
         if result.get("status") != "conflict":
             return _cpf_match_json_error(
@@ -30881,11 +30898,15 @@ def admin_trainee_cpf_auto_match(session_id: str, trainee_id: str):
     ]
     status = "suggestions" if public_candidates else "no_match"
     message = (
-        "Un dossier correspondant a été trouvé. Vérifiez-le puis cliquez sur « Associer ce dossier »."
+        "Un dossier probable a été trouvé grâce à l’identité, aux coordonnées ou aux dates. "
+        "Vérifiez-le puis cliquez sur « Associer ce dossier »."
         if len(public_candidates) == 1
-        else f"{len(public_candidates)} dossiers correspondent à l’e-mail et au téléphone. Choisissez le bon dossier."
+        else f"{len(public_candidates)} dossiers possibles ont été trouvés. Choisissez le bon dossier."
         if public_candidates
-        else "Aucun dossier WEDOF ne correspond actuellement à la fois à l’e-mail et au téléphone du stagiaire."
+        else (
+            "Aucun dossier WEDOF ne correspond suffisamment au nom, au prénom, "
+            "aux coordonnées ou aux dates de formation du stagiaire."
+        )
     )
     return jsonify({
         "ok": True, "status": status, "message": message,

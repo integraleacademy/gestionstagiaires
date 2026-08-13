@@ -140,7 +140,7 @@
     if (running) return;
     running = true;
     suggestions.innerHTML = '';
-    setStatus('loading', 'Comparaison de l’e-mail, du téléphone, de l’identité et des dates avec WEDOF…');
+    setStatus('loading', 'Comparaison du nom, du prénom, des dates, de l’e-mail et du téléphone avec WEDOF…');
     try {
       const payload = await post(root.dataset.searchUrl);
       if (payload.status === 'associated') {
