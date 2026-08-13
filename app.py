@@ -30177,6 +30177,7 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
     trainee["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
     trainee["convocation_aps_last_error"] = ""
     trainee["convocation_auto_last_error"] = ""
+    trainee["convocation_auto_scheduled_at"] = ""
     return True
 
 
@@ -30233,10 +30234,12 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
 
     convention_signed = convention_status == "signed"
     convention_sent = convention_status in {"sent", "waiting_signature", "signed"}
-    convocation_error = trainee.get("convocation_aps_last_error") or trainee.get("convocation_auto_last_error") or ""
+    convocation_sent_at_raw = trainee.get("convocation_aps_sent_at") or ""
+    convocation_error = trainee.get("convocation_aps_last_error") or ""
+    if not convocation_error and not convocation_sent_at_raw:
+        convocation_error = trainee.get("convocation_auto_last_error") or ""
     if not convention_signed and convocation_error == "En attente de signature de la convention":
         convocation_error = ""
-    convocation_sent_at_raw = trainee.get("convocation_aps_sent_at") or ""
     convocation_sent_at = _format_automation_datetime(convocation_sent_at_raw)
     has_convocation_file = bool(trainee.get("convocation_aps_pdf_path") or trainee.get("convocation_aps_docx_path"))
     convocation_generated_at_raw = trainee.get("convocation_aps_generated_at") or (convocation_sent_at_raw if has_convocation_file else "")
@@ -34498,6 +34501,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         t["convocation_aps_generated_from"] = "word"
         t["convocation_aps_view_url"] = url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)
         t["convocation_aps_last_error"] = ""
+        t["convocation_auto_last_error"] = ""
+        t["convocation_auto_scheduled_at"] = ""
         t["updated_at"] = sent_at
         s["trainees"] = trainees
         s.pop("stagiaires", None)
