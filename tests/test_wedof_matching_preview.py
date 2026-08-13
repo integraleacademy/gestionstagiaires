@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import app as gestion_app
 from wedof_matching import (
-    build_matching_preview, match_folder, normalize_email, normalize_name,
+    build_matching_preview, extract_folder, match_folder, normalize_email, normalize_name,
     normalize_phone,
 )
 from wedof_service import WedofClient
@@ -111,6 +111,21 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(preview["counts"]["cpf_analyzed"], 1)
         self.assertEqual(preview["counts"]["exact_match"], 1)
         self.assertNotIn("rawSecret", str(preview))
+
+    def test_invoice_reference_is_whitelisted_from_wedof_folder(self):
+        extracted = extract_folder(folder(invoice={
+            "qontoInvoiceId": "inv-cpf-1",
+            "number": "F-CPF-1",
+            "status": "paid",
+            "paidAt": "2026-10-02T14:00:00Z",
+            "privatePayload": "never",
+        }))
+
+        self.assertEqual(extracted["qonto_invoice_id"], "inv-cpf-1")
+        self.assertEqual(extracted["qonto_invoice_number"], "F-CPF-1")
+        self.assertEqual(extracted["invoice_status"], "paid")
+        self.assertEqual(extracted["invoice_paid_at"], "2026-10-02T14:00:00Z")
+        self.assertNotIn("privatePayload", extracted)
 
 
 class PreviewRouteTests(unittest.TestCase):

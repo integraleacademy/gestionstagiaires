@@ -77,6 +77,31 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
         "wedof_url": _nested(folder, "url", "links.web", "_links.web.href"),
         "waiting_reason": _nested(folder, "waitingReason", "pendingReason", "data.waitingReason"),
         "step_dates": _nested(folder, "stateDates", "statusHistory", "data.stateDates"),
+        # WEDOF deployments do not all expose the accounting reference under
+        # the same envelope.  Keep only the small, explicit allow-list needed
+        # to reconnect an already-created CPF invoice to its local trainee.
+        "qonto_invoice_id": _nested(
+            folder,
+            "qontoInvoiceId", "invoice.qontoInvoiceId", "invoice.qontoId", "invoice.id",
+            "billing.qontoInvoiceId", "billing.invoice.id",
+            "data.qontoInvoiceId", "data.invoice.qontoInvoiceId", "data.invoice.id",
+        ),
+        "qonto_invoice_number": _nested(
+            folder,
+            "qontoInvoiceNumber", "invoice.qontoInvoiceNumber", "invoice.number",
+            "billing.qontoInvoiceNumber", "billing.invoice.number",
+            "data.qontoInvoiceNumber", "data.invoice.number",
+        ),
+        "invoice_status": _nested(
+            folder,
+            "invoice.status", "billing.invoice.status", "qontoInvoiceStatus",
+            "data.invoice.status", "data.qontoInvoiceStatus",
+        ),
+        "invoice_paid_at": _nested(
+            folder,
+            "invoice.paidAt", "invoice.paid_at", "billing.invoice.paidAt",
+            "qontoInvoicePaidAt", "data.invoice.paidAt", "data.invoice.paid_at",
+        ),
     }
 
 
