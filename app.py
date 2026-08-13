@@ -1667,6 +1667,13 @@ def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], local_i
         total_cents = int(local_invoice.get("qontoTotalAmountCents") or 0)
     else:
         total_cents = money_value_to_cents(local_invoice.get("amountTTC") or local_invoice.get("amount_ttc") or local_invoice.get("amount") or 0)
+    remote_paid_amount_is_explicit = any(
+        client_invoice.get(key) not in (None, '')
+        for key in (
+            'amount_paid', 'paid_amount', 'amount_paid_cents', 'paid_amount_cents',
+            'remaining_amount', 'amount_due', 'remaining_amount_cents',
+        )
+    )
     amount_paid = _qonto_money_value(client_invoice.get("amount_paid"))
     if amount_paid is None:
         amount_paid = _qonto_money_value(client_invoice.get("paid_amount"))
@@ -1695,6 +1702,10 @@ def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], local_i
     else:
         amount_paid_cents = 0 if amount_paid is None else money_value_to_cents(amount_paid)
     qonto_status = (client_invoice.get("status") or local_invoice.get("qonto_status") or local_invoice.get("qontoStatus") or local_invoice.get("qonto_invoice_status") or "").strip() or "unpaid"
+    if qonto_status == 'paid' and not remote_paid_amount_is_explicit and total_cents > 0:
+        # Qonto's paid status is itself authoritative.  Some list/webhook
+        # payloads omit amount_paid even though the full invoice is settled.
+        amount_paid_cents = total_cents
     amount_paid_cents, paid_amount_is_consistent = _validate_qonto_paid_cents(
         total_cents,
         amount_paid_cents,
@@ -30996,7 +31007,8 @@ def _cpf_public_snapshot(remote: Dict[str, Any]) -> Dict[str, Any]:
     now = _now_iso()
     allowed = ("external_id", "state", "type", "first_name", "last_name", "email", "start_date", "end_date",
                "training_title", "total_amount", "cpf_amount", "france_travail_amount", "candidate_amount",
-               "created_at", "updated_at", "waiting_reason", "step_dates")
+               "created_at", "updated_at", "waiting_reason", "step_dates", "qonto_invoice_id",
+               "qonto_invoice_number", "invoice_status", "invoice_paid_at")
     snapshot = {key: remote.get(key) for key in allowed if remote.get(key) not in (None, "")}
     url = str(remote.get("wedof_url") or "").strip()
     parsed = urlparse(url)
@@ -32980,6 +32992,506 @@ def _cpf_invoice_tracking_financing_entry(
     return financing
 
 
+def _cpf_invoice_amount(trainee: Dict[str, Any]) -> float:
+    structured_amount = sum(
+        _money(item.get('amount') or item.get('amount_ttc'))
+        for item in (trainee.get('financings') or [])
+        if isinstance(item, dict)
+        and _is_cpf_financeur(item.get('type') or item.get('financing_type') or item.get('label'))
+    )
+    return _money(
+        trainee.get('cpf_amount')
+        or trainee.get('montant_cpf')
+        or structured_amount
+    )
+
+
+def _qonto_invoice_total_cents_for_discovery(invoice: Dict[str, Any]) -> Optional[int]:
+    """Read an invoice total without falling back to the trainee's local amount."""
+    for key in ('total_amount_cents', 'totalAmountCents'):
+        value = invoice.get(key)
+        if value not in (None, ''):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+    for key in ('total_amount', 'total_including_taxes', 'amount_including_taxes', 'amount'):
+        value = invoice.get(key)
+        if value not in (None, ''):
+            try:
+                return money_value_to_cents(value)
+            except ValueError:
+                return None
+    return None
+
+
+def _qonto_invoice_has_exact_discovery_amount(invoice: Dict[str, Any], expected_cents: int) -> bool:
+    total_cents = _qonto_invoice_total_cents_for_discovery(invoice)
+    if total_cents is not None:
+        return total_cents == expected_cents
+    items_total_cents = 0
+    item_seen = False
+    for collection_key in ('items', 'line_items', 'invoice_items'):
+        rows = invoice.get(collection_key)
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                return False
+            unit_price = row.get('unit_price')
+            unit_value = _qonto_money_value(unit_price)
+            if unit_value in (None, ''):
+                return False
+            try:
+                quantity = Decimal(str(row.get('quantity') or '1').replace(',', '.'))
+                items_total_cents += int(
+                    (Decimal(str(unit_value).replace(',', '.')) * quantity * Decimal('100')).quantize(
+                        Decimal('1'), rounding=ROUND_HALF_UP,
+                    )
+                )
+            except (InvalidOperation, TypeError, ValueError):
+                return False
+            item_seen = True
+    return item_seen and items_total_cents == expected_cents
+
+
+def _qonto_invoice_client_identity(invoice: Dict[str, Any]) -> Tuple[str, str]:
+    client = invoice.get('client') if isinstance(invoice.get('client'), dict) else {}
+    if not client and isinstance(invoice.get('customer'), dict):
+        client = invoice['customer']
+    client_id = str(
+        invoice.get('client_id')
+        or invoice.get('clientId')
+        or client.get('id')
+        or client.get('client_id')
+        or ''
+    ).strip()
+    client_name = str(
+        client.get('name')
+        or client.get('company_name')
+        or invoice.get('client_name')
+        or invoice.get('customer_name')
+        or ''
+    ).strip()
+    return client_id, client_name
+
+
+def _qonto_invoice_discovery_text(invoice: Dict[str, Any]) -> str:
+    values: List[str] = []
+    for key in ('number', 'invoice_number', 'header', 'footer', 'purchase_order', 'terms_and_conditions'):
+        value = invoice.get(key)
+        if value not in (None, ''):
+            values.append(str(value))
+    for collection_key in ('items', 'line_items', 'invoice_items'):
+        rows = invoice.get(collection_key)
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            for key in ('title', 'description', 'name', 'label'):
+                value = row.get(key)
+                if value not in (None, ''):
+                    values.append(str(value))
+    return ' '.join(values)
+
+
+def _normalized_text_contains_name(text: str, name: Any) -> bool:
+    needle = re.sub(r'[^a-z0-9]+', ' ', normalize_name(name)).strip()
+    if not needle:
+        return False
+    haystack = re.sub(r'[^a-z0-9]+', ' ', normalize_name(text)).strip()
+    return f' {needle} ' in f' {haystack} '
+
+
+def _cpf_qonto_client_id() -> str:
+    lookups = (
+        (find_qonto_client_by_tax_identification_number, CPF_QONTO_CLIENT_TAX_ID),
+        (find_qonto_client_by_name, CPF_QONTO_CLIENT_NAME),
+        (find_qonto_client_by_name, 'Mon Compte Formation'),
+    )
+    for lookup, value in lookups:
+        try:
+            cpf_client = lookup(value)
+        except Exception as exc:
+            app.logger.info(
+                '[QONTO] CPF client lookup unavailable lookup=%s error=%s',
+                getattr(lookup, '__name__', 'unknown'), _sanitize_qonto_error(str(exc)),
+            )
+            continue
+        payload = (
+            cpf_client.get('client')
+            if isinstance(cpf_client, dict) and isinstance(cpf_client.get('client'), dict)
+            else (cpf_client or {})
+        )
+        if not isinstance(payload, dict):
+            continue
+        client_name = str(payload.get('name') or payload.get('company_name') or '').strip()
+        if client_name and not _is_cpf_financeur(client_name):
+            continue
+        client_id = str(payload.get('id') or '').strip()
+        if client_id:
+            return client_id
+    return ''
+
+
+def _qonto_invoice_has_cpf_client(
+    invoice: Dict[str, Any], *, cpf_client_id: str = ''
+) -> Tuple[bool, bool]:
+    """Return (matches, has_client_evidence) for the canonical CPF customer."""
+    invoice_client_id, invoice_client_name = _qonto_invoice_client_identity(invoice)
+    has_evidence = bool(invoice_client_id or invoice_client_name)
+    if cpf_client_id and invoice_client_id and invoice_client_id == cpf_client_id:
+        return True, True
+    if invoice_client_name:
+        return _is_cpf_financeur(invoice_client_name), True
+    if cpf_client_id and invoice_client_id:
+        return False, True
+    return False, has_evidence
+
+
+def _qonto_invoice_matches_cpf_registration(
+    invoice: Dict[str, Any],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    cpf_client_id: str = '',
+    wedof_external_id: str = '',
+    trusted_reference: bool = False,
+) -> bool:
+    invoice_id = str(invoice.get('id') or '').strip()
+    if not invoice_id:
+        return False
+    cpf_amount_cents = money_value_to_cents(_cpf_invoice_amount(trainee))
+    if cpf_amount_cents <= 0 or not _qonto_invoice_has_exact_discovery_amount(invoice, cpf_amount_cents):
+        return False
+    client_matches, client_has_evidence = _qonto_invoice_has_cpf_client(
+        invoice, cpf_client_id=cpf_client_id,
+    )
+    if not client_matches and (client_has_evidence or not trusted_reference):
+        return False
+    if trusted_reference:
+        # The Qonto identifier/number came directly from the associated WEDOF
+        # folder.  Exact amount and any client evidence remain validated.
+        return True
+
+    invoice_text = _qonto_invoice_discovery_text(invoice)
+    identity_matches = (
+        _normalized_text_contains_name(invoice_text, trainee.get('first_name') or trainee.get('prenom'))
+        and _normalized_text_contains_name(invoice_text, trainee.get('last_name') or trainee.get('nom'))
+    )
+    normalized_external_id = str(wedof_external_id or '').strip().casefold()
+    wedof_reference_matches = bool(
+        normalized_external_id and normalized_external_id in invoice_text.casefold()
+    )
+
+    session_start = normalize_date(_session_get(session_obj, 'date_start', ''))
+    session_end = normalize_date(_session_get(session_obj, 'date_end', '')) or session_start
+    invoice_start = normalize_date(
+        invoice.get('performance_start_date') or invoice.get('performance_date')
+    )
+    invoice_end = normalize_date(invoice.get('performance_end_date'))
+    raw_text = invoice_text.casefold()
+
+    def date_is_present(expected: Optional[str], actual: Optional[str]) -> bool:
+        if not expected:
+            return False
+        if actual:
+            return actual == expected
+        return expected in raw_text or str(fr_date(expected) or '').casefold() in raw_text
+
+    dates_match = date_is_present(session_start, invoice_start) and date_is_present(session_end, invoice_end)
+    return bool((identity_matches and dates_match) or (wedof_reference_matches and dates_match))
+
+
+def _qonto_invoice_can_be_cpf_candidate(
+    invoice: Dict[str, Any], trainee: Dict[str, Any], *, cpf_client_id: str = ''
+) -> bool:
+    """Cheap pre-filter before retrieving an individual Qonto invoice."""
+    expected_cents = money_value_to_cents(_cpf_invoice_amount(trainee))
+    total_cents = _qonto_invoice_total_cents_for_discovery(invoice)
+    if total_cents is not None and total_cents != expected_cents:
+        return False
+    client_matches, has_client_evidence = _qonto_invoice_has_cpf_client(
+        invoice, cpf_client_id=cpf_client_id,
+    )
+    return client_matches or not has_client_evidence
+
+
+def _qonto_invoice_detail(invoice: Dict[str, Any]) -> Dict[str, Any]:
+    invoice_id = str(invoice.get('id') or '').strip()
+    if not invoice_id:
+        return invoice
+    try:
+        remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
+    except Exception as exc:
+        app.logger.info(
+            '[QONTO] CPF invoice detail unavailable invoice_id=%s error=%s',
+            invoice_id, _sanitize_qonto_error(str(exc)),
+        )
+        return invoice
+    return {**invoice, **remote} if isinstance(remote, dict) else invoice
+
+
+def _qonto_invoice_list_has_next_page(payload: Any, page: int, item_count: int, per_page: int) -> bool:
+    meta = payload.get('meta') if isinstance(payload, dict) and isinstance(payload.get('meta'), dict) else {}
+    for key in ('total_pages', 'totalPages', 'last_page', 'lastPage'):
+        if meta.get(key) not in (None, ''):
+            try:
+                return page < int(meta[key])
+            except (TypeError, ValueError):
+                break
+    next_page = meta.get('next_page') or meta.get('nextPage')
+    if next_page not in (None, '', False):
+        return True
+    return item_count >= per_page
+
+
+def _search_qonto_cpf_invoice(
+    session_obj: Dict[str, Any], trainee: Dict[str, Any], *, wedof_external_id: str = ''
+) -> Tuple[Optional[Dict[str, Any]], str]:
+    cpf_client_id = _cpf_qonto_client_id()
+    session_start = normalize_date(_session_get(session_obj, 'date_start', ''))
+    params: Dict[str, Any] = {
+        'filter[status]': 'draft,unpaid,paid',
+        'exclude_imported': 'false',
+        'sort_by': 'created_at:desc',
+        'per_page': 100,
+    }
+    if session_start:
+        params['filter[created_at_from]'] = f'{session_start}T00:00:00Z'
+
+    matches: Dict[str, Dict[str, Any]] = {}
+    detail_reads = 0
+    max_detail_reads = 25
+    for page in range(1, 6):
+        payload = list_qonto_invoices({**params, 'page': page})
+        page_invoices = list(_iter_qonto_invoice_payloads(payload))
+        for listed_invoice in page_invoices:
+            if not _qonto_invoice_can_be_cpf_candidate(
+                listed_invoice, trainee, cpf_client_id=cpf_client_id,
+            ):
+                continue
+            invoice = listed_invoice
+            if detail_reads < max_detail_reads and str(listed_invoice.get('id') or '').strip():
+                invoice = _qonto_invoice_detail(listed_invoice)
+                detail_reads += 1
+            if _qonto_invoice_matches_cpf_registration(
+                invoice,
+                session_obj,
+                trainee,
+                cpf_client_id=cpf_client_id,
+                wedof_external_id=wedof_external_id,
+            ):
+                matches[str(invoice.get('id'))] = invoice
+        if not _qonto_invoice_list_has_next_page(payload, page, len(page_invoices), 100):
+            break
+
+    active_matches = {
+        invoice_id: invoice
+        for invoice_id, invoice in matches.items()
+        if str(invoice.get('status') or '').strip().lower() not in {'canceled', 'cancelled'}
+    }
+    if len(active_matches) == 1:
+        return next(iter(active_matches.values())), 'found'
+    if len(active_matches) > 1:
+        app.logger.warning(
+            '[QONTO] CPF invoice discovery ambiguous trainee_id=%s session_id=%s invoice_ids=%s',
+            trainee.get('id') or '', session_obj.get('id') or '', sorted(active_matches),
+        )
+        return None, 'ambiguous'
+    if len(matches) == 1:
+        return next(iter(matches.values())), 'found'
+    return None, 'not_found'
+
+
+def _cpf_wedof_invoice_reference(link: Optional[Dict[str, Any]]) -> Tuple[str, str]:
+    if not isinstance(link, dict):
+        return '', ''
+    snapshot = link.get('cpf_snapshot') if isinstance(link.get('cpf_snapshot'), dict) else {}
+    invoice_id = str(
+        snapshot.get('qonto_invoice_id')
+        or link.get('qonto_invoice_id')
+        or link.get('qontoInvoiceId')
+        or ''
+    ).strip()
+    invoice_number = str(
+        snapshot.get('qonto_invoice_number')
+        or link.get('qonto_invoice_number')
+        or link.get('qontoInvoiceNumber')
+        or ''
+    ).strip()
+    return invoice_id, invoice_number
+
+
+def _qonto_invoice_from_wedof_reference(
+    link: Optional[Dict[str, Any]], session_obj: Dict[str, Any], trainee: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
+    invoice_id, invoice_number = _cpf_wedof_invoice_reference(link)
+    if not invoice_id and not invoice_number:
+        return None
+    invoice: Optional[Dict[str, Any]] = None
+    try:
+        if invoice_id:
+            invoice = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
+        elif invoice_number:
+            invoice = find_qonto_invoice_by_number(invoice_number)
+            if invoice:
+                invoice = _qonto_invoice_detail(invoice)
+    except Exception as exc:
+        app.logger.info(
+            '[QONTO] WEDOF CPF invoice reference unavailable invoice_id=%s invoice_number=%s error=%s',
+            invoice_id, invoice_number, _sanitize_qonto_error(str(exc)),
+        )
+        return None
+    if not isinstance(invoice, dict):
+        return None
+    cpf_client_id = _cpf_qonto_client_id()
+    if _qonto_invoice_matches_cpf_registration(
+        invoice, session_obj, trainee, cpf_client_id=cpf_client_id, trusted_reference=True,
+    ):
+        return invoice
+    app.logger.warning(
+        '[QONTO] WEDOF CPF invoice reference rejected after validation trainee_id=%s invoice_id=%s invoice_number=%s',
+        trainee.get('id') or '', invoice_id, invoice_number,
+    )
+    return None
+
+
+def _cpf_invoice_discovery_is_recent(trainee: Dict[str, Any]) -> bool:
+    state = trainee.get('cpf_qonto_invoice_discovery')
+    if not isinstance(state, dict):
+        return False
+    attempted_at = _parse_iso_datetime(state.get('last_attempt_at'))
+    if attempted_at is None:
+        return False
+    now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    return (now_utc - attempted_at).total_seconds() < 300
+
+
+def _persist_discovered_cpf_invoice(
+    data: Dict[str, Any],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    invoice: Dict[str, Any],
+    *,
+    wedof_external_id: str = '',
+) -> Dict[str, Any]:
+    amount = _cpf_invoice_amount(trainee)
+    financing_ref = f'wedof:{wedof_external_id}' if wedof_external_id else 'qonto-discovery'
+    invoice_id = str(invoice.get('id') or '').strip()
+    invoice_status = _normalize_billing_invoice_status(invoice.get('status') or 'draft')
+    client_id, _ = _qonto_invoice_client_identity(invoice)
+    now = _now_iso()
+    line = {
+        'id': _billing_line_id(str(session_obj.get('id') or ''), str(trainee.get('id') or ''), 'CPF', financing_ref),
+        'traineeId': str(trainee.get('id') or ''),
+        'sessionId': str(session_obj.get('id') or ''),
+        'financingType': 'CPF',
+        'typeFinanceur': 'CPF',
+        'financeurName': 'CPF',
+        'financingRef': financing_ref,
+        'amount': amount,
+        'amountHT': amount,
+        'amountTTC': amount,
+        'currency': 'EUR',
+        'invoiceStatus': invoice_status,
+        'paymentStatus': 'unpaid',
+        'qontoInvoiceId': invoice_id,
+        'qontoDraftId': invoice_id if invoice_status == 'draft' else '',
+        'qontoInvoiceNumber': _qonto_invoice_number(invoice),
+        'qontoClientId': client_id,
+        'qontoCustomerId': client_id,
+        'invoiceGeneratedAt': invoice.get('created_at') or now,
+        'invoicePdfUrl': invoice.get('public_url') or invoice.get('url') or '',
+        'qontoPdfUrl': invoice.get('public_url') or invoice.get('url') or '',
+        'clientName': CPF_QONTO_CLIENT_NAME,
+        'createdAt': now,
+        'updatedAt': now,
+        'logs': [],
+    }
+    _refresh_billing_line_invoice_from_qonto(line, invoice)
+    _apply_qonto_invoice_payment_to_billing_line(line, invoice)
+    _billing_log(
+        line,
+        'Facture CPF retrouvée automatiquement dans Qonto',
+        'success',
+        f'Dossier WEDOF {wedof_external_id}' if wedof_external_id else 'Correspondance identité, dates, montant et client CPF',
+        invoice_id,
+    )
+    _save_billing_line(data, line)
+    return line
+
+
+def _discover_cpf_qonto_invoice(
+    data: Dict[str, Any],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    force: bool = False,
+) -> Tuple[Optional[Dict[str, Any]], bool]:
+    """Reconnect a WEDOF/Qonto CPF invoice that was never stored locally."""
+    if _cpf_invoice_amount(trainee) <= 0 or (not force and _cpf_invoice_discovery_is_recent(trainee)):
+        return None, False
+    state = trainee.get('cpf_qonto_invoice_discovery')
+    if not isinstance(state, dict):
+        state = {}
+        trainee['cpf_qonto_invoice_discovery'] = state
+    state['last_attempt_at'] = _now_iso()
+    link = _cpf_active_link(
+        data,
+        session_id=str(session_obj.get('id') or ''),
+        trainee_id=str(trainee.get('id') or ''),
+    )
+    wedof_external_id = str((link or {}).get('external_id') or '').strip()
+
+    try:
+        invoice = _qonto_invoice_from_wedof_reference(link, session_obj, trainee)
+        discovery_status = 'found' if invoice else 'not_found'
+        if invoice is None and link:
+            try:
+                _refresh_cpf_link_from_wedof(data, link)
+                invoice = _qonto_invoice_from_wedof_reference(link, session_obj, trainee)
+                if invoice:
+                    discovery_status = 'found'
+            except (WedofConfigurationError, WedofApiError) as exc:
+                app.logger.info(
+                    '[WEDOF] CPF invoice reference refresh unavailable external_id=%s error=%s',
+                    wedof_external_id, _sanitize_qonto_error(str(exc)),
+                )
+        if invoice is None:
+            invoice, discovery_status = _search_qonto_cpf_invoice(
+                session_obj, trainee, wedof_external_id=wedof_external_id,
+            )
+        if invoice:
+            line = _persist_discovered_cpf_invoice(
+                data,
+                session_obj,
+                trainee,
+                invoice,
+                wedof_external_id=wedof_external_id,
+            )
+            state.update({
+                'status': 'found',
+                'invoice_id': line.get('qontoInvoiceId') or '',
+                'invoice_number': line.get('qontoInvoiceNumber') or '',
+                'found_at': _now_iso(),
+            })
+            state.pop('error', None)
+            return line, True
+        state['status'] = discovery_status
+        state.pop('error', None)
+        return None, True
+    except Exception as exc:
+        state['status'] = 'error'
+        state['error'] = _sanitize_qonto_error(str(exc))[:500]
+        app.logger.warning(
+            '[QONTO] CPF invoice discovery failed trainee_id=%s session_id=%s error=%s',
+            trainee.get('id') or '', session_obj.get('id') or '', state['error'],
+        )
+        return None, True
+
+
 def _legacy_trainee_qonto_invoice_candidate(trainee: Dict[str, Any], financing: Dict[str, Any], persisted: Dict[str, Any]) -> Dict[str, Any]:
     """Return trainee-level Qonto invoice state when it belongs to this billing line.
 
@@ -33813,10 +34325,33 @@ def api_billing_session(session_id: str):
 @admin_login_required
 def api_billing_trainee_session(trainee_id: str, session_id: str):
     data = load_data()
+    session_obj = next(
+        (sess for sess in data.get('sessions', []) if str(sess.get('id')) == str(session_id)),
+        None,
+    )
+    trainee = next(
+        (
+            item
+            for item in _session_trainees_list(session_obj or {})
+            if str(item.get('id')) == str(trainee_id)
+        ),
+        None,
+    )
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
     _repair_logged_qonto_rejection_retries(data, lines)
     cpf_sync_attempted = False
+    data_changed = False
     if _qonto_is_configured():
+        has_cpf_invoice = any(
+            is_cpf_billing_context(line)
+            and bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
+            for line in lines
+        )
+        if session_obj and trainee and not has_cpf_invoice:
+            _, discovery_changed = _discover_cpf_qonto_invoice(data, session_obj, trainee)
+            data_changed = data_changed or discovery_changed
+            if discovery_changed:
+                lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
         for line in lines:
             if not is_cpf_billing_context(line) or not (line.get('qontoInvoiceId') or line.get('qontoDraftId')):
                 continue
@@ -33827,21 +34362,22 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
                 line['syncWarning'] = 'Synchronisation de la facture CPF impossible pour le moment'
                 _billing_log(line, 'Synchronisation automatique facture CPF indisponible', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or '')
                 _save_billing_line(data, line)
-        if cpf_sync_attempted:
+        if cpf_sync_attempted or data_changed:
             # Persist the Qonto payment state recovered while the trainee card
             # loads, including a non-blocking warning when Qonto is unavailable.
             save_data(data)
-    trainee = None
-    for sess in data.get('sessions', []):
-        if str(sess.get('id')) != str(session_id):
-            continue
-        for t in _session_trainees_list(sess):
-            if str(t.get('id')) == str(trainee_id):
-                trainee = t
-                break
     fresh_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
     summary = calculate_trainee_financial_summary(trainee or {'id': trainee_id}, fresh_lines)
-    return jsonify({'ok': True, 'lines': fresh_lines, 'financial_summary': summary})
+    return jsonify({
+        'ok': True,
+        'lines': fresh_lines,
+        'financial_summary': summary,
+        'cpf_invoice_discovery': (
+            trainee.get('cpf_qonto_invoice_discovery')
+            if isinstance((trainee or {}).get('cpf_qonto_invoice_discovery'), dict)
+            else {}
+        ),
+    })
 
 
 def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -34424,8 +34960,42 @@ def api_billing_reschedule_rejected_debit():
 def api_billing_sync_qonto():
     data = load_data(); payload = request.get_json(silent=True) or {}; lines = []
     if payload:
-        line = _line_from_payload(data, payload)
-        if line: lines = [line]
+        requested_trainee_id = str(payload.get('traineeId') or '')
+        requested_session_id = str(payload.get('sessionId') or '')
+        if requested_trainee_id and requested_session_id and not (payload.get('lineId') or payload.get('billingLineId')):
+            requested_session = next(
+                (item for item in data.get('sessions', []) if str(item.get('id')) == requested_session_id),
+                None,
+            )
+            requested_trainee = next(
+                (
+                    item
+                    for item in _session_trainees_list(requested_session or {})
+                    if str(item.get('id')) == requested_trainee_id
+                ),
+                None,
+            )
+            if requested_session and requested_trainee and _qonto_is_configured():
+                existing_lines = _billing_lines_for_trainee_session(
+                    data, requested_trainee_id, requested_session_id,
+                )
+                has_cpf_invoice = any(
+                    is_cpf_billing_context(item)
+                    and bool(item.get('qontoInvoiceId') or item.get('qontoDraftId'))
+                    for item in existing_lines
+                )
+                if not has_cpf_invoice:
+                    _, discovery_changed = _discover_cpf_qonto_invoice(
+                        data, requested_session, requested_trainee, force=True,
+                    )
+                    if discovery_changed:
+                        save_data(data)
+            lines = _billing_lines_for_trainee_session(
+                data, requested_trainee_id, requested_session_id,
+            )
+        else:
+            line = _line_from_payload(data, payload)
+            if line: lines = [line]
     if not lines:
         lines = _billing_lines(data)
     reset_count = synced_count = 0; errors = []; last_line = None
