@@ -28046,6 +28046,18 @@ APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
 APS_ENTRY_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_entree_aps")
 APS_END_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_fin_aps")
+CERTIFICATE_REALIZATION_TEMPLATE = os.path.join(app.root_path, "templates_word", "certificatrealisation.pdf")
+CERTIFICATE_REALIZATION_SIGNATORY = "Clément VAILLANT"
+CERTIFICATE_REALIZATION_PROVIDER = "Intégrale Sécurité Formations"
+CERTIFICATE_REALIZATION_DEFAULT_HOURS = {
+    "aps": 175,
+    "a3p": 328,
+    "vtc": 105,
+    "desp_puget": 245,
+    "desp_paris": 245,
+    "ssiap": 70,
+    "vae": 35,
+}
 A3P_EXAM_DOSSIER_DIR = os.path.join(PERSIST_DIR, "generated_documents", "dossiers_examen_a3p")
 APS_EXAM_DOSSIER_DIR = os.path.join(PERSIST_DIR, "generated_documents", "dossiers_examen_aps")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
@@ -29411,6 +29423,290 @@ def _format_long_fr_date(value: str) -> str:
         return f"{dt.day} {months[dt.month]} {dt.year}"
     except Exception:
         return value
+
+
+def _certificate_realization_nature(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> str:
+    text = " ".join(
+        str(value or "")
+        for value in (
+            _session_get(session_obj, "training_type", ""),
+            _session_get(session_obj, "name", ""),
+            trainee.get("contract_type"),
+            trainee.get("training_contract_type"),
+            trainee.get("status"),
+        )
+    ).upper()
+    if "VAE" in text:
+        return "vae"
+    if "APPRENT" in text or "ALTERNANCE" in text:
+        return "apprenticeship"
+    if "BILAN DE COMP" in text:
+        return "skills_assessment"
+    return "training"
+
+
+def _certificate_realization_quantity(value: Any, unit: str) -> str:
+    if value in (None, "") or isinstance(value, bool):
+        return ""
+    match = re.search(r"\d+(?:[.,]\d+)?", str(value).replace("\u202f", " "))
+    if not match:
+        return ""
+    try:
+        quantity = float(match.group(0).replace(",", "."))
+    except ValueError:
+        return ""
+    if quantity <= 0:
+        return ""
+    rendered = str(int(quantity)) if quantity.is_integer() else (f"{quantity:.2f}".rstrip("0").rstrip(".").replace(".", ","))
+    singular = "heure" if unit == "hours" else "mois"
+    plural = "heures" if unit == "hours" else "mois"
+    return f"{rendered} {singular if quantity == 1 else plural}"
+
+
+def _certificate_realization_months(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> str:
+    month_keys = (
+        "certificate_realization_months", "realized_months", "duration_months",
+        "training_duration_months", "apprenticeship_months", "nombre_mois_realises",
+    )
+    for source in (trainee, session_obj):
+        for key in month_keys:
+            rendered = _certificate_realization_quantity(source.get(key), "months")
+            if rendered:
+                return rendered
+
+    start = _parse_iso_date(str(_session_get(session_obj, "date_start", "") or ""))
+    end = _parse_iso_date(str(_session_get(session_obj, "date_end", "") or ""))
+    if start and end and end >= start:
+        months = max(1, ((end.year - start.year) * 12) + end.month - start.month + (1 if end.day >= start.day else 0))
+        return _certificate_realization_quantity(months, "months")
+    return "Non renseignée"
+
+
+def _certificate_realization_duration(session_obj: Dict[str, Any], trainee: Dict[str, Any], nature: str) -> str:
+    if nature == "apprenticeship":
+        return _certificate_realization_months(session_obj, trainee)
+
+    hour_keys = (
+        "certificate_realization_hours", "realized_training_hours", "realised_training_hours",
+        "hours_completed", "training_duration_hours", "duration_hours", "total_hours",
+        "h_total", "heures_realisees", "duree_heures",
+    )
+    for source in (trainee, session_obj):
+        for key in hour_keys:
+            rendered = _certificate_realization_quantity(source.get(key), "hours")
+            if rendered:
+                return rendered
+
+    training_text = _automation_training_text(session_obj)
+    if "AFC" in training_text and "APS" in training_text and "SSIAP" in training_text:
+        return "393 heures"
+    slug = str(_automation_document_config(session_obj).get("slug") or "")
+    hours = CERTIFICATE_REALIZATION_DEFAULT_HOURS.get(slug)
+    return _certificate_realization_quantity(hours, "hours") if hours else "Non renseignée"
+
+
+def _certificate_realization_dates(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Tuple[str, str]:
+    start = str(
+        trainee.get("certificate_realization_start_date")
+        or trainee.get("actual_training_start_date")
+        or trainee.get("real_training_start_date")
+        or _session_get(session_obj, "date_start", "")
+        or ""
+    ).strip()
+    end = str(
+        trainee.get("certificate_realization_end_date")
+        or trainee.get("actual_training_end_date")
+        or trainee.get("real_training_end_date")
+        or _session_get(session_obj, "date_end", "")
+        or ""
+    ).strip()
+    vtc_dates = str(trainee.get("vtc_real_training_dates") or "").strip()
+    if vtc_dates:
+        matches = re.findall(r"\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b", vtc_dates)
+        if len(matches) >= 2:
+            start, end = matches[0], matches[-1]
+    return fr_date(start), fr_date(end)
+
+
+def _certificate_realization_training_title(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> str:
+    for value in (
+        trainee.get("certificate_realization_title"), trainee.get("formation_nom"), trainee.get("training_name"),
+        _session_get(session_obj, "training_title", ""), _session_get(session_obj, "nom_pedagogique", ""),
+    ):
+        if str(value or "").strip():
+            return str(value).strip()
+
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    session_name = str(_session_get(session_obj, "name", "") or "").strip()
+    if session_name and ("AFC" in session_name.upper() or ("APS" in session_name.upper() and "SSIAP" in session_name.upper())):
+        return session_name
+    long_label = formation_label(training_type)
+    return str(long_label or session_name or training_type or "Formation").strip()
+
+
+def _certificate_realization_employer(trainee: Dict[str, Any], billing_lines: Optional[List[Dict[str, Any]]] = None) -> str:
+    for key in ("employer_name", "company_name", "employer", "entreprise", "raison_sociale", "qonto_company_name"):
+        value = str(trainee.get(key) or "").strip()
+        if value:
+            return value
+    for line in billing_lines or []:
+        financing = str(line.get("financingType") or line.get("typeFinanceur") or line.get("financeurName") or "").upper()
+        if financing not in {"ENTREPRISE", "COMPANY"}:
+            continue
+        value = str(line.get("companyName") or line.get("company_name") or "").strip()
+        if value:
+            return value
+    return "Non renseignée"
+
+
+def _build_certificate_realization_context(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    billing_lines: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, str]:
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    beneficiary = f"{first_name} {last_name}".strip()
+    start_date, end_date = _certificate_realization_dates(session_obj, trainee)
+    if not beneficiary:
+        raise ValueError("Impossible de générer le certificat de réalisation : nom du stagiaire manquant.")
+    if not start_date or not end_date:
+        raise ValueError("Impossible de générer le certificat de réalisation : dates de formation manquantes.")
+    nature = _certificate_realization_nature(session_obj, trainee)
+    return {
+        "signatory": CERTIFICATE_REALIZATION_SIGNATORY,
+        "provider": CERTIFICATE_REALIZATION_PROVIDER,
+        "beneficiary": beneficiary,
+        "employer": _certificate_realization_employer(trainee, billing_lines),
+        "training_title": _certificate_realization_training_title(session_obj, trainee),
+        "nature": nature,
+        "start_date": start_date,
+        "end_date": end_date,
+        "duration": _certificate_realization_duration(session_obj, trainee, nature),
+        "place": "Puget-sur-Argens",
+        "issued_date": datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y"),
+    }
+
+
+def _draw_certificate_realization_value(
+    pdf_canvas: Any,
+    value: str,
+    x: float,
+    y: float,
+    max_width: float,
+    *,
+    font_size: float = 10.2,
+    min_font_size: float = 7.2,
+) -> None:
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    size = font_size
+    while size > min_font_size and stringWidth(value, "Helvetica-Bold", size) > max_width:
+        size = max(min_font_size, size - 0.4)
+    pdf_canvas.setFont("Helvetica-Bold", size)
+    pdf_canvas.setFillColorRGB(15 / 255, 23 / 255, 42 / 255)
+    pdf_canvas.drawString(x, y, value)
+
+
+def _certificate_realization_wrapped_lines(value: str, max_width: float, max_lines: int = 2) -> List[str]:
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+
+    words = str(value or "").split()
+    lines: List[str] = []
+    current = ""
+    index = 0
+    while index < len(words):
+        word = words[index]
+        candidate = f"{current} {word}".strip()
+        if not current or stringWidth(candidate, "Helvetica-Bold", 9.4) <= max_width:
+            current = candidate
+            index += 1
+            continue
+        lines.append(current)
+        current = ""
+        if len(lines) == max_lines - 1:
+            break
+    remaining = " ".join(([current] if current else []) + words[index:]).strip()
+    if remaining and len(lines) < max_lines:
+        original = remaining
+        while remaining and stringWidth(remaining, "Helvetica-Bold", 9.4) > max_width:
+            remaining = remaining[:-1].rstrip()
+        if remaining != original and len(remaining) > 3:
+            remaining = remaining[:-3].rstrip() + "..."
+        lines.append(remaining)
+    return lines or [""]
+
+
+def _build_certificate_realization_pdf(context: Dict[str, str]) -> BytesIO:
+    if not (PYPDF_LIBRARY_AVAILABLE and REPORTLAB_LIBRARY_AVAILABLE):
+        raise RuntimeError("Le moteur PDF nécessaire au certificat de réalisation est indisponible.")
+    if not os.path.exists(CERTIFICATE_REALIZATION_TEMPLATE):
+        raise FileNotFoundError("Modèle PDF obligatoire manquant : templates_word/certificatrealisation.pdf")
+
+    from reportlab.pdfgen import canvas
+
+    reader = PdfReader(CERTIFICATE_REALIZATION_TEMPLATE)
+    if not reader.pages:
+        raise RuntimeError("Le modèle du certificat de réalisation ne contient aucune page.")
+    page = reader.pages[0]
+    width = float(page.mediabox.width)
+    height = float(page.mediabox.height)
+    packet = BytesIO()
+    overlay = canvas.Canvas(packet, pagesize=(width, height), pageCompression=1)
+
+    def mask(x: float, y: float, mask_width: float, mask_height: float) -> None:
+        overlay.setFillColorRGB(1, 1, 1)
+        overlay.rect(x, y, mask_width, mask_height, stroke=0, fill=1)
+
+    mask(155, 596, 376, 18)
+    mask(108, 553, 310, 17)
+    mask(108, 496, 425, 17)
+    mask(190, 478, 343, 16)
+    mask(140, 461, 393, 14)
+    mask(70, 449, 463, 12)
+    mask(174, 334, 108, 16)
+    mask(294, 334, 97, 16)
+    mask(163, 315, 132, 16)
+    mask(106, 183, 126, 16)
+    mask(90, 165, 143, 16)
+
+    _draw_certificate_realization_value(overlay, context["signatory"], 164, 603.5, 360, font_size=10.6)
+    _draw_certificate_realization_value(overlay, context["provider"], 112, 560.3, 298, font_size=10.2)
+    _draw_certificate_realization_value(overlay, context["beneficiary"], 114, 503.5, 410, font_size=10.2)
+    _draw_certificate_realization_value(overlay, context["employer"], 198, 485.1, 326, font_size=9.8)
+    for index, line in enumerate(_certificate_realization_wrapped_lines(context["training_title"], 380)):
+        _draw_certificate_realization_value(overlay, line, 149 if index == 0 else 72, 465.8 - (index * 12), 374 if index == 0 else 452, font_size=9.4)
+    _draw_certificate_realization_value(overlay, context["start_date"], 182, 340.9, 95, font_size=9.2, min_font_size=8)
+    _draw_certificate_realization_value(overlay, context["end_date"], 302, 340.9, 84, font_size=9.2, min_font_size=8)
+    _draw_certificate_realization_value(overlay, context["duration"], 172, 321.7, 119, font_size=9.2, min_font_size=7.8)
+    _draw_certificate_realization_value(overlay, context["place"], 114, 190.3, 114, font_size=8.5, min_font_size=7)
+    _draw_certificate_realization_value(overlay, context["issued_date"], 99, 171.9, 128, font_size=9.2, min_font_size=8)
+
+    checkbox_y = {
+        "training": 416.4,
+        "skills_assessment": 401.97,
+        "vae": 386.77,
+        "apprenticeship": 372.35,
+    }.get(context.get("nature"), 416.4)
+    overlay.setFillColorRGB(0, 24 / 255, 122 / 255)
+    overlay.rect(78.5, checkbox_y, 9.2, 9.2, stroke=0, fill=1)
+    overlay.setStrokeColorRGB(1, 1, 1)
+    overlay.setLineWidth(1.4)
+    overlay.line(80.1, checkbox_y + 4.4, 82.6, checkbox_y + 1.8)
+    overlay.line(82.6, checkbox_y + 1.8, 86.3, checkbox_y + 7.2)
+    overlay.save()
+    packet.seek(0)
+    page.merge_page(PdfReader(packet).pages[0])
+
+    writer = PdfWriter()
+    writer.add_page(page)
+    for remaining_page in reader.pages[1:]:
+        writer.add_page(remaining_page)
+    writer.add_metadata({"/Title": f"Certificat de réalisation - {context['beneficiary']}"})
+    output = BytesIO()
+    writer.write(output)
+    output.seek(0)
+    return output
 
 
 
@@ -34352,6 +34648,38 @@ def admin_preview_aps_entry_attestation(session_id: str, trainee_id: str):
     except Exception as exc:
         app.logger.exception("[ATTESTATION ENTREE APS] Aperçu impossible")
         return make_response(f"Aperçu attestation d’entrée APS impossible : {html.escape(str(exc))}", 400)
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/certificat-realisation")
+@admin_login_required
+def admin_trainee_certificate_realization(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, _, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee:
+        abort(404)
+    try:
+        context = _build_certificate_realization_context(
+            session_obj,
+            trainee,
+            _billing_lines_for_trainee_session(data, trainee_id, session_id),
+        )
+        certificate = _build_certificate_realization_pdf(context)
+    except (FileNotFoundError, RuntimeError) as exc:
+        app.logger.exception("[CERTIFICAT REALISATION] Génération impossible")
+        return make_response(f"Certificat de réalisation indisponible : {html.escape(str(exc))}", 503)
+    except ValueError as exc:
+        return make_response(html.escape(str(exc)), 400)
+
+    name = "-".join(filter(None, (
+        _safe_filename_part(trainee.get("last_name") or trainee.get("nom")),
+        _safe_filename_part(trainee.get("first_name") or trainee.get("prenom")),
+    )))
+    return send_file(
+        certificate,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"certificat-realisation-{name or trainee_id}.pdf",
+    )
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-entree-aps/send")

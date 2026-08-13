@@ -688,6 +688,12 @@
    href="{{ url_for('admin_trainee_summary', session_id=session.id, trainee_id=trainee.id) }}">
   📄 Fiche récap
 </a>
+<a class="btn btn-outline btn-uniform btn-admin-trainee-side-action"
+   href="{{ url_for('admin_trainee_certificate_realization', session_id=session.id, trainee_id=trainee.id) }}"
+   target="_blank" rel="noopener"
+   title="Générer le certificat de réalisation prérempli au format PDF">
+  📜 Certificat de réalisation
+</a>
 {% if trainee.printed or trainee.summary_printed_at %}
 <div class="hint" style="margin-top:6px;">Fiche imprimée le {{ trainee.printed_at|frdatetime or trainee.summary_printed_at|frdate }}</div>
 {% endif %}
