@@ -10161,6 +10161,36 @@ def fetch_hebergement_status(
     return None
 
 
+def _refresh_trainee_hebergement_status(
+    session_item: Dict[str, Any],
+    trainee: Dict[str, Any],
+) -> bool:
+    """Refresh one A3P trainee's hosting status without ever downgrading it."""
+    training_type = str(_session_get(session_item, "training_type", "") or "").strip().upper()
+    if training_type != "A3P":
+        return False
+
+    current_status = str(trainee.get("hosting_status") or "unknown").strip().lower() or "unknown"
+    if current_status == "reserved":
+        trainee["hosting_status"] = "reserved"
+        return False
+
+    remote_status = fetch_hebergement_status(
+        str(trainee.get("email") or "").strip().lower(),
+        last_name=normalize_last_name(trainee.get("last_name") or ""),
+        first_name=normalize_first_name(trainee.get("first_name") or ""),
+        session_name=_session_get(session_item, "name", ""),
+        session_date_start=_session_get(session_item, "date_start", ""),
+        session_date_end=_session_get(session_item, "date_end", ""),
+    )
+    if remote_status != "reserved":
+        trainee["hosting_status"] = current_status
+        return False
+
+    trainee["hosting_status"] = "reserved"
+    return True
+
+
 def _is_charles_debouvry_debug_target(*, email: str = "", last_name: str = "", first_name: str = "") -> bool:
     normalized_email = (email or "").strip().lower()
     normalized_last_name = _normalized_token(normalize_last_name(last_name or ""))
@@ -27136,6 +27166,7 @@ def public_trainee_space(token):
         _mark_public_login(data, s, t)
 
     training_type = _session_get(s, "training_type", "")
+    _refresh_trainee_hebergement_status(s, t)
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
 
     # ✅ aligne la liste des docs requis
@@ -30434,6 +30465,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
+
+    _refresh_trainee_hebergement_status(s, t)
 
     # Le suivi CPF doit refléter WEDOF dès l'ouverture de la fiche. Le bouton
     # d'actualisation reste utile pour relancer manuellement une API indisponible,
