@@ -53,6 +53,15 @@ class CertificateRealizationTests(unittest.TestCase):
         self.assertEqual(context["duration"], "35 heures")
         self.assertIn("VAE", context["training_title"])
 
+    def test_context_requires_an_employer_name(self):
+        for company_name in ("", "Non renseignée"):
+            with self.subTest(company_name=company_name):
+                session = self._session()
+                session["trainees"][0]["company_name"] = company_name
+
+                with self.assertRaisesRegex(ValueError, "nom de l’entreprise manquant"):
+                    gestion_app._build_certificate_realization_context(session, session["trainees"][0])
+
     def test_pdf_keeps_template_and_adds_all_values(self):
         session = self._session()
         context = gestion_app._build_certificate_realization_context(session, session["trainees"][0])
@@ -96,6 +105,31 @@ class CertificateRealizationTests(unittest.TestCase):
         template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
         self.assertIn("Certificat de réalisation", template)
         self.assertIn("admin_trainee_certificate_realization", template)
+
+    def test_admin_route_asks_for_company_before_generating(self):
+        session = self._session("DIRIGEANT INITIAL", "DESP été 2026")
+        session["trainees"][0].pop("company_name")
+        data = {"sessions": [session]}
+
+        with patch.object(gestion_app, "load_data", return_value=data):
+            prompt_response = self.client.get(
+                "/admin/sessions/SESSION-1/stagiaires/TRAINEE-1/certificat-realisation"
+            )
+            pdf_response = self.client.post(
+                "/admin/sessions/SESSION-1/stagiaires/TRAINEE-1/certificat-realisation",
+                data={"company_name": "Société Sécurité Méditerranée"},
+            )
+
+        self.assertEqual(prompt_response.status_code, 200)
+        self.assertEqual(prompt_response.mimetype, "text/html")
+        self.assertIn("Nom de l’entreprise manquant", prompt_response.get_data(as_text=True))
+        self.assertNotIn("Non renseignée", prompt_response.get_data(as_text=True))
+
+        self.assertEqual(pdf_response.status_code, 200)
+        self.assertEqual(pdf_response.mimetype, "application/pdf")
+        text = PdfReader(BytesIO(pdf_response.data)).pages[0].extract_text()
+        self.assertIn("Société Sécurité Méditerranée", text)
+        self.assertNotIn("Non renseignée", text)
 
 
 if __name__ == "__main__":
