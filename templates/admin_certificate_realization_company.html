@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .certificate-company-page{
+    min-height:calc(100vh - 210px);
+    display:grid;
+    place-items:center;
+    padding:36px 16px 56px;
+  }
+  .certificate-company-card{
+    width:min(620px,100%);
+    overflow:hidden;
+    border:1px solid #dbeafe;
+    border-radius:26px;
+    background:#fff;
+    box-shadow:0 24px 70px rgba(15,23,42,.13);
+  }
+  .certificate-company-head{
+    padding:28px 30px 24px;
+    color:#fff;
+    background:linear-gradient(135deg,#172554 0%,#1d4ed8 62%,#2563eb 100%);
+  }
+  .certificate-company-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    margin-bottom:14px;
+    padding:6px 10px;
+    border:1px solid rgba(255,255,255,.32);
+    border-radius:999px;
+    background:rgba(255,255,255,.14);
+    font-size:12px;
+    font-weight:850;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+  .certificate-company-head h1{margin:0;font-size:27px;line-height:1.15;}
+  .certificate-company-head p{margin:10px 0 0;color:#dbeafe;line-height:1.55;}
+  .certificate-company-body{padding:28px 30px 30px;}
+  .certificate-company-trainee{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:24px;
+    padding:14px 16px;
+    border:1px solid #e2e8f0;
+    border-radius:16px;
+    background:#f8fafc;
+  }
+  .certificate-company-avatar{
+    display:grid;
+    flex:0 0 42px;
+    width:42px;
+    height:42px;
+    place-items:center;
+    border-radius:13px;
+    color:#1d4ed8;
+    background:#dbeafe;
+    font-size:20px;
+  }
+  .certificate-company-trainee strong{display:block;color:#0f172a;}
+  .certificate-company-trainee span{display:block;margin-top:3px;color:#64748b;font-size:13px;}
+  .certificate-company-label{display:block;margin-bottom:8px;color:#0f172a;font-size:14px;font-weight:850;}
+  .certificate-company-input{
+    width:100%;
+    box-sizing:border-box;
+    min-height:52px;
+    padding:12px 15px;
+    border:1px solid #cbd5e1;
+    border-radius:14px;
+    color:#0f172a;
+    background:#fff;
+    font:inherit;
+  }
+  .certificate-company-input:focus{
+    border-color:#3b82f6;
+    outline:0;
+    box-shadow:0 0 0 4px rgba(59,130,246,.14);
+  }
+  .certificate-company-help{margin:8px 0 0;color:#64748b;font-size:12px;line-height:1.45;}
+  .certificate-company-error{
+    margin:0 0 14px;
+    padding:10px 12px;
+    border:1px solid #fecaca;
+    border-radius:12px;
+    color:#b91c1c;
+    background:#fef2f2;
+    font-size:13px;
+    font-weight:750;
+  }
+  .certificate-company-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
+  .certificate-company-actions .btn{min-height:44px;padding:0 18px;}
+  @media(max-width:640px){
+    .certificate-company-head,.certificate-company-body{padding:23px 20px;}
+    .certificate-company-actions{flex-direction:column-reverse;}
+    .certificate-company-actions .btn{width:100%;}
+  }
+</style>
+
+<section class="certificate-company-page">
+  <div class="certificate-company-card">
+    <header class="certificate-company-head">
+      <div class="certificate-company-badge">📜 Action requise</div>
+      <h1>Nom de l’entreprise manquant</h1>
+      <p>Renseignez la raison sociale de l’employeur avant de générer le certificat de réalisation.</p>
+    </header>
+    <div class="certificate-company-body">
+      <div class="certificate-company-trainee">
+        <div class="certificate-company-avatar" aria-hidden="true">👤</div>
+        <div>
+          <strong>{{ trainee.first_name or trainee.prenom }} {{ trainee.last_name or trainee.nom }}</strong>
+          <span>{{ session_obj.name or session_obj.training_type or "Session de formation" }}</span>
+        </div>
+      </div>
+
+      <form method="post">
+        {% if form_error %}<div class="certificate-company-error" role="alert">{{ form_error }}</div>{% endif %}
+        <label class="certificate-company-label" for="certificateCompanyName">Nom de l’entreprise *</label>
+        <input
+          class="certificate-company-input"
+          id="certificateCompanyName"
+          name="company_name"
+          type="text"
+          maxlength="180"
+          autocomplete="organization"
+          placeholder="Ex. Société Sécurité Méditerranée"
+          required
+          autofocus
+        >
+        <p class="certificate-company-help">Ce nom sera utilisé sur ce certificat avant l’ouverture du PDF.</p>
+        <div class="certificate-company-actions">
+          <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=session_obj.id, trainee_id=trainee.id) }}">Annuler</a>
+          <button class="btn btn-primary" type="submit">Générer le certificat PDF</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -29545,24 +29545,32 @@ def _certificate_realization_training_title(session_obj: Dict[str, Any], trainee
 
 
 def _certificate_realization_employer(trainee: Dict[str, Any], billing_lines: Optional[List[Dict[str, Any]]] = None) -> str:
+    def usable_company_name(value: Any) -> str:
+        candidate = re.sub(r"\s+", " ", str(value or "")).strip()
+        normalized = unicodedata.normalize("NFKD", candidate).encode("ascii", "ignore").decode("ascii").upper()
+        if normalized in {"", "-", "N/A", "NA", "NC", "NEANT", "NON RENSEIGNE", "NON RENSEIGNEE"}:
+            return ""
+        return candidate
+
     for key in ("employer_name", "company_name", "employer", "entreprise", "raison_sociale", "qonto_company_name"):
-        value = str(trainee.get(key) or "").strip()
+        value = usable_company_name(trainee.get(key))
         if value:
             return value
     for line in billing_lines or []:
         financing = str(line.get("financingType") or line.get("typeFinanceur") or line.get("financeurName") or "").upper()
         if financing not in {"ENTREPRISE", "COMPANY"}:
             continue
-        value = str(line.get("companyName") or line.get("company_name") or "").strip()
+        value = usable_company_name(line.get("companyName") or line.get("company_name"))
         if value:
             return value
-    return "Non renseignée"
+    return ""
 
 
 def _build_certificate_realization_context(
     session_obj: Dict[str, Any],
     trainee: Dict[str, Any],
     billing_lines: Optional[List[Dict[str, Any]]] = None,
+    employer_override: str = "",
 ) -> Dict[str, str]:
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
@@ -29572,12 +29580,15 @@ def _build_certificate_realization_context(
         raise ValueError("Impossible de générer le certificat de réalisation : nom du stagiaire manquant.")
     if not start_date or not end_date:
         raise ValueError("Impossible de générer le certificat de réalisation : dates de formation manquantes.")
+    employer = _certificate_realization_employer({"company_name": employer_override}) or _certificate_realization_employer(trainee, billing_lines)
+    if not employer:
+        raise ValueError("Impossible de générer le certificat de réalisation : nom de l’entreprise manquant.")
     nature = _certificate_realization_nature(session_obj, trainee)
     return {
         "signatory": CERTIFICATE_REALIZATION_SIGNATORY,
         "provider": CERTIFICATE_REALIZATION_PROVIDER,
         "beneficiary": beneficiary,
-        "employer": _certificate_realization_employer(trainee, billing_lines),
+        "employer": employer,
         "training_title": _certificate_realization_training_title(session_obj, trainee),
         "nature": nature,
         "start_date": start_date,
@@ -29600,12 +29611,39 @@ def _draw_certificate_realization_value(
 ) -> None:
     from reportlab.pdfbase.pdfmetrics import stringWidth
 
+    value = str(value or "")
+    word_spacing = 0.9
+
+    def rendered_width(candidate_size: float) -> float:
+        return stringWidth(value, "Helvetica-Bold", candidate_size) + (value.count(" ") * word_spacing)
+
     size = font_size
-    while size > min_font_size and stringWidth(value, "Helvetica-Bold", size) > max_width:
+    while size > min_font_size and rendered_width(size) > max_width:
         size = max(min_font_size, size - 0.4)
-    pdf_canvas.setFont("Helvetica-Bold", size)
-    pdf_canvas.setFillColorRGB(15 / 255, 23 / 255, 42 / 255)
-    pdf_canvas.drawString(x, y, value)
+    text_object = pdf_canvas.beginText(x, y)
+    text_object.setFont("Helvetica-Bold", size)
+    text_object.setFillColorRGB(15 / 255, 23 / 255, 42 / 255)
+    text_object.setWordSpace(word_spacing)
+    text_object.textOut(value)
+    pdf_canvas.drawText(text_object)
+
+
+def _draw_certificate_realization_label(
+    pdf_canvas: Any,
+    value: str,
+    x: float,
+    y: float,
+    *,
+    font_name: str = "Helvetica",
+    font_size: float = 10.2,
+    color: Tuple[float, float, float] = (15 / 255, 23 / 255, 42 / 255),
+) -> None:
+    text_object = pdf_canvas.beginText(x, y)
+    text_object.setFont(font_name, font_size)
+    text_object.setFillColorRGB(*color)
+    text_object.setWordSpace(0.2)
+    text_object.textOut(value)
+    pdf_canvas.drawText(text_object)
 
 
 def _certificate_realization_wrapped_lines(value: str, max_width: float, max_lines: int = 2) -> List[str]:
@@ -29658,29 +29696,44 @@ def _build_certificate_realization_pdf(context: Dict[str, str]) -> BytesIO:
         overlay.setFillColorRGB(1, 1, 1)
         overlay.rect(x, y, mask_width, mask_height, stroke=0, fill=1)
 
-    mask(155, 596, 376, 18)
-    mask(108, 553, 310, 17)
-    mask(108, 496, 425, 17)
-    mask(190, 478, 343, 16)
-    mask(140, 461, 393, 14)
-    mask(70, 449, 463, 12)
-    mask(174, 334, 108, 16)
-    mask(294, 334, 97, 16)
-    mask(163, 315, 132, 16)
-    mask(106, 183, 126, 16)
-    mask(90, 165, 143, 16)
+    mask(69, 595, 464, 20)
+    mask(69, 552, 350, 18)
+    mask(69, 495, 464, 19)
+    mask(69, 477, 464, 18)
+    mask(69, 447, 464, 29)
+    mask(69, 333, 322, 18)
+    mask(69, 314, 226, 18)
+    mask(69, 182, 164, 18)
+    mask(69, 164, 164, 18)
 
-    _draw_certificate_realization_value(overlay, context["signatory"], 164, 603.5, 360, font_size=10.6)
-    _draw_certificate_realization_value(overlay, context["provider"], 112, 560.3, 298, font_size=10.2)
+    _draw_certificate_realization_label(overlay, "Je soussigné(e) :", 71, 603.5)
+    _draw_certificate_realization_value(overlay, context["signatory"], 155, 603.5, 370, font_size=10.4)
+    _draw_certificate_realization_label(
+        overlay,
+        "interne),",
+        71,
+        560.3,
+        font_name="Helvetica-Oblique",
+        color=(0, 24 / 255, 122 / 255),
+    )
+    _draw_certificate_realization_value(overlay, context["provider"], 114, 560.3, 296, font_size=10.2)
+    _draw_certificate_realization_label(overlay, "Mme/M.", 71, 503.5)
     _draw_certificate_realization_value(overlay, context["beneficiary"], 114, 503.5, 410, font_size=10.2)
-    _draw_certificate_realization_value(overlay, context["employer"], 198, 485.1, 326, font_size=9.8)
-    for index, line in enumerate(_certificate_realization_wrapped_lines(context["training_title"], 380)):
-        _draw_certificate_realization_value(overlay, line, 149 if index == 0 else 72, 465.8 - (index * 12), 374 if index == 0 else 452, font_size=9.4)
-    _draw_certificate_realization_value(overlay, context["start_date"], 182, 340.9, 95, font_size=9.2, min_font_size=8)
-    _draw_certificate_realization_value(overlay, context["end_date"], 302, 340.9, 84, font_size=9.2, min_font_size=8)
-    _draw_certificate_realization_value(overlay, context["duration"], 172, 321.7, 119, font_size=9.2, min_font_size=7.8)
-    _draw_certificate_realization_value(overlay, context["place"], 114, 190.3, 114, font_size=8.5, min_font_size=7)
-    _draw_certificate_realization_value(overlay, context["issued_date"], 99, 171.9, 128, font_size=9.2, min_font_size=8)
+    _draw_certificate_realization_label(overlay, "salarié(e) de l’entreprise :", 71, 485.1)
+    _draw_certificate_realization_value(overlay, context["employer"], 192, 485.1, 332, font_size=9.8)
+    _draw_certificate_realization_label(overlay, "a suivi l’action :", 71, 465.8)
+    for index, line in enumerate(_certificate_realization_wrapped_lines(context["training_title"], 382)):
+        _draw_certificate_realization_value(overlay, line, 146 if index == 0 else 71, 465.8 - (index * 12), 378 if index == 0 else 453, font_size=9.4)
+    _draw_certificate_realization_label(overlay, "qui s’est déroulée du", 71, 340.9)
+    _draw_certificate_realization_value(overlay, context["start_date"], 173, 340.9, 91, font_size=9.2, min_font_size=8)
+    _draw_certificate_realization_label(overlay, "au", 280, 340.9)
+    _draw_certificate_realization_value(overlay, context["end_date"], 298, 340.9, 88, font_size=9.2, min_font_size=8)
+    _draw_certificate_realization_label(overlay, "pour une durée de", 71, 321.7)
+    _draw_certificate_realization_value(overlay, context["duration"], 161, 321.7, 130, font_size=9.2, min_font_size=7.8)
+    _draw_certificate_realization_label(overlay, "Fait à :", 71, 190.3)
+    _draw_certificate_realization_value(overlay, context["place"], 108, 190.3, 120, font_size=8.5, min_font_size=7)
+    _draw_certificate_realization_label(overlay, "Le :", 71, 171.9)
+    _draw_certificate_realization_value(overlay, context["issued_date"], 94, 171.9, 133, font_size=9.2, min_font_size=8)
 
     checkbox_y = {
         "training": 416.4,
@@ -34671,18 +34724,30 @@ def admin_preview_aps_entry_attestation(session_id: str, trainee_id: str):
         return make_response(f"Aperçu attestation d’entrée APS impossible : {html.escape(str(exc))}", 400)
 
 
-@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/certificat-realisation")
+@app.route("/admin/sessions/<session_id>/stagiaires/<trainee_id>/certificat-realisation", methods=["GET", "POST"])
 @admin_login_required
 def admin_trainee_certificate_realization(session_id: str, trainee_id: str):
     data = load_data()
     session_obj, _, trainee = _find_session_trainee(data, session_id, trainee_id)
     if not session_obj or not trainee:
         abort(404)
+    billing_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    stored_employer = _certificate_realization_employer(trainee, billing_lines)
+    submitted_employer = _certificate_realization_employer({"company_name": request.form.get("company_name")})[:180]
+    if not stored_employer and not submitted_employer:
+        return render_template(
+            "admin_certificate_realization_company.html",
+            title="Entreprise du stagiaire",
+            trainee=trainee,
+            session_obj=session_obj,
+            form_error=("Veuillez renseigner le nom de l’entreprise." if request.method == "POST" else ""),
+        ), (400 if request.method == "POST" else 200)
     try:
         context = _build_certificate_realization_context(
             session_obj,
             trainee,
-            _billing_lines_for_trainee_session(data, trainee_id, session_id),
+            billing_lines,
+            employer_override=submitted_employer,
         )
         certificate = _build_certificate_realization_pdf(context)
     except (FileNotFoundError, RuntimeError) as exc:
