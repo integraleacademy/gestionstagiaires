@@ -1674,6 +1674,11 @@ def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], local_i
         amount_paid_cents = int(local_invoice.get("qontoAmountPaidCents") or 0)
     elif amount_paid is None and local_invoice.get("qontoInvoiceAmountPaid") is not None:
         amount_paid_cents = money_value_to_cents(local_invoice.get("qontoInvoiceAmountPaid") or 0)
+    elif amount_paid is None and local_invoice.get("qonto_invoice_amount_paid") is not None:
+        # Trainee-level invoices created by the historical WEDOF/Qonto flow use
+        # snake_case fields.  Keep accepting that shape so an already-paid CPF
+        # invoice does not reappear as unpaid in the admin trainee dashboard.
+        amount_paid_cents = money_value_to_cents(local_invoice.get("qonto_invoice_amount_paid") or 0)
     else:
         amount_paid_cents = 0 if amount_paid is None else money_value_to_cents(amount_paid)
     qonto_status = (client_invoice.get("status") or local_invoice.get("qonto_status") or local_invoice.get("qontoStatus") or local_invoice.get("qonto_invoice_status") or "").strip() or "unpaid"
@@ -32889,6 +32894,79 @@ def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
     return entries
 
 
+def _legacy_qonto_invoice_is_cpf(invoice: Dict[str, Any]) -> bool:
+    """Identify a trainee-level CPF invoice from its business fields only."""
+    if not isinstance(invoice, dict):
+        return False
+    cpf_fields = (
+        'fundingType', 'funding_type', 'financingType', 'financing_type',
+        'financeur', 'financingLabel', 'typeFinanceur', 'financeurName',
+        'client_name', 'clientName', 'company_name', 'companyName', 'organization',
+    )
+    if any(_is_cpf_financeur(invoice.get(key)) for key in cpf_fields):
+        return True
+    client = invoice.get('client') if isinstance(invoice.get('client'), dict) else {}
+    return any(_is_cpf_financeur(client.get(key)) for key in ('name', 'company_name', 'organization'))
+
+
+def _cpf_invoice_tracking_financing_entry(
+    trainee: Dict[str, Any],
+    persisted: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """Expose an existing CPF/Qonto invoice as a read-only billing line.
+
+    CPF invoice creation stays outside the platform.  We only rebuild a CPF
+    line when a real Qonto invoice identifier is already present either on the
+    trainee (legacy WEDOF/Qonto flow) or in persisted billing data.
+    """
+    persisted = persisted if isinstance(persisted, dict) else None
+    trainee_invoice = trainee.get('qonto_invoice') if isinstance(trainee.get('qonto_invoice'), dict) else {}
+    trainee_invoice_is_cpf = _legacy_qonto_invoice_is_cpf(trainee_invoice)
+    # A trainee-level invoice can also be a personal invoice created from this
+    # page.  Do not reinterpret it as CPF based on an amount match alone.
+    if not persisted and not trainee_invoice_is_cpf:
+        return None
+    invoice_id = str(
+        (persisted or {}).get('qontoInvoiceId')
+        or (persisted or {}).get('qontoDraftId')
+        or trainee_invoice.get('qonto_invoice_id')
+        or trainee_invoice.get('qontoInvoiceId')
+        or ''
+    ).strip()
+    if not invoice_id:
+        return None
+
+    structured_cpf_amount = sum(
+        _money(item.get('amount') or item.get('amount_ttc'))
+        for item in (trainee.get('financings') or [])
+        if isinstance(item, dict)
+        and _is_cpf_financeur(item.get('type') or item.get('financing_type') or item.get('label'))
+    )
+    amount = _money(
+        trainee.get('cpf_amount')
+        or trainee.get('montant_cpf')
+        or structured_cpf_amount
+        or (persisted or {}).get('amountTTC')
+        or (persisted or {}).get('amount')
+        or trainee_invoice.get('amount_ttc')
+        or trainee_invoice.get('amountTTC')
+        or trainee_invoice.get('amount')
+    )
+    if amount <= 0:
+        return None
+
+    financing = {
+        'type': 'CPF',
+        'label': (persisted or {}).get('financingLabel') or (persisted or {}).get('financeurName') or 'CPF',
+        'amount': amount,
+        'ref': (persisted or {}).get('financingRef') or 'legacy',
+        'tracking_only': True,
+    }
+    if not persisted and not _legacy_trainee_qonto_invoice_candidate(trainee, financing, {}):
+        return None
+    return financing
+
+
 def _legacy_trainee_qonto_invoice_candidate(trainee: Dict[str, Any], financing: Dict[str, Any], persisted: Dict[str, Any]) -> Dict[str, Any]:
     """Return trainee-level Qonto invoice state when it belongs to this billing line.
 
@@ -32902,6 +32980,10 @@ def _legacy_trainee_qonto_invoice_candidate(trainee: Dict[str, Any], financing: 
     invoice_id = (inv.get('qonto_invoice_id') or inv.get('qontoInvoiceId') or '').strip()
     if not invoice_id:
         return {}
+    financing_is_cpf = is_cpf_billing_context(financing)
+    invoice_is_cpf = _legacy_qonto_invoice_is_cpf(inv)
+    if invoice_is_cpf != financing_is_cpf:
+        return {}
     inv_amount = _money(inv.get('amount_ttc') or inv.get('amountTTC') or inv.get('amount'))
     if inv_amount > 0 and abs(inv_amount - _money(financing.get('amount'))) > 0.01:
         return {}
@@ -32913,6 +32995,18 @@ def _legacy_trainee_qonto_invoice_candidate(trainee: Dict[str, Any], financing: 
 
 def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
     existing = existing or {}
+    existing_cpf_by_trainee: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for row in existing.values():
+        if (
+            isinstance(row, dict)
+            and is_cpf_billing_context(row)
+            and (row.get('qontoInvoiceId') or row.get('qontoDraftId'))
+        ):
+            key = (
+                str(row.get('sessionId') or ''),
+                str(row.get('traineeId') or row.get('studentId') or ''),
+            )
+            existing_cpf_by_trainee.setdefault(key, row)
     out = []
     for sess in sessions or []:
         start = _parse_date_safe(_session_get(sess, 'date_start', ''))
@@ -32934,12 +33028,28 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
             trainee_id = str(trainee.get('id') or '')
             if not trainee_id or not (trainee.get('last_name') or trainee.get('first_name')):
                 continue
-            for financing in _financing_entries(trainee):
+            financing_entries = _financing_entries(trainee)
+            cpf_tracking_entry = _cpf_invoice_tracking_financing_entry(
+                trainee,
+                existing_cpf_by_trainee.get((session_id, trainee_id)),
+            )
+            if cpf_tracking_entry:
+                financing_entries.insert(0, cpf_tracking_entry)
+            for financing in financing_entries:
                 line_id = _billing_line_id(session_id, trainee_id, financing['type'], financing.get('ref'))
                 persisted = dict(existing.get(line_id) or {})
                 legacy_inv = _legacy_trainee_qonto_invoice_candidate(trainee, financing, persisted)
                 if legacy_inv:
                     legacy_status = _normalize_billing_invoice_status(legacy_inv.get('qonto_invoice_status') or ('draft' if legacy_inv.get('qonto_invoice_id') else 'not_invoiced'))
+                    legacy_payment = normalize_qonto_invoice_payment_data({}, legacy_inv)
+                    if (
+                        legacy_payment['qonto_total_amount_cents'] > 0
+                        and legacy_payment['qonto_amount_paid_cents'] <= 0
+                        and (legacy_status == 'paid' or legacy_inv.get('qonto_invoice_paid_at'))
+                    ):
+                        legacy_payment['qonto_amount_paid_cents'] = legacy_payment['qonto_total_amount_cents']
+                        legacy_payment['qonto_remaining_amount_cents'] = 0
+                        legacy_payment['qonto_payment_status'] = 'paid'
                     persisted.update({
                         'qontoInvoiceId': legacy_inv.get('qonto_invoice_id') or legacy_inv.get('qontoInvoiceId') or '',
                         'qontoDraftId': legacy_inv.get('qonto_invoice_id') or legacy_inv.get('qontoInvoiceId') or '',
@@ -32947,11 +33057,18 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                         'qontoClientId': legacy_inv.get('qonto_client_id') or legacy_inv.get('qontoClientId') or '',
                         'qontoCustomerId': legacy_inv.get('qonto_client_id') or legacy_inv.get('qontoCustomerId') or '',
                         'invoiceStatus': legacy_status,
-                        'paymentStatus': 'paid' if legacy_status == 'paid' or legacy_inv.get('qonto_invoice_paid_at') else 'unpaid',
+                        'paymentStatus': legacy_payment['qonto_payment_status'],
                         'invoiceGeneratedAt': legacy_inv.get('created_at') or legacy_inv.get('invoiceGeneratedAt') or _now_iso(),
                         'paidAt': legacy_inv.get('qonto_invoice_paid_at') or '',
                         'invoicePdfUrl': legacy_inv.get('qonto_invoice_url') or legacy_inv.get('invoicePdfUrl') or '',
                         'clientName': legacy_inv.get('client_name') or legacy_inv.get('clientName') or persisted.get('clientName') or '',
+                        'qonto_total_amount_cents': legacy_payment['qonto_total_amount_cents'],
+                        'qonto_amount_paid_cents': legacy_payment['qonto_amount_paid_cents'],
+                        'qonto_remaining_amount_cents': legacy_payment['qonto_remaining_amount_cents'],
+                        'qonto_payment_status': legacy_payment['qonto_payment_status'],
+                        'qonto_status': legacy_payment['qonto_status'],
+                        'qontoPaidAt': legacy_payment.get('qonto_paid_at') or legacy_inv.get('qonto_invoice_paid_at') or '',
+                        'qontoLastSyncedAt': legacy_inv.get('qonto_last_synced_at') or legacy_inv.get('qonto_invoice_synced_at') or legacy_inv.get('updatedAt') or '',
                     })
                 status = _normalize_billing_invoice_status(persisted.get('invoiceStatus') or 'not_invoiced')
                 line = {
@@ -33087,16 +33204,16 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
     personal_cents = money_value_to_cents(trainee.get('personal_amount') or 0)
     other_cents = money_value_to_cents(trainee.get('other_financing_amount') or trainee.get('other_amount') or 0)
     cpf_cents = money_value_to_cents(trainee.get('cpf_amount') or 0)
-    # CPF invoices and collections are managed in the external CPF software, not
-    # in Qonto.  The financial dashboard must therefore use only the amounts
-    # that we can invoice and collect here as its billing/payment objective.
-    # CPF is still exposed as externally invoiced in its financer breakdown.
+    # CPF creation remains managed in the external CPF workflow.  A linked
+    # Qonto invoice is tracked below for visibility, but its amounts stay out of
+    # the platform's personal/other billing and collection objective.
     collectable_total_cents = personal_cents + other_cents
     invoiced_total_cents = 0
     qonto_paid_total_cents = 0
     manual_paid_total_cents = 0
     cash_paid_total_cents = 0
     qonto_payment_entries: List[Dict[str, Any]] = []
+    cpf_invoice_entries: List[Dict[str, Any]] = []
     linked_invoice_ids = {str(l.get('qontoInvoiceId') or l.get('qontoDraftId') or '') for l in lines if l.get('qontoInvoiceId') or l.get('qontoDraftId')}
     by_financer: Dict[str, Dict[str, Any]] = {}
     for key, planned in (('CPF', cpf_cents), ('PERSONNEL', personal_cents), ('AUTRE', other_cents)):
@@ -33110,6 +33227,7 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
             'paid_amount_cents': 0,
             'remaining_amount_cents': 0 if externally_managed else planned,
             'externally_managed': externally_managed,
+            'qonto_tracked': False,
         }
 
     # Cash installments are stored directly on the trainee rather than on a
@@ -33138,13 +33256,44 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
             continue
         financing_text = str(line.get('financingType') or line.get('financeurName') or '').upper()
         financer = 'CPF' if is_cpf_billing_context(line) else ('AUTRE' if 'AUTRE' in financing_text else 'PERSONNEL')
-        by_financer.setdefault(financer, {'planned_amount_cents': 0, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': 0, 'externally_managed': financer == 'CPF'})
-        # CPF billing/payment tracking belongs to the external CPF software.
-        # Do not include a CPF line in Qonto totals, even if legacy data has an
-        # invoice identifier attached to it.
-        if financer == 'CPF':
-            continue
+        by_financer.setdefault(financer, {'planned_amount_cents': 0, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': 0, 'externally_managed': financer == 'CPF', 'qonto_tracked': False})
         invoice_id = str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '').strip()
+        # CPF remains outside the platform's invoicing/payment objective, but a
+        # Qonto invoice that already exists must be visible and trackable from
+        # the trainee page.  Keep its amounts in the CPF bucket only.
+        if financer == 'CPF':
+            if invoice_id:
+                frontend_invoice = line.get('qonto_invoice') if isinstance(line.get('qonto_invoice'), dict) else serialize_qonto_invoice_for_frontend(line)
+                total_cents = int(frontend_invoice['total_amount_cents'])
+                paid_cents = int(frontend_invoice['paid_amount_cents'])
+                remaining_cents = int(frontend_invoice['remaining_amount_cents'])
+                status = str(frontend_invoice['payment_status'])
+                bucket = by_financer['CPF']
+                if not bucket.get('qonto_tracked'):
+                    # Replace the historical "assumed invoiced" amount with the
+                    # real Qonto amount as soon as an invoice is identifiable.
+                    bucket['invoiced_amount_cents'] = 0
+                    bucket['paid_amount_cents'] = 0
+                bucket['qonto_tracked'] = True
+                bucket['invoiced_amount_cents'] += total_cents
+                bucket['paid_amount_cents'] += paid_cents
+                bucket['invoice_id'] = invoice_id
+                bucket['invoice_number'] = frontend_invoice.get('invoice_number') or invoice_id
+                bucket['invoice_status'] = str(frontend_invoice.get('qonto_status') or line.get('invoiceStatus') or '')
+                bucket['invoice_payment_status'] = status
+                bucket['last_synced_at'] = frontend_invoice.get('last_synced_at') or ''
+                cpf_invoice_entries.append({
+                    'invoice_id': invoice_id,
+                    'invoice_number': frontend_invoice.get('invoice_number') or invoice_id,
+                    'source': 'qonto_cpf',
+                    'total_amount_cents': total_cents,
+                    'paid_amount_cents': paid_cents,
+                    'remaining_amount_cents': remaining_cents,
+                    'payment_status': status,
+                    'qonto_status': str(frontend_invoice.get('qonto_status') or '').lower(),
+                    'last_synced_at': frontend_invoice.get('last_synced_at') or '',
+                })
+            continue
         if invoice_id:
             frontend_invoice = line.get('qonto_invoice') if isinstance(line.get('qonto_invoice'), dict) else serialize_qonto_invoice_for_frontend(line)
             total_cents = int(frontend_invoice['total_amount_cents'])
@@ -33214,8 +33363,20 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
     paid_total_cents = qonto_paid_total_cents + manual_paid_total_cents
     for item in by_financer.values():
         if item.get('externally_managed'):
-            item['remaining_amount_cents'] = 0
-            item['payment_status'] = 'externally_managed'
+            if item.get('qonto_tracked'):
+                payment_target_cents = item['invoiced_amount_cents'] or item['planned_amount_cents']
+                item['remaining_amount_cents'] = max(payment_target_cents - item['paid_amount_cents'], 0)
+                raw_status = str(item.get('invoice_payment_status') or '').lower()
+                if raw_status in {'draft', 'canceled', 'cancelled', 'control'}:
+                    item['payment_status'] = raw_status
+                else:
+                    item['payment_status'] = (
+                        'paid' if payment_target_cents > 0 and item['paid_amount_cents'] >= payment_target_cents
+                        else ('partially_paid' if item['paid_amount_cents'] > 0 else 'unpaid')
+                    )
+            else:
+                item['remaining_amount_cents'] = 0
+                item['payment_status'] = 'externally_managed'
         else:
             item['remaining_amount_cents'] = max(item['planned_amount_cents'] - item['paid_amount_cents'], 0)
             item['payment_status'] = 'not_planned' if item['planned_amount_cents'] <= 0 else ('paid' if item['paid_amount_cents'] >= item['planned_amount_cents'] else ('partially_paid' if item['paid_amount_cents'] > 0 else 'unpaid'))
@@ -33233,6 +33394,9 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
         'invoicing_percentage': pct(invoiced_total_cents, collectable_total_cents),
         'payment_percentage': pct(paid_total_cents, collectable_total_cents),
         'qonto_payment_entries': qonto_payment_entries,
+        'cpf_invoice_entries': cpf_invoice_entries,
+        'cpf_qonto_invoiced_total_cents': by_financer['CPF']['invoiced_amount_cents'] if by_financer['CPF'].get('qonto_tracked') else 0,
+        'cpf_qonto_paid_total_cents': by_financer['CPF']['paid_amount_cents'] if by_financer['CPF'].get('qonto_tracked') else 0,
         'payment_status': 'paid' if collectable_total_cents > 0 and paid_total_cents >= collectable_total_cents else ('partially_paid' if paid_total_cents > 0 else 'unpaid'),
         'by_financer': by_financer,
     }
@@ -33609,6 +33773,22 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
     data = load_data()
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
     _repair_logged_qonto_rejection_retries(data, lines)
+    cpf_sync_attempted = False
+    if _qonto_is_configured():
+        for line in lines:
+            if not is_cpf_billing_context(line) or not (line.get('qontoInvoiceId') or line.get('qontoDraftId')):
+                continue
+            cpf_sync_attempted = True
+            try:
+                _sync_billing_line_with_qonto(data, line)
+            except Exception as exc:
+                line['syncWarning'] = 'Synchronisation de la facture CPF impossible pour le moment'
+                _billing_log(line, 'Synchronisation automatique facture CPF indisponible', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or '')
+                _save_billing_line(data, line)
+        if cpf_sync_attempted:
+            # Persist the Qonto payment state recovered while the trainee card
+            # loads, including a non-blocking warning when Qonto is unavailable.
+            save_data(data)
     trainee = None
     for sess in data.get('sessions', []):
         if str(sess.get('id')) != str(session_id):
