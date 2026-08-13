@@ -240,3 +240,31 @@ class PublicTraineeLoginTests(unittest.TestCase):
         self.assertIn("Faites le premier pas vers votre futur métier", body)
         self.assertNotIn("Que recherchez-vous", body)
         self.assertNotIn("Connecter · Piloter · Certifier", body)
+
+    def test_generated_convention_and_convocation_are_visible_for_vtc(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+        self.data["sessions"][0]["training_type"] = "Chauffeur VTC"
+        trainee["convention_signature"] = {
+            "status": "ongoing",
+            "unsigned_pdf_path": "/tmp/convention-vtc.pdf",
+        }
+        trainee["convocation_aps_pdf_token"] = "convocation-vtc.pdf"
+
+        with self.client.session_transaction() as browser_session:
+            browser_session["admin_logged_in"] = True
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ), patch.object(gestion_app, "_store_public_file_token", return_value="convention-vtc.pdf"):
+            response = self.client.get("/espace/PUBLIC-TOKEN")
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Documents de formation", body)
+        self.assertIn("/espace/PUBLIC-TOKEN/download/convention-vtc.pdf", body)
+        self.assertIn("/espace/PUBLIC-TOKEN/download/convocation-vtc.pdf", body)
+
+    def test_unsigned_convention_token_belongs_to_trainee(self):
+        trainee = {"convention_signature": {"unsigned_pdf_token": "convention.pdf"}}
+
+        self.assertTrue(gestion_app._token_belongs_to_trainee(trainee, "convention.pdf"))
+        self.assertFalse(gestion_app._token_belongs_to_trainee(trainee, "another.pdf"))

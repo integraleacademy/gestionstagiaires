@@ -23920,8 +23920,9 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
         return True
 
     conv_sig = t.get("convention_signature") if isinstance(t.get("convention_signature"), dict) else {}
-    if (conv_sig.get("signed_pdf_token") or "").strip() == file_token:
-        return True
+    for key in ("signed_pdf_token", "unsigned_pdf_token"):
+        if (conv_sig.get(key) or "").strip() == file_token:
+            return True
     for key in ("convocation_aps_pdf_token", "attestation_entree_aps_pdf_token", "attestation_fin_aps_pdf_token"):
         if (t.get(key) or "").strip() == file_token:
             return True
@@ -27162,6 +27163,21 @@ def public_trainee_space(token):
     ):
         if not (t.get(token_key) or "").strip() and (t.get(path_key) or "").strip():
             t[token_key] = _store_public_file_token(str(t.get(path_key) or ""))
+
+    # Keep both current and legacy conventions viewable from the trainee space.
+    # The unsigned copy is useful while Yousign is awaiting a signature; once
+    # signed, the final PDF remains preferred by the template.
+    convention_signature = _yousign_state(t)
+    if not (convention_signature.get("signed_pdf_token") or "").strip():
+        signed_convention_path = str(convention_signature.get("signed_pdf_path") or "").strip()
+        if signed_convention_path:
+            convention_signature["signed_pdf_token"] = _store_public_file_token(signed_convention_path)
+    if not (convention_signature.get("unsigned_pdf_token") or "").strip():
+        unsigned_convention_path = str(
+            convention_signature.get("unsigned_pdf_path") or t.get("convention_aps_pdf_path") or ""
+        ).strip()
+        if unsigned_convention_path:
+            convention_signature["unsigned_pdf_token"] = _store_public_file_token(unsigned_convention_path)
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
