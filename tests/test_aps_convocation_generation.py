@@ -463,6 +463,25 @@ class ApsAutomationStatusTests(unittest.TestCase):
         self.assertEqual(status["convocation"]["status"], "error")
         self.assertTrue(status["convocation"]["can_send"])
 
+    def test_successful_convocation_ignores_stale_automation_error(self):
+        session = {"id": "session-1", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "trainee-1",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "convocation_aps_status": "sent",
+            "convocation_aps_sent_at": "2026-08-13T11:45:00Z",
+            "convocation_aps_pdf_path": "/tmp/convocation.pdf",
+            "convocation_auto_last_error": "Working outside of application context.",
+            "convention_signature": {"status": "done", "signed_at": "2026-08-13T11:20:00Z"},
+        }
+
+        with app.app.test_request_context():
+            status = app._build_trainee_automation_status(session, trainee, "session-1", "trainee-1")
+
+        self.assertEqual(status["convocation"]["status"], "sent")
+        self.assertEqual(status["convocation"]["error"], "")
+
 
     def test_manual_desp_convocation_send_endpoint_does_not_require_convention_signature(self):
         data = {
@@ -473,7 +492,14 @@ class ApsAutomationStatusTests(unittest.TestCase):
                     "name": "Formation DESP",
                     "date_start": "2026-09-01",
                     "date_end": "2026-09-05",
-                    "trainees": [{"id": "trainee-desp", "first_name": "Jean", "last_name": "Dupont", "email": "jean@example.com"}],
+                    "trainees": [{
+                        "id": "trainee-desp",
+                        "first_name": "Jean",
+                        "last_name": "Dupont",
+                        "email": "jean@example.com",
+                        "convocation_auto_last_error": "Working outside of application context.",
+                        "convocation_auto_scheduled_at": "2026-08-13T11:40:00Z",
+                    }],
                 }
             ]
         }
@@ -498,6 +524,8 @@ class ApsAutomationStatusTests(unittest.TestCase):
         trainee = data["sessions"][0]["trainees"][0]
         self.assertEqual(trainee["convocation_aps_status"], "sent")
         self.assertTrue(trainee["convocation_aps_sent_at"])
+        self.assertEqual(trainee["convocation_auto_last_error"], "")
+        self.assertEqual(trainee["convocation_auto_scheduled_at"], "")
         save_data.assert_called_once_with(data)
 
     def test_manual_convocation_generation_endpoint_does_not_require_convention_signature(self):
