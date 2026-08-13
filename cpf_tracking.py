@@ -26,6 +26,20 @@ WEDOF_STATUS_TO_STEP = {
 }
 TERMINAL_EXCEPTION_STATES = {"refused", "rejected", "cancelled", "canceled", "abandoned"}
 
+# L'état pédagogique du dossier WEDOF et l'état de sa facture sont deux
+# informations distinctes. Un dossier facturé peut donc rester techniquement
+# en ``serviceDoneValidated`` tandis que la facture Qonto est déjà finalisée,
+# envoyée ou en attente de paiement.
+GENERATED_INVOICE_STATUSES = {
+    "generated", "finalized", "sent", "unpaid", "partiallypaid", "paid",
+    "overdue", "issued", "validated", "invoiced", "invoicesent",
+    "externalgenerated", "generatedexternally",
+}
+NON_GENERATED_INVOICE_STATUSES = {
+    "notgenerated", "notinvoiced", "draft", "cancelled", "canceled",
+    "deleted", "control", "missing", "syncerror", "error", "failed",
+}
+
 
 def map_wedof_status(status: Any) -> Optional[int]:
     """Retourne l'index de l'étape, sans jamais rabattre un état inconnu."""
@@ -150,8 +164,69 @@ def has_cpf_financing(trainee: Dict[str, Any]) -> bool:
     return any(re.search(r"(^|\W)cpf($|\W)|mon compte formation|caisse des d[ée]p[ôo]ts", str(v or ""), re.I) for v in values)
 
 
-def build_steps(snapshot: Dict[str, Any]) -> Dict[str, Any]:
-    index = map_wedof_status(snapshot.get("state"))
+def _normalized_invoice_status(value: Any) -> str:
+    return re.sub(r"[\s_-]+", "", str(value or "").strip().casefold())
+
+
+def _invoice_record_is_generated(record: Dict[str, Any]) -> bool:
+    """Détecte une facture réelle sans confondre un brouillon avec une émission."""
+    status = _normalized_invoice_status(
+        record.get("invoice_status") or record.get("invoiceStatus")
+        or record.get("qonto_status") or record.get("qontoStatus")
+        or record.get("payment_status") or record.get("paymentStatus")
+    )
+    if status in GENERATED_INVOICE_STATUSES:
+        return True
+    if status in NON_GENERATED_INVOICE_STATUSES:
+        return False
+    invoice_number = (
+        record.get("qonto_invoice_number") or record.get("qontoInvoiceNumber")
+        or record.get("invoice_number") or record.get("invoiceNumber")
+    )
+    paid_at = (
+        record.get("invoice_paid_at") or record.get("paidAt")
+        or record.get("qontoPaidAt")
+    )
+    return bool(str(invoice_number or "").strip() or str(paid_at or "").strip())
+
+
+def _billing_line_is_cpf(line: Dict[str, Any]) -> bool:
+    values = [line.get(key) for key in (
+        "financingType", "financing_type", "typeFinanceur", "financeurName",
+        "financeur", "financingLabel", "fundingType", "funding_type",
+    )]
+    return any(
+        re.search(r"(^|\W)cpf($|\W)|mon compte formation|caisse des d[ée]p[ôo]ts", str(value or ""), re.I)
+        for value in values
+    )
+
+
+def _has_generated_cpf_invoice(snapshot: Dict[str, Any], trainee: Dict[str, Any],
+                               session_obj: Dict[str, Any], data: Dict[str, Any]) -> bool:
+    if _invoice_record_is_generated(snapshot):
+        return True
+    trainee_id = str(trainee.get("id") or "")
+    session_id = str(session_obj.get("id") or "")
+    billing_lines = data.get("billing_lines") if isinstance(data.get("billing_lines"), list) else []
+    return any(
+        isinstance(line, dict)
+        and str(line.get("traineeId") or line.get("trainee_id") or "") == trainee_id
+        and str(line.get("sessionId") or line.get("session_id") or "") == session_id
+        and _billing_line_is_cpf(line)
+        and bool(
+            line.get("qontoInvoiceId") or line.get("qonto_invoice_id")
+            or line.get("qontoInvoiceNumber") or line.get("qonto_invoice_number")
+        )
+        and _invoice_record_is_generated(line)
+        for line in billing_lines
+    )
+
+
+def build_steps(snapshot: Dict[str, Any], *, invoice_generated: Optional[bool] = None) -> Dict[str, Any]:
+    raw_index = map_wedof_status(snapshot.get("state"))
+    if invoice_generated is None:
+        invoice_generated = _invoice_record_is_generated(snapshot)
+    index = 5 if invoice_generated else raw_index
     dates = snapshot.get("step_dates")
     steps = []
     for position, label in enumerate(CPF_STEPS):
@@ -169,7 +244,7 @@ def build_steps(snapshot: Dict[str, Any]) -> Dict[str, Any]:
             "date": format_paris_date(raw_date) if index is not None and position <= index else "",
         })
     return {"steps": steps, "current_index": index,
-            "unknown": bool(snapshot.get("state")) and index is None,
+            "unknown": bool(snapshot.get("state")) and raw_index is None and not invoice_generated,
             "waiting_reason": waiting_reason(snapshot) if index == 0 else ""}
 
 
@@ -253,7 +328,8 @@ def build_cpf_view(trainee: Dict[str, Any], session_obj: Dict[str, Any], data: D
         if not snapshot.get("created_at"):
             snapshot["created_at"] = link.get("created_at")
     result = {"found": bool(link), "snapshot": snapshot, "link": link, "sync_error": (link or {}).get("cpf_sync_error") or ""}
-    result.update(build_steps(snapshot))
+    invoice_generated = _has_generated_cpf_invoice(snapshot, trainee, session_obj, data)
+    result.update(build_steps(snapshot, invoice_generated=invoice_generated))
     result["automation"] = automation_view(
         str(snapshot.get("external_id") or ""), data.get("wedof_automation_status", []),
         data.get("wedof_automation_runs", []), snapshot,

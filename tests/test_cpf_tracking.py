@@ -27,6 +27,83 @@ def test_the_six_wedof_steps_are_mapped_centrally():
         assert view["steps"][index]["state"] == "current"
 
 
+def test_wedof_invoice_advances_a_validated_service_to_invoiced():
+    for invoice_data in (
+        {"invoice_status": "unpaid"},
+        {"qonto_invoice_number": "FL-2026-367"},
+        {"invoice_status": "paid", "invoice_paid_at": "2026-08-13T16:00:00Z"},
+    ):
+        view = build_steps({"state": "serviceDoneValidated", **invoice_data})
+        assert view["current_index"] == 5
+        assert view["steps"][4]["state"] == "done"
+        assert view["steps"][5]["state"] == "current"
+
+
+def test_draft_or_cancelled_invoice_does_not_mark_the_cpf_folder_as_invoiced():
+    for invoice_status in ("draft", "cancelled", "error"):
+        view = build_steps({
+            "state": "serviceDoneValidated",
+            "invoice_status": invoice_status,
+            "qonto_invoice_id": "inv-draft",
+        })
+        assert view["current_index"] == 4
+        assert view["steps"][4]["state"] == "current"
+        assert view["steps"][5]["state"] == "future"
+
+
+def test_persisted_cpf_invoice_also_advances_the_tracking_step():
+    trainee = {"id": "T1", "cpf_amount": 980}
+    session = {"id": "S1"}
+    data = {
+        "wedof_links": [{
+            "active": True,
+            "session_id": "S1",
+            "trainee_id": "T1",
+            "external_id": "401604887065",
+            "wedof_state": "serviceDoneValidated",
+            "cpf_snapshot": {"state": "serviceDoneValidated"},
+        }],
+        "billing_lines": [{
+            "traineeId": "T1",
+            "sessionId": "S1",
+            "financingType": "CPF",
+            "invoiceStatus": "sent",
+            "qontoInvoiceNumber": "FL-2026-367",
+        }],
+    }
+
+    view = build_cpf_view(trainee, session, data)
+
+    assert view["snapshot"]["state"] == "serviceDoneValidated"
+    assert view["current_index"] == 5
+    assert view["steps"][5]["state"] == "current"
+
+
+def test_cpf_billing_placeholder_without_invoice_reference_is_not_invoiced():
+    trainee = {"id": "T1", "cpf_amount": 980}
+    session = {"id": "S1"}
+    data = {
+        "wedof_links": [{
+            "active": True,
+            "session_id": "S1",
+            "trainee_id": "T1",
+            "external_id": "401604887065",
+            "cpf_snapshot": {"state": "serviceDoneValidated"},
+        }],
+        "billing_lines": [{
+            "traineeId": "T1",
+            "sessionId": "S1",
+            "financingType": "CPF",
+            "paymentStatus": "unpaid",
+        }],
+    }
+
+    view = build_cpf_view(trainee, session, data)
+
+    assert view["current_index"] == 4
+    assert view["steps"][5]["state"] == "future"
+
+
 def test_waiting_reasons_only_use_explicit_remote_value():
     assert waiting_reason({"waiting_reason": "attendee"}) == "En attente de validation de la part du candidat"
     assert waiting_reason({"waiting_reason": "france_travail"}) == "Demande en cours d’instruction par France Travail"
