@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import app as application
 from cpf_tracking import (CPF_STEPS, automation_view, build_cpf_view, build_steps,
-                          format_euro, format_paris_datetime, has_cpf_financing,
+                          format_euro, format_paris_date, format_paris_datetime, has_cpf_financing,
                           map_wedof_status, waiting_reason)
 
 
@@ -70,6 +70,53 @@ def test_waiting_service_done_has_an_explicit_target_without_false_alert():
 def test_french_money_and_paris_datetime_formats():
     assert format_euro("4200") == "4\u202f200,00 €"
     assert format_paris_datetime("2026-08-11T12:45:00Z") == "11/08/2026 à 14h45"
+    assert format_paris_date("2026-08-11T22:45:00Z") == "12/08/2026"
+
+
+def test_reached_cpf_steps_show_wedof_dates_without_time():
+    view = build_steps({
+        "state": "inTraining",
+        "created_at": "2026-08-03T08:12:00Z",
+        "start_date": "2026-09-08",
+        "step_dates": {
+            "accepted": {"changedAt": "2026-08-13T14:42:32+02:00"},
+        },
+    })
+    assert [step["date"] for step in view["steps"]] == [
+        "03/08/2026", "13/08/2026", "08/09/2026", "", "", "",
+    ]
+
+
+def test_pending_step_uses_folder_creation_date_and_current_step_is_dated():
+    view = build_steps({
+        "state": "pending",
+        "created_at": "2026-08-13T12:42:32Z",
+    })
+    assert view["steps"][0] == {
+        "label": "En attente d’acceptation",
+        "state": "current",
+        "date": "13/08/2026",
+    }
+
+
+def test_accepted_folder_uses_remote_creation_and_update_dates_without_history():
+    view = build_steps({
+        "state": "accepted",
+        "created_at": "2026-08-10T09:00:00Z",
+        "updated_at": "2026-08-13T14:42:32+02:00",
+    })
+    assert [step["date"] for step in view["steps"][:2]] == ["10/08/2026", "13/08/2026"]
+
+
+def test_status_history_list_dates_are_supported():
+    view = build_steps({
+        "state": "accepted",
+        "step_dates": [
+            {"status": "pending", "date": "2026-08-01T09:00:00Z"},
+            {"state": "accepted", "at": "2026-08-04T17:30:00Z"},
+        ],
+    })
+    assert [step["date"] for step in view["steps"][:2]] == ["01/08/2026", "04/08/2026"]
 
 
 def test_template_keeps_automation_and_places_cpf_before_elearning():
@@ -86,6 +133,7 @@ def test_template_keeps_automation_and_places_cpf_before_elearning():
     assert "admin_trainee_cpf_auto_match" in source
     assert "admin_trainee_cpf_associate_match" in source
     assert "js/cpf-auto-match.js" in source
+    assert "La recherche démarre automatiquement à l’ouverture de la fiche." in source
     assert "{{ action.detail }}" in source
     assert "Automatisation attendue mais non programmée" not in source
 
@@ -97,6 +145,14 @@ def test_successful_cpf_association_reloads_the_current_trainee_page():
     assert "window.location.reload()" in source
     assert source.count("refreshAfterAssociation(payload.redirect_url)") == 2
     assert "window.location.assign(payload.redirect_url)" not in source
+
+
+def test_cpf_matching_starts_automatically_when_the_page_opens():
+    source = open("static/js/cpf-auto-match.js", encoding="utf-8").read()
+    assert "function initCpfAutoMatch()" in source
+    assert "document.addEventListener('DOMContentLoaded', initCpfAutoMatch, {once: true})" in source
+    assert "root.dataset.cpfAutoMatchInitialized = 'true'" in source
+    assert "search();" in source
 
 
 def test_refresh_cpf_link_updates_status_snapshot_and_automation(monkeypatch):
