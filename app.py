@@ -29702,7 +29702,7 @@ def _build_certificate_realization_pdf(context: Dict[str, str]) -> BytesIO:
     mask(69, 477, 464, 18)
     mask(69, 447, 464, 29)
     mask(69, 333, 322, 18)
-    mask(69, 314, 226, 18)
+    mask(69, 319, 226, 14)
     mask(69, 182, 164, 18)
     mask(69, 164, 164, 18)
 
