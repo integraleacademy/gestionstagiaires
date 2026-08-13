@@ -286,6 +286,120 @@ class RefreshExternalApiTests(unittest.TestCase):
         self.assertEqual(seen["kwargs"]["session_name"], "A3P MARS 2026")
 
 
+class PublicTraineePageHostingTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_hebergement_lookup = gestion_app.fetch_hebergement_status
+        self.original_render_template = gestion_app.render_template
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app.fetch_hebergement_status = self.original_hebergement_lookup
+        gestion_app.render_template = self.original_render_template
+
+    def test_public_a3p_page_refreshes_and_persists_reserved_hosting(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S-A3P",
+                    "name": "A3P SEPTEMBRE 2026",
+                    "training_type": "A3P",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-10-27",
+                    "trainees": [
+                        {
+                            "id": "T-ARTHUR",
+                            "public_token": "PUBLIC-ARTHUR",
+                            "public_has_logged_in": True,
+                            "last_name": "SANSEVERINO",
+                            "first_name": "Arthur",
+                            "email": "arthur@example.test",
+                            "hosting_status": "unknown",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ]
+        }
+        saved = {"count": 0}
+        seen = {}
+        rendered = {}
+
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
+
+        def fake_hebergement_lookup(email, **kwargs):
+            seen["email"] = email
+            seen["kwargs"] = kwargs
+            return "reserved"
+
+        def fake_render(template_name, **context):
+            rendered["template_name"] = template_name
+            rendered["context"] = context
+            return "ok"
+
+        gestion_app.fetch_hebergement_status = fake_hebergement_lookup
+        gestion_app.render_template = fake_render
+
+        with self.client.session_transaction() as sess:
+            sess["public_auth_PUBLIC-ARTHUR"] = True
+
+        response = self.client.get("/espace/PUBLIC-ARTHUR")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(rendered["template_name"], "public_trainee.html")
+        self.assertEqual(saved["count"], 1)
+        self.assertEqual(seen["email"], "arthur@example.test")
+        self.assertEqual(seen["kwargs"]["last_name"], "SANSEVERINO")
+        self.assertEqual(seen["kwargs"]["first_name"], "Arthur")
+        self.assertEqual(seen["kwargs"]["session_name"], "A3P SEPTEMBRE 2026")
+        self.assertEqual(data["sessions"][0]["trainees"][0]["hosting_status"], "reserved")
+        self.assertEqual(rendered["context"]["trainee"]["hosting_status"], "reserved")
+
+    def test_public_a3p_page_does_not_requery_an_existing_reservation(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S-A3P",
+                    "name": "A3P SEPTEMBRE 2026",
+                    "training_type": "A3P",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-10-27",
+                    "trainees": [
+                        {
+                            "id": "T-ARTHUR",
+                            "public_token": "PUBLIC-ARTHUR",
+                            "public_has_logged_in": True,
+                            "last_name": "SANSEVERINO",
+                            "first_name": "Arthur",
+                            "email": "arthur@example.test",
+                            "hosting_status": "reserved",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ]
+        }
+        called = {"value": False}
+
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: None
+        gestion_app.fetch_hebergement_status = lambda *args, **kwargs: called.__setitem__("value", True)
+        gestion_app.render_template = lambda *args, **kwargs: "ok"
+
+        with self.client.session_transaction() as sess:
+            sess["public_auth_PUBLIC-ARTHUR"] = True
+
+        response = self.client.get("/espace/PUBLIC-ARTHUR")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(called["value"])
+        self.assertEqual(data["sessions"][0]["trainees"][0]["hosting_status"], "reserved")
+
+
 class AdminTraineesPageHostingTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()

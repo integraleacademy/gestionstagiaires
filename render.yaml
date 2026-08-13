@@ -45,6 +45,8 @@ services:
         value: https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto
       - key: PUBLIC_STUDENT_PORTAL_BASE
         value: https://gestionstagiaires-r5no.onrender.com
+      - key: HEBERGEMENT_STATUS_ENDPOINT
+        value: https://assistance-alw9.onrender.com/lookup_hebergement.json
       - key: CNAPSV3_API_TOKEN
         sync: false
       - key: BREVO_API_KEY
