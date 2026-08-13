@@ -447,6 +447,22 @@ class ApsAutomationStatusTests(unittest.TestCase):
         self.assertTrue(status["convocation"]["can_send"])
         self.assertEqual(status["convocation"]["block_reason"], "")
 
+    def test_failed_convocation_can_be_retried_manually(self):
+        session = {"id": "session-1", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "trainee-1",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "convocation_aps_last_error": "Échec d’envoi email",
+            "convention_signature": {"status": "done", "signed_at": "2026-07-03T08:10:00Z"},
+        }
+
+        with app.app.test_request_context():
+            status = app._build_trainee_automation_status(session, trainee, "session-1", "trainee-1")
+
+        self.assertEqual(status["convocation"]["status"], "error")
+        self.assertTrue(status["convocation"]["can_send"])
+
 
     def test_manual_desp_convocation_send_endpoint_does_not_require_convention_signature(self):
         data = {

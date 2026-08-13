@@ -30364,7 +30364,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         },
         "convocation": {
             "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
-            "can_generate": theory_succeeded if is_vtc_automation else True, "can_send": (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) and convocation_status in {"generated", "sent"}, "block_reason": "" if (is_vtc_automation and theory_succeeded) or can_send_convocation_without_signed_convention else convocation_block_reason,
+            "can_generate": theory_succeeded if is_vtc_automation else True, "can_send": (theory_succeeded if is_vtc_automation else (convention_signed or can_send_convocation_without_signed_convention)) and convocation_status in {"generated", "sent", "error"}, "block_reason": "" if (is_vtc_automation and theory_succeeded) or can_send_convocation_without_signed_convention else convocation_block_reason,
             "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
             "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
