@@ -66,6 +66,76 @@ def format_paris_datetime(value: Any) -> str:
         return "Non communiqué"
 
 
+def format_paris_date(value: Any) -> str:
+    """Formate une date WEDOF en date civile française, sans heure."""
+    if isinstance(value, dt.datetime):
+        parsed = value
+    elif isinstance(value, dt.date):
+        return value.strftime("%d/%m/%Y")
+    else:
+        raw = str(value or "").strip()
+        if not raw:
+            return ""
+        if re.fullmatch(r"\d{2}/\d{2}/\d{4}", raw):
+            return raw
+        try:
+            parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return ""
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(PARIS).strftime("%d/%m/%Y")
+
+
+def _history_date(value: Any) -> Any:
+    """Extrait une date d'un événement d'historique WEDOF connu."""
+    if isinstance(value, (str, dt.date, dt.datetime)):
+        return value
+    if not isinstance(value, dict):
+        return ""
+    for key in ("date", "at", "changedAt", "transitionedAt", "createdAt", "updatedAt", "timestamp"):
+        candidate = value.get(key)
+        if candidate not in (None, ""):
+            return candidate
+    return ""
+
+
+def _step_position(value: Any) -> Optional[int]:
+    raw = str(value or "").strip()
+    if raw.isdigit() and 0 <= int(raw) < len(CPF_STEPS):
+        return int(raw)
+    mapped = map_wedof_status(raw)
+    if mapped is not None:
+        return mapped
+    folded = raw.casefold()
+    return next((position for position, label in enumerate(CPF_STEPS)
+                 if label.casefold() == folded), None)
+
+
+def _step_history_date(step_dates: Any, position: int) -> Any:
+    """Lit aussi bien ``stateDates`` qu'une liste ``statusHistory`` WEDOF."""
+    if isinstance(step_dates, dict):
+        for key, value in step_dates.items():
+            if _step_position(key) == position:
+                candidate = _history_date(value)
+                if candidate:
+                    return candidate
+        for nested_key in ("history", "items", "events"):
+            candidate = _step_history_date(step_dates.get(nested_key), position)
+            if candidate:
+                return candidate
+    elif isinstance(step_dates, list):
+        for event in step_dates:
+            if not isinstance(event, dict):
+                continue
+            state = event.get("state") or event.get("status") or event.get("name")
+            if _step_position(state) == position:
+                candidate = _history_date(event)
+                if candidate:
+                    return candidate
+    return ""
+
+
 def has_cpf_financing(trainee: Dict[str, Any]) -> bool:
     """Détecte le CPF dans les montants et les financements structurés (y compris mixtes)."""
     try:
@@ -82,11 +152,22 @@ def has_cpf_financing(trainee: Dict[str, Any]) -> bool:
 
 def build_steps(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     index = map_wedof_status(snapshot.get("state"))
-    dates = snapshot.get("step_dates") if isinstance(snapshot.get("step_dates"), dict) else {}
+    dates = snapshot.get("step_dates")
     steps = []
     for position, label in enumerate(CPF_STEPS):
         state = "future" if index is None or position > index else "current" if position == index else "done"
-        steps.append({"label": label, "state": state, "date": format_paris_datetime(dates.get(str(position)) or dates.get(label)) if position < (index or 0) else ""})
+        raw_date = _step_history_date(dates, position)
+        if not raw_date and position == 0:
+            raw_date = snapshot.get("created_at")
+        if not raw_date and position == 2 and index is not None and position <= index:
+            raw_date = snapshot.get("start_date")
+        if not raw_date and index is not None and position == index:
+            raw_date = snapshot.get("updated_at")
+        steps.append({
+            "label": label,
+            "state": state,
+            "date": format_paris_date(raw_date) if index is not None and position <= index else "",
+        })
     return {"steps": steps, "current_index": index,
             "unknown": bool(snapshot.get("state")) and index is None,
             "waiting_reason": waiting_reason(snapshot) if index == 0 else ""}
@@ -169,6 +250,8 @@ def build_cpf_view(trainee: Dict[str, Any], session_obj: Dict[str, Any], data: D
         snapshot.setdefault("state", link.get("wedof_state"))
         snapshot.setdefault("start_date", link.get("wedof_date_start"))
         snapshot.setdefault("end_date", link.get("wedof_date_end"))
+        if not snapshot.get("created_at"):
+            snapshot["created_at"] = link.get("created_at")
     result = {"found": bool(link), "snapshot": snapshot, "link": link, "sync_error": (link or {}).get("cpf_sync_error") or ""}
     result.update(build_steps(snapshot))
     result["automation"] = automation_view(

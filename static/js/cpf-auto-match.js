@@ -1,6 +1,8 @@
 (() => {
-  const root = document.querySelector('[data-cpf-auto-match]');
-  if (!root || root.dataset.readOnly === 'true') return;
+  function initCpfAutoMatch() {
+    const root = document.querySelector('[data-cpf-auto-match]');
+    if (!root || root.dataset.readOnly === 'true' || root.dataset.cpfAutoMatchInitialized === 'true') return;
+    root.dataset.cpfAutoMatchInitialized = 'true';
 
   const status = root.querySelector('[data-cpf-match-status]');
   const message = root.querySelector('[data-cpf-match-message]');
@@ -164,4 +166,11 @@
     if (button) associate(button);
   });
   search();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCpfAutoMatch, {once: true});
+  } else {
+    initCpfAutoMatch();
+  }
 })();
