@@ -113,6 +113,104 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertEqual(summary["by_financer"]["PERSONNEL"]["paid_amount_cents"], 142500)
         self.assertEqual(summary["qonto_payment_entries"][0]["source"], "qonto_direct_debit")
 
+    def test_completed_installments_before_invoice_are_reconciled_without_double_counting(self):
+        trainee = {"id": "T1", "personal_amount": 3800}
+        line = {
+            "traineeId": "T1",
+            "financingType": "PERSONNEL",
+            "amount": 3800,
+            "amountTTC": 3800,
+            "qontoInvoiceId": "inv-created-after-debits",
+            "qontoInvoiceNumber": "FL-2026-LATE",
+            "qonto_total_amount_cents": 380000,
+            # The invoice did not exist when the first two collections were
+            # completed, so its own paid amount is still zero.
+            "qonto_amount_paid_cents": 0,
+            "directDebitInstallments": [
+                {"index": 1, "amount": 950, "status": "completed"},
+                {"index": 2, "amount": 950, "status": "completed"},
+                {"index": 3, "amount": 950, "status": "scheduled"},
+                {"index": 4, "amount": 950, "status": "scheduled"},
+            ],
+        }
+
+        invoice = gestion_app.serialize_qonto_invoice_for_frontend(line)
+        summary = gestion_app.calculate_trainee_financial_summary(trainee, [line])
+
+        self.assertEqual(invoice["paid_amount_cents"], 190000)
+        self.assertEqual(invoice["remaining_amount_cents"], 190000)
+        self.assertEqual(invoice["payment_status"], "partially_paid")
+        self.assertEqual(summary["paid_total_cents"], 190000)
+        self.assertEqual(summary["remaining_total_cents"], 190000)
+        self.assertEqual(summary["payment_percentage"], 50)
+        self.assertEqual(summary["by_financer"]["PERSONNEL"]["paid_amount_cents"], 190000)
+        self.assertEqual(summary["qonto_payment_entries"][0]["paid_amount_cents"], 190000)
+
+        sync_line = {**line, "qonto_amount_paid_cents": 0}
+        gestion_app._apply_qonto_invoice_payment_to_billing_line(
+            sync_line,
+            {
+                "id": "inv-created-after-debits",
+                "number": "FL-2026-LATE",
+                "status": "unpaid",
+                "total_amount": {"value": "3800.00"},
+                "amount_paid": {"value": "0.00"},
+            },
+        )
+        self.assertEqual(sync_line["qonto_amount_paid_cents"], 190000)
+        self.assertEqual(sync_line["qonto_remaining_amount_cents"], 190000)
+        self.assertEqual(sync_line["paymentStatus"], "partially_paid")
+
+        # A later Qonto sync reporting those same 1,900 euros must not add the
+        # invoice amount on top of the two collections.
+        line["qonto_amount_paid_cents"] = 190000
+        summary = gestion_app.calculate_trainee_financial_summary(trainee, [line])
+        self.assertEqual(summary["paid_total_cents"], 190000)
+
+    def test_preinvoice_collections_are_reconciled_for_legacy_line_without_payment_mode(self):
+        line = {
+            "qontoInvoiceId": "inv-legacy",
+            "qonto_total_amount_cents": 380000,
+            "qonto_amount_paid_cents": 0,
+            "directDebitInstallments": [
+                {"index": 1, "amount": 950, "status": "paid"},
+                {"index": 2, "amount": 950, "status": "succeeded"},
+            ],
+        }
+
+        self.assertEqual(
+            gestion_app.serialize_qonto_invoice_for_frontend(line)["paid_amount_cents"],
+            190000,
+        )
+
+    def test_rejected_collection_history_still_cancels_stale_invoice_paid_amount(self):
+        line = {
+            "qontoInvoiceId": "inv-retry",
+            "qonto_total_amount_cents": 190000,
+            "qonto_amount_paid_cents": 95000,
+            "directDebitInstallments": [
+                {
+                    "index": 1,
+                    "amount": 950,
+                    "status": "returned",
+                    "rejection_treated": True,
+                },
+                {
+                    "index": 1,
+                    "amount": 950,
+                    "status": "scheduled",
+                    "is_rejection_retry": True,
+                },
+                {"index": 2, "amount": 950, "status": "scheduled"},
+            ],
+        }
+
+        invoice = gestion_app.serialize_qonto_invoice_for_frontend(line)
+
+        self.assertEqual(invoice["paid_amount_cents"], 0)
+        self.assertEqual(invoice["remaining_amount_cents"], 190000)
+        self.assertEqual(invoice["payment_status"], "unpaid")
+
     def test_external_invoice_is_included_in_invoicing_progress(self):
         trainee = {"id": "T1", "personal_amount": 3800}
         line = {
@@ -324,6 +422,8 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertIn("function lineHasGeneratedInvoice", html)
         self.assertIn("c.resteAFacturer>0.01", html)
         self.assertIn("Géré hors plateforme", html)
+        self.assertIn("rawInstallments.some", html)
+        self.assertIn("return Math.max(lineAmount(l)-linePaid(l),0)", html)
 
     def test_webhook_invalid_signature_and_idempotent_valid(self):
         client=gestion_app.app.test_client(); raw=json.dumps({"event":"v1/client-invoices.updated","data":{"id":"inv"}}).encode(); secret="s"
