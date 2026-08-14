@@ -112,6 +112,19 @@ services:
       - key: CASH_PAYMENT_REMINDERS_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/cash-payment-reminders
   - type: cron
+    name: gestionstagiaires-afc-documents-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Daily execution; the application enforces the initial two-day wait and
+    # the three-day interval between successful reminders.
+    schedule: "0 7 * * *"
+    dockerCommand: python scripts/run_afc_documents_reminders.py
+    envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
+      - key: AFC_DOCUMENTS_REMINDERS_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/afc-documents-reminders
+  - type: cron
     name: gestionstagiaires-daily-recap
     runtime: docker
     dockerfilePath: ./Dockerfile
