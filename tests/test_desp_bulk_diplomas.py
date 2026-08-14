@@ -45,10 +45,10 @@ class DespBulkDiplomaTests(unittest.TestCase):
             return json.load(source)
 
     @staticmethod
-    def _blank_pdf():
+    def _blank_pdf(text="Diplôme DESP"):
         output = BytesIO()
         pdf = canvas.Canvas(output, pagesize=landscape(A4))
-        pdf.drawString(40, 40, "Diplôme DESP")
+        pdf.drawString(40, 40, text)
         pdf.save()
         return output.getvalue()
 
@@ -59,12 +59,18 @@ class DespBulkDiplomaTests(unittest.TestCase):
         Image.new("RGB", (350, 450), "#1d4ed8").save(photo_path)
         return photo_token
 
-    def _post_diploma(self, session_id, pdf_bytes):
+    def _post_diploma(
+        self,
+        session_id,
+        pdf_bytes,
+        filename="Diplome Jean Dupont.pdf",
+        send_notifications=False,
+    ):
         return self.client.post(
             f"/api/sessions/{session_id}/diplome/bulk_upload",
             data={
-                "send_notifications": "0",
-                "files": (BytesIO(pdf_bytes), "Diplome Jean Dupont.pdf"),
+                "send_notifications": "1" if send_notifications else "0",
+                "files": (BytesIO(pdf_bytes), filename),
             },
             content_type="multipart/form-data",
         )
@@ -172,6 +178,115 @@ class DespBulkDiplomaTests(unittest.TestCase):
         token = saved["sessions"][0]["trainees"][0]["deliverables"]["diplome"]
         with open(os.path.join(self.temp_dir.name, token), "rb") as stored_file:
             self.assertEqual(stored_file.read(), source_pdf)
+
+    def test_vae_diploma_matches_name_inside_pdf_and_appears_on_admin_trainee(self):
+        photo_token = self._create_identity_photo()
+        self._write_data({
+            "sessions": [{
+                "id": "DESP-2026",
+                "name": "VAE DESP 2026",
+                "training_type": "DIRIGEANT VAE",
+                "trainees": [{
+                    "id": "T1",
+                    "first_name": "Jean",
+                    "last_name": "Dupont",
+                    "identity_photo": photo_token,
+                    "public_token": "public-jean",
+                }],
+            }],
+        })
+
+        response = self._post_diploma(
+            "DESP-2026",
+            self._blank_pdf("Diplôme DESP attribué à Jean Dupont"),
+            filename="diplome-desp.pdf",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["added_count"], 1)
+        saved = self._read_data()
+        token = saved["sessions"][0]["trainees"][0]["deliverables"]["diplome"]
+
+        trainee_page = self.client.get("/admin/sessions/DESP-2026/stagiaires/T1")
+        self.assertEqual(trainee_page.status_code, 200)
+        page_html = trainee_page.get_data(as_text=True)
+        self.assertIn("Importé", page_html)
+        self.assertIn(token, page_html)
+
+    def test_diploma_is_persisted_before_notifications_are_sent(self):
+        photo_token = self._create_identity_photo()
+        self._write_data({
+            "sessions": [{
+                "id": "DESP-2026",
+                "name": "DESP initial 2026",
+                "training_type": "DIRIGEANT INITIAL",
+                "trainees": [{
+                    "id": "T1",
+                    "first_name": "Jean",
+                    "last_name": "Dupont",
+                    "email": "jean.dupont@example.com",
+                    "identity_photo": photo_token,
+                }],
+            }],
+        })
+        observed_persistence = []
+
+        def fake_email(*args, **kwargs):
+            trainee = self._read_data()["sessions"][0]["trainees"][0]
+            observed_persistence.append(bool((trainee.get("deliverables") or {}).get("diplome")))
+            return False
+
+        with patch.object(gestion_app, "brevo_send_email", side_effect=fake_email), patch.object(
+            gestion_app,
+            "brevo_send_sms",
+            return_value=False,
+        ):
+            response = self._post_diploma(
+                "DESP-2026",
+                self._blank_pdf(),
+                send_notifications=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["added_count"], 1)
+        self.assertEqual(observed_persistence, [True])
+
+    def test_vae_parchemin_bulk_import_still_persists_on_admin_trainee(self):
+        photo_token = self._create_identity_photo()
+        self._write_data({
+            "sessions": [{
+                "id": "DESP-2026",
+                "name": "VAE DESP 2026",
+                "training_type": "DIRIGEANT VAE",
+                "trainees": [{
+                    "id": "T1",
+                    "first_name": "Jean",
+                    "last_name": "Dupont",
+                    "identity_photo": photo_token,
+                    "public_token": "public-jean",
+                }],
+            }],
+        })
+
+        response = self.client.post(
+            "/api/sessions/DESP-2026/parchemin/bulk_upload",
+            data={
+                "send_notifications": "0",
+                "files": (
+                    BytesIO(self._blank_pdf("Diplôme DESP attribué à Jean Dupont")),
+                    "parchemin.pdf",
+                ),
+            },
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["added_count"], 1)
+        saved = self._read_data()
+        token = saved["sessions"][0]["trainees"][0]["deliverables"]["parchemin"]
+        trainee_page = self.client.get("/admin/sessions/DESP-2026/stagiaires/T1")
+        self.assertEqual(trainee_page.status_code, 200)
+        self.assertIn(token, trainee_page.get_data(as_text=True))
 
 
 if __name__ == "__main__":

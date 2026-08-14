@@ -40067,6 +40067,99 @@ def _store_parchemin_generated_pdf(session_id: str, trainee_id: str, pdf_bytes: 
     return path
 
 
+def _persist_bulk_deliverable_token(
+    session_id: str,
+    trainee_id: str,
+    kind: str,
+    token: str,
+) -> Dict[str, Any]:
+    """Attach a bulk-uploaded deliverable using the latest persisted payload.
+
+    Bulk imports can spend several seconds generating PDFs and sending Brevo
+    notifications. Persisting from the payload loaded at the start of that
+    work can overwrite newer trainee changes. This small atomic mutation also
+    makes the document visible on the admin trainee sheet before notifications
+    are attempted.
+    """
+
+    def mutate(canonical: Dict[str, Any]) -> Dict[str, Any]:
+        session_obj = find_session(canonical, session_id)
+        if not session_obj:
+            return {"ok": False, "reason": "session introuvable pendant l'enregistrement"}
+
+        current_trainees = _session_trainees_list(session_obj)
+        current_trainee = next(
+            (item for item in current_trainees if str(item.get("id") or "") == str(trainee_id)),
+            None,
+        )
+        if not current_trainee:
+            return {"ok": False, "reason": "stagiaire introuvable pendant l'enregistrement"}
+
+        deliverables = current_trainee.setdefault("deliverables", {})
+        existing = str(deliverables.get(kind) or "").strip()
+        if existing and existing != token:
+            label = DELIVERABLE_LABELS.get(kind, "document").lower()
+            return {"ok": False, "reason": f"{label} déjà existant (non remplacé)"}
+
+        deliverables[kind] = token
+        current_trainee["updated_at"] = _now_iso()
+        session_obj["trainees"] = current_trainees
+        session_obj.pop("stagiaires", None)
+        return {"ok": True}
+
+    return _atomic_update_data(mutate)
+
+
+def _persist_bulk_email_history_entry(
+    session_id: str,
+    trainee_id: str,
+    entry: Optional[Dict[str, Any]],
+) -> None:
+    """Merge one Brevo history entry without rewriting a stale data payload."""
+    if not isinstance(entry, dict):
+        return
+
+    def mutate(canonical: Dict[str, Any]) -> Dict[str, Any]:
+        session_obj = find_session(canonical, session_id)
+        if not session_obj:
+            return {"ok": False}
+        current_trainees = _session_trainees_list(session_obj)
+        current_trainee = next(
+            (item for item in current_trainees if str(item.get("id") or "") == str(trainee_id)),
+            None,
+        )
+        if not current_trainee:
+            return {"ok": False}
+
+        history = current_trainee.get("sent_email_history")
+        if not isinstance(history, list):
+            history = []
+        signature = (
+            str(entry.get("to_email") or ""),
+            str(entry.get("subject") or ""),
+            str(entry.get("sent_at") or ""),
+        )
+        if not any((
+            str(item.get("to_email") or ""),
+            str(item.get("subject") or ""),
+            str(item.get("sent_at") or ""),
+        ) == signature for item in history if isinstance(item, dict)):
+            history.insert(0, dict(entry))
+        current_trainee["sent_email_history"] = history[:200]
+        session_obj["trainees"] = current_trainees
+        session_obj.pop("stagiaires", None)
+        return {"ok": True}
+
+    try:
+        _atomic_update_data(mutate)
+    except Exception:
+        app.logger.exception(
+            "Unable to persist bulk email history for session=%s trainee=%s",
+            session_id,
+            trainee_id,
+        )
+
+
 @app.post("/api/sessions/<session_id>/parchemin/bulk_upload")
 @admin_login_required
 @admin_write_required
@@ -40148,6 +40241,15 @@ def api_parchemin_bulk_upload(session_id: str):
             failed.append({"filename": original_name, "reason": f"génération parchemin impossible: {str(e)}"})
             continue
 
+        persist_result = _persist_bulk_deliverable_token(session_id, trainee_id, "parchemin", token)
+        if not persist_result.get("ok"):
+            _safe_remove_file(final_path)
+            failed.append({
+                "filename": original_name,
+                "reason": persist_result.get("reason") or "enregistrement du parchemin impossible",
+            })
+            continue
+
         trainee.setdefault("deliverables", {})
         trainee["deliverables"]["parchemin"] = token
         trainee["updated_at"] = _now_iso()
@@ -40201,7 +40303,14 @@ def api_parchemin_bulk_upload(session_id: str):
                     f"A bientôt, la Team Intégrale Academy"
                 )
 
-                brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
+                email_sent = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
+                if email_sent:
+                    history = trainee.get("sent_email_history") or []
+                    _persist_bulk_email_history_entry(
+                        session_id,
+                        trainee_id,
+                        history[0] if history else None,
+                    )
                 brevo_send_sms(trainee.get("phone", ""), sms)
             except Exception:
                 pass
@@ -40211,10 +40320,6 @@ def api_parchemin_bulk_upload(session_id: str):
             "trainee_id": trainee_id,
             "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
         })
-
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
-    save_data(data)
 
     return jsonify({
         "ok": True,
@@ -40449,7 +40554,21 @@ def api_diplome_bulk_upload(session_id: str):
             failed.append({"filename": original_name, "reason": "extension non autorisée"})
             continue
 
+        pdf_bytes = None
         trainee, reason = _match_trainee_from_filename(trainees, original_name)
+        if not trainee and ext == ".pdf":
+            try:
+                f.stream.seek(0)
+                pdf_bytes = f.read() or b""
+                f.stream.seek(0)
+                trainee, pdf_reason = _match_trainee_from_parchemin_pdf(trainees, pdf_bytes)
+                if not trainee:
+                    if reason == "nom/prénom non trouvés dans le fichier" and pdf_reason == "nom/prénom non trouvés dans le parchemin":
+                        reason = "nom/prénom non trouvés dans le nom du fichier ni dans le PDF"
+                    else:
+                        reason = f"{reason}; PDF: {pdf_reason}"
+            except Exception:
+                reason = f"{reason}; lecture du PDF impossible"
         if not trainee:
             failed.append({"filename": original_name, "reason": reason or "non rattaché"})
             continue
@@ -40483,7 +40602,8 @@ def api_diplome_bulk_upload(session_id: str):
                 pass
 
             if is_desp_diploma:
-                pdf_bytes = f.read() or b""
+                if pdf_bytes is None:
+                    pdf_bytes = f.read() or b""
                 final_pdf = _build_vae_parchemin_pdf(pdf_bytes, photo_path)
                 stored = _store_parchemin_generated_pdf(session_id, trainee_id, final_pdf)
             else:
@@ -40494,6 +40614,15 @@ def api_diplome_bulk_upload(session_id: str):
             traceback.print_exc()
             reason = "génération du diplôme avec photo impossible" if is_desp_diploma else "erreur stockage"
             failed.append({"filename": original_name, "reason": f"{reason}: {str(e)}"})
+            continue
+
+        persist_result = _persist_bulk_deliverable_token(session_id, trainee_id, "diplome", token)
+        if not persist_result.get("ok"):
+            _safe_remove_file(stored)
+            failed.append({
+                "filename": original_name,
+                "reason": persist_result.get("reason") or "enregistrement du diplôme impossible",
+            })
             continue
 
         trainee.setdefault("deliverables", {})
@@ -40656,7 +40785,14 @@ def api_diplome_bulk_upload(session_id: str):
                 )
 
                 if (trainee.get("email") or "").strip():
-                    brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
+                    email_sent = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
+                    if email_sent:
+                        history = trainee.get("sent_email_history") or []
+                        _persist_bulk_email_history_entry(
+                            session_id,
+                            trainee_id,
+                            history[0] if history else None,
+                        )
                 if (trainee.get("phone") or "").strip():
                     brevo_send_sms(trainee.get("phone", ""), sms)
 
@@ -40668,10 +40804,6 @@ def api_diplome_bulk_upload(session_id: str):
             "trainee_id": trainee_id,
             "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
         })
-
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
-    save_data(data)
 
     return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed, "send_notifications": send_notifications})
 
