@@ -31008,7 +31008,8 @@ def _cpf_public_snapshot(remote: Dict[str, Any]) -> Dict[str, Any]:
     allowed = ("external_id", "state", "type", "first_name", "last_name", "email", "start_date", "end_date",
                "training_title", "total_amount", "cpf_amount", "france_travail_amount", "candidate_amount",
                "created_at", "updated_at", "waiting_reason", "step_dates", "qonto_invoice_id",
-               "qonto_invoice_number", "invoice_status", "invoice_paid_at")
+               "qonto_invoice_number", "invoice_number", "billing_state", "invoice_status",
+               "invoice_paid_at")
     snapshot = {key: remote.get(key) for key in allowed if remote.get(key) not in (None, "")}
     url = str(remote.get("wedof_url") or "").strip()
     parsed = urlparse(url)
@@ -33317,8 +33318,11 @@ def _cpf_wedof_invoice_reference(link: Optional[Dict[str, Any]]) -> Tuple[str, s
     ).strip()
     invoice_number = str(
         snapshot.get('qonto_invoice_number')
+        or snapshot.get('invoice_number')
         or link.get('qonto_invoice_number')
+        or link.get('invoice_number')
         or link.get('qontoInvoiceNumber')
+        or link.get('invoiceNumber')
         or ''
     ).strip()
     return invoice_id, invoice_number
@@ -33431,18 +33435,24 @@ def _discover_cpf_qonto_invoice(
     force: bool = False,
 ) -> Tuple[Optional[Dict[str, Any]], bool]:
     """Reconnect a WEDOF/Qonto CPF invoice that was never stored locally."""
-    if _cpf_invoice_amount(trainee) <= 0 or (not force and _cpf_invoice_discovery_is_recent(trainee)):
+    if _cpf_invoice_amount(trainee) <= 0:
+        return None, False
+    link = _cpf_active_link(
+        data,
+        session_id=str(session_obj.get('id') or ''),
+        trainee_id=str(trainee.get('id') or ''),
+    )
+    # A newly-synchronized WEDOF invoice number is a strict lookup key. Do not
+    # let a previous broad-search throttle postpone its first exact Qonto
+    # lookup when the finance card is opened again.
+    has_wedof_invoice_reference = any(_cpf_wedof_invoice_reference(link))
+    if not force and _cpf_invoice_discovery_is_recent(trainee) and not has_wedof_invoice_reference:
         return None, False
     state = trainee.get('cpf_qonto_invoice_discovery')
     if not isinstance(state, dict):
         state = {}
         trainee['cpf_qonto_invoice_discovery'] = state
     state['last_attempt_at'] = _now_iso()
-    link = _cpf_active_link(
-        data,
-        session_id=str(session_obj.get('id') or ''),
-        trainee_id=str(trainee.get('id') or ''),
-    )
     wedof_external_id = str((link or {}).get('external_id') or '').strip()
 
     try:

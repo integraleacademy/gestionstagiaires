@@ -77,6 +77,21 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
         "wedof_url": _nested(folder, "url", "links.web", "_links.web.href"),
         "waiting_reason": _nested(folder, "waitingReason", "pendingReason", "data.waitingReason"),
         "step_dates": _nested(folder, "stateDates", "statusHistory", "data.stateDates"),
+        # WEDOF keeps the pedagogical state and the billing state separate. A
+        # folder can therefore remain ``serviceDoneValidated`` while its
+        # top-level ``billingState`` has already moved to ``billed``.
+        "billing_state": _nested(
+            folder,
+            "billingState", "billing.state", "data.billingState", "data.billing.state",
+        ),
+        "invoice_number": _nested(
+            folder,
+            "invoiceNumber", "invoice.number", "invoice.reference", "invoiceReference",
+            "billing.invoiceNumber", "billing.invoice.number", "billing.invoice.reference",
+            "billing.invoiceReference", "billing.number",
+            "data.invoiceNumber", "data.invoice.number", "data.invoice.reference",
+            "data.billing.invoiceNumber", "data.billing.invoice.number",
+        ),
         # WEDOF deployments do not all expose the accounting reference under
         # the same envelope.  Keep only the small, explicit allow-list needed
         # to reconnect an already-created CPF invoice to its local trainee.
@@ -91,6 +106,10 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
             "qontoInvoiceNumber", "invoice.qontoInvoiceNumber", "invoice.number",
             "billing.qontoInvoiceNumber", "billing.invoice.number",
             "data.qontoInvoiceNumber", "data.invoice.number",
+            # WEDOF commonly exposes the Qonto-created invoice only through
+            # its accounting number (for example FL-2026-374).
+            "invoiceNumber", "invoiceReference", "billing.invoiceNumber",
+            "billing.invoiceReference", "data.invoiceNumber",
         ),
         "invoice_status": _nested(
             folder,

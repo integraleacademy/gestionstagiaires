@@ -31,6 +31,8 @@ def test_wedof_invoice_advances_a_validated_service_to_invoiced():
     for invoice_data in (
         {"invoice_status": "unpaid"},
         {"qonto_invoice_number": "FL-2026-367"},
+        {"billing_state": "billed"},
+        {"billingState": "billed"},
         {"invoice_status": "paid", "invoice_paid_at": "2026-08-13T16:00:00Z"},
     ):
         view = build_steps({"state": "serviceDoneValidated", **invoice_data})
@@ -237,6 +239,8 @@ def test_refresh_cpf_link_updates_status_snapshot_and_automation(monkeypatch):
         "externalId": "CPF-42",
         "type": "CPF",
         "state": "serviceDoneDeclared",
+        "billingState": "billed",
+        "invoiceNumber": "FL-2026-374",
         "trainingActionInfo": {"sessionStartDate": "2026-07-13", "sessionEndDate": "2026-08-12"},
     }
     client = Mock()
@@ -258,6 +262,9 @@ def test_refresh_cpf_link_updates_status_snapshot_and_automation(monkeypatch):
     client.get_registration_folder_interactive.assert_called_once_with("CPF-42")
     assert link["wedof_state"] == "serviceDoneDeclared"
     assert link["cpf_snapshot"]["state"] == "serviceDoneDeclared"
+    assert link["cpf_snapshot"]["billing_state"] == "billed"
+    assert link["cpf_snapshot"]["invoice_number"] == "FL-2026-374"
+    assert link["cpf_snapshot"]["qonto_invoice_number"] == "FL-2026-374"
     assert link["cpf_snapshot"]["synced_at"] == "2026-08-13T10:00:00+00:00"
     assert link["last_seen_at"] == "2026-08-13T10:00:00+00:00"
     assert "cpf_sync_error" not in link

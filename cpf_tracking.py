@@ -33,11 +33,12 @@ TERMINAL_EXCEPTION_STATES = {"refused", "rejected", "cancelled", "canceled", "ab
 GENERATED_INVOICE_STATUSES = {
     "generated", "finalized", "sent", "unpaid", "partiallypaid", "paid",
     "overdue", "issued", "validated", "invoiced", "invoicesent",
-    "externalgenerated", "generatedexternally",
+    "externalgenerated", "generatedexternally", "billed", "settled",
 }
 NON_GENERATED_INVOICE_STATUSES = {
     "notgenerated", "notinvoiced", "draft", "cancelled", "canceled",
     "deleted", "control", "missing", "syncerror", "error", "failed",
+    "notbilled", "billingpending", "readytobill",
 }
 
 
@@ -170,6 +171,11 @@ def _normalized_invoice_status(value: Any) -> str:
 
 def _invoice_record_is_generated(record: Dict[str, Any]) -> bool:
     """Détecte une facture réelle sans confondre un brouillon avec une émission."""
+    billing_state = _normalized_invoice_status(
+        record.get("billing_state") or record.get("billingState")
+    )
+    if billing_state in GENERATED_INVOICE_STATUSES:
+        return True
     status = _normalized_invoice_status(
         record.get("invoice_status") or record.get("invoiceStatus")
         or record.get("qonto_status") or record.get("qontoStatus")
