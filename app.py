@@ -40047,6 +40047,15 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     return out.getvalue()
 
 
+def _is_desp_diploma_session(session_obj: Dict[str, Any]) -> bool:
+    """Return whether bulk diploma imports must receive the trainee photo."""
+    descriptor = " ".join((
+        str(_session_get(session_obj, "training_type", "") or ""),
+        str(_session_get(session_obj, "name", "") or ""),
+    )).upper()
+    return "DIRIGEANT" in descriptor or "DESP" in descriptor
+
+
 def _store_parchemin_generated_pdf(session_id: str, trainee_id: str, pdf_bytes: bytes) -> str:
     base = trainee_upload_dir(session_id, trainee_id)
     target_dir = os.path.join(base, "deliverables")
@@ -40408,6 +40417,10 @@ def api_diplome_bulk_upload(session_id: str):
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
+    is_desp_diploma = _is_desp_diploma_session(s)
+    if is_desp_diploma and not (PYPDF_LIBRARY_AVAILABLE and REPORTLAB_LIBRARY_AVAILABLE):
+        return jsonify({"ok": False, "error": "missing_pdf_dependencies"}), 503
+
     files = request.files.getlist("files")
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
@@ -40427,6 +40440,10 @@ def api_diplome_bulk_upload(session_id: str):
         received += 1
         original_name = f.filename
         ext = _safe_ext(original_name)
+
+        if is_desp_diploma and ext != ".pdf":
+            failed.append({"filename": original_name, "reason": "format invalide (PDF uniquement pour un diplôme DESP)"})
+            continue
 
         if ext not in (".pdf", ".jpg", ".jpeg", ".png"):
             failed.append({"filename": original_name, "reason": "extension non autorisée"})
@@ -40448,18 +40465,35 @@ def api_diplome_bulk_upload(session_id: str):
             failed.append({"filename": original_name, "reason": "déjà un diplôme existant (non remplacé)"})
             continue
 
+        photo_path = ""
+        if is_desp_diploma:
+            photo_token = str(trainee.get("identity_photo") or "").strip()
+            if not photo_token:
+                failed.append({"filename": original_name, "reason": "photo d'identité absente sur la fiche stagiaire"})
+                continue
+            photo_path = _detokenize_path(photo_token)
+            if not os.path.exists(photo_path):
+                failed.append({"filename": original_name, "reason": "photo d'identité introuvable"})
+                continue
+
         try:
             try:
                 f.stream.seek(0)
             except Exception:
                 pass
 
-            stored = _store_file(session_id, trainee_id, "deliverables", f)
+            if is_desp_diploma:
+                pdf_bytes = f.read() or b""
+                final_pdf = _build_vae_parchemin_pdf(pdf_bytes, photo_path)
+                stored = _store_parchemin_generated_pdf(session_id, trainee_id, final_pdf)
+            else:
+                stored = _store_file(session_id, trainee_id, "deliverables", f)
             token = _tokenize_path(stored)
         except Exception as e:
             print("=== BULK DIPLOME: erreur stockage ===")
             traceback.print_exc()
-            failed.append({"filename": original_name, "reason": f"erreur stockage: {str(e)}"})
+            reason = "génération du diplôme avec photo impossible" if is_desp_diploma else "erreur stockage"
+            failed.append({"filename": original_name, "reason": f"{reason}: {str(e)}"})
             continue
 
         trainee.setdefault("deliverables", {})
