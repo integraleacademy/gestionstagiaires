@@ -106,6 +106,24 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         self.assertEqual(due["sent"], 1)
         self.assertEqual(len(candidate["documents_reminder_history"]), 2)
 
+    def test_next_reminder_date_uses_initial_delay_then_latest_success(self):
+        candidate = self.candidate()
+
+        initial_next = gestion_app._afc_documents_reminder_next_at(candidate)
+        self.assertEqual(initial_next, datetime.datetime(2026, 8, 12, 8, 0, 0))
+
+        candidate["documents_reminder_history"] = [{
+            "sent_at": "2026-08-14T09:30:00Z",
+            "source": "manual",
+            "email_status": "ACCEPTE",
+            "sms_status": "ACCEPTE",
+        }]
+        repeated_next = gestion_app._afc_documents_reminder_next_at(candidate)
+        self.assertEqual(repeated_next, datetime.datetime(2026, 8, 17, 9, 30, 0))
+
+        candidate["cnaps_status"] = "TRANSMIS"
+        self.assertIsNone(gestion_app._afc_documents_reminder_next_at(candidate))
+
     def test_automatic_reminders_stop_when_cnaps_has_progressed_or_title_is_active(self):
         transmitted = self.candidate(id="AFC-TRANSMIS", cnaps_status="TRANSMIS")
         active_title = self.candidate(
@@ -190,6 +208,8 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Relances documents", page)
         self.assertIn("14/08/2026", page)
+        self.assertIn("Prochaine relance", page)
+        self.assertIn("17/08/2026", page)
         self.assertIn("data-send-documents-reminder", page)
         self.assertIn("Automatique après 2 jours, puis tous les 3 jours", page)
 
