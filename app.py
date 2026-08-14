@@ -17667,15 +17667,16 @@ def _afc_utc_datetime(value: Optional[datetime.datetime] = None) -> datetime.dat
     return current
 
 
-def _afc_documents_reminder_due(candidate: Dict[str, Any], now: datetime.datetime) -> bool:
+def _afc_documents_reminder_next_at(candidate: Dict[str, Any]) -> Optional[datetime.datetime]:
     if not _afc_candidate_waits_for_documents(candidate):
-        return False
-    current = _afc_utc_datetime(now)
+        return None
     status_since = _parse_iso_datetime(candidate.get("cnaps_status_changed_at"))
     if status_since is None:
         status_since = _parse_iso_datetime(candidate.get("created_at"))
-    if status_since is None or current - status_since < datetime.timedelta(days=AFC_DOCUMENTS_REMINDER_INITIAL_DELAY_DAYS):
-        return False
+    if status_since is None:
+        return None
+
+    next_at = status_since + datetime.timedelta(days=AFC_DOCUMENTS_REMINDER_INITIAL_DELAY_DAYS)
 
     sent_dates = [
         parsed
@@ -17685,9 +17686,17 @@ def _afc_documents_reminder_due(candidate: Dict[str, Any], now: datetime.datetim
         )
         if parsed is not None
     ]
-    if sent_dates and current - max(sent_dates) < datetime.timedelta(days=AFC_DOCUMENTS_REMINDER_INTERVAL_DAYS):
-        return False
-    return True
+    if sent_dates:
+        next_at = max(
+            next_at,
+            max(sent_dates) + datetime.timedelta(days=AFC_DOCUMENTS_REMINDER_INTERVAL_DAYS),
+        )
+    return next_at
+
+
+def _afc_documents_reminder_due(candidate: Dict[str, Any], now: datetime.datetime) -> bool:
+    next_at = _afc_documents_reminder_next_at(candidate)
+    return bool(next_at and _afc_utc_datetime(now) >= next_at)
 
 
 def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -17846,6 +17855,11 @@ def admin_afc():
         candidate["has_positioning_test"] = _afc_find_latest_positioning_score(candidate, positioning_tests) is not None
     if changed:
         save_data(data)
+    reminder_now = _afc_utc_datetime()
+    for candidate in candidates:
+        next_reminder_at = _afc_documents_reminder_next_at(candidate)
+        candidate["documents_reminder_next_at"] = _iso_from_dt(next_reminder_at) if next_reminder_at else ""
+        candidate["documents_reminder_due_now"] = bool(next_reminder_at and reminder_now >= next_reminder_at)
     prioritized = [c for c in candidates if c.get("cnaps_priority")]
     non_prioritized = [c for c in candidates if not c.get("cnaps_priority")]
     retained = [c for c in non_prioritized if (c.get("decision") or "").strip().upper() == "RETENU"]
