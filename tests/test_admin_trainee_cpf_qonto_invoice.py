@@ -210,6 +210,49 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         self.assertEqual(cpf_line["qontoInvoiceId"], "inv_from_wedof")
         self.assertEqual(cpf_line["financingRef"], "wedof:WEDOF-42")
 
+    def test_wedof_invoice_number_recovers_and_displays_the_cpf_invoice(self):
+        data = self._without_local_cpf_invoice()
+        data["wedof_links"] = [{
+            "active": True,
+            "session_id": "S-CPF",
+            "trainee_id": "T-CPF",
+            "external_id": "421643740630",
+            "cpf_snapshot": {
+                "state": "serviceDoneValidated",
+                "billing_state": "billed",
+                "invoice_number": "FL-2026-374",
+            },
+        }]
+        remote_invoice = self._remote_invoice(
+            "inv_from_wedof_number",
+            number="FL-2026-374",
+            items=[],
+            performance_start_date="",
+            performance_end_date="",
+        )
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as flask_session:
+            flask_session["admin_logged_in"] = True
+
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "_cpf_qonto_client_id", return_value="cpf-client"), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", return_value=remote_invoice) as find_invoice, \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": remote_invoice}), \
+             patch.object(gestion_app, "list_qonto_invoices", side_effect=AssertionError("The WEDOF number must avoid a broad Qonto search")):
+            response = client.get("/api/billing/trainee/T-CPF/session/S-CPF")
+
+        self.assertEqual(response.status_code, 200)
+        cpf_line = next(
+            line for line in response.get_json()["lines"]
+            if line["financingType"] == "CPF"
+        )
+        self.assertEqual(cpf_line["qontoInvoiceId"], "inv_from_wedof_number")
+        self.assertEqual(cpf_line["qontoInvoiceNumber"], "FL-2026-374")
+        self.assertEqual(cpf_line["financingRef"], "wedof:421643740630")
+        find_invoice.assert_called_once_with("FL-2026-374")
+
     def test_discovery_rejects_same_cpf_amount_for_another_trainee(self):
         data = self._without_local_cpf_invoice()
         wrong_invoice = self._remote_invoice(
@@ -292,6 +335,42 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         save_data.assert_not_called()
+
+    def test_recent_failed_discovery_retries_an_exact_wedof_invoice_number(self):
+        data = self._without_local_cpf_invoice()
+        data["sessions"][0]["trainees"][0]["cpf_qonto_invoice_discovery"] = {
+            "status": "not_found",
+            "last_attempt_at": gestion_app._now_iso(),
+        }
+        data["wedof_links"] = [{
+            "active": True,
+            "session_id": "S-CPF",
+            "trainee_id": "T-CPF",
+            "external_id": "421643740630",
+            "cpf_snapshot": {"invoice_number": "FL-2026-374"},
+        }]
+        remote_invoice = self._remote_invoice(
+            "inv_exact_after_throttle",
+            number="FL-2026-374",
+            items=[],
+            performance_start_date="",
+            performance_end_date="",
+        )
+
+        with patch.object(gestion_app, "_cpf_qonto_client_id", return_value="cpf-client"), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", return_value=remote_invoice) as find_invoice, \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": remote_invoice}), \
+             patch.object(gestion_app, "list_qonto_invoices", side_effect=AssertionError("Exact WEDOF lookup expected")):
+            line, changed = gestion_app._discover_cpf_qonto_invoice(
+                data,
+                data["sessions"][0],
+                data["sessions"][0]["trainees"][0],
+            )
+
+        self.assertTrue(changed)
+        self.assertIsNotNone(line)
+        self.assertEqual(line["qontoInvoiceId"], "inv_exact_after_throttle")
+        find_invoice.assert_called_once_with("FL-2026-374")
 
     def test_paid_qonto_status_without_amount_paid_is_still_settled(self):
         normalized = gestion_app.normalize_qonto_invoice_payment_data({

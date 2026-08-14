@@ -127,6 +127,18 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(extracted["invoice_paid_at"], "2026-10-02T14:00:00Z")
         self.assertNotIn("privatePayload", extracted)
 
+    def test_wedof_billing_state_and_top_level_invoice_number_are_whitelisted(self):
+        extracted = extract_folder(folder(
+            state="serviceDoneValidated",
+            billingState="billed",
+            invoiceNumber="FL-2026-374",
+        ))
+
+        self.assertEqual(extracted["state"], "serviceDoneValidated")
+        self.assertEqual(extracted["billing_state"], "billed")
+        self.assertEqual(extracted["invoice_number"], "FL-2026-374")
+        self.assertEqual(extracted["qonto_invoice_number"], "FL-2026-374")
+
 
 class PreviewRouteTests(unittest.TestCase):
     def setUp(self):
