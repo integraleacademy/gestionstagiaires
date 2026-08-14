@@ -20,7 +20,7 @@ class CronDeploymentTests(unittest.TestCase):
         self.assertIn("key: CRON_SECRET", secret_group)
         self.assertIn("generateValue: true", secret_group)
         self.assertIn("fromGroup: gestionstagiaires-cron-secrets", web)
-        self.assertEqual(len(cron_blocks), 5)
+        self.assertEqual(len(cron_blocks), 6)
         for cron in cron_blocks:
             self.assertIn("fromGroup: gestionstagiaires-cron-secrets", cron)
             self.assertNotIn("key: CRON_SECRET\n        sync: false", cron)

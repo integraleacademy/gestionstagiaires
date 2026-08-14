@@ -5239,6 +5239,7 @@ def _create_afc_candidate(payload: Dict[str, Any], *, import_source: str = "") -
     nom = str(payload.get("nom") or "").strip()
     prenom = str(payload.get("prenom") or "").strip()
     cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
+    created_at = _now_iso()
     candidate = {
         "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
         "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
@@ -5248,11 +5249,12 @@ def _create_afc_candidate(payload: Dict[str, Any], *, import_source: str = "") -
         "decision": "", "notification_status": "",
         "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
         "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
+        "cnaps_status_changed_at": created_at,
         "motif_refus": "", "complement_refus": "", "complement_refus_autre": "",
         "modules": {"formation_technique": 0, "remise_niveau": 0, "soutien_personnalise": 0, "paf": 0},
         "dates_formation": "", "test_francais_reussi": None, "cnaps_priority": False,
         "presence_afc": False, "presence_afc_status": "A_CONVOQUER",
-        "test_results_comment": "", "created_at": _now_iso(),
+        "test_results_comment": "", "created_at": created_at,
     }
     if import_source:
         candidate["source"] = import_source
@@ -10338,6 +10340,8 @@ Je vous souhaite une excellente journée,
 
 Clément VAILLANT - Intégrale Academy"""
 AFC_DEFAULT_DOCUMENTS_REMINDER_SMS_TEMPLATE = """Bonjour {{prenom}}, Intégrale Academy vous rappelle que votre dossier AFC est incomplet. Merci de nous transmettre les documents manquants dans les meilleurs délais afin de finaliser votre inscription. Si vous les avez déjà envoyés, ne tenez pas compte de ce SMS. 04 22 47 07 68"""
+AFC_DOCUMENTS_REMINDER_INITIAL_DELAY_DAYS = 2
+AFC_DOCUMENTS_REMINDER_INTERVAL_DAYS = 3
 AFC_DEFAULT_MAIL_TEMPLATE_RETAINED = """Bonjour,
 
 Je me permets de revenir vers vous concernant la formation Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1) financée par France Travail qui débutera le 1er avril 2026.
@@ -14071,6 +14075,7 @@ PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
     "api_admin_afc_delete_all_candidates",
     "api_admin_afc_notify_candidate",
     "api_admin_afc_notify_pending_candidates",
+    "api_admin_afc_send_documents_reminder",
     "admin_afc_candidate_sheet",
     "admin_afc_export",
 }
@@ -17571,6 +17576,118 @@ def admin_sales_tracking_save_objectives():
         "monthly_objectives": monthly_objectives,
     })
 
+def _normalize_afc_cnaps_status(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    cleaned = unicodedata.normalize("NFD", raw)
+    cleaned = "".join(ch for ch in cleaned if unicodedata.category(ch) != "Mn")
+    return " ".join(cleaned.upper().replace("_", " ").replace("-", " ").split())
+
+
+def _afc_documents_reminder_history(candidate: Dict[str, Any]) -> List[Dict[str, str]]:
+    raw_history = candidate.get("documents_reminder_history")
+    if not isinstance(raw_history, list):
+        return []
+
+    normalized: List[Dict[str, str]] = []
+    for item in raw_history:
+        if isinstance(item, dict):
+            sent_at = str(item.get("sent_at") or item.get("date") or "").strip()
+            source = str(item.get("source") or "automatic").strip().lower()
+            email_status = str(item.get("email_status") or "").strip().upper()
+            sms_status = str(item.get("sms_status") or "").strip().upper()
+        else:
+            sent_at = str(item or "").strip()
+            source = "automatic"
+            email_status = ""
+            sms_status = ""
+        if not sent_at:
+            continue
+        normalized.append({
+            "sent_at": sent_at,
+            "source": source if source in {"automatic", "manual"} else "automatic",
+            "email_status": email_status,
+            "sms_status": sms_status,
+        })
+    return normalized[-100:]
+
+
+def _set_afc_candidate_cnaps_status(
+    candidate: Dict[str, Any],
+    status: Any,
+    *,
+    changed_at: str = "",
+) -> bool:
+    normalized_status = str(status or "").strip().upper() or "INCONNU"
+    previous_raw = str(candidate.get("cnaps_status") or "").strip()
+    status_changed = _normalize_afc_cnaps_status(previous_raw) != _normalize_afc_cnaps_status(normalized_status)
+    changed = previous_raw != normalized_status
+    candidate["cnaps_status"] = normalized_status
+    if status_changed or not str(candidate.get("cnaps_status_changed_at") or "").strip():
+        candidate["cnaps_status_changed_at"] = changed_at or _now_iso()
+        changed = True
+    return changed
+
+
+def _afc_candidate_waits_for_documents(candidate: Dict[str, Any]) -> bool:
+    if candidate.get("archived") or candidate.get("enrolled_at") or candidate.get("cnaps_priority"):
+        return False
+    if str(candidate.get("decision") or "").strip().upper() == "NON RETENU":
+        return False
+    if str(candidate.get("presence_afc_status") or "").strip().upper() == "ABSENT":
+        return False
+
+    # A detected active authorization/card means that no document reminder is
+    # necessary even when the remote dossier status itself is still INCONNU.
+    for entry in _normalize_cnaps_remote_history(candidate.get("cnaps_status_history")):
+        history_status = _normalize_afc_cnaps_status(entry.get("status"))
+        if any(marker in history_status for marker in ("ACTIF", "AUTORISATION PREALABLE", "CARTE PROFESSIONNELLE")):
+            return False
+
+    status = _normalize_afc_cnaps_status(candidate.get("cnaps_status"))
+    if status in {"", "INCONNU", "UNKNOWN", "AUCUN DOSSIER", "NON TRANSMIS", "STATUT CNAPS"}:
+        return True
+    return any(marker in status for marker in (
+        "DOCUMENTS MANQUANTS",
+        "DOCUMENT MANQUANT",
+        "PIECES MANQUANTES",
+        "PIECE MANQUANTE",
+        "DOSSIER INCOMPLET",
+        "A COMPLETER",
+        "A FOURNIR",
+        "EN ATTENTE DE DOCUMENT",
+    ))
+
+
+def _afc_utc_datetime(value: Optional[datetime.datetime] = None) -> datetime.datetime:
+    current = value or datetime.datetime.utcnow()
+    if current.tzinfo is not None:
+        current = current.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    return current
+
+
+def _afc_documents_reminder_due(candidate: Dict[str, Any], now: datetime.datetime) -> bool:
+    if not _afc_candidate_waits_for_documents(candidate):
+        return False
+    current = _afc_utc_datetime(now)
+    status_since = _parse_iso_datetime(candidate.get("cnaps_status_changed_at"))
+    if status_since is None:
+        status_since = _parse_iso_datetime(candidate.get("created_at"))
+    if status_since is None or current - status_since < datetime.timedelta(days=AFC_DOCUMENTS_REMINDER_INITIAL_DELAY_DAYS):
+        return False
+
+    sent_dates = [
+        parsed
+        for parsed in (
+            _parse_iso_datetime(item.get("sent_at"))
+            for item in _afc_documents_reminder_history(candidate)
+        )
+        if parsed is not None
+    ]
+    if sent_dates and current - max(sent_dates) < datetime.timedelta(days=AFC_DOCUMENTS_REMINDER_INTERVAL_DAYS):
+        return False
+    return True
 
 
 def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -17610,6 +17727,19 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
 
     changed = False
     for candidate in bucket["candidates"]:
+        normalized_reminders = _afc_documents_reminder_history(candidate)
+        if candidate.get("documents_reminder_history") != normalized_reminders:
+            candidate["documents_reminder_history"] = normalized_reminders
+            changed = True
+        if not str(candidate.get("cnaps_status_changed_at") or "").strip():
+            candidate["cnaps_status_changed_at"] = (
+                str(candidate.get("created_at") or "").strip()
+                or str(candidate.get("convocation_email_sent_at") or "").strip()
+                or str(candidate.get("convocation_sms_sent_at") or "").strip()
+                or str(candidate.get("notification_sent_at") or "").strip()
+                or _now_iso()
+            )
+            changed = True
         if "presence_afc_status" not in candidate:
             if bool(candidate.get("presence_afc")):
                 candidate["presence_afc_status"] = "PRESENT"
@@ -17697,7 +17827,8 @@ def admin_afc():
     for candidate in candidates:
         candidate.setdefault("cnaps_priority", False)
         if candidate.get("cnaps_priority"):
-            candidate["cnaps_status"] = "ACCEPTE"
+            if _set_afc_candidate_cnaps_status(candidate, "ACCEPTE"):
+                changed = True
             candidate["decision"] = "RETENU"
             candidate["motif_refus"] = ""
             candidate["complement_refus"] = ""
@@ -17706,12 +17837,12 @@ def admin_afc():
             cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
             cnaps_status = cnaps_lookup.get("status")
             if cnaps_status:
-                candidate["cnaps_status"] = cnaps_status
+                _set_afc_candidate_cnaps_status(candidate, cnaps_status)
                 candidate["cnaps_status_history"] = cnaps_lookup.get("statut_cnaps_history") or []
                 changed = True
         if candidate.get("cnaps_priority") and (candidate.get("cnaps_status") or "").strip().upper() != "ACCEPTE":
-            candidate["cnaps_status"] = "ACCEPTE"
-            changed = True
+            if _set_afc_candidate_cnaps_status(candidate, "ACCEPTE"):
+                changed = True
         candidate["has_positioning_test"] = _afc_find_latest_positioning_score(candidate, positioning_tests) is not None
     if changed:
         save_data(data)
@@ -17930,14 +18061,17 @@ def api_admin_afc_update_candidate(candidate_id: str):
     for field in (
         "identifiant_ft", "nom", "prenom", "email", "telephone", "decision",
         "motif_refus", "complement_refus", "complement_refus_autre", "dates_formation",
-        "cnaps_status", "notification_status", "test_results_comment",
+        "notification_status", "test_results_comment",
         "date_icop",
     ):
         if field in payload:
             value = str(payload.get(field) or "").strip()
-            if field in {"cnaps_status", "decision", "notification_status"}:
+            if field in {"decision", "notification_status"}:
                 value = value.upper()
             candidate[field] = value
+
+    if "cnaps_status" in payload:
+        _set_afc_candidate_cnaps_status(candidate, payload.get("cnaps_status"))
 
     if "cnaps_status_history" in payload:
         candidate["cnaps_status_history"] = _normalize_cnaps_remote_history(payload.get("cnaps_status_history"))
@@ -17951,7 +18085,7 @@ def api_admin_afc_update_candidate(candidate_id: str):
         cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
         cnaps_status = cnaps_lookup.get("status")
         if cnaps_status:
-            candidate["cnaps_status"] = cnaps_status
+            _set_afc_candidate_cnaps_status(candidate, cnaps_status)
             candidate["cnaps_status_history"] = cnaps_lookup.get("statut_cnaps_history") or []
 
     modules = candidate.setdefault("modules", {})
@@ -17969,7 +18103,7 @@ def api_admin_afc_update_candidate(candidate_id: str):
     if "cnaps_priority" in payload:
         candidate["cnaps_priority"] = bool(payload.get("cnaps_priority"))
         if candidate["cnaps_priority"]:
-            candidate["cnaps_status"] = "ACCEPTE"
+            _set_afc_candidate_cnaps_status(candidate, "ACCEPTE")
             candidate["decision"] = "RETENU"
             candidate["motif_refus"] = ""
             candidate["complement_refus"] = ""
@@ -18147,6 +18281,203 @@ def _send_afc_convocation_notification(bucket: dict, candidate: dict) -> tuple[b
     if (email and not email_ok) or (phone and not sms_ok):
         return False, "Échec envoi convocation"
     return True, ""
+
+
+def _send_afc_documents_reminder(
+    bucket: Dict[str, Any],
+    candidate: Dict[str, Any],
+    *,
+    source: str,
+    sent_at: str = "",
+) -> Dict[str, Any]:
+    templates = bucket.get("mail_templates") or {}
+    email = str(candidate.get("email") or "").strip()
+    phone = str(candidate.get("telephone") or "").strip()
+    attempt_at = sent_at or _now_iso()
+
+    subject = (
+        str(templates.get("documents_reminder_subject") or "").strip()
+        or AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_SUBJECT
+    )
+    raw_mail = _afc_render_mail_template(
+        str(templates.get("documents_reminder_email") or "").strip()
+        or AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_TEMPLATE,
+        candidate,
+    )
+    raw_sms = _afc_render_mail_template(
+        str(templates.get("documents_reminder_sms") or "").strip()
+        or AFC_DEFAULT_DOCUMENTS_REMINDER_SMS_TEMPLATE,
+        candidate,
+    )
+
+    email_status = "ABSENT"
+    email_error = ""
+    if email:
+        html_body = mail_layout(
+            "<p>" + "</p><p>".join(line for line in raw_mail.splitlines() if line.strip()) + "</p>"
+        )
+        email_result = brevo_send_email(
+            email,
+            subject,
+            html_body,
+            text_content=raw_mail,
+            metadata={
+                "purpose": "afc_documents_reminder",
+                "candidate_id": str(candidate.get("id") or ""),
+                "source": source,
+            },
+        )
+        email_ok = bool(email_result.get("ok")) if isinstance(email_result, dict) else bool(email_result)
+        email_status = "ACCEPTE" if email_ok else "ECHEC"
+        if not email_ok:
+            email_error = (
+                str(email_result.get("error") or "").strip()
+                if isinstance(email_result, dict)
+                else "Échec envoi e-mail"
+            ) or "Échec envoi e-mail"
+
+    sms_status = "ABSENT"
+    sms_error = ""
+    if phone:
+        sms_ok = bool(brevo_send_sms(phone, raw_sms))
+        sms_status = "ACCEPTE" if sms_ok else "ECHEC"
+        if not sms_ok:
+            sms_error = "Échec envoi SMS"
+
+    email_accepted = email_status == "ACCEPTE"
+    sms_accepted = sms_status == "ACCEPTE"
+    accepted = email_accepted or sms_accepted
+    attempted_failures = [
+        message
+        for message in (email_error, sms_error)
+        if message
+    ]
+
+    candidate["documents_reminder_last_attempt_at"] = attempt_at
+    candidate["documents_reminder_email_status"] = email_status
+    candidate["documents_reminder_sms_status"] = sms_status
+    if accepted:
+        history = _afc_documents_reminder_history(candidate)
+        history.append({
+            "sent_at": attempt_at,
+            "source": "manual" if source == "manual" else "automatic",
+            "email_status": email_status,
+            "sms_status": sms_status,
+        })
+        candidate["documents_reminder_history"] = history[-100:]
+        candidate["documents_reminder_last_sent_at"] = attempt_at
+
+    if not email and not phone:
+        error = "Email et téléphone manquants"
+    else:
+        error = " ; ".join(attempted_failures)
+    if error:
+        candidate["documents_reminder_last_error"] = error
+    else:
+        candidate.pop("documents_reminder_last_error", None)
+
+    intended_channels = int(bool(email)) + int(bool(phone))
+    accepted_channels = int(email_accepted) + int(sms_accepted)
+    return {
+        "ok": accepted,
+        "partial": bool(accepted and accepted_channels < intended_channels),
+        "error": error,
+        "sent_at": attempt_at if accepted else "",
+        "email_status": email_status,
+        "sms_status": sms_status,
+        "history": _afc_documents_reminder_history(candidate),
+    }
+
+
+def _refresh_afc_cnaps_status_for_reminder(candidate: Dict[str, Any], *, changed_at: str = "") -> bool:
+    lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
+    remote_status = str(lookup.get("status") or "").strip()
+    if not remote_status:
+        return False
+    changed = _set_afc_candidate_cnaps_status(candidate, remote_status, changed_at=changed_at)
+    remote_history = _normalize_cnaps_remote_history(lookup.get("statut_cnaps_history"))
+    if candidate.get("cnaps_status_history") != remote_history:
+        candidate["cnaps_status_history"] = remote_history
+        changed = True
+    return changed
+
+
+def run_afc_documents_reminders(
+    now: Optional[datetime.datetime] = None,
+    *,
+    refresh_cnaps: bool = True,
+) -> Dict[str, int]:
+    current = _afc_utc_datetime(now)
+    data = load_data()
+    bucket = _afc_bucket(data)
+    checked = eligible = sent = failed = 0
+    changed = False
+
+    for candidate in bucket.get("candidates") or []:
+        if not isinstance(candidate, dict) or candidate.get("archived"):
+            continue
+        checked += 1
+        if refresh_cnaps and _afc_candidate_waits_for_documents(candidate):
+            if _refresh_afc_cnaps_status_for_reminder(candidate, changed_at=_iso_from_dt(current)):
+                changed = True
+        if not _afc_documents_reminder_due(candidate, current):
+            continue
+        eligible += 1
+        result = _send_afc_documents_reminder(
+            bucket,
+            candidate,
+            source="automatic",
+            sent_at=_iso_from_dt(current),
+        )
+        changed = True
+        if result.get("ok"):
+            sent += 1
+            _append_activity_log(
+                data,
+                "afc_documents_reminder_sent",
+                "afc_candidate",
+                str(candidate.get("id") or ""),
+                details={"source": "automatic"},
+            )
+        else:
+            failed += 1
+
+    if changed:
+        save_data(data)
+    return {
+        "checked": checked,
+        "eligible": eligible,
+        "sent": sent,
+        "failed": failed,
+    }
+
+
+@app.post("/api/admin/afc/candidates/<candidate_id>/documents-reminder")
+def api_admin_afc_send_documents_reminder(candidate_id: str):
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidate = next(
+        (item for item in bucket.get("candidates", []) if str(item.get("id") or "") == candidate_id),
+        None,
+    )
+    if not candidate:
+        return jsonify({"ok": False, "error": "Candidat introuvable"}), 404
+    if candidate.get("archived"):
+        return jsonify({"ok": False, "error": "Ce candidat est archivé"}), 400
+
+    result = _send_afc_documents_reminder(bucket, candidate, source="manual")
+    if result.get("ok"):
+        _append_activity_log(
+            data,
+            "afc_documents_reminder_sent",
+            "afc_candidate",
+            candidate_id,
+            details={"source": "manual", "partial": bool(result.get("partial"))},
+        )
+    save_data(data)
+    if not result.get("ok"):
+        return jsonify(result), 400 if result.get("error") == "Email et téléphone manquants" else 502
+    return jsonify(result)
 
 
 @app.post("/api/admin/afc/candidates/notify-pending")
@@ -36148,6 +36479,15 @@ def internal_cron_a3p_hosting_reminders():
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     return jsonify({"ok": True, **run_a3p_hosting_reminders()})
+
+
+@app.post("/internal/cron/afc-documents-reminders")
+def internal_cron_afc_documents_reminders():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if not expected or not provided or not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify({"ok": True, **run_afc_documents_reminders()})
 
 
 DAILY_RECAP_RECIPIENTS = (

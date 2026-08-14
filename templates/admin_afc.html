@@ -15,7 +15,7 @@
   }
   .afc-table{
     width: 100%;
-    min-width: 1450px;
+    min-width: 1650px;
     table-layout: auto;
   }
   .afc-table th,
@@ -68,6 +68,13 @@
   .afc-delivery-badge.failed{background:#fee2e2;color:#991b1b;}
   .afc-delivery-badge.missing{background:#f1f5f9;color:#64748b;}
   .afc-delivery-help{font-size:10px;color:#64748b;white-space:normal;line-height:1.25;max-width:190px;}
+  .afc-reminder-cell{display:flex;min-width:210px;max-width:280px;flex-direction:column;align-items:flex-start;gap:7px;white-space:normal;}
+  .afc-reminder-summary{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 9px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:850;}
+  .afc-reminder-summary.empty{background:#f1f5f9;color:#64748b;}
+  .afc-reminder-dates{display:flex;flex-wrap:wrap;gap:5px;}
+  .afc-reminder-date{display:inline-flex;border:1px solid #ddd6fe;border-radius:7px;padding:4px 7px;background:#faf5ff;color:#6b21a8;font-size:11px;font-weight:800;white-space:nowrap;}
+  .afc-reminder-help{max-width:245px;color:#64748b;font-size:10px;line-height:1.3;white-space:normal;}
+  .afc-reminder-send{padding:6px 9px;font-size:11px;}
   .afc-filters{
     display:flex;
     flex-wrap:wrap;
@@ -216,10 +223,10 @@
 </div>
 
 <div class="card afc-table-wrap" style="margin-top:12px;overflow:auto;">
-  <table class="table" id="afcTable">
+  <table class="table afc-table" id="afcTable">
     <thead>
       <tr>
-        <th>Présence ICOP</th><th>Date ICOP</th><th>Nom</th><th>Prénom</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
+        <th>Présence ICOP</th><th>Date ICOP</th><th>Nom</th><th>Prénom</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Relances documents</th><th>Fiche candidat</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -272,6 +279,28 @@
           <div class="afc-cnaps-wrap">
             <span class="cnaps afc-cnaps-statuses" data-cnaps data-cnaps-history='{{ (c.cnaps_status_history or [])|tojson }}'>{{ c.cnaps_status or 'INCONNU' }}</span>
             <button class="mini-btn" data-refresh-cnaps type="button" title="Actualiser le statut CNAPS">↻</button>
+          </div>
+        </td>
+        <td>
+          {% set reminder_history = c.documents_reminder_history or [] %}
+          <div class="afc-reminder-cell" data-documents-reminder-history>
+            {% if reminder_history %}
+            <span class="afc-reminder-summary">↗ {{ reminder_history|length }} relance{{ 's' if reminder_history|length > 1 else '' }}</span>
+            <div class="afc-reminder-dates">
+              {% for reminder in reminder_history|reverse %}
+              <span
+                class="afc-reminder-date"
+                title="{{ 'Envoi manuel' if reminder.source == 'manual' else 'Envoi automatique' }} · E-mail {{ reminder.email_status or 'non renseigné' }} · SMS {{ reminder.sms_status or 'non renseigné' }}"
+              >{{ reminder.sent_at|format_date_fr }}</span>
+              {% endfor %}
+            </div>
+            {% else %}
+            <span class="afc-reminder-summary empty">Aucune relance</span>
+            {% endif %}
+            {% if not show_archived %}
+            <button type="button" class="btn btn-outline afc-reminder-send" data-send-documents-reminder>Envoyer maintenant</button>
+            <small class="afc-reminder-help">Automatique après 2 jours, puis tous les 3 jours tant que le dossier reste incomplet.</small>
+            {% endif %}
           </div>
         </td>
         <td><a class="btn btn-outline" href="{{ url_for('admin_afc_candidate_sheet', candidate_id=c.id) }}">Fiche candidat</a></td>
@@ -755,6 +784,38 @@ document.querySelectorAll('[data-refresh-cnaps]').forEach((btn)=>{
       await refreshCnapsForRow(tr);
     }catch(_err){
       alert('Erreur CNAPS');
+    }
+  });
+});
+
+document.querySelectorAll('[data-send-documents-reminder]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const target = e.currentTarget;
+    const tr = target.closest('tr');
+    const fullName = `${getCandidateFieldValue(tr, 'prenom')} ${getCandidateFieldValue(tr, 'nom')}`.trim();
+    if(!confirm(`Envoyer maintenant le mail et le SMS « Relance documents » à ${fullName || 'ce candidat'} ?`)) return;
+    const originalLabel = target.textContent;
+    target.disabled = true;
+    target.textContent = 'Envoi en cours…';
+    try{
+      const response = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}/documents-reminder`, { method:'POST' });
+      const body = await response.json().catch(()=>({}));
+      if(!response.ok || !body.ok){
+        alert(body.error || 'La relance n’a pas pu être envoyée.');
+        return;
+      }
+      const channelLabels = [];
+      if(body.email_status === 'ACCEPTE') channelLabels.push('e-mail accepté');
+      else if(body.email_status === 'ECHEC') channelLabels.push('e-mail en échec');
+      if(body.sms_status === 'ACCEPTE') channelLabels.push('SMS accepté');
+      else if(body.sms_status === 'ECHEC') channelLabels.push('SMS en échec');
+      alert(`Relance enregistrée${channelLabels.length ? ` : ${channelLabels.join(', ')}` : ''}.`);
+      location.reload();
+    }catch(_err){
+      alert('La relance n’a pas pu être envoyée.');
+    }finally{
+      target.disabled = false;
+      target.textContent = originalLabel;
     }
   });
 });
