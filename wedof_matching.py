@@ -86,10 +86,11 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
         ),
         "invoice_number": _nested(
             folder,
-            "invoiceNumber", "invoice.number", "invoice.reference", "invoiceReference",
-            "billing.invoiceNumber", "billing.invoice.number", "billing.invoice.reference",
+            "billNumber", "invoiceNumber", "invoice.number", "invoice.reference", "invoiceReference",
+            "billing.billNumber", "billing.invoiceNumber", "billing.invoice.number", "billing.invoice.reference",
             "billing.invoiceReference", "billing.number",
-            "data.invoiceNumber", "data.invoice.number", "data.invoice.reference",
+            "data.billNumber", "data.invoiceNumber", "data.invoice.number", "data.invoice.reference",
+            "data.billing.billNumber",
             "data.billing.invoiceNumber", "data.billing.invoice.number",
         ),
         # WEDOF deployments do not all expose the accounting reference under
@@ -108,8 +109,9 @@ def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
             "data.qontoInvoiceNumber", "data.invoice.number",
             # WEDOF commonly exposes the Qonto-created invoice only through
             # its accounting number (for example FL-2026-374).
-            "invoiceNumber", "invoiceReference", "billing.invoiceNumber",
-            "billing.invoiceReference", "data.invoiceNumber",
+            "billNumber", "invoiceNumber", "invoiceReference", "billing.billNumber",
+            "billing.invoiceNumber", "billing.invoiceReference", "data.billNumber",
+            "data.invoiceNumber", "data.billing.billNumber",
         ),
         "invoice_status": _nested(
             folder,

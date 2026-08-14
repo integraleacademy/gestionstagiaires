@@ -3822,6 +3822,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   let financeStatusSyncInFlight = false;
   let currentLines = [];
   let currentFinancialSummary = null;
+  let currentCpfWedofInvoice = null;
   let currentLine = null;
   let modalLoading = false;
   const esc = v => String(v ?? "").replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -3864,6 +3865,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     if(!r.ok||!j.ok) throw new Error(j.error||'Chargement impossible');
     currentLines = j.lines || [];
     currentFinancialSummary = j.financial_summary || null;
+    currentCpfWedofInvoice = j.cpf_wedof_invoice || null;
     console.log("FINANCIAL_FRONTEND_DIAGNOSTIC", {
       financialSummary: currentFinancialSummary,
       invoiceRows: currentLines.map(l => l.qonto_invoice).filter(Boolean)
@@ -4151,14 +4153,20 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const cpfBucket=currentFinancialSummary?.by_financer?.CPF;
     const cpfInvoice=canonicalInvoiceEntry(cpfLine);
     const cpfInvoiceId=String(cpfLine?.qontoInvoiceId||cpfLine?.qontoDraftId||'');
-    const cpfInvoiceNumber=String(cpfInvoice?.invoice_number||cpfLine?.qontoInvoiceNumber||cpfInvoiceId);
-    const cpfInvoiceTotal=cpfBucket?.qonto_tracked?Number(cpfBucket.invoiced_amount_cents||0)/100:(cpfLine?lineAmount(cpfLine):0);
+    const cpfWedofInvoiceNumber=String(currentCpfWedofInvoice?.invoice_number||'');
+    const cpfWedofBillingState=String(currentCpfWedofInvoice?.billing_state||'').toLowerCase();
+    const cpfWedofUrl=String(currentCpfWedofInvoice?.wedof_url||'');
+    const cpfInvoiceNumber=String(cpfInvoice?.invoice_number||cpfLine?.qontoInvoiceNumber||cpfWedofInvoiceNumber||cpfInvoiceId);
+    const cpfInvoiceTotal=cpfBucket?.qonto_tracked?Number(cpfBucket.invoiced_amount_cents||0)/100:(cpfLine?lineAmount(cpfLine):c.montantCpf);
     const cpfInvoicePaid=cpfBucket?.qonto_tracked?Number(cpfBucket.paid_amount_cents||0)/100:(cpfLine?linePaid(cpfLine):0);
     const cpfPaymentStatus=String(cpfBucket?.payment_status||cpfInvoice?.payment_status||cpfLine?.paymentStatus||'unpaid').toLowerCase();
     const cpfInvoiceStatus=String(cpfLine?.invoiceStatus||cpfInvoice?.status||'').toLowerCase();
-    const cpfInvoiceState=cpfPaymentStatus==='paid'?['Facture payée','green']:(['partially_paid','partial'].includes(cpfPaymentStatus)?['Paiement partiel','orange']:(cpfInvoiceStatus==='draft'?['Brouillon Qonto','blue']:(['canceled','cancelled'].includes(cpfInvoiceStatus)?['Facture annulée','red']:(cpfInvoiceStatus==='control'?['À contrôler','red']:['En attente de paiement','orange']))));
+    const cpfInvoiceState=cpfInvoiceId?(cpfPaymentStatus==='paid'?['Facture payée','green']:(['partially_paid','partial'].includes(cpfPaymentStatus)?['Paiement partiel','orange']:(cpfInvoiceStatus==='draft'?['Brouillon Qonto','blue']:(['canceled','cancelled'].includes(cpfInvoiceStatus)?['Facture annulée','red']:(cpfInvoiceStatus==='control'?['À contrôler','red']:['En attente de paiement','orange']))))):(cpfWedofBillingState==='paid'?['Payée dans WEDOF','green']:['Facturée dans WEDOF','green']);
     const cpfInvoicePaidAt=String(cpfInvoice?.paid_at||cpfLine?.paidAt||'');
-    const cpfInvoiceHtml=cpfLine&&cpfInvoiceId?`<div class="finance-summary-card__cpf-invoice"><div class="finance-summary-card__cpf-invoice-head"><strong>Facture CPF</strong>${badge(cpfInvoiceState[0],cpfInvoiceState[1])}</div><div class="finance-summary-card__cpf-invoice-number">${esc(cpfInvoiceNumber||cpfInvoiceId)}</div><div class="finance-summary-card__cpf-invoice-amount">${fmtMoney(cpfInvoicePaid)} encaissé sur ${fmtMoney(cpfInvoiceTotal)}${cpfPaymentStatus==='paid'&&cpfInvoicePaidAt?` · Payée le ${formatIsoDateFr(cpfInvoicePaidAt.slice(0,10))}`:''}</div><a class="finance-summary-card__cpf-invoice-link" href="/admin/qonto/invoices/${encodeURIComponent(cpfInvoiceId)}/pdf" target="_blank" rel="noopener"><span aria-hidden="true">👁</span> Visualiser la facture</a></div>`:'';
+    const hasCpfInvoice=Boolean(cpfInvoiceId||cpfWedofInvoiceNumber||['billed','paid'].includes(cpfWedofBillingState));
+    const cpfInvoiceAmountHtml=cpfInvoiceId?`${fmtMoney(cpfInvoicePaid)} encaissé sur ${fmtMoney(cpfInvoiceTotal)}${cpfPaymentStatus==='paid'&&cpfInvoicePaidAt?` · Payée le ${formatIsoDateFr(cpfInvoicePaidAt.slice(0,10))}`:''}`:`Montant facturé : ${fmtMoney(cpfInvoiceTotal)}${cpfWedofBillingState==='paid'?' · Paiement confirmé par WEDOF':' · Paiement géré hors plateforme'}`;
+    const cpfInvoiceLink=cpfInvoiceId?`<a class="finance-summary-card__cpf-invoice-link" href="/admin/qonto/invoices/${encodeURIComponent(cpfInvoiceId)}/pdf" target="_blank" rel="noopener"><span aria-hidden="true">👁</span> Visualiser la facture</a>`:(cpfWedofUrl?`<a class="finance-summary-card__cpf-invoice-link" href="${esc(cpfWedofUrl)}" target="_blank" rel="noopener"><span aria-hidden="true">↗</span> Ouvrir dans WEDOF</a>`:'');
+    const cpfInvoiceHtml=hasCpfInvoice?`<div class="finance-summary-card__cpf-invoice"><div class="finance-summary-card__cpf-invoice-head"><strong>Facture CPF</strong>${badge(cpfInvoiceState[0],cpfInvoiceState[1])}</div><div class="finance-summary-card__cpf-invoice-number">${esc(cpfInvoiceNumber||'Référence non communiquée')}</div><div class="finance-summary-card__cpf-invoice-amount">${cpfInvoiceAmountHtml}</div>${cpfInvoiceLink}</div>`:'';
     const cashStatus=statusFromRatio(c.cashPaid,c.cashPlanned,{none:'Montant à préciser',zero:'À encaisser',partial:'Espèces partielles',done:'Espèces réglées',over:'Trop-perçu espèces'});
     const cards=[
       {label:'Prix formation',icon:'€',value:fmtMoney(c.prixFormation),badge:adjusted?badge('Tarif ajusté','blue'):badge('Tarif standard','gray'),tone:adjusted?'blue':'gray',meta:'Montant de référence'},
@@ -4194,10 +4202,11 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const paid=bucket?Number(bucket.paid_amount_cents||0)/100:related.reduce((a,l)=>a+linePaid(l),0);
       const external=Boolean(bucket?.externally_managed);
       const qontoTracked=external&&Boolean(bucket?.qonto_tracked);
+      const wedofBilled=name==='CPF'&&['billed','paid'].includes(String(currentCpfWedofInvoice?.billing_state||'').toLowerCase());
       const remaining=qontoTracked&&bucket?.remaining_amount_cents!=null?Number(bucket.remaining_amount_cents)/100:Math.max(planned-paid,0);
       const paymentStatus=String(bucket?.payment_status||'').toLowerCase();
       const trackedState=paymentStatus==='paid'?['Facture payée','green']:(['partially_paid','partial'].includes(paymentStatus)?['Paiement partiel','orange']:(paymentStatus==='draft'?['Brouillon Qonto','blue']:(['canceled','cancelled'].includes(paymentStatus)?['Facture annulée','red']:(paymentStatus==='control'?['À contrôler','red']:['En attente de paiement','orange']))));
-      const st=qontoTracked?trackedState:(external?['Géré hors plateforme','green']:statusFromRatio(paid,planned,{none:'Non prévu',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'}));
+      const st=qontoTracked?trackedState:(external?[wedofBilled?'Facturée dans WEDOF':'Géré hors plateforme','green']:statusFromRatio(paid,planned,{none:'Non prévu',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'}));
       return `<div class="finance-line ${typeClass}"><strong>${esc(name)}</strong><div><span class="finance-mini-label">Prévu</span>${fmtMoney(planned)}</div><div><span class="finance-mini-label">Facturé</span>${fmtMoney(inv)}</div>${external&&!qontoTracked?'<div><span class="finance-mini-label">Paiement</span>Géré hors plateforme</div><div><span class="finance-mini-label">À encaisser ici</span>0,00 €</div>':`<div><span class="finance-mini-label">Payé</span>${fmtMoney(paid)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(remaining,0))}</div>`}${badge(st[0],st[1])}</div>`;
     }).join('');
   }
