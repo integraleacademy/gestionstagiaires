@@ -10324,6 +10324,20 @@ Je vous confirme que nous avons RDV le :
 Nous vous remercions de bien vouloir compléter DES QUE POSSIBLE ET AVANT NOTRE RDV, le formulaire en cliquant ici : https://cnapsv5-1.onrender.com/
 
 Clément VAILLANT - Intégrale Sécurité Formations (04 22 47 07 68)"""
+AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_SUBJECT = "Relance documents – Dossier AFC incomplet"
+AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_TEMPLATE = """Bonjour {{prenom}},
+
+Nous revenons vers vous concernant votre dossier pour la formation Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1) financée par France Travail.
+
+À ce jour, nous n'avons pas encore reçu l'ensemble des documents nécessaires à l'étude de votre dossier. Nous vous remercions de nous les transmettre dans les meilleurs délais afin de ne pas retarder votre inscription.
+
+Si vous avez déjà envoyé vos documents, merci de ne pas tenir compte de ce message.
+
+Je reste à votre disposition pour tous renseignements complémentaires,
+Je vous souhaite une excellente journée,
+
+Clément VAILLANT - Intégrale Academy"""
+AFC_DEFAULT_DOCUMENTS_REMINDER_SMS_TEMPLATE = """Bonjour {{prenom}}, Intégrale Academy vous rappelle que votre dossier AFC est incomplet. Merci de nous transmettre les documents manquants dans les meilleurs délais afin de finaliser votre inscription. Si vous les avez déjà envoyés, ne tenez pas compte de ce SMS. 04 22 47 07 68"""
 AFC_DEFAULT_MAIL_TEMPLATE_RETAINED = """Bonjour,
 
 Je me permets de revenir vers vous concernant la formation Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1) financée par France Travail qui débutera le 1er avril 2026.
@@ -17580,6 +17594,12 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
         mt["convocation_email"] = AFC_DEFAULT_CONVOCATION_EMAIL_TEMPLATE
     if not (mt.get("convocation_sms") or "").strip():
         mt["convocation_sms"] = AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE
+    if not (mt.get("documents_reminder_subject") or "").strip():
+        mt["documents_reminder_subject"] = AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_SUBJECT
+    if not (mt.get("documents_reminder_email") or "").strip():
+        mt["documents_reminder_email"] = AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_TEMPLATE
+    if not (mt.get("documents_reminder_sms") or "").strip():
+        mt["documents_reminder_sms"] = AFC_DEFAULT_DOCUMENTS_REMINDER_SMS_TEMPLATE
     if not isinstance(bucket.get("modules"), dict):
         bucket["modules"] = {}
     modules = bucket["modules"]
@@ -17872,6 +17892,9 @@ def api_admin_afc_save_mail_templates():
     templates["convocation_subject"] = str(payload.get("convocation_subject") or "").strip() or AFC_DEFAULT_CONVOCATION_EMAIL_SUBJECT
     templates["convocation_email"] = str(payload.get("convocation_email") or "").strip() or AFC_DEFAULT_CONVOCATION_EMAIL_TEMPLATE
     templates["convocation_sms"] = str(payload.get("convocation_sms") or "").strip() or AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE
+    templates["documents_reminder_subject"] = str(payload.get("documents_reminder_subject") or "").strip() or AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_SUBJECT
+    templates["documents_reminder_email"] = str(payload.get("documents_reminder_email") or "").strip() or AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_TEMPLATE
+    templates["documents_reminder_sms"] = str(payload.get("documents_reminder_sms") or "").strip() or AFC_DEFAULT_DOCUMENTS_REMINDER_SMS_TEMPLATE
     save_data(data)
     return jsonify({"ok": True})
 

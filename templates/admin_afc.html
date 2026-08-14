@@ -156,7 +156,7 @@
     aria-expanded="false"
     style="margin-bottom:8px;"
   >
-    Modèles de mail
+    Modèles de mail et SMS
   </button>
   <div id="mailTemplatesPanel" style="display:none;">
     <p style="margin:0 0 10px;color:#475569;">Variables disponibles : <code>{{'{{nom}}'}}</code>, <code>{{'{{prenom}}'}}</code> et <code>{{'{{date_icop}}'}}</code> (date ICOP du candidat).</p>
@@ -170,6 +170,14 @@
     <textarea id="tmplConvocationEmail" rows="10" style="width:100%;">{{ afc.mail_templates.convocation_email }}</textarea>
     <label style="margin-top:10px;display:block;">SMS convocation (envoyé automatiquement au passage à "Convoqué")</label>
     <textarea id="tmplConvocationSms" rows="8" style="width:100%;">{{ afc.mail_templates.convocation_sms }}</textarea>
+    <hr style="margin:18px 0;border:0;border-top:1px solid #e2e8f0;">
+    <h3 style="margin:0 0 10px;">Relance documents</h3>
+    <label>Objet du mail de relance documents</label>
+    <input id="tmplDocumentsReminderSubject" type="text" style="width:100%;" value="{{ afc.mail_templates.documents_reminder_subject }}">
+    <label style="margin-top:10px;display:block;">Mail relance documents</label>
+    <textarea id="tmplDocumentsReminderEmail" rows="10" style="width:100%;">{{ afc.mail_templates.documents_reminder_email }}</textarea>
+    <label style="margin-top:10px;display:block;">SMS relance documents</label>
+    <textarea id="tmplDocumentsReminderSms" rows="6" style="width:100%;">{{ afc.mail_templates.documents_reminder_sms }}</textarea>
     <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
   </div>
 </div>
@@ -847,9 +855,13 @@ document.getElementById('btnSaveTemplates').addEventListener('click', async ()=>
   const convocation_subject = document.getElementById('tmplConvocationSubject').value;
   const convocation_email = document.getElementById('tmplConvocationEmail').value;
   const convocation_sms = document.getElementById('tmplConvocationSms').value;
-  await fetch('/api/admin/afc/mail-templates',{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({retained,rejected,convocation_subject,convocation_email,convocation_sms})
+  const documents_reminder_subject = document.getElementById('tmplDocumentsReminderSubject').value;
+  const documents_reminder_email = document.getElementById('tmplDocumentsReminderEmail').value;
+  const documents_reminder_sms = document.getElementById('tmplDocumentsReminderSms').value;
+  const response = await fetch('/api/admin/afc/mail-templates',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({retained,rejected,convocation_subject,convocation_email,convocation_sms,documents_reminder_subject,documents_reminder_email,documents_reminder_sms})
   });
+  if(!response.ok){ alert('Erreur lors de la sauvegarde des modèles'); return; }
   alert('Modèles sauvegardés');
 });
 
