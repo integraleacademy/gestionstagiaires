@@ -139,6 +139,17 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(extracted["invoice_number"], "FL-2026-374")
         self.assertEqual(extracted["qonto_invoice_number"], "FL-2026-374")
 
+    def test_official_wedof_bill_number_is_whitelisted_for_qonto_lookup(self):
+        extracted = extract_folder(folder(
+            state="serviceDoneValidated",
+            billingState="billed",
+            billNumber="FL-2026-374",
+        ))
+
+        self.assertEqual(extracted["billing_state"], "billed")
+        self.assertEqual(extracted["invoice_number"], "FL-2026-374")
+        self.assertEqual(extracted["qonto_invoice_number"], "FL-2026-374")
+
 
 class PreviewRouteTests(unittest.TestCase):
     def setUp(self):

@@ -1,6 +1,6 @@
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import app as gestion_app
 
@@ -253,6 +253,58 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         self.assertEqual(cpf_line["financingRef"], "wedof:421643740630")
         find_invoice.assert_called_once_with("FL-2026-374")
 
+    def test_official_wedof_bill_number_is_refreshed_and_exposed_to_the_cpf_card(self):
+        data = self._without_local_cpf_invoice()
+        data["wedof_links"] = [{
+            "active": True,
+            "session_id": "S-CPF",
+            "trainee_id": "T-CPF",
+            "external_id": "421643740630",
+            "cpf_snapshot": {
+                "state": "serviceDoneValidated",
+                "billing_state": "billed",
+            },
+        }]
+        remote_invoice = self._remote_invoice(
+            "inv_from_wedof_bill_number",
+            number="FL-2026-374",
+            items=[],
+            performance_start_date="",
+            performance_end_date="",
+        )
+        wedof_client = Mock()
+        wedof_client.get_registration_folder_interactive.return_value = {
+            "externalId": "421643740630",
+            "type": "CPF",
+            "state": "serviceDoneValidated",
+            "billingState": "billed",
+            "billNumber": "FL-2026-374",
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as flask_session:
+            flask_session["admin_logged_in"] = True
+
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "WedofClient", return_value=wedof_client), \
+             patch.object(gestion_app, "sync_folder_automation_status"), \
+             patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "_cpf_qonto_client_id", return_value="cpf-client"), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", return_value=remote_invoice) as find_invoice, \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": remote_invoice}), \
+             patch.object(gestion_app, "list_qonto_invoices", side_effect=AssertionError("The official WEDOF bill number must use an exact lookup")):
+            response = client.get("/api/billing/trainee/T-CPF/session/S-CPF")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        cpf_line = next(line for line in payload["lines"] if line["financingType"] == "CPF")
+        self.assertEqual(cpf_line["qontoInvoiceId"], "inv_from_wedof_bill_number")
+        self.assertEqual(cpf_line["qontoInvoiceNumber"], "FL-2026-374")
+        self.assertEqual(payload["cpf_wedof_invoice"]["invoice_number"], "FL-2026-374")
+        self.assertEqual(payload["cpf_wedof_invoice"]["billing_state"], "billed")
+        self.assertIn("421643740630", payload["cpf_wedof_invoice"]["wedof_url"])
+        find_invoice.assert_called_once_with("FL-2026-374")
+
     def test_discovery_rejects_same_cpf_amount_for_another_trainee(self):
         data = self._without_local_cpf_invoice()
         wrong_invoice = self._remote_invoice(
@@ -397,6 +449,9 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         template = (Path(__file__).parents[1] / "templates" / "admin_trainee.html").read_text()
 
         self.assertIn("Visualiser la facture", template)
+        self.assertIn("Facturée dans WEDOF", template)
+        self.assertIn("Ouvrir dans WEDOF", template)
+        self.assertIn("currentCpfWedofInvoice", template)
         self.assertIn("Facture payée", template)
         self.assertIn("Payée le", template)
         self.assertIn("qonto_tracked", template)

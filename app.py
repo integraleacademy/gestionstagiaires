@@ -33328,6 +33328,46 @@ def _cpf_wedof_invoice_reference(link: Optional[Dict[str, Any]]) -> Tuple[str, s
     return invoice_id, invoice_number
 
 
+def _cpf_wedof_invoice_view(link: Optional[Dict[str, Any]]) -> Dict[str, str]:
+    """Expose the safe WEDOF billing reference even before Qonto is linked."""
+    if not isinstance(link, dict):
+        return {}
+    snapshot = link.get('cpf_snapshot') if isinstance(link.get('cpf_snapshot'), dict) else {}
+    invoice_id, invoice_number = _cpf_wedof_invoice_reference(link)
+    billing_state = str(
+        snapshot.get('billing_state')
+        or snapshot.get('billingState')
+        or link.get('billing_state')
+        or link.get('billingState')
+        or ''
+    ).strip()
+    folder_state = str(snapshot.get('state') or link.get('wedof_state') or '').strip()
+    external_id = str(snapshot.get('external_id') or link.get('external_id') or '').strip()
+    wedof_url = str(snapshot.get('wedof_url') or link.get('wedof_url') or '').strip()
+    parsed = urlparse(wedof_url)
+    if not (parsed.scheme == 'https' and (parsed.hostname or '').casefold().endswith('wedof.fr')):
+        wedof_url = ''
+    if not wedof_url and external_id and re.fullmatch(r'[A-Za-z0-9_-]+', external_id):
+        wedof_url = (
+            'https://wedof.fr/formation/dossiers/kanban/'
+            f'{quote(external_id, safe="")}/dossierFormation'
+        )
+        query = {key: value for key, value in (
+            ('state', folder_state), ('billingState', billing_state),
+        ) if value}
+        if query:
+            wedof_url = f'{wedof_url}?{urlencode(query)}'
+    if not any((invoice_id, invoice_number, billing_state)):
+        return {}
+    return {
+        'external_id': external_id,
+        'billing_state': billing_state,
+        'invoice_id': invoice_id,
+        'invoice_number': invoice_number,
+        'wedof_url': wedof_url,
+    }
+
+
 def _qonto_invoice_from_wedof_reference(
     link: Optional[Dict[str, Any]], session_obj: Dict[str, Any], trainee: Dict[str, Any]
 ) -> Optional[Dict[str, Any]]:
@@ -34378,10 +34418,12 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
             save_data(data)
     fresh_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
     summary = calculate_trainee_financial_summary(trainee or {'id': trainee_id}, fresh_lines)
+    cpf_link = _cpf_active_link(data, session_id=str(session_id), trainee_id=str(trainee_id))
     return jsonify({
         'ok': True,
         'lines': fresh_lines,
         'financial_summary': summary,
+        'cpf_wedof_invoice': _cpf_wedof_invoice_view(cpf_link),
         'cpf_invoice_discovery': (
             trainee.get('cpf_qonto_invoice_discovery')
             if isinstance((trainee or {}).get('cpf_qonto_invoice_discovery'), dict)
