@@ -142,6 +142,20 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
 
         self.assertEqual(result, {"checked": 2, "eligible": 0, "sent": 0, "failed": 0})
 
+    def test_automatic_reminders_do_not_send_outside_french_daytime_hours(self):
+        candidate = self.candidate()
+        self.data["afc"]["candidates"] = [candidate]
+        self.configure_successful_delivery()
+
+        result = gestion_app.run_afc_documents_reminders(
+            datetime.datetime(2026, 8, 12, 3, 0, 0),
+            refresh_cnaps=False,
+        )
+
+        self.assertEqual(result, {"checked": 0, "eligible": 0, "sent": 0, "failed": 0})
+        self.assertEqual(self.email_calls, [])
+        self.assertEqual(self.sms_calls, [])
+
     def test_cron_refreshes_cnaps_before_sending_and_stops_if_documents_arrived(self):
         candidate = self.candidate()
         self.data["afc"]["candidates"] = [candidate]
@@ -202,8 +216,17 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         )
         self.data["afc"]["candidates"] = [candidate]
 
-        response = self.client.get("/admin/afc")
-        page = response.get_data(as_text=True)
+        original_utc_datetime = gestion_app._afc_utc_datetime
+        gestion_app._afc_utc_datetime = lambda value=None: (
+            original_utc_datetime(value)
+            if value is not None
+            else datetime.datetime(2026, 8, 15, 8, 0, 0)
+        )
+        try:
+            response = self.client.get("/admin/afc")
+            page = response.get_data(as_text=True)
+        finally:
+            gestion_app._afc_utc_datetime = original_utc_datetime
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Relances documents", page)
@@ -241,13 +264,16 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
                 os.environ["CRON_SECRET"] = original_secret
         self.assertEqual(response.status_code, 403)
 
-    def test_render_blueprint_declares_the_daily_afc_reminder_job(self):
+    def test_render_blueprint_declares_the_hourly_afc_reminder_job(self):
         with open("render.yaml", encoding="utf-8") as blueprint_file:
             blueprint = blueprint_file.read()
 
-        self.assertIn("name: gestionstagiaires-afc-documents-reminders", blueprint)
-        self.assertIn("python scripts/run_afc_documents_reminders.py", blueprint)
-        self.assertIn("/internal/cron/afc-documents-reminders", blueprint)
+        marker = "name: gestionstagiaires-afc-documents-reminders"
+        self.assertIn(marker, blueprint)
+        reminder_job = blueprint.split(marker, 1)[1].split("\n  - type:", 1)[0]
+        self.assertIn('schedule: "0 * * * *"', reminder_job)
+        self.assertIn("python scripts/run_afc_documents_reminders.py", reminder_job)
+        self.assertIn("/internal/cron/afc-documents-reminders", reminder_job)
 
 
 if __name__ == "__main__":

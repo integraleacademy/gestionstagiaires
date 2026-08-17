@@ -18416,12 +18416,23 @@ def _refresh_afc_cnaps_status_for_reminder(candidate: Dict[str, Any], *, changed
     return changed
 
 
+def _afc_documents_reminders_allowed_now(now_utc: Optional[datetime.datetime] = None) -> bool:
+    """Keep automatic AFC e-mail/SMS reminders inside French daytime hours."""
+    current = now_utc or datetime.datetime.now(datetime.timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=datetime.timezone.utc)
+    paris_hour = current.astimezone(ZoneInfo("Europe/Paris")).hour
+    return 8 <= paris_hour < 20
+
+
 def run_afc_documents_reminders(
     now: Optional[datetime.datetime] = None,
     *,
     refresh_cnaps: bool = True,
 ) -> Dict[str, int]:
     current = _afc_utc_datetime(now)
+    if not _afc_documents_reminders_allowed_now(current):
+        return {"checked": 0, "eligible": 0, "sent": 0, "failed": 0}
     data = load_data()
     bucket = _afc_bucket(data)
     checked = eligible = sent = failed = 0
@@ -18431,6 +18442,8 @@ def run_afc_documents_reminders(
         if not isinstance(candidate, dict) or candidate.get("archived"):
             continue
         checked += 1
+        if not _afc_documents_reminder_due(candidate, current):
+            continue
         if refresh_cnaps and _afc_candidate_waits_for_documents(candidate):
             if _refresh_afc_cnaps_status_for_reminder(candidate, changed_at=_iso_from_dt(current)):
                 changed = True

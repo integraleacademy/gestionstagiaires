@@ -116,9 +116,10 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    # Daily execution; the application enforces the initial two-day wait and
-    # the three-day interval between successful reminders.
-    schedule: "0 7 * * *"
+    # Hourly execution prevents a reminder that becomes due after the morning
+    # pass from waiting until the following day. The app limits delivery to
+    # 08:00-20:00 Europe/Paris and keeps the two-/three-day intervals.
+    schedule: "0 * * * *"
     dockerCommand: python scripts/run_afc_documents_reminders.py
     envVars:
       - fromGroup: gestionstagiaires-cron-secrets
