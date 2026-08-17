@@ -5283,6 +5283,11 @@ CNAPS_STATUS_CHANGE_NOTIFICATION_TO = "cassandre@integraleacademy.com"
 CNAPS_STATUS_CHANGE_NOTIFICATION_CC = ["elsa@integraleacademy.com", "clement@integraleacademy.com"]
 CNAPS_MONITOR_TOKEN = os.environ.get("CNAPS_MONITOR_TOKEN", "").strip()
 CNAPS_MONITOR_REQUEST_DELAY_SECONDS = max(0.0, float(os.environ.get("CNAPS_MONITOR_REQUEST_DELAY_SECONDS", "1")))
+AFC_CNAPS_REFRESH_INTERVAL_SECONDS = max(60, int(os.environ.get("AFC_CNAPS_REFRESH_INTERVAL_SECONDS", "900")))
+AFC_CNAPS_REFRESH_REQUEST_DELAY_SECONDS = max(
+    0.0,
+    float(os.environ.get("AFC_CNAPS_REFRESH_REQUEST_DELAY_SECONDS", "0.25")),
+)
 
 def _cnaps_status_change_key(last_name: str, nub: str) -> str:
     normalized_name = unicodedata.normalize("NFD", str(last_name or ""))
@@ -18416,6 +18421,152 @@ def _refresh_afc_cnaps_status_for_reminder(candidate: Dict[str, Any], *, changed
     return changed
 
 
+def run_afc_cnaps_status_refresh(
+    now: Optional[datetime.datetime] = None,
+) -> Dict[str, Any]:
+    """Refresh active AFC candidates without waiting for an admin page visit."""
+    base_result: Dict[str, Any] = {
+        "attempted": 0,
+        "checked": 0,
+        "updated": 0,
+        "errors": 0,
+        "skipped_fresh": 0,
+    }
+    if not (CNAPS_LOOKUP_ENDPOINT or "").strip():
+        return {**base_result, "status": "not_configured"}
+
+    current = _afc_utc_datetime(now)
+    attempted_at = _iso_from_dt(current)
+    snapshot = load_data(run_background_tasks=False)
+    afc_bucket = snapshot.get("afc") if isinstance(snapshot.get("afc"), dict) else {}
+    raw_candidates = afc_bucket.get("candidates") if isinstance(afc_bucket.get("candidates"), list) else []
+
+    selected: List[Dict[str, str]] = []
+    skipped_fresh = 0
+    refresh_interval = datetime.timedelta(seconds=AFC_CNAPS_REFRESH_INTERVAL_SECONDS)
+    for candidate in raw_candidates:
+        if not isinstance(candidate, dict) or candidate.get("archived") or candidate.get("cnaps_priority"):
+            continue
+        candidate_id = str(candidate.get("id") or "").strip()
+        last_name = str(candidate.get("nom") or "").strip()
+        first_name = str(candidate.get("prenom") or "").strip()
+        if not candidate_id or not last_name or not first_name:
+            continue
+
+        last_attempts = [
+            parsed
+            for parsed in (
+                _parse_iso_datetime(candidate.get("cnaps_auto_refresh_attempted_at")),
+                _parse_iso_datetime(candidate.get("cnaps_status_checked_at")),
+            )
+            if parsed is not None
+        ]
+        if last_attempts and current < max(last_attempts) + refresh_interval:
+            skipped_fresh += 1
+            continue
+        selected.append({"id": candidate_id, "nom": last_name, "prenom": first_name})
+
+    attempts: List[Dict[str, Any]] = []
+    successful_checks = errors = 0
+    for index, candidate_snapshot in enumerate(selected):
+        lookup: Optional[Dict[str, Any]] = None
+        try:
+            lookup = fetch_cnaps_lookup_by_name(
+                candidate_snapshot["nom"],
+                candidate_snapshot["prenom"],
+            )
+        except Exception:
+            app.logger.exception(
+                "[AFC_CNAPS_REFRESH] lookup failed candidate_id=%s",
+                candidate_snapshot["id"],
+            )
+        remote_status = str((lookup or {}).get("status") or "").strip()
+        if remote_status:
+            successful_checks += 1
+        else:
+            errors += 1
+        attempts.append({**candidate_snapshot, "lookup": lookup if remote_status else None})
+        if AFC_CNAPS_REFRESH_REQUEST_DELAY_SECONDS and index + 1 < len(selected):
+            time.sleep(AFC_CNAPS_REFRESH_REQUEST_DELAY_SECONDS)
+
+    updated = 0
+    if attempts:
+        def merge_afc_cnaps_results(latest_data: Dict[str, Any]) -> int:
+            latest_afc = latest_data.get("afc") if isinstance(latest_data.get("afc"), dict) else {}
+            latest_candidates = latest_afc.get("candidates") if isinstance(latest_afc.get("candidates"), list) else []
+            candidates_by_id = {
+                str(item.get("id") or ""): item
+                for item in latest_candidates
+                if isinstance(item, dict) and item.get("id")
+            }
+            changed_candidates = 0
+            unknown_statuses = {"", "INCONNU", "UNKNOWN", "AUCUN DOSSIER", "NON TRANSMIS", "STATUT CNAPS"}
+
+            for attempt in attempts:
+                candidate = candidates_by_id.get(attempt["id"])
+                if not candidate or candidate.get("archived") or candidate.get("cnaps_priority"):
+                    continue
+                # Do not merge a result obtained for an identity edited while
+                # the remote request was in flight. The next cycle retries it.
+                if (
+                    str(candidate.get("nom") or "").strip() != attempt["nom"]
+                    or str(candidate.get("prenom") or "").strip() != attempt["prenom"]
+                ):
+                    continue
+
+                candidate["cnaps_auto_refresh_attempted_at"] = attempted_at
+                lookup = attempt.get("lookup")
+                if not isinstance(lookup, dict):
+                    continue
+
+                candidate["cnaps_status_checked_at"] = attempted_at
+                remote_status = str(lookup.get("status") or "").strip()
+                current_status = _normalize_afc_cnaps_status(candidate.get("cnaps_status"))
+                normalized_remote_status = _normalize_afc_cnaps_status(remote_status)
+
+                # A temporary empty/unknown answer must not erase a status
+                # which had already progressed in the CNAPS workflow.
+                preserve_known_status = (
+                    normalized_remote_status in unknown_statuses
+                    and current_status not in unknown_statuses
+                )
+                candidate_changed = False
+                if not preserve_known_status:
+                    candidate_changed = _set_afc_candidate_cnaps_status(
+                        candidate,
+                        remote_status,
+                        changed_at=attempted_at,
+                    )
+
+                remote_history = _normalize_cnaps_remote_history(lookup.get("statut_cnaps_history"))
+                preserve_known_history = preserve_known_status and not remote_history
+                if not preserve_known_history and candidate.get("cnaps_status_history") != remote_history:
+                    candidate["cnaps_status_history"] = remote_history
+                    candidate_changed = True
+                if candidate_changed:
+                    changed_candidates += 1
+            return changed_candidates
+
+        updated = update_data(merge_afc_cnaps_results, run_background_tasks=False)
+
+    app.logger.info(
+        "[AFC_CNAPS_REFRESH] status=done selected=%s checked=%s updated=%s errors=%s skipped_fresh=%s",
+        len(selected),
+        successful_checks,
+        updated,
+        errors,
+        skipped_fresh,
+    )
+    return {
+        "status": "done",
+        "attempted": len(selected),
+        "checked": successful_checks,
+        "updated": updated,
+        "errors": errors,
+        "skipped_fresh": skipped_fresh,
+    }
+
+
 def _afc_documents_reminders_allowed_now(now_utc: Optional[datetime.datetime] = None) -> bool:
     """Keep automatic AFC e-mail/SMS reminders inside French daytime hours."""
     current = now_utc or datetime.datetime.now(datetime.timezone.utc)
@@ -24050,10 +24201,27 @@ def internal_cnaps_public_annuaire_monitor():
         app.logger.info("[CNAPS_MONITOR] already_running")
         return jsonify({"ok": True, "status": "already_running"})
     try:
-        return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor()})
+        try:
+            afc_result = run_afc_cnaps_status_refresh()
+        except Exception as exc:
+            app.logger.exception("[AFC_CNAPS_REFRESH] execution failed")
+            afc_result = {
+                "status": "failed",
+                "attempted": 0,
+                "checked": 0,
+                "updated": 0,
+                "errors": 1,
+                "error": str(exc)[:160],
+            }
+        return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor(), "afc": afc_result})
     except Exception as exc:
         app.logger.exception("[CNAPS_MONITOR] execution failed")
-        return jsonify({"ok": True, "status": "failed", "error": str(exc)[:160]})
+        return jsonify({
+            "ok": True,
+            "status": "failed",
+            "error": str(exc)[:160],
+            "afc": afc_result,
+        })
     finally:
         _cnaps_public_annuaire_monitor_lock.release()
 
