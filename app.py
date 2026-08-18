@@ -3315,6 +3315,7 @@ MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 
 _data_lock = threading.RLock()
 _cnaps_public_annuaire_monitor_lock = threading.Lock()
+_afc_documents_reminders_lock = threading.Lock()
 _wedof_webhook_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
 _storage_startup_logged = False
@@ -18576,7 +18577,7 @@ def _afc_documents_reminders_allowed_now(now_utc: Optional[datetime.datetime] = 
     return 8 <= paris_hour < 20
 
 
-def run_afc_documents_reminders(
+def _run_afc_documents_reminders(
     now: Optional[datetime.datetime] = None,
     *,
     refresh_cnaps: bool = True,
@@ -18628,6 +18629,27 @@ def run_afc_documents_reminders(
         "sent": sent,
         "failed": failed,
     }
+
+
+def run_afc_documents_reminders(
+    now: Optional[datetime.datetime] = None,
+    *,
+    refresh_cnaps: bool = True,
+) -> Dict[str, Any]:
+    """Run AFC reminders once, regardless of which scheduler triggered them."""
+    if not _afc_documents_reminders_lock.acquire(blocking=False):
+        app.logger.info("[AFC_DOCUMENTS_REMINDERS] already_running")
+        return {
+            "checked": 0,
+            "eligible": 0,
+            "sent": 0,
+            "failed": 0,
+            "status": "already_running",
+        }
+    try:
+        return _run_afc_documents_reminders(now, refresh_cnaps=refresh_cnaps)
+    finally:
+        _afc_documents_reminders_lock.release()
 
 
 @app.post("/api/admin/afc/candidates/<candidate_id>/documents-reminder")
@@ -24213,7 +24235,24 @@ def internal_cnaps_public_annuaire_monitor():
                 "errors": 1,
                 "error": str(exc)[:160],
             }
-        return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor(), "afc": afc_result})
+        try:
+            reminder_result = run_afc_documents_reminders()
+        except Exception as exc:
+            app.logger.exception("[AFC_DOCUMENTS_REMINDERS] execution failed")
+            reminder_result = {
+                "status": "failed",
+                "checked": 0,
+                "eligible": 0,
+                "sent": 0,
+                "failed": 1,
+                "error": str(exc)[:160],
+            }
+        return jsonify({
+            "ok": True,
+            **run_cnaps_public_annuaire_monitor(),
+            "afc": afc_result,
+            "afc_documents_reminders": reminder_result,
+        })
     except Exception as exc:
         app.logger.exception("[CNAPS_MONITOR] execution failed")
         return jsonify({
@@ -24221,6 +24260,7 @@ def internal_cnaps_public_annuaire_monitor():
             "status": "failed",
             "error": str(exc)[:160],
             "afc": afc_result,
+            "afc_documents_reminders": reminder_result,
         })
     finally:
         _cnaps_public_annuaire_monitor_lock.release()

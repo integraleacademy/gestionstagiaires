@@ -106,6 +106,26 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         self.assertEqual(due["sent"], 1)
         self.assertEqual(len(candidate["documents_reminder_history"]), 2)
 
+    def test_delayed_worker_catches_up_an_overdue_reminder(self):
+        candidate = self.candidate(
+            documents_reminder_history=[{
+                "sent_at": "2026-08-14T09:30:00Z",
+                "source": "automatic",
+                "email_status": "ACCEPTE",
+                "sms_status": "ACCEPTE",
+            }]
+        )
+        self.data["afc"]["candidates"] = [candidate]
+        self.configure_successful_delivery()
+
+        result = gestion_app.run_afc_documents_reminders(
+            datetime.datetime(2026, 8, 18, 12, 51, 0),
+            refresh_cnaps=False,
+        )
+
+        self.assertEqual(result, {"checked": 1, "eligible": 1, "sent": 1, "failed": 0})
+        self.assertEqual(candidate["documents_reminder_history"][-1]["sent_at"], "2026-08-18T12:51:00Z")
+
     def test_next_reminder_date_uses_initial_delay_then_latest_success(self):
         candidate = self.candidate()
 
@@ -204,6 +224,24 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         self.assertEqual(result["failed"], 1)
         self.assertEqual(candidate.get("documents_reminder_history"), [])
         self.assertIn("Brevo indisponible", candidate["documents_reminder_last_error"])
+
+    def test_a_second_automatic_run_is_skipped_while_one_is_in_progress(self):
+        self.assertTrue(gestion_app._afc_documents_reminders_lock.acquire(blocking=False))
+        try:
+            result = gestion_app.run_afc_documents_reminders(
+                datetime.datetime(2026, 8, 18, 12, 0, 0),
+                refresh_cnaps=False,
+            )
+        finally:
+            gestion_app._afc_documents_reminders_lock.release()
+
+        self.assertEqual(result, {
+            "checked": 0,
+            "eligible": 0,
+            "sent": 0,
+            "failed": 0,
+            "status": "already_running",
+        })
 
     def test_afc_line_displays_manual_button_and_french_reminder_dates(self):
         candidate = self.candidate(

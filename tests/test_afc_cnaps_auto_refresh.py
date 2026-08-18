@@ -146,17 +146,29 @@ class AfcCnapsAutoRefreshTests(unittest.TestCase):
 
     def test_existing_monitor_endpoint_runs_the_afc_refresh_cycle(self):
         client = gestion_app.app.test_client()
+        call_order = []
         with (
             mock.patch.object(gestion_app, "CNAPS_MONITOR_TOKEN", "secret"),
             mock.patch.object(
                 gestion_app,
                 "run_afc_cnaps_status_refresh",
-                return_value={"status": "done", "attempted": 2, "checked": 2, "updated": 1, "errors": 0},
+                side_effect=lambda: call_order.append("cnaps") or {
+                    "status": "done", "attempted": 2, "checked": 2, "updated": 1, "errors": 0,
+                },
             ) as afc_refresh,
             mock.patch.object(
                 gestion_app,
+                "run_afc_documents_reminders",
+                side_effect=lambda: call_order.append("reminders") or {
+                    "checked": 19, "eligible": 2, "sent": 2, "failed": 0,
+                },
+            ) as reminders,
+            mock.patch.object(
+                gestion_app,
                 "run_cnaps_public_annuaire_monitor",
-                return_value={"status": "done", "checked": 3, "notified": 0, "errors": 0},
+                side_effect=lambda: call_order.append("public_annuaire") or {
+                    "status": "done", "checked": 3, "notified": 0, "errors": 0,
+                },
             ),
         ):
             response = client.post(
@@ -166,7 +178,40 @@ class AfcCnapsAutoRefreshTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["afc"]["updated"], 1)
+        self.assertEqual(response.get_json()["afc_documents_reminders"]["sent"], 2)
         afc_refresh.assert_called_once_with()
+        reminders.assert_called_once_with()
+        self.assertEqual(call_order, ["cnaps", "reminders", "public_annuaire"])
+
+    def test_reminder_failure_does_not_stop_the_existing_cnaps_monitor(self):
+        client = gestion_app.app.test_client()
+        with (
+            mock.patch.object(gestion_app, "CNAPS_MONITOR_TOKEN", "secret"),
+            mock.patch.object(
+                gestion_app,
+                "run_afc_cnaps_status_refresh",
+                return_value={"status": "done", "attempted": 0, "checked": 0, "updated": 0, "errors": 0},
+            ),
+            mock.patch.object(
+                gestion_app,
+                "run_afc_documents_reminders",
+                side_effect=RuntimeError("Brevo indisponible"),
+            ),
+            mock.patch.object(
+                gestion_app,
+                "run_cnaps_public_annuaire_monitor",
+                return_value={"status": "done", "checked": 3, "notified": 0, "errors": 0},
+            ) as public_monitor,
+        ):
+            response = client.post(
+                "/internal/jobs/cnaps-public-annuaire-monitor",
+                headers={"X-CNAPS-Monitor-Token": "secret"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["status"], "done")
+        self.assertEqual(response.get_json()["afc_documents_reminders"]["status"], "failed")
+        public_monitor.assert_called_once_with()
 
 
 if __name__ == "__main__":
