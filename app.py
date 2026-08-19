@@ -3316,6 +3316,7 @@ MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 _data_lock = threading.RLock()
 _cnaps_public_annuaire_monitor_lock = threading.Lock()
 _afc_documents_reminders_lock = threading.Lock()
+_convention_signature_reminders_lock = threading.Lock()
 _wedof_webhook_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
 _storage_startup_logged = False
@@ -24247,11 +24248,23 @@ def internal_cnaps_public_annuaire_monitor():
                 "failed": 1,
                 "error": str(exc)[:160],
             }
+        try:
+            convention_reminder_result = run_convocation_signature_reminders()
+        except Exception as exc:
+            app.logger.exception("[CONVENTION_SIGNATURE_REMINDERS] execution failed")
+            convention_reminder_result = {
+                "status": "failed",
+                "checked": 0,
+                "sent": 0,
+                "failed": 1,
+                "error": str(exc)[:160],
+            }
         return jsonify({
             "ok": True,
             **run_cnaps_public_annuaire_monitor(),
             "afc": afc_result,
             "afc_documents_reminders": reminder_result,
+            "convention_signature_reminders": convention_reminder_result,
         })
     except Exception as exc:
         app.logger.exception("[CNAPS_MONITOR] execution failed")
@@ -24261,6 +24274,7 @@ def internal_cnaps_public_annuaire_monitor():
             "error": str(exc)[:160],
             "afc": afc_result,
             "afc_documents_reminders": reminder_result,
+            "convention_signature_reminders": convention_reminder_result,
         })
     finally:
         _cnaps_public_annuaire_monitor_lock.release()
@@ -29327,17 +29341,21 @@ def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
         return False, message
 
 
-def run_convocation_signature_reminders() -> Dict[str, int]:
-    if not _convention_reminders_allowed_now():
+def _run_convocation_signature_reminders(
+    now_utc: Optional[datetime.datetime] = None,
+) -> Dict[str, int]:
+    current = now_utc or datetime.datetime.utcnow()
+    if current.tzinfo is not None:
+        current = current.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    if not _convention_reminders_allowed_now(current):
         return {"checked": 0, "sent": 0, "failed": 0}
     data = load_data()
-    now = datetime.datetime.utcnow()
     due_ids = []
     for sess in data.get("sessions", []):
         for trainee in _session_trainees_list(sess):
             state = _yousign_state(trainee)
             due_at = _parse_iso_datetime(state.get("next_reminder_at"))
-            if _is_yousign_signature_pending(state) and due_at and due_at <= now:
+            if _is_yousign_signature_pending(state) and due_at and due_at <= current:
                 due_ids.append(str(trainee.get("id") or state.get("signature_request_id") or ""))
     sent = failed = 0
     for signature_id in due_ids:
@@ -29347,6 +29365,19 @@ def run_convocation_signature_reminders() -> Dict[str, int]:
         else:
             failed += 1
     return {"checked": len(due_ids), "sent": sent, "failed": failed}
+
+
+def run_convocation_signature_reminders(
+    now_utc: Optional[datetime.datetime] = None,
+) -> Dict[str, Any]:
+    """Run due Yousign signature reminders once, whichever scheduler called it."""
+    if not _convention_signature_reminders_lock.acquire(blocking=False):
+        app.logger.info("[CONVENTION_SIGNATURE_REMINDERS] already_running")
+        return {"status": "already_running", "checked": 0, "sent": 0, "failed": 0}
+    try:
+        return _run_convocation_signature_reminders(now_utc)
+    finally:
+        _convention_signature_reminders_lock.release()
 
 
 def build_signature_email_text(first_name: str, formation_label: str, dates_session: str, signature_url: str) -> str:

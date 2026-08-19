@@ -57,6 +57,42 @@ class ConventionSignatureReminderTests(unittest.TestCase):
         self.assertEqual(state["reminder_count"], 8)
         self.assertEqual(state["next_reminder_at"], "2026-07-28T08:00:00Z")
 
+    def test_automatic_worker_waits_until_the_displayed_due_time(self):
+        trainee = {
+            "id": "trainee-1",
+            "convention_signature": {
+                "status": "ongoing",
+                # 12:54 UTC is 14:54 in Paris on 19 August.
+                "next_reminder_at": "2026-08-19T12:54:00Z",
+            },
+        }
+        data = {"sessions": [{"id": "session-1", "trainees": [trainee]}]}
+
+        with mock.patch.object(app, "load_data", return_value=data), \
+             mock.patch.object(app, "send_convocation_signature_reminder", return_value=(True, "ok")) as send:
+            early = app.run_convocation_signature_reminders(
+                datetime.datetime(2026, 8, 19, 12, 53, 59)
+            )
+            due = app.run_convocation_signature_reminders(
+                datetime.datetime(2026, 8, 19, 12, 54, 0)
+            )
+
+        self.assertEqual(early, {"checked": 0, "sent": 0, "failed": 0})
+        self.assertEqual(due, {"checked": 1, "sent": 1, "failed": 0})
+        send.assert_called_once_with("trainee-1")
+
+    def test_automatic_worker_skips_a_concurrent_run(self):
+        self.assertTrue(app._convention_signature_reminders_lock.acquire(blocking=False))
+        try:
+            result = app.run_convocation_signature_reminders(
+                datetime.datetime(2026, 8, 19, 12, 54, 0)
+            )
+        finally:
+            app._convention_signature_reminders_lock.release()
+
+        self.assertEqual(result["status"], "already_running")
+        self.assertEqual(result["sent"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

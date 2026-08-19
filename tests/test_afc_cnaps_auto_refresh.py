@@ -165,6 +165,13 @@ class AfcCnapsAutoRefreshTests(unittest.TestCase):
             ) as reminders,
             mock.patch.object(
                 gestion_app,
+                "run_convocation_signature_reminders",
+                side_effect=lambda: call_order.append("convention_reminders") or {
+                    "checked": 2, "sent": 2, "failed": 0,
+                },
+            ) as convention_reminders,
+            mock.patch.object(
+                gestion_app,
                 "run_cnaps_public_annuaire_monitor",
                 side_effect=lambda: call_order.append("public_annuaire") or {
                     "status": "done", "checked": 3, "notified": 0, "errors": 0,
@@ -179,9 +186,14 @@ class AfcCnapsAutoRefreshTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["afc"]["updated"], 1)
         self.assertEqual(response.get_json()["afc_documents_reminders"]["sent"], 2)
+        self.assertEqual(response.get_json()["convention_signature_reminders"]["sent"], 2)
         afc_refresh.assert_called_once_with()
         reminders.assert_called_once_with()
-        self.assertEqual(call_order, ["cnaps", "reminders", "public_annuaire"])
+        convention_reminders.assert_called_once_with()
+        self.assertEqual(
+            call_order,
+            ["cnaps", "reminders", "convention_reminders", "public_annuaire"],
+        )
 
     def test_reminder_failure_does_not_stop_the_existing_cnaps_monitor(self):
         client = gestion_app.app.test_client()
@@ -199,6 +211,11 @@ class AfcCnapsAutoRefreshTests(unittest.TestCase):
             ),
             mock.patch.object(
                 gestion_app,
+                "run_convocation_signature_reminders",
+                return_value={"checked": 0, "sent": 0, "failed": 0},
+            ),
+            mock.patch.object(
+                gestion_app,
                 "run_cnaps_public_annuaire_monitor",
                 return_value={"status": "done", "checked": 3, "notified": 0, "errors": 0},
             ) as public_monitor,
@@ -211,6 +228,41 @@ class AfcCnapsAutoRefreshTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["status"], "done")
         self.assertEqual(response.get_json()["afc_documents_reminders"]["status"], "failed")
+        public_monitor.assert_called_once_with()
+
+    def test_convention_reminder_failure_does_not_stop_the_existing_cnaps_monitor(self):
+        client = gestion_app.app.test_client()
+        with (
+            mock.patch.object(gestion_app, "CNAPS_MONITOR_TOKEN", "secret"),
+            mock.patch.object(
+                gestion_app,
+                "run_afc_cnaps_status_refresh",
+                return_value={"status": "done", "attempted": 0, "checked": 0, "updated": 0, "errors": 0},
+            ),
+            mock.patch.object(
+                gestion_app,
+                "run_afc_documents_reminders",
+                return_value={"checked": 0, "eligible": 0, "sent": 0, "failed": 0},
+            ),
+            mock.patch.object(
+                gestion_app,
+                "run_convocation_signature_reminders",
+                side_effect=RuntimeError("Brevo indisponible"),
+            ),
+            mock.patch.object(
+                gestion_app,
+                "run_cnaps_public_annuaire_monitor",
+                return_value={"status": "done", "checked": 3, "notified": 0, "errors": 0},
+            ) as public_monitor,
+        ):
+            response = client.post(
+                "/internal/jobs/cnaps-public-annuaire-monitor",
+                headers={"X-CNAPS-Monitor-Token": "secret"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["status"], "done")
+        self.assertEqual(response.get_json()["convention_signature_reminders"]["status"], "failed")
         public_monitor.assert_called_once_with()
 
 
