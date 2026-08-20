@@ -1446,11 +1446,137 @@ def get_qonto_direct_debit_mandate(mandate_id: str) -> Dict[str, Any]:
     """Fetch one mandate by its Qonto identifier."""
     return _qonto_request("GET", f"/v2/sepa/direct_debit_mandates/{quote(str(mandate_id), safe='')}")
 
+
+def _qonto_direct_debit_mandate_payload(response: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(response, dict):
+        return {}
+    mandate = response.get("direct_debit_mandate") or response.get("mandate") or response
+    return mandate if isinstance(mandate, dict) else {}
+
+
+def _qonto_identifier_is_uuid(value: Any) -> bool:
+    try:
+        uuid.UUID(str(value or "").strip())
+        return True
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
+def _all_qonto_direct_debit_mandates_for_client(client_id: str) -> List[Dict[str, Any]]:
+    """Return every mandate for one exact Qonto client, across all pages."""
+    if not str(client_id or "").strip():
+        return []
+    mandates: List[Dict[str, Any]] = []
+    page, per_page = 1, 100
+    while True:
+        response = list_qonto_direct_debit_mandates(str(client_id), page=page, per_page=per_page)
+        items = _qonto_direct_debit_mandate_items(response)
+        mandates.extend(items)
+        meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+        next_page = meta.get("next_page") or meta.get("nextPage")
+        total_pages = meta.get("total_pages") or meta.get("totalPages")
+        if next_page:
+            try:
+                next_number = int(next_page)
+            except (TypeError, ValueError):
+                next_number = page + 1
+        elif total_pages:
+            try:
+                next_number = page + 1 if page < int(total_pages) else 0
+            except (TypeError, ValueError):
+                next_number = 0
+        else:
+            next_number = page + 1 if len(items) >= per_page else 0
+        if not next_number or next_number <= page:
+            return mandates
+        page = next_number
+
+
+def _resolve_qonto_direct_debit_mandate_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
+    """Repair a legacy mandate link before reconciling its subscriptions.
+
+    Older billing rows could persist the human-readable RUM in the technical
+    mandate-id field.  Qonto subscriptions contain the UUID, so the comparison
+    then returned zero matches while the UI continued to show "Mandat OK".
+    Resolve the mandate only through the line's exact Qonto client or exact RUM
+    and persist the UUID back onto the row.
+    """
+    stored_id = str(line.get("qonto_direct_debit_mandate_id") or "").strip()
+    stored_rum = str(line.get("qonto_mandate_rum") or "").strip()
+    client_id = str(
+        line.get("qontoClientId") or line.get("qontoCustomerId")
+        or line.get("qonto_mandate_client_id") or ""
+    ).strip()
+    rum_candidates = {value for value in (stored_rum, stored_id) if value and not _qonto_identifier_is_uuid(value)}
+    mandate: Dict[str, Any] = {}
+
+    if client_id:
+        mandates = _all_qonto_direct_debit_mandates_for_client(client_id)
+        mandate = next(
+            (item for item in mandates if stored_id and str(item.get("id") or "") == stored_id),
+            {},
+        )
+        if not mandate and rum_candidates:
+            mandate = next(
+                (item for item in mandates if _qonto_mandate_rum(item) in rum_candidates),
+                {},
+            )
+        if not mandate:
+            usable = [
+                item for item in mandates
+                if _map_mandate_status(item.get("status")) in {"pending", "active", "signed"}
+            ]
+            # A single mandate for this exact Qonto client is unambiguous.  Do
+            # not guess when the client has several mandates.
+            if len(usable) == 1:
+                mandate = usable[0]
+
+    if not mandate and stored_id and _qonto_identifier_is_uuid(stored_id):
+        try:
+            mandate = _qonto_direct_debit_mandate_payload(get_qonto_direct_debit_mandate(stored_id))
+        except QontoNotFoundError:
+            mandate = {}
+    if not mandate and rum_candidates:
+        for rum in rum_candidates:
+            mandate = find_qonto_direct_debit_mandate_by_rum(rum) or {}
+            if mandate:
+                break
+    if not mandate or not str(mandate.get("id") or "").strip():
+        return {}
+
+    resolved_id = str(mandate.get("id"))
+    resolved_rum = _qonto_mandate_rum(mandate) or stored_rum
+    previous_id = stored_id
+    line["qonto_direct_debit_mandate_id"] = resolved_id
+    if resolved_rum:
+        line["qonto_mandate_rum"] = resolved_rum
+    if mandate.get("client_id"):
+        line["qonto_mandate_client_id"] = str(mandate.get("client_id"))
+        line["qontoClientId"] = line.get("qontoClientId") or str(mandate.get("client_id"))
+        line["qontoCustomerId"] = line.get("qontoCustomerId") or str(mandate.get("client_id"))
+    status = _map_mandate_status(mandate.get("status"))
+    line["qonto_mandate_status"] = status
+    line["mandateStatus"] = status
+    if previous_id and previous_id != resolved_id:
+        _billing_log(
+            line, "Identifiant technique du mandat Qonto réparé", "success",
+            f"{previous_id} -> {resolved_id}", resolved_id,
+        )
+    return mandate
+
 def create_qonto_direct_debit_mandate(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/sepa/direct_debit_mandates", {"direct_debit_mandate": payload})
 
 def create_qonto_direct_debit_subscription(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/sepa/direct_debit_subscriptions", {"direct_debit_subscription": payload})
+
+
+def get_qonto_direct_debit_subscription(subscription_id: str) -> Dict[str, Any]:
+    """Fetch one subscription, including historical completed/canceled rows."""
+    return _qonto_request(
+        "GET",
+        f"/v2/sepa/direct_debit_subscriptions/{quote(str(subscription_id), safe='')}",
+    )
 
 def list_qonto_direct_debit_subscriptions(
     mandate_id: str = "", page: int = 1, per_page: int = 100
@@ -1470,8 +1596,29 @@ def _qonto_direct_debit_subscription_items(response: Dict[str, Any]) -> List[Dic
             return [item for item in response[key] if isinstance(item, dict)]
     return []
 
-def list_qonto_direct_debit_collections(subscription_id: str = "") -> Dict[str, Any]:
-    params = {"direct_debit_subscription_id": subscription_id} if subscription_id else None
+
+def _qonto_direct_debit_subscription_payload(response: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(response, dict):
+        return {}
+    subscription = response.get("direct_debit_subscription") or response.get("subscription") or response
+    return subscription if isinstance(subscription, dict) else {}
+
+
+def _qonto_subscription_mandate_id(subscription: Dict[str, Any]) -> str:
+    """Return a subscription mandate UUID without accepting an implicit match."""
+    nested = subscription.get("direct_debit_mandate")
+    nested_id = nested.get("id") if isinstance(nested, dict) else ""
+    return str(
+        subscription.get("direct_debit_mandate_id")
+        or subscription.get("mandate_id") or nested_id or ""
+    ).strip()
+
+def list_qonto_direct_debit_collections(
+    subscription_id: str = "", page: int = 1, per_page: int = 100,
+) -> Dict[str, Any]:
+    params: Dict[str, Any] = {"page": page, "per_page": per_page}
+    if subscription_id:
+        params["direct_debit_subscription_id"] = subscription_id
     return _qonto_request("GET", "/v2/sepa/direct_debit_collections", params=params)
 
 def _qonto_collection_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -1479,6 +1626,58 @@ def _qonto_collection_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
         if isinstance(response.get(key), list):
             return response.get(key)
     return []
+
+
+def _qonto_collection_date(collection: Dict[str, Any]) -> str:
+    return str(
+        collection.get("collection_date") or collection.get("scheduled_at")
+        or collection.get("due_date") or collection.get("date")
+        or collection.get("completed_at") or collection.get("paid_at") or ""
+    )[:10]
+
+
+def _qonto_collection_amount_cents(collection: Dict[str, Any]) -> int:
+    amount = collection.get("amount")
+    if isinstance(amount, dict):
+        amount = amount.get("value") if amount.get("value") is not None else amount.get("amount")
+    return money_value_to_cents(amount or 0)
+
+
+def _all_qonto_direct_debit_collections_for_rum(rum: str) -> List[Dict[str, Any]]:
+    """List collections for one exact RUM when local subscription ids are stale."""
+    rum = str(rum or "").strip()
+    if not rum:
+        return []
+    collections: List[Dict[str, Any]] = []
+    page, per_page = 1, 100
+    while True:
+        response = list_qonto_direct_debit_collections(page=page, per_page=per_page)
+        items = _qonto_collection_items(response)
+        collections.extend(
+            item for item in items
+            if str(
+                item.get("unique_mandate_reference") or item.get("rum")
+                or item.get("mandate_reference") or ""
+            ).strip() == rum
+        )
+        meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+        next_page = meta.get("next_page") or meta.get("nextPage")
+        total_pages = meta.get("total_pages") or meta.get("totalPages")
+        if next_page:
+            try:
+                next_number = int(next_page)
+            except (TypeError, ValueError):
+                next_number = page + 1
+        elif total_pages:
+            try:
+                next_number = page + 1 if page < int(total_pages) else 0
+            except (TypeError, ValueError):
+                next_number = 0
+        else:
+            next_number = page + 1 if len(items) >= per_page else 0
+        if not next_number or next_number <= page:
+            return collections
+        page = next_number
 
 def _qonto_webhook_secret() -> str:
     return _qonto_secret(os.environ.get("QONTO_WEBHOOK_SECRET") or "")
@@ -32554,7 +32753,13 @@ def _map_mandate_status(status: Any) -> str:
 
 def _map_collection_status(status: Any) -> str:
     value = str(status or '').lower()
-    return {'pending': 'scheduled', 'active': 'scheduled', 'scheduled': 'scheduled', 'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed', 'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded', 'on_hold': 'on_hold'}.get(value, value or 'scheduled')
+    return {
+        'pending': 'scheduled', 'pending_mandate_signature': 'scheduled',
+        'active': 'scheduled', 'scheduled': 'scheduled', 'in_progress': 'scheduled',
+        'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed',
+        'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded',
+        'on_hold': 'on_hold',
+    }.get(value, value or 'scheduled')
 
 
 def _format_euro(value: Any) -> str:
@@ -33063,6 +33268,11 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
 
 def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: str) -> int:
     """Import subscriptions which already exist in Qonto for a recovered mandate."""
+    existing = {
+        str(item.get('qonto_direct_debit_subscription_id') or ''): item
+        for item in _sepa_installments(line)
+        if item.get('qonto_direct_debit_subscription_id')
+    }
     subscriptions: List[Dict[str, Any]] = []
     page, per_page = 1, 100
     while True:
@@ -33070,7 +33280,7 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
         items = _qonto_direct_debit_subscription_items(response)
         subscriptions.extend(
             item for item in items
-            if str(item.get('direct_debit_mandate_id') or '') == str(mandate_id)
+            if _qonto_subscription_mandate_id(item) == str(mandate_id)
         )
         meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
         total_pages = meta.get('total_pages') or meta.get('totalPages')
@@ -33087,11 +33297,30 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
             break
         page = next_number
 
-    existing = {
-        str(item.get('qonto_direct_debit_subscription_id') or ''): item
-        for item in _sepa_installments(line)
-        if item.get('qonto_direct_debit_subscription_id')
-    }
+    # The organization-wide list can omit historical rows depending on their
+    # lifecycle.  A billing line already knows those subscription UUIDs, so
+    # retrieve any missing one directly instead of losing paid/rejected history.
+    listed_ids = {str(item.get('id') or '') for item in subscriptions if item.get('id')}
+    for subscription_id in existing:
+        if not subscription_id or subscription_id in listed_ids or not _qonto_identifier_is_uuid(subscription_id):
+            continue
+        try:
+            response = get_qonto_direct_debit_subscription(subscription_id)
+            subscription = _qonto_direct_debit_subscription_payload(response)
+        except QontoNotFoundError:
+            continue
+        except Exception as exc:
+            app.logger.warning(
+                '[QONTO] lecture souscription historique impossible subscription_id=%s error=%s',
+                subscription_id, _sanitize_qonto_error(str(exc)),
+            )
+            continue
+        if (
+            str(subscription.get('id') or '') == subscription_id
+            and _qonto_subscription_mandate_id(subscription) == str(mandate_id)
+        ):
+            subscriptions.append(subscription)
+            listed_ids.add(subscription_id)
     # A SEPA mandate can be reused for several invoice schedules.  When the
     # current invoice reference is present in Qonto, only merge that schedule
     # with subscriptions already known by this billing line.  The fallback to
@@ -33303,7 +33532,7 @@ def _recover_missing_qonto_rejection_retries(line: Dict[str, Any], mandate_id: s
             subscription_id = str(subscription.get('id') or '').strip()
             if not subscription_id or subscription_id in known_subscription_ids:
                 continue
-            if str(subscription.get('direct_debit_mandate_id') or '') != str(mandate_id):
+            if _qonto_subscription_mandate_id(subscription) != str(mandate_id):
                 continue
             reference = _qonto_subscription_reference(subscription)
             schedule_index, schedule_total, is_rejection_retry = _qonto_reference_schedule_position(reference)
@@ -34379,13 +34608,23 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'paymentMode': persisted.get('paymentMode') or 'cash',
                     'directDebitInstallments': persisted.get('directDebitInstallments') if isinstance(persisted.get('directDebitInstallments'), list) else [],
                     'qontoPaymentGlobalStatus': persisted.get('qontoPaymentGlobalStatus') or '',
-                    'qonto_direct_debit_mandate_id': persisted.get('qonto_direct_debit_mandate_id') or '',
+                    'qonto_direct_debit_mandate_id': (
+                        persisted.get('qonto_direct_debit_mandate_id')
+                        or trainee.get('qonto_direct_debit_mandate_id') or ''
+                    ),
                     'qonto_direct_debit_subscription_id': persisted.get('qonto_direct_debit_subscription_id') or '',
+                    'qonto_mandate_rum': persisted.get('qonto_mandate_rum') or trainee.get('qonto_mandate_rum') or '',
+                    'qonto_mandate_client_id': (
+                        persisted.get('qonto_mandate_client_id')
+                        or trainee.get('qonto_mandate_client_id') or ''
+                    ),
                     'sign_url': persisted.get('sign_url') or persisted.get('qonto_mandate_sign_url') or '',
                     'mandateStatus': persisted.get('mandateStatus') or persisted.get('qonto_mandate_status') or '',
                     'qonto_mandate_status': persisted.get('qonto_mandate_status') or '',
                     'qonto_mandate_sign_url': persisted.get('qonto_mandate_sign_url') or '',
                     'qonto_mandate_signed_at': persisted.get('qonto_mandate_signed_at') or '',
+                    'qontoDirectDebitSyncWarning': persisted.get('qontoDirectDebitSyncWarning') or '',
+                    'qontoDirectDebitLastSyncedAt': persisted.get('qontoDirectDebitLastSyncedAt') or '',
                     'qonto_rejected_collection_ids': persisted.get('qonto_rejected_collection_ids') if isinstance(persisted.get('qonto_rejected_collection_ids'), list) else [],
                     'sepa_payment_plan': persisted.get('sepa_payment_plan') if isinstance(persisted.get('sepa_payment_plan'), dict) else {},
                     'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
@@ -34477,7 +34716,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -35337,14 +35576,26 @@ def api_billing_cancel_or_reset():
 
 
 
-def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
+def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
     """Refresh the mandate before collections, then create missing subscriptions.
 
     Mandate signature does not change the invoice.  Refreshing it here makes the
     manual “Synchroniser Qonto” action a reliable recovery path when a SEPA
     webhook was not delivered.
     """
-    client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
+    recovery_errors: List[str] = []
+    recovered = 0
+    collection_updates = 0
+    mandate: Dict[str, Any] = {}
+    try:
+        mandate = _resolve_qonto_direct_debit_mandate_for_line(line)
+    except Exception as exc:
+        recovery_errors.append(_sanitize_qonto_error(str(exc)))
+        app.logger.warning(
+            '[QONTO] résolution mandat impossible line_id=%s error=%s',
+            line.get('id'), _sanitize_qonto_error(str(exc)),
+        )
+    client_id = line.get('qontoClientId') or line.get('qontoCustomerId') or line.get('qonto_mandate_client_id')
     mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '')
     if mandate_id:
         try:
@@ -35357,27 +35608,38 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         except Exception as exc:
             # Keep the former local schedule as a safe fallback when Qonto's
             # subscription listing is temporarily unavailable.
+            recovery_errors.append(_sanitize_qonto_error(str(exc)))
             app.logger.warning(
                 '[QONTO] reconstruction échéancier impossible mandate_id=%s error=%s',
                 mandate_id, _sanitize_qonto_error(str(exc)),
             )
-    if client_id and mandate_id:
-        mandates = list_qonto_direct_debit_mandates(str(client_id))
-        items = mandates.get('direct_debit_mandates') or mandates.get('mandates') or mandates.get('items') or []
-        mandate = next((item for item in items if str(item.get('id') or '') == mandate_id), None)
-        if isinstance(mandate, dict):
-            status = _map_mandate_status(mandate.get('status'))
-            line['qonto_mandate_status'] = status
-            line['mandateStatus'] = status
-            if status in {'active', 'signed'}:
-                line['qonto_mandate_signed_at'] = (
-                    mandate.get('accepted_at') or mandate.get('signed_at') or mandate.get('approved_at')
-                    or line.get('qonto_mandate_signed_at') or _now_iso()
+    if isinstance(mandate, dict) and mandate:
+        status = _map_mandate_status(mandate.get('status'))
+        line['qonto_mandate_status'] = status
+        line['mandateStatus'] = status
+        if status in {'active', 'signed'}:
+            line['qonto_mandate_signed_at'] = (
+                mandate.get('accepted_at') or mandate.get('signed_at') or mandate.get('approved_at')
+                or line.get('qonto_mandate_signed_at') or _now_iso()
+            )
+            current_schedule_cents = sum(
+                money_value_to_cents(item.get('amount') or 0)
+                for item in _effective_sepa_installments(line)
+            )
+            expected_line_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+            if (
+                expected_line_cents > 0
+                and abs(current_schedule_cents - expected_line_cents) > 1
+            ):
+                recovery_errors.append(
+                    'L’échéancier local ne correspond plus au montant facturé ; '
+                    'aucun nouveau prélèvement n’a été créé automatiquement.'
                 )
+            else:
                 result = ensure_qonto_sepa_installments_for_line(line)
                 if result.get('created'):
                     _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)
-            _sync_sepa_aliases(line)
+        _sync_sepa_aliases(line)
     if mandate_id:
         try:
             recovered_retries = _recover_missing_qonto_rejection_retries(line, mandate_id)
@@ -35387,6 +35649,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
                     f'{recovered_retries} prélèvement(s)', mandate_id,
                 )
         except Exception as exc:
+            recovery_errors.append(_sanitize_qonto_error(str(exc)))
             app.logger.warning(
                 '[QONTO] récupération des prélèvements reprogrammés impossible mandate_id=%s error=%s',
                 mandate_id, _sanitize_qonto_error(str(exc)),
@@ -35396,22 +35659,23 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         sid = item.get('qonto_direct_debit_subscription_id')
         if not sid:
             continue
-        collections = _qonto_collection_items(list_qonto_direct_debit_collections(sid))
+        try:
+            collections = _qonto_collection_items(list_qonto_direct_debit_collections(sid))
+        except Exception as exc:
+            recovery_errors.append(_sanitize_qonto_error(str(exc)))
+            app.logger.warning(
+                '[QONTO] lecture collections impossible subscription_id=%s error=%s',
+                sid, _sanitize_qonto_error(str(exc)),
+            )
+            continue
         if not collections:
             continue
-        def collection_date(collection: Dict[str, Any]) -> str:
-            return str(
-                collection.get('collection_date') or collection.get('scheduled_at')
-                or collection.get('due_date') or collection.get('date')
-                or collection.get('completed_at') or collection.get('paid_at') or ''
-            )[:10]
-
-        collections.sort(key=lambda collection: (collection_date(collection), str(collection.get('id') or '')))
+        collections.sort(key=lambda collection: (_qonto_collection_date(collection), str(collection.get('id') or '')))
         due_date = str(item.get('due_date') or item.get('date') or '')[:10]
         # Recurring subscriptions share an id across all monthly rows. Match
         # the collection to its planned date so one paid/rejected collection
         # cannot incorrectly change every installment in the schedule.
-        collection = next((candidate for candidate in collections if collection_date(candidate) == due_date), None)
+        collection = next((candidate for candidate in collections if _qonto_collection_date(candidate) == due_date), None)
         if collection is None:
             same_subscription_rows = sum(
                 1 for candidate in installments
@@ -35424,9 +35688,9 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
         item['qonto_collection_status_raw'] = raw_collection_status
         item['status'] = _map_collection_status(raw_collection_status)
-        if collection_date(collection):
-            item['date'] = collection_date(collection)
-            item['due_date'] = collection_date(collection)
+        if _qonto_collection_date(collection):
+            item['date'] = _qonto_collection_date(collection)
+            item['due_date'] = _qonto_collection_date(collection)
         if item['status'] == 'completed':
             item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
             # A stale subscription-level rejection must not survive once the
@@ -35440,6 +35704,79 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
             item['failureReason'] = collection.get('status_reason')
             item['status_reason'] = collection.get('status_reason')
         item['updated_at'] = _now_iso()
+        collection_updates += 1
+
+    # A rejected collection can be retried under another subscription UUID.
+    # When the locally stored ids are stale, reconcile only collections whose
+    # RUM exactly equals this line's mandate, then require the same date and
+    # amount before touching an installment.  This repairs the row without any
+    # possibility of importing another trainee's payment.
+    mandate_rum = str(line.get('qonto_mandate_rum') or '').strip()
+    needs_rum_fallback = bool(
+        mandate_rum and (
+            recovery_errors or not collection_updates
+            or any(_installment_is_rejected(item) for item in _effective_sepa_installments(line))
+        )
+    )
+    if needs_rum_fallback:
+        try:
+            rum_collections = _all_qonto_direct_debit_collections_for_rum(mandate_rum)
+        except Exception as exc:
+            recovery_errors.append(_sanitize_qonto_error(str(exc)))
+            rum_collections = []
+        grouped_collections: Dict[Tuple[str, int], List[Dict[str, Any]]] = {}
+        for collection in rum_collections:
+            key = (_qonto_collection_date(collection), _qonto_collection_amount_cents(collection))
+            if key[0] and key[1] > 0:
+                grouped_collections.setdefault(key, []).append(collection)
+        collection_authority = {
+            'completed': 4, 'paid': 4, 'succeeded': 4, 'success': 4,
+            'rejected': 3, 'declined': 3, 'returned': 3, 'refunded': 3,
+            'canceled': 2, 'cancelled': 2,
+        }
+        for (due_date, amount_cents), candidates in grouped_collections.items():
+            collection = max(
+                candidates,
+                key=lambda item: (
+                    collection_authority.get(str(item.get('status') or '').lower(), 1),
+                    str(item.get('id') or ''),
+                ),
+            )
+            subscription_id = str(collection.get('direct_debit_subscription_id') or '').strip()
+            matching = [
+                item for item in installments
+                if str(item.get('due_date') or item.get('date') or '')[:10] == due_date
+                and money_value_to_cents(item.get('amount') or 0) == amount_cents
+            ]
+            exact_subscription = [
+                item for item in matching
+                if subscription_id
+                and str(item.get('qonto_direct_debit_subscription_id') or '') == subscription_id
+            ]
+            target = (exact_subscription or matching)
+            if not target:
+                continue
+            item = target[0]
+            raw_collection_status = str(collection.get('status') or '').strip().lower()
+            item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
+            if subscription_id:
+                item['qonto_direct_debit_subscription_id'] = subscription_id
+            item['qonto_collection_status_raw'] = raw_collection_status
+            item['status'] = _map_collection_status(raw_collection_status)
+            item['date'] = due_date
+            item['due_date'] = due_date
+            if item['status'] == 'completed':
+                item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
+                for key in (
+                    'failureReason', 'status_reason', 'rejection_treated',
+                    'rejection_treated_at', 'excluded_from_schedule_totals',
+                ):
+                    item.pop(key, None)
+            elif collection.get('status_reason'):
+                item['failureReason'] = collection.get('status_reason')
+                item['status_reason'] = collection.get('status_reason')
+            item['updated_at'] = _now_iso()
+            collection_updates += 1
     removed_cancelled = _drop_cancelled_qonto_future_installments(line)
     if removed_cancelled:
         _billing_log(
@@ -35457,6 +35794,32 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         line['paymentStatus'] = 'failed'
     elif line['qontoPaymentGlobalStatus'] in {'Rejet traité', 'Prélèvements programmés'}:
         line['paymentStatus'] = 'unpaid'
+    effective_total_cents = sum(
+        money_value_to_cents(item.get('amount') or 0)
+        for item in _effective_sepa_installments(line)
+    )
+    expected_total_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    schedule_mismatch = bool(
+        expected_total_cents > 0
+        and abs(effective_total_cents - expected_total_cents) > 1
+    )
+    warning = ''
+    if schedule_mismatch:
+        warning = (
+            'Le montant de l’échéancier Qonto ne correspond pas au montant de cette fiche ; '
+            'l’ancien plan a été conservé et aucun nouveau prélèvement n’a été créé.'
+        )
+    elif recovery_errors and not (recovered or collection_updates):
+        warning = 'La lecture des prélèvements Qonto a échoué ; l’ancien échéancier a été conservé.'
+    line['qontoDirectDebitSyncWarning'] = warning
+    line['qontoDirectDebitLastSyncedAt'] = _now_iso()
+    return {
+        'recovered_installments': recovered,
+        'updated_collections': collection_updates,
+        'errors': list(dict.fromkeys(error for error in recovery_errors if error)),
+        'warning': warning,
+        'schedule_mismatch': schedule_mismatch,
+    }
 
 
 def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) -> bool:
@@ -35800,7 +36163,7 @@ def api_billing_sync_qonto():
             if line: lines = [line]
     if not lines:
         lines = _billing_lines(data)
-    reset_count = synced_count = 0; errors = []; last_line = None
+    reset_count = synced_count = recovered_installments = updated_collections = 0; errors = []; last_line = None
     for line in lines:
         has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
         has_sepa_mandate = line.get('paymentMode') == 'sepa_direct_debit' and bool(line.get('qonto_direct_debit_mandate_id'))
@@ -35811,7 +36174,15 @@ def api_billing_sync_qonto():
             if has_invoice:
                 reset, _ = _sync_billing_line_with_qonto(data, line)
             if line.get('paymentMode') == 'sepa_direct_debit':
-                _sync_qonto_direct_debit_line(line)
+                direct_debit_result = _sync_qonto_direct_debit_line(line)
+                recovered_installments += int(direct_debit_result.get('recovered_installments') or 0)
+                updated_collections += int(direct_debit_result.get('updated_collections') or 0)
+                if direct_debit_result.get('warning'):
+                    errors.append({
+                        'id': line.get('id'),
+                        'message': direct_debit_result['warning'],
+                        'kind': 'direct_debit_reconciliation',
+                    })
                 _mark_line_qonto_rejection_notifications_treated(data, line)
             _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1; last_line = line
         except Exception as exc:
@@ -35836,7 +36207,19 @@ def api_billing_sync_qonto():
         invoice['number'] = invoice['invoice_number']
         invoice['amount_paid_cents'] = invoice['paid_amount_cents']
         app.logger.info('QONTO_PAYMENT_PIPELINE invoice_number=%s raw_paid_amount=%.2f normalized_paid_cents=%s stored_paid_cents=%s stored_total_cents=%s calculated_remaining_cents=%s summary_paid_total_cents=%s frontend_paid_amount_cents=%s', invoice['number'], cents_to_money(invoice['paid_amount_cents']), invoice['paid_amount_cents'], (persisted_check or {}).get('qonto_amount_paid_cents'), (persisted_check or {}).get('qonto_total_amount_cents'), invoice['remaining_amount_cents'], summary.get('paid_total_cents'), invoice['paid_amount_cents'])
-    return jsonify({'ok': True, 'success': True, 'synced_count': synced_count, 'failed_count': len(errors), 'message': f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), {reset_count} ligne(s) à contrôler.', 'lines': all_lines, 'errors': errors, 'invoice': invoice, 'financial_summary': summary})
+    return jsonify({
+        'ok': True, 'success': True, 'synced_count': synced_count,
+        'recovered_installments': recovered_installments,
+        'updated_collections': updated_collections,
+        'failed_count': len(errors),
+        'message': (
+            f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), '
+            f'{recovered_installments} échéance(s) Qonto retrouvée(s), '
+            f'{updated_collections} statut(s) de prélèvement mis à jour.'
+        ),
+        'lines': all_lines, 'errors': errors, 'invoice': invoice,
+        'financial_summary': summary,
+    })
 
 
 @app.post('/api/admin/billing-lines/bulk-generate')

@@ -436,7 +436,11 @@ class QontoInvoiceStatusTests(unittest.TestCase):
                 "name": "APS NOVEMBRE 2026",
                 "date_start": "2026-11-01",
                 "date_end": "2026-11-05",
-                "trainees": [{"id": "T1", "first_name": "Clement", "last_name": "VAILLANT", "personal_amount": 900}],
+                "trainees": [{
+                    "id": "T1", "first_name": "Clement", "last_name": "VAILLANT",
+                    "personal_amount": 900, "qonto_mandate_rum": "RUM-T1",
+                    "qonto_mandate_client_id": "client_123",
+                }],
             }],
             "billing_lines": [{
                 "id": line_id,
@@ -469,6 +473,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(len(line["directDebitInstallments"]), 3)
         self.assertEqual(line["qontoPaymentGlobalStatus"], "Mandat à signer")
         self.assertEqual(line["qonto_direct_debit_mandate_id"], "mandate_123")
+        self.assertEqual(line["qonto_mandate_rum"], "RUM-T1")
+        self.assertEqual(line["qonto_mandate_client_id"], "client_123")
 
 
     def test_mark_external_billing_line_blocks_qonto_generation(self):

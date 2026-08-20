@@ -273,7 +273,109 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertEqual([item["status"] for item in installments], ["completed", "failed", "scheduled"])
         self.assertEqual(installments[1]["failureReason"], "blocked_account")
 
+    def test_rum_fallback_never_imports_another_mandates_collection(self):
+        installments = [
+            {
+                "index": 1, "date": "2026-06-30", "due_date": "2026-06-30",
+                "amount": 716.17, "status": "failed", "failureReason": "unknown",
+                "qonto_direct_debit_subscription_id": "stale-subscription-1",
+            },
+            {
+                "index": 2, "date": "2026-07-30", "due_date": "2026-07-30",
+                "amount": 716.17, "status": "scheduled",
+                "qonto_direct_debit_subscription_id": "stale-subscription-2",
+            },
+        ]
+        line = {
+            "id": "line-adelaide", "amount": 1432.34, "amountTTC": 1432.34,
+            "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "123e4567-e89b-42d3-a456-426614174111",
+            "qonto_mandate_rum": "RUM-ADELAIDE",
+            "qonto_mandate_status": "active", "mandateStatus": "active",
+            "directDebitInstallments": installments,
+            "sepa_payment_plan": {"installments": installments},
+        }
+
+        def collections(subscription_id="", page=1, per_page=100):
+            if subscription_id:
+                return {"direct_debit_collections": []}
+            return {
+                "direct_debit_collections": [
+                    {
+                        "id": "collection-adelaide", "direct_debit_subscription_id": "real-subscription-1",
+                        "collection_date": "2026-06-30", "amount": {"value": "716.17"},
+                        "status": "completed", "unique_mandate_reference": "RUM-ADELAIDE",
+                    },
+                    {
+                        "id": "collection-other", "direct_debit_subscription_id": "other-subscription",
+                        "collection_date": "2026-07-30", "amount": {"value": "716.17"},
+                        "status": "completed", "unique_mandate_reference": "RUM-ANOTHER-TRAINEE",
+                    },
+                ],
+                "meta": {"current_page": 1, "total_pages": 1},
+            }
+
+        with patch.object(
+            gestion_app, "_resolve_qonto_direct_debit_mandate_for_line",
+            return_value={"id": line["qonto_direct_debit_mandate_id"], "status": "active"},
+        ), patch.object(
+            gestion_app, "_recover_qonto_installments_for_mandate", return_value=0,
+        ), patch.object(
+            gestion_app, "_recover_missing_qonto_rejection_retries", return_value=0,
+        ), patch.object(
+            gestion_app, "ensure_qonto_sepa_installments_for_line", return_value={"created": 0},
+        ), patch.object(
+            gestion_app, "list_qonto_direct_debit_collections", side_effect=collections,
+        ):
+            result = gestion_app._sync_qonto_direct_debit_line(line)
+
+        self.assertEqual(installments[0]["status"], "completed")
+        self.assertEqual(
+            installments[0]["qonto_direct_debit_subscription_id"], "real-subscription-1",
+        )
+        self.assertEqual(installments[1]["status"], "scheduled")
+        self.assertGreaterEqual(result["updated_collections"], 1)
+
+    def test_sync_reports_a_stale_amount_instead_of_claiming_success(self):
+        installments = [
+            {
+                "index": index, "date": f"2026-{month:02d}-30",
+                "due_date": f"2026-{month:02d}-30", "amount": 716.17,
+                "status": "scheduled", "qonto_direct_debit_subscription_id": f"stale-{index}",
+            }
+            for index, month in enumerate((6, 7, 8, 9, 10), start=1)
+        ]
+        line = {
+            "id": "line-adelaide", "amount": 3309, "amountTTC": 3309,
+            "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "123e4567-e89b-42d3-a456-426614174111",
+            "qonto_mandate_status": "active", "mandateStatus": "active",
+            "directDebitInstallments": installments,
+            "sepa_payment_plan": {"installments": installments},
+        }
+
+        with patch.object(
+            gestion_app, "_resolve_qonto_direct_debit_mandate_for_line",
+            return_value={"id": line["qonto_direct_debit_mandate_id"], "status": "active"},
+        ), patch.object(
+            gestion_app, "_recover_qonto_installments_for_mandate", return_value=0,
+        ), patch.object(
+            gestion_app, "_recover_missing_qonto_rejection_retries", return_value=0,
+        ), patch.object(
+            gestion_app, "ensure_qonto_sepa_installments_for_line",
+        ) as ensure_mock, patch.object(
+            gestion_app, "list_qonto_direct_debit_collections",
+            return_value={"direct_debit_collections": []},
+        ):
+            result = gestion_app._sync_qonto_direct_debit_line(line)
+
+        ensure_mock.assert_not_called()
+        self.assertTrue(result["schedule_mismatch"])
+        self.assertIn("ne correspond pas au montant", result["warning"])
+        self.assertEqual(line["qontoDirectDebitSyncWarning"], result["warning"])
+
     def test_sync_rebuilds_schedule_after_credit_note_and_keeps_prior_payments(self):
+        mandate_uuid = "123e4567-e89b-42d3-a456-426614174111"
         old_installments = [
             {
                 "index": 1, "date": "2026-06-30", "due_date": "2026-06-30",
@@ -303,7 +405,9 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
             "qontoInvoiceNumber": "FL-NEW", "qonto_total_amount_cents": 330900,
             "qonto_amount_paid_cents": 0,
             "qontoClientId": "client-adelaide",
-            "qonto_direct_debit_mandate_id": "mandate-adelaide",
+            # Legacy rows could contain the RUM here instead of Qonto's UUID.
+            "qonto_direct_debit_mandate_id": "RUM-ADELAIDE",
+            "qonto_mandate_rum": "RUM-ADELAIDE",
             "qonto_mandate_status": "active", "mandateStatus": "active",
             "paymentPlan": {
                 "mode": "sepa_direct_debit", "installments": 5,
@@ -317,19 +421,19 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         }
         subscriptions = {"direct_debit_subscriptions": [
             {
-                "id": "sub-paid-1", "direct_debit_mandate_id": "mandate-adelaide",
+                "id": "sub-paid-1", "direct_debit_mandate_id": mandate_uuid,
                 "initial_collection_date": "2026-06-30", "amount": {"value": "716.17"},
                 "status": "completed", "reference": "FL-OLD - échéance 1/5",
             },
             {
-                "id": "sub-paid-2", "direct_debit_mandate_id": "mandate-adelaide",
+                "id": "sub-paid-2", "direct_debit_mandate_id": mandate_uuid,
                 "initial_collection_date": "2026-07-30", "amount": {"value": "716.17"},
                 "status": "completed", "reference": "FL-OLD - échéance 2/5",
             },
             *[
                 {
                     "id": f"sub-old-{index}",
-                    "direct_debit_mandate_id": "mandate-adelaide",
+                    "direct_debit_mandate_id": mandate_uuid,
                     "initial_collection_date": f"2026-{month:02d}-30",
                     "amount": {"value": "716.17"}, "status": "canceled",
                     "reference": f"FL-OLD - échéance {index}/5",
@@ -339,7 +443,7 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
             *[
                 {
                     "id": f"sub-new-{index}",
-                    "direct_debit_mandate_id": "mandate-adelaide",
+                    "direct_debit_mandate_id": mandate_uuid,
                     "initial_collection_date": f"2026-{month:02d}-30",
                     "amount": {"value": "625.55"}, "status": "pending",
                     "reference": f"FL-NEW - échéance {index}/3",
@@ -347,7 +451,7 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
                 for index, month in ((1, 8), (2, 9), (3, 10))
             ],
             {
-                "id": "sub-unrelated", "direct_debit_mandate_id": "mandate-adelaide",
+                "id": "sub-unrelated", "direct_debit_mandate_id": mandate_uuid,
                 "initial_collection_date": "2026-09-15", "amount": {"value": "999.00"},
                 "status": "pending", "reference": "FL-OTHER - échéance 1/1",
             },
@@ -373,7 +477,8 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         ), patch.object(
             gestion_app, "list_qonto_direct_debit_mandates", return_value={
                 "direct_debit_mandates": [{
-                    "id": "mandate-adelaide", "status": "active",
+                    "id": mandate_uuid, "unique_mandate_reference": "RUM-ADELAIDE",
+                    "client_id": "client-adelaide", "status": "active",
                 }],
             },
         ), patch.object(
@@ -391,6 +496,7 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
             gestion_app._sync_qonto_direct_debit_line(line)
 
         create_subscription_mock.assert_not_called()
+        self.assertEqual(line["qonto_direct_debit_mandate_id"], mandate_uuid)
 
         installments = line["directDebitInstallments"]
         self.assertEqual(len(installments), 5)
