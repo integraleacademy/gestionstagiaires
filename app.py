@@ -1455,10 +1455,13 @@ def create_qonto_direct_debit_subscription(payload: Dict[str, Any]) -> Dict[str,
 def list_qonto_direct_debit_subscriptions(
     mandate_id: str = "", page: int = 1, per_page: int = 100
 ) -> Dict[str, Any]:
-    """List subscriptions attached to a mandate, including existing schedules."""
+    """List subscriptions; callers restrict them to ``mandate_id`` locally.
+
+    Qonto's list endpoint does not accept ``direct_debit_mandate_id`` as a
+    query parameter.  Sending that unsupported filter can reject the entire
+    reconciliation request, leaving the old local schedule unchanged.
+    """
     params: Dict[str, Any] = {"page": page, "per_page": per_page}
-    if mandate_id:
-        params["direct_debit_mandate_id"] = mandate_id
     return _qonto_request("GET", "/v2/sepa/direct_debit_subscriptions", params=params)
 
 def _qonto_direct_debit_subscription_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -33067,7 +33070,7 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
         items = _qonto_direct_debit_subscription_items(response)
         subscriptions.extend(
             item for item in items
-            if str(item.get('direct_debit_mandate_id') or mandate_id) == str(mandate_id)
+            if str(item.get('direct_debit_mandate_id') or '') == str(mandate_id)
         )
         meta = response.get('meta') if isinstance(response.get('meta'), dict) else {}
         total_pages = meta.get('total_pages') or meta.get('totalPages')
@@ -33300,7 +33303,7 @@ def _recover_missing_qonto_rejection_retries(line: Dict[str, Any], mandate_id: s
             subscription_id = str(subscription.get('id') or '').strip()
             if not subscription_id or subscription_id in known_subscription_ids:
                 continue
-            if str(subscription.get('direct_debit_mandate_id') or mandate_id) != str(mandate_id):
+            if str(subscription.get('direct_debit_mandate_id') or '') != str(mandate_id):
                 continue
             reference = _qonto_subscription_reference(subscription)
             schedule_index, schedule_total, is_rejection_retry = _qonto_reference_schedule_position(reference)

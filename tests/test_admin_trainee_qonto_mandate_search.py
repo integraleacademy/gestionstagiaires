@@ -69,6 +69,20 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
             "qontoPaymentGlobalStatus": "Rejet traité",
         }
 
+    def test_subscription_listing_does_not_send_unsupported_mandate_filter(self):
+        with patch.object(
+            gestion_app, "_qonto_request", return_value={"direct_debit_subscriptions": []},
+        ) as request_mock:
+            result = gestion_app.list_qonto_direct_debit_subscriptions(
+                "mandate-adelaide", page=2, per_page=50,
+            )
+
+        self.assertEqual(result, {"direct_debit_subscriptions": []})
+        request_mock.assert_called_once_with(
+            "GET", "/v2/sepa/direct_debit_subscriptions",
+            params={"page": 2, "per_page": 50},
+        )
+
     def test_searches_every_page_by_exact_rum_and_persists_uuid_and_rum(self):
         trainee = {"id": "trainee-1", "first_name": "Anne", "last_name": "Test"}
         data = {"sessions": [{"id": "session-1", "trainees": [trainee]}]}
@@ -336,6 +350,11 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
                 "id": "sub-unrelated", "direct_debit_mandate_id": "mandate-adelaide",
                 "initial_collection_date": "2026-09-15", "amount": {"value": "999.00"},
                 "status": "pending", "reference": "FL-OTHER - échéance 1/1",
+            },
+            {
+                "id": "sub-without-mandate",
+                "initial_collection_date": "2026-09-30", "amount": {"value": "625.55"},
+                "status": "pending", "reference": "FL-NEW - échéance 2/3",
             },
         ]}
         collections = {
