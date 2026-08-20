@@ -145,6 +145,35 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         self.assertEqual(cpf_bucket["remaining_amount_cents"], 0)
         save_data.assert_called_once_with(data)
 
+    def test_trainee_poll_does_not_resync_a_recent_cpf_invoice(self):
+        data = self._data()
+        data["sessions"][0]["trainees"][0]["qonto_invoice"]["qonto_last_synced_at"] = gestion_app._now_iso()
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as flask_session:
+            flask_session["admin_logged_in"] = True
+            flask_session["admin_role"] = "admin"
+
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data") as save_data, \
+             patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(
+                 gestion_app,
+                 "_billing_lines_for_trainee_session",
+                 wraps=gestion_app._billing_lines_for_trainee_session,
+             ) as build_lines, \
+             patch.object(
+                 gestion_app,
+                 "get_qonto_invoice",
+                 side_effect=AssertionError("a recent CPF invoice must not be re-fetched during polling"),
+             ):
+            response = client.get("/api/billing/trainee/T-CPF/session/S-CPF")
+
+        self.assertEqual(response.status_code, 200)
+        cpf_line = next(line for line in response.get_json()["lines"] if line["financingType"] == "CPF")
+        self.assertEqual(cpf_line["qonto_invoice"]["payment_status"], "unpaid")
+        save_data.assert_not_called()
+        build_lines.assert_called_once_with(data, "T-CPF", "S-CPF")
+
     def test_trainee_endpoint_discovers_cpf_invoice_missing_from_local_record(self):
         data = self._without_local_cpf_invoice()
         data["sessions"][0]["trainees"][0].update({

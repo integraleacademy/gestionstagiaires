@@ -285,6 +285,47 @@ class RefreshExternalApiTests(unittest.TestCase):
         self.assertEqual(seen["kwargs"]["first_name"], "Charles")
         self.assertEqual(seen["kwargs"]["session_name"], "A3P MARS 2026")
 
+    def test_refresh_external_does_not_save_when_statuses_are_unchanged(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S-A3P",
+                    "name": "A3P MARS 2026",
+                    "training_type": "A3P",
+                    "date_start": "2026-03-30",
+                    "date_end": "2026-06-02",
+                    "trainees": [
+                        {
+                            "id": "T-CHARLES",
+                            "last_name": "DEBOUVRY",
+                            "first_name": "Charles",
+                            "email": "charles.debouvry@gmail.com",
+                            "cnaps": "ACCEPTÉ",
+                            "hosting_status": "reserved",
+                            "updated_at": "2026-08-20T10:00:00Z",
+                        }
+                    ],
+                }
+            ]
+        }
+        saved = {"count": 0}
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
+        gestion_app.fetch_cnaps_status_by_name = lambda *_: "ACCEPTÉ"
+        gestion_app.fetch_hebergement_status = lambda *args, **kwargs: "reserved"
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.post("/api/sessions/S-A3P/stagiaires/T-CHARLES/refresh-external")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["cnaps_status"], "ACCEPTÉ")
+        self.assertEqual(response.get_json()["hosting_status"], "reserved")
+        self.assertEqual(saved["count"], 0)
+        self.assertEqual(data["sessions"][0]["trainees"][0]["updated_at"], "2026-08-20T10:00:00Z")
+
 
 class PublicTraineePageHostingTests(unittest.TestCase):
     def setUp(self):

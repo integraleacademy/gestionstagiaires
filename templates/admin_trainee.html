@@ -3878,7 +3878,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   function scheduleLocalTraineePoll(immediate=false){
     clearTimeout(localTraineePollTimer);
     if(immediate) load({allowAutoSync:false}).catch(()=>{});
-    localTraineePollTimer=setTimeout(async()=>{try{await load({allowAutoSync:false});}catch(e){/* retain current finance display */}scheduleLocalTraineePoll();},document.hidden?30000:5000);
+    localTraineePollTimer=setTimeout(async()=>{try{await load({allowAutoSync:false});}catch(e){/* retain current finance display */}scheduleLocalTraineePoll();},document.hidden?120000:30000);
   }
   document.addEventListener('visibilitychange',()=>scheduleLocalTraineePoll(!document.hidden));
   window.refreshQontoInvoiceHistory = () => load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });

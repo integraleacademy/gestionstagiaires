@@ -84,7 +84,7 @@ let localBillingPollTimer;
 function scheduleLocalBillingPoll(immediate=false){
   clearTimeout(localBillingPollTimer);
   if(immediate) load().catch(()=>{});
-  localBillingPollTimer=setTimeout(async()=>{try{await load();}catch(e){/* retain current table */}scheduleLocalBillingPoll();},document.hidden?30000:5000);
+  localBillingPollTimer=setTimeout(async()=>{try{await load();}catch(e){/* retain current table */}scheduleLocalBillingPoll();},document.hidden?120000:30000);
 }
 document.addEventListener('visibilitychange',()=>scheduleLocalBillingPoll(!document.hidden));
 
