@@ -2711,17 +2711,19 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
   });
 
   async function autoRefreshExternalStatuses() {
+    if (document.hidden) return;
     const rows = Array.from(document.querySelectorAll("tr[data-trainee-id]"));
     for (const tr of rows) {
       await refreshExternalForRow(tr, { silent: true });
     }
   }
 
-  // Mise à jour automatique initiale + toutes les 5 minutes
+  // Laisse le chargement initial respirer, puis vérifie automatiquement les
+  // statuts externes toutes les 15 minutes. Le bouton individuel reste immédiat.
   setTimeout(() => {
     autoRefreshExternalStatuses();
-    setInterval(autoRefreshExternalStatuses, 5 * 60 * 1000);
-  }, 1200);
+    setInterval(autoRefreshExternalStatuses, 15 * 60 * 1000);
+  }, 60 * 1000);
 
   // =========================
 // Bulk SST upload

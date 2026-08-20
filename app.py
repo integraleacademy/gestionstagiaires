@@ -76,6 +76,9 @@ _REQUEST_STARTED_AT_KEY = "_memory_request_started_at"
 _BACKGROUND_TASKS_LOCK = threading.Lock()
 _BACKGROUND_TASKS_LAST_RUN_AT = 0.0
 _BACKGROUND_TASKS_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKGROUND_TASKS_MIN_INTERVAL_SECONDS", "300"))
+MEMORY_DIAGNOSTICS_ENABLED = (os.environ.get("MEMORY_DIAGNOSTICS_ENABLED", "0") or "").strip().lower() in {
+    "1", "true", "yes", "on",
+}
 
 def _current_rss_mb() -> float:
     try:
@@ -112,6 +115,8 @@ def _current_route_for_log() -> str:
     return "-"
 
 def _log_memory_stage(stage: str, started_at: Optional[float] = None, route: Optional[str] = None, baseline_mb: Optional[float] = None) -> float:
+    if not MEMORY_DIAGNOSTICS_ENABLED:
+        return baseline_mb if baseline_mb is not None else -1.0
     current_rss_mb = _current_rss_mb()
     peak_rss_mb = _peak_rss_mb()
     duration_ms = 0.0 if started_at is None else (time.monotonic() - started_at) * 1000
@@ -2831,36 +2836,43 @@ def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
     sales_today_notification_count = 0
-    if session.get("admin_logged_in"):
+    admin_logged_in = bool(session.get("admin_logged_in"))
+    can_view_notifications = admin_logged_in and _admin_can_view_notifications()
+    ctx_data: Optional[Dict[str, Any]] = None
+    if admin_logged_in:
+        try:
+            ctx_data = load_data()
+        except Exception:
+            ctx_data = None
         try:
             wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
         except Exception:
             wedof_new_requests_count = 0
-        try:
-            sales_metrics = _build_sales_tracking_metrics(load_data(), datetime.date.today().year)
-            sales_today_notification_count = max(int(sales_metrics.get("today_inscriptions") or 0), 0)
-        except Exception:
-            sales_today_notification_count = 0
-    if session.get("admin_logged_in") and _admin_can_view_notifications():
-        try:
-            admin_notifications = _admin_notifications_payload(load_data())
-        except Exception:
-            admin_notifications = {"notifications": [], "unresolved_total": 0}
+        if ctx_data is not None:
+            try:
+                sales_metrics = _build_sales_tracking_metrics(ctx_data, datetime.date.today().year)
+                sales_today_notification_count = max(int(sales_metrics.get("today_inscriptions") or 0), 0)
+            except Exception:
+                sales_today_notification_count = 0
+            if can_view_notifications:
+                try:
+                    admin_notifications = _admin_notifications_payload(ctx_data)
+                except Exception:
+                    admin_notifications = {"notifications": [], "unresolved_total": 0}
     mail_sent_notice = bool(session.pop("_mail_sent_notice", False))
     current_partner_name = ""
     assisted_partner_name = ""
     partner = None
     partner_sidebar = {}
-    if session.get("admin_logged_in"):
+    if admin_logged_in and ctx_data is not None:
         try:
-            ctx_data = load_data()
             active_partner_id = _current_partner_id()
             partner = next((p for p in ctx_data.get("partners", []) if isinstance(p, dict) and p.get("id") == active_partner_id), None)
             current_partner_name = (partner or {}).get("name") or ""
             if partner:
                 normalize_partner_subscription(ctx_data, partner)
                 sub = partner.get("subscription") or {}
-                notification_total = admin_notifications.get("unresolved_total", 0) if _admin_can_view_notifications() else 0
+                notification_total = admin_notifications.get("unresolved_total", 0) if can_view_notifications else 0
                 enabled_modules = _partner_enabled_modules(partner)
                 partner_sidebar = {
                     "partner": partner,
@@ -3315,6 +3327,7 @@ def _int_env(name: str, default: int) -> int:
 
 
 MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
+QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS = max(30, _int_env("QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS", 300))
 
 _data_lock = threading.RLock()
 _cnaps_public_annuaire_monitor_lock = threading.Lock()
@@ -23496,12 +23509,17 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
     if not t:
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
-    ln = normalize_last_name(t.get("last_name") or "")
-    fn = normalize_first_name(t.get("first_name") or "")
-    if ln:
+    changed = False
+    original_last_name = t.get("last_name") or ""
+    original_first_name = t.get("first_name") or ""
+    ln = normalize_last_name(original_last_name)
+    fn = normalize_first_name(original_first_name)
+    if ln and ln != original_last_name:
         t["last_name"] = ln
-    if fn:
+        changed = True
+    if fn and fn != original_first_name:
         t["first_name"] = fn
+        changed = True
     email = (t.get("email") or "").strip().lower()
 
     current_cnaps = (t.get("cnaps") or "").strip() or "INCONNU"
@@ -23513,14 +23531,7 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
                 if _normalize_cnaps_status(cn_u) != _normalize_cnaps_status(current_cnaps):
                     t["cnaps"] = cn_u
                     record_cnaps_status_change(t, cn_u)
-                else:
-                    t["cnaps"] = current_cnaps
-            else:
-                t["cnaps"] = current_cnaps
-        else:
-            t["cnaps"] = current_cnaps
-    else:
-        t["cnaps"] = current_cnaps
+                    changed = True
 
     training_type = _session_get(s, "training_type", "")
     if training_type == "A3P":
@@ -23566,13 +23577,12 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
             fetch_result=hb,
             current_hosting_status=current_hosting,
         )
-        if hb == "reserved" or current_hosting == "reserved":
+        if hb == "reserved" and current_hosting != "reserved":
             t["hosting_status"] = "reserved"
-        else:
-            t["hosting_status"] = current_hosting
+            changed = True
         _log_charles_hebergement_trace(
             "api_refresh_trainee_external",
-            "valeur finale sauvegardée après refresh API",
+            "valeur finale après refresh API",
             email=email,
             last_name=ln,
             first_name=fn,
@@ -23582,12 +23592,15 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
             final_hosting_status=t.get("hosting_status"),
         )
     else:
-        t.pop("hosting_status", None)
+        if "hosting_status" in t:
+            t.pop("hosting_status", None)
+            changed = True
 
-    t["updated_at"] = _now_iso()
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
-    save_data(data)
+    if changed:
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
 
     response_payload = {
         "ok": True,
@@ -34459,7 +34472,10 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     line['qonto_payment_status'] = qonto_source['qonto_payment_status']
                     line['paymentStatus'] = qonto_source['qonto_payment_status']
                     line['qonto_status'] = qonto_source.get('qonto_status') or qonto_source.get('qontoStatus') or line.get('invoiceStatus') or ''
-                    line['qontoLastSyncedAt'] = qonto_source.get('qontoLastSyncedAt') or qonto_source.get('updatedAt') or ''
+                    # ``updatedAt`` also changes for purely local edits. Only
+                    # an explicit Qonto sync timestamp may throttle a remote
+                    # payment refresh.
+                    line['qontoLastSyncedAt'] = qonto_source.get('qontoLastSyncedAt') or ''
                 out.append(line)
     return out
 
@@ -34929,8 +34945,9 @@ def admin_direct_debits():
 @admin_login_required
 def api_admin_billing_lines():
     data = load_data()
-    _repair_logged_qonto_rejection_retries(data, _billing_lines(data))
-    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': 0, 'sync_warning': ''})
+    lines = _billing_lines(data)
+    _repair_logged_qonto_rejection_retries(data, lines)
+    return jsonify({'ok': True, 'lines': lines, 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': 0, 'sync_warning': ''})
 
 
 @app.post('/api/admin/invoicing/sync-qonto')
@@ -35071,6 +35088,18 @@ def _billing_lines_for_trainee_session(data: Dict[str, Any], trainee_id: str, se
     return [l for l in _billing_lines_for_session(data, session_id) if str(l.get('traineeId')) == str(trainee_id)]
 
 
+def _billing_line_qonto_sync_due(line: Dict[str, Any], now: Optional[datetime.datetime] = None) -> bool:
+    last_synced_at = _parse_iso_datetime(
+        line.get('qontoLastSyncedAt') or line.get('qonto_last_synced_at') or ''
+    )
+    if last_synced_at is None:
+        return True
+    current = now or datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    if current.tzinfo is not None:
+        current = current.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    return (current - last_synced_at).total_seconds() >= QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS
+
+
 @app.get('/api/billing/session/<session_id>')
 @admin_login_required
 def api_billing_session(session_id: str):
@@ -35125,6 +35154,8 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
         for line in lines:
             if not is_cpf_billing_context(line) or not (line.get('qontoInvoiceId') or line.get('qontoDraftId')):
                 continue
+            if not _billing_line_qonto_sync_due(line):
+                continue
             cpf_sync_attempted = True
             try:
                 _sync_billing_line_with_qonto(data, line)
@@ -35136,7 +35167,11 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
             # Persist the Qonto payment state recovered while the trainee card
             # loads, including a non-blocking warning when Qonto is unavailable.
             save_data(data)
-    fresh_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    fresh_lines = (
+        _billing_lines_for_trainee_session(data, trainee_id, session_id)
+        if cpf_sync_attempted or data_changed
+        else lines
+    )
     summary = calculate_trainee_financial_summary(trainee or {'id': trainee_id}, fresh_lines)
     cpf_link = _cpf_active_link(data, session_id=str(session_id), trainee_id=str(trainee_id))
     return jsonify({
