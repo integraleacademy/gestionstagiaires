@@ -179,7 +179,7 @@ class DespBulkDiplomaTests(unittest.TestCase):
         with open(os.path.join(self.temp_dir.name, token), "rb") as stored_file:
             self.assertEqual(stored_file.read(), source_pdf)
 
-    def test_vae_diploma_matches_name_inside_pdf_and_appears_on_admin_trainee(self):
+    def test_vae_diploma_matches_name_inside_pdf_and_appears_on_admin_and_public_trainee(self):
         photo_token = self._create_identity_photo()
         self._write_data({
             "sessions": [{
@@ -212,6 +212,12 @@ class DespBulkDiplomaTests(unittest.TestCase):
         page_html = trainee_page.get_data(as_text=True)
         self.assertIn("Importé", page_html)
         self.assertIn(token, page_html)
+
+        public_page = self.client.get("/espace/public-jean")
+        self.assertEqual(public_page.status_code, 200)
+        public_html = public_page.get_data(as_text=True)
+        self.assertIn("Télécharger mon diplôme DESP", public_html)
+        self.assertIn(f"/espace/public-jean/download/{token}", public_html)
 
     def test_diploma_is_persisted_before_notifications_are_sent(self):
         photo_token = self._create_identity_photo()

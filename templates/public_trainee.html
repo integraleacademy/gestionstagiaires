@@ -1716,7 +1716,7 @@ id="upload_{{ d.key }}"
 
   {% if is_dirigeant_vae %}
   {% set vae_key = trainee.vae_status or 'livret_1_todo' %}
-  {% set has_vae_parchemin = (trainee.deliverables or {}).get('parchemin') %}
+  {% set vae_diploma_token = (trainee.deliverables or {}).get('parchemin') or (trainee.deliverables or {}).get('diplome') %}
   {% set vae_step_index_map = {
     'livret_1_todo': 0,
     'livret_1_analysis': 1,
@@ -1731,7 +1731,7 @@ id="upload_{{ d.key }}"
     'certified': 8
   } %}
   {% set vae_done_until = vae_step_index_map[vae_key] if vae_key in vae_step_index_map else 0 %}
-  {% if has_vae_parchemin %}
+  {% if vae_diploma_token %}
     {% set vae_done_until = [vae_done_until, 8]|max %}
   {% endif %}
   {% set vae_current_step_map = {
@@ -1914,10 +1914,10 @@ id="upload_{{ d.key }}"
         {% if vae_current_step == 8 and vae_done_until < 8 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         {% if vae_done_until >= 8 %}
           <p class="oktag">Étape terminée</p>
-          {% if has_vae_parchemin %}
+          {% if vae_diploma_token %}
             <p>
               <a class="btn small" target="_blank" rel="noopener"
-                 href="/espace/{{ token_safe }}/download/{{ has_vae_parchemin }}">
+                 href="/espace/{{ token_safe }}/download/{{ vae_diploma_token }}">
                 Télécharger mon diplôme DESP en cliquant ici
               </a>
             </p>
