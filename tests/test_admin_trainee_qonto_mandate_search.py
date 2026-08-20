@@ -530,6 +530,251 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertEqual(summary["remaining_total_cents"], 187666)
         self.assertEqual(summary["by_financer"]["PERSONNEL"]["paid_amount_cents"], 143234)
 
+    def _adelaide_reset_collections(self):
+        return [
+            {
+                "id": "collection-june", "direct_debit_subscription_id": "sub-paid-1",
+                "collection_date": "2026-06-30", "amount": {"value": "716.17"},
+                "status": "completed", "unique_mandate_reference": "RUM-ADELAIDE",
+            },
+            {
+                "id": "collection-july", "direct_debit_subscription_id": "sub-paid-2",
+                "collection_date": "2026-07-30", "amount": {"value": "716.17"},
+                "status": "completed", "unique_mandate_reference": "RUM-ADELAIDE",
+            },
+            *[
+                {
+                    "id": f"collection-new-{index}",
+                    "direct_debit_subscription_id": f"sub-new-{index}",
+                    "collection_date": f"2026-{month:02d}-30",
+                    "amount": {"value": "625.55"}, "status": "pending",
+                    "unique_mandate_reference": "RUM-ADELAIDE",
+                }
+                for index, month in enumerate((8, 9, 10), start=1)
+            ],
+            {
+                "id": "collection-canceled-old", "direct_debit_subscription_id": "sub-old-3",
+                "collection_date": "2026-08-30", "amount": {"value": "716.17"},
+                "status": "canceled", "unique_mandate_reference": "RUM-ADELAIDE",
+            },
+        ]
+
+    def _adelaide_reset_line(self):
+        old_installments = [
+            {
+                "index": index, "date": f"2026-{month:02d}-30",
+                "due_date": f"2026-{month:02d}-30", "amount": 716.17,
+                "status": "failed" if index == 1 else "scheduled",
+                "qonto_direct_debit_subscription_id": f"sub-old-{index}",
+            }
+            for index, month in enumerate((6, 7, 8, 9, 10), start=1)
+        ]
+        return {
+            "id": gestion_app._billing_line_id(
+                "session-adelaide", "trainee-adelaide", "PERSONNEL", "legacy",
+            ),
+            "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+            "financingType": "PERSONNEL", "typeFinanceur": "PERSONNEL",
+            "amount": 3309, "amountTTC": 3309, "paymentMode": "sepa_direct_debit",
+            "qontoInvoiceId": "invoice-after-credit-note", "qontoInvoiceNumber": "FL-NEW",
+            "qontoClientId": "client-adelaide", "qontoCustomerId": "client-adelaide",
+            "qonto_direct_debit_mandate_id": "123e4567-e89b-42d3-a456-426614174111",
+            "qonto_mandate_rum": "RUM-ADELAIDE", "qonto_mandate_status": "active",
+            "mandateStatus": "active", "invoiceStatus": "sent", "paymentStatus": "unpaid",
+            "directDebitInstallments": old_installments,
+            "sepa_payment_plan": {"installments": old_installments},
+            "paymentPlan": {
+                "mode": "sepa_direct_debit", "installments": 5,
+                "schedule": [
+                    {"date": item["date"], "amount": item["amount"]}
+                    for item in old_installments
+                ],
+            },
+        }
+
+    def test_financial_reset_preview_rebuilds_adelaide_from_exact_qonto_rows(self):
+        line = self._adelaide_reset_line()
+        with patch.object(
+            gestion_app, "_resolve_qonto_direct_debit_mandate_for_line",
+            return_value={
+                "id": line["qonto_direct_debit_mandate_id"],
+                "unique_mandate_reference": "RUM-ADELAIDE", "status": "active",
+            },
+        ), patch.object(
+            gestion_app, "_recover_qonto_installments_for_mandate", return_value=0,
+        ), patch.object(
+            gestion_app, "_all_qonto_direct_debit_collections_for_rum",
+            return_value=self._adelaide_reset_collections(),
+        ):
+            preview = gestion_app._build_financial_tracking_reset_preview(line)
+
+        self.assertEqual(preview["expected_amount_cents"], 330900)
+        self.assertEqual(preview["detected_amount_cents"], 330899)
+        self.assertEqual(preview["paid_amount_cents"], 143234)
+        self.assertEqual(preview["remaining_amount_cents"], 187666)
+        self.assertEqual(
+            [item["amount"] for item in preview["installments"]],
+            [716.17, 716.17, 625.55, 625.55, 625.55],
+        )
+        self.assertEqual(
+            [item["status"] for item in preview["installments"]],
+            ["completed", "completed", "scheduled", "scheduled", "scheduled"],
+        )
+        self.assertEqual(
+            [item["date"] for item in preview["installments"]],
+            ["2026-06-30", "2026-07-30", "2026-08-30", "2026-09-30", "2026-10-30"],
+        )
+        self.assertEqual(len(preview["fingerprint"]), 64)
+
+    def test_financial_reset_refuses_to_guess_between_two_matching_schedules(self):
+        line = self._adelaide_reset_line()
+        line["amount"] = line["amountTTC"] = 200
+        ambiguous = [
+            {
+                "id": "paid", "collection_date": "2026-06-30",
+                "amount": {"value": "100.00"}, "status": "completed",
+            },
+            {
+                "id": "pending-a", "collection_date": "2026-08-30",
+                "amount": {"value": "100.00"}, "status": "pending",
+            },
+            {
+                "id": "pending-b", "collection_date": "2026-09-30",
+                "amount": {"value": "100.00"}, "status": "pending",
+            },
+        ]
+        with patch.object(
+            gestion_app, "_resolve_qonto_direct_debit_mandate_for_line",
+            return_value={"id": line["qonto_direct_debit_mandate_id"], "status": "active"},
+        ), patch.object(
+            gestion_app, "_recover_qonto_installments_for_mandate", return_value=0,
+        ), patch.object(
+            gestion_app, "_all_qonto_direct_debit_collections_for_rum", return_value=ambiguous,
+        ):
+            with self.assertRaisesRegex(ValueError, "échéancier unique"):
+                gestion_app._build_financial_tracking_reset_preview(line)
+
+    def test_financial_reset_endpoint_previews_then_saves_only_this_fiche_with_backup(self):
+        line = self._adelaide_reset_line()
+        trainee = {
+            "id": "trainee-adelaide", "first_name": "Adelaide", "last_name": "Tita",
+            "cpf_amount": 991, "personal_amount": 3309,
+        }
+        other_trainee = {
+            "id": "trainee-other", "first_name": "Autre", "last_name": "Stagiaire",
+            "personal_amount": 1200,
+        }
+        other_line = {
+            "id": gestion_app._billing_line_id(
+                "session-adelaide", "trainee-other", "PERSONNEL", "legacy",
+            ),
+            "traineeId": "trainee-other", "sessionId": "session-adelaide",
+            "financingType": "PERSONNEL", "amount": 1200, "amountTTC": 1200,
+            "paymentMode": "cash", "invoiceStatus": "not_invoiced",
+            "paymentStatus": "not_applicable", "marker": "must-remain-unchanged",
+        }
+        other_line_before = dict(other_line)
+        data = {
+            "sessions": [{
+                "id": "session-adelaide", "name": "TITIA DESP SEPTEMBRE 2026",
+                "training_type": "TITIA DESP", "date_start": "2026-09-01",
+                "date_end": "2026-09-30", "trainees": [trainee, other_trainee],
+            }],
+            "billing_lines": [line, other_line],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data") as save_mock, \
+             patch.object(
+                 gestion_app, "_resolve_qonto_direct_debit_mandate_for_line",
+                 return_value={
+                     "id": line["qonto_direct_debit_mandate_id"],
+                     "unique_mandate_reference": "RUM-ADELAIDE", "status": "active",
+                 },
+             ), \
+             patch.object(gestion_app, "_recover_qonto_installments_for_mandate", return_value=0), \
+             patch.object(
+                 gestion_app, "_all_qonto_direct_debit_collections_for_rum",
+                 return_value=self._adelaide_reset_collections(),
+             ), \
+             patch.object(gestion_app, "create_qonto_direct_debit_subscription") as create_mock:
+            preview_response = self.client.post(
+                "/api/billing/reset-financial-tracking",
+                json={
+                    "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+                    "preview": True,
+                },
+            )
+            self.assertEqual(preview_response.status_code, 200)
+            save_mock.assert_not_called()
+            fingerprint = preview_response.get_json()["preview"]["fingerprint"]
+
+            confirm_response = self.client.post(
+                "/api/billing/reset-financial-tracking",
+                json={
+                    "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+                    "confirm": True, "previewFingerprint": fingerprint,
+                },
+            )
+
+        self.assertEqual(confirm_response.status_code, 200)
+        save_mock.assert_called_once_with(data)
+        create_mock.assert_not_called()
+        self.assertEqual(trainee["cpf_amount"], 991)
+        self.assertEqual(trainee["personal_amount"], 3309)
+        self.assertEqual(len(data["financial_tracking_reset_backups"]), 1)
+        backup = data["financial_tracking_reset_backups"][0]
+        self.assertEqual(backup["trainee_id"], "trainee-adelaide")
+        self.assertEqual(len(backup["billing_line"]["directDebitInstallments"]), 5)
+
+        stored = next(item for item in data["billing_lines"] if item["id"] == line["id"])
+        untouched = next(item for item in data["billing_lines"] if item["id"] == other_line["id"])
+        self.assertEqual(untouched, other_line_before)
+        self.assertEqual(
+            [item["amount"] for item in stored["directDebitInstallments"]],
+            [716.17, 716.17, 625.55, 625.55, 625.55],
+        )
+        response_data = confirm_response.get_json()
+        self.assertEqual(response_data["financial_summary"]["paid_total_cents"], 143234)
+        self.assertEqual(response_data["financial_summary"]["remaining_total_cents"], 187666)
+
+    def test_financial_reset_endpoint_rejects_changed_preview_without_saving(self):
+        line = self._adelaide_reset_line()
+        trainee = {
+            "id": "trainee-adelaide", "first_name": "Adelaide", "last_name": "Tita",
+            "personal_amount": 3309,
+        }
+        data = {
+            "sessions": [{
+                "id": "session-adelaide", "training_type": "TITIA DESP",
+                "date_start": "2026-09-01", "date_end": "2026-09-30",
+                "trainees": [trainee],
+            }],
+            "billing_lines": [line],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data") as save_mock, \
+             patch.object(
+                 gestion_app, "_resolve_qonto_direct_debit_mandate_for_line",
+                 return_value={"id": line["qonto_direct_debit_mandate_id"], "status": "active"},
+             ), \
+             patch.object(gestion_app, "_recover_qonto_installments_for_mandate", return_value=0), \
+             patch.object(
+                 gestion_app, "_all_qonto_direct_debit_collections_for_rum",
+                 return_value=self._adelaide_reset_collections(),
+             ):
+            response = self.client.post(
+                "/api/billing/reset-financial-tracking",
+                json={
+                    "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+                    "confirm": True, "previewFingerprint": "stale-preview",
+                },
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("données Qonto ont changé", response.get_json()["error"])
+        save_mock.assert_not_called()
+        self.assertNotIn("financial_tracking_reset_backups", data)
+
     def test_retry_attempts_share_one_of_seven_contractual_slots(self):
         line = self._urbanik_line_with_two_retry_attempts()
 

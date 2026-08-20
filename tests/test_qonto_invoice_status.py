@@ -189,6 +189,16 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("if(rumInput&&updated.qonto_mandate_rum)rumInput.value=updated.qonto_mandate_rum", template)
         self.assertIn("Le RUM généré par Qonto s’ajoute automatiquement", template)
 
+    def test_financial_reset_button_requires_preview_then_confirmation(self):
+        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+
+        self.assertIn('id="btnResetFinancialTracking"', template)
+        self.assertIn("/api/billing/reset-financial-tracking", template)
+        self.assertIn("preview:true", template)
+        self.assertIn("previewFingerprint:preview.fingerprint", template)
+        self.assertIn("modifie uniquement le suivi de cette fiche", template)
+        self.assertIn("Une sauvegarde automatique sera conservée", template)
+
     def test_pending_qonto_mandate_never_reports_programmed_debits(self):
         line = {
             "paymentMode": "sepa_direct_debit",

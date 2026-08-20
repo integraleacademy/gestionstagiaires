@@ -35857,6 +35857,300 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+QONTO_FINANCIAL_RESET_PAID_STATUSES = {'completed', 'paid', 'succeeded', 'success'}
+QONTO_FINANCIAL_RESET_PENDING_STATUSES = {'scheduled', 'pending', 'active', 'in_progress', 'on_hold'}
+QONTO_FINANCIAL_RESET_CANCELED_STATUSES = {'canceled', 'cancelled'}
+
+
+def _financial_reset_row_key(row: Dict[str, Any]) -> Tuple[str, int]:
+    return (
+        str(row.get('due_date') or row.get('date') or '')[:10],
+        money_value_to_cents(row.get('amount') or 0),
+    )
+
+
+def _financial_reset_row_authority(row: Dict[str, Any]) -> Tuple[int, int, str]:
+    raw_status = str(
+        row.get('qonto_collection_status_raw')
+        or row.get('status') or ''
+    ).strip().lower()
+    normalized_status = str(row.get('status') or '').strip().lower()
+    if normalized_status in QONTO_FINANCIAL_RESET_PAID_STATUSES:
+        rank = 5
+    elif normalized_status in QONTO_FINANCIAL_RESET_PENDING_STATUSES:
+        rank = 4
+    elif normalized_status in {'failed', 'rejected', 'declined'}:
+        rank = 3
+    elif normalized_status in {'returned', 'refunded'}:
+        rank = 2
+    elif raw_status in QONTO_FINANCIAL_RESET_CANCELED_STATUSES:
+        rank = 0
+    else:
+        rank = 1
+    return (
+        rank,
+        1 if row.get('qonto_direct_debit_collection_id') else 0,
+        str(row.get('qonto_direct_debit_collection_id') or row.get('qonto_direct_debit_subscription_id') or ''),
+    )
+
+
+def _financial_reset_row_from_collection(collection: Dict[str, Any]) -> Dict[str, Any]:
+    due_date = _qonto_collection_date(collection)
+    amount_cents = _qonto_collection_amount_cents(collection)
+    raw_status = str(collection.get('status') or '').strip().lower()
+    row: Dict[str, Any] = {
+        'date': due_date,
+        'due_date': due_date,
+        'amount': cents_to_money(amount_cents),
+        'status': _map_collection_status(raw_status),
+        'qonto_collection_status_raw': raw_status,
+        'qonto_direct_debit_collection_id': str(collection.get('id') or ''),
+        'qonto_direct_debit_subscription_id': str(collection.get('direct_debit_subscription_id') or ''),
+        'reference': str(collection.get('reference') or ''),
+    }
+    if row['status'] in QONTO_FINANCIAL_RESET_PAID_STATUSES:
+        row['paidAt'] = (
+            collection.get('paid_at') or collection.get('completed_at')
+            or due_date
+        )
+    if collection.get('status_reason'):
+        row['failureReason'] = collection.get('status_reason')
+        row['status_reason'] = collection.get('status_reason')
+    return row
+
+
+def _unique_financial_reset_subset(
+    rows: List[Dict[str, Any]], target_cents: int, tolerance_cents: int = 1,
+) -> Optional[List[Dict[str, Any]]]:
+    """Return one unambiguous subset whose amount matches the remaining balance."""
+    if target_cents <= tolerance_cents:
+        return []
+    if not rows or len(rows) > 24:
+        return None
+    states: Dict[int, List[Tuple[int, ...]]] = {0: [()]}
+    ceiling = target_cents + tolerance_cents
+    for index, row in enumerate(rows):
+        amount_cents = money_value_to_cents(row.get('amount') or 0)
+        if amount_cents <= 0:
+            continue
+        additions: Dict[int, List[Tuple[int, ...]]] = {}
+        for current_total, subsets in list(states.items()):
+            next_total = current_total + amount_cents
+            if next_total > ceiling:
+                continue
+            for subset in subsets:
+                additions.setdefault(next_total, []).append(subset + (index,))
+        for total, subsets in additions.items():
+            merged = states.setdefault(total, [])
+            for subset in subsets:
+                if subset not in merged:
+                    merged.append(subset)
+                if len(merged) >= 2:
+                    break
+    matches: List[Tuple[int, ...]] = []
+    for total in range(max(0, target_cents - tolerance_cents), target_cents + tolerance_cents + 1):
+        for subset in states.get(total, []):
+            if subset not in matches:
+                matches.append(subset)
+            if len(matches) > 1:
+                return None
+    if len(matches) != 1:
+        return None
+    return [copy.deepcopy(rows[index]) for index in matches[0]]
+
+
+def _build_financial_tracking_reset_preview(line: Dict[str, Any]) -> Dict[str, Any]:
+    """Read Qonto without writing and build one safe replacement schedule.
+
+    Completed collections are immutable payment facts. Future installments are
+    selected only when a single combination matches the personal billing line
+    to the cent (with the one-cent rounding tolerance already used elsewhere).
+    Any ambiguity aborts the reset instead of guessing or touching Qonto.
+    """
+    working = copy.deepcopy(line)
+    mandate = _resolve_qonto_direct_debit_mandate_for_line(working)
+    mandate_id = str(working.get('qonto_direct_debit_mandate_id') or mandate.get('id') or '').strip()
+    mandate_rum = str(working.get('qonto_mandate_rum') or _qonto_mandate_rum(mandate) or '').strip()
+    if not mandate_id:
+        raise ValueError('Aucun mandat Qonto n’est rattaché à cette fiche.')
+    if not mandate_rum:
+        raise ValueError('Le RUM du mandat Qonto est absent. Recherchez d’abord le mandat avec son numéro RUM.')
+
+    recovered = _recover_qonto_installments_for_mandate(working, mandate_id)
+    candidates_by_key: Dict[Tuple[str, int], Dict[str, Any]] = {}
+    if recovered:
+        for raw_row in _sepa_installments(working):
+            row = copy.deepcopy(raw_row)
+            key = _financial_reset_row_key(row)
+            raw_subscription_status = str(row.get('qonto_subscription_status') or '').strip().lower()
+            if not key[0] or key[1] <= 0 or raw_subscription_status in QONTO_FINANCIAL_RESET_CANCELED_STATUSES:
+                continue
+            current = candidates_by_key.get(key)
+            if current is None or _financial_reset_row_authority(row) > _financial_reset_row_authority(current):
+                candidates_by_key[key] = row
+
+    collections = _all_qonto_direct_debit_collections_for_rum(mandate_rum)
+    for collection in collections:
+        raw_status = str(collection.get('status') or '').strip().lower()
+        if raw_status in QONTO_FINANCIAL_RESET_CANCELED_STATUSES:
+            continue
+        row = _financial_reset_row_from_collection(collection)
+        key = _financial_reset_row_key(row)
+        if not key[0] or key[1] <= 0:
+            continue
+        current = candidates_by_key.get(key)
+        if current is None or _financial_reset_row_authority(row) > _financial_reset_row_authority(current):
+            candidates_by_key[key] = row
+
+    candidates = sorted(
+        candidates_by_key.values(),
+        key=lambda row: (_financial_reset_row_key(row)[0], _financial_reset_row_key(row)[1]),
+    )
+    paid_rows = [
+        copy.deepcopy(row) for row in candidates
+        if str(row.get('status') or '').lower() in QONTO_FINANCIAL_RESET_PAID_STATUSES
+    ]
+    pending_rows = [
+        copy.deepcopy(row) for row in candidates
+        if str(row.get('status') or '').lower() in QONTO_FINANCIAL_RESET_PENDING_STATUSES
+    ]
+    failed_rows = [
+        copy.deepcopy(row) for row in candidates
+        if str(row.get('status') or '').lower() not in (
+            QONTO_FINANCIAL_RESET_PAID_STATUSES | QONTO_FINANCIAL_RESET_PENDING_STATUSES
+        )
+    ]
+
+    expected_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    paid_cents = sum(money_value_to_cents(row.get('amount') or 0) for row in paid_rows)
+    if expected_cents <= 0:
+        raise ValueError('Le montant personnel de cette fiche est nul ou invalide.')
+    if paid_cents > expected_cents + 1:
+        raise ValueError('Les paiements Qonto détectés dépassent le montant personnel de cette fiche.')
+    remaining_cents = max(expected_cents - paid_cents, 0)
+    selected_pending = _unique_financial_reset_subset(pending_rows, remaining_cents)
+    if selected_pending is None:
+        # A genuinely unpaid rejected installment can still be part of the
+        # current contractual schedule. Prefer pending rows, and use failed
+        # rows only when they produce one unique exact plan.
+        selected_pending = _unique_financial_reset_subset(pending_rows + failed_rows, remaining_cents)
+    if selected_pending is None:
+        raise ValueError(
+            'Qonto ne renvoie pas un échéancier unique correspondant au montant de cette fiche. '
+            'La réinitialisation a été annulée sans aucune modification.'
+        )
+
+    rows = paid_rows + selected_pending
+    rows.sort(key=lambda row: (_financial_reset_row_key(row)[0], _financial_reset_row_key(row)[1]))
+    total_cents = sum(money_value_to_cents(row.get('amount') or 0) for row in rows)
+    if abs(total_cents - expected_cents) > 1:
+        raise ValueError(
+            'Le total détecté dans Qonto ne correspond pas au montant personnel. '
+            'La réinitialisation a été annulée.'
+        )
+    total = len(rows)
+    if not total:
+        raise ValueError('Aucun prélèvement Qonto exploitable n’a été détecté pour ce mandat.')
+    for index, row in enumerate(rows, start=1):
+        row['index'] = index
+        row['schedule_index'] = index
+        row['schedule_total'] = total
+        row['total'] = total
+        row['is_current_schedule_attempt'] = True
+        row['updated_at'] = _now_iso()
+
+    fingerprint_payload = {
+        'line_id': str(line.get('id') or ''),
+        'mandate_id': mandate_id,
+        'rum': mandate_rum,
+        'expected_cents': expected_cents,
+        'rows': [
+            {
+                'date': _financial_reset_row_key(row)[0],
+                'amount_cents': _financial_reset_row_key(row)[1],
+                'status': str(row.get('status') or ''),
+                'subscription_id': str(row.get('qonto_direct_debit_subscription_id') or ''),
+                'collection_id': str(row.get('qonto_direct_debit_collection_id') or ''),
+            }
+            for row in rows
+        ],
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(fingerprint_payload, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    ).hexdigest()
+    return {
+        'line_id': str(line.get('id') or ''),
+        'mandate_id': mandate_id,
+        'mandate_rum': mandate_rum,
+        'qonto_client_id': str(
+            working.get('qontoClientId') or working.get('qontoCustomerId')
+            or working.get('qonto_mandate_client_id') or ''
+        ),
+        'expected_amount_cents': expected_cents,
+        'detected_amount_cents': total_cents,
+        'paid_amount_cents': sum(
+            money_value_to_cents(row.get('amount') or 0)
+            for row in rows
+            if str(row.get('status') or '').lower() in QONTO_FINANCIAL_RESET_PAID_STATUSES
+        ),
+        'remaining_amount_cents': max(expected_cents - paid_cents, 0),
+        'installments': rows,
+        'fingerprint': fingerprint,
+    }
+
+
+def _apply_financial_tracking_reset(line: Dict[str, Any], preview: Dict[str, Any]) -> None:
+    rows = copy.deepcopy(preview.get('installments') or [])
+    now = _now_iso()
+    line['paymentMode'] = 'sepa_direct_debit'
+    line['directDebitInstallments'] = rows
+    line['sepa_payment_plan'] = {'installments': rows}
+    line['paymentPlan'] = {
+        'mode': 'sepa_direct_debit',
+        'label': f'Prélèvement {len(rows)}x',
+        'installments': len(rows),
+        'frequency': 'monthly',
+        'firstDebitDate': rows[0].get('due_date') or rows[0].get('date') or '',
+        'schedule': [
+            {'date': row.get('due_date') or row.get('date') or '', 'amount': _money(row.get('amount'))}
+            for row in rows
+        ],
+    }
+    line['qonto_direct_debit_mandate_id'] = preview.get('mandate_id') or line.get('qonto_direct_debit_mandate_id') or ''
+    line['qonto_mandate_rum'] = preview.get('mandate_rum') or line.get('qonto_mandate_rum') or ''
+    if preview.get('qonto_client_id'):
+        line['qonto_mandate_client_id'] = preview['qonto_client_id']
+        line['qontoClientId'] = line.get('qontoClientId') or preview['qonto_client_id']
+        line['qontoCustomerId'] = line.get('qontoCustomerId') or preview['qonto_client_id']
+    line['qonto_direct_debit_subscription_id'] = next(
+        (
+            str(row.get('qonto_direct_debit_subscription_id') or '')
+            for row in rows if row.get('qonto_direct_debit_subscription_id')
+        ),
+        '',
+    )
+    line['qontoDirectDebitSyncWarning'] = ''
+    line['syncWarning'] = ''
+    line['qontoDirectDebitLastSyncedAt'] = now
+    line['qontoLastSyncedAt'] = now
+    _sync_sepa_aliases(line)
+    if line.get('qontoPaymentGlobalStatus') == 'Payé':
+        line['paymentStatus'] = 'paid'
+    elif line.get('qontoPaymentGlobalStatus') == 'Paiement partiel':
+        line['paymentStatus'] = 'partial'
+    elif line.get('qontoPaymentGlobalStatus') == 'Rejeté':
+        line['paymentStatus'] = 'failed'
+    else:
+        line['paymentStatus'] = 'unpaid'
+    _billing_log(
+        line,
+        'Suivi financier reconstruit depuis Qonto',
+        'success',
+        f'{len(rows)} échéance(s), dont {line.get("sepa_payment_plan", {}).get("paid_installments", 0)} payée(s)',
+        preview.get('fingerprint') or '',
+    )
+
+
 def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) -> bool:
     collection_id = str(item.get('id') or '')
     subscription_id = str(item.get('direct_debit_subscription_id') or '')
@@ -36253,6 +36547,135 @@ def api_billing_sync_qonto():
             f'{updated_collections} statut(s) de prélèvement mis à jour.'
         ),
         'lines': all_lines, 'errors': errors, 'invoice': invoice,
+        'financial_summary': summary,
+    })
+
+
+@app.post('/api/billing/reset-financial-tracking')
+@admin_login_required
+@admin_write_required
+def api_billing_reset_financial_tracking():
+    """Preview or atomically rebuild one trainee's local SEPA tracking.
+
+    The endpoint is deliberately read-only toward Qonto. It never cancels,
+    creates, edits, or retries a remote debit. The local billing row is saved
+    only after a second request confirms the exact preview fingerprint.
+    """
+    payload = request.get_json(silent=True) or {}
+    trainee_id = str(payload.get('traineeId') or '').strip()
+    session_id = str(payload.get('sessionId') or '').strip()
+    preview_only = bool(payload.get('preview'))
+    confirmed = payload.get('confirm') is True
+    if not trainee_id or not session_id:
+        return jsonify({'ok': False, 'error': 'Fiche stagiaire ou session manquante.'}), 400
+    if not preview_only and not confirmed:
+        return jsonify({'ok': False, 'error': 'La confirmation de réinitialisation est obligatoire.'}), 400
+
+    data = load_data()
+    session_obj = next(
+        (item for item in data.get('sessions', []) if str(item.get('id') or '') == session_id),
+        None,
+    )
+    trainee = next(
+        (
+            item for item in _session_trainees_list(session_obj or {})
+            if str(item.get('id') or '') == trainee_id
+        ),
+        None,
+    )
+    if not session_obj or not trainee:
+        return jsonify({'ok': False, 'error': 'Cette fiche stagiaire est introuvable dans cette session.'}), 404
+
+    lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    personal_sepa_lines = [
+        line for line in lines
+        if line.get('paymentMode') == 'sepa_direct_debit'
+        and str(line.get('financingType') or line.get('typeFinanceur') or '').strip().upper() in {'PERSONNEL', 'PERSONAL'}
+    ]
+    if not personal_sepa_lines:
+        personal_sepa_lines = [line for line in lines if line.get('paymentMode') == 'sepa_direct_debit']
+    if len(personal_sepa_lines) != 1:
+        return jsonify({
+            'ok': False,
+            'error': (
+                'Aucun échéancier personnel unique n’a été trouvé sur cette fiche.'
+                if not personal_sepa_lines
+                else 'Plusieurs échéanciers personnels existent sur cette fiche ; aucune réinitialisation automatique n’est possible.'
+            ),
+        }), 409
+    line = personal_sepa_lines[0]
+
+    try:
+        reset_preview = _build_financial_tracking_reset_preview(line)
+    except Exception as exc:
+        return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc))}), 409
+
+    public_installments = [
+        {
+            'index': int(row.get('index') or index),
+            'date': str(row.get('due_date') or row.get('date') or '')[:10],
+            'amount_cents': money_value_to_cents(row.get('amount') or 0),
+            'status': str(row.get('status') or 'scheduled'),
+        }
+        for index, row in enumerate(reset_preview['installments'], start=1)
+    ]
+    response_preview = {
+        'fingerprint': reset_preview['fingerprint'],
+        'line_id': reset_preview['line_id'],
+        'mandate_rum': reset_preview['mandate_rum'],
+        'expected_amount_cents': reset_preview['expected_amount_cents'],
+        'detected_amount_cents': reset_preview['detected_amount_cents'],
+        'paid_amount_cents': reset_preview['paid_amount_cents'],
+        'remaining_amount_cents': reset_preview['remaining_amount_cents'],
+        'installments': public_installments,
+    }
+    if preview_only:
+        return jsonify({'ok': True, 'preview': response_preview})
+
+    supplied_fingerprint = str(payload.get('previewFingerprint') or '').strip()
+    if not supplied_fingerprint or not hmac.compare_digest(
+        supplied_fingerprint, reset_preview['fingerprint'],
+    ):
+        return jsonify({
+            'ok': False,
+            'error': 'Les données Qonto ont changé depuis l’aperçu. Relancez la réinitialisation pour les vérifier.',
+        }), 409
+
+    existing_map = _billing_existing_map(data)
+    backup = {
+        'id': f'finance-reset-{uuid.uuid4().hex[:12]}',
+        'created_at': _now_iso(),
+        'created_by': session.get('admin_username') or session.get('admin_email') or 'admin',
+        'session_id': session_id,
+        'trainee_id': trainee_id,
+        'line_id': str(line.get('id') or ''),
+        'preview_fingerprint': reset_preview['fingerprint'],
+        'trainee_financing': {
+            key: copy.deepcopy(trainee.get(key))
+            for key in (
+                'training_price', 'cpf_amount', 'personal_amount', 'other_amount',
+                'other_financing_amount', 'financings', 'cpf_validated',
+            )
+        },
+        'billing_line': copy.deepcopy(existing_map.get(str(line.get('id') or '')) or line),
+    }
+    _apply_financial_tracking_reset(line, reset_preview)
+    _save_billing_line(data, line)
+    backups = data.get('financial_tracking_reset_backups')
+    if not isinstance(backups, list):
+        backups = []
+    backups.append(backup)
+    data['financial_tracking_reset_backups'] = backups[-50:]
+    save_data(data)
+
+    fresh_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    summary = calculate_trainee_financial_summary(trainee, fresh_lines)
+    return jsonify({
+        'ok': True,
+        'message': 'Le suivi financier a été reconstruit depuis Qonto sans modifier Qonto.',
+        'backup_id': backup['id'],
+        'preview': response_preview,
+        'lines': fresh_lines,
         'financial_summary': summary,
     })
 
