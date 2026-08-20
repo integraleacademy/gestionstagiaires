@@ -33089,11 +33089,37 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
         for item in _sepa_installments(line)
         if item.get('qonto_direct_debit_subscription_id')
     }
+    # A SEPA mandate can be reused for several invoice schedules.  When the
+    # current invoice reference is present in Qonto, only merge that schedule
+    # with subscriptions already known by this billing line.  The fallback to
+    # all mandate subscriptions preserves recovery for older references which
+    # Qonto returned without a label.
+    line_reference_tokens = {
+        str(value).strip().casefold()
+        for value in (
+            line.get('qontoInvoiceNumber'), line.get('qontoInvoiceId'), line.get('id'),
+        )
+        if str(value or '').strip()
+    }
+    matching_reference_ids = {
+        str(subscription.get('id') or '')
+        for subscription in subscriptions
+        if str(subscription.get('id') or '')
+        and str(_qonto_subscription_reference(subscription)).split(' - ', 1)[0].strip().casefold()
+        in line_reference_tokens
+    }
+    if matching_reference_ids:
+        subscriptions = [
+            subscription for subscription in subscriptions
+            if str(subscription.get('id') or '') in existing
+            or str(subscription.get('id') or '') in matching_reference_ids
+        ]
     recovered: List[Dict[str, Any]] = []
     for subscription in subscriptions:
         subscription_id = str(subscription.get('id') or '')
         if not subscription_id:
             continue
+        raw_subscription_status = str(subscription.get('status') or '').strip().lower()
         reference = _qonto_subscription_reference(subscription)
         schedule_index, schedule_total, is_rejection_retry = _qonto_reference_schedule_position(reference)
         amount = subscription.get('amount')
@@ -33153,6 +33179,11 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
                 # that was attempted, not every future monthly occurrence.
                 'status': subscription_status if offset == 0 or subscription_status not in {'failed', 'returned', 'refunded'} else 'scheduled',
                 'qonto_direct_debit_subscription_id': subscription_id,
+                # Keep the subscription status separate from the collection
+                # status.  When an installment plan is replaced in Qonto, the
+                # old future subscriptions remain visible as ``canceled`` but
+                # must no longer be counted in the trainee's active schedule.
+                'qonto_subscription_status': raw_subscription_status,
                 'qonto_subscription_occurrence': offset + 1,
                 'reference': reference,
                 'updated_at': _now_iso(),
@@ -33178,6 +33209,72 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
     line['qonto_direct_debit_subscription_id'] = recovered[0]['qonto_direct_debit_subscription_id']
     _sync_sepa_aliases(line)
     return len(recovered)
+
+
+def _drop_cancelled_qonto_future_installments(line: Dict[str, Any]) -> int:
+    """Remove obsolete future rows left behind by a replaced Qonto schedule.
+
+    Qonto keeps canceled subscriptions for audit purposes.  They are useful
+    when a collection was actually attempted, but a canceled subscription
+    without a real collection is not an amount still due.  Keeping those rows
+    made an old installment plan survive an invoice credit note and overlap
+    the newly programmed debits.
+    """
+    installments = _sepa_installments(line)
+    kept: List[Dict[str, Any]] = []
+    removed = 0
+    for item in installments:
+        subscription_status = str(item.get('qonto_subscription_status') or '').strip().lower()
+        collection_status = str(item.get('qonto_collection_status_raw') or '').strip().lower()
+        subscription_cancelled = subscription_status in {'canceled', 'cancelled'}
+        collection_cancelled = collection_status in {'canceled', 'cancelled'}
+        has_real_collection = bool(item.get('qonto_direct_debit_collection_id')) and not collection_cancelled
+        if subscription_cancelled and not has_real_collection:
+            removed += 1
+            continue
+        kept.append(item)
+    if not removed:
+        return 0
+
+    kept.sort(key=lambda item: (
+        str(item.get('due_date') or item.get('date') or ''),
+        _positive_installment_int(item.get('index')),
+    ))
+    # A plain replacement plan can reuse references such as "échéance 1/3",
+    # while the two payments already collected belonged to "échéance 1/5".
+    # Rebase the surviving rows chronologically so those duplicate reference
+    # positions cannot collapse paid and future installments into one slot.
+    if not any(item.get('is_rejection_retry') for item in kept):
+        total = len(kept)
+        for index, item in enumerate(kept, start=1):
+            item['index'] = index
+            item['schedule_index'] = index
+            item['schedule_total'] = total
+        payment_plan = dict(line.get('paymentPlan') or {})
+        payment_plan.update({
+            'mode': 'sepa_direct_debit',
+            'paymentMode': 'sepa',
+            'installments': total,
+            'frequency': 'monthly',
+            'firstDebitDate': str(kept[0].get('due_date') or kept[0].get('date') or '') if kept else '',
+            'schedule': [
+                {
+                    'date': str(item.get('due_date') or item.get('date') or ''),
+                    'amount': _money(item.get('amount')),
+                    'status': item.get('status') or 'scheduled',
+                }
+                for item in kept
+            ],
+        })
+        line['paymentPlan'] = payment_plan
+    line['directDebitInstallments'] = kept
+    line['sepa_payment_plan'] = {'installments': kept}
+    line['qonto_direct_debit_subscription_id'] = next((
+        item.get('qonto_direct_debit_subscription_id') for item in kept
+        if item.get('qonto_direct_debit_subscription_id')
+    ), '')
+    _sync_sepa_aliases(line)
+    return removed
 
 
 def _recover_missing_qonto_rejection_retries(line: Dict[str, Any], mandate_id: str) -> int:
@@ -35246,6 +35343,21 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
     """
     client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
     mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '')
+    if mandate_id:
+        try:
+            recovered = _recover_qonto_installments_for_mandate(line, mandate_id)
+            if recovered:
+                _billing_log(
+                    line, 'Échéancier Qonto reconstruit avant synchronisation', 'success',
+                    f'{recovered} prélèvement(s) retrouvé(s)', mandate_id,
+                )
+        except Exception as exc:
+            # Keep the former local schedule as a safe fallback when Qonto's
+            # subscription listing is temporarily unavailable.
+            app.logger.warning(
+                '[QONTO] reconstruction échéancier impossible mandate_id=%s error=%s',
+                mandate_id, _sanitize_qonto_error(str(exc)),
+            )
     if client_id and mandate_id:
         mandates = list_qonto_direct_debit_mandates(str(client_id))
         items = mandates.get('direct_debit_mandates') or mandates.get('mandates') or mandates.get('items') or []
@@ -35305,17 +35417,32 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
             if same_subscription_rows > 1:
                 continue
             collection = collections[-1]
+        raw_collection_status = str(collection.get('status') or '').strip().lower()
         item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
-        item['status'] = _map_collection_status(collection.get('status'))
+        item['qonto_collection_status_raw'] = raw_collection_status
+        item['status'] = _map_collection_status(raw_collection_status)
         if collection_date(collection):
             item['date'] = collection_date(collection)
             item['due_date'] = collection_date(collection)
         if item['status'] == 'completed':
             item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
+            # A stale subscription-level rejection must not survive once the
+            # corresponding Qonto collection is confirmed as completed.
+            for key in (
+                'failureReason', 'status_reason', 'rejection_treated',
+                'rejection_treated_at', 'excluded_from_schedule_totals',
+            ):
+                item.pop(key, None)
         if collection.get('status_reason'):
             item['failureReason'] = collection.get('status_reason')
             item['status_reason'] = collection.get('status_reason')
         item['updated_at'] = _now_iso()
+    removed_cancelled = _drop_cancelled_qonto_future_installments(line)
+    if removed_cancelled:
+        _billing_log(
+            line, 'Anciennes échéances Qonto annulées retirées', 'success',
+            f'{removed_cancelled} prélèvement(s) obsolète(s)', mandate_id,
+        )
     _sync_sepa_aliases(line)
     line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
     if line['qontoPaymentGlobalStatus'] == 'Payé':

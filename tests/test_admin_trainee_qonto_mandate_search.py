@@ -259,6 +259,152 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertEqual([item["status"] for item in installments], ["completed", "failed", "scheduled"])
         self.assertEqual(installments[1]["failureReason"], "blocked_account")
 
+    def test_sync_rebuilds_schedule_after_credit_note_and_keeps_prior_payments(self):
+        old_installments = [
+            {
+                "index": 1, "date": "2026-06-30", "due_date": "2026-06-30",
+                "amount": 716.17, "status": "failed", "failureReason": "unknown",
+                "qonto_direct_debit_subscription_id": "sub-paid-1",
+            },
+            {
+                "index": 2, "date": "2026-07-30", "due_date": "2026-07-30",
+                "amount": 716.17, "status": "scheduled",
+                "qonto_direct_debit_subscription_id": "sub-paid-2",
+            },
+            *[
+                {
+                    "index": index, "date": f"2026-{month:02d}-30",
+                    "due_date": f"2026-{month:02d}-30", "amount": 716.17,
+                    "status": "scheduled",
+                    "qonto_direct_debit_subscription_id": f"sub-old-{index}",
+                }
+                for index, month in ((3, 8), (4, 9), (5, 10))
+            ],
+        ]
+        line = {
+            "id": "line-adelaide", "traineeId": "trainee-adelaide",
+            "financingType": "PERSONNEL", "amount": 3309, "amountTTC": 3309,
+            "paymentMode": "sepa_direct_debit",
+            "qontoInvoiceId": "invoice-after-credit-note",
+            "qontoInvoiceNumber": "FL-NEW", "qonto_total_amount_cents": 330900,
+            "qonto_amount_paid_cents": 0,
+            "qontoClientId": "client-adelaide",
+            "qonto_direct_debit_mandate_id": "mandate-adelaide",
+            "qonto_mandate_status": "active", "mandateStatus": "active",
+            "paymentPlan": {
+                "mode": "sepa_direct_debit", "installments": 5,
+                "schedule": [
+                    {"date": item["date"], "amount": item["amount"]}
+                    for item in old_installments
+                ],
+            },
+            "directDebitInstallments": old_installments,
+            "sepa_payment_plan": {"installments": old_installments},
+        }
+        subscriptions = {"direct_debit_subscriptions": [
+            {
+                "id": "sub-paid-1", "direct_debit_mandate_id": "mandate-adelaide",
+                "initial_collection_date": "2026-06-30", "amount": {"value": "716.17"},
+                "status": "completed", "reference": "FL-OLD - échéance 1/5",
+            },
+            {
+                "id": "sub-paid-2", "direct_debit_mandate_id": "mandate-adelaide",
+                "initial_collection_date": "2026-07-30", "amount": {"value": "716.17"},
+                "status": "completed", "reference": "FL-OLD - échéance 2/5",
+            },
+            *[
+                {
+                    "id": f"sub-old-{index}",
+                    "direct_debit_mandate_id": "mandate-adelaide",
+                    "initial_collection_date": f"2026-{month:02d}-30",
+                    "amount": {"value": "716.17"}, "status": "canceled",
+                    "reference": f"FL-OLD - échéance {index}/5",
+                }
+                for index, month in ((3, 8), (4, 9), (5, 10))
+            ],
+            *[
+                {
+                    "id": f"sub-new-{index}",
+                    "direct_debit_mandate_id": "mandate-adelaide",
+                    "initial_collection_date": f"2026-{month:02d}-30",
+                    "amount": {"value": "625.55"}, "status": "pending",
+                    "reference": f"FL-NEW - échéance {index}/3",
+                }
+                for index, month in ((1, 8), (2, 9), (3, 10))
+            ],
+            {
+                "id": "sub-unrelated", "direct_debit_mandate_id": "mandate-adelaide",
+                "initial_collection_date": "2026-09-15", "amount": {"value": "999.00"},
+                "status": "pending", "reference": "FL-OTHER - échéance 1/1",
+            },
+        ]}
+        collections = {
+            "sub-paid-1": {"direct_debit_collections": [{
+                "id": "collection-june", "collection_date": "2026-06-30",
+                "status": "completed", "completed_at": "2026-06-30T08:00:00Z",
+            }]},
+            "sub-paid-2": {"direct_debit_collections": [{
+                "id": "collection-july", "collection_date": "2026-07-30",
+                "status": "completed", "completed_at": "2026-07-30T08:00:00Z",
+            }]},
+        }
+
+        with patch.object(
+            gestion_app, "list_qonto_direct_debit_subscriptions", return_value=subscriptions,
+        ), patch.object(
+            gestion_app, "list_qonto_direct_debit_mandates", return_value={
+                "direct_debit_mandates": [{
+                    "id": "mandate-adelaide", "status": "active",
+                }],
+            },
+        ), patch.object(
+            gestion_app, "_ensure_qonto_oauth_ready",
+        ), patch.object(
+            gestion_app, "get_qonto_bank_account_id", return_value="bank-account-1",
+        ), patch.object(
+            gestion_app, "create_qonto_direct_debit_subscription",
+        ) as create_subscription_mock, patch.object(
+            gestion_app, "list_qonto_direct_debit_collections",
+            side_effect=lambda subscription_id: collections.get(subscription_id, {}),
+        ), patch.object(
+            gestion_app, "_recover_missing_qonto_rejection_retries", return_value=0,
+        ):
+            gestion_app._sync_qonto_direct_debit_line(line)
+
+        create_subscription_mock.assert_not_called()
+
+        installments = line["directDebitInstallments"]
+        self.assertEqual(len(installments), 5)
+        self.assertEqual(
+            [item["qonto_direct_debit_subscription_id"] for item in installments],
+            ["sub-paid-1", "sub-paid-2", "sub-new-1", "sub-new-2", "sub-new-3"],
+        )
+        self.assertEqual(
+            [item["status"] for item in installments],
+            ["completed", "completed", "scheduled", "scheduled", "scheduled"],
+        )
+        self.assertEqual(
+            [item["amount"] for item in installments],
+            [716.17, 716.17, 625.55, 625.55, 625.55],
+        )
+        self.assertEqual(
+            [item["due_date"] for item in installments],
+            ["2026-06-30", "2026-07-30", "2026-08-30", "2026-09-30", "2026-10-30"],
+        )
+        self.assertEqual([item["schedule_index"] for item in installments], [1, 2, 3, 4, 5])
+        self.assertEqual(line["sepa_payment_plan"]["total_installments"], 5)
+        self.assertEqual(line["sepa_payment_plan"]["total_paid"], 1432.34)
+        self.assertEqual(line["sepa_payment_plan"]["total_remaining"], 1876.65)
+        self.assertEqual(line["qontoPaymentGlobalStatus"], "Paiement partiel")
+        self.assertEqual(line["paymentStatus"], "partial")
+
+        summary = gestion_app.calculate_trainee_financial_summary(
+            {"id": "trainee-adelaide", "personal_amount": 3309}, [line],
+        )
+        self.assertEqual(summary["paid_total_cents"], 143234)
+        self.assertEqual(summary["remaining_total_cents"], 187666)
+        self.assertEqual(summary["by_financer"]["PERSONNEL"]["paid_amount_cents"], 143234)
+
     def test_retry_attempts_share_one_of_seven_contractual_slots(self):
         line = self._urbanik_line_with_two_retry_attempts()
 
