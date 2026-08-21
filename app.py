@@ -35874,6 +35874,65 @@ QONTO_FINANCIAL_RESET_PENDING_STATUSES = {'scheduled', 'pending', 'active', 'in_
 QONTO_FINANCIAL_RESET_CANCELED_STATUSES = {'canceled', 'cancelled'}
 
 
+def _financial_reset_line_is_personal(line: Dict[str, Any]) -> bool:
+    """Recognize legacy personal lines even when one type alias is missing."""
+    values = (
+        line.get('financingType'), line.get('typeFinanceur'),
+        line.get('financingLabel'), line.get('financeurName'),
+    )
+    return any(
+        str(value or '').strip().upper() in {'PERSONNEL', 'PERSONAL'}
+        for value in values
+    )
+
+
+def _financial_reset_line_installment_rows(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Read schedule evidence without requiring the legacy paymentMode flag."""
+    direct = line.get('directDebitInstallments')
+    if isinstance(direct, list) and any(isinstance(item, dict) for item in direct):
+        return [item for item in direct if isinstance(item, dict)]
+    sepa_plan = line.get('sepa_payment_plan')
+    if isinstance(sepa_plan, dict):
+        installments = sepa_plan.get('installments')
+        if isinstance(installments, list) and any(isinstance(item, dict) for item in installments):
+            return [item for item in installments if isinstance(item, dict)]
+    payment_plan = line.get('paymentPlan')
+    if isinstance(payment_plan, dict):
+        schedule = payment_plan.get('schedule')
+        if isinstance(schedule, list) and any(isinstance(item, dict) for item in schedule):
+            return [item for item in schedule if isinstance(item, dict)]
+    return []
+
+
+def _financial_reset_line_has_tracking(line: Dict[str, Any]) -> bool:
+    payment_mode = str(line.get('paymentMode') or '').strip().lower()
+    payment_plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
+    plan_mode = str(
+        payment_plan.get('mode') or payment_plan.get('paymentMode') or ''
+    ).strip().lower()
+    return bool(
+        _financial_reset_line_installment_rows(line)
+        or payment_mode in {'sepa', 'direct_debit', 'sepa_direct_debit'}
+        or plan_mode in {'sepa', 'direct_debit', 'sepa_direct_debit'}
+        or line.get('qonto_direct_debit_mandate_id')
+        or line.get('qonto_direct_debit_subscription_id')
+        or line.get('qonto_mandate_rum')
+    )
+
+
+def _financial_reset_line_candidates(lines: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return reset candidates, preferring personal rows with a real schedule."""
+    personal = [line for line in lines if _financial_reset_line_is_personal(line)]
+    pool = personal or [line for line in lines if _financial_reset_line_has_tracking(line)]
+    with_rows = [line for line in pool if _financial_reset_line_installment_rows(line)]
+    if with_rows:
+        return with_rows
+    with_tracking = [line for line in pool if _financial_reset_line_has_tracking(line)]
+    if with_tracking:
+        return with_tracking
+    return personal
+
+
 def _financial_reset_row_key(row: Dict[str, Any]) -> Tuple[str, int]:
     return (
         str(row.get('due_date') or row.get('date') or '')[:10],
@@ -36746,23 +36805,17 @@ def api_billing_reset_financial_tracking():
         return jsonify({'ok': False, 'error': 'Cette fiche stagiaire est introuvable dans cette session.'}), 404
 
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
-    personal_sepa_lines = [
-        line for line in lines
-        if line.get('paymentMode') == 'sepa_direct_debit'
-        and str(line.get('financingType') or line.get('typeFinanceur') or '').strip().upper() in {'PERSONNEL', 'PERSONAL'}
-    ]
-    if not personal_sepa_lines:
-        personal_sepa_lines = [line for line in lines if line.get('paymentMode') == 'sepa_direct_debit']
-    if len(personal_sepa_lines) != 1:
+    reset_candidates = _financial_reset_line_candidates(lines)
+    if len(reset_candidates) != 1:
         return jsonify({
             'ok': False,
             'error': (
                 'Aucun échéancier personnel unique n’a été trouvé sur cette fiche.'
-                if not personal_sepa_lines
+                if not reset_candidates
                 else 'Plusieurs échéanciers personnels existent sur cette fiche ; aucune réinitialisation automatique n’est possible.'
             ),
         }), 409
-    line = personal_sepa_lines[0]
+    line = reset_candidates[0]
 
     try:
         reset_preview = (

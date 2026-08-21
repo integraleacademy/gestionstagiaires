@@ -849,6 +849,49 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertEqual(response_data["financial_summary"]["paid_total_cents"], 143234)
         self.assertEqual(response_data["financial_summary"]["remaining_total_cents"], 187666)
 
+    def test_manual_financial_reset_finds_personal_schedule_without_payment_mode(self):
+        line = self._adelaide_reset_line()
+        line.pop("paymentMode")
+        trainee = {
+            "id": "trainee-adelaide", "first_name": "Adelaide", "last_name": "Tita",
+            "cpf_amount": 991, "personal_amount": 3309,
+        }
+        other_line = {
+            "id": gestion_app._billing_line_id(
+                "session-adelaide", "trainee-adelaide", "AUTRE", "legacy",
+            ),
+            "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+            "financingType": "AUTRE", "amount": 500, "amountTTC": 500,
+            "paymentMode": "sepa_direct_debit",
+            "directDebitInstallments": [{
+                "date": "2026-08-15", "amount": 500, "status": "scheduled",
+            }],
+        }
+        data = {
+            "sessions": [{
+                "id": "session-adelaide", "name": "TITIA DESP SEPTEMBRE 2026",
+                "training_type": "TITIA DESP", "date_start": "2026-09-01",
+                "date_end": "2026-09-30", "trainees": [trainee],
+            }],
+            "billing_lines": [line, other_line],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data") as save_mock, \
+             patch.object(gestion_app, "_build_financial_tracking_reset_preview") as automatic_mock:
+            response = self.client.post(
+                "/api/billing/reset-financial-tracking",
+                json={
+                    "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+                    "preview": True, "manualInstallments": self._adelaide_manual_rows(),
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["preview"]["line_id"], line["id"])
+        save_mock.assert_not_called()
+        automatic_mock.assert_not_called()
+
     def test_manual_override_prevents_sync_from_reimporting_or_creating_a_schedule(self):
         line = self._adelaide_reset_line()
         preview = gestion_app._build_manual_financial_tracking_reset_preview(

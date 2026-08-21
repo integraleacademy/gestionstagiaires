@@ -4317,10 +4317,31 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     return value||'Inconnu';
   }
   let financialResetDraftRows=[];
+  function financialResetLineIsPersonal(line){
+    return [line?.financingType,line?.typeFinanceur,line?.financingLabel,line?.financeurName]
+      .some(value=>['PERSONNEL','PERSONAL'].includes(String(value||'').trim().toUpperCase()));
+  }
+  function financialResetRawRows(line){
+    const direct=Array.isArray(line?.directDebitInstallments)?line.directDebitInstallments.filter(item=>item&&typeof item==='object'):[];
+    if(direct.length)return direct;
+    const sepa=Array.isArray(line?.sepa_payment_plan?.installments)?line.sepa_payment_plan.installments.filter(item=>item&&typeof item==='object'):[];
+    if(sepa.length)return sepa;
+    return Array.isArray(line?.paymentPlan?.schedule)?line.paymentPlan.schedule.filter(item=>item&&typeof item==='object'):[];
+  }
+  function financialResetLineHasTracking(line){
+    const paymentMode=String(line?.paymentMode||'').trim().toLowerCase();
+    const planMode=String(line?.paymentPlan?.mode||line?.paymentPlan?.paymentMode||'').trim().toLowerCase();
+    return financialResetRawRows(line).length>0
+      || ['sepa','direct_debit','sepa_direct_debit'].includes(paymentMode)
+      || ['sepa','direct_debit','sepa_direct_debit'].includes(planMode)
+      || Boolean(line?.qonto_direct_debit_mandate_id||line?.qonto_direct_debit_subscription_id||line?.qonto_mandate_rum);
+  }
   function financialResetTargetLine(){
-    const sepa=currentLines.filter(line=>line.paymentMode==='sepa_direct_debit');
-    const personal=sepa.filter(line=>/PERSONNEL|PERSONAL/.test(String(line.financingType||line.typeFinanceur||'').toUpperCase()));
-    const matches=personal.length?personal:sepa;
+    const personal=currentLines.filter(financialResetLineIsPersonal);
+    const pool=personal.length?personal:currentLines.filter(financialResetLineHasTracking);
+    const withRows=pool.filter(line=>financialResetRawRows(line).length>0);
+    const tracked=pool.filter(financialResetLineHasTracking);
+    const matches=withRows.length?withRows:(tracked.length?tracked:personal);
     return matches.length===1?matches[0]:null;
   }
   function financialResetNormalizedStatus(status){
@@ -4330,13 +4351,13 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     return 'scheduled';
   }
   function financialResetRowsFromLine(line){
-    const effective=logicalInstallmentsForLine(line);
-    const source=effective.length?effective:(Array.isArray(line?.directDebitInstallments)?line.directDebitInstallments:[]);
+    const direct=Array.isArray(line?.directDebitInstallments)&&line.directDebitInstallments.length?logicalInstallmentsForLine(line):[];
+    const source=direct.length?direct:financialResetRawRows(line);
     return [...source]
       .sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b)))
       .map(item=>({
         date:installmentDate(item),
-        amount_cents:Math.round(Number(item?.amount||0)*100),
+        amount_cents:Number.isInteger(item?.amount_cents)?Number(item.amount_cents):Math.round(Number(item?.amount||0)*100),
         status:financialResetNormalizedStatus(item?.status)
       }));
   }

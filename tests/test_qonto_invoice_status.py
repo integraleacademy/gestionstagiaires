@@ -201,6 +201,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("Confirmer et appliquer", template)
         self.assertIn("modifie uniquement le suivi de cette fiche", template)
         self.assertIn("Une sauvegarde automatique sera conservée", template)
+        self.assertIn("function financialResetLineHasTracking", template)
+        self.assertIn("function financialResetRawRows", template)
         self.assertNotIn("window.confirm(financialResetConfirmation", template)
 
     def test_pending_qonto_mandate_never_reports_programmed_debits(self):
