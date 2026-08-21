@@ -4316,42 +4316,147 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     if(['failed','rejected','declined'].includes(value))return 'Rejeté';
     return value||'Inconnu';
   }
-  function financialResetConfirmation(preview){
-    const rows=(preview.installments||[]).map(item=>`• ${formatIsoDateFr(item.date)} — ${fmtMoney(Number(item.amount_cents||0)/100)} — ${financialResetStatusLabel(item.status)}`).join('\n');
-    const roundingGap=Math.abs(Number(preview.expected_amount_cents||0)-Number(preview.detected_amount_cents||0));
-    const roundingNote=roundingGap===1?`Écart d’arrondi accepté : ${fmtMoney(0.01)}`:'';
-    return [
-      'Vérifiez le nouvel échéancier détecté dans Qonto :',
-      '', rows || 'Aucune échéance détectée.', '',
-      `Montant personnel attendu : ${fmtMoney(Number(preview.expected_amount_cents||0)/100)}`,
-      `Total détecté : ${fmtMoney(Number(preview.detected_amount_cents||0)/100)}`,
-      `Déjà réglé : ${fmtMoney(Number(preview.paid_amount_cents||0)/100)}`,
-      roundingNote,
-      '',
-      'Cette action modifie uniquement le suivi de cette fiche. Elle ne crée, ne modifie et n’annule aucun prélèvement dans Qonto. Une sauvegarde automatique sera conservée.',
-      '', 'Confirmer la réinitialisation ?'
-    ].join('\n');
+  let financialResetDraftRows=[];
+  function financialResetTargetLine(){
+    const sepa=currentLines.filter(line=>line.paymentMode==='sepa_direct_debit');
+    const personal=sepa.filter(line=>/PERSONNEL|PERSONAL/.test(String(line.financingType||line.typeFinanceur||'').toUpperCase()));
+    const matches=personal.length?personal:sepa;
+    return matches.length===1?matches[0]:null;
   }
-  resetFinancialTrackingBtn?.addEventListener('click', async ()=>{
-    resetFinancialTrackingBtn.disabled=true;
-    try{
-      showQontoSyncModal('Analyse du suivi financier', 'Nous relisons le mandat et les prélèvements Qonto sans effectuer aucune modification.');
-      const previewResult=await billingApi('/api/billing/reset-financial-tracking',{traineeId,sessionId,preview:true,source:'admin_trainee'});
-      hideQontoSyncModal();
-      const preview=previewResult.preview||{};
-      if(!window.confirm(financialResetConfirmation(preview)))return;
-      showQontoSyncModal('Réinitialisation du suivi financier', 'Nous sauvegardons l’ancien suivi puis reconstruisons uniquement cette fiche. Qonto reste inchangé.');
-      const result=await billingApi('/api/billing/reset-financial-tracking',{traineeId,sessionId,confirm:true,previewFingerprint:preview.fingerprint,source:'admin_trainee'});
-      await load({allowAutoSync:false});
-      hideQontoSyncModal();
-      alert(result.message||'Le suivi financier a été réinitialisé.');
-    }catch(error){
-      hideQontoSyncModal();
-      alert(error.message||'La réinitialisation du suivi financier a été annulée sans modification.');
-    }finally{
-      hideQontoSyncModal();
-      resetFinancialTrackingBtn.disabled=false;
+  function financialResetNormalizedStatus(status){
+    const value=String(status||'scheduled').toLowerCase();
+    if(['completed','paid','succeeded','success'].includes(value))return 'completed';
+    if(['failed','returned','rejected','refunded','declined'].includes(value))return 'failed';
+    return 'scheduled';
+  }
+  function financialResetRowsFromLine(line){
+    const effective=logicalInstallmentsForLine(line);
+    const source=effective.length?effective:(Array.isArray(line?.directDebitInstallments)?line.directDebitInstallments:[]);
+    return [...source]
+      .sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b)))
+      .map(item=>({
+        date:installmentDate(item),
+        amount_cents:Math.round(Number(item?.amount||0)*100),
+        status:financialResetNormalizedStatus(item?.status)
+      }));
+  }
+  function financialResetRowHtml(row,index){
+    const amount=(Number(row?.amount_cents||0)/100).toFixed(2);
+    const status=financialResetNormalizedStatus(row?.status);
+    return `<div class="kv" data-financial-reset-row style="display:grid;grid-template-columns:minmax(145px,1fr) minmax(125px,.8fr) minmax(150px,1fr) auto;gap:10px;align-items:end;">
+      <label><span class="label">Date</span><input type="date" data-financial-reset-date value="${esc(row?.date||'')}"></label>
+      <label><span class="label">Montant</span><input type="number" min="0.01" step="0.01" data-financial-reset-amount value="${esc(amount)}"></label>
+      <label><span class="label">Statut</span><select data-financial-reset-status><option value="completed"${status==='completed'?' selected':''}>Réglé</option><option value="scheduled"${status==='scheduled'?' selected':''}>Programmé</option><option value="failed"${status==='failed'?' selected':''}>Rejeté</option></select></label>
+      <button type="button" class="btn btn-outline" data-financial-reset-remove="${index}" aria-label="Supprimer cette échéance">Supprimer</button>
+    </div>`;
+  }
+  function collectFinancialResetRows(){
+    return [...document.querySelectorAll('[data-financial-reset-row]')].map(row=>({
+      date:String(row.querySelector('[data-financial-reset-date]')?.value||'').trim(),
+      amount_cents:Math.round(Number(String(row.querySelector('[data-financial-reset-amount]')?.value||0).replace(',','.'))*100),
+      status:String(row.querySelector('[data-financial-reset-status]')?.value||'scheduled')
+    }));
+  }
+  function updateFinancialResetTotals(line){
+    const rows=collectFinancialResetRows();
+    const total=rows.reduce((sum,row)=>sum+Number(row.amount_cents||0),0);
+    const paid=rows.filter(row=>row.status==='completed').reduce((sum,row)=>sum+Number(row.amount_cents||0),0);
+    const expected=Math.round(Number(lineAmount(line)||0)*100);
+    const gap=expected-total;
+    const totalNode=document.getElementById('financialResetDraftTotal');
+    const paidNode=document.getElementById('financialResetDraftPaid');
+    const gapNode=document.getElementById('financialResetDraftGap');
+    if(totalNode)totalNode.textContent=fmtMoney(total/100);
+    if(paidNode)paidNode.textContent=fmtMoney(paid/100);
+    if(gapNode){
+      gapNode.textContent=Math.abs(gap)<=1?(gap===0?'Total conforme':'Écart d’arrondi de 0,01 € accepté'):`Écart de ${fmtMoney(Math.abs(gap)/100)}`;
+      gapNode.style.color=Math.abs(gap)<=1?'#15803d':'#b91c1c';
     }
+  }
+  function renderFinancialResetEditor(line){
+    const expected=Math.round(Number(lineAmount(line)||0)*100);
+    return `<div class="billing-modal-head"><div><h2>Corriger le suivi financier</h2><div class="muted">Renseignez ici l’échéancier réel de cette fiche.</div><span class="billing-modal-step">Étape 1 · Saisie</span></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>
+      <div class="billing-modal-error" style="margin:14px 0;">L’ancien historique Qonto peut contenir plusieurs plans. Les lignes ci-dessous sont donc modifiables : vérifiez chaque date, montant et statut.</div>
+      <div id="financialResetRows" style="display:grid;gap:10px;">${financialResetDraftRows.map(financialResetRowHtml).join('')}</div>
+      <div class="billing-modal-actions" style="justify-content:flex-start;"><button type="button" class="btn btn-outline" id="addFinancialResetRow">+ Ajouter une échéance</button></div>
+      <div class="billing-modal-grid" style="margin-top:14px;"><div class="kv"><b>Montant personnel attendu</b><br>${fmtMoney(expected/100)}</div><div class="kv"><b>Total saisi</b><br><span id="financialResetDraftTotal">—</span></div><div class="kv"><b>Déjà réglé</b><br><span id="financialResetDraftPaid">—</span></div><div class="kv"><b>Contrôle</b><br><span id="financialResetDraftGap">—</span></div></div>
+      <div class="hint" style="margin-top:12px;">Cette action modifie uniquement le suivi de cette fiche : elle ne crée, ne modifie et n’annule aucun prélèvement dans Qonto. Une sauvegarde automatique sera conservée.</div>
+      <div id="modalMsg"></div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Annuler</button><button type="button" class="btn btn-primary" id="verifyFinancialReset">Vérifier l’échéancier</button></div>`;
+  }
+  function bindFinancialResetEditor(line){
+    bindModalCloseButtons();
+    document.querySelectorAll('[data-financial-reset-date],[data-financial-reset-amount],[data-financial-reset-status]').forEach(input=>input.addEventListener('input',()=>updateFinancialResetTotals(line)));
+    document.querySelectorAll('[data-financial-reset-remove]').forEach(button=>button.onclick=()=>{
+      financialResetDraftRows=collectFinancialResetRows().filter((row,index)=>index!==Number(button.dataset.financialResetRemove));
+      const modal=document.querySelector('.billing-modal');
+      if(modal)modal.innerHTML=renderFinancialResetEditor(line);
+      bindFinancialResetEditor(line);
+    });
+    const add=document.getElementById('addFinancialResetRow');
+    if(add)add.onclick=()=>{
+      financialResetDraftRows=collectFinancialResetRows();
+      financialResetDraftRows.push({date:'',amount_cents:0,status:'scheduled'});
+      const modal=document.querySelector('.billing-modal');
+      if(modal)modal.innerHTML=renderFinancialResetEditor(line);
+      bindFinancialResetEditor(line);
+    };
+    const verify=document.getElementById('verifyFinancialReset');
+    if(verify)verify.onclick=()=>verifyFinancialReset(line);
+    updateFinancialResetTotals(line);
+  }
+  function renderFinancialResetReview(preview){
+    const rows=(preview.installments||[]).map((item,index)=>`<div class="kv"><b>${index+1}/${preview.installments.length} · ${esc(formatIsoDateFr(item.date)||item.date)}</b><br>${fmtMoney(Number(item.amount_cents||0)/100)} · ${esc(financialResetStatusLabel(item.status))}</div>`).join('');
+    const gap=Math.abs(Number(preview.expected_amount_cents||0)-Number(preview.detected_amount_cents||0));
+    return `<div class="billing-modal-head"><div><h2>Vérifiez avant d’appliquer</h2><div class="muted">Voici exactement ce qui apparaîtra sur cette fiche.</div><span class="billing-modal-step">Étape 2 · Confirmation</span></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>
+      <div class="billing-modal-grid" style="margin-top:14px;">${rows}</div>
+      <div class="billing-modal-grid" style="margin-top:14px;"><div class="kv"><b>Total de l’échéancier</b><br>${fmtMoney(Number(preview.detected_amount_cents||0)/100)}</div><div class="kv"><b>Déjà réglé</b><br>${fmtMoney(Number(preview.paid_amount_cents||0)/100)}</div><div class="kv"><b>Reste contractuel</b><br>${fmtMoney(Number(preview.remaining_amount_cents||0)/100)}</div><div class="kv"><b>Contrôle</b><br>${gap===1?'Écart d’arrondi de 0,01 € accepté':'Total conforme'}</div></div>
+      <div class="billing-modal-success" style="margin-top:14px;">Seule cette fiche sera mise à jour. Qonto et les autres stagiaires resteront inchangés.</div>
+      <div id="modalMsg"></div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" id="editFinancialReset">Retour à la modification</button><button type="button" class="btn btn-primary" id="applyFinancialReset">Confirmer et appliquer</button></div>`;
+  }
+  async function verifyFinancialReset(line){
+    const rows=collectFinancialResetRows();
+    financialResetDraftRows=rows;
+    const verify=document.getElementById('verifyFinancialReset');
+    if(verify){verify.disabled=true;verify.textContent='Vérification…';}
+    try{
+      const result=await billingApi('/api/billing/reset-financial-tracking',{traineeId,sessionId,preview:true,manualInstallments:rows,source:'admin_trainee'});
+      const preview=result.preview||{};
+      financialResetDraftRows=(preview.installments||[]).map(row=>({...row}));
+      const modal=document.querySelector('.billing-modal');
+      if(!modal)return;
+      modal.innerHTML=renderFinancialResetReview(preview);
+      bindModalCloseButtons();
+      document.getElementById('editFinancialReset').onclick=()=>{modal.innerHTML=renderFinancialResetEditor(line);bindFinancialResetEditor(line);};
+      document.getElementById('applyFinancialReset').onclick=()=>applyFinancialReset(line,preview);
+    }catch(error){
+      modalMessage(error.message||'L’échéancier n’est pas valide.','error');
+      if(verify){verify.disabled=false;verify.textContent='Vérifier l’échéancier';}
+    }
+  }
+  async function applyFinancialReset(line,preview){
+    const apply=document.getElementById('applyFinancialReset');
+    if(apply){apply.disabled=true;apply.textContent='Application…';}
+    try{
+      const result=await billingApi('/api/billing/reset-financial-tracking',{traineeId,sessionId,confirm:true,manualInstallments:financialResetDraftRows,previewFingerprint:preview.fingerprint,source:'admin_trainee'});
+      await load({allowAutoSync:false});
+      const updatedPreview=result.preview||preview;
+      const modal=document.querySelector('.billing-modal');
+      if(!modal)return;
+      modal.innerHTML=`<div class="qonto-result qonto-result--success" role="status"><button class="billing-modal-close qonto-result__close" type="button" data-modal-close aria-label="Fermer">✕</button><div class="qonto-result__check" aria-hidden="true">✓</div><div class="qonto-result__eyebrow">Correction enregistrée</div><h2>Le suivi financier est maintenant à jour</h2><p>${esc(result.message||'La correction a été appliquée uniquement à cette fiche.')}</p><div class="qonto-result__reference"><span>Déjà réglé</span><strong>${fmtMoney(Number(updatedPreview.paid_amount_cents||0)/100)}</strong></div><div class="qonto-result__reference"><span>Reste contractuel</span><strong>${fmtMoney(Number(updatedPreview.remaining_amount_cents||0)/100)}</strong></div><div class="billing-modal-actions"><button type="button" class="btn btn-primary" data-modal-close>Terminer</button></div></div>`;
+      bindModalCloseButtons();
+    }catch(error){
+      modalMessage(error.message||'La correction a été annulée sans modification.','error');
+      if(apply){apply.disabled=false;apply.textContent='Confirmer et appliquer';}
+    }
+  }
+  resetFinancialTrackingBtn?.addEventListener('click', ()=>{
+    const line=financialResetTargetLine();
+    if(!line){alert('Aucun échéancier personnel unique n’a été trouvé sur cette fiche.');return;}
+    currentLine=line;
+    financialResetDraftRows=financialResetRowsFromLine(line);
+    if(!financialResetDraftRows.length)financialResetDraftRows=[{date:'',amount_cents:0,status:'scheduled'}];
+    document.body.insertAdjacentHTML('beforeend',`<div class="billing-modal-overlay no-print" role="dialog" aria-modal="true"><div class="billing-modal">${renderFinancialResetEditor(line)}</div></div>`);
+    bindFinancialResetEditor(line);
   });
   const mandateSearchBtn=document.getElementById('btnSearchQontoMandate');
   const mandateNumberInput=document.getElementById('qontoMandateNumber');

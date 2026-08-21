@@ -33788,6 +33788,13 @@ def _persist_qonto_mandate_on_trainee(data: Dict[str, Any], line: Dict[str, Any]
 def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
     if line.get('paymentMode') != 'sepa_direct_debit':
         return {'created': 0, 'skipped': True}
+    tracking_override = line.get('financial_tracking_override')
+    if isinstance(tracking_override, dict) and tracking_override.get('enabled'):
+        # An admin-reviewed local schedule must never create a second set of
+        # subscriptions.  Qonto sync may still read exact date/amount matches,
+        # but every automatic write path stops here.
+        _sync_sepa_aliases(line)
+        return {'created': 0, 'skipped': True, 'manual_tracking': True}
     _ensure_qonto_oauth_ready()
     client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
     mandate_id = line.get('qonto_direct_debit_mandate_id')
@@ -34640,6 +34647,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'qontoDirectDebitLastSyncedAt': persisted.get('qontoDirectDebitLastSyncedAt') or '',
                     'qonto_rejected_collection_ids': persisted.get('qonto_rejected_collection_ids') if isinstance(persisted.get('qonto_rejected_collection_ids'), list) else [],
                     'sepa_payment_plan': persisted.get('sepa_payment_plan') if isinstance(persisted.get('sepa_payment_plan'), dict) else {},
+                    'financial_tracking_override': persisted.get('financial_tracking_override') if isinstance(persisted.get('financial_tracking_override'), dict) else {},
                     'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
@@ -34732,7 +34740,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -35622,6 +35630,10 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
     recovered = 0
     collection_updates = 0
     mandate: Dict[str, Any] = {}
+    tracking_override = line.get('financial_tracking_override')
+    manual_tracking = bool(
+        isinstance(tracking_override, dict) and tracking_override.get('enabled')
+    )
     try:
         mandate = _resolve_qonto_direct_debit_mandate_for_line(line)
     except Exception as exc:
@@ -35632,7 +35644,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
         )
     client_id = line.get('qontoClientId') or line.get('qontoCustomerId') or line.get('qonto_mandate_client_id')
     mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '')
-    if mandate_id:
+    if mandate_id and not manual_tracking:
         try:
             recovered = _recover_qonto_installments_for_mandate(line, mandate_id)
             if recovered:
@@ -35670,12 +35682,12 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
                     'L’échéancier local ne correspond plus au montant facturé ; '
                     'aucun nouveau prélèvement n’a été créé automatiquement.'
                 )
-            else:
+            elif not manual_tracking:
                 result = ensure_qonto_sepa_installments_for_line(line)
                 if result.get('created'):
                     _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)
         _sync_sepa_aliases(line)
-    if mandate_id:
+    if mandate_id and not manual_tracking:
         try:
             recovered_retries = _recover_missing_qonto_rejection_retries(line, mandate_id)
             if recovered_retries:
@@ -35749,7 +35761,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
     mandate_rum = str(line.get('qonto_mandate_rum') or '').strip()
     needs_rum_fallback = bool(
         mandate_rum and (
-            recovery_errors or not collection_updates
+            manual_tracking or recovery_errors or not collection_updates
             or any(_installment_is_rejected(item) for item in _effective_sepa_installments(line))
         )
     )
@@ -35812,7 +35824,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
                 item['status_reason'] = collection.get('status_reason')
             item['updated_at'] = _now_iso()
             collection_updates += 1
-    removed_cancelled = _drop_cancelled_qonto_future_installments(line)
+    removed_cancelled = 0 if manual_tracking else _drop_cancelled_qonto_future_installments(line)
     if removed_cancelled:
         _billing_log(
             line, 'Anciennes échéances Qonto annulées retirées', 'success',
@@ -36079,6 +36091,7 @@ def _build_financial_tracking_reset_preview(line: Dict[str, Any]) -> Dict[str, A
         json.dumps(fingerprint_payload, sort_keys=True, separators=(',', ':')).encode('utf-8')
     ).hexdigest()
     return {
+        'mode': 'qonto',
         'line_id': str(line.get('id') or ''),
         'mandate_id': mandate_id,
         'mandate_rum': mandate_rum,
@@ -36095,6 +36108,133 @@ def _build_financial_tracking_reset_preview(line: Dict[str, Any]) -> Dict[str, A
         ),
         'remaining_amount_cents': max(expected_cents - paid_cents, 0),
         'installments': rows,
+        'fingerprint': fingerprint,
+    }
+
+
+def _build_manual_financial_tracking_reset_preview(
+    line: Dict[str, Any], raw_installments: Any,
+) -> Dict[str, Any]:
+    """Build a deterministic local reset preview from admin-reviewed rows.
+
+    This is the safe fallback for mandates whose Qonto history contains several
+    successive schedules (credit notes, replacements, retries, etc.).  It does
+    not write to Qonto and it requires the reviewed rows to match the personal
+    amount to the cent, with the same one-cent rounding tolerance used by the
+    automatic preview.
+    """
+    if not isinstance(raw_installments, list) or not raw_installments:
+        raise ValueError('Ajoutez au moins une échéance à l’échéancier corrigé.')
+    if len(raw_installments) > 24:
+        raise ValueError('L’échéancier corrigé ne peut pas dépasser 24 échéances.')
+
+    expected_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    if expected_cents <= 0:
+        raise ValueError('Le montant personnel de cette fiche est nul ou invalide.')
+
+    normalized_rows: List[Dict[str, Any]] = []
+    seen_keys = set()
+    paid_aliases = QONTO_FINANCIAL_RESET_PAID_STATUSES | {'regle', 'réglé', 'reglee', 'réglée'}
+    pending_aliases = QONTO_FINANCIAL_RESET_PENDING_STATUSES | {'programme', 'programmé', 'programmee', 'programmée'}
+    failed_aliases = QONTO_REJECTED_COLLECTION_STATUSES | {'rejete', 'rejeté', 'rejetee', 'rejetée'}
+    for position, raw in enumerate(raw_installments, start=1):
+        if not isinstance(raw, dict):
+            raise ValueError(f'Échéance {position} invalide.')
+        raw_date_value = str(raw.get('date') or raw.get('due_date') or '').strip()
+        date_value = raw_date_value[:10]
+        parsed_date = _parse_date_safe(date_value)
+        if len(raw_date_value) != 10 or parsed_date is None or parsed_date.isoformat() != date_value:
+            raise ValueError(f'La date de l’échéance {position} est invalide.')
+        amount_cents = (
+            int(raw.get('amount_cents'))
+            if isinstance(raw.get('amount_cents'), int)
+            else money_value_to_cents(raw.get('amount') or 0)
+        )
+        if amount_cents <= 0:
+            raise ValueError(f'Le montant de l’échéance {position} doit être supérieur à zéro.')
+        raw_status = str(raw.get('status') or '').strip().lower()
+        if raw_status in paid_aliases:
+            status = 'completed'
+        elif raw_status in pending_aliases:
+            status = 'scheduled'
+        elif raw_status in failed_aliases:
+            status = 'failed'
+        else:
+            raise ValueError(
+                f'Le statut de l’échéance {position} doit être Réglé, Programmé ou Rejeté.'
+            )
+
+        key = (date_value, amount_cents)
+        if key in seen_keys:
+            raise ValueError('Deux échéances corrigées ont la même date et le même montant.')
+        seen_keys.add(key)
+        # Rebuild a clean row instead of carrying subscription ids or retry
+        # metadata from the obsolete schedule. Exact Qonto ids can be safely
+        # reattached later by the read-only RUM/date/amount reconciliation.
+        row = {
+            'index': position,
+            'schedule_index': position,
+            'date': date_value,
+            'due_date': date_value,
+            'amount': cents_to_money(amount_cents),
+            'status': status,
+            'is_current_schedule_attempt': True,
+            'manual_tracking_entry': True,
+            'updated_at': _now_iso(),
+        }
+        if status == 'completed':
+            row['paidAt'] = date_value
+        normalized_rows.append(row)
+
+    normalized_rows.sort(key=lambda row: (_financial_reset_row_key(row)[0], _financial_reset_row_key(row)[1]))
+    total = len(normalized_rows)
+    for index, row in enumerate(normalized_rows, start=1):
+        row['index'] = index
+        row['schedule_index'] = index
+        row['schedule_total'] = total
+        row['total'] = total
+
+    detected_cents = sum(money_value_to_cents(row.get('amount') or 0) for row in normalized_rows)
+    if abs(detected_cents - expected_cents) > 1:
+        raise ValueError(
+            'Le total de l’échéancier corrigé doit correspondre au montant personnel de cette fiche '
+            '(un centime d’écart maximum est accepté).'
+        )
+    paid_cents = sum(
+        money_value_to_cents(row.get('amount') or 0)
+        for row in normalized_rows
+        if str(row.get('status') or '').lower() in QONTO_FINANCIAL_RESET_PAID_STATUSES
+    )
+    fingerprint_payload = {
+        'mode': 'manual',
+        'line_id': str(line.get('id') or ''),
+        'expected_cents': expected_cents,
+        'rows': [
+            {
+                'date': _financial_reset_row_key(row)[0],
+                'amount_cents': _financial_reset_row_key(row)[1],
+                'status': str(row.get('status') or ''),
+            }
+            for row in normalized_rows
+        ],
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(fingerprint_payload, sort_keys=True, separators=(',', ':')).encode('utf-8')
+    ).hexdigest()
+    return {
+        'mode': 'manual',
+        'line_id': str(line.get('id') or ''),
+        'mandate_id': str(line.get('qonto_direct_debit_mandate_id') or ''),
+        'mandate_rum': str(line.get('qonto_mandate_rum') or ''),
+        'qonto_client_id': str(
+            line.get('qontoClientId') or line.get('qontoCustomerId')
+            or line.get('qonto_mandate_client_id') or ''
+        ),
+        'expected_amount_cents': expected_cents,
+        'detected_amount_cents': detected_cents,
+        'paid_amount_cents': paid_cents,
+        'remaining_amount_cents': max(expected_cents - paid_cents, 0),
+        'installments': normalized_rows,
         'fingerprint': fingerprint,
     }
 
@@ -36133,6 +36273,19 @@ def _apply_financial_tracking_reset(line: Dict[str, Any], preview: Dict[str, Any
     line['syncWarning'] = ''
     line['qontoDirectDebitLastSyncedAt'] = now
     line['qontoLastSyncedAt'] = now
+    if preview.get('mode') == 'manual':
+        line['financial_tracking_override'] = {
+            'enabled': True,
+            'source': 'admin_reviewed_schedule',
+            'fingerprint': preview.get('fingerprint') or '',
+            'updated_at': now,
+            'updated_by': (
+                session.get('admin_username') or session.get('admin_email') or 'admin'
+                if has_request_context() else 'system'
+            ),
+        }
+    else:
+        line.pop('financial_tracking_override', None)
     _sync_sepa_aliases(line)
     if line.get('qontoPaymentGlobalStatus') == 'Payé':
         line['paymentStatus'] = 'paid'
@@ -36144,7 +36297,11 @@ def _apply_financial_tracking_reset(line: Dict[str, Any], preview: Dict[str, Any
         line['paymentStatus'] = 'unpaid'
     _billing_log(
         line,
-        'Suivi financier reconstruit depuis Qonto',
+        (
+            'Suivi financier corrigé manuellement'
+            if preview.get('mode') == 'manual'
+            else 'Suivi financier reconstruit depuis Qonto'
+        ),
         'success',
         f'{len(rows)} échéance(s), dont {line.get("sepa_payment_plan", {}).get("paid_installments", 0)} payée(s)',
         preview.get('fingerprint') or '',
@@ -36566,6 +36723,8 @@ def api_billing_reset_financial_tracking():
     session_id = str(payload.get('sessionId') or '').strip()
     preview_only = bool(payload.get('preview'))
     confirmed = payload.get('confirm') is True
+    has_manual_installments = 'manualInstallments' in payload
+    manual_installments = payload.get('manualInstallments')
     if not trainee_id or not session_id:
         return jsonify({'ok': False, 'error': 'Fiche stagiaire ou session manquante.'}), 400
     if not preview_only and not confirmed:
@@ -36606,7 +36765,11 @@ def api_billing_reset_financial_tracking():
     line = personal_sepa_lines[0]
 
     try:
-        reset_preview = _build_financial_tracking_reset_preview(line)
+        reset_preview = (
+            _build_manual_financial_tracking_reset_preview(line, manual_installments)
+            if has_manual_installments
+            else _build_financial_tracking_reset_preview(line)
+        )
     except Exception as exc:
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc))}), 409
 
@@ -36620,6 +36783,7 @@ def api_billing_reset_financial_tracking():
         for index, row in enumerate(reset_preview['installments'], start=1)
     ]
     response_preview = {
+        'mode': reset_preview.get('mode') or 'qonto',
         'fingerprint': reset_preview['fingerprint'],
         'line_id': reset_preview['line_id'],
         'mandate_rum': reset_preview['mandate_rum'],
@@ -36638,7 +36802,11 @@ def api_billing_reset_financial_tracking():
     ):
         return jsonify({
             'ok': False,
-            'error': 'Les données Qonto ont changé depuis l’aperçu. Relancez la réinitialisation pour les vérifier.',
+            'error': (
+                'L’échéancier a changé depuis l’aperçu. Vérifiez-le de nouveau avant de l’appliquer.'
+                if reset_preview.get('mode') == 'manual'
+                else 'Les données Qonto ont changé depuis l’aperçu. Relancez la réinitialisation pour les vérifier.'
+            ),
         }), 409
 
     existing_map = _billing_existing_map(data)
@@ -36672,7 +36840,11 @@ def api_billing_reset_financial_tracking():
     summary = calculate_trainee_financial_summary(trainee, fresh_lines)
     return jsonify({
         'ok': True,
-        'message': 'Le suivi financier a été reconstruit depuis Qonto sans modifier Qonto.',
+        'message': (
+            'Le suivi financier de cette fiche a été corrigé sans modifier Qonto.'
+            if reset_preview.get('mode') == 'manual'
+            else 'Le suivi financier a été reconstruit depuis Qonto sans modifier Qonto.'
+        ),
         'backup_id': backup['id'],
         'preview': response_preview,
         'lines': fresh_lines,

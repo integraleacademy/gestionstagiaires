@@ -592,6 +592,46 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
             },
         }
 
+    def _adelaide_manual_rows(self):
+        return [
+            {"date": "2026-06-30", "amount_cents": 71617, "status": "completed"},
+            {"date": "2026-07-30", "amount_cents": 71617, "status": "completed"},
+            {"date": "2026-08-30", "amount_cents": 62555, "status": "scheduled"},
+            {"date": "2026-09-30", "amount_cents": 62555, "status": "scheduled"},
+            {"date": "2026-10-30", "amount_cents": 62555, "status": "scheduled"},
+        ]
+
+    def test_manual_financial_reset_preview_uses_only_admin_reviewed_rows(self):
+        line = self._adelaide_reset_line()
+
+        preview = gestion_app._build_manual_financial_tracking_reset_preview(
+            line, self._adelaide_manual_rows(),
+        )
+
+        self.assertEqual(preview["mode"], "manual")
+        self.assertEqual(preview["expected_amount_cents"], 330900)
+        self.assertEqual(preview["detected_amount_cents"], 330899)
+        self.assertEqual(preview["paid_amount_cents"], 143234)
+        self.assertEqual(preview["remaining_amount_cents"], 187666)
+        self.assertEqual(
+            [item["amount"] for item in preview["installments"]],
+            [716.17, 716.17, 625.55, 625.55, 625.55],
+        )
+        self.assertEqual(
+            [item["status"] for item in preview["installments"]],
+            ["completed", "completed", "scheduled", "scheduled", "scheduled"],
+        )
+        self.assertTrue(all(item["manual_tracking_entry"] for item in preview["installments"]))
+
+    def test_manual_financial_reset_refuses_a_wrong_total(self):
+        rows = self._adelaide_manual_rows()
+        rows[-1]["amount_cents"] = 60000
+
+        with self.assertRaisesRegex(ValueError, "total de l’échéancier corrigé"):
+            gestion_app._build_manual_financial_tracking_reset_preview(
+                self._adelaide_reset_line(), rows,
+            )
+
     def test_financial_reset_preview_rebuilds_adelaide_from_exact_qonto_rows(self):
         line = self._adelaide_reset_line()
         with patch.object(
@@ -736,6 +776,135 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         response_data = confirm_response.get_json()
         self.assertEqual(response_data["financial_summary"]["paid_total_cents"], 143234)
         self.assertEqual(response_data["financial_summary"]["remaining_total_cents"], 187666)
+
+    def test_manual_financial_reset_endpoint_saves_only_adelaide_without_qonto_write(self):
+        line = self._adelaide_reset_line()
+        trainee = {
+            "id": "trainee-adelaide", "first_name": "Adelaide", "last_name": "Tita",
+            "cpf_amount": 991, "personal_amount": 3309,
+        }
+        other_trainee = {
+            "id": "trainee-other", "first_name": "Autre", "last_name": "Stagiaire",
+            "personal_amount": 1200,
+        }
+        other_line = {
+            "id": gestion_app._billing_line_id(
+                "session-adelaide", "trainee-other", "PERSONNEL", "legacy",
+            ),
+            "traineeId": "trainee-other", "sessionId": "session-adelaide",
+            "financingType": "PERSONNEL", "amount": 1200, "amountTTC": 1200,
+            "paymentMode": "cash", "invoiceStatus": "not_invoiced",
+            "paymentStatus": "not_applicable", "marker": "must-remain-unchanged",
+        }
+        other_line_before = dict(other_line)
+        data = {
+            "sessions": [{
+                "id": "session-adelaide", "name": "TITIA DESP SEPTEMBRE 2026",
+                "training_type": "TITIA DESP", "date_start": "2026-09-01",
+                "date_end": "2026-09-30", "trainees": [trainee, other_trainee],
+            }],
+            "billing_lines": [line, other_line],
+        }
+        manual_rows = self._adelaide_manual_rows()
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data") as save_mock, \
+             patch.object(gestion_app, "_build_financial_tracking_reset_preview") as automatic_mock, \
+             patch.object(gestion_app, "create_qonto_direct_debit_subscription") as create_mock:
+            preview_response = self.client.post(
+                "/api/billing/reset-financial-tracking",
+                json={
+                    "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+                    "preview": True, "manualInstallments": manual_rows,
+                },
+            )
+            self.assertEqual(preview_response.status_code, 200)
+            preview = preview_response.get_json()["preview"]
+            self.assertEqual(preview["mode"], "manual")
+            save_mock.assert_not_called()
+
+            confirm_response = self.client.post(
+                "/api/billing/reset-financial-tracking",
+                json={
+                    "traineeId": "trainee-adelaide", "sessionId": "session-adelaide",
+                    "confirm": True, "manualInstallments": manual_rows,
+                    "previewFingerprint": preview["fingerprint"],
+                },
+            )
+
+        self.assertEqual(confirm_response.status_code, 200)
+        automatic_mock.assert_not_called()
+        create_mock.assert_not_called()
+        save_mock.assert_called_once_with(data)
+        self.assertEqual(len(data["financial_tracking_reset_backups"]), 1)
+        stored = next(item for item in data["billing_lines"] if item["id"] == line["id"])
+        untouched = next(item for item in data["billing_lines"] if item["id"] == other_line["id"])
+        self.assertEqual(untouched, other_line_before)
+        self.assertTrue(stored["financial_tracking_override"]["enabled"])
+        self.assertEqual(stored["financial_tracking_override"]["source"], "admin_reviewed_schedule")
+        self.assertEqual(
+            [item["amount"] for item in stored["directDebitInstallments"]],
+            [716.17, 716.17, 625.55, 625.55, 625.55],
+        )
+        response_data = confirm_response.get_json()
+        self.assertEqual(response_data["financial_summary"]["paid_total_cents"], 143234)
+        self.assertEqual(response_data["financial_summary"]["remaining_total_cents"], 187666)
+
+    def test_manual_override_prevents_sync_from_reimporting_or_creating_a_schedule(self):
+        line = self._adelaide_reset_line()
+        preview = gestion_app._build_manual_financial_tracking_reset_preview(
+            line, self._adelaide_manual_rows(),
+        )
+        with gestion_app.app.test_request_context('/'):
+            gestion_app._apply_financial_tracking_reset(line, preview)
+
+        with patch.object(
+            gestion_app, "_resolve_qonto_direct_debit_mandate_for_line",
+            return_value={
+                "id": line["qonto_direct_debit_mandate_id"],
+                "unique_mandate_reference": "RUM-ADELAIDE", "status": "active",
+            },
+        ), patch.object(
+            gestion_app, "_recover_qonto_installments_for_mandate",
+        ) as recover_mock, patch.object(
+            gestion_app, "ensure_qonto_sepa_installments_for_line",
+        ) as ensure_mock, patch.object(
+            gestion_app, "_recover_missing_qonto_rejection_retries",
+        ) as retry_mock, patch.object(
+            gestion_app, "list_qonto_direct_debit_collections", return_value=[],
+        ), patch.object(
+            gestion_app, "_all_qonto_direct_debit_collections_for_rum",
+            return_value=self._adelaide_reset_collections(),
+        ) as rum_mock:
+            result = gestion_app._sync_qonto_direct_debit_line(line)
+
+        recover_mock.assert_not_called()
+        ensure_mock.assert_not_called()
+        retry_mock.assert_not_called()
+        rum_mock.assert_called_once_with("RUM-ADELAIDE")
+        self.assertEqual(result["recovered_installments"], 0)
+        self.assertEqual(
+            [item["amount"] for item in line["directDebitInstallments"]],
+            [716.17, 716.17, 625.55, 625.55, 625.55],
+        )
+        self.assertEqual(line["qontoPaymentGlobalStatus"], "Paiement partiel")
+
+    def test_manual_override_blocks_every_direct_subscription_write(self):
+        line = self._adelaide_reset_line()
+        preview = gestion_app._build_manual_financial_tracking_reset_preview(
+            line, self._adelaide_manual_rows(),
+        )
+        with gestion_app.app.test_request_context('/'):
+            gestion_app._apply_financial_tracking_reset(line, preview)
+
+        with patch.object(gestion_app, "_ensure_qonto_oauth_ready") as oauth_mock, \
+             patch.object(gestion_app, "create_qonto_direct_debit_subscription") as create_mock:
+            result = gestion_app.ensure_qonto_sepa_installments_for_line(line)
+
+        self.assertEqual(result, {
+            "created": 0, "skipped": True, "manual_tracking": True,
+        })
+        oauth_mock.assert_not_called()
+        create_mock.assert_not_called()
 
     def test_financial_reset_endpoint_rejects_changed_preview_without_saving(self):
         line = self._adelaide_reset_line()

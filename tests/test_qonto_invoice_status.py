@@ -195,9 +195,13 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn('id="btnResetFinancialTracking"', template)
         self.assertIn("/api/billing/reset-financial-tracking", template)
         self.assertIn("preview:true", template)
+        self.assertIn("manualInstallments", template)
         self.assertIn("previewFingerprint:preview.fingerprint", template)
+        self.assertIn("Vérifier l’échéancier", template)
+        self.assertIn("Confirmer et appliquer", template)
         self.assertIn("modifie uniquement le suivi de cette fiche", template)
         self.assertIn("Une sauvegarde automatique sera conservée", template)
+        self.assertNotIn("window.confirm(financialResetConfirmation", template)
 
     def test_pending_qonto_mandate_never_reports_programmed_debits(self):
         line = {
