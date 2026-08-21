@@ -247,6 +247,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("Programmer les échéances", template)
         self.assertIn("Échéancier non programmé", template)
         self.assertIn("qonto_direct_debit_subscription_id", template)
+        self.assertIn("value==='scheduled'&&installment?.manual_tracking_entry", template)
         self.assertIn("installment?.qonto_direct_debit_subscription_id?'Programmé':'À venir'", template)
         self.assertIn("installmentStatusLabel(it)", template)
 
