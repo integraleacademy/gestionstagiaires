@@ -1,0 +1,41 @@
+name: Notion Work - actualiser les PR
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: notion-work-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Actualiser puis relancer la PR prioritaire
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --limit 100 --json number,headRefName,body --jq '[.[] | select(.headRefName | startswith("work/notion-gestion-stagiaires-")) | select((.body // "") | contains("<!-- notion-page-id:")) | .number] | sort | .[0] // empty')"
+          [ -n "$pr" ] || { echo "Aucune PR Work Notion ouverte."; exit 0; }
+
+          head_ref="$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json headRefName --jq '.headRefName')"
+          behind="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${head_ref}" --jq '.behind_by')"
+          if [ "$behind" != "0" ]; then
+            if ! gh pr update-branch "$pr" --repo "$GITHUB_REPOSITORY"; then
+              gh pr comment "$pr" --repo "$GITHUB_REPOSITORY" --body "⚠️ Actualisation automatique impossible : conflit avec main. Work doit corriger cette même PR."
+              exit 1
+            fi
+          fi
+
+          gh workflow run notion-work-publish.yml --repo "$GITHUB_REPOSITORY" --ref main -f pr_number="$pr"
