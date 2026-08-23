@@ -34736,6 +34736,272 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     return buildBillingLinesFromSessions(data.get('sessions', []), _billing_existing_map(data))
 
 
+CPF_WEDOF_BILLED_STATES = {
+    'billed', 'invoiced', 'invoice_generated', 'facture', 'facturee', 'facturé', 'facturée',
+}
+
+
+def _cpf_wedof_link_has_invoice(link: Dict[str, Any]) -> bool:
+    """Return whether a cached WEDOF link describes an already-created invoice."""
+    if not isinstance(link, dict) or link.get('active') is not True:
+        return False
+    snapshot = link.get('cpf_snapshot') if isinstance(link.get('cpf_snapshot'), dict) else {}
+    invoice_id, invoice_number = _cpf_wedof_invoice_reference(link)
+    billing_state = normalize_name(
+        snapshot.get('billing_state') or link.get('billing_state') or ''
+    ).replace(' ', '_')
+    invoice_status = str(snapshot.get('invoice_status') or '').strip()
+    return bool(
+        invoice_id
+        or invoice_number
+        or invoice_status
+        or billing_state in CPF_WEDOF_BILLED_STATES
+    )
+
+
+def _cpf_virtual_invoice_line(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    link: Optional[Dict[str, Any]] = None,
+    legacy_invoice: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build a read-only dashboard row for a WEDOF-created CPF invoice.
+
+    This deliberately performs no Qonto or WEDOF request.  The global billing
+    page must stay cheap to open; exact remote reconciliation remains available
+    through the existing per-invoice synchronization actions.
+    """
+    link = link if isinstance(link, dict) else {}
+    snapshot = link.get('cpf_snapshot') if isinstance(link.get('cpf_snapshot'), dict) else {}
+    legacy_invoice = legacy_invoice if isinstance(legacy_invoice, dict) else {}
+    invoice_id, invoice_number = _cpf_wedof_invoice_reference(link)
+    invoice_id = str(
+        invoice_id
+        or legacy_invoice.get('qonto_invoice_id')
+        or legacy_invoice.get('qontoInvoiceId')
+        or ''
+    ).strip()
+    invoice_number = str(
+        invoice_number
+        or legacy_invoice.get('qonto_invoice_number')
+        or legacy_invoice.get('qontoInvoiceNumber')
+        or ''
+    ).strip()
+
+    amount = _money(
+        _cpf_invoice_amount(trainee)
+        or snapshot.get('cpf_amount')
+        or snapshot.get('total_amount')
+        or legacy_invoice.get('amount_ttc')
+        or legacy_invoice.get('amountTTC')
+        or legacy_invoice.get('amount')
+    )
+    total_cents = money_value_to_cents(amount)
+    raw_invoice_status = str(
+        snapshot.get('invoice_status')
+        or legacy_invoice.get('qonto_invoice_status')
+        or legacy_invoice.get('invoiceStatus')
+        or ''
+    ).strip()
+    billing_state = str(
+        snapshot.get('billing_state') or link.get('billing_state') or ''
+    ).strip()
+    normalized_status = _normalize_billing_invoice_status(raw_invoice_status)
+    if normalized_status == 'not_invoiced' and (invoice_id or invoice_number or billing_state):
+        normalized_status = 'finalized'
+    paid_at = str(
+        snapshot.get('invoice_paid_at')
+        or legacy_invoice.get('qonto_invoice_paid_at')
+        or legacy_invoice.get('paidAt')
+        or ''
+    ).strip()
+    legacy_paid = _money(
+        legacy_invoice.get('qonto_invoice_amount_paid')
+        or legacy_invoice.get('qontoInvoiceAmountPaid')
+        or 0
+    )
+    paid_cents = money_value_to_cents(legacy_paid)
+    if normalized_status == 'paid' or paid_at:
+        paid_cents = total_cents
+        normalized_status = 'paid'
+    paid_cents = min(max(paid_cents, 0), total_cents) if total_cents > 0 else max(paid_cents, 0)
+    payment_unknown = not bool(raw_invoice_status or paid_at or legacy_paid)
+    payment_status = (
+        'paid' if total_cents > 0 and paid_cents >= total_cents
+        else ('partially_paid' if paid_cents > 0 else ('control' if payment_unknown else 'unpaid'))
+    )
+
+    session_id = str(session_obj.get('id') or link.get('session_id') or '')
+    trainee_id = str(trainee.get('id') or link.get('trainee_id') or '')
+    external_id = str(link.get('external_id') or snapshot.get('external_id') or '').strip()
+    training = str(
+        _session_get(session_obj, 'training_type', '')
+        or snapshot.get('training_title')
+        or _session_get(session_obj, 'name', '')
+        or 'Formation CPF'
+    ).strip()
+    session_name = str(_session_get(session_obj, 'name', '') or training).strip()
+    date_start = str(
+        normalize_date(_session_get(session_obj, 'date_start', '') or snapshot.get('start_date')) or ''
+    )
+    date_end = str(
+        normalize_date(_session_get(session_obj, 'date_end', '') or snapshot.get('end_date')) or date_start
+    )
+    generated_at = str(
+        legacy_invoice.get('created_at')
+        or legacy_invoice.get('invoiceGeneratedAt')
+        or snapshot.get('updated_at')
+        or snapshot.get('synced_at')
+        or ''
+    )
+    row_id = _billing_line_id(
+        session_id or 'wedof', trainee_id or external_id or 'cpf', 'CPF',
+        f'wedof:{external_id}' if external_id else f'invoice:{invoice_id or invoice_number}',
+    )
+    return {
+        'id': row_id,
+        'traineeId': trainee_id,
+        'sessionId': session_id,
+        'financingType': 'CPF',
+        'typeFinanceur': 'CPF',
+        'financeurName': 'CPF',
+        'financingLabel': 'CPF',
+        'financingRef': f'wedof:{external_id}' if external_id else 'wedof:legacy',
+        'amount': amount,
+        'amountHT': amount,
+        'amountTTC': amount,
+        'currency': 'EUR',
+        'invoiceStatus': normalized_status,
+        'paymentStatus': payment_status,
+        'qontoInvoiceId': invoice_id,
+        'qontoDraftId': invoice_id if normalized_status == 'draft' else '',
+        'qontoInvoiceNumber': invoice_number,
+        'invoiceGeneratedAt': generated_at,
+        'paidAt': paid_at,
+        'invoicePdfUrl': str(legacy_invoice.get('qonto_invoice_url') or legacy_invoice.get('invoicePdfUrl') or ''),
+        'qontoPdfUrl': str(legacy_invoice.get('qonto_invoice_url') or legacy_invoice.get('qontoPdfUrl') or ''),
+        'clientName': CPF_QONTO_CLIENT_NAME,
+        'traineeLastName': str(trainee.get('last_name') or snapshot.get('last_name') or ''),
+        'traineeFirstName': str(trainee.get('first_name') or snapshot.get('first_name') or ''),
+        'traineeEmail': str(trainee.get('email') or snapshot.get('email') or ''),
+        'formationName': training,
+        'sessionName': session_name,
+        'dateStart': date_start,
+        'dateEnd': date_end,
+        'dateLabel': (
+            f'du {fr_date(date_start)} au {fr_date(date_end)}'
+            if date_start and date_end else ''
+        ),
+        'qonto_total_amount_cents': total_cents,
+        'qonto_amount_paid_cents': paid_cents,
+        'qonto_remaining_amount_cents': max(total_cents - paid_cents, 0),
+        'qonto_payment_status': payment_status,
+        'payment_status': payment_status,
+        'qonto_status': normalized_status,
+        'cpfWedofInvoice': True,
+        'cpfWedofReferenceOnly': True,
+        'cpfPaymentUnknown': payment_unknown,
+        'cpfWedofExternalId': external_id,
+        'cpfWedofUrl': _cpf_wedof_invoice_view(link).get('wedof_url', '') if link else '',
+        'cpfWedofBillingState': billing_state,
+        'cpfWedofState': str(snapshot.get('state') or link.get('wedof_state') or ''),
+        'cpfWedofSyncedAt': str(snapshot.get('synced_at') or link.get('last_seen_at') or ''),
+        'specificCase': False,
+        'logs': [],
+    }
+
+
+def _cpf_wedof_invoice_lines(
+    data: Dict[str, Any], billing_lines: Optional[List[Dict[str, Any]]] = None
+) -> List[Dict[str, Any]]:
+    """Merge every known WEDOF/Qonto CPF invoice into one global read-only view."""
+    source_lines = billing_lines if billing_lines is not None else _billing_lines(data)
+    rows_by_registration: Dict[Tuple[str, str], Dict[str, Any]] = {}
+
+    for source in source_lines:
+        if not isinstance(source, dict) or not is_cpf_billing_context(source):
+            continue
+        if not (source.get('qontoInvoiceId') or source.get('qontoDraftId') or source.get('qontoInvoiceNumber')):
+            continue
+        row = dict(source)
+        row.update({
+            'cpfWedofInvoice': True,
+            'cpfWedofReferenceOnly': False,
+            'cpfPaymentUnknown': str(row.get('paymentStatus') or '').strip().lower() in {'', 'unknown', 'control'},
+        })
+        key = (str(row.get('sessionId') or ''), str(row.get('traineeId') or ''))
+        rows_by_registration[key] = row
+
+    sessions_by_id = {
+        str(item.get('id') or ''): item
+        for item in data.get('sessions', [])
+        if isinstance(item, dict) and item.get('id')
+    }
+
+    # Older WEDOF/Qonto invoices were stored directly on the trainee.  Include
+    # them even when their session predates the generic billing rollout.
+    for session_obj in data.get('sessions', []):
+        if not isinstance(session_obj, dict):
+            continue
+        session_id = str(session_obj.get('id') or '')
+        for trainee in _session_trainees_list(session_obj):
+            trainee_id = str(trainee.get('id') or '')
+            key = (session_id, trainee_id)
+            if key in rows_by_registration:
+                continue
+            legacy_invoice = trainee.get('qonto_invoice') if isinstance(trainee.get('qonto_invoice'), dict) else {}
+            if not _legacy_qonto_invoice_is_cpf(legacy_invoice):
+                continue
+            if not (
+                legacy_invoice.get('qonto_invoice_id')
+                or legacy_invoice.get('qontoInvoiceId')
+                or legacy_invoice.get('qonto_invoice_number')
+                or legacy_invoice.get('qontoInvoiceNumber')
+            ):
+                continue
+            rows_by_registration[key] = _cpf_virtual_invoice_line(
+                session_obj, trainee, legacy_invoice=legacy_invoice,
+            )
+
+    for link in data.get('wedof_links', []):
+        if not _cpf_wedof_link_has_invoice(link):
+            continue
+        session_id = str(link.get('session_id') or '')
+        trainee_id = str(link.get('trainee_id') or '')
+        session_obj = sessions_by_id.get(session_id) or {'id': session_id}
+        trainee = next((
+            item for item in _session_trainees_list(session_obj)
+            if str(item.get('id') or '') == trainee_id
+        ), None) or {'id': trainee_id}
+        key = (session_id, trainee_id)
+        current = rows_by_registration.get(key)
+        if current is None:
+            current = _cpf_virtual_invoice_line(session_obj, trainee, link=link)
+            rows_by_registration[key] = current
+        snapshot = link.get('cpf_snapshot') if isinstance(link.get('cpf_snapshot'), dict) else {}
+        invoice_id, invoice_number = _cpf_wedof_invoice_reference(link)
+        current.update({
+            'cpfWedofInvoice': True,
+            'cpfWedofExternalId': str(link.get('external_id') or snapshot.get('external_id') or ''),
+            'cpfWedofUrl': _cpf_wedof_invoice_view(link).get('wedof_url', ''),
+            'cpfWedofBillingState': str(snapshot.get('billing_state') or link.get('billing_state') or ''),
+            'cpfWedofState': str(snapshot.get('state') or link.get('wedof_state') or ''),
+            'cpfWedofSyncedAt': str(snapshot.get('synced_at') or link.get('last_seen_at') or ''),
+        })
+        if invoice_id and not current.get('qontoInvoiceId'):
+            current['qontoInvoiceId'] = invoice_id
+        if invoice_number and not current.get('qontoInvoiceNumber'):
+            current['qontoInvoiceNumber'] = invoice_number
+
+    rows = list(rows_by_registration.values())
+    rows.sort(key=lambda item: (
+        str(item.get('invoiceGeneratedAt') or item.get('cpfWedofSyncedAt') or ''),
+        str(item.get('qontoInvoiceNumber') or item.get('qontoInvoiceId') or ''),
+    ), reverse=True)
+    return rows
+
+
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
@@ -35194,7 +35460,14 @@ def api_admin_billing_lines():
     data = load_data()
     lines = _billing_lines(data)
     _repair_logged_qonto_rejection_retries(data, lines)
-    return jsonify({'ok': True, 'lines': lines, 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': 0, 'sync_warning': ''})
+    return jsonify({
+        'ok': True,
+        'lines': lines,
+        'cpf_invoice_lines': _cpf_wedof_invoice_lines(data, lines),
+        'start_date': BILLING_START_DATE.isoformat(),
+        'reset_count': 0,
+        'sync_warning': '',
+    })
 
 
 @app.post('/api/admin/invoicing/sync-qonto')
