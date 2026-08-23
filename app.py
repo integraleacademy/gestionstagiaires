@@ -3227,7 +3227,7 @@ def _resolve_persist_dir() -> str:
 
     On Render this must point to the mounted persistent disk.  The value can be
     forced with PERSIST_DIR.  Without PERSIST_DIR, both common Render mount
-    paths are probed and the one that already contains the business data wins.
+    paths are probed in order, with /var/data preferred for Render test-v2.
     """
     configured = (os.environ.get("PERSIST_DIR") or "").strip()
     if configured:
@@ -3236,26 +3236,92 @@ def _resolve_persist_dir() -> str:
         raise RuntimeError(f"PERSIST_DIR configuré mais non accessible en écriture: {configured}")
 
     candidates = ["/var/data", "/data"]
-    writable_candidates: List[Tuple[str, int]] = []
     last_error = None
     for candidate in candidates:
         try:
             if _is_writable_directory(candidate):
-                writable_candidates.append((candidate, _persist_dir_data_score(candidate)))
+                return candidate
         except Exception as exc:
             last_error = exc
             continue
 
-    if not writable_candidates:
-        raise RuntimeError(f"Aucun dossier persistant accessible parmi {candidates}: {last_error}")
+    raise RuntimeError(f"Aucun dossier persistant accessible parmi {candidates}: {last_error}")
 
-    best_candidate, best_score = max(writable_candidates, key=lambda item: item[1])
-    if best_score > 0:
-        return best_candidate
 
-    return writable_candidates[0][0]
+def _copy_file_if_missing(source: str, destination: str) -> bool:
+    if not os.path.isfile(source) or os.path.exists(destination):
+        return False
+    os.makedirs(os.path.dirname(destination) or ".", exist_ok=True)
+    shutil.copy2(source, destination)
+    return True
+
+
+def _copy_tree_contents_if_missing(source_dir: str, destination_dir: str) -> int:
+    if not os.path.isdir(source_dir):
+        return 0
+    copied = 0
+    os.makedirs(destination_dir, exist_ok=True)
+    for root, dirs, files in os.walk(source_dir):
+        rel_root = os.path.relpath(root, source_dir)
+        target_root = destination_dir if rel_root == "." else os.path.join(destination_dir, rel_root)
+        os.makedirs(target_root, exist_ok=True)
+        for dirname in dirs:
+            os.makedirs(os.path.join(target_root, dirname), exist_ok=True)
+        for filename in files:
+            src = os.path.join(root, filename)
+            dst = os.path.join(target_root, filename)
+            if not os.path.exists(dst):
+                shutil.copy2(src, dst)
+                copied += 1
+    return copied
+
+
+def _bootstrap_persistent_storage(persist_dir: str) -> None:
+    """Create persistent folders and copy legacy local data if the disk is empty.
+
+    This is intentionally non-destructive: existing files on the persistent disk
+    always win and source files are never removed.
+    """
+    folders = [
+        "backups",
+        "trash",
+        "uploads",
+        os.path.join("uploads", "vae"),
+        "generated_documents",
+        os.path.join("generated_documents", "convocations_aps"),
+        os.path.join("generated_documents", "conventions_aps"),
+        os.path.join("generated_documents", "yousign_signed_conventions"),
+        os.path.join("generated_documents", "yousign_signed_convocations"),
+    ]
+    for folder in folders:
+        os.makedirs(os.path.join(persist_dir, folder), exist_ok=True)
+
+    app_root = os.path.dirname(os.path.abspath(__file__))
+    legacy_roots = [app_root]
+    if os.path.abspath(persist_dir) != "/data" and os.path.isdir("/data"):
+        legacy_roots.append("/data")
+
+    copied_files = []
+    for root in legacy_roots:
+        filenames = ["data.json", "data_vae.json", "wedof_webhooks.json"]
+        try:
+            filenames.extend(name for name in os.listdir(root) if name.endswith(".db"))
+        except Exception:
+            pass
+        for filename in filenames:
+            if _copy_file_if_missing(os.path.join(root, filename), os.path.join(persist_dir, filename)):
+                copied_files.append(os.path.join(root, filename))
+        for dirname in ("uploads", "generated_documents", "documents", "factures", "conventions", "convocations"):
+            copied_count = _copy_tree_contents_if_missing(os.path.join(root, dirname), os.path.join(persist_dir, dirname))
+            if copied_count:
+                copied_files.append(f"{os.path.join(root, dirname)}/* ({copied_count})")
+
+    if copied_files:
+        app.logger.info("Storage bootstrap copied legacy data into %s: %s", persist_dir, ", ".join(copied_files))
+
 
 PERSIST_DIR = _resolve_persist_dir()
+_bootstrap_persistent_storage(PERSIST_DIR)
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 WEDOF_WEBHOOK_FILE = os.path.join(PERSIST_DIR, "wedof_webhooks.json")
 
@@ -4009,8 +4075,12 @@ def _log_storage_state(data: Optional[Dict[str, Any]] = None) -> None:
     size = os.path.getsize(DATA_FILE) if exists else 0
     trainees_count, sessions_count = _count_loaded_objects(data or {})
     app.logger.info(
-        "Storage startup path=%s exists=%s size=%sB stagiaires=%s sessions=%s",
+        "Storage startup persist_dir=%s data_file=%s uploads_dir=%s backups_dir=%s generated_documents_dir=%s exists=%s size=%sB stagiaires=%s sessions=%s",
+        PERSIST_DIR,
         DATA_FILE,
+        UPLOADS_DIR,
+        BACKUP_DIR,
+        os.path.join(PERSIST_DIR, "generated_documents"),
         exists,
         size,
         trainees_count,
@@ -30012,9 +30082,8 @@ def _aps_convocation_allowed_pdf_roots() -> List[str]:
         upload_root = None
     if not upload_root:
         upload_root = os.environ.get("UPLOAD_FOLDER")
-    if not upload_root:
-        upload_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
-    roots.append(os.path.join(upload_root, "convocations_aps"))
+    if upload_root:
+        roots.append(os.path.join(upload_root, "convocations_aps"))
     return [os.path.abspath(root) for root in roots if root]
 
 
