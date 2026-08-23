@@ -1,0 +1,54 @@
+name: Work - appliquer le message accueil
+
+on:
+  push:
+    branches:
+      - work/notion-gestion-stagiaires-3c56e0d1a86e806a964dfb1029195c36-20260823142124
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: work/notion-gestion-stagiaires-3c56e0d1a86e806a964dfb1029195c36-20260823142124
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Appliquer le changement ciblé
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          template = Path('templates/admin_sessions.html')
+          text = template.read_text(encoding='utf-8')
+          needle = '    <div class="muted" style="margin-top:4px;">Pilotage des formations, stagiaires et outils administratifs.</div>'
+          replacement = needle + '\n    <div class="muted homepage-test-message" style="margin-top:4px;">ceci est un test</div>'
+          if text.count(needle) != 1:
+              raise SystemExit(f'En-tête attendu introuvable ou ambigu : {text.count(needle)} occurrence(s)')
+          if 'homepage-test-message' in text:
+              raise SystemExit('Le marqueur homepage-test-message existe déjà')
+          template.write_text(text.replace(needle, replacement, 1), encoding='utf-8')
+
+          test = Path('tests/test_admin_sessions_homepage_test_message.py')
+          test.write_text('''from pathlib import Path\nimport unittest\n\n\nROOT = Path(__file__).resolve().parents[1]\nTEMPLATE = ROOT / "templates" / "admin_sessions.html"\nBASE = ROOT / "templates" / "base.html"\n\n\nclass AdminSessionsHomepageTestMessageTests(unittest.TestCase):\n    def test_message_is_rendered_in_homepage_header_before_actions(self):\n        html = TEMPLATE.read_text(encoding="utf-8")\n        header_start = html.index('<div class="page-head">')\n        actions_start = html.index('<div class="admin-actions"', header_start)\n        message_start = html.index('ceci est un test', header_start)\n\n        self.assertLess(header_start, message_start)\n        self.assertLess(message_start, actions_start)\n        self.assertIn('class="muted homepage-test-message"', html[header_start:actions_start])\n\n    def test_message_is_limited_to_admin_sessions_homepage(self):\n        homepage = TEMPLATE.read_text(encoding="utf-8")\n        base = BASE.read_text(encoding="utf-8")\n\n        self.assertEqual(homepage.count('ceci est un test'), 1)\n        self.assertNotIn('ceci est un test', base)\n\n\nif __name__ == "__main__":\n    unittest.main()\n''', encoding='utf-8')
+          PY
+      - name: Vérifier le comportement ciblé
+        run: |
+          python -m unittest tests.test_admin_sessions_homepage_test_message -v
+          python -m py_compile tests/test_admin_sessions_homepage_test_message.py
+          git diff --check
+      - name: Nettoyer le workflow transitoire et publier la branche
+        run: |
+          rm -f .github/workflows/work-apply-homepage-test-message.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Afficher le message test sur la page d’accueil'
+          git push origin HEAD:work/notion-gestion-stagiaires-3c56e0d1a86e806a964dfb1029195c36-20260823142124
