@@ -34718,6 +34718,15 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     line['payment_status'] = qonto_source['qonto_payment_status']
                     line['qonto_payment_status'] = qonto_source['qonto_payment_status']
                     line['paymentStatus'] = qonto_source['qonto_payment_status']
+                    # The payment totals are the business source of truth for a
+                    # finalized invoice.  A stale Qonto document status such as
+                    # "finalized" must not make a fully settled invoice appear
+                    # as merely "sent" in the billing dashboard.
+                    if (
+                        qonto_source['qonto_payment_status'] == 'paid'
+                        and line.get('invoiceStatus') in {'finalized', 'sent', 'paid'}
+                    ):
+                        line['invoiceStatus'] = 'paid'
                     line['qonto_status'] = qonto_source.get('qonto_status') or qonto_source.get('qontoStatus') or line.get('invoiceStatus') or ''
                     # ``updatedAt`` also changes for purely local edits. Only
                     # an explicit Qonto sync timestamp may throttle a remote
