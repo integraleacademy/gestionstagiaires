@@ -1,8 +1,10 @@
 {# This partial is included globally at the end of base.html. Keep the
    responsive hardening here so every admin/public page receives it without
    duplicating imports across individual templates. #}
-<link rel="stylesheet" href="{{ url_for('static', filename='responsive.css', v=static_version|default('20260823-responsive-platform')) }}">
-<script src="{{ url_for('static', filename='responsive.js', v=static_version|default('20260823-responsive-platform')) }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='responsive.css', v=static_version|default('20260823-responsive-platform-v2')) }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='responsive-v2.css', v=static_version|default('20260823-responsive-platform-v2')) }}">
+<script src="{{ url_for('static', filename='responsive.js', v=static_version|default('20260823-responsive-platform-v2')) }}"></script>
+<script src="{{ url_for('static', filename='responsive-v2.js', v=static_version|default('20260823-responsive-platform-v2')) }}"></script>
 
 <div id="globalMailSentBadge" class="global-mail-sent-badge" role="status" aria-live="polite">Mail envoyé</div>
 <style>
