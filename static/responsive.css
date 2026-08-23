@@ -1,0 +1,481 @@
+/* Responsive hardening layer.
+   Loaded after style.css so legacy desktop styles stay intact while mobile
+   receives a consistent shell, forms, tables and modal behaviour. */
+
+@media (max-width: 980px){
+  html, body{
+    width:100%;
+    max-width:100%;
+  }
+
+  body{
+    overflow-x:clip;
+  }
+
+  .container,
+  .main-content,
+  .app-shell,
+  .card,
+  details.card,
+  .modal-body,
+  .page-head,
+  .session-header,
+  .trainee-profile-card,
+  .finance-dashboard,
+  .automation-panel{
+    min-width:0;
+    max-width:100%;
+  }
+
+  img,
+  video,
+  canvas,
+  iframe{
+    max-width:100%;
+  }
+
+  .topbar,
+  body.admin-sidebar-active .topbar,
+  body.admin-sidebar-active.partner-sidebar-collapsed .topbar,
+  body.partner-space .topbar,
+  body.partner-space.partner-sidebar-collapsed .topbar{
+    width:100%;
+    max-width:100%;
+    margin-left:0;
+  }
+
+  .topbar-inner,
+  body.admin-sidebar-active .topbar-inner{
+    width:100%;
+    max-width:100%;
+    margin:0;
+    padding:10px 12px;
+    gap:10px;
+  }
+
+  .brand,
+  body.admin-sidebar-active .brand{
+    min-width:0;
+    max-width:100%;
+    margin-left:0;
+    margin-right:0;
+  }
+
+  .brand-copy,
+  .brand-title-line{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .brand-title-line strong,
+  .brand-title-line span,
+  .brand-datetime{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    max-width:100%;
+  }
+
+  .topbar-actions,
+  body.admin-sidebar-active .topbar-actions,
+  body.partner-space .topbar-actions{
+    min-width:0;
+    max-width:100%;
+    flex-wrap:wrap;
+  }
+
+  .command-search{
+    order:4;
+    flex:1 0 100%;
+    width:100%;
+    max-width:none;
+  }
+
+  .command-search__panel{
+    left:10px;
+    right:10px;
+    width:auto;
+    max-width:none;
+  }
+
+  .page-head,
+  .session-header,
+  .subscription-hero,
+  .help-hero,
+  .subscription-module-meter{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .page-head > *,
+  .session-header > *,
+  .session-stats,
+  .summary-head-right{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .session-stats{
+    width:100%;
+  }
+
+  .stat{
+    flex:1 1 160px;
+    min-width:0;
+  }
+
+  .form-grid,
+  .partner-form-grid,
+  .admin-subscription-grid,
+  .billing-modal-grid,
+  .subscription-current-grid,
+  .help-grid{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea{
+    min-width:0;
+    max-width:100%;
+  }
+
+  input[type="file"],
+  .upload-form input[type="file"]{
+    width:100% !important;
+    max-width:100% !important;
+  }
+
+  .inline,
+  .btn-row,
+  .card-actions,
+  .form-actions,
+  .qonto-actions,
+  .billing-modal-actions,
+  .modal-actions{
+    flex-wrap:wrap;
+  }
+
+  .btn-row > form,
+  .btn-row > a,
+  .btn-row > button{
+    flex:1 1 220px;
+    min-width:0;
+  }
+
+  .btn,
+  button,
+  a.btn{
+    max-width:100%;
+  }
+
+  .table-wrap,
+  .partners-table-wrap,
+  .responsive-table-scroll,
+  .comparison-card{
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-inline:contain;
+  }
+
+  .responsive-table-scroll{
+    margin-block:10px;
+    border-radius:14px;
+  }
+
+  .responsive-table-scroll > table{
+    width:max-content;
+    min-width:100%;
+  }
+
+  .table{
+    min-width:900px !important;
+  }
+
+  input.comment,
+  textarea.comment{
+    width:min(320px,78vw) !important;
+    min-width:220px !important;
+    max-width:320px !important;
+  }
+
+  .modal-backdrop,
+  .billing-modal-overlay,
+  .subscription-modal,
+  .app-modal-backdrop{
+    padding:8px !important;
+  }
+
+  .modal,
+  .billing-modal,
+  .subscription-modal-card,
+  .app-modal-card{
+    width:100% !important;
+    max-width:100% !important;
+    max-height:calc(100dvh - 16px) !important;
+  }
+
+  .modal-body,
+  .billing-modal,
+  .subscription-modal-card{
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .modal-foot{
+    flex-wrap:wrap;
+  }
+
+  .partner-sidebar,
+  body.partner-space .partner-sidebar,
+  body.admin-sidebar-active .partner-sidebar,
+  body.partner-sidebar-collapsed .partner-sidebar{
+    height:100dvh;
+    max-height:100dvh;
+  }
+
+  .partner-sidebar__scroll{
+    overscroll-behavior:contain;
+  }
+
+  .trainee-profile-card__main,
+  .trainee-profile-card__identity,
+  .trainee-info-grid{
+    min-width:0;
+  }
+
+  .trainee-contact-chip-row,
+  .trainee-cnaps-panel,
+  .qonto-invoice-head{
+    max-width:100%;
+  }
+
+  .trainee-search-panel,
+  .docs-to-control-panel{
+    max-width:calc(100vw - 24px) !important;
+  }
+
+  .notif-panel,
+  body.admin-sidebar-active .admin-sidebar-notif-panel,
+  body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-panel{
+    left:10px;
+    right:10px;
+    width:auto;
+    max-width:none;
+  }
+}
+
+@media (max-width: 720px){
+  .container,
+  .main-content,
+  body.partner-space .main-content,
+  body.admin-sidebar-active .main-content{
+    width:100%;
+    max-width:100%;
+    padding-left:10px !important;
+    padding-right:10px !important;
+  }
+
+  .topbar-inner,
+  body.admin-sidebar-active .topbar-inner{
+    align-items:center;
+    padding:8px 10px;
+  }
+
+  .brand img,
+  body.admin-sidebar-active .brand img{
+    width:auto;
+    height:38px !important;
+    max-width:52px;
+    object-fit:contain;
+  }
+
+  .brand-title-line span,
+  .brand-datetime{
+    display:none;
+  }
+
+  .page-head{
+    margin:12px 0;
+  }
+
+  .page-head h1{
+    font-size:clamp(23px,7vw,30px);
+  }
+
+  .page-head h2{
+    font-size:21px;
+  }
+
+  .grid.cards{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+
+  .card,
+  .session-card,
+  .trainee-profile-card,
+  .finance-dashboard,
+  .automation-panel{
+    padding-left:12px;
+    padding-right:12px;
+    border-radius:18px;
+  }
+
+  .form-grid,
+  .partner-form-grid,
+  .trainee-info-grid,
+  .billing-modal-grid{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+
+  .btn-row,
+  .card-actions,
+  .form-actions,
+  .billing-modal-actions,
+  .modal-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .btn-row > form,
+  .btn-row > a,
+  .btn-row > button,
+  .card-actions > *,
+  .form-actions > *,
+  .billing-modal-actions > *,
+  .modal-actions > *{
+    width:100%;
+    flex:1 1 auto;
+  }
+
+  .btn-row .btn,
+  .card-actions .btn,
+  .form-actions .btn,
+  .billing-modal-actions .btn,
+  .modal-actions .btn{
+    width:100%;
+    min-height:44px;
+    white-space:normal;
+  }
+
+  .modal-backdrop,
+  .app-modal-backdrop{
+    align-items:flex-end;
+  }
+
+  .modal,
+  .app-modal-card,
+  .subscription-modal-card,
+  .billing-modal{
+    border-radius:18px !important;
+  }
+
+  .modal-head,
+  .modal-body,
+  .modal-foot{
+    padding:12px !important;
+  }
+
+  .modal-foot{
+    flex-direction:column-reverse;
+    align-items:stretch;
+  }
+
+  .modal-foot .btn{
+    width:100%;
+    min-height:44px;
+  }
+
+  /* Sticky identity columns consume almost the whole phone viewport. On a
+     phone the table remains horizontally scrollable, but every column can be
+     reached because the first columns no longer stay pinned. */
+  #traineesTable th:nth-child(1),
+  #traineesTable td:nth-child(1),
+  #traineesTable th:nth-child(2),
+  #traineesTable td:nth-child(2),
+  #traineesTable .col-session,
+  #traineesTable .col-last-name,
+  #traineesTable .col-first-name{
+    position:static !important;
+    left:auto !important;
+    box-shadow:none !important;
+  }
+
+  #traineesTable .col-session,
+  #traineesTable .col-last-name,
+  #traineesTable .col-first-name{
+    min-width:140px !important;
+    max-width:190px !important;
+  }
+
+  .trainee-identity-head{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+
+  .trainee-photo-block{
+    width:100% !important;
+    max-width:260px;
+  }
+
+  .trainee-contact-chip-row .btn,
+  .btn-admin-trainee-side-action{
+    width:100%;
+  }
+
+  .session-date-row{
+    grid-template-columns:30px minmax(0,1fr);
+  }
+
+  .session-date-row strong{
+    grid-column:2;
+    text-align:left;
+  }
+
+  .session-metrics,
+  .session-actions{
+    grid-template-columns:minmax(0,1fr) !important;
+  }
+
+  .billing-modal-overlay{
+    align-items:flex-end;
+  }
+}
+
+@media (max-width: 480px){
+  .topbar-actions{
+    gap:6px;
+  }
+
+  .partner-sidebar-toggle,
+  .topbar-actions .btn,
+  .topbar-actions button{
+    min-height:42px;
+  }
+
+  .command-search__bar{
+    height:44px;
+  }
+
+  .card,
+  .session-card,
+  .trainee-profile-card{
+    padding:11px;
+  }
+
+  .trainee-name-row{
+    padding:14px !important;
+  }
+
+  .trainee-name-input{
+    width:100% !important;
+    font-size:22px !important;
+  }
+
+  .notif-panel{
+    top:64px;
+    max-height:calc(100dvh - 82px);
+  }
+}

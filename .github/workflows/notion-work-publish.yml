@@ -101,6 +101,10 @@ jobs:
           if [ -n "$changed_py" ]; then
             while IFS= read -r file; do python -m py_compile "$file"; done <<< "$changed_py"
           fi
+      - name: Installer pytest pour la régression responsive
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Tester le contrat responsive global
+        run: pytest -q tests/test_responsive_design.py
 
   publish:
     name: Publier la PR validée
