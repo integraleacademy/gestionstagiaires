@@ -35,6 +35,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           INPUT_PR: ${{ inputs.pr_number }}
           EVENT_PR: ${{ github.event.pull_request.number }}
+          EVENT_REVIEW_AUTHOR: ${{ github.event.review.user.login }}
           EVENT_REVIEW_BODY: ${{ github.event.review.body }}
           EVENT_REVIEW_COMMIT: ${{ github.event.review.commit_id }}
         run: |
@@ -53,10 +54,10 @@ jobs:
           if [ -n "$first_number" ] && [ "$requested_pr" != "$first_number" ]; then echo "PR #$requested_pr en attente de la PR #$first_number."; exit 0; fi
           marker="<!-- work-independent-review: approved sha=${head_sha} -->"
           if [ "$GITHUB_EVENT_NAME" = "pull_request_review" ]; then
-            if [ "${EVENT_REVIEW_COMMIT:-}" != "$head_sha" ] || [[ "${EVENT_REVIEW_BODY:-}" != *"$marker"* ]]; then exit 0; fi
+            if [ "${EVENT_REVIEW_AUTHOR:-}" != "integraleacademy" ] || [ "${EVENT_REVIEW_COMMIT:-}" != "$head_sha" ] || [[ "${EVENT_REVIEW_BODY:-}" != *"$marker"* ]]; then exit 0; fi
           else
             reviews="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${requested_pr}/reviews?per_page=100")"
-            approved="$(printf '%s' "$reviews" | jq -r --arg sha "$head_sha" --arg marker "$marker" '[.[] | select(.commit_id == $sha and ((.body // "") | contains($marker)))] | length')"
+            approved="$(printf '%s' "$reviews" | jq -r --arg sha "$head_sha" --arg marker "$marker" '[.[] | select(.user.login == "integraleacademy" and .commit_id == $sha and ((.body // "") | contains($marker)))] | length')"
             [ "$approved" != "0" ] || exit 0
           fi
           echo "pr_number=$requested_pr" >> "$GITHUB_OUTPUT"
@@ -118,6 +119,8 @@ jobs:
           state="$(printf '%s' "$current" | cut -f1)"; current_head="$(printf '%s' "$current" | cut -f2)"; is_draft="$(printf '%s' "$current" | cut -f3)"
           [ "$state" = "OPEN" ] || exit 0
           [ "$current_head" = "$EXPECTED_HEAD" ] || { echo "::error::La tête a changé après la revue ou les tests."; exit 1; }
+          first_number="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --limit 100 --json number,headRefName,body --jq '[.[] | select(.headRefName | startswith("work/notion-gestion-stagiaires-")) | select((.body // "") | contains("<!-- notion-page-id:")) | .number] | sort | .[0] // empty')"
+          [ -z "$first_number" ] || [ "$PR_NUMBER" = "$first_number" ] || { echo "::error::La PR #$first_number doit être publiée avant."; exit 1; }
           behind="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${HEAD_REF}" --jq '.behind_by')"
           [ "$behind" = "0" ] || { echo "::error::La PR n'est plus à jour avec main."; exit 1; }
           if [ "$is_draft" = "true" ]; then gh pr ready "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"; fi
