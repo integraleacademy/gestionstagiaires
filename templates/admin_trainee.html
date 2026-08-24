@@ -4308,7 +4308,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   });
   financeNotificationsBtn?.addEventListener('click', ()=>{ financeNotificationsOpen = !financeNotificationsOpen; render(currentLines); });
   quickGenerateBtn?.addEventListener('click', ()=>{ const line=firstInvoiceToGenerate(); if(line) openGenerateInvoiceModal(line); });
-  syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; showQontoSyncModal(); try{ const j=await billingApi('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); if(j.failed_count){const detail=j.errors?.[0]?.message||'Qonto a refusé la programmation des échéances.';throw new Error(`Échéancier non programmé : ${detail}`);} hideQontoSyncModal(); alert(j.message||'Synchronisation terminée'); }catch(e){ hideQontoSyncModal(); alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ hideQontoSyncModal(); syncBtn.disabled=false; }});
+  syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; showQontoSyncModal(); try{ const j=await billingApi('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee',refreshWedof:true}); await load(); if(j.failed_count){const detail=j.errors?.[0]?.message||'Qonto a refusé la programmation des échéances.';throw new Error(`Échéancier non programmé : ${detail}`);} hideQontoSyncModal(); alert(j.message||'Synchronisation terminée'); }catch(e){ hideQontoSyncModal(); alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ hideQontoSyncModal(); syncBtn.disabled=false; }});
   function financialResetStatusLabel(status){
     const value=String(status||'').toLowerCase();
     if(['completed','paid','succeeded','success'].includes(value))return 'Réglé';
