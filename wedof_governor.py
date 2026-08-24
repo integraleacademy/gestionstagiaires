@@ -125,7 +125,8 @@ def _origin(value: str) -> str:
 
 
 def _snapshot_with_connection(
-    db: sqlite3.Connection, now: dt.datetime,
+    db: sqlite3.Connection, now: dt.datetime, *, include_details: bool = False,
+    recent_event_limit: int = 20,
 ) -> Dict[str, Any]:
     limits = configured_limits()
     bucket_keys = _buckets(now)
@@ -140,24 +141,81 @@ def _snapshot_with_connection(
             str(row["origin"]): int(row["request_count"] or 0) for row in rows
         }
         used = sum(by_origin.values())
+        utilization_percent = round((used / limits[period]) * 100, 1)
+        if used >= limits[period]:
+            status = "blocked"
+        elif utilization_percent >= 90:
+            status = "critical"
+        elif utilization_percent >= 75:
+            status = "warning"
+        else:
+            status = "normal"
         periods[period] = {
             "bucket": bucket,
             "used": used,
             "limit": limits[period],
             "remaining": max(0, limits[period] - used),
+            "utilization_percent": utilization_percent,
+            "status": status,
             "by_origin": by_origin,
         }
-    return {
+    snapshot: Dict[str, Any] = {
         "enabled": governor_enabled(),
         "timezone": "Europe/Paris",
+        "generated_at": now.isoformat(timespec="seconds"),
         "periods": periods,
     }
+    if include_details:
+        limit = max(0, min(int(recent_event_limit), 100))
+        recent_events = []
+        if limit:
+            rows = db.execute(
+                "SELECT requested_at, origin, operation, method, path "
+                "FROM wedof_request_events ORDER BY event_id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+            recent_events = [
+                {
+                    "requested_at": str(row["requested_at"]),
+                    "origin": str(row["origin"]),
+                    "operation": str(row["operation"]),
+                    "method": str(row["method"]),
+                    "path": str(row["path"]),
+                }
+                for row in rows
+            ]
+        active_leases = db.execute(
+            "SELECT lease_name, owner, expires_at "
+            "FROM wedof_governor_leases WHERE expires_at > ? "
+            "ORDER BY expires_at",
+            (now.isoformat(timespec="seconds"),),
+        ).fetchall()
+        snapshot["recent_events"] = recent_events
+        snapshot["active_leases"] = [
+            {
+                "name": str(row["lease_name"]),
+                "owner": str(row["owner"]),
+                "expires_at": str(row["expires_at"]),
+            }
+            for row in active_leases
+        ]
+    return snapshot
 
 
-def quota_snapshot(*, now: Optional[dt.datetime] = None) -> Dict[str, Any]:
+def quota_snapshot(
+    *, now: Optional[dt.datetime] = None, recent_event_limit: int = 20,
+) -> Dict[str, Any]:
     current = _current(now)
-    with _connect() as db:
-        return _snapshot_with_connection(db, current)
+    try:
+        with _connect() as db:
+            return _snapshot_with_connection(
+                db, current, include_details=True,
+                recent_event_limit=recent_event_limit,
+            )
+    except sqlite3.Error as exc:
+        raise WedofGovernorError(
+            "Le compteur WEDOF central est indisponible.",
+        ) from exc
 
 
 def reserve_request(

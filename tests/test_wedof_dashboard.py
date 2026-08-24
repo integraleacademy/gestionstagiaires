@@ -128,6 +128,59 @@ class WedofDashboardViewTests(unittest.TestCase):
         with self.client.session_transaction() as session:
             session["admin_logged_in"] = True
 
+    def test_admin_displays_central_quota_origins_alerts_locks_and_recent_requests(self):
+        data = {
+            "sessions": [], "wedof_links": [], "wedof_automation_status": [],
+            "wedof_automation_runs": [{"status": "success"}],
+            "wedof_automation_sync": {},
+        }
+        quota = {
+            "enabled": True,
+            "timezone": "Europe/Paris",
+            "generated_at": "2026-08-24T12:30:00+02:00",
+            "periods": {
+                "hour": {"used": 12, "limit": 100, "remaining": 88,
+                         "utilization_percent": 12.0, "status": "normal",
+                         "by_origin": {"crm": 5, "gestionstagiaires": 7}},
+                "day": {"used": 451, "limit": 500, "remaining": 49,
+                        "utilization_percent": 90.2, "status": "critical",
+                        "by_origin": {"crm": 301, "gestionstagiaires": 140,
+                                      "gestionstagiaires-webhook": 10}},
+                "month": {"used": 6200, "limit": 15000, "remaining": 8800,
+                          "utilization_percent": 41.3, "status": "normal",
+                          "by_origin": {"crm": 4000, "gestionstagiaires": 2200}},
+            },
+            "recent_events": [{
+                "requested_at": "2026-08-24T12:29:00+02:00",
+                "origin": "crm", "operation": "get_registration_folder",
+                "method": "GET", "path": "/registrationFolders/:id",
+            }],
+            "active_leases": [{
+                "name": "wedof-global-reconciliation", "owner": "crm-worker",
+                "expires_at": "2026-08-24T13:00:00+02:00",
+            }],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "wedof_quota_snapshot", return_value=quota) as snapshot, \
+             patch.object(gestion_app, "WedofClient") as remote:
+            response = self.client.get("/admin/wedof")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("no-store", response.headers["Cache-Control"])
+        for text in (
+            "Consommation WEDOF", "Compteur central actif", "451", "sur 500 requêtes",
+            "CRM", "Gestion Stagiaires", "Webhooks Gestion Stagiaires",
+            "Plafond presque atteint", "wedof-global-reconciliation",
+            "Lecture d’un dossier", "/registrationFolders/:id",
+            "Cette actualisation ne contacte pas WEDOF",
+        ):
+            self.assertIn(text, html)
+        self.assertNotIn("lease_token", html)
+        snapshot.assert_called_once_with(recent_event_limit=20)
+        remote.assert_not_called()
+
     def test_compact_dashboard_tabs_counters_badges_and_sidebar(self):
         remote = Mock()
         remote.list_registration_folders.side_effect = [

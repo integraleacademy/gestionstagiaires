@@ -1,12 +1,31 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260811-redesign') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260824-quota-dashboard') }}">
 {% set st = wedof_dashboard.stats %}
 {% set state_labels = {
   'accepted': 'Accepté',
   'inTraining': 'En formation',
   'serviceDoneDeclared': 'Service fait déclaré',
   'serviceDoneValidated': 'Service fait validé'
+} %}
+{% set quota_period_labels = {
+  'hour': ['Cette heure', 'Plafond horaire'],
+  'day': ['Aujourd’hui', 'Plafond quotidien'],
+  'month': ['Ce mois', 'Plafond mensuel']
+} %}
+{% set quota_origin_labels = {
+  'crm': 'CRM',
+  'gestionstagiaires': 'Gestion Stagiaires',
+  'gestionstagiaires-webhook': 'Webhooks Gestion Stagiaires'
+} %}
+{% set quota_operation_labels = {
+  'list_registration_folders': 'Liste de dossiers',
+  'get_registration_folder': 'Lecture d’un dossier',
+  'registration_folder_action': 'Action sur un dossier',
+  'get_current_organism': 'Lecture de l’organisme',
+  'targeted_get': 'Lecture ciblée',
+  'due_get': 'Contrôle d’une échéance',
+  'wedof_request': 'Requête WEDOF'
 } %}
 
 <div class="wedof-page">
@@ -46,6 +65,159 @@
       </form>
     </div>
   </header>
+
+  <section id="wedof-consumption" class="wedof-panel wedof-quota-panel" aria-labelledby="wedof-consumption-title">
+    <div class="wedof-panel-header wedof-quota-header">
+      <div>
+        <span class="wedof-section-label">Surveillance de l’API</span>
+        <h2 id="wedof-consumption-title">Consommation WEDOF</h2>
+        <p>Chaque tentative est comptée avant son envoi. Les plafonds bloquent automatiquement tout dépassement.</p>
+      </div>
+      <a class="btn btn-outline wedof-quota-refresh" href="{{ url_for('admin_wedof_requests') }}#wedof-consumption">Actualiser les compteurs</a>
+    </div>
+
+    {% if not wedof_quota.available %}
+      <div class="wedof-quota-unavailable" role="alert">
+        <strong>Compteur momentanément indisponible</strong>
+        <span>Aucune requête WEDOF n’est envoyée depuis cet écran. Vérifiez le disque persistant et la base du gouverneur.</span>
+      </div>
+    {% else %}
+      <div class="wedof-quota-health" aria-label="État du compteur central">
+        <span class="wedof-status-pill {{ 'is-live' if wedof_quota.enabled else 'is-test' }}">
+          {{ 'Compteur central actif' if wedof_quota.enabled else 'Compteur central désactivé' }}
+        </span>
+        <span>Lecture au {{ wedof_quota.generated_at|frdatetime }}</span>
+        <span>Cette actualisation ne contacte pas WEDOF</span>
+      </div>
+
+      <div class="wedof-quota-cards" aria-label="Plafonds de requêtes WEDOF">
+        {% for period_key in ['hour', 'day', 'month'] %}
+          {% set quota = wedof_quota.periods.get(period_key, {}) %}
+          <article class="wedof-quota-card is-{{ quota.status or 'normal' }}">
+            <div class="wedof-quota-card-heading">
+              <div>
+                <span>{{ quota_period_labels[period_key][1] }}</span>
+                <h3>{{ quota_period_labels[period_key][0] }}</h3>
+              </div>
+              <strong>{{ "{:.1f}".format(quota.utilization_percent or 0).replace('.', ',') }} %</strong>
+            </div>
+            <div class="wedof-quota-values">
+              <strong>{{ "{:,}".format(quota.used or 0).replace(',', ' ') }}</strong>
+              <span>sur {{ "{:,}".format(quota.limit or 0).replace(',', ' ') }} requêtes</span>
+            </div>
+            <div class="wedof-quota-progress" role="progressbar" aria-valuemin="0" aria-valuemax="{{ quota.limit or 0 }}" aria-valuenow="{{ quota.used or 0 }}">
+              <span style="width: {{ 100 if (quota.utilization_percent or 0) > 100 else (quota.utilization_percent or 0) }}%"></span>
+            </div>
+            <small>{{ "{:,}".format(quota.remaining or 0).replace(',', ' ') }} requête{{ 's' if (quota.remaining or 0) != 1 else '' }} restante{{ 's' if (quota.remaining or 0) != 1 else '' }}</small>
+          </article>
+        {% endfor %}
+      </div>
+
+      <div class="wedof-quota-details">
+        <article class="wedof-quota-side-card" aria-labelledby="wedof-origin-title">
+          <div class="wedof-quota-side-heading">
+            <div>
+              <span class="wedof-section-label">Origine</span>
+              <h3 id="wedof-origin-title">Répartition aujourd’hui</h3>
+            </div>
+            <strong>{{ (wedof_quota.periods.get('day', {}).used or 0) }} au total</strong>
+          </div>
+          {% set daily_quota = wedof_quota.periods.get('day', {}) %}
+          {% set daily_total = daily_quota.used or 0 %}
+          <div class="wedof-origin-list">
+            {% for origin in ['crm', 'gestionstagiaires', 'gestionstagiaires-webhook'] %}
+              {% set origin_count = (daily_quota.by_origin or {}).get(origin, 0) %}
+              {% set origin_percent = ((origin_count / daily_total) * 100) if daily_total else 0 %}
+              <div class="wedof-origin-row">
+                <div><strong>{{ quota_origin_labels[origin] }}</strong><span>{{ origin_count }} requête{{ 's' if origin_count != 1 else '' }}</span></div>
+                <div class="wedof-origin-track" aria-hidden="true"><span style="width: {{ origin_percent }}%"></span></div>
+                <b>{{ "{:.0f}".format(origin_percent) }} %</b>
+              </div>
+            {% endfor %}
+            {% for origin, origin_count in (daily_quota.by_origin or {}).items() %}
+              {% if origin not in quota_origin_labels %}
+                {% set origin_percent = ((origin_count / daily_total) * 100) if daily_total else 0 %}
+                <div class="wedof-origin-row">
+                  <div><strong>{{ origin }}</strong><span>{{ origin_count }} requête{{ 's' if origin_count != 1 else '' }}</span></div>
+                  <div class="wedof-origin-track" aria-hidden="true"><span style="width: {{ origin_percent }}%"></span></div>
+                  <b>{{ "{:.0f}".format(origin_percent) }} %</b>
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </article>
+
+        <article class="wedof-quota-side-card" aria-labelledby="wedof-alert-title">
+          <div class="wedof-quota-side-heading">
+            <div>
+              <span class="wedof-section-label">Protection</span>
+              <h3 id="wedof-alert-title">Alertes et verrous</h3>
+            </div>
+          </div>
+          <div class="wedof-quota-alerts">
+            {% set quota_alerts = namespace(found=false) %}
+            {% if not wedof_quota.enabled %}
+              {% set quota_alerts.found = true %}
+              <div class="wedof-quota-alert is-warning"><strong>Compteur désactivé</strong><span>Activez le gouverneur avant toute reprise des appels WEDOF.</span></div>
+            {% endif %}
+            {% for period_key in ['hour', 'day', 'month'] %}
+              {% set quota = wedof_quota.periods.get(period_key, {}) %}
+              {% if quota.status and quota.status != 'normal' %}
+                {% set quota_alerts.found = true %}
+                <div class="wedof-quota-alert is-{{ quota.status }}">
+                  <strong>
+                    {% if quota.status == 'blocked' %}Plafond atteint{% elif quota.status == 'critical' %}Plafond presque atteint{% else %}Consommation à surveiller{% endif %}
+                    · {{ quota_period_labels[period_key][0]|lower }}
+                  </strong>
+                  <span>{{ "{:.1f}".format(quota.utilization_percent or 0).replace('.', ',') }} % utilisé · {{ quota.remaining or 0 }} restant</span>
+                </div>
+              {% endif %}
+            {% endfor %}
+            {% if not quota_alerts.found %}
+              <div class="wedof-quota-alert is-normal"><strong>Aucune alerte</strong><span>Les trois plafonds sont sous 75 %.</span></div>
+            {% endif %}
+          </div>
+          <div class="wedof-locks">
+            <strong>Verrous interprocessus</strong>
+            {% if wedof_quota.active_leases %}
+              {% for lease in wedof_quota.active_leases %}
+                <span>{{ lease.name }} · jusqu’au {{ lease.expires_at|frdatetime }}</span>
+              {% endfor %}
+            {% else %}
+              <span>Aucun traitement WEDOF en cours.</span>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+
+      <details class="wedof-quota-events">
+        <summary>
+          <span><strong>Dernières requêtes comptées</strong><small>Les 20 événements les plus récents, sans numéro de dossier exposé.</small></span>
+          <b>{{ wedof_quota.recent_events|length }}</b>
+        </summary>
+        {% if wedof_quota.recent_events %}
+          <div class="wedof-quota-events-wrap">
+            <table class="wedof-quota-events-table">
+              <thead><tr><th>Date</th><th>Application</th><th>Opération</th><th>Méthode</th><th>Chemin neutralisé</th></tr></thead>
+              <tbody>
+                {% for event in wedof_quota.recent_events %}
+                  <tr>
+                    <td>{{ event.requested_at|frdatetime }}</td>
+                    <td><span class="wedof-origin-badge is-{{ event.origin|replace('_', '-') }}">{{ quota_origin_labels.get(event.origin, event.origin) }}</span></td>
+                    <td>{{ quota_operation_labels.get(event.operation, event.operation) }}</td>
+                    <td><code>{{ event.method }}</code></td>
+                    <td><code>{{ event.path }}</code></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="wedof-quota-empty">Aucune requête n’a encore été comptée depuis l’activation du gouverneur.</div>
+        {% endif %}
+      </details>
+    {% endif %}
+  </section>
 
   {% if wedof_dashboard_state == 'never_synchronized' %}
     <div class="wedof-notice is-warning" role="status">
