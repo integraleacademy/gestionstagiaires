@@ -63,6 +63,10 @@ class WedofIsolationTests(unittest.TestCase):
         with patch.object(gestion_app, "_fetch_wedof_folder_details", return_value={}), \
              patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
              patch.object(gestion_app, "_save_wedof_webhooks") as save_wedof, \
+             patch.object(
+                 gestion_app, "_send_wedof_entry_to_salesforce",
+                 return_value=({"success": True}, 200),
+             ), \
              patch.object(gestion_app, "load_data") as load_data, \
              patch.object(gestion_app, "save_data") as save_data:
             resp = self.client.post(
@@ -110,6 +114,107 @@ class WedofIsolationTests(unittest.TestCase):
         self.assertTrue(saved_entry["salesforce_sent"])
         self.assertEqual(saved_entry["salesforce_send_count"], 1)
         self.assertFalse(saved_entry["processed"])
+
+    def test_embedded_folder_updates_cache_without_any_wedof_get(self):
+        payload = {
+            "event": "registrationFolder.updated",
+            "registrationFolder": {
+                "externalId": "CPF-CACHED-1",
+                "type": "cpf",
+                "state": "accepted",
+                "attendee": {
+                    "firstName": "Sara",
+                    "lastName": "Boukhari",
+                    "email": "sara@example.com",
+                },
+                "trainingActionInfo": {
+                    "startDate": "2026-09-07",
+                    "endDate": "2026-10-09",
+                    "title": "APS",
+                },
+            },
+        }
+        canonical = {
+            "wedof_links": [],
+            "wedof_folder_cache": [],
+            "wedof_automation_status": [],
+        }
+
+        def atomic_update(mutator):
+            return mutator(canonical)
+
+        with patch.dict(
+                 gestion_app.os.environ,
+                 {"WEDOF_WEBHOOK_SECRET": "webhook-secret"}, clear=False,
+             ), \
+             patch.object(gestion_app, "_fetch_wedof_folder_details") as fetch, \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "_save_wedof_webhooks"), \
+             patch.object(
+                 gestion_app, "_send_wedof_entry_to_salesforce",
+                 return_value=({"success": True}, 200),
+             ), \
+             patch.object(gestion_app, "_atomic_update_data", side_effect=atomic_update):
+            response = self.client.post(
+                "/api/webhooks/wedof",
+                json=payload,
+                headers={
+                    "X-Wedof-Delivery": "delivery-cache-1",
+                    "X-Wedof-Secret": "webhook-secret",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        fetch.assert_not_called()
+        self.assertEqual(
+            canonical["wedof_folder_cache"][0]["external_id"], "CPF-CACHED-1",
+        )
+        self.assertEqual(
+            canonical["wedof_automation_status"][0]["external_id"],
+            "CPF-CACHED-1",
+        )
+
+    def test_untrusted_webhook_can_never_spend_wedof_quota(self):
+        with patch.dict(
+                 gestion_app.os.environ,
+                 {"WEDOF_WEBHOOK_SECRET": "webhook-secret"}, clear=False,
+             ), \
+             patch.object(gestion_app, "_fetch_wedof_folder_details") as fetch, \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "_save_wedof_webhooks"), \
+             patch.object(
+                 gestion_app, "_send_wedof_entry_to_salesforce",
+                 return_value=({"success": True}, 200),
+             ), \
+             patch.object(gestion_app, "_atomic_update_data") as atomic_update:
+            response = self.client.post(
+                "/api/webhooks/wedof",
+                json={"registrationFolderId": "CPF-UNTRUSTED"},
+                headers={"X-Wedof-Signature": "invalid"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        fetch.assert_not_called()
+        atomic_update.assert_not_called()
+
+    def test_duplicate_webhook_is_acknowledged_before_targeted_get(self):
+        with patch.object(gestion_app, "_fetch_wedof_folder_details") as fetch, \
+             patch.object(
+                 gestion_app, "_load_wedof_webhooks",
+                 return_value=[{"delivery_id": "delivery-duplicate"}],
+             ), \
+             patch.object(gestion_app, "_save_wedof_webhooks") as save, \
+             patch.object(gestion_app, "_send_wedof_entry_to_salesforce") as salesforce:
+            response = self.client.post(
+                "/api/webhooks/wedof",
+                json={"registrationFolderId": "CPF-42"},
+                headers={"X-Wedof-Delivery": "delivery-duplicate"},
+            )
+
+        self.assertEqual(response.get_json(), {"ok": True, "duplicate": True})
+        fetch.assert_not_called()
+        save.assert_not_called()
+        salesforce.assert_not_called()
 
     def test_salesforce_payload_uses_bounded_permalink_instead_of_raw_webhook(self):
         salesforce_response = type(

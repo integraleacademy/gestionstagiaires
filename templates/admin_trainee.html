@@ -786,7 +786,7 @@
     <span class="cpf-panel__chevron" aria-hidden="true"></span>
   </summary>
   <header class="cpf-head">
-    <div class="cpf-actions"><span class="cpf-sync{% if cpf.sync_error %} is-error{% endif %}">{{ cpf.sync_error or ('Synchronisé' if cpf.found else 'Non associé') }}</span>{% if cpf.found %}<form method="post" action="{{ url_for('admin_trainee_cpf_refresh',session_id=session.id,trainee_id=trainee.id) }}"><button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>Actualiser WEDOF</button></form>{% endif %}{% if d.wedof_url %}<a class="btn btn-outline" href="{{ d.wedof_url }}" target="_blank" rel="noopener">Ouvrir dans WEDOF</a>{% endif %}</div>
+    <div class="cpf-actions"><span class="cpf-sync{% if cpf.sync_error %} is-error{% endif %}">{{ cpf.sync_error or ('Données en cache' if cpf.found else 'Non associé') }}</span>{% if cpf.found %}<form method="post" action="{{ url_for('admin_trainee_cpf_refresh',session_id=session.id,trainee_id=trainee.id) }}"><button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>Actualiser ce dossier</button></form>{% endif %}{% if d.wedof_url %}<a class="btn btn-outline" href="{{ d.wedof_url }}" target="_blank" rel="noopener">Ouvrir dans WEDOF</a>{% endif %}</div>
   </header>
   {% if cpf.found %}
     {% if cpf.unknown %}<div class="cpf-alert">Statut WEDOF non classé : « {{ d.state or 'Non communiqué' }} ». Aucune étape n’a été déduite artificiellement.</div>{% endif %}
@@ -803,21 +803,21 @@
   {% else %}
     <div class="cpf-empty">
       <div class="cpf-empty__head">
-        <h3>Recherche automatique du dossier CPF</h3>
-        <p>La recherche démarre automatiquement à l’ouverture de la fiche. La plateforme rapproche d’abord le nom, le prénom et les dates, puis sécurise l’association avec l’e-mail et/ou le téléphone.</p>
+        <h3>Recherche dans le cache des dossiers CPF</h3>
+        <p>L’ouverture de la fiche ne contacte pas WEDOF. Vous pouvez rechercher dans les dernières données reçues par webhook ou réconciliation, ou saisir directement un numéro de dossier.</p>
       </div>
       <section class="cpf-auto-match"
                data-cpf-auto-match
                data-search-url="{{ url_for('admin_trainee_cpf_auto_match',session_id=session.id,trainee_id=trainee.id) }}"
                data-associate-url="{{ url_for('admin_trainee_cpf_associate_match',session_id=session.id,trainee_id=trainee.id) }}"
                data-read-only="{{ 'true' if is_read_only else 'false' }}">
-        <div class="cpf-match-status{% if not is_read_only %} is-loading{% else %} is-neutral{% endif %}" data-cpf-match-status role="status" aria-live="polite">
+        <div class="cpf-match-status is-neutral" data-cpf-match-status role="status" aria-live="polite">
           <span class="cpf-match-spinner" aria-hidden="true"></span>
           <span class="cpf-match-status__text">
             <strong>Rapprochement WEDOF</strong>
-            <span data-cpf-match-message>{% if is_read_only %}Recherche désactivée en mode lecture seule.{% else %}Recherche du bon dossier en cours…{% endif %}</span>
+            <span data-cpf-match-message>{% if is_read_only %}Recherche désactivée en mode lecture seule.{% else %}Aucune requête WEDOF ne sera envoyée par cette recherche.{% endif %}</span>
           </span>
-          <button class="btn btn-outline cpf-match-retry" type="button" data-cpf-match-retry hidden>Relancer</button>
+          <button class="btn btn-outline cpf-match-retry" type="button" data-cpf-match-retry {% if is_read_only %}hidden{% endif %}>Rechercher dans le cache</button>
         </div>
         <div class="cpf-suggestions" data-cpf-suggestions></div>
       </section>

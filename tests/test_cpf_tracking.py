@@ -1,4 +1,5 @@
 import datetime as dt
+import inspect
 from unittest.mock import Mock
 
 import app as application
@@ -212,7 +213,8 @@ def test_template_keeps_automation_and_places_cpf_before_elearning():
     assert "admin_trainee_cpf_auto_match" in source
     assert "admin_trainee_cpf_associate_match" in source
     assert "js/cpf-auto-match.js" in source
-    assert "La recherche démarre automatiquement à l’ouverture de la fiche." in source
+    assert "L’ouverture de la fiche ne contacte pas WEDOF." in source
+    assert "Rechercher dans le cache" in source
     assert "{{ action.detail }}" in source
     assert "Automatisation attendue mais non programmée" not in source
 
@@ -226,12 +228,19 @@ def test_successful_cpf_association_reloads_the_current_trainee_page():
     assert "window.location.assign(payload.redirect_url)" not in source
 
 
-def test_cpf_matching_starts_automatically_when_the_page_opens():
+def test_cpf_matching_waits_for_an_explicit_click_when_the_page_opens():
     source = open("static/js/cpf-auto-match.js", encoding="utf-8").read()
     assert "function initCpfAutoMatch()" in source
     assert "document.addEventListener('DOMContentLoaded', initCpfAutoMatch, {once: true})" in source
     assert "root.dataset.cpfAutoMatchInitialized = 'true'" in source
-    assert "search();" in source
+    assert "\n  search();\n" not in source
+    assert "retry.addEventListener('click', search)" in source
+
+
+def test_opening_a_trainee_page_never_refreshes_wedof_implicitly():
+    source = inspect.getsource(application.admin_trainee_page)
+    assert "_refresh_cpf_link_from_wedof" not in source
+    assert "strictement locale" in source
 
 
 def test_refresh_cpf_link_updates_status_snapshot_and_automation(monkeypatch):

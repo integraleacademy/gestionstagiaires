@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import app as gestion_app
-from wedof_matching import find_trainee_cpf_candidates
+from wedof_matching import extract_folder, find_trainee_cpf_candidates
 
 
 def local_data():
@@ -135,10 +135,10 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         return temp.name, path
 
     @staticmethod
-    def _listing_client(*folders):
-        remote = Mock()
-        remote.list_registration_folders.side_effect = [list(folders), [], [], []]
-        return remote
+    def _cached_data(*folders):
+        data = local_data()
+        data["wedof_folder_cache"] = [extract_folder(folder) for folder in folders]
+        return data
 
     def test_authentication_is_required(self):
         anonymous = gestion_app.app.test_client()
@@ -147,60 +147,47 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         client.assert_not_called()
 
-    def test_unique_complete_match_is_associated_automatically(self):
-        temp, path = self._store()
-        remote = self._listing_client(remote_folder())
+    def test_unique_complete_cached_match_is_suggested_without_remote_call(self):
+        temp, path = self._store(self._cached_data(remote_folder()))
         with patch.object(gestion_app, "DATA_FILE", path), \
              patch.object(gestion_app, "BACKUP_DIR", temp), \
-             patch.object(gestion_app, "WedofClient", return_value=remote):
+             patch.object(gestion_app, "WedofClient") as client:
             response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/auto-match")
         with open(path, encoding="utf-8") as stream:
             saved = json.load(stream)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json["status"], "associated")
-        link = saved["wedof_links"][0]
-        self.assertEqual((link["source"], link["matching_rule"]),
-                         ("automatic_exact_match", "email_phone_identity_dates"))
-        self.assertEqual(link["cpf_snapshot"]["external_id"], "CPF-1")
-        automation = saved["wedof_automation_status"][0]
-        self.assertEqual(automation["external_id"], "CPF-1")
-        self.assertIn(automation["entry_training"]["status"], {
-            "planned", "dry_run_due", "dry_run_due_late",
-        })
-        self.assertEqual(automation["service_done"]["status"], "waiting_for_in_training")
-        self.assertEqual(
-            [call.args[0] for call in remote.list_registration_folders.call_args_list],
-            list(gestion_app.CPF_ASSOCIATION_STATES),
-        )
-        remote.get_registration_folder_interactive.assert_not_called()
+        self.assertEqual(response.json["status"], "suggestions")
+        self.assertEqual(response.json["candidates"][0]["external_id"], "CPF-1")
+        self.assertTrue(response.json["candidates"][0]["automatic_match"])
+        self.assertEqual(saved["wedof_links"], [])
+        client.assert_not_called()
 
-    def test_different_wedof_email_is_auto_associated_when_phone_identity_and_dates_match(self):
-        temp, path = self._store()
+    def test_different_wedof_email_is_suggested_from_cache_when_phone_matches(self):
         folder = remote_folder(attendee={
             "firstName": "Elodie", "lastName": "D-Arc",
             "email": "adresse-cpf@example.fr", "phoneNumber": "+33 6 12 34 56 78",
         })
-        remote = self._listing_client(folder)
+        temp, path = self._store(self._cached_data(folder))
         with patch.object(gestion_app, "DATA_FILE", path), \
              patch.object(gestion_app, "BACKUP_DIR", temp), \
-             patch.object(gestion_app, "WedofClient", return_value=remote):
+             patch.object(gestion_app, "WedofClient") as client:
             response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/auto-match")
         with open(path, encoding="utf-8") as stream:
             saved = json.load(stream)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json["status"], "associated")
-        self.assertEqual(saved["wedof_links"][0]["matching_rule"], "phone_identity_dates")
-        self.assertEqual(saved["wedof_links"][0]["external_id"], "CPF-1")
+        self.assertEqual(response.json["status"], "suggestions")
+        self.assertTrue(response.json["candidates"][0]["automatic_match"])
+        self.assertEqual(saved["wedof_links"], [])
+        client.assert_not_called()
 
     def test_contact_match_with_different_dates_is_proposed_without_write(self):
-        temp, path = self._store()
         folder = remote_folder(trainingActionInfo={
             "startDate": "2026-09-08", "endDate": "2026-10-10", "title": "APS",
         })
-        remote = self._listing_client(folder)
+        temp, path = self._store(self._cached_data(folder))
         with patch.object(gestion_app, "DATA_FILE", path), \
              patch.object(gestion_app, "BACKUP_DIR", temp), \
-             patch.object(gestion_app, "WedofClient", return_value=remote):
+             patch.object(gestion_app, "WedofClient") as client:
             response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/auto-match")
         with open(path, encoding="utf-8") as stream:
             saved = json.load(stream)
@@ -209,30 +196,32 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         self.assertEqual(response.json["candidates"][0]["external_id"], "CPF-1")
         self.assertIn("Dates de formation différentes", response.json["candidates"][0]["mismatches"])
         self.assertEqual(saved["wedof_links"], [])
+        client.assert_not_called()
 
     def test_two_complete_matches_are_never_auto_associated(self):
-        temp, path = self._store()
-        remote = self._listing_client(remote_folder("CPF-1"), remote_folder("CPF-2"))
+        temp, path = self._store(self._cached_data(
+            remote_folder("CPF-1"), remote_folder("CPF-2"),
+        ))
         with patch.object(gestion_app, "DATA_FILE", path), \
              patch.object(gestion_app, "BACKUP_DIR", temp), \
-             patch.object(gestion_app, "WedofClient", return_value=remote):
+             patch.object(gestion_app, "WedofClient") as client:
             response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/auto-match")
         with open(path, encoding="utf-8") as stream:
             saved = json.load(stream)
         self.assertEqual(response.json["status"], "suggestions")
         self.assertEqual(len(response.json["candidates"]), 2)
         self.assertEqual(saved["wedof_links"], [])
+        client.assert_not_called()
 
     def test_identity_only_match_is_proposed_for_manual_confirmation(self):
-        temp, path = self._store()
         folder = remote_folder(attendee={
             "firstName": "Elodie", "lastName": "D-Arc",
             "email": "adresse-cpf@example.fr", "phoneNumber": "0700000000",
         })
-        remote = self._listing_client(folder)
+        temp, path = self._store(self._cached_data(folder))
         with patch.object(gestion_app, "DATA_FILE", path), \
              patch.object(gestion_app, "BACKUP_DIR", temp), \
-             patch.object(gestion_app, "WedofClient", return_value=remote):
+             patch.object(gestion_app, "WedofClient") as client:
             response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/auto-match")
         with open(path, encoding="utf-8") as stream:
             saved = json.load(stream)
@@ -241,23 +230,26 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         self.assertFalse(response.json["candidates"][0]["automatic_match"])
         self.assertIn("Même nom et prénom", response.json["candidates"][0]["match_reasons"])
         self.assertEqual(saved["wedof_links"], [])
+        client.assert_not_called()
 
     def test_competing_identity_and_date_match_requires_manual_choice(self):
-        temp, path = self._store()
         possible_duplicate = remote_folder("CPF-2", attendee={
             "firstName": "Elodie", "lastName": "D-Arc",
             "email": "adresse-cpf@example.fr", "phoneNumber": "0700000000",
         })
-        remote = self._listing_client(remote_folder("CPF-1"), possible_duplicate)
+        temp, path = self._store(self._cached_data(
+            remote_folder("CPF-1"), possible_duplicate,
+        ))
         with patch.object(gestion_app, "DATA_FILE", path), \
              patch.object(gestion_app, "BACKUP_DIR", temp), \
-             patch.object(gestion_app, "WedofClient", return_value=remote):
+             patch.object(gestion_app, "WedofClient") as client:
             response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/auto-match")
         with open(path, encoding="utf-8") as stream:
             saved = json.load(stream)
         self.assertEqual(response.json["status"], "suggestions")
         self.assertEqual(len(response.json["candidates"]), 2)
         self.assertEqual(saved["wedof_links"], [])
+        client.assert_not_called()
 
     def test_suggested_folder_is_associated_in_one_verified_click(self):
         temp, path = self._store()

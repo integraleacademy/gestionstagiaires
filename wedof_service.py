@@ -2,11 +2,18 @@
 
 import logging
 import os
+import re
 import time
 import math
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import requests
+
+from wedof_governor import (
+    WedofGovernorError,
+    WedofQuotaExceeded,
+    reserve_request,
+)
 
 
 WEDOF_BASE_URL = "https://www.wedof.fr/api"
@@ -58,12 +65,19 @@ class WedofClient:
         self,
         api_key: Optional[str] = None,
         session: Optional[requests.Session] = None,
+        origin: str = "gestionstagiaires",
     ) -> None:
         key = (api_key if api_key is not None else os.environ.get("WEDOF_API_KEY", "")).strip()
         if not key:
             raise WedofConfigurationError("La variable WEDOF_API_KEY est absente.")
         self._session = session or requests.Session()
-        self._headers = {"Accept": "application/json", "X-Api-Key": key}
+        self._origin = str(origin or "gestionstagiaires")[:80]
+        self._headers = {
+            "Accept": "application/json",
+            "X-Api-Key": key,
+            "User-Agent": "IntegraleAcademy-GestionStagiaires/2026.08",
+            "X-Integrale-Application": self._origin,
+        }
         self._mutation_headers = {**self._headers, "Content-Type": "application/json"}
         self._timeout = (
             _bounded_env("WEDOF_CONNECT_TIMEOUT_SECONDS", 5, 1, 30),
@@ -72,6 +86,32 @@ class WedofClient:
         self._max_attempts = _bounded_env("WEDOF_GET_MAX_ATTEMPTS", 3, 1, 4, integer=True)
         self._backoff = _bounded_env("WEDOF_GET_BACKOFF_SECONDS", 1, 0, 10)
         self._page_limit = _bounded_env("WEDOF_PAGE_LIMIT", 50, 10, 100, integer=True)
+
+    def _reserve(self, method: str, path: str) -> None:
+        safe_path = re.sub(r"(/registrationFolders/)[^/]+", r"\1:id", path)
+        if safe_path.rstrip("/").endswith("/registrationFolders"):
+            operation = "list_registration_folders"
+        elif "/registrationFolders/:id" in safe_path:
+            operation = "registration_folder_action" if method != "GET" else "get_registration_folder"
+        elif safe_path.rstrip("/").endswith("/organisms/me"):
+            operation = "get_current_organism"
+        else:
+            operation = "wedof_request"
+        try:
+            reserve_request(
+                origin=self._origin, operation=operation,
+                method=method, path=safe_path,
+            )
+        except WedofQuotaExceeded as exc:
+            raise WedofApiError(
+                "Le plafond interne de requêtes WEDOF est atteint.",
+                "wedof_quota_exceeded", False, 429,
+            ) from exc
+        except WedofGovernorError as exc:
+            raise WedofApiError(
+                "Le compteur WEDOF central est indisponible ; requête bloquée.",
+                "wedof_governor_unavailable", True, 503,
+            ) from exc
 
     def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None,
                            timeout: Optional[Tuple[float, float]] = None,
@@ -83,6 +123,7 @@ class WedofClient:
         for attempt in range(1, attempts + 1):
             started = time.monotonic()
             try:
+                self._reserve("GET", path)
                 response = self._session.get(f"{WEDOF_BASE_URL}{path}", headers=self._headers,
                                              params=params, timeout=request_timeout)
             except requests.Timeout as exc:
@@ -143,6 +184,7 @@ class WedofClient:
     def _post_json_response(self, path: str, payload: Mapping[str, Any]) -> Tuple[Any, Any]:
         """Envoie exactement une fois une mutation; le moteur réconcilie toute ambiguïté."""
         try:
+            self._reserve("POST", path)
             response = self._session.post(f"{WEDOF_BASE_URL}{path}", headers=self._mutation_headers,
                                           json=dict(payload), timeout=self._timeout)
         except requests.Timeout as exc:

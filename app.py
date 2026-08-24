@@ -60,6 +60,15 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
+from wedof_governor import (
+    WedofGovernorError,
+    WedofQuotaExceeded,
+    acquire_lease as acquire_wedof_governor_lease,
+    quota_snapshot as wedof_quota_snapshot,
+    release_lease as release_wedof_governor_lease,
+    reserve_request as reserve_central_wedof_request,
+    valid_governor_token,
+)
 from wedof_matching import (build_matching_preview, extract_folder, find_trainee_cpf_candidates,
                             normalize_date, normalize_email, normalize_name, normalize_phone)
 from wedof_links import (ALLOWED_STATES, evaluate_wedof_link_date_consistency, local_association_status,
@@ -3502,6 +3511,10 @@ def _resolve_persist_dir() -> str:
 PERSIST_DIR = _resolve_persist_dir()
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 WEDOF_WEBHOOK_FILE = os.path.join(PERSIST_DIR, "wedof_webhooks.json")
+os.environ.setdefault(
+    "WEDOF_GOVERNOR_DB_PATH",
+    os.path.join(PERSIST_DIR, "wedof_governor.sqlite3"),
+)
 
 BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -8451,32 +8464,33 @@ def _find_wedof_folder_id(payload: Any) -> str:
     return ""
 
 
-def _fetch_wedof_folder_details(folder_id: str) -> Dict[str, Any]:
-    token = (os.environ.get("WEDOF_API_TOKEN") or "").strip()
-    if not folder_id or not token:
+def _embedded_wedof_folder(payload: Any) -> Dict[str, Any]:
+    """Réutilise un dossier complet du webhook au lieu de le relire."""
+    if not isinstance(payload, dict):
         return {}
-
-    url_candidates = [
-        f"https://www.wedof.fr/api/registration-folders/{folder_id}",
-        f"https://api.wedof.fr/registration-folders/{folder_id}",
-        f"https://api.wedof.fr/api/registration-folders/{folder_id}",
-    ]
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-    }
-
-    for url in url_candidates:
-        try:
-            app.logger.info("[WEDOF] appel API détail dossier = %s", url)
-            resp = requests.get(url, headers=headers, timeout=15)
-            body_preview = resp.text[:1200]
-            app.logger.info("[WEDOF] réponse API détail dossier = status=%s body=%s", resp.status_code, body_preview)
-            if resp.ok:
-                return resp.json() if resp.content else {}
-        except Exception:
-            app.logger.exception("[WEDOF] erreur appel API détail dossier url=%s", url)
+    if payload.get("externalId") and any(
+            key in payload for key in ("state", "attendee", "trainingActionInfo")):
+        return payload
+    for key in ("registrationFolder", "folder", "resource", "data", "payload"):
+        candidate = _embedded_wedof_folder(payload.get(key))
+        if candidate:
+            return candidate
     return {}
+
+
+def _fetch_wedof_folder_details(folder_id: str) -> Dict[str, Any]:
+    if not folder_id:
+        return {}
+    try:
+        return WedofClient(
+            origin="gestionstagiaires-webhook",
+        ).get_registration_folder_interactive(folder_id)
+    except (WedofConfigurationError, WedofApiError) as exc:
+        app.logger.warning(
+            "[WEDOF WEBHOOK] lecture ciblée impossible dossier=%s erreur=%s",
+            folder_id, getattr(exc, "code", "wedof_unavailable"),
+        )
+        return {}
 
 
 def _notification_id(prefix: str) -> str:
@@ -16374,22 +16388,39 @@ def run_wedof_automation_dry_run() -> Dict[str, Any]:
         return summary
     os.makedirs(PERSIST_DIR, exist_ok=True)
     lock_file = open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8")
+    lease: Dict[str, Any] = {}
     try:
         try:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return {"ok": False, "status": "already_running"}
+        lease = acquire_wedof_governor_lease(
+            "wedof-global-reconciliation",
+            owner=f"gestionstagiaires:{os.getpid()}:{uuid.uuid4().hex[:8]}",
+            ttl_seconds=3600,
+        )
+        if not lease.get("acquired", False):
+            return {"ok": False, "status": "already_running"}
         working = load_data()
         summary = run_dry_run(WedofClient(), working)
         statuses, runs = working["wedof_automation_status"], working["wedof_automation_runs"]
+        folder_cache = working.get("wedof_folder_cache", [])
         sync = working.get("wedof_automation_sync", {"states": {}})
         def persist(canonical):
             canonical["wedof_automation_status"], canonical["wedof_automation_runs"] = statuses, runs[-100:]
+            canonical["wedof_folder_cache"] = folder_cache
             canonical["wedof_automation_sync"] = sync
             return canonical
         _atomic_update_data(persist)
         return summary
     finally:
+        if lease.get("token"):
+            try:
+                release_wedof_governor_lease(
+                    "wedof-global-reconciliation", str(lease["token"]),
+                )
+            except WedofGovernorError:
+                app.logger.warning("Libération du verrou WEDOF central impossible")
         try: fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
         finally: lock_file.close()
 
@@ -16403,13 +16434,21 @@ def _wedof_live_mode_enabled() -> bool:
 def run_wedof_automation_live() -> Dict[str, Any]:
     """Exécute et persiste le live sous un verrou interprocessus exclusif."""
     if not _wedof_live_mode_enabled():
-        return run_wedof_automation_dry_run()
+        return {"ok": True, "status": "suspended", "mode": "disabled"}
     os.makedirs(PERSIST_DIR, exist_ok=True)
     lock_file = open(WEDOF_AUTOMATION_LOCK_FILE, "a+", encoding="utf-8")
+    lease: Dict[str, Any] = {}
     try:
         try:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
+            return {"ok": False, "status": "already_running", "mode": "live"}
+        lease = acquire_wedof_governor_lease(
+            "wedof-live-automation",
+            owner=f"gestionstagiaires:{os.getpid()}:{uuid.uuid4().hex[:8]}",
+            ttl_seconds=3600,
+        )
+        if not lease.get("acquired", False):
             return {"ok": False, "status": "already_running", "mode": "live"}
         working = load_data()
         def persist(snapshot):
@@ -16426,6 +16465,13 @@ def run_wedof_automation_live() -> Dict[str, Any]:
         _atomic_update_data(persist_final)
         return summary
     finally:
+        if lease.get("token"):
+            try:
+                release_wedof_governor_lease(
+                    "wedof-live-automation", str(lease["token"]),
+                )
+            except WedofGovernorError:
+                app.logger.warning("Libération du verrou WEDOF live impossible")
         try: fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
         finally: lock_file.close()
 
@@ -17232,19 +17278,18 @@ def wedof_webhook():
     payload = request.get_json(silent=True)
     if payload is None:
         payload = {}
-    headers_map = {k: v for k, v in request.headers.items()}
-
-    wedof_headers = {
-        k: v
-        for k, v in headers_map.items()
-        if k.lower().startswith("x-wedof") or k.lower() in ("authorization", "x-webhook-secret", "x-api-key")
+    headers_map = {
+        k: v for k, v in request.headers.items()
+        if k.casefold() not in {
+            "authorization", "x-api-key", "x-wedof-secret",
+            "x-webhook-secret", "x-wedof-signature",
+        }
     }
-    app.logger.info("[WEDOF] headers wedof reçus (avant vérification) = %s", wedof_headers)
-    app.logger.info("[WEDOF] payload brut reçu = %s", raw_body.decode("utf-8", errors="replace"))
 
     secret_raw = (os.environ.get("WEDOF_WEBHOOK_SECRET") or "")
     secret = secret_raw.encode("utf-8")
     sig_valid = False
+    trusted_for_wedof = False
 
     if signature and secret:
         computed_digest = hmac.new(secret, raw_body, hashlib.sha256).digest()
@@ -17262,6 +17307,7 @@ def wedof_webhook():
                 computed_b64url,
             )
         )
+        trusted_for_wedof = sig_valid
         if not sig_valid:
             app.logger.warning("[WEDOF WEBHOOK] invalid_signature: signature reçue mais non valide; webhook accepté temporairement")
     elif secret:
@@ -17277,29 +17323,38 @@ def wedof_webhook():
             auth_secret = auth_header[7:].strip().strip('"').strip("'")
         if header_secret and hmac.compare_digest(header_secret, secret_raw):
             sig_valid = True
+            trusted_for_wedof = True
             app.logger.info("[WEDOF WEBHOOK] authentifié via secret header")
         elif auth_secret and hmac.compare_digest(auth_secret, secret_raw):
             sig_valid = True
+            trusted_for_wedof = True
             app.logger.info("[WEDOF WEBHOOK] authentifié via Authorization Bearer")
         else:
             app.logger.warning("[WEDOF WEBHOOK] missing_signature: aucun header signature/secret exploitable; requête acceptée en mode compatibilité")
-            sig_valid = True
     else:
         app.logger.warning("[WEDOF WEBHOOK] missing_secret: WEDOF_WEBHOOK_SECRET non configuré; webhook accepté")
-        sig_valid = True
 
 
     try:
+        resolved_delivery_id = delivery_id or hashlib.sha256(raw_body).hexdigest()
+        entries = _load_wedof_webhooks()
+        if any(
+            isinstance(item, dict)
+            and str(item.get("delivery_id") or "") == resolved_delivery_id
+            for item in entries
+        ):
+            return jsonify({"ok": True, "duplicate": True}), 200
         folder_id = _find_wedof_folder_id(payload)
         app.logger.info("[WEDOF] identifiant dossier trouvé = %s", folder_id or "(aucun)")
-        wedof_folder_details = _fetch_wedof_folder_details(folder_id) if folder_id else {}
+        wedof_folder_details = _embedded_wedof_folder(payload)
+        if not wedof_folder_details and folder_id and trusted_for_wedof:
+            wedof_folder_details = _fetch_wedof_folder_details(folder_id)
 
-        entries = _load_wedof_webhooks()
         entry = {
             "id": f"WEDOF-{uuid.uuid4().hex[:10].upper()}",
             "received_at": _now_iso(),
             "event": event,
-            "delivery_id": delivery_id,
+            "delivery_id": resolved_delivery_id,
             "payload": payload,
             "raw_payload": raw_body.decode("utf-8", errors="replace"),
             "headers": headers_map,
@@ -17320,6 +17375,23 @@ def wedof_webhook():
                 salesforce_result.get("error") or "erreur inconnue",
             )
         _save_wedof_webhooks(entries)
+
+        if trusted_for_wedof and isinstance(wedof_folder_details, dict) and extract_folder(
+                wedof_folder_details).get("external_id"):
+            def persist_folder_cache(canonical):
+                remote = extract_folder(wedof_folder_details)
+                external_id = str(remote.get("external_id") or "")
+                _upsert_wedof_folder_cache(canonical, wedof_folder_details)
+                sync_folder_automation_status(canonical, wedof_folder_details)
+                for link in canonical.get("wedof_links", []):
+                    if (isinstance(link, dict) and link.get("active") is True
+                            and str(link.get("external_id") or "") == external_id):
+                        link["cpf_snapshot"] = _cpf_public_snapshot(remote)
+                        link["wedof_state"] = remote.get("state") or link.get("wedof_state")
+                        link["last_seen_at"] = _now_iso()
+                        link.pop("cpf_sync_error", None)
+                return canonical
+            _atomic_update_data(persist_folder_cache)
 
         merged_payload = payload.copy() if isinstance(payload, dict) else {}
         if isinstance(wedof_folder_details, dict):
@@ -31681,16 +31753,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     _refresh_trainee_hebergement_status(s, t)
 
-    # Le suivi CPF doit refléter WEDOF dès l'ouverture de la fiche. Le bouton
-    # d'actualisation reste utile pour relancer manuellement une API indisponible,
-    # mais il ne doit pas être nécessaire pour voir une transition d'état.
-    if has_cpf_financing(t):
-        cpf_link = _cpf_active_link(data, session_id=session_id, trainee_id=trainee_id)
-        if cpf_link:
-            try:
-                _refresh_cpf_link_from_wedof(data, cpf_link)
-            except (WedofApiError, WedofConfigurationError):
-                cpf_link["cpf_sync_error"] = "Synchronisation momentanément indisponible"
+    # L'ouverture d'une fiche reste strictement locale. Les webhooks, les
+    # lectures ciblées explicites et les réconciliations bornées alimentent ce
+    # cache sans déclencher un GET WEDOF à chaque consultation.
 
     _remember_admin_trainee_consultation(session_id, trainee_id)
 
@@ -31854,6 +31919,31 @@ def _cpf_public_snapshot(remote: Dict[str, Any]) -> Dict[str, Any]:
     return snapshot
 
 
+def _upsert_wedof_folder_cache(
+    data: Dict[str, Any], folder: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    remote = extract_folder(folder)
+    external_id = str(remote.get("external_id") or "").strip()
+    if not external_id:
+        return None
+    snapshot = {**remote, "synced_at": _now_iso()}
+    cache = data.setdefault("wedof_folder_cache", [])
+    if not isinstance(cache, list):
+        cache = []
+        data["wedof_folder_cache"] = cache
+    existing = next((
+        item for item in cache
+        if isinstance(item, dict)
+        and str(item.get("external_id") or "") == external_id
+    ), None)
+    if existing is None:
+        cache.append(snapshot)
+        return snapshot
+    existing.clear()
+    existing.update(snapshot)
+    return existing
+
+
 def _refresh_cpf_link_from_wedof(data: Dict[str, Any], link: Dict[str, Any]) -> Dict[str, Any]:
     """Actualise en lecture seule le cache d'un lien CPF depuis WEDOF."""
     remote_folder = WedofClient().get_registration_folder_interactive(str(link.get("external_id") or ""))
@@ -31864,6 +31954,7 @@ def _refresh_cpf_link_from_wedof(data: Dict[str, Any], link: Dict[str, Any]) -> 
     link["wedof_state"] = remote.get("state") or link.get("wedof_state")
     link["last_seen_at"] = _now_iso()
     link.pop("cpf_sync_error", None)
+    _upsert_wedof_folder_cache(data, remote_folder)
     sync_folder_automation_status(data, remote_folder)
     return remote
 
@@ -31873,18 +31964,15 @@ CPF_ASSOCIATION_STATES = (
 )
 
 
-def _cpf_fetch_matchable_folders() -> List[Dict[str, Any]]:
-    """Relit les dossiers CPF associables sans effectuer de mutation WEDOF."""
-    client = WedofClient()
-    folders_by_id: Dict[str, Dict[str, Any]] = {}
-    for state in CPF_ASSOCIATION_STATES:
-        for folder in client.list_registration_folders(state):
-            if not isinstance(folder, dict):
-                continue
-            external_id = str(extract_folder(folder).get("external_id") or "").strip()
-            if external_id:
-                folders_by_id[external_id] = folder
-    return list(folders_by_id.values())
+def _cpf_fetch_matchable_folders(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Retourne exclusivement les dossiers déjà présents dans le cache local."""
+    return [
+        item for item in data.get("wedof_folder_cache", [])
+        if isinstance(item, dict)
+        and str(item.get("state") or "") in CPF_ASSOCIATION_STATES
+        and str(item.get("type") or "").casefold() == "cpf"
+        and item.get("external_id")
+    ]
 
 
 def _cpf_active_link(data: Dict[str, Any], *, session_id: str, trainee_id: str) -> Optional[Dict[str, Any]]:
@@ -32019,6 +32107,7 @@ def _persist_trainee_cpf_match(
         link["cpf_snapshot"] = _cpf_public_snapshot(candidate)
         link["wedof_state"] = candidate.get("state") or link.get("wedof_state")
         link["last_seen_at"] = _now_iso()
+        _upsert_wedof_folder_cache(canonical, remote_folder)
         sync_folder_automation_status(canonical, remote_folder)
         if outcome == "created":
             link.setdefault("association_history", []).append({
@@ -32060,53 +32149,11 @@ def admin_trainee_cpf_auto_match(session_id: str, trainee_id: str):
             "external_id": existing.get("external_id"), "redirect_url": redirect_url,
         })
 
-    try:
-        folders = _cpf_fetch_matchable_folders()
-    except (WedofConfigurationError, WedofApiError):
-        return _cpf_match_json_error(
-            "La recherche WEDOF est momentanément indisponible. Vous pouvez la relancer ou saisir le numéro du dossier.",
-            503,
-        )
+    folders = _cpf_fetch_matchable_folders(data)
 
     candidates = find_trainee_cpf_candidates(
         folders, local_session, trainee, allowed_states=CPF_ASSOCIATION_STATES,
     )
-    automatic_candidates = [item for item in candidates if item.get("automatic_match")]
-    # Un dossier peut être associé sans reprendre exactement le même e-mail,
-    # mais jamais si un autre dossier partage lui aussi un signal fort sur les
-    # mêmes dates. Dans ce cas, l'administrateur doit choisir explicitement.
-    credible_on_session_dates = [
-        item for item in candidates
-        if item.get("dates_match") and (
-            item.get("identity_match") or item.get("email_match") or item.get("phone_match")
-        )
-    ]
-    if len(automatic_candidates) == 1 and len(credible_on_session_dates) == 1:
-        remote_folder = next(
-            folder for folder in folders
-            if str(extract_folder(folder).get("external_id") or "")
-            == str(automatic_candidates[0].get("external_id") or "")
-        )
-        result = _persist_trainee_cpf_match(
-            remote_folder, session_id=session_id, trainee_id=trainee_id, automatic=True,
-        )
-        if result.get("status") == "associated":
-            session.pop("cpf_association_preview", None)
-            return jsonify({
-                "ok": True, **result, "redirect_url": redirect_url,
-                "message": (
-                    "Dossier CPF associé automatiquement : le nom, le prénom, les dates "
-                    "et au moins une coordonnée concordent."
-                ),
-            })
-        if result.get("status") != "conflict":
-            return _cpf_match_json_error(
-                str(result.get("message") or "L’association automatique n’a pas pu être enregistrée."), 409,
-            )
-        # Une autre requête a pu créer le lien pendant la lecture WEDOF.
-        # Relire l'état canonique permet de désactiver correctement la suggestion.
-        data = load_data(run_background_tasks=False)
-
     public_candidates = [
         _cpf_candidate_payload(item, data, session_id=session_id, trainee_id=trainee_id)
         for item in candidates
@@ -32119,8 +32166,8 @@ def admin_trainee_cpf_auto_match(session_id: str, trainee_id: str):
         else f"{len(public_candidates)} dossiers possibles ont été trouvés. Choisissez le bon dossier."
         if public_candidates
         else (
-            "Aucun dossier WEDOF ne correspond suffisamment au nom, au prénom, "
-            "aux coordonnées ou aux dates de formation du stagiaire."
+            "Aucun dossier correspondant n’est présent dans le cache WEDOF. "
+            "Saisissez le numéro exact si vous le connaissez."
         )
     )
     return jsonify({
@@ -38186,15 +38233,98 @@ def internal_cron_convocation_signature_reminders():
     return jsonify({"ok": True, **result, "training_convocations": convocation_reminders})
 
 
+def _wedof_governor_authorized() -> bool:
+    provided = (request.headers.get("X-Wedof-Governor-Token") or "").strip()
+    return valid_governor_token(provided)
+
+
+@app.post("/internal/wedof/governor/reserve")
+def internal_wedof_governor_reserve():
+    """Réserve atomiquement une unité avant un appel WEDOF du CRM."""
+    if not _wedof_governor_authorized():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    payload = request.get_json(silent=True) or {}
+    origin = str(payload.get("origin") or "").strip().casefold()
+    if origin not in {"crm", "gestionstagiaires", "gestionstagiaires-webhook"}:
+        return jsonify({"ok": False, "error": "invalid_origin"}), 400
+    try:
+        result = reserve_central_wedof_request(
+            origin=origin,
+            operation=str(payload.get("operation") or "wedof_request"),
+            method=str(payload.get("method") or "GET"),
+            path=str(payload.get("path") or ""),
+        )
+    except WedofQuotaExceeded as exc:
+        return jsonify({"ok": False, "error": "quota_exceeded", **exc.snapshot}), 429
+    except WedofGovernorError:
+        app.logger.exception("Compteur WEDOF central indisponible")
+        return jsonify({"ok": False, "error": "governor_unavailable"}), 503
+    return jsonify(result), 200
+
+
+@app.get("/internal/wedof/governor/status")
+def internal_wedof_governor_status():
+    if not _wedof_governor_authorized():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    try:
+        return jsonify({"ok": True, **wedof_quota_snapshot()}), 200
+    except WedofGovernorError:
+        return jsonify({"ok": False, "error": "governor_unavailable"}), 503
+
+
+@app.post("/internal/wedof/governor/locks/acquire")
+def internal_wedof_governor_lock_acquire():
+    if not _wedof_governor_authorized():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "").strip()
+    if name not in {"wedof-global-reconciliation", "wedof-live-automation"}:
+        return jsonify({"ok": False, "error": "invalid_lock"}), 400
+    try:
+        ttl_seconds = int(payload.get("ttl_seconds") or 3600)
+    except (TypeError, ValueError):
+        ttl_seconds = 3600
+    try:
+        result = acquire_wedof_governor_lease(
+            name,
+            owner=str(payload.get("owner") or "unknown"),
+            ttl_seconds=ttl_seconds,
+        )
+    except WedofGovernorError:
+        return jsonify({"ok": False, "error": "governor_unavailable"}), 503
+    return jsonify(result), 200
+
+
+@app.post("/internal/wedof/governor/locks/release")
+def internal_wedof_governor_lock_release():
+    if not _wedof_governor_authorized():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "").strip()
+    if name not in {"wedof-global-reconciliation", "wedof-live-automation"}:
+        return jsonify({"ok": False, "error": "invalid_lock"}), 400
+    try:
+        released = release_wedof_governor_lease(
+            name, str(payload.get("token") or ""),
+        )
+    except WedofGovernorError:
+        return jsonify({"ok": False, "error": "governor_unavailable"}), 503
+    return jsonify({"ok": True, "released": released}), 200
+
+
 @app.post("/internal/cron/wedof-automation")
 def internal_cron_wedof_automation():
     expected = os.environ.get("CRON_SECRET", "").strip()
     provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
     if not expected or not provided or not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not read_env_bool("WEDOF_CRON_ENABLED", default=False):
+        return jsonify({"ok": True, "status": "suspended", "mode": "disabled"}), 200
+    if not _wedof_live_mode_enabled():
+        return jsonify({"ok": True, "status": "suspended", "mode": "disabled"}), 200
     try:
-        result = run_wedof_automation_live() if _wedof_live_mode_enabled() else run_wedof_automation_dry_run()
-    except (WedofConfigurationError, WedofApiError) as exc:
+        result = run_wedof_automation_live()
+    except (WedofConfigurationError, WedofApiError, WedofGovernorError) as exc:
         app.logger.warning("Cron WEDOF indisponible erreur=%s", getattr(exc, "code", "wedof_configuration_error"))
         result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
     except Exception:
@@ -38203,6 +38333,37 @@ def internal_cron_wedof_automation():
     if result.get("status") == "skipped_maintenance_window":
         result = {"ok": True, "status": "skipped_maintenance_window", "mode": result.get("mode", "dry_run"),
                   "next_action": "automatic_retry_on_next_cron"}
+    status_code = 409 if result.get("status") == "already_running" else 503 if result.get("status") == "failed" else 200
+    return jsonify(result), status_code
+
+
+@app.post("/internal/cron/wedof-reconciliation")
+def internal_cron_wedof_reconciliation():
+    """Lance au plus quelques scans globaux GET-only explicitement autorisés."""
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if not expected or not provided or not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not read_env_bool("WEDOF_RECONCILIATION_ENABLED", default=False):
+        return jsonify({"ok": True, "status": "suspended", "mode": "disabled"}), 200
+    try:
+        result = run_wedof_automation_dry_run()
+    except (WedofConfigurationError, WedofApiError, WedofGovernorError) as exc:
+        app.logger.warning(
+            "Réconciliation WEDOF indisponible erreur=%s",
+            getattr(exc, "code", "wedof_configuration_error"),
+        )
+        result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
+    except Exception:
+        app.logger.exception("Erreur technique nettoyée de la réconciliation WEDOF")
+        result = {"ok": False, "partial": False, "status": "failed", "error": "wedof_unavailable"}
+    if result.get("status") == "skipped_maintenance_window":
+        result = {
+            "ok": True,
+            "status": "skipped_maintenance_window",
+            "mode": result.get("mode", "dry_run"),
+            "next_action": "automatic_retry_on_next_reconciliation",
+        }
     status_code = 409 if result.get("status") == "already_running" else 503 if result.get("status") == "failed" else 200
     return jsonify(result), status_code
 

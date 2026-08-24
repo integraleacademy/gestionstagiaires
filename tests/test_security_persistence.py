@@ -164,10 +164,14 @@ class WedofWebhookSecurityTests(unittest.TestCase):
         self.client = gestion_app.app.test_client()
         self.original_secret = os.environ.get("WEDOF_WEBHOOK_SECRET")
         self.original_loader = gestion_app._fetch_wedof_folder_details
+        self.original_webhook_loader = gestion_app._load_wedof_webhooks
         self.original_save = gestion_app._save_wedof_webhooks
+        self.original_salesforce_sender = gestion_app._send_wedof_entry_to_salesforce
         self.saved = []
         gestion_app._fetch_wedof_folder_details = lambda *_: {}
+        gestion_app._load_wedof_webhooks = lambda: []
         gestion_app._save_wedof_webhooks = lambda entries: self.saved.append(entries)
+        gestion_app._send_wedof_entry_to_salesforce = lambda *_: ({"success": True}, 200)
         os.environ["WEDOF_WEBHOOK_SECRET"] = "secret"
 
     def tearDown(self):
@@ -176,7 +180,9 @@ class WedofWebhookSecurityTests(unittest.TestCase):
         else:
             os.environ["WEDOF_WEBHOOK_SECRET"] = self.original_secret
         gestion_app._fetch_wedof_folder_details = self.original_loader
+        gestion_app._load_wedof_webhooks = self.original_webhook_loader
         gestion_app._save_wedof_webhooks = self.original_save
+        gestion_app._send_wedof_entry_to_salesforce = self.original_salesforce_sender
 
     def test_invalid_wedof_signature_is_accepted_and_flagged(self):
         response = self.client.post("/api/webhooks/wedof", json={"id": "x"}, headers={"X-Wedof-Signature": "bad"})

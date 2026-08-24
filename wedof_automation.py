@@ -374,9 +374,18 @@ def run_dry_run(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime]
     failed_states = [state for state in ALL_STATES if state in state_errors]
     succeeded_states = set(ALL_STATES) - set(failed_states)
     existing = {str(x.get("external_id") or ""): x for x in data.get("wedof_automation_status", []) if isinstance(x, dict)}
+    folder_cache = {
+        str(item.get("external_id") or ""): item
+        for item in data.get("wedof_folder_cache", [])
+        if isinstance(item, dict) and item.get("external_id")
+    }
     if succeeded_states:
         # Un état actualisé remplace son ancien instantané; un état indisponible reste intact.
         existing = {key: row for key, row in existing.items() if row.get("wedof_state") not in succeeded_states}
+        folder_cache = {
+            key: row for key, row in folder_cache.items()
+            if row.get("state") not in succeeded_states
+        }
         links = {str(x.get("external_id") or "") for x in data.get("wedof_links", []) if isinstance(x, dict) and x.get("active") is True}
         blocks = _active_blocks_by_key(
             data.get("wedof_automation_blocks", data.get("wedof_automation_exceptions", [])))
@@ -390,33 +399,18 @@ def run_dry_run(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime]
                         "local_link_status": "unlinked", "entry_training": _action_record("anomaly", None, "18:00", current, "missing_external_id"),
                         "service_done": _action_record("not_applicable", None, "23:00", current)}
                     continue
+                folder_cache[external_id] = {**remote, "synced_at": started}
                 row = build_folder_automation_status(
                     folder, now=current, blocks=blocks, linked=external_id in links,
                 )
                 if row is None:
                     continue
-                action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
-                if action:
-                    record = row[action]
-                    if record["status"].startswith("dry_run_due"):
-                        try:
-                            reread = client.get_registration_folder(external_id)
-                            check = extract_folder(reread)
-                            if str(check.get("external_id") or "") != external_id:
-                                raise ValueError("external_id_conflict")
-                            refreshed = build_folder_automation_status(
-                                reread, now=current, blocks=blocks, linked=external_id in links,
-                            )
-                            if refreshed is None:
-                                raise ValueError("missing_external_id")
-                            row = refreshed
-                        except Exception:
-                            row[action] = _action_record(
-                                "anomaly", record["planned_date"], record["planned_time"],
-                                current, "remote_reread_failed",
-                            )
+                # Le listing est déjà la source de cette réconciliation globale.
+                # Les GET individuels sont réservés au cron live, uniquement
+                # lorsqu'une action persistée est réellement arrivée à échéance.
                 existing[external_id] = row
         data["wedof_automation_status"] = list(existing.values())
+        data["wedof_folder_cache"] = list(folder_cache.values())
 
     statuses = data.get("wedof_automation_status", [])
     counts = {"planned": 0, "due": 0, "late": 0, "blocked": 0, "anomalies": 0}
@@ -471,6 +465,86 @@ def _set_dashboard_action(data: Dict[str, Any], external_id: str, action: str,
                    "last_error_code": journal.get("last_error_code")}
 
 
+def _planned_datetime(record: Dict[str, Any], current: dt.datetime) -> Optional[dt.datetime]:
+    raw = str(record.get("planned_at") or "").strip()
+    if raw:
+        try:
+            parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=PARIS_TZ)
+            return parsed.astimezone(PARIS_TZ)
+        except ValueError:
+            pass
+    date_value = normalize_date(record.get("planned_date"))
+    time_value = str(record.get("planned_time") or "").strip()
+    if not date_value or not time_value:
+        return None
+    try:
+        return dt.datetime.combine(
+            dt.date.fromisoformat(date_value),
+            dt.datetime.strptime(time_value, "%H:%M").time(),
+            PARIS_TZ,
+        )
+    except ValueError:
+        return None
+
+
+def _due_live_candidates(
+    data: Dict[str, Any], current: dt.datetime,
+) -> list[tuple[str, str, Dict[str, Any]]]:
+    """Sélectionne uniquement les actions arrivées à échéance depuis le cache."""
+    cached_by_id = {
+        str(item.get("external_id") or ""): item
+        for item in data.get("wedof_folder_cache", [])
+        if isinstance(item, dict) and item.get("external_id")
+    }
+    status_ids = {
+        str(item.get("external_id") or "")
+        for item in data.get("wedof_automation_status", [])
+        if isinstance(item, dict)
+    }
+    for external_id, cached in cached_by_id.items():
+        if external_id not in status_ids:
+            sync_folder_automation_status(data, cached, now=current)
+
+    actions = {
+        (str(item.get("external_id") or ""), str(item.get("action") or "")): item
+        for item in data.get("wedof_automation_actions", [])
+        if isinstance(item, dict)
+    }
+    candidates = []
+    for row in data.get("wedof_automation_status", []):
+        if not isinstance(row, dict):
+            continue
+        external_id = str(row.get("external_id") or "").strip()
+        state = str(row.get("wedof_state") or row.get("state") or "")
+        action = (
+            "entry_training" if state == "accepted"
+            else "service_done" if state == "inTraining"
+            else ""
+        )
+        if not external_id or not action:
+            continue
+        journal = actions.get((external_id, action), {})
+        if journal.get("status") in {"success", "already_done"}:
+            continue
+        record = row.get(action) if isinstance(row.get(action), dict) else {}
+        due_at = _planned_datetime(record, current)
+        needs_reconciliation = journal.get("status") in {
+            "processing", "uncertain_after_timeout",
+        }
+        if needs_reconciliation or (due_at is not None and due_at <= current):
+            cached = cached_by_id.get(external_id) or {
+                "external_id": external_id,
+                "state": state,
+                "type": row.get("wedof_type"),
+                "start_date": row.get("wedof_date_start"),
+                "end_date": row.get("wedof_date_end"),
+            }
+            candidates.append((external_id, action, cached))
+    return candidates
+
+
 def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime] = None,
                         persist_reservation: Optional[Callable[[Dict[str, Any]], None]] = None) -> Dict[str, Any]:
     """Exécute les actions dues. L'appelant détient le verrou interprocessus."""
@@ -485,18 +559,12 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         return result
     actions = data.setdefault("wedof_automation_actions", [])
     counts = {"entry_success": 0, "service_done_success": 0, "already_done": 0,
-              "blocked": 0, "errors": 0, "uncertain": 0}
-    # Listing selects candidates only. Every mutation is guarded by a fresh per-folder GET.
-    candidates = []
-    for state, action in (("accepted", "entry_training"), ("inTraining", "service_done")):
-        try:
-            candidates.extend((folder, action) for folder in client.list_registration_folders(state))
-        except Exception:
-            counts["errors"] += 1
-    for listed, action in candidates:
-        external_id = str(extract_folder(listed).get("external_id") or "").strip()
-        if not external_id:
-            continue
+              "blocked": 0, "errors": 0, "uncertain": 0, "candidates": 0}
+    # Aucun listing WEDOF ici : le cache/webhook fournit les échéances et seul
+    # le dossier réellement dû est relu avant une éventuelle mutation.
+    candidates = _due_live_candidates(data, current)
+    counts["candidates"] = len(candidates)
+    for external_id, action, listed in candidates:
         # La donnée persistante est relue avant toute réservation et même avant le GET distant.
         block = _indexed_block(_active_blocks_by_key(data.get("wedof_automation_blocks", [])), external_id, action)
         existing = next((x for x in actions if isinstance(x, dict) and
@@ -510,6 +578,9 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
                 counts["blocked"] += 1
             sync_folder_automation_status(data, listed, now=current)
             continue
+        if (existing and existing.get("status") == "error"
+                and existing.get("last_http_status") in {400, 401, 403, 404}):
+            continue
         expected_done = ENTRY_DONE_STATES if action == "entry_training" else SERVICE_DONE_STATES
         try:
             fresh = client.get_registration_folder(external_id)
@@ -520,8 +591,6 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         # Reconcile durable success/uncertainty/processing before considering a POST.
         if existing and existing.get("status") in {"success", "already_done"}:
             sync_folder_automation_status(data, fresh, now=current)
-            continue
-        if existing and existing.get("status") == "error" and existing.get("last_http_status") in {400, 401, 403, 404}:
             continue
         if remote.get("state") in expected_done:
             journal = existing or _new_action(external_id, action,

@@ -56,9 +56,25 @@ services:
       - key: AFC_IMPORT_VISION_MODEL
         value: gpt-4.1-mini
       - key: WEDOF_AUTOMATION_ENABLED
-        value: "true"
-      - key: WEDOF_DRY_RUN
         value: "false"
+      - key: WEDOF_DRY_RUN
+        value: "true"
+      # Coupure d'urgence : le cron horaire reste déployé mais ne fait aucun
+      # appel WEDOF tant que ce drapeau n'est pas réactivé explicitement.
+      - key: WEDOF_CRON_ENABLED
+        value: "false"
+      # Les scans globaux sont séparés des actions dues et restent suspendus
+      # jusqu'à validation du quota avec WEDOF.
+      - key: WEDOF_RECONCILIATION_ENABLED
+        value: "false"
+      - key: WEDOF_GOVERNOR_ENABLED
+        value: "true"
+      - key: WEDOF_REQUEST_LIMIT_PER_HOUR
+        value: "100"
+      - key: WEDOF_REQUEST_LIMIT_PER_DAY
+        value: "500"
+      - key: WEDOF_REQUEST_LIMIT_PER_MONTH
+        value: "15000"
       - key: WEDOF_MAINTENANCE_WINDOW_ENABLED
         value: "true"
       - key: WEDOF_MAINTENANCE_START_TIME
@@ -76,6 +92,19 @@ services:
       - fromGroup: gestionstagiaires-cron-secrets
       - key: WEDOF_AUTOMATION_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/wedof-automation
+  - type: cron
+    name: gestionstagiaires-wedof-reconciliation
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # Quatre passages maximum par jour. Le endpoint reste un no-op tant que
+    # WEDOF_RECONCILIATION_ENABLED=false sur le service web.
+    schedule: "17 1,7,13,19 * * *"
+    dockerCommand: python scripts/run_wedof_reconciliation.py
+    envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
+      - key: WEDOF_RECONCILIATION_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/wedof-reconciliation
   - type: cron
     name: gestionstagiaires-convocation-reminders
     runtime: docker
