@@ -47,6 +47,14 @@ class WedofClientTests(unittest.TestCase):
         self.assertEqual(second.kwargs["params"], {"limit": 1, "page": 1})
         for call in (first, second):
             self.assertEqual(call.kwargs["headers"]["X-Api-Key"], "cle-secrete")
+            self.assertEqual(
+                call.kwargs["headers"]["User-Agent"],
+                "IntegraleAcademy-GestionStagiaires/2026.08",
+            )
+            self.assertEqual(
+                call.kwargs["headers"]["X-Integrale-Application"],
+                "gestionstagiaires",
+            )
             self.assertNotIn("Authorization", call.kwargs["headers"])
             self.assertEqual(call.kwargs["timeout"], (5, 45))
         self.assertEqual(result["registration_folders_sample_count"], 1)
@@ -122,6 +130,28 @@ class WedofClientTests(unittest.TestCase):
             session.get.side_effect = [failure, response(payload={"name": "Test", "siret": "1"})]
             self.assertEqual(WedofClient(api_key="key", session=session).get_current_organism()["name"], "Test")
             self.assertEqual(session.get.call_count, 2)
+
+    @patch("wedof_service.reserve_request")
+    @patch("wedof_service.time.sleep")
+    def test_each_http_attempt_is_counted_before_retry(self, sleep, reserve):
+        session = Mock()
+        session.get.side_effect = [
+            requests.Timeout(),
+            response(payload={"name": "Test", "siret": "1"}),
+        ]
+        client = WedofClient(
+            api_key="key", session=session, origin="gestionstagiaires-webhook",
+        )
+        self.assertEqual(client.get_current_organism()["name"], "Test")
+        self.assertEqual(reserve.call_count, 2)
+        self.assertTrue(all(
+            call.kwargs["origin"] == "gestionstagiaires-webhook"
+            for call in reserve.call_args_list
+        ))
+        self.assertEqual(
+            session.get.call_args.kwargs["headers"]["X-Integrale-Application"],
+            "gestionstagiaires-webhook",
+        )
 
     @patch("wedof_service.time.sleep")
     def test_retry_after_and_non_retryable_statuses(self, sleep):

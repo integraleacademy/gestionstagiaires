@@ -56,6 +56,20 @@ def _nested(source: Dict[str, Any], *paths: str) -> Any:
 
 def extract_folder(folder: Dict[str, Any]) -> Dict[str, Any]:
     """Extrait la liste blanche de données autorisées (jamais le dossier brut)."""
+    # Les lectures d'écran et les rapprochements utilisent désormais aussi le
+    # cache local déjà extrait. Le reconnaître évite toute nouvelle requête
+    # WEDOF et conserve exactement la même liste blanche.
+    if isinstance(folder, dict) and folder.get("external_id"):
+        allowed = (
+            "external_id", "state", "type", "first_name", "last_name", "email",
+            "phone", "start_date", "end_date", "training_title",
+            "training_duration", "total_amount", "cpf_amount",
+            "france_travail_amount", "candidate_amount", "created_at",
+            "updated_at", "wedof_url", "waiting_reason", "step_dates",
+            "billing_state", "invoice_number", "qonto_invoice_id",
+            "qonto_invoice_number", "invoice_status", "invoice_paid_at",
+        )
+        return {key: folder.get(key) for key in allowed}
     return {
         "external_id": folder.get("externalId") or "",
         "state": folder.get("state") or "",

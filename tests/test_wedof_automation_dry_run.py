@@ -159,6 +159,10 @@ class WedofDryRunTests(unittest.TestCase):
         self.assertEqual(rows["LATE"]["local_link_status"], "unlinked")
         self.assertEqual(len(data["wedof_automation_status"]), 2)
         self.assertTrue(all(method == "GET" for method, _ in client.calls))
+        self.assertEqual(
+            [target for _method, target in client.calls],
+            list(("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated")) * 2,
+        )
 
     def test_remote_terminal_states_are_read_and_run_history_is_limited(self):
         client = FakeClient({"accepted": [], "inTraining": [], "serviceDoneDeclared": [folder("D", state="serviceDoneDeclared")], "serviceDoneValidated": [folder("V", state="serviceDoneValidated")]})
@@ -171,16 +175,70 @@ class WedofDryRunTests(unittest.TestCase):
             self.assertEqual((rows[external_id]["wedof_date_start"], rows[external_id]["wedof_date_end"]),
                              ("2026-09-07", "2026-10-09"))
 
-    def test_cron_requires_secret_and_explicit_dry_run_but_ignores_mutation_flag(self):
+    def test_automation_cron_is_suspended_without_explicit_live_flags(self):
         client = gestion_app.app.test_client()
-        with patch.dict(os.environ, {"CRON_SECRET": "secret", "WEDOF_DRY_RUN": "false", "WEDOF_AUTOMATION_ENABLED": "false"}, clear=False):
+        env = {
+            "CRON_SECRET": "secret",
+            "WEDOF_CRON_ENABLED": "false",
+            "WEDOF_DRY_RUN": "true",
+            "WEDOF_AUTOMATION_ENABLED": "false",
+        }
+        with patch.dict(os.environ, env, clear=False), \
+             patch.object(gestion_app, "run_wedof_automation_live") as live, \
+             patch.object(gestion_app, "run_wedof_automation_dry_run") as dry:
             self.assertEqual(client.post("/internal/cron/wedof-automation").status_code, 403)
-            # Fail-closed now falls back to GET-only simulation instead of rejecting the cron.
-            with patch.object(gestion_app, "run_wedof_automation_dry_run", return_value={"ok": True, "mode": "dry_run"}):
-                self.assertEqual(client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"}).status_code, 200)
-        with patch.dict(os.environ, {"CRON_SECRET": "secret", "WEDOF_DRY_RUN": "true", "WEDOF_AUTOMATION_ENABLED": "false"}, clear=False), patch.object(gestion_app, "run_wedof_automation_dry_run", return_value={"ok": True, "mode": "dry_run"}):
-            response = client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"})
+            response = client.post(
+                "/internal/cron/wedof-automation",
+                headers={"X-Cron-Secret": "secret"},
+            )
+            self.assertEqual(
+                response.get_json(),
+                {"ok": True, "status": "suspended", "mode": "disabled"},
+            )
+            live.assert_not_called()
+            dry.assert_not_called()
+
+        enabled = {
+            "CRON_SECRET": "secret",
+            "WEDOF_CRON_ENABLED": "true",
+            "WEDOF_AUTOMATION_ENABLED": "true",
+            "WEDOF_DRY_RUN": "false",
+        }
+        with patch.dict(os.environ, enabled, clear=False), patch.object(
+            gestion_app, "run_wedof_automation_live",
+            return_value={"ok": True, "mode": "live", "status": "success"},
+        ) as live:
+            response = client.post(
+                "/internal/cron/wedof-automation",
+                headers={"X-Cron-Secret": "secret"},
+            )
             self.assertEqual(response.status_code, 200)
+            live.assert_called_once_with()
+
+    def test_reconciliation_cron_is_separate_and_disabled_by_default(self):
+        client = gestion_app.app.test_client()
+        env = {"CRON_SECRET": "secret", "WEDOF_RECONCILIATION_ENABLED": "false"}
+        with patch.dict(os.environ, env, clear=False), patch.object(
+            gestion_app, "run_wedof_automation_dry_run",
+        ) as dry:
+            response = client.post(
+                "/internal/cron/wedof-reconciliation",
+                headers={"X-Cron-Secret": "secret"},
+            )
+            self.assertEqual(response.get_json()["status"], "suspended")
+            dry.assert_not_called()
+
+        env["WEDOF_RECONCILIATION_ENABLED"] = "true"
+        with patch.dict(os.environ, env, clear=False), patch.object(
+            gestion_app, "run_wedof_automation_dry_run",
+            return_value={"ok": True, "status": "success", "mode": "dry_run"},
+        ) as dry:
+            response = client.post(
+                "/internal/cron/wedof-reconciliation",
+                headers={"X-Cron-Secret": "secret"},
+            )
+            self.assertEqual(response.status_code, 200)
+            dry.assert_called_once_with()
 
     def test_partial_success_preserves_failed_state_and_updates_other_states(self):
         old = folder("OLD", state="accepted")
@@ -208,22 +266,24 @@ class WedofDryRunTests(unittest.TestCase):
     def test_admin_and_cron_handle_partial_and_failed_results(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as flask_session: flask_session["admin_logged_in"] = True
-        env = {"WEDOF_DRY_RUN": "true", "CRON_SECRET": "secret"}
+        env = {"WEDOF_DRY_RUN": "true", "CRON_SECRET": "secret",
+               "WEDOF_RECONCILIATION_ENABLED": "true"}
         partial = {"ok": True, "partial": True, "status": "partial_success", "failed_states": ["inTraining"]}
         with patch.dict(os.environ, env, clear=False), patch.object(gestion_app, "run_wedof_automation_dry_run", return_value=partial):
             response = client.post("/admin/wedof/automation/analyze", follow_redirects=True)
             self.assertEqual(response.status_code, 200); self.assertIn("Analyse WEDOF partielle", response.get_data(as_text=True))
-            self.assertEqual(client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"}).status_code, 200)
+            self.assertEqual(client.post("/internal/cron/wedof-reconciliation", headers={"X-Cron-Secret": "secret"}).status_code, 200)
         failed = {"ok": False, "partial": False, "status": "failed", "failed_states": list(("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated"))}
         with patch.dict(os.environ, env, clear=False), patch.object(gestion_app, "run_wedof_automation_dry_run", return_value=failed):
-            self.assertEqual(client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"}).status_code, 503)
+            self.assertEqual(client.post("/internal/cron/wedof-reconciliation", headers={"X-Cron-Secret": "secret"}).status_code, 503)
 
     def test_admin_cron_and_render_script_treat_maintenance_skip_as_success(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as flask_session: flask_session["admin_logged_in"] = True
         skipped = {"ok": True, "partial": False, "status": "skipped_maintenance_window", "mode": "dry_run",
                    "maintenance_window": {"start_time": "05:00", "end_time": "07:00", "timezone": "Europe/Paris"}}
-        env = {"WEDOF_DRY_RUN": "true", "CRON_SECRET": "secret"}
+        env = {"WEDOF_DRY_RUN": "true", "CRON_SECRET": "secret",
+               "WEDOF_RECONCILIATION_ENABLED": "true"}
         with patch.dict(os.environ, env, clear=False), patch.object(gestion_app, "run_wedof_automation_dry_run", return_value=skipped):
             admin = client.post("/admin/wedof/automation/analyze")
             self.assertEqual((admin.status_code, admin.headers["Location"].endswith("/admin/wedof")), (302, True))
@@ -231,17 +291,17 @@ class WedofDryRunTests(unittest.TestCase):
                 flashes = flask_session.get("_flashes", [])
             self.assertTrue(any(category == "info" and "Analyse WEDOF suspendue entre 05:00 et 07:00" in message
                                 for category, message in flashes))
-            cron = client.post("/internal/cron/wedof-automation", headers={"X-Cron-Secret": "secret"})
+            cron = client.post("/internal/cron/wedof-reconciliation", headers={"X-Cron-Secret": "secret"})
             self.assertEqual(cron.status_code, 200)
             self.assertEqual(cron.get_json(), {"ok": True, "status": "skipped_maintenance_window",
-                                               "mode": "dry_run", "next_action": "automatic_retry_on_next_cron"})
+                                               "mode": "dry_run", "next_action": "automatic_retry_on_next_reconciliation"})
         class Response:
             ok = True
             text = '{"ok":true,"status":"skipped_maintenance_window"}'
-        with patch.dict(os.environ, {"WEDOF_AUTOMATION_URL": "https://example.invalid/cron",
+        with patch.dict(os.environ, {"WEDOF_RECONCILIATION_URL": "https://example.invalid/cron",
                                      "CRON_SECRET": "not-a-real-secret"}, clear=False), \
              patch("requests.post", return_value=Response()) as post:
-            runpy.run_path("scripts/run_wedof_automation.py", run_name="__main__")
+            runpy.run_path("scripts/run_wedof_reconciliation.py", run_name="__main__")
             post.assert_called_once()
 
     def test_dashboard_global_states_follow_reliable_run_history(self):

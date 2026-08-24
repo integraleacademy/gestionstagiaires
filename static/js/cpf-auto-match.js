@@ -142,7 +142,7 @@
     if (running) return;
     running = true;
     suggestions.innerHTML = '';
-    setStatus('loading', 'Comparaison du nom, du prénom, des dates, de l’e-mail et du téléphone avec WEDOF…');
+    setStatus('loading', 'Comparaison avec les derniers dossiers présents dans le cache WEDOF…');
     try {
       const payload = await post(root.dataset.searchUrl);
       if (payload.status === 'associated') {
@@ -165,7 +165,6 @@
     const button = event.target.closest('[data-cpf-associate]');
     if (button) associate(button);
   });
-  search();
   }
 
   if (document.readyState === 'loading') {
