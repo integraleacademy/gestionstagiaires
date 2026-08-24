@@ -16307,6 +16307,24 @@ def admin_sessions_automations():
     response.headers["Pragma"] = "no-cache"
     return response
 
+def _admin_wedof_quota_dashboard() -> Dict[str, Any]:
+    """Expose le compteur central à l'admin sans jamais contacter WEDOF."""
+    try:
+        return {
+            **wedof_quota_snapshot(recent_event_limit=20),
+            "available": True,
+        }
+    except WedofGovernorError:
+        app.logger.exception("Lecture du compteur WEDOF impossible dans l'administration")
+        return {
+            "available": False,
+            "enabled": False,
+            "periods": {},
+            "recent_events": [],
+            "active_leases": [],
+        }
+
+
 @app.get("/admin/wedof")
 @admin_login_required
 def admin_wedof_requests():
@@ -16318,7 +16336,7 @@ def admin_wedof_requests():
     wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
     displayed_links = _wedof_links_for_display(data)
     maintenance = is_wedof_maintenance_window()
-    return render_template(
+    response = make_response(render_template(
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=wedof_new_requests_count,
@@ -16336,7 +16354,11 @@ def admin_wedof_requests():
         wedof_dashboard_state=automation_dashboard_state(data),
         wedof_maintenance=maintenance,
         wedof_next_attempt=next_automatic_attempt() if maintenance["active"] else None,
-    )
+        wedof_quota=_admin_wedof_quota_dashboard(),
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 def _wedof_links_for_display(data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -16620,7 +16642,7 @@ def admin_wedof_matching_preview():
         if isinstance(item, dict):
             item["display_fields"] = _wedof_entry_display_fields(item)
     displayed_links = _wedof_links_for_display(data)
-    return render_template(
+    response = make_response(render_template(
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=sum(1 for item in wedof_webhooks if not bool(item.get("processed"))),
@@ -16638,7 +16660,11 @@ def admin_wedof_matching_preview():
         wedof_maintenance=is_wedof_maintenance_window(),
         wedof_next_attempt=next_automatic_attempt() if is_wedof_maintenance_window()["active"] else None,
         wedof_preview=True,
-    )
+        wedof_quota=_admin_wedof_quota_dashboard(),
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 def _manual_session_item(item: Dict[str, Any]) -> Dict[str, Any]:
