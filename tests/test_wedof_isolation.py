@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import patch
 
@@ -98,21 +99,41 @@ class WedofIsolationTests(unittest.TestCase):
             "trainingActionInfo": {"title": "Formation dirigeant DESP"},
         }
 
-        with patch.object(gestion_app, "_fetch_wedof_folder_details", return_value={}), \
+        def relay_to_crm(entry):
+            entry["crm_sent"] = True
+            entry["crm_sent_at"] = "2026-08-24T20:03:00Z"
+            entry["crm_send_count"] = 1
+            return {"success": True}, 200
+
+        with patch.dict(
+                 gestion_app.os.environ,
+                 {"WEDOF_WEBHOOK_SECRET": "webhook-secret"}, clear=False,
+             ), \
+             patch.object(gestion_app, "_fetch_wedof_folder_details", return_value={}), \
              patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
              patch.object(gestion_app, "_save_wedof_webhooks") as save_wedof, \
+             patch.object(
+                 gestion_app, "_send_wedof_entry_to_crm",
+                 side_effect=relay_to_crm,
+             ) as crm_relay, \
              patch.object(gestion_app.requests, "post", return_value=salesforce_response) as salesforce_post:
             resp = self.client.post(
                 "/api/webhooks/wedof",
                 json=payload,
-                headers={"X-Wedof-Event": "cpf.created"},
+                headers={
+                    "X-Wedof-Event": "cpf.created",
+                    "X-Wedof-Secret": "webhook-secret",
+                },
             )
 
         self.assertEqual(resp.status_code, 200)
         salesforce_post.assert_called_once()
+        crm_relay.assert_called_once()
         saved_entry = save_wedof.call_args.args[0][0]
         self.assertTrue(saved_entry["salesforce_sent"])
         self.assertEqual(saved_entry["salesforce_send_count"], 1)
+        self.assertTrue(saved_entry["crm_sent"])
+        self.assertEqual(saved_entry["crm_send_count"], 1)
         self.assertFalse(saved_entry["processed"])
 
     def test_embedded_folder_updates_cache_without_any_wedof_get(self):
@@ -152,6 +173,10 @@ class WedofIsolationTests(unittest.TestCase):
              patch.object(gestion_app, "_save_wedof_webhooks"), \
              patch.object(
                  gestion_app, "_send_wedof_entry_to_salesforce",
+                 return_value=({"success": True}, 200),
+             ), \
+             patch.object(
+                 gestion_app, "_send_wedof_entry_to_crm",
                  return_value=({"success": True}, 200),
              ), \
              patch.object(gestion_app, "_atomic_update_data", side_effect=atomic_update):
@@ -215,6 +240,140 @@ class WedofIsolationTests(unittest.TestCase):
         fetch.assert_not_called()
         save.assert_not_called()
         salesforce.assert_not_called()
+
+    def test_trusted_duplicate_repairs_a_missing_crm_relay_without_salesforce(self):
+        entry = {
+            "id": "WEDOF-OLD",
+            "delivery_id": "delivery-old",
+            "payload": {"registrationFolderId": "CPF-OLD"},
+            "raw_payload": '{"registrationFolderId":"CPF-OLD"}',
+            "signature_valid": True,
+        }
+
+        def relay_to_crm(stored_entry):
+            stored_entry["crm_sent"] = True
+            return {"success": True}, 200
+
+        with patch.dict(
+                 gestion_app.os.environ,
+                 {"WEDOF_WEBHOOK_SECRET": "webhook-secret"}, clear=False,
+             ), \
+             patch.object(
+                 gestion_app, "_load_wedof_webhooks", return_value=[entry],
+             ), \
+             patch.object(gestion_app, "_save_wedof_webhooks") as save, \
+             patch.object(
+                 gestion_app, "_send_wedof_entry_to_crm",
+                 side_effect=relay_to_crm,
+             ) as crm_relay, \
+             patch.object(gestion_app, "_send_wedof_entry_to_salesforce") as salesforce:
+            response = self.client.post(
+                "/api/webhooks/wedof",
+                json={"registrationFolderId": "CPF-OLD"},
+                headers={
+                    "X-Wedof-Delivery": "delivery-old",
+                    "X-Wedof-Secret": "webhook-secret",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {
+            "ok": True, "duplicate": True, "crm_relayed": True,
+        })
+        crm_relay.assert_called_once_with(entry)
+        save.assert_called_once_with([entry])
+        salesforce.assert_not_called()
+
+    def test_crm_relay_sends_cached_folder_without_an_extra_wedof_request(self):
+        crm_response = type(
+            "CrmResponse",
+            (),
+            {
+                "status_code": 200,
+                "text": '{"ok":true,"processed":true}',
+                "json": lambda self: {"ok": True, "processed": True},
+            },
+        )()
+        entry = {
+            "id": "WEDOF-CRM",
+            "delivery_id": "delivery-crm",
+            "event": "registrationFolder.created",
+            "payload": {"registrationFolderId": "CPF-CRM"},
+            "raw_payload": '{"registrationFolderId":"CPF-CRM"}',
+            "wedof_folder_details": {
+                "externalId": "CPF-CRM",
+                "type": "cpf",
+                "state": "accepted",
+                "attendee": {
+                    "firstName": "Moustapha",
+                    "lastName": "Diouf",
+                    "email": "moustapha@example.com",
+                },
+            },
+        }
+
+        with patch.dict(
+                 gestion_app.os.environ,
+                 {
+                     "CRM_WEDOF_WEBHOOK_URL": "https://crm.example.test/api/webhooks/wedof",
+                     "CRM_WEDOF_WEBHOOK_SECRET": "relay-secret",
+                 }, clear=False,
+             ), \
+             patch.object(
+                 gestion_app.requests, "post", return_value=crm_response,
+             ) as crm_post:
+            result, status = gestion_app._send_wedof_entry_to_crm(entry)
+
+        self.assertEqual(status, 200)
+        self.assertTrue(result["success"])
+        self.assertTrue(entry["crm_sent"])
+        self.assertEqual(entry["crm_send_count"], 1)
+        crm_post.assert_called_once()
+        request_call = crm_post.call_args
+        self.assertEqual(
+            request_call.args[0],
+            "https://crm.example.test/api/webhooks/wedof",
+        )
+        self.assertEqual(
+            json.loads(request_call.kwargs["data"].decode("utf-8"))["externalId"],
+            "CPF-CRM",
+        )
+        self.assertEqual(
+            request_call.kwargs["headers"]["X-Wedof-Secret"],
+            "relay-secret",
+        )
+        self.assertEqual(
+            request_call.kwargs["headers"]["X-Wedof-Delivery"],
+            "gestionstagiaires:delivery-crm",
+        )
+        self.assertNotIn(
+            "X-Wedof-Signature", request_call.kwargs["headers"],
+        )
+
+    def test_admin_can_relay_an_existing_wedof_entry_to_crm(self):
+        entry = {"id": "WEDOF-EXISTING", "payload": {"externalId": "CPF-1"}}
+
+        def relay_to_crm(stored_entry):
+            stored_entry["crm_sent"] = True
+            stored_entry["crm_send_count"] = 1
+            return {"success": True, "crm_sent": True}, 200
+
+        with patch.object(
+                 gestion_app, "_load_wedof_webhooks", return_value=[entry],
+             ), \
+             patch.object(gestion_app, "_save_wedof_webhooks") as save, \
+             patch.object(
+                 gestion_app, "_send_wedof_entry_to_crm",
+                 side_effect=relay_to_crm,
+             ):
+            response = self.client.post(
+                "/api/send-to-crm/WEDOF-EXISTING",
+                headers={"X-Requested-With": "XMLHttpRequest"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["success"])
+        save.assert_called_once_with([entry])
 
     def test_salesforce_payload_uses_bounded_permalink_instead_of_raw_webhook(self):
         salesforce_response = type(
@@ -344,6 +503,9 @@ class WedofIsolationTests(unittest.TestCase):
             "salesforce_sent": True,
             "salesforce_sent_at": "2026-06-12T10:00:00Z",
             "salesforce_send_count": 1,
+            "crm_sent": True,
+            "crm_sent_at": "2026-06-12T10:00:01Z",
+            "crm_send_count": 1,
         }
 
         with patch.object(gestion_app, "_load_wedof_webhooks", return_value=[entry]):
@@ -352,8 +514,10 @@ class WedofIsolationTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn(">Notifier</button>", html)
-        self.assertIn("Envoyé automatiquement à Salesforce", html)
+        self.assertIn("Envoyé à Salesforce le", html)
         self.assertIn("Renvoyer Salesforce", html)
+        self.assertIn("Envoyé au CRM le", html)
+        self.assertIn("Renvoyer au CRM", html)
 
     def test_admin_wedof_shows_the_selected_training_date_range(self):
         entry = {
