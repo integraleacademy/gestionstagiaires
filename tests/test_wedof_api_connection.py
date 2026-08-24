@@ -153,6 +153,23 @@ class WedofClientTests(unittest.TestCase):
             "gestionstagiaires-webhook",
         )
 
+    @patch("wedof_service.reserve_request")
+    def test_interactive_read_can_identify_a_manual_cpf_refresh(self, reserve):
+        session = Mock()
+        session.get.return_value = response(payload={"externalId": "W1"})
+
+        folder = WedofClient(api_key="key", session=session).get_registration_folder_interactive(
+            "W1", operation="cpf_invoice_manual_refresh",
+        )
+
+        self.assertEqual(folder["externalId"], "W1")
+        reserve.assert_called_once_with(
+            origin="gestionstagiaires",
+            operation="cpf_invoice_manual_refresh",
+            method="GET",
+            path="/registrationFolders/:id",
+        )
+
     @patch("wedof_service.time.sleep")
     def test_retry_after_and_non_retryable_statuses(self, sleep):
         limited = response(429)

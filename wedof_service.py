@@ -87,19 +87,21 @@ class WedofClient:
         self._backoff = _bounded_env("WEDOF_GET_BACKOFF_SECONDS", 1, 0, 10)
         self._page_limit = _bounded_env("WEDOF_PAGE_LIMIT", 50, 10, 100, integer=True)
 
-    def _reserve(self, method: str, path: str) -> None:
+    def _reserve(self, method: str, path: str, *, operation: Optional[str] = None) -> None:
         safe_path = re.sub(r"(/registrationFolders/)[^/]+", r"\1:id", path)
-        if safe_path.rstrip("/").endswith("/registrationFolders"):
-            operation = "list_registration_folders"
-        elif "/registrationFolders/:id" in safe_path:
-            operation = "registration_folder_action" if method != "GET" else "get_registration_folder"
-        elif safe_path.rstrip("/").endswith("/organisms/me"):
-            operation = "get_current_organism"
-        else:
-            operation = "wedof_request"
+        resolved_operation = str(operation or "").strip()[:80]
+        if not resolved_operation:
+            if safe_path.rstrip("/").endswith("/registrationFolders"):
+                resolved_operation = "list_registration_folders"
+            elif "/registrationFolders/:id" in safe_path:
+                resolved_operation = "registration_folder_action" if method != "GET" else "get_registration_folder"
+            elif safe_path.rstrip("/").endswith("/organisms/me"):
+                resolved_operation = "get_current_organism"
+            else:
+                resolved_operation = "wedof_request"
         try:
             reserve_request(
-                origin=self._origin, operation=operation,
+                origin=self._origin, operation=resolved_operation,
                 method=method, path=safe_path,
             )
         except WedofQuotaExceeded as exc:
@@ -115,7 +117,8 @@ class WedofClient:
 
     def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None,
                            timeout: Optional[Tuple[float, float]] = None,
-                           max_attempts: Optional[int] = None, backoff: Optional[float] = None) -> Tuple[Any, Any]:
+                           max_attempts: Optional[int] = None, backoff: Optional[float] = None,
+                           operation: Optional[str] = None) -> Tuple[Any, Any]:
         response = None
         request_timeout = timeout or self._timeout
         attempts = self._max_attempts if max_attempts is None else max(1, int(max_attempts))
@@ -123,7 +126,7 @@ class WedofClient:
         for attempt in range(1, attempts + 1):
             started = time.monotonic()
             try:
-                self._reserve("GET", path)
+                self._reserve("GET", path, operation=operation)
                 response = self._session.get(f"{WEDOF_BASE_URL}{path}", headers=self._headers,
                                              params=params, timeout=request_timeout)
             except requests.Timeout as exc:
@@ -292,13 +295,16 @@ class WedofClient:
             raise WedofApiError("La réponse WEDOF concernant le dossier est inattendue.")
         return payload
 
-    def get_registration_folder_interactive(self, external_id: str) -> Dict[str, Any]:
+    def get_registration_folder_interactive(
+        self, external_id: str, *, operation: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Lecture utilisateur bornée, sans retry ni attente Retry-After."""
         identifier = str(external_id or "").strip()
         if not identifier or "/" in identifier:
             raise WedofApiError("L’identifiant du dossier WEDOF est invalide.")
         payload = self._get_json_response(
-            f"/registrationFolders/{identifier}", timeout=(3, 8), max_attempts=1, backoff=0
+            f"/registrationFolders/{identifier}", timeout=(3, 8), max_attempts=1,
+            backoff=0, operation=operation,
         )[0]
         if not isinstance(payload, dict):
             raise WedofApiError("La réponse WEDOF concernant le dossier est inattendue.")

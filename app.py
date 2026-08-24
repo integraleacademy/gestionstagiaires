@@ -16325,6 +16325,21 @@ def _admin_wedof_quota_dashboard() -> Dict[str, Any]:
         }
 
 
+def _admin_wedof_execution_flags() -> Dict[str, bool]:
+    """Expose les vrais garde-fous d'exécution, pas seulement l'ancien flag live."""
+    cron_enabled = read_env_bool("WEDOF_CRON_ENABLED", default=False)
+    automation_configured = read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False)
+    dry_run = read_env_bool("WEDOF_DRY_RUN", default=True)
+    return {
+        "wedof_automation_enabled": cron_enabled and automation_configured and not dry_run,
+        "wedof_cron_enabled": cron_enabled,
+        "wedof_reconciliation_enabled": read_env_bool(
+            "WEDOF_RECONCILIATION_ENABLED", default=False,
+        ),
+        "wedof_dry_run": dry_run,
+    }
+
+
 @app.get("/admin/wedof")
 @admin_login_required
 def admin_wedof_requests():
@@ -16341,8 +16356,7 @@ def admin_wedof_requests():
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=wedof_new_requests_count,
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
-        wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
-        wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
+        **_admin_wedof_execution_flags(),
         wedof_links=displayed_links,
         wedof_date_differences=[row for row in displayed_links if row["date_consistency"]["dates_differ"] is not False],
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
@@ -16647,8 +16661,7 @@ def admin_wedof_matching_preview():
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=sum(1 for item in wedof_webhooks if not bool(item.get("processed"))),
         wedof_api_key_configured=True,
-        wedof_automation_enabled=read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False),
-        wedof_dry_run=read_env_bool("WEDOF_DRY_RUN", default=True),
+        **_admin_wedof_execution_flags(),
         matching_preview=preview,
         wedof_dashboard=dashboard,
         wedof_links=displayed_links,
@@ -31974,7 +31987,10 @@ def _upsert_wedof_folder_cache(
 
 def _refresh_cpf_link_from_wedof(data: Dict[str, Any], link: Dict[str, Any]) -> Dict[str, Any]:
     """Actualise en lecture seule le cache d'un lien CPF depuis WEDOF."""
-    remote_folder = WedofClient().get_registration_folder_interactive(str(link.get("external_id") or ""))
+    remote_folder = WedofClient().get_registration_folder_interactive(
+        str(link.get("external_id") or ""),
+        operation="cpf_invoice_manual_refresh",
+    )
     remote = extract_folder(remote_folder)
     if str(remote.get("type") or "").casefold() != "cpf":
         raise WedofApiError("Le dossier retourné n’est pas un dossier CPF.")
@@ -34517,8 +34533,9 @@ def _discover_cpf_qonto_invoice(
     trainee: Dict[str, Any],
     *,
     force: bool = False,
+    allow_wedof_refresh: bool = False,
 ) -> Tuple[Optional[Dict[str, Any]], bool]:
-    """Reconnect a WEDOF/Qonto CPF invoice that was never stored locally."""
+    """Reconnect a CPF invoice, using WEDOF only after an explicit user action."""
     if _cpf_invoice_amount(trainee) <= 0:
         return None, False
     link = _cpf_active_link(
@@ -34542,7 +34559,7 @@ def _discover_cpf_qonto_invoice(
     try:
         invoice = _qonto_invoice_from_wedof_reference(link, session_obj, trainee)
         discovery_status = 'found' if invoice else 'not_found'
-        if invoice is None and link:
+        if invoice is None and link and allow_wedof_refresh:
             try:
                 _refresh_cpf_link_from_wedof(data, link)
                 invoice = _qonto_invoice_from_wedof_reference(link, session_obj, trainee)
@@ -37052,8 +37069,16 @@ def api_billing_sync_qonto():
                     for item in existing_lines
                 )
                 if not has_cpf_invoice:
+                    allow_wedof_refresh = (
+                        payload.get('refreshWedof') is True
+                        and str(payload.get('source') or '').strip() == 'admin_trainee'
+                    )
                     _, discovery_changed = _discover_cpf_qonto_invoice(
-                        data, requested_session, requested_trainee, force=True,
+                        data,
+                        requested_session,
+                        requested_trainee,
+                        force=True,
+                        allow_wedof_refresh=allow_wedof_refresh,
                     )
                     if discovery_changed:
                         save_data(data)

@@ -268,7 +268,9 @@ def test_refresh_cpf_link_updates_status_snapshot_and_automation(monkeypatch):
 
     application._refresh_cpf_link_from_wedof(data, link)
 
-    client.get_registration_folder_interactive.assert_called_once_with("CPF-42")
+    client.get_registration_folder_interactive.assert_called_once_with(
+        "CPF-42", operation="cpf_invoice_manual_refresh",
+    )
     assert link["wedof_state"] == "serviceDoneDeclared"
     assert link["cpf_snapshot"]["state"] == "serviceDoneDeclared"
     assert link["cpf_snapshot"]["billing_state"] == "billed"

@@ -21,6 +21,7 @@
 {% set quota_operation_labels = {
   'list_registration_folders': 'Liste de dossiers',
   'get_registration_folder': 'Lecture d’un dossier',
+  'cpf_invoice_manual_refresh': 'Actualisation manuelle facture CPF',
   'registration_folder_action': 'Action sur un dossier',
   'get_current_organism': 'Lecture de l’organisme',
   'targeted_get': 'Lecture ciblée',
@@ -44,10 +45,12 @@
       <h1>Pilotage des dossiers CPF</h1>
       <p>Suivez l’avancement WEDOF, contrôlez les automatisations et rattachez chaque dossier au bon stagiaire sans mélanger les informations techniques.</p>
       <div class="wedof-hero-meta">
-        {% if wedof_automation_enabled and not wedof_dry_run %}
+        {% if wedof_automation_enabled %}
           <span class="wedof-status-pill is-live">Automatisation active</span>
-        {% else %}
+        {% elif wedof_dry_run %}
           <span class="wedof-status-pill is-test">Mode test · aucun envoi</span>
+        {% else %}
+          <span class="wedof-status-pill is-test">Automatisation suspendue · aucune déclaration</span>
         {% endif %}
         <span class="wedof-status-pill is-sync">Dernière analyse : {{ (wedof_last_run.finished_at|frdatetime) if wedof_last_run and wedof_last_run.finished_at else 'jamais' }}</span>
         <span class="wedof-status-pill">{{ wedof_new_requests_count or 0 }} nouvelle{{ 's' if (wedof_new_requests_count or 0) > 1 else '' }} demande{{ 's' if (wedof_new_requests_count or 0) > 1 else '' }}</span>
@@ -504,7 +507,9 @@
       <div class="wedof-disclosure-body">
         <div class="wedof-technical-list">
           <div><span>Clé API configurée</span><strong>{{ 'Oui' if wedof_api_key_configured else 'Non' }}</strong></div>
-          <div><span>Automatisation active</span><strong>{{ 'Oui' if wedof_automation_enabled else 'Non' }}</strong></div>
+          <div><span>Déclarations automatiques actives</span><strong>{{ 'Oui' if wedof_automation_enabled else 'Non' }}</strong></div>
+          <div><span>Cron de déclarations autorisé</span><strong>{{ 'Oui' if wedof_cron_enabled else 'Non' }}</strong></div>
+          <div><span>Réconciliation en lecture seule</span><strong>{{ 'Oui' if wedof_reconciliation_enabled else 'Non' }}</strong></div>
           <div><span>Mode test sans envoi</span><strong>{{ 'Oui' if wedof_dry_run else 'Non' }}</strong></div>
         </div>
         <form method="post" action="{{ url_for('admin_test_wedof_api') }}">
