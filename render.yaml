@@ -53,6 +53,8 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: WEDOF_WEBHOOK_SECRET
+        sync: false
       - key: AFC_IMPORT_VISION_MODEL
         value: gpt-4.1-mini
       - key: WEDOF_AUTOMATION_ENABLED
@@ -63,10 +65,12 @@ services:
       # appel WEDOF tant que ce drapeau n'est pas réactivé explicitement.
       - key: WEDOF_CRON_ENABLED
         value: "false"
-      # Les scans globaux sont séparés des actions dues et restent suspendus
-      # jusqu'à validation du quota avec WEDOF.
+      # Les scans de secours sont séparés des actions dues, plafonnés par le
+      # gouverneur central et limités à quatre passages par jour.
       - key: WEDOF_RECONCILIATION_ENABLED
-        value: "false"
+        value: "true"
+      - key: WEDOF_PAGE_LIMIT
+        value: "100"
       - key: WEDOF_GOVERNOR_ENABLED
         value: "true"
       - key: WEDOF_REQUEST_LIMIT_PER_HOUR
@@ -97,9 +101,9 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    # Quatre passages maximum par jour. Le endpoint reste un no-op tant que
-    # WEDOF_RECONCILIATION_ENABLED=false sur le service web.
-    schedule: "17 1,7,13,19 * * *"
+    # Quatre passages espacés sur la journée : 08:17, 12:17, 16:17 et 20:17
+    # en heure d'été de Paris (une heure plus tôt en heure d'hiver).
+    schedule: "17 6,10,14,18 * * *"
     dockerCommand: python scripts/run_wedof_reconciliation.py
     envVars:
       - fromGroup: gestionstagiaires-cron-secrets

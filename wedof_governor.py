@@ -227,7 +227,7 @@ def acquire_lease(
     if not lease_name:
         raise WedofGovernorError("Nom de verrou WEDOF manquant.")
     current = _current(now)
-    ttl = max(30, min(int(ttl_seconds), 7200))
+    ttl = max(30, min(int(ttl_seconds), 86400))
     expires = current + dt.timedelta(seconds=ttl)
     timestamp = current.isoformat(timespec="seconds")
     db = _connect()

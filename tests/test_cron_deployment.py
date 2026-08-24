@@ -25,13 +25,15 @@ class CronDeploymentTests(unittest.TestCase):
             self.assertIn("fromGroup: gestionstagiaires-cron-secrets", cron)
             self.assertNotIn("key: CRON_SECRET\n        sync: false", cron)
 
-    def test_wedof_traffic_is_suspended_and_governed_by_default(self):
+    def test_wedof_mutations_are_suspended_but_reconciliation_is_governed(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
         web = blueprint.split("  - type: web", 1)[1].split("  - type: cron", 1)[0]
         self.assertIn('key: WEDOF_AUTOMATION_ENABLED\n        value: "false"', web)
         self.assertIn('key: WEDOF_DRY_RUN\n        value: "true"', web)
         self.assertIn('key: WEDOF_CRON_ENABLED\n        value: "false"', web)
-        self.assertIn('key: WEDOF_RECONCILIATION_ENABLED\n        value: "false"', web)
+        self.assertIn('key: WEDOF_RECONCILIATION_ENABLED\n        value: "true"', web)
+        self.assertIn('key: WEDOF_PAGE_LIMIT\n        value: "100"', web)
+        self.assertIn("key: WEDOF_WEBHOOK_SECRET\n        sync: false", web)
         self.assertIn('key: WEDOF_GOVERNOR_ENABLED\n        value: "true"', web)
         self.assertIn('key: WEDOF_REQUEST_LIMIT_PER_MONTH\n        value: "15000"', web)
 
@@ -40,7 +42,7 @@ class CronDeploymentTests(unittest.TestCase):
         block = blueprint.split(
             "name: gestionstagiaires-wedof-reconciliation", 1,
         )[1].split("  - type:", 1)[0]
-        self.assertIn('schedule: "17 1,7,13,19 * * *"', block)
+        self.assertIn('schedule: "17 6,10,14,18 * * *"', block)
         self.assertIn("scripts/run_wedof_reconciliation.py", block)
 
 

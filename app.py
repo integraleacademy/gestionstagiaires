@@ -17292,20 +17292,22 @@ def wedof_webhook():
     trusted_for_wedof = False
 
     if signature and secret:
-        computed_digest = hmac.new(secret, raw_body, hashlib.sha256).digest()
-        computed_hex = computed_digest.hex()
-        computed_b64 = base64.b64encode(computed_digest).decode("ascii")
-        computed_b64url = base64.urlsafe_b64encode(computed_digest).decode("ascii").rstrip("=")
-
         provided = signature.split("=", 1)[-1].strip().strip('"').strip("'")
-        sig_valid = any(
-            hmac.compare_digest(candidate, provided)
-            for candidate in (
+        candidates = []
+        # WEDOF documente HMAC-SHA512 hexadécimal. SHA256 reste accepté
+        # temporairement pour préserver un éventuel émetteur interne existant.
+        for algorithm in (hashlib.sha512, hashlib.sha256):
+            computed_digest = hmac.new(secret, raw_body, algorithm).digest()
+            computed_hex = computed_digest.hex()
+            candidates.extend((
                 computed_hex,
                 computed_hex.upper(),
-                computed_b64,
-                computed_b64url,
-            )
+                base64.b64encode(computed_digest).decode("ascii"),
+                base64.urlsafe_b64encode(computed_digest).decode("ascii").rstrip("="),
+            ))
+        sig_valid = any(
+            hmac.compare_digest(candidate, provided)
+            for candidate in candidates
         )
         trusted_for_wedof = sig_valid
         if not sig_valid:
@@ -38278,7 +38280,10 @@ def internal_wedof_governor_lock_acquire():
         return jsonify({"ok": False, "error": "forbidden"}), 403
     payload = request.get_json(silent=True) or {}
     name = str(payload.get("name") or "").strip()
-    if name not in {"wedof-global-reconciliation", "wedof-live-automation"}:
+    if name not in {
+        "wedof-global-reconciliation", "wedof-live-automation",
+        "wedof-crm-reconciliation-schedule",
+    }:
         return jsonify({"ok": False, "error": "invalid_lock"}), 400
     try:
         ttl_seconds = int(payload.get("ttl_seconds") or 3600)
@@ -38301,7 +38306,10 @@ def internal_wedof_governor_lock_release():
         return jsonify({"ok": False, "error": "forbidden"}), 403
     payload = request.get_json(silent=True) or {}
     name = str(payload.get("name") or "").strip()
-    if name not in {"wedof-global-reconciliation", "wedof-live-automation"}:
+    if name not in {
+        "wedof-global-reconciliation", "wedof-live-automation",
+        "wedof-crm-reconciliation-schedule",
+    }:
         return jsonify({"ok": False, "error": "invalid_lock"}), 400
     try:
         released = release_wedof_governor_lease(

@@ -193,12 +193,12 @@ class WedofWebhookSecurityTests(unittest.TestCase):
 
     def test_valid_wedof_signature_is_accepted(self):
         body = b'{"id":"x"}'
-        signature = hmac.new(b"secret", body, hashlib.sha256).hexdigest()
+        signature = hmac.new(b"secret", body, hashlib.sha512).hexdigest()
         response = self.client.post(
             "/api/webhooks/wedof",
             data=body,
             content_type="application/json",
-            headers={"X-Wedof-Signature": f"sha256={signature}"},
+            headers={"X-Wedof-Signature": signature},
         )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(self.saved)

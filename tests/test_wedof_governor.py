@@ -149,3 +149,25 @@ def test_governor_http_lock_returns_busy_without_technical_error():
         assert second.status_code == 200
         assert second.get_json()["acquired"] is False
         assert released.get_json() == {"ok": True, "released": True}
+
+
+def test_governor_accepts_the_crm_six_hour_schedule_lock():
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "governor.sqlite3")
+        with governor_env(path):
+            client = gestion_app.app.test_client()
+            headers = {"X-Wedof-Governor-Token": governor_auth_token()}
+            response = client.post(
+                "/internal/wedof/governor/locks/acquire",
+                headers=headers,
+                json={
+                    "name": "wedof-crm-reconciliation-schedule",
+                    "owner": "crm-worker",
+                    "ttl_seconds": 21600,
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.get_json()["acquired"] is True
+        expires_at = dt.datetime.fromisoformat(response.get_json()["expires_at"])
+        assert expires_at > dt.datetime.now(PARIS) + dt.timedelta(hours=5)
