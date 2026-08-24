@@ -282,7 +282,42 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         self.assertEqual(cpf_line["financingRef"], "wedof:421643740630")
         find_invoice.assert_called_once_with("FL-2026-374")
 
-    def test_official_wedof_bill_number_is_refreshed_and_exposed_to_the_cpf_card(self):
+    def test_automatic_trainee_refresh_never_contacts_wedof(self):
+        data = self._without_local_cpf_invoice()
+        data["wedof_links"] = [{
+            "active": True,
+            "session_id": "S-CPF",
+            "trainee_id": "T-CPF",
+            "external_id": "421643740630",
+            "cpf_snapshot": {
+                "state": "serviceDoneValidated",
+                "billing_state": "billed",
+            },
+        }]
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as flask_session:
+            flask_session["admin_logged_in"] = True
+            flask_session["admin_role"] = "admin"
+
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "WedofClient") as wedof_client, \
+             patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "_cpf_qonto_client_id", return_value="cpf-client"), \
+             patch.object(gestion_app, "list_qonto_invoices", return_value={"client_invoices": [], "meta": {"total_pages": 1}}):
+            polling_response = client.get("/api/billing/trainee/T-CPF/session/S-CPF")
+            auto_sync_response = client.post("/api/billing/sync-qonto", json={
+                "traineeId": "T-CPF",
+                "sessionId": "S-CPF",
+                "source": "admin_trainee_auto",
+                "refreshWedof": True,
+            })
+
+        self.assertEqual(polling_response.status_code, 200)
+        self.assertEqual(auto_sync_response.status_code, 200)
+        wedof_client.assert_not_called()
+
+    def test_explicit_manual_sync_refreshes_official_wedof_bill_number(self):
         data = self._without_local_cpf_invoice()
         data["wedof_links"] = [{
             "active": True,
@@ -312,6 +347,7 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         client = gestion_app.app.test_client()
         with client.session_transaction() as flask_session:
             flask_session["admin_logged_in"] = True
+            flask_session["admin_role"] = "admin"
 
         with patch.object(gestion_app, "load_data", return_value=data), \
              patch.object(gestion_app, "save_data"), \
@@ -322,17 +358,24 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
              patch.object(gestion_app, "find_qonto_invoice_by_number", return_value=remote_invoice) as find_invoice, \
              patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": remote_invoice}), \
              patch.object(gestion_app, "list_qonto_invoices", side_effect=AssertionError("The official WEDOF bill number must use an exact lookup")):
-            response = client.get("/api/billing/trainee/T-CPF/session/S-CPF")
+            response = client.post("/api/billing/sync-qonto", json={
+                "traineeId": "T-CPF",
+                "sessionId": "S-CPF",
+                "source": "admin_trainee",
+                "refreshWedof": True,
+            })
 
         self.assertEqual(response.status_code, 200)
         payload = response.get_json()
         cpf_line = next(line for line in payload["lines"] if line["financingType"] == "CPF")
         self.assertEqual(cpf_line["qontoInvoiceId"], "inv_from_wedof_bill_number")
         self.assertEqual(cpf_line["qontoInvoiceNumber"], "FL-2026-374")
-        self.assertEqual(payload["cpf_wedof_invoice"]["invoice_number"], "FL-2026-374")
-        self.assertEqual(payload["cpf_wedof_invoice"]["billing_state"], "billed")
-        self.assertIn("421643740630", payload["cpf_wedof_invoice"]["wedof_url"])
+        self.assertEqual(data["wedof_links"][0]["cpf_snapshot"]["invoice_number"], "FL-2026-374")
+        self.assertEqual(data["wedof_links"][0]["cpf_snapshot"]["billing_state"], "billed")
         find_invoice.assert_called_once_with("FL-2026-374")
+        wedof_client.get_registration_folder_interactive.assert_called_once_with(
+            "421643740630", operation="cpf_invoice_manual_refresh",
+        )
 
     def test_discovery_rejects_same_cpf_amount_for_another_trainee(self):
         data = self._without_local_cpf_invoice()
@@ -486,6 +529,9 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         self.assertIn("qonto_tracked", template)
         self.assertIn("!isCpfQontoLine(line)&&!lineHasGeneratedInvoice(line)", template)
         self.assertIn("const cpfTrackingOnly = isCpfQontoLine(l);", template)
+        self.assertIn("source:'admin_trainee_auto'", template)
+        self.assertNotIn("source:'admin_trainee_auto',refreshWedof:true", template)
+        self.assertIn("source:'admin_trainee',refreshWedof:true", template)
 
 
 if __name__ == "__main__":
