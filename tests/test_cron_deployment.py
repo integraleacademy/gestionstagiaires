@@ -25,12 +25,13 @@ class CronDeploymentTests(unittest.TestCase):
             self.assertIn("fromGroup: gestionstagiaires-cron-secrets", cron)
             self.assertNotIn("key: CRON_SECRET\n        sync: false", cron)
 
-    def test_wedof_mutations_are_enabled_and_reconciliation_is_governed(self):
+    def test_wedof_mutations_use_one_explicit_kill_switch(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
         web = blueprint.split("  - type: web", 1)[1].split("  - type: cron", 1)[0]
-        self.assertIn('key: WEDOF_AUTOMATION_ENABLED\n        value: "true"', web)
-        self.assertIn('key: WEDOF_DRY_RUN\n        value: "false"', web)
-        self.assertIn('key: WEDOF_CRON_ENABLED\n        value: "true"', web)
+        self.assertIn('key: WEDOF_AUTOMATION_KILL_SWITCH\n        value: "false"', web)
+        self.assertNotIn("key: WEDOF_AUTOMATION_ENABLED", web)
+        self.assertNotIn("key: WEDOF_DRY_RUN", web)
+        self.assertNotIn("key: WEDOF_CRON_ENABLED", web)
         self.assertIn('key: WEDOF_RECONCILIATION_ENABLED\n        value: "true"', web)
         self.assertIn('key: WEDOF_PAGE_LIMIT\n        value: "100"', web)
         self.assertIn("key: WEDOF_WEBHOOK_SECRET\n        sync: false", web)
