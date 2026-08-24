@@ -182,15 +182,16 @@ class WedofDashboardViewTests(unittest.TestCase):
         snapshot.assert_called_once_with(recent_event_limit=20)
         remote.assert_not_called()
 
-    def test_admin_displays_the_effective_cron_and_reconciliation_gates(self):
+    def test_admin_ignores_stale_legacy_flags_without_kill_switch(self):
         data = {
             "sessions": [], "wedof_links": [], "wedof_automation_status": [],
             "wedof_automation_runs": [], "wedof_automation_sync": {},
         }
         env = {
-            "WEDOF_AUTOMATION_ENABLED": "true",
+            "WEDOF_AUTOMATION_KILL_SWITCH": "false",
+            "WEDOF_AUTOMATION_ENABLED": "false",
             "WEDOF_CRON_ENABLED": "false",
-            "WEDOF_DRY_RUN": "false",
+            "WEDOF_DRY_RUN": "true",
             "WEDOF_RECONCILIATION_ENABLED": "true",
         }
         with patch.dict(os.environ, env, clear=False), \
@@ -201,9 +202,9 @@ class WedofDashboardViewTests(unittest.TestCase):
 
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Automatisation suspendue · aucune déclaration", html)
-        self.assertIn("Déclarations automatiques actives</span><strong>Non", html)
-        self.assertIn("Cron de déclarations autorisé</span><strong>Non", html)
+        self.assertIn("Automatisation active", html)
+        self.assertIn("Déclarations automatiques actives</span><strong>Oui", html)
+        self.assertIn("Cron de déclarations autorisé</span><strong>Oui", html)
         self.assertIn("Réconciliation en lecture seule</span><strong>Oui", html)
 
     def test_compact_dashboard_tabs_counters_badges_and_sidebar(self):
@@ -224,7 +225,7 @@ class WedofDashboardViewTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         for text in ("Accepté", "En formation", "Service fait déclaré", "Anomalie",
-                     "Simulation prévue", "Entrée en formation déclarée ✅",
+                     "Automatisation prévue", "Entrée en formation déclarée ✅",
                      "Service fait déclaré ✅", "À rattacher localement", "Dossiers non rattachés localement"):
             self.assertIn(text, html)
         self.assertIn('data-wedof-panel="accepted"', html)
