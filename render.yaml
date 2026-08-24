@@ -57,14 +57,10 @@ services:
         sync: false
       - key: AFC_IMPORT_VISION_MODEL
         value: gpt-4.1-mini
-      - key: WEDOF_AUTOMATION_ENABLED
-        value: "true"
-      - key: WEDOF_DRY_RUN
+      # Automatisation réelle active par défaut. Ce seul arrêt d'urgence peut
+      # suspendre les déclarations sans dépendre d'anciens drapeaux Render.
+      - key: WEDOF_AUTOMATION_KILL_SWITCH
         value: "false"
-      # Automatisation réelle active : le cron horaire n'exécute que les
-      # actions arrivées à échéance et conserve les garde-fous ci-dessous.
-      - key: WEDOF_CRON_ENABLED
-        value: "true"
       # Les scans de secours sont séparés des actions dues, plafonnés par le
       # gouverneur central et limités à quatre passages par jour.
       - key: WEDOF_RECONCILIATION_ENABLED

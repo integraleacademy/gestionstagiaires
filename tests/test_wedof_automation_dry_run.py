@@ -175,15 +175,16 @@ class WedofDryRunTests(unittest.TestCase):
             self.assertEqual((rows[external_id]["wedof_date_start"], rows[external_id]["wedof_date_end"]),
                              ("2026-09-07", "2026-10-09"))
 
-    def test_automation_cron_is_suspended_without_explicit_live_flags(self):
+    def test_automation_cron_only_obeys_explicit_kill_switch(self):
         client = gestion_app.app.test_client()
-        env = {
+        suspended = {
             "CRON_SECRET": "secret",
-            "WEDOF_CRON_ENABLED": "false",
-            "WEDOF_DRY_RUN": "true",
-            "WEDOF_AUTOMATION_ENABLED": "false",
+            "WEDOF_AUTOMATION_KILL_SWITCH": "true",
+            "WEDOF_CRON_ENABLED": "true",
+            "WEDOF_DRY_RUN": "false",
+            "WEDOF_AUTOMATION_ENABLED": "true",
         }
-        with patch.dict(os.environ, env, clear=False), \
+        with patch.dict(os.environ, suspended, clear=False), \
              patch.object(gestion_app, "run_wedof_automation_live") as live, \
              patch.object(gestion_app, "run_wedof_automation_dry_run") as dry:
             self.assertEqual(client.post("/internal/cron/wedof-automation").status_code, 403)
@@ -198,13 +199,14 @@ class WedofDryRunTests(unittest.TestCase):
             live.assert_not_called()
             dry.assert_not_called()
 
-        enabled = {
+        enabled_despite_stale_legacy_flags = {
             "CRON_SECRET": "secret",
-            "WEDOF_CRON_ENABLED": "true",
-            "WEDOF_AUTOMATION_ENABLED": "true",
-            "WEDOF_DRY_RUN": "false",
+            "WEDOF_AUTOMATION_KILL_SWITCH": "false",
+            "WEDOF_CRON_ENABLED": "false",
+            "WEDOF_AUTOMATION_ENABLED": "false",
+            "WEDOF_DRY_RUN": "true",
         }
-        with patch.dict(os.environ, enabled, clear=False), patch.object(
+        with patch.dict(os.environ, enabled_despite_stale_legacy_flags, clear=False), patch.object(
             gestion_app, "run_wedof_automation_live",
             return_value={"ok": True, "mode": "live", "status": "success"},
         ) as live:

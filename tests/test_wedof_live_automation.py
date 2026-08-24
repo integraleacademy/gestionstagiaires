@@ -54,13 +54,18 @@ def automation_data(initial, now, **extra):
     return data
 
 
-def test_fail_closed_environment_requires_exact_pair():
-    for enabled, dry, expected in [("true", "false", True), ("false", "false", False),
-                                   ("true", "true", False), ("invalid", "false", False),
-                                   ("true", "", False)]:
-        with patch.dict(os.environ, {"WEDOF_AUTOMATION_ENABLED": enabled, "WEDOF_DRY_RUN": dry}, clear=False):
+def test_live_mode_only_obeys_explicit_kill_switch():
+    legacy_values = {
+        "WEDOF_AUTOMATION_ENABLED": "false",
+        "WEDOF_DRY_RUN": "true",
+        "WEDOF_CRON_ENABLED": "false",
+    }
+    for kill_switch, expected in [
+        ("", True), ("false", True), ("0", True), ("true", False), ("1", False),
+    ]:
+        env = {**legacy_values, "WEDOF_AUTOMATION_KILL_SWITCH": kill_switch}
+        with patch.dict(os.environ, env, clear=False):
             assert gestion_app._wedof_live_mode_enabled() is expected
-
 
 def test_entry_due_and_not_before_target_using_only_wedof_date():
     for hour, expected in [(17, 0), (18, 1)]:
