@@ -58,13 +58,13 @@ services:
       - key: AFC_IMPORT_VISION_MODEL
         value: gpt-4.1-mini
       - key: WEDOF_AUTOMATION_ENABLED
-        value: "false"
-      - key: WEDOF_DRY_RUN
         value: "true"
-      # Coupure d'urgence : le cron horaire reste déployé mais ne fait aucun
-      # appel WEDOF tant que ce drapeau n'est pas réactivé explicitement.
-      - key: WEDOF_CRON_ENABLED
+      - key: WEDOF_DRY_RUN
         value: "false"
+      # Automatisation réelle active : le cron horaire n'exécute que les
+      # actions arrivées à échéance et conserve les garde-fous ci-dessous.
+      - key: WEDOF_CRON_ENABLED
+        value: "true"
       # Les scans de secours sont séparés des actions dues, plafonnés par le
       # gouverneur central et limités à quatre passages par jour.
       - key: WEDOF_RECONCILIATION_ENABLED
