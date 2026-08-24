@@ -56,9 +56,21 @@ def test_counter_is_shared_by_origin_and_blocks_before_overrun():
 
         assert snapshot["periods"]["day"]["used"] == 2
         assert snapshot["periods"]["day"]["remaining"] == 0
+        assert snapshot["periods"]["day"]["utilization_percent"] == 100.0
+        assert snapshot["periods"]["day"]["status"] == "blocked"
         assert snapshot["periods"]["day"]["by_origin"] == {
             "crm": 1,
             "gestionstagiaires": 1,
+        }
+        assert [event["origin"] for event in snapshot["recent_events"]] == [
+            "gestionstagiaires", "crm",
+        ]
+        assert snapshot["recent_events"][0] == {
+            "requested_at": "2026-08-24T12:00:00+02:00",
+            "origin": "gestionstagiaires",
+            "operation": "due_get",
+            "method": "GET",
+            "path": "/registrationFolders/:id",
         }
 
 
@@ -70,8 +82,14 @@ def test_lease_is_cross_process_safe_and_releasable():
             second = acquire_lease(
                 "wedof-global-reconciliation", owner="gestionstagiaires",
             )
+            snapshot = quota_snapshot()
             assert first["acquired"] is True
             assert second["acquired"] is False
+            assert snapshot["active_leases"] == [{
+                "name": "wedof-global-reconciliation",
+                "owner": "crm",
+                "expires_at": first["expires_at"],
+            }]
             assert release_lease(
                 "wedof-global-reconciliation", first["token"],
             ) is True
