@@ -16325,18 +16325,21 @@ def _admin_wedof_quota_dashboard() -> Dict[str, Any]:
         }
 
 
+def _wedof_automation_kill_switch_active() -> bool:
+    """Un seul drapeau explicite peut suspendre les déclarations automatiques."""
+    return read_env_bool("WEDOF_AUTOMATION_KILL_SWITCH", default=False)
+
+
 def _admin_wedof_execution_flags() -> Dict[str, bool]:
-    """Expose les vrais garde-fous d'exécution, pas seulement l'ancien flag live."""
-    cron_enabled = read_env_bool("WEDOF_CRON_ENABLED", default=False)
-    automation_configured = read_env_bool("WEDOF_AUTOMATION_ENABLED", default=False)
-    dry_run = read_env_bool("WEDOF_DRY_RUN", default=True)
+    """Expose le mode réel, indépendant des anciens drapeaux Render obsolètes."""
+    live_enabled = not _wedof_automation_kill_switch_active()
     return {
-        "wedof_automation_enabled": cron_enabled and automation_configured and not dry_run,
-        "wedof_cron_enabled": cron_enabled,
+        "wedof_automation_enabled": live_enabled,
+        "wedof_cron_enabled": live_enabled,
         "wedof_reconciliation_enabled": read_env_bool(
             "WEDOF_RECONCILIATION_ENABLED", default=False,
         ),
-        "wedof_dry_run": dry_run,
+        "wedof_dry_run": False,
     }
 
 
@@ -16462,9 +16465,8 @@ def run_wedof_automation_dry_run() -> Dict[str, Any]:
 
 
 def _wedof_live_mode_enabled() -> bool:
-    """Fail closed: seules les deux chaînes canoniques autorisent une mutation."""
-    return (os.environ.get("WEDOF_AUTOMATION_ENABLED") or "").strip().casefold() == "true" and \
-           (os.environ.get("WEDOF_DRY_RUN") or "").strip().casefold() == "false"
+    """Le mode réel reste actif sauf arrêt d'urgence explicitement demandé."""
+    return not _wedof_automation_kill_switch_active()
 
 
 def run_wedof_automation_live() -> Dict[str, Any]:
@@ -38377,8 +38379,6 @@ def internal_cron_wedof_automation():
     provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
     if not expected or not provided or not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
-    if not read_env_bool("WEDOF_CRON_ENABLED", default=False):
-        return jsonify({"ok": True, "status": "suspended", "mode": "disabled"}), 200
     if not _wedof_live_mode_enabled():
         return jsonify({"ok": True, "status": "suspended", "mode": "disabled"}), 200
     try:
