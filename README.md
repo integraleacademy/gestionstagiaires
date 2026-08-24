@@ -57,6 +57,8 @@ python app.py
 - `CRON_SECRET` est généré et partagé automatiquement par le Blueprint Render entre le service web et les tâches cron ; il ne doit pas être créé séparément sur chaque service.
 - `CNAPSV3_API_TOKEN` (obligatoire sur le service web pour que le suivi automatique lise les dossiers CNAPS)
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
+- `CRM_WEDOF_WEBHOOK_URL` (facultatif, défaut : `https://assistance-alw9.onrender.com/api/webhooks/wedof`)
+- `CRM_WEDOF_WEBHOOK_SECRET` (facultatif : secret partagé avec le CRM ; à défaut, `WEDOF_WEBHOOK_SECRET` est réutilisé)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
 - `WEDOF_MAINTENANCE_WINDOW_ENABLED` (facultatif, `true` par défaut ; seules les valeurs `false`, `0`, `no` et `off` désactivent la suspension)
 - `WEDOF_MAINTENANCE_START_TIME` (facultatif, heure de Paris au format `HH:MM`, `05:00` par défaut)
@@ -78,7 +80,7 @@ python app.py
 - Endpoint webhook: `POST /api/webhooks/wedof`
 - URL Render à configurer côté WeDoF: `${PUBLIC_BASE_URL}/api/webhooks/wedof`
 - Historique webhook persisté dans `PERSIST_DIR/wedof_webhooks.json`
-- Chaque nouvelle demande exploitable est envoyée automatiquement à Salesforce lors de la réception du webhook. En cas d'échec, la demande reste enregistrée et l'interface admin permet de relancer l'envoi.
+- Chaque nouvelle demande exploitable est envoyée automatiquement à Salesforce lors de la réception du webhook. Lorsqu'elle est authentifiée, elle est aussi transmise au CRM. Le dossier complet déjà mis en cache est relayé sans nouvelle lecture WEDOF. En cas d'échec, la demande reste enregistrée et l'interface admin permet de relancer séparément chaque envoi.
 - L'action **Notifier** (mail/SMS au candidat) reste volontairement manuelle dans l'interface admin.
 
 ## Module VAE DESP

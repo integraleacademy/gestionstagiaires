@@ -14279,7 +14279,10 @@ PARTNER_MODULES = [
 PARTNER_MODULE_KEYS = {m["key"] for m in PARTNER_MODULES}
 PARTNER_MODULE_ROUTE_ENDPOINTS = {
     "cnaps": {"admin_cnaps_unknown"},
-    "cpf": {"admin_wedof_requests", "admin_mark_wedof_treated", "send_wedof_to_salesforce"},
+    "cpf": {
+        "admin_wedof_requests", "admin_mark_wedof_treated",
+        "send_wedof_to_salesforce", "send_wedof_to_crm",
+    },
     "billing": {"admin_qonto_settings", "admin_sessions_billing"},
     "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives", "admin_sales_tracking_send_daily_recap"},
     "automations": {"admin_sessions_conventions", "admin_sessions_automations"},
@@ -17296,6 +17299,150 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
     }, 200
 
 
+DEFAULT_CRM_WEDOF_WEBHOOK_URL = (
+    "https://assistance-alw9.onrender.com/api/webhooks/wedof"
+)
+
+
+def _wedof_crm_relay_body(entry: Dict[str, Any], *, use_original: bool) -> str:
+    """Return the smallest complete WEDOF body that the CRM can process."""
+    raw_payload = str(entry.get("raw_payload") or "")
+    if use_original and raw_payload:
+        return raw_payload
+
+    folder_details = entry.get("wedof_folder_details")
+    if isinstance(folder_details, dict) and folder_details:
+        return json.dumps(
+            folder_details, ensure_ascii=False, separators=(",", ":"),
+        )
+
+    payload = entry.get("payload")
+    if isinstance(payload, dict):
+        return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    return raw_payload
+
+
+def _send_wedof_entry_to_crm(
+        entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
+    """Relay one authenticated WEDOF folder to the CRM without another list scan."""
+    entry_id = str(entry.get("id") or "")
+    target_url = (
+        os.environ.get("CRM_WEDOF_WEBHOOK_URL")
+        or DEFAULT_CRM_WEDOF_WEBHOOK_URL
+    ).strip()
+    relay_secret = (
+        os.environ.get("CRM_WEDOF_WEBHOOK_SECRET")
+        or os.environ.get("WEDOF_WEBHOOK_SECRET")
+        or ""
+    ).strip()
+    original_signature = str(entry.get("signature") or "").strip()
+    signature_is_valid = bool(entry.get("signature_valid"))
+    use_original_signature = bool(
+        not relay_secret and signature_is_valid and original_signature
+    )
+    raw_body = _wedof_crm_relay_body(
+        entry, use_original=use_original_signature,
+    )
+    attempted_at = _now_iso()
+    entry["crm_last_attempt_at"] = attempted_at
+    entry.pop("crm_last_error", None)
+
+    if not target_url:
+        error = "URL du webhook CRM non configurée."
+        entry["crm_last_error"] = error
+        return {"success": False, "crm_status": 0, "error": error}, 503
+    if not raw_body:
+        error = "Contenu WEDOF absent : transmission CRM impossible."
+        entry["crm_last_error"] = error
+        return {"success": False, "crm_status": 0, "error": error}, 422
+
+    source_delivery_id = str(
+        entry.get("delivery_id")
+        or hashlib.sha256(raw_body.encode("utf-8")).hexdigest()
+    )
+    headers = {
+        "Content-Type": "application/json",
+        # Namespace relay deliveries so a partial event received independently
+        # by the CRM cannot suppress this complete cached-folder payload.
+        "X-Wedof-Delivery": f"gestionstagiaires:{source_delivery_id}"[:200],
+    }
+    event = str(entry.get("event") or "").strip()
+    if event:
+        headers["X-Wedof-Event"] = event
+    if relay_secret:
+        # A shared relay secret lets us send the complete cached folder and
+        # avoids a second WEDOF API request in the CRM.
+        headers["X-Wedof-Secret"] = relay_secret
+    elif use_original_signature:
+        # Last-resort compatibility: the exact original body keeps the official
+        # WEDOF HMAC valid when no internal relay secret is configured.
+        headers["X-Wedof-Signature"] = original_signature
+    else:
+        error = "Secret de transmission vers le CRM non configuré."
+        entry["crm_last_error"] = error
+        return {"success": False, "crm_status": 0, "error": error}, 503
+
+    try:
+        crm_response = requests.post(
+            target_url,
+            data=raw_body.encode("utf-8"),
+            headers=headers,
+            timeout=15,
+        )
+    except Exception:
+        error = "Erreur réseau lors de la transmission au CRM."
+        entry["crm_last_error"] = error
+        app.logger.exception("[WEDOF CRM] erreur de transmission id=%s", entry_id)
+        return {"success": False, "crm_status": 0, "error": error}, 502
+
+    response_preview = str(getattr(crm_response, "text", "") or "")[:500]
+    try:
+        response_payload = crm_response.json()
+    except Exception:
+        response_payload = {}
+    crm_status = int(getattr(crm_response, "status_code", 0) or 0)
+    if crm_status != 200 or not isinstance(response_payload, dict) \
+            or response_payload.get("ok") is not True:
+        remote_error = (
+            response_payload.get("error")
+            if isinstance(response_payload, dict) else ""
+        )
+        error = str(remote_error or (
+            f"Le CRM a répondu {crm_status}."
+            if crm_status else "Réponse CRM invalide."
+        ))
+        entry["crm_last_error"] = error
+        app.logger.warning(
+            "[WEDOF CRM] transmission échouée id=%s status=%s preview=%s",
+            entry_id, crm_status, response_preview,
+        )
+        return {
+            "success": False,
+            "crm_status": crm_status,
+            "crm_response_preview": response_preview,
+            "error": error,
+        }, 502
+
+    entry["crm_sent"] = True
+    entry["crm_sent_at"] = attempted_at
+    entry["crm_send_count"] = int(entry.get("crm_send_count") or 0) + 1
+    entry.pop("crm_last_error", None)
+    app.logger.info(
+        "[WEDOF CRM] transmission réussie id=%s status=%s processed=%s duplicate=%s",
+        entry_id, crm_status, bool(response_payload.get("processed")),
+        bool(response_payload.get("duplicate")),
+    )
+    return {
+        "success": True,
+        "crm_status": crm_status,
+        "crm_processed": bool(response_payload.get("processed")),
+        "crm_duplicate": bool(response_payload.get("duplicate")),
+        "crm_sent": True,
+        "crm_sent_at": attempted_at,
+        "crm_send_count": entry["crm_send_count"],
+    }, 200
+
+
 @app.post("/api/send-to-salesforce/<entry_id>")
 @admin_login_required
 @admin_write_required
@@ -17306,6 +17453,23 @@ def send_wedof_to_salesforce(entry_id: str):
         return jsonify({"ok": False, "error": "Demande introuvable."}), 404
 
     result, status_code = _send_wedof_entry_to_salesforce(entry)
+    _save_wedof_webhooks(entries)
+    return jsonify(result), status_code
+
+
+@app.post("/api/send-to-crm/<entry_id>")
+@admin_login_required
+@admin_write_required
+def send_wedof_to_crm(entry_id: str):
+    entries = _load_wedof_webhooks()
+    entry = next(
+        (item for item in entries if str(item.get("id") or "") == str(entry_id)),
+        None,
+    )
+    if entry is None:
+        return jsonify({"ok": False, "error": "Demande introuvable."}), 404
+
+    result, status_code = _send_wedof_entry_to_crm(entry)
     _save_wedof_webhooks(entries)
     return jsonify(result), status_code
 
@@ -17381,12 +17545,22 @@ def wedof_webhook():
     try:
         resolved_delivery_id = delivery_id or hashlib.sha256(raw_body).hexdigest()
         entries = _load_wedof_webhooks()
-        if any(
-            isinstance(item, dict)
+        duplicate_entry = next((
+            item for item in entries
+            if isinstance(item, dict)
             and str(item.get("delivery_id") or "") == resolved_delivery_id
-            for item in entries
-        ):
-            return jsonify({"ok": True, "duplicate": True}), 200
+        ), None)
+        if duplicate_entry is not None:
+            response = {"ok": True, "duplicate": True}
+            # A retry can repair an entry stored before the CRM relay existed,
+            # without resending the lead to Salesforce.
+            if trusted_for_wedof and not duplicate_entry.get("crm_sent"):
+                crm_result, _crm_status = _send_wedof_entry_to_crm(
+                    duplicate_entry,
+                )
+                _save_wedof_webhooks(entries)
+                response["crm_relayed"] = bool(crm_result.get("success"))
+            return jsonify(response), 200
         folder_id = _find_wedof_folder_id(payload)
         app.logger.info("[WEDOF] identifiant dossier trouvé = %s", folder_id or "(aucun)")
         wedof_folder_details = _embedded_wedof_folder(payload)
@@ -17416,6 +17590,19 @@ def wedof_webhook():
                 entry.get("id"),
                 salesforce_status,
                 salesforce_result.get("error") or "erreur inconnue",
+            )
+        if trusted_for_wedof:
+            crm_result, crm_status = _send_wedof_entry_to_crm(entry)
+            if not crm_result.get("success"):
+                app.logger.warning(
+                    "[WEDOF WEBHOOK] transmission CRM automatique échouée id=%s status=%s error=%s",
+                    entry.get("id"),
+                    crm_status,
+                    crm_result.get("error") or "erreur inconnue",
+                )
+        else:
+            entry["crm_last_error"] = (
+                "Transmission CRM non tentée : webhook WEDOF non authentifié."
             )
         _save_wedof_webhooks(entries)
 
@@ -17448,7 +17635,8 @@ def wedof_webhook():
             fields["wedof_case_id"] = folder_id
         if event.lower().startswith(("cpf", "edof", "dossier", "registrationfolder")) or fields.get("wedof_case_id"):
             app.logger.info(
-                "[WEDOF WEBHOOK] dossier conservé uniquement dans /admin/wedof case_id=%s email=%s",
+                "[WEDOF WEBHOOK] dossier conservé dans /admin/wedof et relais CRM=%s case_id=%s email=%s",
+                "ok" if entry.get("crm_sent") else "échec",
                 fields.get("wedof_case_id") or "-",
                 fields.get("email") or "-",
             )

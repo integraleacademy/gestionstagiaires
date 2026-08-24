@@ -523,7 +523,7 @@
     <summary>
       <div>
         <strong>Demandes entrantes WeDoF CPF / EDOF</strong>
-        <small>Webhooks, notifications et transmission Salesforce · {{ public_base_url }}/api/webhooks/wedof</small>
+        <small>Webhooks, notifications et transmissions automatiques vers Salesforce et le CRM · {{ public_base_url }}/api/webhooks/wedof</small>
       </div>
       <span class="wedof-summary-badge">{{ wedof_webhooks|length }} demande{{ 's' if wedof_webhooks|length > 1 else '' }}</span>
     </summary>
@@ -575,6 +575,14 @@
                     <div class="hint">Envoyé à Salesforce le {{ item.salesforce_sent_at }}{% if item.salesforce_send_count %} · {{ item.salesforce_send_count }} envoi{{ 's' if item.salesforce_send_count > 1 else '' }}{% endif %}</div>
                   {% elif item.salesforce_last_error %}
                     <div class="hint" style="color:#b91c1c">Envoi automatique échoué : {{ item.salesforce_last_error }}</div>
+                  {% endif %}
+                  <button class="btn {{ 'btn-outline' if item.crm_sent else 'btn-blue' }}" type="button" data-crm-send data-entry-id="{{ item.id }}">
+                    {{ 'Renvoyer au CRM' if item.crm_sent else ('Réessayer CRM' if item.crm_last_error else 'Envoyer au CRM') }}
+                  </button>
+                  {% if item.crm_sent_at %}
+                    <div class="hint">Envoyé au CRM le {{ item.crm_sent_at }}{% if item.crm_send_count %} · {{ item.crm_send_count }} envoi{{ 's' if item.crm_send_count > 1 else '' }}{% endif %}</div>
+                  {% elif item.crm_last_error %}
+                    <div class="hint" style="color:#b91c1c">Transmission CRM échouée : {{ item.crm_last_error }}</div>
                   {% endif %}
                   <details>
                     <summary class="btn btn-outline">JSON brut</summary>
@@ -677,7 +685,7 @@
       const response = await fetch(url, options);
       const data = await response.json().catch(() => ({}));
       if (!response.ok || data.ok === false || data.success === false) {
-        throw new Error(data.error || data.salesforce_response_preview || 'L’opération a échoué.');
+        throw new Error(data.error || data.salesforce_response_preview || data.crm_response_preview || 'L’opération a échoué.');
       }
       return data;
     }
@@ -727,6 +735,25 @@
           button.className = 'btn btn-outline';
           button.textContent = 'Renvoyer Salesforce';
           if (feedback) feedback.textContent = 'Envoi Salesforce réussi ✅';
+        } catch (error) {
+          if (feedback) feedback.textContent = error.message;
+          button.disabled = false;
+        }
+      });
+    });
+    document.querySelectorAll('[data-crm-send]').forEach(button => {
+      button.addEventListener('click', async () => {
+        if (button.disabled || !button.dataset.entryId) return;
+        const feedback = button.parentElement?.querySelector('[data-wedof-feedback]');
+        button.disabled = true;
+        if (feedback) feedback.textContent = 'Transmission vers le CRM…';
+        try {
+          await jsonRequest(`/api/send-to-crm/${button.dataset.entryId}`, {
+            method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'},
+          });
+          button.className = 'btn btn-outline';
+          button.textContent = 'Renvoyer au CRM';
+          if (feedback) feedback.textContent = 'Piste transmise au CRM ✅';
         } catch (error) {
           if (feedback) feedback.textContent = error.message;
           button.disabled = false;
