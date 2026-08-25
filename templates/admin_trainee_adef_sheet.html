@@ -19,6 +19,8 @@
     .row{display:grid;grid-template-columns:320px 1fr;gap:12px;padding:10px;border-radius:10px;background:#f8faff;border:1px solid var(--line)}
     .label{font-weight:700;color:#1e3a8a}
     .value{font-weight:500;min-height:20px}
+    .cnaps-validity-item + .cnaps-validity-item{margin-top:4px}
+    .cnaps-validity-note{color:var(--muted);font-weight:400}
     @media (max-width: 760px){.row{grid-template-columns:1fr}.logo{width:130px}.title h1{font-size:24px}}
     @media print{
       @page{size:A4;margin:8mm}
@@ -31,7 +33,7 @@
 </head>
 <body>
   <div class="page">
-    <div class="toolbar"><button class="btn" onclick="window.print()">🖨️ Imprimer</button></div>
+    <div class="toolbar"><button class="btn" id="btnPrintAdef" type="button">🖨️ Imprimer</button></div>
 
     <div class="header">
       <div class="title">
@@ -57,8 +59,77 @@
       <div class="row"><div class="label">Code postal</div><div class="value">{{ adef.zip_code or "—" }}</div></div>
       <div class="row"><div class="label">Ville</div><div class="value">{{ adef.city or "—" }}</div></div>
       <div class="row"><div class="label">Numéro PRE ou CAR</div><div class="value">{{ adef.pre_or_car or "—" }}</div></div>
+      <div class="row" id="adefCnapsValidityRow">
+        <div class="label">Date de fin de validité</div>
+        <div class="value" id="adefCnapsValidity" aria-live="polite">Chargement de la validité CNAPS…</div>
+      </div>
     </div>
   </div>
   {% include "_mail_sent_badge.html" %}
+
+  <script>
+    const adefCnapsValidityPromise = (() => {
+      const output = document.getElementById("adefCnapsValidity");
+      const nub = {{ extract_nub_from_pre_car(adef.pre_or_car)|tojson }};
+      const nom = {{ (adef.last_name or "")|tojson }};
+      const prenom = {{ (adef.first_name or "")|tojson }};
+
+      const formatFrenchDate = (rawDate) => {
+        const value = String(rawDate || "").trim();
+        const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|$)/);
+        if (isoMatch) return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+        const frenchMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\D|$)/);
+        if (frenchMatch) return `${frenchMatch[1]}/${frenchMatch[2]}/${frenchMatch[3]}`;
+        return value;
+      };
+
+      const showNote = (message) => {
+        output.replaceChildren();
+        const note = document.createElement("span");
+        note.className = "cnaps-validity-note";
+        note.textContent = message;
+        output.appendChild(note);
+      };
+
+      if (!nub) {
+        showNote("NUB absent — validité CNAPS non vérifiable.");
+        return Promise.resolve();
+      }
+
+      const params = new URLSearchParams({ nom, prenom, nub });
+      return fetch(`/api/cnaps_public_annuaire?${params.toString()}`, {
+        headers: { Accept: "application/json" },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`CNAPS HTTP ${response.status}`);
+          return response.json();
+        })
+        .then((payload) => {
+          const activeTitles = Array.isArray(payload.active_titles) ? payload.active_titles : [];
+          if (!activeTitles.length) {
+            showNote("Aucun titre CNAPS actif trouvé.");
+            return;
+          }
+
+          output.replaceChildren();
+          activeTitles.forEach((title) => {
+            const status = title.display_status || title.status || "Titre actif";
+            const validUntil = formatFrenchDate(title.date_fin_validite || title.valid_until);
+            const item = document.createElement("div");
+            item.className = "cnaps-validity-item";
+            item.textContent = validUntil ? `${status} / Expire le ${validUntil}` : `${status} / Date d’expiration non renseignée`;
+            output.appendChild(item);
+          });
+        })
+        .catch(() => {
+          showNote("Validité CNAPS momentanément indisponible.");
+        });
+    })();
+
+    document.getElementById("btnPrintAdef").addEventListener("click", async () => {
+      await adefCnapsValidityPromise;
+      window.print();
+    });
+  </script>
 </body>
 </html>
