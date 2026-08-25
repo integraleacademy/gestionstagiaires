@@ -75,8 +75,12 @@
       const prenom = {{ (adef.first_name or "")|tojson }};
 
       const formatFrenchDate = (rawDate) => {
-        const match = String(rawDate || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
-        return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+        const value = String(rawDate || "").trim();
+        const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|$)/);
+        if (isoMatch) return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+        const frenchMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\D|$)/);
+        if (frenchMatch) return `${frenchMatch[1]}/${frenchMatch[2]}/${frenchMatch[3]}`;
+        return value;
       };
 
       const showNote = (message) => {
