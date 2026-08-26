@@ -1,3 +1,4 @@
+import datetime
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -137,6 +138,56 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
         self.assertIn('class="financial-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF"', template)
         self.assertIn("Reste à encaisser autres", template)
         self.assertIn("Financement personnel uniquement", template)
+
+    def test_next_direct_debit_date_is_the_first_future_actionable_installment(self):
+        line = {
+            "directDebitInstallments": [
+                {"date": "2026-08-20", "status": "scheduled"},
+                {"date": "2026-09-01", "status": "completed"},
+                {"due_date": "2026-09-12", "status": "scheduled"},
+                {"date": "2026-10-01", "status": "pending"},
+            ]
+        }
+
+        self.assertEqual(
+            gestion_app._next_direct_debit_date(line, today=datetime.date(2026, 8, 26)),
+            "2026-09-12",
+        )
+
+    def test_next_direct_debit_date_ignores_terminal_invalid_and_past_entries(self):
+        line = {
+            "directDebitInstallments": [
+                {"date": "not-a-date", "status": "scheduled"},
+                {"date": "2026-08-25", "status": "pending"},
+                {"date": "2026-09-02", "status": "returned"},
+                {"date": "2026-09-03", "status": "cancelled"},
+            ]
+        }
+
+        self.assertIsNone(
+            gestion_app._next_direct_debit_date(line, today=datetime.date(2026, 8, 26))
+        )
+
+    def test_report_exposes_and_renders_next_direct_debit_date(self):
+        lines = [{
+            "traineeId": "trainee-1",
+            "qontoInvoiceId": "invoice-1",
+            "invoiceStatus": "sent",
+            "amount": 600,
+            "qonto_total_amount_cents": 60000,
+            "qonto_amount_paid_cents": 25000,
+            "qonto_remaining_amount_cents": 35000,
+            "directDebitInstallments": [
+                {"date": "2099-09-12", "status": "scheduled"},
+            ],
+        }]
+        with patch.object(gestion_app, "_billing_lines_for_session", return_value=lines):
+            invoice = gestion_app._session_financial_report({}, self.session)["rows"][0]["invoices"][0]
+
+        self.assertEqual(invoice["next_direct_debit_date"], "2099-09-12")
+        template = Path("templates/admin_session_financial_report.html").read_text(encoding="utf-8")
+        self.assertIn("Prochain prélèvement prévu le", template)
+        self.assertIn("invoice.next_direct_debit_date", template)
 
 
 if __name__ == "__main__":

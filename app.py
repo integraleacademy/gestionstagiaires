@@ -22139,6 +22139,37 @@ def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List
     }
 
 
+_TERMINAL_DIRECT_DEBIT_STATUSES = {
+    "completed", "paid", "succeeded", "success", "failed", "returned",
+    "rejected", "refunded", "declined", "cancelled", "canceled",
+}
+
+
+def _next_direct_debit_date(
+    line: Dict[str, Any], *, today: Optional[datetime.date] = None,
+) -> Optional[str]:
+    """Return the earliest actionable SEPA instalment date for a billing line."""
+    current = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    installments = line.get("directDebitInstallments")
+    if not isinstance(installments, list):
+        installments = []
+    candidates: List[datetime.date] = []
+    for installment in installments:
+        if not isinstance(installment, dict):
+            continue
+        status = str(installment.get("status") or "scheduled").strip().lower()
+        if status in _TERMINAL_DIRECT_DEBIT_STATUSES:
+            continue
+        raw_date = str(installment.get("date") or installment.get("due_date") or "").strip()
+        try:
+            installment_date = datetime.date.fromisoformat(raw_date[:10])
+        except (TypeError, ValueError):
+            continue
+        if installment_date >= current:
+            candidates.append(installment_date)
+    return min(candidates).isoformat() if candidates else None
+
+
 def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]) -> Dict[str, Any]:
     """Build the printable, per-trainee financial view for one session."""
     session_id = str(session_item.get("id") or "")
@@ -22227,6 +22258,10 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
                 "payment_percentage": round(min(max(paid_cents / total_cents * 100, 0), 100), 1) if total_cents else 0,
                 "payment_known": payment_known,
                 "external": external,
+                "next_direct_debit_date": (
+                    _next_direct_debit_date(line)
+                    if payment_known and remaining_cents > 0 else None
+                ),
             })
 
         # Attribute payments known by the centralized rollup but not attached
@@ -22253,7 +22288,7 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
         if not invoices:
             payment_known = summary_paid_cents > 0
             funding_cents = int(round(funding * 100))
-            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": funding, "remaining": max(funding_cents - summary_paid_cents, 0) / 100, "payment_percentage": round(min(max(summary_paid_cents / funding_cents * 100, 0), 100), 1) if funding_cents else 0, "payment_known": payment_known, "external": False})
+            invoices.append({"number": "—", "status": "not_invoiced", "payment_status": financial_summary.get("payment_status") if payment_known else "not_applicable", "paid": summary_paid_cents / 100, "total": funding, "remaining": max(funding_cents - summary_paid_cents, 0) / 100, "payment_percentage": round(min(max(summary_paid_cents / funding_cents * 100, 0), 100), 1) if funding_cents else 0, "payment_known": payment_known, "external": False, "next_direct_debit_date": None})
 
         # Keep the KPI consistent with the trainee sheet, including payments
         # which cannot sensibly be assigned to one invoice row.
