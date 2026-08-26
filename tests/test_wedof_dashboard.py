@@ -16,6 +16,66 @@ def folder(external_id, state="accepted", **changes):
 
 
 class WedofDashboardUnitTests(unittest.TestCase):
+    def test_rows_are_sorted_by_nearest_active_automation(self):
+        statuses = [
+            {"external_id": "LATER", "wedof_state": "accepted", "wedof_type": "cpf",
+             "wedof_date_start": "2026-09-20", "wedof_date_end": "2026-10-20",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-20", "planned_time": "18:00"}},
+            {"external_id": "SAME-LATE", "wedof_state": "accepted", "wedof_type": "cpf",
+             "wedof_date_start": "2026-09-01", "wedof_date_end": "2026-10-01",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-01", "planned_time": "19:00"}},
+            {"external_id": "DONE", "wedof_state": "accepted", "wedof_type": "cpf",
+             "wedof_date_start": "2026-08-01", "wedof_date_end": "2026-08-31",
+             "entry_training": {"status": "success", "planned_date": "2026-08-01", "planned_time": "18:00"}},
+            {"external_id": "SAME-EARLY", "wedof_state": "accepted", "wedof_type": "cpf",
+             "wedof_date_start": "2026-09-01", "wedof_date_end": "2026-10-01",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-01", "planned_time": "18:00"}},
+        ]
+
+        rows = build_automation_dashboard([], statuses=statuses)["rows"]
+
+        self.assertEqual(
+            [row["external_id"] for row in rows],
+            ["SAME-EARLY", "SAME-LATE", "LATER", "DONE"],
+        )
+
+    def test_rows_without_a_valid_active_schedule_use_a_stable_fallback(self):
+        statuses = [
+            {"external_id": "Z-NO-DATE", "wedof_state": "accepted", "wedof_type": "cpf",
+             "entry_training": {"status": "planned", "planned_date": "invalid", "planned_time": "18:00"}},
+            {"external_id": "A-NOT-APPLICABLE", "wedof_state": "serviceDoneValidated", "wedof_type": "cpf"},
+            {"external_id": "M-BLOCKED", "wedof_state": "accepted", "wedof_type": "cpf",
+             "wedof_date_start": "2026-09-01", "wedof_date_end": "2026-10-01",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-01", "planned_time": "18:00"}},
+        ]
+        exceptions = [{"external_id": "M-BLOCKED", "action": "entry_training", "active": True}]
+
+        rows = build_automation_dashboard([], statuses=statuses, exceptions=exceptions)["rows"]
+
+        self.assertEqual(
+            [row["external_id"] for row in rows],
+            ["A-NOT-APPLICABLE", "M-BLOCKED", "Z-NO-DATE"],
+        )
+
+    def test_rows_with_invalid_or_missing_time_follow_all_valid_schedules(self):
+        statuses = [
+            {"external_id": "A-INVALID-TIME", "wedof_state": "accepted", "wedof_type": "cpf",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-01",
+                                "planned_time": "invalid"}},
+            {"external_id": "VALID-LATER", "wedof_state": "accepted", "wedof_type": "cpf",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-02",
+                                "planned_time": "08:15"}},
+            {"external_id": "B-MISSING-TIME", "wedof_state": "accepted", "wedof_type": "cpf",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-01"}},
+        ]
+
+        rows = build_automation_dashboard([], statuses=statuses)["rows"]
+
+        self.assertEqual(
+            [row["external_id"] for row in rows],
+            ["VALID-LATER", "A-INVALID-TIME", "B-MISSING-TIME"],
+        )
+
     def test_active_block_is_an_immediate_overlay_and_recomputes_counters(self):
         dashboard = build_automation_dashboard([], statuses=[{
             "external_id": "GENERIC-LATE", "wedof_state": "accepted", "wedof_type": "cpf",
@@ -118,9 +178,10 @@ class WedofDashboardUnitTests(unittest.TestCase):
                 {"external_id": "D", "service_done": {"status": "success"}},
             ],
         )
-        self.assertEqual(dashboard["rows"][0]["tab"], "anomaly")
-        self.assertTrue(dashboard["rows"][1]["entry_success"])
-        self.assertTrue(dashboard["rows"][2]["service_success"])
+        rows = {row["external_id"]: row for row in dashboard["rows"]}
+        self.assertEqual(rows["BAD"]["tab"], "anomaly")
+        self.assertTrue(rows["T"]["entry_success"])
+        self.assertTrue(rows["D"]["service_success"])
 
 
 class WedofDashboardViewTests(unittest.TestCase):
