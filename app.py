@@ -22150,13 +22150,25 @@ def _next_direct_debit_date(
 ) -> Optional[str]:
     """Return the earliest actionable SEPA instalment date for a billing line."""
     current = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
-    installments = line.get("directDebitInstallments")
-    if not isinstance(installments, list):
-        installments = []
+    stored_plan = line.get("sepa_payment_plan")
+    plan_installments = (
+        stored_plan.get("installments") if isinstance(stored_plan, dict) else None
+    )
+    raw_installments = (
+        plan_installments if isinstance(plan_installments, list) and plan_installments
+        else line.get("directDebitInstallments")
+    )
+    installments = [
+        dict(installment) for installment in raw_installments or []
+        if isinstance(installment, dict)
+    ] if isinstance(raw_installments, list) else []
+    canonical_line = dict(line)
+    canonical_line["directDebitInstallments"] = installments
+    canonical_plan = dict(stored_plan) if isinstance(stored_plan, dict) else {}
+    canonical_plan["installments"] = installments
+    canonical_line["sepa_payment_plan"] = canonical_plan
     candidates: List[datetime.date] = []
-    for installment in installments:
-        if not isinstance(installment, dict):
-            continue
+    for installment in _effective_sepa_installments(canonical_line):
         status = str(installment.get("status") or "scheduled").strip().lower()
         if status in _TERMINAL_DIRECT_DEBIT_STATUSES:
             continue
