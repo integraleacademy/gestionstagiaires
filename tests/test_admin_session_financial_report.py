@@ -168,6 +168,46 @@ class AdminSessionFinancialReportTests(unittest.TestCase):
             gestion_app._next_direct_debit_date(line, today=datetime.date(2026, 8, 26))
         )
 
+    def test_next_direct_debit_date_uses_current_reprogrammed_attempt(self):
+        line = {
+            "directDebitInstallments": [
+                {
+                    "index": 1,
+                    "date": "2026-09-01",
+                    "status": "scheduled",
+                    "created_at": "2026-08-01T08:00:00Z",
+                },
+                {
+                    "index": 1,
+                    "schedule_index": 1,
+                    "date": "2026-09-10",
+                    "status": "scheduled",
+                    "is_rejection_retry": True,
+                    "created_at": "2026-08-02T08:00:00Z",
+                },
+            ]
+        }
+
+        self.assertEqual(
+            gestion_app._next_direct_debit_date(line, today=datetime.date(2026, 8, 26)),
+            "2026-09-10",
+        )
+        self.assertNotIn("sepa_payment_plan", line)
+
+    def test_next_direct_debit_date_supports_canonical_plan_alias(self):
+        line = {
+            "sepa_payment_plan": {
+                "installments": [
+                    {"due_date": "2026-09-12", "status": "scheduled"},
+                ]
+            }
+        }
+
+        self.assertEqual(
+            gestion_app._next_direct_debit_date(line, today=datetime.date(2026, 8, 26)),
+            "2026-09-12",
+        )
+
     def test_report_exposes_and_renders_next_direct_debit_date(self):
         lines = [{
             "traineeId": "trainee-1",
