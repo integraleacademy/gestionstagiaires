@@ -687,6 +687,28 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
     return {"ok": True, "mode": "live", **counts}
 
 
+_DASHBOARD_SCHEDULED_STATUSES = {"planned", "dry_run_due", "dry_run_due_late"}
+
+
+def _dashboard_automation_sort_key(row: Dict[str, Any]) -> tuple:
+    """Put the next actionable WEDOF automation first, with a stable fallback."""
+    external_id = str(row.get("external_id") or "").casefold()
+    is_scheduled = (
+        row.get("automation_status") in _DASHBOARD_SCHEDULED_STATUSES
+        and bool(row.get("automation_action"))
+        and not row.get("automation_blocked")
+    )
+    planned_date = normalize_date(row.get("planned_date")) if is_scheduled else None
+    raw_time = str(row.get("planned_time") or "").strip()
+    try:
+        planned_time = dt.time.fromisoformat(raw_time).strftime("%H:%M:%S")
+    except (TypeError, ValueError):
+        planned_time = "23:59:59"
+    if planned_date:
+        return (0, planned_date, planned_time, external_id)
+    return (1, "9999-12-31", "23:59:59", external_id)
+
+
 def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iterable[Dict[str, Any]] = (),
                                statuses: Iterable[Dict[str, Any]] = (), exceptions: Iterable[Dict[str, Any]] = (),
                                local_associations: Iterable[Dict[str, Any]] = ()) -> Dict[str, Any]:
@@ -787,6 +809,8 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
             and bool(row.get("wedof_date_start"))
             and row["wedof_date_start"] >= unlinked_tracking_start
         )
+
+    rows.sort(key=_dashboard_automation_sort_key)
 
     stats = {"accepted":sum(x["tab"]=="accepted" for x in rows), "training":sum(x["tab"]=="training" for x in rows),
              "service":sum(x["tab"]=="service" for x in rows), "anomaly":sum(x["tab"]=="anomaly" for x in rows),
