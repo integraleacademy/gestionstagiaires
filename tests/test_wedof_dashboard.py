@@ -57,6 +57,25 @@ class WedofDashboardUnitTests(unittest.TestCase):
             ["A-NOT-APPLICABLE", "M-BLOCKED", "Z-NO-DATE"],
         )
 
+    def test_rows_with_invalid_or_missing_time_follow_all_valid_schedules(self):
+        statuses = [
+            {"external_id": "A-INVALID-TIME", "wedof_state": "accepted", "wedof_type": "cpf",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-01",
+                                "planned_time": "invalid"}},
+            {"external_id": "VALID-LATER", "wedof_state": "accepted", "wedof_type": "cpf",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-02",
+                                "planned_time": "08:15"}},
+            {"external_id": "B-MISSING-TIME", "wedof_state": "accepted", "wedof_type": "cpf",
+             "entry_training": {"status": "planned", "planned_date": "2026-09-01"}},
+        ]
+
+        rows = build_automation_dashboard([], statuses=statuses)["rows"]
+
+        self.assertEqual(
+            [row["external_id"] for row in rows],
+            ["VALID-LATER", "A-INVALID-TIME", "B-MISSING-TIME"],
+        )
+
     def test_active_block_is_an_immediate_overlay_and_recomputes_counters(self):
         dashboard = build_automation_dashboard([], statuses=[{
             "external_id": "GENERIC-LATE", "wedof_state": "accepted", "wedof_type": "cpf",

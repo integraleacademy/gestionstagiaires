@@ -692,7 +692,7 @@ _DASHBOARD_SCHEDULED_STATUSES = {"planned", "dry_run_due", "dry_run_due_late"}
 
 def _dashboard_automation_sort_key(row: Dict[str, Any]) -> tuple:
     """Put the next actionable WEDOF automation first, with a stable fallback."""
-    external_id = str(row.get("external_id") or "").casefold()
+    external_id = str(row.get("external_id") or "").strip()
     is_scheduled = (
         row.get("automation_status") in _DASHBOARD_SCHEDULED_STATUSES
         and bool(row.get("automation_action"))
@@ -703,10 +703,10 @@ def _dashboard_automation_sort_key(row: Dict[str, Any]) -> tuple:
     try:
         planned_time = dt.time.fromisoformat(raw_time).strftime("%H:%M:%S")
     except (TypeError, ValueError):
-        planned_time = "23:59:59"
-    if planned_date:
-        return (0, planned_date, planned_time, external_id)
-    return (1, "9999-12-31", "23:59:59", external_id)
+        planned_time = None
+    if planned_date and planned_time:
+        return (0, planned_date, planned_time, external_id.casefold(), external_id)
+    return (1, "9999-12-31", "23:59:59", external_id.casefold(), external_id)
 
 
 def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iterable[Dict[str, Any]] = (),
