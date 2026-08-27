@@ -3954,6 +3954,9 @@ function updateDocsRelanceState(status, plannedDateIso){
     if(financeValidationManualMode && financeValidationManualStatus === 'validated') return {label:'Financement validé', tone:'green', icon:'✓', manual:true};
     const epsilon = 0.01;
     if(c.montantCpf <= epsilon && c.montantPersonnel <= epsilon && c.montantAutre <= epsilon) return {label:'Financement à valider', tone:'gray', icon:'⌛'};
+    const fullyFunded = c.prixFormation > epsilon && c.totalFinancement + epsilon >= c.prixFormation;
+    const trackedAmountFullyPaid = c.objectifFacturation > epsilon && c.totalPaye + epsilon >= c.objectifFacturation;
+    if(c.montantAutre > epsilon && fullyFunded && trackedAmountFullyPaid) return {label:'Financement validé', tone:'green', icon:'✓'};
     if(c.montantPersonnel > epsilon){
       if(generatedCashPersonalInvoiceAmount(lines) + epsilon >= c.montantPersonnel) return {label:'Financement validé', tone:'green', icon:'✓'};
       const mandate = mandateState(lines);
