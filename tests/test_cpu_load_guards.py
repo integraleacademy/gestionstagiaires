@@ -55,7 +55,11 @@ class CpuLoadGuardTests(unittest.TestCase):
             response = client.get("/api/admin/billing-lines")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["lines"], lines)
+        self.assertEqual(
+            response.get_json()["lines"],
+            [{"id": "line-1", "nextDirectDebitDate": None}],
+        )
+        self.assertEqual(lines, [{"id": "line-1"}])
         build_lines.assert_called_once_with(data)
         repair_lines.assert_called_once_with(data, lines)
 
