@@ -219,6 +219,76 @@ def test_template_keeps_automation_and_places_cpf_before_elearning():
     assert "Automatisation attendue mais non programmée" not in source
 
 
+def test_cpf_preview_allows_an_explicit_forced_association():
+    source = open("templates/admin_trainee.html", encoding="utf-8").read()
+    assert "Association impossible" not in source
+    assert "Associer malgré l’incohérence" in source
+    assert 'name="force_mismatch"' in source
+    assert "cpf_force_association_value" in source
+
+
+def test_cpf_mismatch_requires_explicit_confirmation_on_the_server(monkeypatch):
+    client = application.app.test_client()
+    with client.session_transaction() as flask_session:
+        flask_session["admin_logged_in"] = True
+        flask_session["cpf_association_preview"] = {
+            "session_id": "S1",
+            "trainee_id": "T1",
+            "external_id": "CPF-1",
+            "snapshot": {"external_id": "CPF-1", "state": "accepted"},
+            "mismatches": ["dates de session"],
+        }
+    save_data = Mock()
+    monkeypatch.setattr(application, "save_data", save_data)
+
+    response = client.post("/admin/sessions/S1/stagiaires/T1/cpf/associate")
+
+    assert response.status_code == 302
+    save_data.assert_not_called()
+
+
+def test_cpf_mismatch_can_be_forced_and_is_traced(monkeypatch):
+    client = application.app.test_client()
+    with client.session_transaction() as flask_session:
+        flask_session["admin_logged_in"] = True
+        flask_session["admin_username"] = "clement"
+        flask_session["cpf_association_preview"] = {
+            "session_id": "S1",
+            "trainee_id": "T1",
+            "external_id": "CPF-1",
+            "snapshot": {
+                "external_id": "CPF-1", "state": "accepted",
+                "start_date": "2026-09-11", "end_date": "2026-10-09",
+            },
+            "mismatches": ["dates de session"],
+        }
+    data = {
+        "sessions": [{
+            "id": "S1", "date_start": "2026-09-07", "date_end": "2026-10-09",
+            "trainees": [{"id": "T1", "cpf_amount": 1650}],
+        }],
+        "wedof_links": [],
+    }
+    save_data = Mock()
+    monkeypatch.setattr(application, "load_data", lambda **_kwargs: data)
+    monkeypatch.setattr(application, "save_data", save_data)
+    monkeypatch.setattr(application, "sync_folder_automation_status", Mock())
+
+    response = client.post(
+        "/admin/sessions/S1/stagiaires/T1/cpf/associate",
+        data={"force_mismatch": application.CPF_FORCE_ASSOCIATION_VALUE},
+    )
+
+    assert response.status_code == 302
+    save_data.assert_called_once_with(data)
+    assert data["wedof_links"][0]["external_id"] == "CPF-1"
+    history = data["wedof_links"][0]["association_history"][-1]
+    assert history["source"] == "manual_forced"
+    assert history["mismatches"] == ["dates de session"]
+    with client.session_transaction() as flask_session:
+        assert "cpf_association_preview" not in flask_session
+
+
 def test_successful_cpf_association_reloads_the_current_trainee_page():
     source = open("static/js/cpf-auto-match.js", encoding="utf-8").read()
     assert "function refreshAfterAssociation" in source
