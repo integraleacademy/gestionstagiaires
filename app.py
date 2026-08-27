@@ -35798,9 +35798,14 @@ def api_admin_billing_lines():
     data = load_data()
     lines = _billing_lines(data)
     _repair_logged_qonto_rejection_retries(data, lines)
+    frontend_lines = []
+    for line in lines:
+        frontend_line = dict(line)
+        frontend_line['nextDirectDebitDate'] = _next_direct_debit_date(line)
+        frontend_lines.append(frontend_line)
     return jsonify({
         'ok': True,
-        'lines': lines,
+        'lines': frontend_lines,
         'cpf_invoice_lines': _cpf_wedof_invoice_lines(data, lines),
         'start_date': BILLING_START_DATE.isoformat(),
         'reset_count': 0,
