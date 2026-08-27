@@ -1,3 +1,6 @@
+import json
+import shutil
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -181,6 +184,48 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("computed.otherFundingInvoiced", template)
         self.assertIn("value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`", template)
         self.assertIn("badge(otherFundingFact[0],otherFundingFact[1])", template)
+
+    def test_fully_paid_other_funding_is_automatically_validated(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is required to execute the financing validation rule")
+
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+        start = template.index("  function financingValidationFrom(c, lines){")
+        end = template.index("\n  function syncFinancementStatusIfValidated", start)
+        validation_function = template[start:end]
+        base_case = {
+            "prixFormation": 4300,
+            "montantCpf": 0,
+            "montantPersonnel": 0,
+            "montantAutre": 4300,
+            "totalFinancement": 4300,
+            "objectifFacturation": 4300,
+        }
+        script = f"""
+const financeValidationManualMode = false;
+const financeValidationManualStatus = '';
+{validation_function}
+const paid = financingValidationFrom({json.dumps({**base_case, "totalPaye": 4300})}, []);
+const unpaid = financingValidationFrom({json.dumps({**base_case, "totalPaye": 0})}, []);
+process.stdout.write(JSON.stringify({{paid, unpaid}}));
+"""
+
+        completed = subprocess.run(
+            [node, "-e", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        states = json.loads(completed.stdout)
+
+        self.assertEqual(states["paid"]["label"], "Financement validé")
+        self.assertEqual(states["paid"]["tone"], "green")
+        self.assertEqual(states["unpaid"]["label"], "Financement à valider")
+        self.assertEqual(states["unpaid"]["tone"], "gray")
 
     def test_invoiced_card_identifies_qonto_and_external_invoice_origins(self):
         template = gestion_app.app.jinja_loader.get_source(
