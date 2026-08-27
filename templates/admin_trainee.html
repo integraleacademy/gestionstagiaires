@@ -828,7 +828,31 @@
           <button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>Rechercher le dossier</button>
         </form>
       </details>
-      {% if cpf_association_preview %}{% set p = cpf_association_preview.snapshot %}<div class="cpf-preview"><strong>Dossier trouvé — vérifiez avant association</strong><dl><div><dt>Stagiaire</dt><dd>{{ p.first_name }} {{ p.last_name }}</dd></div><div><dt>E-mail</dt><dd>{{ p.email or 'Non communiqué' }}</dd></div><div><dt>Formation / dates</dt><dd>{{ p.training_title or 'Non communiqué' }} · {{ p.start_date or '—' }} au {{ p.end_date or '—' }}</dd></div></dl>{% if cpf_association_preview.mismatches %}<div class="cpf-alert">Association impossible : incohérence sur {{ cpf_association_preview.mismatches|join(', ') }}.</div>{% else %}<form method="post" action="{{ url_for('admin_trainee_cpf_associate',session_id=session.id,trainee_id=trainee.id) }}" onsubmit="return confirm('Confirmer l’association de ce dossier CPF à ce stagiaire ?');"><button class="btn btn-primary" type="submit">Associer ce dossier au stagiaire</button></form>{% endif %}</div>{% endif %}
+      {% if cpf_association_preview %}
+        {% set p = cpf_association_preview.snapshot %}
+        {% set cpf_mismatches = cpf_association_preview.mismatches or [] %}
+        <div class="cpf-preview">
+          <strong>Dossier trouvé — vérifiez avant association</strong>
+          <dl>
+            <div><dt>Stagiaire</dt><dd>{{ p.first_name }} {{ p.last_name }}</dd></div>
+            <div><dt>E-mail</dt><dd>{{ p.email or 'Non communiqué' }}</dd></div>
+            <div><dt>Formation / dates</dt><dd>{{ p.training_title or 'Non communiqué' }} · {{ p.start_date or '—' }} au {{ p.end_date or '—' }}</dd></div>
+          </dl>
+          {% if cpf_mismatches %}
+            <div class="cpf-alert">
+              Incohérence détectée sur {{ cpf_mismatches|join(', ') }}. Vérifiez qu’il s’agit bien du bon dossier avant de poursuivre.
+            </div>
+          {% endif %}
+          <form method="post"
+                action="{{ url_for('admin_trainee_cpf_associate',session_id=session.id,trainee_id=trainee.id) }}"
+                onsubmit="return confirm('{% if cpf_mismatches %}Une incohérence a été détectée. Confirmer l’association de ce dossier malgré tout ?{% else %}Confirmer l’association de ce dossier CPF à ce stagiaire ?{% endif %}');">
+            {% if cpf_mismatches %}<input type="hidden" name="force_mismatch" value="{{ cpf_force_association_value }}">{% endif %}
+            <button class="btn btn-primary" type="submit">
+              {% if cpf_mismatches %}Associer malgré l’incohérence{% else %}Associer ce dossier au stagiaire{% endif %}
+            </button>
+          </form>
+        </div>
+      {% endif %}
     </div>
   {% endif %}
 </details>

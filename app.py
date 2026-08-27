@@ -32152,6 +32152,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         cpf_tracking=build_cpf_view(t, s, data),
         cpf_association_preview=(session.get("cpf_association_preview") or {})
             if (session.get("cpf_association_preview") or {}).get("trainee_id") == trainee_id else None,
+        cpf_force_association_value=CPF_FORCE_ASSOCIATION_VALUE,
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
@@ -32243,6 +32244,7 @@ def _refresh_cpf_link_from_wedof(data: Dict[str, Any], link: Dict[str, Any]) -> 
 CPF_ASSOCIATION_STATES = (
     "accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated",
 )
+CPF_FORCE_ASSOCIATION_VALUE = "ASSOCIER_MALGRE_INCOHERENCE"
 
 
 def _cpf_fetch_matchable_folders(data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -32541,7 +32543,11 @@ def admin_trainee_cpf_search(session_id: str, trainee_id: str):
                                            "external_id": external_id, "snapshot": _cpf_public_snapshot(remote),
                                            "mismatches": mismatches}
     if mismatches:
-        flash("Association bloquée : incohérence détectée sur " + ", ".join(mismatches) + ".", "error")
+        flash(
+            "Incohérence détectée sur " + ", ".join(mismatches)
+            + ". Vérifiez le récapitulatif avant d’associer malgré l’incohérence.",
+            "warning",
+        )
     else:
         flash("Dossier trouvé. Vérifiez le récapitulatif avant de l’associer.", "success")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
@@ -32552,8 +32558,13 @@ def admin_trainee_cpf_search(session_id: str, trainee_id: str):
 @admin_write_required
 def admin_trainee_cpf_associate(session_id: str, trainee_id: str):
     preview = session.get("cpf_association_preview") or {}
-    if preview.get("session_id") != session_id or preview.get("trainee_id") != trainee_id or preview.get("mismatches"):
+    if preview.get("session_id") != session_id or preview.get("trainee_id") != trainee_id:
         flash("Association refusée : la vérification du dossier doit être relancée.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
+    mismatches = [str(item) for item in (preview.get("mismatches") or []) if str(item).strip()]
+    forced = bool(mismatches)
+    if forced and request.form.get("force_mismatch") != CPF_FORCE_ASSOCIATION_VALUE:
+        flash("Association refusée : confirmez explicitement l’association malgré l’incohérence.", "error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
     data = load_data(run_background_tasks=False)
     local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
@@ -32570,10 +32581,15 @@ def admin_trainee_cpf_associate(session_id: str, trainee_id: str):
         link["cpf_snapshot"] = snap
         sync_folder_automation_status(data, snap)
         link.setdefault("association_history", []).append({"at": _now_iso(), "admin": session.get("admin_username") or "admin",
-            "old_external_id": None, "new_external_id": preview.get("external_id"), "source": "manual"})
+            "old_external_id": None, "new_external_id": preview.get("external_id"),
+            "source": "manual_forced" if forced else "manual",
+            **({"mismatches": mismatches} if forced else {})})
         save_data(data)
         session.pop("cpf_association_preview", None)
-        flash("Dossier CPF associé au stagiaire.", "success")
+        if forced:
+            flash("Dossier CPF associé malgré l’incohérence signalée sur " + ", ".join(mismatches) + ".", "success")
+        else:
+            flash("Dossier CPF associé au stagiaire.", "success")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#cpfTracking")
 
 
