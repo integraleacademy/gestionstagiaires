@@ -12,7 +12,7 @@ class CpuLoadGuardTests(unittest.TestCase):
             gestion_app.session["admin_logged_in"] = True
             gestion_app.session["admin_role"] = "admin"
             with patch.object(gestion_app, "load_data", return_value=data) as load_data, \
-                 patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+                 patch.object(gestion_app, "_load_wedof_webhooks") as load_wedof_webhooks, \
                  patch.object(
                      gestion_app,
                      "_build_sales_tracking_metrics",
@@ -28,6 +28,8 @@ class CpuLoadGuardTests(unittest.TestCase):
         load_data.assert_called_once_with()
         build_sales_metrics.assert_called_once_with(data, gestion_app.datetime.date.today().year)
         build_notifications.assert_called_once_with(data)
+        load_wedof_webhooks.assert_not_called()
+        self.assertEqual(context["wedof_new_requests_count"], 0)
         self.assertEqual(context["sales_today_notification_count"], 2)
 
     def test_memory_stage_is_noop_when_diagnostics_are_disabled(self):

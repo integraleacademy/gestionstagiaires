@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from unittest.mock import patch
 
@@ -513,6 +514,13 @@ class WedofIsolationTests(unittest.TestCase):
 
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
+        self.assertIn("1 nouvelle demande", html)
+        cpf_navigation = next(
+            link
+            for link in re.findall(r'<a[^>]+href="/admin/wedof"[^>]*>.*?</a>', html, re.DOTALL)
+            if "CPF" in link
+        )
+        self.assertNotIn("partner-sidebar__badge", cpf_navigation)
         self.assertIn(">Notifier</button>", html)
         self.assertIn("Envoyé à Salesforce le", html)
         self.assertIn("Renvoyer Salesforce", html)
