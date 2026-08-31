@@ -3964,7 +3964,7 @@ def _send_partner_invitation_email(user: Dict[str, Any], partner: Dict[str, Any]
 
 def _partner_counts(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
     sessions_for_partner = [s for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id]
-    return {"users": sum(1 for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id), "sessions": len(sessions_for_partner), "trainees": sum(len(_session_trainees_list(s)) for s in sessions_for_partner)}
+    return {"users": sum(1 for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id), "sessions": len(sessions_for_partner), "trainees": sum(len(_registered_trainees(s)) for s in sessions_for_partner)}
 
 
 
@@ -5601,7 +5601,7 @@ def _cnaps_trainee_enrollments(data: Dict[str, Any], *, first_name: str, last_na
     for session_obj in data.get("sessions", []) or []:
         if not isinstance(session_obj, dict) or bool(session_obj.get("archived")) or _is_wedof_leads_session(session_obj):
             continue
-        for trainee in _session_trainees_list(session_obj):
+        for trainee in _registered_trainees(session_obj):
             trainee_nub = re.sub(
                 r"\D+", "", str(
                     trainee.get("nub")
@@ -5638,7 +5638,7 @@ def _cnaps_trainee_first_name(data: Dict[str, Any], *, last_name: str, nub: str)
     for session_obj in data.get("sessions", []) or []:
         if not isinstance(session_obj, dict) or bool(session_obj.get("archived")) or _is_wedof_leads_session(session_obj):
             continue
-        for trainee in _session_trainees_list(session_obj):
+        for trainee in _registered_trainees(session_obj):
             trainee_nub = re.sub(
                 r"\D+", "", str(
                     trainee.get("nub")
@@ -7326,6 +7326,8 @@ def _is_vtc_cm_reminder_auto_disabled(trainee: Dict[str, Any]) -> bool:
 
 
 def _compute_vtc_cm_reminder_schedule(trainee: Dict[str, Any]) -> Optional[datetime.datetime]:
+    if _trainee_registration_is_cancelled(trainee):
+        return None
     if _is_vtc_cm_reminder_auto_disabled(trainee):
         return None
     if bool(trainee.get("exam_fees_paid")):
@@ -7369,6 +7371,9 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
 
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                _refresh_vtc_cm_reminder_schedule(trainee)
+                continue
             _refresh_vtc_cm_reminder_schedule(trainee)
 
             if _is_vtc_cm_reminder_auto_disabled(trainee):
@@ -7552,6 +7557,11 @@ def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
 
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                if trainee.get("docs_relance_auto_planned_date"):
+                    trainee["docs_relance_auto_planned_date"] = ""
+                    changed = True
+                continue
             training_type = _session_get(session_obj, "training_type", "")
             dossier_complete = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
 
@@ -7751,6 +7761,11 @@ def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
 
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                if trainee.get("docs_relance_auto_planned_date"):
+                    trainee["docs_relance_auto_planned_date"] = ""
+                    changed = True
+                continue
             training_type = _session_get(session_obj, "training_type", "")
             dossier_complete = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
 
@@ -7994,7 +8009,7 @@ def _collect_cnaps_unknown_trainees(data: Dict[str, Any]) -> List[Dict[str, Any]
         date_start = _session_get(session_data, "date_start", "")
         date_end = _session_get(session_data, "date_end", "")
 
-        for trainee in _session_trainees_list(session_data):
+        for trainee in _registered_trainees(session_data):
             if not _cnaps_status_is_unknown(trainee.get("cnaps")):
                 continue
 
@@ -8551,7 +8566,11 @@ def _sync_vtc_book_notification(data: Dict[str, Any], session_obj: Dict[str, Any
         return False
 
     trainee_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
-    should_notify = _is_vtc_book_address_complete(trainee) and not (trainee.get("vtc_book_sent_at") or "").strip()
+    should_notify = (
+        not _trainee_registration_is_cancelled(trainee)
+        and _is_vtc_book_address_complete(trainee)
+        and not (trainee.get("vtc_book_sent_at") or "").strip()
+    )
     changed = False
 
     entry = next(
@@ -9360,6 +9379,71 @@ def _session_trainees_list(s: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
+def _trainee_registration_is_cancelled(trainee: Optional[Dict[str, Any]]) -> bool:
+    """Return whether a trainee record represents a cancelled registration.
+
+    The record intentionally remains in storage and in administrative search
+    results.  This predicate is the single business rule used by counters,
+    dashboards and automations to exclude it from the active enrolment scope.
+    """
+    if not isinstance(trainee, dict):
+        return False
+    value = trainee.get("registration_cancelled")
+    if value is None:
+        value = trainee.get("registration_canceled")
+    if value is None:
+        value = trainee.get("inscription_annulee")
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {
+        "1", "true", "yes", "on", "oui", "annulee", "annulée", "cancelled", "canceled",
+    }
+
+
+def _registered_trainees(source: Any) -> List[Dict[str, Any]]:
+    """Return active registrations without deleting cancelled records."""
+    trainees = _session_trainees_list(source) if isinstance(source, dict) else source
+    if not isinstance(trainees, list):
+        return []
+    return [
+        trainee for trainee in trainees
+        if isinstance(trainee, dict) and not _trainee_registration_is_cancelled(trainee)
+    ]
+
+
+def _close_notifications_for_cancelled_registration(
+    data: Dict[str, Any], session_id: str, trainee_id: str
+) -> int:
+    """Resolve outstanding trainee alerts when their registration is cancelled."""
+    closed = 0
+    for bucket in (
+        "notifications_edof",
+        "notifications_financement_refuse",
+        "notifications_prelevements",
+        "notifications_prelevement_non_valides",
+        "notifications_phone_relances",
+        "notifications_vae_relances",
+        "notifications_cnaps_pre_relances",
+        "notifications_test_fr",
+        "notifications_convention_unsigned",
+        "notifications_vtc_books",
+        "notifications_admin",
+    ):
+        for item in data.get(bucket, []) or []:
+            if not isinstance(item, dict) or item.get("done"):
+                continue
+            meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+            if (
+                str(meta.get("session_id") or "") == str(session_id)
+                and str(meta.get("trainee_id") or "") == str(trainee_id)
+            ):
+                item["done"] = True
+                item["done_at"] = _now_iso()
+                item["resolution"] = "Inscription annulée"
+                closed += 1
+    return closed
+
+
 def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
     # best-effort mapping
     printed_raw = st.get("printed")
@@ -9390,6 +9474,8 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "public_token": st.get("public_token") or "",
         "created_at": st.get("created_at") or "",
         "updated_at": st.get("updated_at") or "",
+        "registration_cancelled": _trainee_registration_is_cancelled(st),
+        "registration_cancelled_at": st.get("registration_cancelled_at") or st.get("inscription_annulee_at") or "",
         "phone_followups": st.get("phone_followups") or [],
         "summary_printed_at": st.get("summary_printed_at") or "",
         "printed": printed_bool,
@@ -9475,7 +9561,7 @@ def trainee_is_conform(t: Dict[str, Any], training_type: str) -> bool:
 
 def session_is_conform(session: Dict[str, Any]) -> bool:
     training_type = _session_get(session, "training_type", "")
-    trainees = _session_trainees_list(session)
+    trainees = _registered_trainees(session)
     if not trainees:
         return False
     return all(trainee_is_conform(t, training_type) for t in trainees)
@@ -9581,7 +9667,7 @@ def compute_vtc_exam_stats(trainees: List[Dict[str, Any]]) -> Dict[str, int]:
 
 def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
     training_type = _session_get(session, "training_type", "")
-    trainees = _session_trainees_list(session)
+    trainees = _registered_trainees(session)
     conform_count = sum(1 for t in trainees if trainee_is_conform(t, training_type))
     total = len(trainees)
     cnaps_accepted_count = sum(1 for t in trainees if _cnaps_is_accepted(t.get("cnaps")))
@@ -11436,6 +11522,8 @@ def _find_pending_trainee_email(data: Dict[str, Any], last_name: str, first_name
     for session_obj in data.get("sessions", []):
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             trainee_last = _normalize_person_name(trainee.get("last_name", ""))
             trainee_first = _normalize_person_name(trainee.get("first_name", ""))
             if trainee_last != target_last or trainee_first != target_first:
@@ -12497,7 +12585,7 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
     for s in data.get("sessions", []):
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
         session_is_vae = "VAE" in training_type
-        for t in _session_trainees_list(s):
+        for t in _registered_trainees(s):
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
             livret_1_sent_at = (action_dates.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia_at") or "").strip()
             livret_2_sent_at = (action_dates.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia_at") or "").strip()
@@ -14208,7 +14296,7 @@ PARTNER_LOGO_MAX_BYTES = 3 * 1024 * 1024
 PARTNER_LOGO_ALLOWED_MIMES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
 
 def _count_partner_trainees(data: Dict[str, Any], partner_id: str) -> int:
-    return sum(len(_session_trainees_list(s)) for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id)
+    return sum(len(_registered_trainees(s)) for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id)
 
 def _default_subscription_for_partner(data: Dict[str, Any], partner: Dict[str, Any]) -> Dict[str, Any]:
     enabled = _partner_enabled_modules(partner) if "_partner_enabled_modules" in globals() else set(partner.get("enabled_modules") or [])
@@ -15038,7 +15126,7 @@ def admin_sessions():
         session_start = _parse_iso_date(_session_get(s, "date_start", ""))
         dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
         if dashboard_label and dashboard_label in dashboard_training_label_set:
-            trainees_for_dashboard = _session_trainees_list(s)
+            trainees_for_dashboard = _registered_trainees(s)
             for trainee in trainees_for_dashboard:
                 trainee_created_at = _parse_iso_date(trainee.get("created_at"))
                 in_dashboard_year = False
@@ -15066,7 +15154,7 @@ def admin_sessions():
             continue
         visible_session_keys.add(duplicate_key)
 
-        trainees = _session_trainees_list(s)
+        trainees = _registered_trainees(s)
         st = compute_stats(s)
 
         # ✅ docs fin de formation : nb de stagiaires COMPLETS / nb stagiaires
@@ -15419,7 +15507,7 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
             continue
         session_name = _session_get(sess, "name", "") or str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
-        for trainee in _session_trainees_list(sess):
+        for trainee in _registered_trainees(sess):
             key = _cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name"))
             if not all(key) or key in enrolled_by_name:
                 continue
@@ -15613,7 +15701,7 @@ def _build_a3p_hosting_dashboard(data: Dict[str, Any], today: Optional[datetime.
     for session_obj in data.get("sessions", []):
         if str(_session_get(session_obj, "training_type", "") or "").strip().upper() != "A3P":
             continue
-        for trainee in _session_trainees_list(session_obj):
+        for trainee in _registered_trainees(session_obj):
             due_dates = _a3p_hosting_due_dates(session_obj, trainee)
             if not due_dates:
                 continue
@@ -15643,7 +15731,7 @@ def _send_a3p_hosting_reminders(data: Dict[str, Any], today: Optional[datetime.d
     for session_obj in data.get("sessions", []):
         if str(_session_get(session_obj, "training_type", "") or "").strip().upper() != "A3P":
             continue
-        for trainee in _session_trainees_list(session_obj):
+        for trainee in _registered_trainees(session_obj):
             if _is_a3p_hosting_reserved(trainee):
                 continue
             history = trainee.setdefault("a3p_hosting_reminders", {})
@@ -15665,9 +15753,9 @@ def _send_a3p_hosting_reminders(data: Dict[str, Any], today: Optional[datetime.d
 
 def run_a3p_hosting_reminders(today: Optional[datetime.date] = None) -> Dict[str, int]:
     data = load_data()
-    before = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _session_trainees_list(s))
+    before = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _registered_trainees(s))
     changed = _send_a3p_hosting_reminders(data, today=today)
-    after = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _session_trainees_list(s))
+    after = sum(len((t.get("a3p_hosting_reminders") or {})) for s in data.get("sessions", []) for t in _registered_trainees(s))
     if changed:
         save_data(data)
     return {"sent": max(after - before, 0), "changed": int(changed)}
@@ -15751,7 +15839,7 @@ def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
             session_status = "À venir"
             session_status_key = "upcoming"
 
-        for trainee in _session_trainees_list(sess):
+        for trainee in _registered_trainees(sess):
             if not bool(trainee.get("cash_payment_enabled")):
                 continue
 
@@ -15958,7 +16046,7 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
         formation_display_label = formation_label(training_type)
-        for trainee_index, trainee in enumerate(_session_trainees_list(sess)):
+        for trainee_index, trainee in enumerate(_registered_trainees(sess)):
             trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
             state = _yousign_state(trainee)
             signed_at = str(state.get("signed_at") or trainee.get("convention_aps_signed_at") or "").strip()
@@ -16073,6 +16161,8 @@ def admin_sessions_conventions():
 
         trainees = _session_trainees_list(sess)
         for trainee_index, trainee in enumerate(trainees):
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
             # Les conventions signées avant le 15 juillet ne nécessitent plus de
             # suivi. Celles créées depuis cette date restent visibles, y compris
@@ -16245,7 +16335,7 @@ def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
             continue
         formation = formation_label(_session_get(sess, "training_type", ""))
         session_name = _session_get(sess, "name", "")
-        trainees = _session_trainees_list(sess)
+        trainees = _registered_trainees(sess)
         for trainee in trainees:
             trainee_id = str(trainee.get("id") or "")
             if not trainee_id:
@@ -16804,7 +16894,7 @@ def admin_wedof_manual_enrolments():
         if not isinstance(session_obj, dict) or _is_wedof_leads_session(session_obj):
             continue
         session_item = _manual_session_item(session_obj)
-        trainees = session_obj.get("trainees", session_obj.get("stagiaires", [])) or []
+        trainees = _registered_trainees(session_obj)
         for trainee_obj in trainees:
             if not isinstance(trainee_obj, dict):
                 continue
@@ -16878,7 +16968,7 @@ def admin_wedof_manual_sessions():
             continue
         item = _manual_session_item(session_obj)
         matching_trainee = next((_manual_trainee_item(trainee)
-                                 for trainee in session_obj.get("trainees", []) or []
+                                 for trainee in _registered_trainees(session_obj)
                                  if isinstance(trainee, dict)
                                  and _manual_trainee_matches(_manual_trainee_item(trainee), email=email,
                                                              phone=phone, first_name=first_name,
@@ -16905,7 +16995,7 @@ def admin_wedof_manual_trainees():
         return jsonify({"error": "Session locale introuvable."}), 404
     query = normalize_name(request.args.get("q"))
     items = []
-    for trainee in local_session.get("trainees", []) or []:
+    for trainee in _registered_trainees(local_session):
         if not isinstance(trainee, dict):
             continue
         item = _manual_trainee_item(trainee)
@@ -17007,6 +17097,9 @@ def admin_wedof_manual_link():
                         and str(item.get("id") or "") == trainee_id), None)
         if trainee is None:
             result.update(error="Le stagiaire n’appartient pas à la session sélectionnée.")
+            return canonical
+        if _trainee_registration_is_cancelled(trainee):
+            result.update(error="Cette inscription est annulée et ne peut pas être associée à WEDOF.")
             return canonical
         local_dates = (normalize_date(local_session.get("date_start") or local_session.get("date_debut")),
                        normalize_date(local_session.get("date_end") or local_session.get("date_fin")))
@@ -17838,7 +17931,7 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         training_label = _sales_training_label(training_type_raw)
 
         for trainee in trainees:
-            if bool(trainee.get("exclude_from_sales_tracking")):
+            if _trainee_registration_is_cancelled(trainee) or bool(trainee.get("exclude_from_sales_tracking")):
                 continue
             anchor_date = _sales_trainee_anchor_date(trainee, training_label)
             if not anchor_date:
@@ -20861,7 +20954,9 @@ def _reserve_ssiap_diploma_numbers(
                 raise ValueError("Aucun stagiaire dans cette session SSIAP.")
 
             selected_trainees = [
-                trainee for trainee in trainees if _ssiap_exam_status(trainee) == "certified"
+                trainee for trainee in trainees
+                if not _trainee_registration_is_cancelled(trainee)
+                and _ssiap_exam_status(trainee) == "certified"
             ]
             if trainee_id is not None:
                 matching_trainees = [
@@ -20870,6 +20965,8 @@ def _reserve_ssiap_diploma_numbers(
                 ]
                 if not matching_trainees:
                     raise LookupError("trainee_not_found")
+                if _trainee_registration_is_cancelled(matching_trainees[0]):
+                    raise ValueError("Le diplôme ne peut pas être généré pour une inscription annulée.")
                 if _ssiap_exam_status(matching_trainees[0]) != "certified":
                     raise ValueError("Le diplôme peut être généré uniquement pour un stagiaire certifié.")
                 selected_trainees = matching_trainees
@@ -21240,7 +21337,7 @@ def admin_trainees_print(session_id: str):
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
     }
 
-    trainees = _session_trainees_list(s)
+    trainees = _registered_trainees(s)
     printable_trainees = []
     for t in trainees:
         printable_trainees.append({
@@ -21546,7 +21643,7 @@ def api_generate_a3p_exam_dossiers(session_id: str):
         abort(404)
     except ValueError as exc:
         return jsonify({"ok": False, "message": str(exc)}), 400
-    trainee_by_id = {str(item.get("id") or ""): item for item in _session_trainees_list(session_item)}
+    trainee_by_id = {str(item.get("id") or ""): item for item in _registered_trainees(session_item)}
     selected = [trainee_by_id[item_id] for item_id in selected_ids if item_id in trainee_by_id]
     if not selected:
         return jsonify({"ok": False, "message": "Aucun candidat valide n'a été sélectionné."}), 400
@@ -21656,7 +21753,7 @@ def admin_tshirt_list(session_id: str):
         "date_end": _session_get(s, "date_end", ""),
     }
 
-    trainees = _session_trainees_list(s)
+    trainees = _registered_trainees(s)
     trainees_out = []
     for t in trainees:
         tshirt_size = (t.get("tshirt_size") or "").strip().upper()
@@ -21714,6 +21811,7 @@ def admin_trainees(session_id: str):
 
     # normalize trainees (and optionally refresh external statuses)
     for t in trainees:
+        t["registration_cancelled"] = _trainee_registration_is_cancelled(t)
         ln = normalize_last_name(t.get("last_name") or "")
         fn = normalize_first_name(t.get("first_name") or "")
         email = (t.get("email") or "").strip().lower()
@@ -21734,7 +21832,11 @@ def admin_trainees(session_id: str):
         current_cnaps = t.get("cnaps") or ""
 
         # ✅ si déjà validé manuellement, on ne touche pas
-        if _normalize_cnaps_status(current_cnaps) != "CARTE PROFESSIONNELLE OK" and auto_refresh_external:
+        if (
+            not t["registration_cancelled"]
+            and _normalize_cnaps_status(current_cnaps) != "CARTE PROFESSIONNELLE OK"
+            and auto_refresh_external
+        ):
             if ln and fn:
                 cn = fetch_cnaps_status_by_name(ln, fn)
 
@@ -21752,7 +21854,7 @@ def admin_trainees(session_id: str):
             record_cnaps_status_change(t, t["cnaps"])
 
         # hosting only for A3P
-        if session_view["training_type"] == "A3P":
+        if session_view["training_type"] == "A3P" and not t["registration_cancelled"]:
             # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
             current = (t.get("hosting_status") or "unknown").strip().lower()
             should_refresh_hosting = current != "reserved"
@@ -21835,7 +21937,7 @@ def admin_trainees(session_id: str):
                 session_date_end=session_view["date_end"],
                 final_hosting_status=t.get("hosting_status"),
             )
-        else:
+        elif session_view["training_type"] != "A3P":
             t.pop("hosting_status", None)
 
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
@@ -21848,7 +21950,7 @@ def admin_trainees(session_id: str):
             "l1_pending_transmission": 0,
             "non_recevable": 0,
         }
-        for t in trainees:
+        for t in _registered_trainees(trainees):
             if not isinstance(t.get("vae_action_dates"), dict):
                 t["vae_action_dates"] = {}
             _sync_vae_status_with_actions(t)
@@ -21966,6 +22068,7 @@ def admin_trainees(session_id: str):
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
         finance_summary=_admin_trainees_finance_summary(session_view, trainees),
+        registered_trainees=_registered_trainees(trainees),
         vae_dashboard_counts=vae_dashboard_counts,
         enums=ENUMS,
         is_adef=_is_adef_training(session_view["training_type"]),
@@ -21987,6 +22090,7 @@ def admin_vtc_trainees_all():
 
         session_name = _session_get(s, "name", "")
         for t in _session_trainees_list(s):
+            t["registration_cancelled"] = _trainee_registration_is_cancelled(t)
             ln = normalize_last_name(t.get("last_name") or "")
             fn = normalize_first_name(t.get("first_name") or "")
             if ln:
@@ -22042,7 +22146,9 @@ def admin_vtc_trainees_all():
         "admin_trainees.html",
         session=session_view,
         trainees=all_trainees,
+        registered_trainees=_registered_trainees(all_trainees),
         stats=stats,
+        finance_summary={"show": False},
         show_hosting=False,
         show_vae=False,
         is_vtc=True,
@@ -22090,6 +22196,7 @@ def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List
     if not is_target:
         return {"show": False}
 
+    registered_trainees = _registered_trainees(trainees)
     revenue = 0.0
     cpf = 0.0
     personal = 0.0
@@ -22098,7 +22205,7 @@ def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List
     missing_price_count = 0
     default_price = default_training_price(session_view.get("training_type") or "")
 
-    for trainee in trainees:
+    for trainee in registered_trainees:
         price = _parse_financial_amount(trainee.get("training_price"))
         if price <= 0 and default_price is not None:
             price = float(default_price)
@@ -22133,7 +22240,7 @@ def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List
         "personal_pct": pct(personal),
         "other_pct": pct(other),
         "remaining_pct": pct(remaining),
-        "trainees_count": len(trainees),
+        "trainees_count": len(registered_trainees),
         "funded_count": funded_count,
         "missing_price_count": missing_price_count,
     }
@@ -22196,7 +22303,7 @@ def _session_financial_report(data: Dict[str, Any], session_item: Dict[str, Any]
     known_paid_total = 0
     unknown_payment_count = 0
 
-    for trainee in _session_trainees_list(session_item):
+    for trainee in _registered_trainees(session_item):
         trainee_id = str(trainee.get("id") or "")
         price = max(_parse_financial_amount(trainee.get("training_price")), 0)
         if price <= 0 and default_price is not None:
@@ -23269,6 +23376,8 @@ def api_create_trainee(session_id: str):
         "training_price": default_price if default_price is not None else "",
         "exclude_from_sales_tracking": False,
         "sales_tracking_amount": "",
+        "registration_cancelled": False,
+        "registration_cancelled_at": "",
         "cpf_amount": cpf_amount,
         "personal_amount": personal_amount,
         "other_amount": other_amount,
@@ -23539,6 +23648,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     payload = request.get_json(silent=True) or {}
     previous_trainee = copy.deepcopy(t)
+    previous_registration_cancelled = _trainee_registration_is_cancelled(t)
     previous_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
     cnaps_remote_history = payload.pop("statut_cnaps_history", None)
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
@@ -23587,6 +23697,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "training_price",
         "exclude_from_sales_tracking",
         "sales_tracking_amount",
+        "registration_cancelled",
         "cpf_amount",
         "cpf_validated",
         "personal_amount",
@@ -23732,6 +23843,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "vtc_elearning_manual_ok",
             "vtc_book_manual_ok",
             "exclude_from_sales_tracking",
+            "registration_cancelled",
             "cpf_validated",
         ):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
@@ -23782,6 +23894,27 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     _sync_vae_status_with_actions(t)
     _sync_financement_status_from_manual_validation(t)
+    registration_cancelled = _trainee_registration_is_cancelled(t)
+    t["registration_cancelled"] = registration_cancelled
+    if "registration_cancelled" in payload and registration_cancelled != previous_registration_cancelled:
+        changed_at = _now_iso()
+        if registration_cancelled:
+            t["registration_cancelled_at"] = changed_at
+            _close_notifications_for_cancelled_registration(data, session_id, trainee_id)
+            append_trainee_history_event(
+                t,
+                "Inscription annulée",
+                "Dossier conservé et exclu des effectifs, ventes et indicateurs",
+                "status",
+            )
+        else:
+            t["registration_cancelled_at"] = ""
+            append_trainee_history_event(
+                t,
+                "Inscription réactivée",
+                "Le stagiaire est de nouveau inclus dans les effectifs et indicateurs",
+                "status",
+            )
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
     if vae_fields_changed and current_vae_status != previous_vae_status:
         if current_vae_status == "certified":
@@ -23821,6 +23954,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         or "vtc_cm_submitted_at" in payload
         or "vtc_cm_reminder_auto_disabled" in payload
         or "vtc_cm_reminder_auto_disabled_at" in payload
+        or "registration_cancelled" in payload
     ):
         _refresh_vtc_cm_reminder_schedule(t)
 
@@ -23947,14 +24081,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
     dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     planned = _docs_relance_planned_date(s)
-    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete or registration_cancelled else (planned.isoformat() if planned else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
 
-    if financement_validated_requested and not financement_was_validated:
+    if financement_validated_requested and not financement_was_validated and not registration_cancelled:
         _auto_send_convention_signature_if_needed(s, trainees, t, session_id, trainee_id, trigger="financement_validated")
 
-    if "VTC" in ((_session_get(s, "training_type", "") or "").upper()):
+    if not registration_cancelled and "VTC" in ((_session_get(s, "training_type", "") or "").upper()):
         _sync_vtc_book_notification(data, s, t)
 
     theory_notification = None
@@ -23995,6 +24129,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_practice_status_manual": t.get("vtc_practice_status_manual") or "",
         "vtc_practice_convocation_sent_at": t.get("vtc_practice_convocation_sent_at") or "",
         "vtc_theory_notification": theory_notification,
+        "registration_cancelled": registration_cancelled,
+        "registration_cancelled_at": t.get("registration_cancelled_at") or "",
     })
 
 
@@ -24462,6 +24598,8 @@ def api_vtc_check_import():
             continue
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             cmar_id_raw = trainee.get("vtc_cmar_id") or ""
             cmar_id = _canonical_cmar_identifier(cmar_id_raw)
             if not cmar_id:
@@ -24621,6 +24759,9 @@ def api_vtc_check_notify():
                     None,
                 )
         if not trainee:
+            failed += 1
+            continue
+        if _trainee_registration_is_cancelled(trainee):
             failed += 1
             continue
 
@@ -27109,9 +27250,11 @@ def admin_test_fr_notify_bulk(session_id: str):
         abort(404)
 
     trainees = _session_trainees_list(s)
-    total = len(trainees)
+    total = len(_registered_trainees(trainees))
     sent = 0
     for t in trainees:
+        if _trainee_registration_is_cancelled(t):
+            continue
         payload = _build_test_fr_payload(t, s, code, deadline, "notify")
         email = (t.get("email") or "").strip()
         phone = (t.get("phone") or "").strip()
@@ -27665,6 +27808,10 @@ def _vae_relance_is_blocked(trainee: Dict[str, Any], cfg: Dict[str, Any]) -> boo
 
 def refresh_vae_relance_schedule(trainee: Dict[str, Any]) -> None:
     state = ensure_vae_relances_state(trainee)
+    if _trainee_registration_is_cancelled(trainee):
+        for item in state.values():
+            item["planned_at"] = ""
+        return
     for key, cfg in VAE_RELANCE_CONFIGS.items():
         item = state[key]
         if (item.get("sent_at") or "").strip():
@@ -27790,6 +27937,8 @@ def _send_vae_relance_reminders(data: Dict[str, Any]) -> bool:
 
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             ensure_vae_relances_state(trainee)
             refresh_vae_relance_schedule(trainee)
             state = trainee.get("vae_relances") or {}
@@ -29918,6 +30067,8 @@ def _run_convocation_signature_reminders(
     due_ids = []
     for sess in data.get("sessions", []):
         for trainee in _session_trainees_list(sess):
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             state = _yousign_state(trainee)
             due_at = _parse_iso_datetime(state.get("next_reminder_at"))
             if _is_yousign_signature_pending(state) and due_at and due_at <= current:
@@ -30413,7 +30564,7 @@ def _send_scheduled_convocation_after_convention_signed(session_id: str, trainee
 def _send_scheduled_convocation_after_convention_signed_in_context(session_id: str, trainee_id: str) -> None:
     data = load_data()
     sess, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
-    if not sess or not trainee:
+    if not sess or not trainee or _trainee_registration_is_cancelled(trainee):
         app.logger.warning("[CONVOCATION] scheduled send skipped: trainee not found session_id=%s trainee_id=%s", session_id, trainee_id)
         return
     try:
@@ -30433,7 +30584,7 @@ def _send_scheduled_convocation_after_convention_signed_in_context(session_id: s
 
 def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> None:
     """Planifie l’envoi automatique de la convocation 5 minutes après signature."""
-    if not _is_aps_session(session_obj) or trainee.get("convocation_aps_sent_at"):
+    if _trainee_registration_is_cancelled(trainee) or not _is_aps_session(session_obj) or trainee.get("convocation_aps_sent_at"):
         return
     key = f"{session_id}:{trainee_id}"
     with _aps_convocation_auto_send_timers_lock:
@@ -30462,6 +30613,8 @@ def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bo
         trainees = _session_trainees_list(sess)
         session_changed = False
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             if trainee.get("convocation_aps_sent_at"):
                 continue
             scheduled_at = _parse_iso_datetime(trainee.get("convocation_auto_scheduled_at"))
@@ -30532,6 +30685,8 @@ def run_training_convocation_reminders(data: Optional[Dict[str, Any]] = None) ->
         trainees = _session_trainees_list(sess)
         session_changed = False
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             if not trainee.get("convocation_aps_sent_at") or trainee.get("convocation_aps_reminder_sent_at"):
                 continue
             checked += 1
@@ -32029,7 +32184,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    _refresh_trainee_hebergement_status(s, t)
+    t["registration_cancelled"] = _trainee_registration_is_cancelled(t)
+    if not t["registration_cancelled"]:
+        _refresh_trainee_hebergement_status(s, t)
 
     # L'ouverture d'une fiche reste strictement locale. Les webhooks, les
     # lectures ciblées explicites et les réconciliations bornées alimentent ce
@@ -32097,7 +32254,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     planned_relance_date = _docs_relance_planned_date(s)
-    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned_relance_date.isoformat() if planned_relance_date else "")
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete or t["registration_cancelled"] else (planned_relance_date.isoformat() if planned_relance_date else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
     t["updated_at"] = _now_iso()
@@ -33153,6 +33310,8 @@ def _build_rejected_debit_alert_html(line: Dict[str, Any], installment: Dict[str
 
 def _notify_rejected_qonto_debit(data: Dict[str, Any], line: Dict[str, Any], installment: Dict[str, Any], collection_id: str) -> bool:
     """Send one email and create one admin notification per rejected collection."""
+    if line.get('registrationCancelled'):
+        return False
     alert_key = collection_id or f"{line.get('id', '')}:{installment.get('due_date') or installment.get('date', '')}"
     notified_keys = line.setdefault('qonto_rejected_collection_ids', [])
     if alert_key in notified_keys:
@@ -33245,6 +33404,8 @@ Intégrale Academy
 
 
 def _send_qonto_mandate_link(line: Dict[str, Any]) -> bool:
+    if line.get('registrationCancelled'):
+        return False
     sign_url = (line.get('sign_url') or '').strip()
     email = (line.get('clientEmail') or line.get('traineeEmail') or '').strip()
     if not sign_url or not email:
@@ -34062,6 +34223,8 @@ def _prepare_sepa_payment_plan(line: Dict[str, Any], payment_plan: Dict[str, Any
 
 
 def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
+    if line.get('registrationCancelled'):
+        raise RuntimeError('Prélèvement bloqué : cette inscription est annulée.')
     if payment_plan.get('mode') != 'sepa_direct_debit':
         line['paymentPlan'] = payment_plan
         line['paymentMode'] = 'cash'
@@ -34130,6 +34293,9 @@ def _persist_qonto_mandate_on_trainee(data: Dict[str, Any], line: Dict[str, Any]
 
 
 def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
+    if line.get('registrationCancelled'):
+        _sync_sepa_aliases(line)
+        return {'created': 0, 'skipped': True, 'registration_cancelled': True}
     if line.get('paymentMode') != 'sepa_direct_debit':
         return {'created': 0, 'skipped': True}
     tracking_override = line.get('financial_tracking_override')
@@ -34996,6 +35162,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
+                    'registrationCancelled': _trainee_registration_is_cancelled(trainee),
                     'traineeEmail': trainee.get('email') or '', 'financeurName': persisted.get('financeurName') or financing.get('label') or financing['type'], 'typeFinanceur': financing['type'], 'clientName': (CPF_QONTO_CLIENT_NAME if is_cpf_billing_context(financing) else (persisted.get('clientName') or buildInvoiceCustomer(financing['type'], trainee, sess, financing).get('name') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip())),
                     # Values entered in the invoice-recipient modal belong to
                     # the billing line.  Preserve them when the generated view
@@ -35238,6 +35405,7 @@ def _cpf_virtual_invoice_line(
         'clientName': CPF_QONTO_CLIENT_NAME,
         'traineeLastName': str(trainee.get('last_name') or snapshot.get('last_name') or ''),
         'traineeFirstName': str(trainee.get('first_name') or snapshot.get('first_name') or ''),
+        'registrationCancelled': _trainee_registration_is_cancelled(trainee),
         'traineeEmail': str(trainee.get('email') or snapshot.get('email') or ''),
         'formationName': training,
         'sessionName': session_name,
@@ -35378,6 +35546,12 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
     which prevents double counting local legacy rows mirroring the same invoice.
     """
     trainee_id = str(trainee.get('id') or '')
+    registration_cancelled = _trainee_registration_is_cancelled(trainee)
+    if registration_cancelled:
+        # Preserve existing invoice rows as history while making every amount
+        # and percentage returned to dashboards neutral for this registration.
+        trainee = {'id': trainee_id}
+        lines = []
     lines = [l for l in (lines or []) if str(l.get('traineeId') or l.get('studentId') or '') == trainee_id]
     personal_cents = money_value_to_cents(trainee.get('personal_amount') or 0)
     other_cents = money_value_to_cents(trainee.get('other_financing_amount') or trainee.get('other_amount') or 0)
@@ -35585,6 +35759,7 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
         'cpf_qonto_paid_total_cents': by_financer['CPF']['paid_amount_cents'] if by_financer['CPF'].get('qonto_tracked') else 0,
         'payment_status': 'paid' if collectable_total_cents > 0 and paid_total_cents >= collectable_total_cents else ('partially_paid' if paid_total_cents > 0 else 'unpaid'),
         'by_financer': by_financer,
+        'registration_cancelled': registration_cancelled,
     }
     summary.update({
         'planned_amount_cents': summary['planned_total_cents'],
@@ -35894,6 +36069,11 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
         return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
+        if current.get('registrationCancelled'):
+            message = 'Facturation bloquée : cette inscription est annulée.'
+            _billing_log(current, 'Génération facture bloquée', 'ignored', message)
+            _save_billing_line(data, current); save_data(data)
+            return False, {'error': message, 'message': message, 'line': current, 'ignored': True}
         if is_cpf_billing_context(current):
             return False, {'error': 'La facturation CPF est gérée dans un logiciel externe.', 'message': 'La facturation CPF est gérée dans un logiciel externe.', 'line': current}
         if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}:
@@ -37097,6 +37277,8 @@ def ensureQontoSepaInstallments(traineeId: str) -> Dict[str, Any]:
 @admin_write_required
 def api_billing_resend_mandate():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
+    if line and line.get('registrationCancelled'):
+        return jsonify({'ok': False, 'error': 'Relance bloquée : cette inscription est annulée.'}), 409
     if not line or not line.get('sign_url'):
         return jsonify({'ok': False, 'error': 'Aucun lien de mandat à renvoyer'}), 400
     sent = _send_qonto_mandate_link(line)
@@ -37113,6 +37295,8 @@ def api_billing_create_mandate():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line:
         return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    if line.get('registrationCancelled'):
+        return jsonify({'ok': False, 'error': 'Prélèvement bloqué : cette inscription est annulée.'}), 409
     _apply_invoice_recipient_payload(line, payload)
     try:
         _ensure_qonto_oauth_ready()
@@ -37166,6 +37350,8 @@ def api_billing_reschedule_rejected_debit():
         line = _line_from_payload(data, item_payload)
         if not line:
             return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+        if line.get('registrationCancelled'):
+            return jsonify({'ok': False, 'error': 'Reprogrammation bloquée : cette inscription est annulée.'}), 409
         # ``sepa_payment_plan.installments`` is the persisted source of truth.
         # Using the legacy alias here made a successful Qonto retry disappear
         # as soon as aliases were synchronized again.
@@ -37556,6 +37742,7 @@ def api_admin_billing_bulk_generate():
     for line_id in ids:
         line = _find_billing_line(data, str(line_id))
         if not line: summary['failed'].append({'id': line_id, 'error': 'introuvable'}); continue
+        if line.get('registrationCancelled'): summary['ignored'].append(line); continue
         if line.get('qontoInvoiceId') or _normalize_billing_invoice_status(line.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}: summary['ignored'].append(line); continue
         ok, res = _create_invoice_for_billing_line(data, line)
         created_line = res.get('line')
@@ -39121,7 +39308,7 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             reminder = " · Pensez à générer les dossiers d’examen" if days_until_exam == 7 and training_type.upper().startswith(("APS", "A3P")) else ""
             key_dates.append({"name": title, "detail": f"{formation_name} · le {fr_date(exam_date.isoformat())} · {date_range}{reminder}"})
 
-        for trainee in _session_trainees_list(session_obj):
+        for trainee in _registered_trainees(session_obj):
             name = _daily_recap_name(trainee)
             trainee_key = str(trainee.get("id") or "").strip() or _normalized_token(name)
             sale_date = _sales_trainee_anchor_date(trainee, training_label)
@@ -40172,7 +40359,7 @@ def api_docs_to_control():
         session_name = _session_get(s, "name", "")
         training_type = _session_get(s, "training_type", "")
 
-        trainees = _session_trainees_list(s)
+        trainees = _registered_trainees(s)
 
         for t in trainees:
             # s'assure que les docs requis existent (sinon liste vide => pas détecté)
@@ -40235,7 +40422,7 @@ def public_docs_to_control():
         session_name = _session_get(s, "name", "")
         training_type = _session_get(s, "training_type", "")
 
-        trainees = _session_trainees_list(s)
+        trainees = _registered_trainees(s)
 
         for t in trainees:
             ensure_documents_schema_for_trainee(t, training_type)
@@ -40343,6 +40530,7 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
         "first_name": (t.get("first_name") or "").strip(),
         "last_name": (t.get("last_name") or "").strip(),
         "created_at": t.get("created_at") or "",
+        "registration_cancelled": _trainee_registration_is_cancelled(t),
         "convention_status": t.get("convention_status") or "soon",
         "convention_saisie_done": bool(t.get("convention_saisie_done")),
         "convention_signed_done": bool(t.get("convention_signed_done")),
@@ -40477,7 +40665,7 @@ def _session_search_item(s: dict) -> dict:
         "date_end": date_end,
         "date_range": date_range,
         "exam_date": _session_get(s, "exam_date", ""),
-        "total": len(_session_trainees_list(s)),
+        "total": len(_registered_trainees(s)),
         "archived": bool(s.get("archived")),
         "admin_url": f"/admin/sessions/{session_id}/trainees",
     }
@@ -40542,7 +40730,11 @@ def api_admin_search_suggestions():
             trainees_by_key[(str(item["session_id"]), str(item["trainee_id"]))] = item
 
     latest_registered = sorted(
-        (item for item in trainee_items if not _is_vae_training_type(item.get("training_type"))),
+        (
+            item for item in trainee_items
+            if not item.get("registration_cancelled")
+            and not _is_vae_training_type(item.get("training_type"))
+        ),
         key=lambda item: str(item.get("created_at") or ""), reverse=True,
     )[:TRAINEE_SEARCH_RECENT_LIMIT]
     recent_trainees = [
@@ -40587,7 +40779,11 @@ def api_trainees_search():
 
     if len(q) < 2:
         latest_registered = sorted(
-            (item for item in all_items if not _is_vae_training_type(item.get("training_type"))),
+            (
+                item for item in all_items
+                if not item.get("registration_cancelled")
+                and not _is_vae_training_type(item.get("training_type"))
+            ),
             key=lambda item: str(item.get("created_at") or ""),
             reverse=True,
         )[:TRAINEE_SEARCH_RECENT_LIMIT]
@@ -40646,7 +40842,7 @@ def api_cnaps_trainees():
             continue
         if _is_wedof_leads_session(s):
             continue
-        trainees = _session_trainees_list(s)
+        trainees = _registered_trainees(s)
         sessions_out.append({
             "id": s.get("id"),
             "name": _session_get(s, "name", ""),
@@ -40687,7 +40883,7 @@ def api_cnaps_pre_request():
             continue
         trainees = _session_trainees_list(s)
         t = next((x for x in trainees if x.get("id") == trainee_id), None)
-        if not t:
+        if not t or _trainee_registration_is_cancelled(t):
             continue
         record_cnaps_pre_request(t)
         updated += 1
@@ -40728,6 +40924,8 @@ def api_cnaps_import_pre():
             continue
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
+            if _trainee_registration_is_cancelled(trainee):
+                continue
             key = (
                 _normalize_person_name(trainee.get("last_name", "")),
                 _normalize_person_name(trainee.get("first_name", "")),
@@ -41075,7 +41273,7 @@ def admin_sessions_archived():
             continue
 
         st = compute_stats(s)
-        trainees = _session_trainees_list(s)
+        trainees = _registered_trainees(s)
         dossier_complete_total = sum(
             1 for t in trainees if dossier_is_complete_total(t, _session_get(s, "training_type", ""), _session_get(s, "date_start", ""))
         )
@@ -44151,6 +44349,25 @@ def _desp_candidate_attempts(candidates: List[Dict[str, Any]]) -> List[Dict[str,
     return assigned
 
 
+def _desp_attempts_for_registered_trainees(
+    exam: Dict[str, Any], attempts: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    active_ids = {str(item.get("id") or "") for item in _registered_trainees(exam)}
+    filtered = []
+    for attempt in attempts:
+        if not isinstance(attempt, dict):
+            continue
+        attempt_view = dict(attempt)
+        candidates = attempt.get("candidates") if isinstance(attempt.get("candidates"), list) else []
+        attempt_view["candidates"] = [
+            candidate for candidate in candidates
+            if not str(candidate.get("candidate_id") or "")
+            or str(candidate.get("candidate_id") or "") in active_ids
+        ]
+        filtered.append(attempt_view)
+    return filtered
+
+
 def _desp_attempt_results(attempt: Dict[str, Any]) -> List[Dict[str, Any]]:
     results = []
     for candidate in attempt.get("candidates", []):
@@ -44162,7 +44379,13 @@ def _desp_attempt_results(attempt: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _desp_public_qcu(data: Dict[str, Any], token: str, kind: str, attempt_id: str):
     exam, trainee = find_session_and_trainee_by_token(data, token)
-    if not exam or not trainee or not _is_desp_initial_session(exam) or not _public_is_authed(token):
+    if (
+        not exam
+        or not trainee
+        or _trainee_registration_is_cancelled(trainee)
+        or not _is_desp_initial_session(exam)
+        or not _public_is_authed(token)
+    ):
         abort(404)
     key = "desp_training_qcu_attempts" if kind == "training" else "desp_exam_qcu_attempts"
     attempt = next((a for a in exam.get(key, []) if isinstance(a, dict) and a.get("id") == attempt_id), None)
@@ -44179,7 +44402,13 @@ def admin_exams():
     data = load_data()
     exams = [s for s in data.get("sessions", []) if isinstance(s, dict) and not s.get("archived") and _is_desp_initial_session(s)]
     exams.sort(key=lambda s: (_session_get(s, "exam_date", "") or "9999", _session_get(s, "name", "")))
-    return render_template("admin_exams.html", exams=exams, qcu_limit=DESP_TRAINING_QCU_LIMIT)
+    exam_views = []
+    for exam in exams:
+        exam_view = dict(exam)
+        exam_view["trainees"] = _registered_trainees(exam)
+        exam_view.pop("stagiaires", None)
+        exam_views.append(exam_view)
+    return render_template("admin_exams.html", exams=exam_views, qcu_limit=DESP_TRAINING_QCU_LIMIT)
 
 
 @app.get("/admin/exams/<session_id>")
@@ -44189,8 +44418,10 @@ def admin_exam_detail(session_id: str):
     exam = _desp_exam_or_404(data, session_id)
     attempts = exam.get("desp_training_qcu_attempts") if isinstance(exam.get("desp_training_qcu_attempts"), list) else []
     exam_attempts = exam.get("desp_exam_qcu_attempts") if isinstance(exam.get("desp_exam_qcu_attempts"), list) else []
-    return render_template("admin_exam_detail.html", exam=exam, trainees=_session_trainees_list(exam), attempts=attempts,
-                           exam_attempts=exam_attempts, qcu_limit=DESP_TRAINING_QCU_LIMIT,
+    return render_template("admin_exam_detail.html", exam=exam, trainees=_registered_trainees(exam),
+                           attempts=_desp_attempts_for_registered_trainees(exam, attempts),
+                           exam_attempts=_desp_attempts_for_registered_trainees(exam, exam_attempts),
+                           qcu_limit=DESP_TRAINING_QCU_LIMIT,
                            completed=request.args.get("completed") == "1")
 
 
@@ -44205,7 +44436,7 @@ def admin_exam_training_qcu_start(session_id: str):
     if len(attempts) >= DESP_TRAINING_QCU_LIMIT:
         return redirect(url_for("admin_exam_detail", session_id=session_id, limit="1"))
     attempt = {"id": uuid.uuid4().hex, "created_at": _now_iso_utc(), "status": "open",
-               "candidates": _desp_candidate_attempts(_session_trainees_list(exam))}
+               "candidates": _desp_candidate_attempts(_registered_trainees(exam))}
     attempts.append(attempt)
     save_data(data)
     return redirect(url_for("admin_exam_detail", session_id=session_id, opened="training"))
@@ -44218,7 +44449,7 @@ def admin_exam_qcu_open(session_id: str):
     exam = _desp_exam_or_404(data, session_id)
     attempts = exam.setdefault("desp_exam_qcu_attempts", [])
     attempt = {"id": uuid.uuid4().hex, "created_at": _now_iso_utc(), "status": "open",
-               "candidates": _desp_candidate_attempts(_session_trainees_list(exam))}
+               "candidates": _desp_candidate_attempts(_registered_trainees(exam))}
     attempts.append(attempt)
     save_data(data)
     return redirect(url_for("admin_exam_detail", session_id=session_id, opened="exam"))
@@ -44313,6 +44544,7 @@ def admin_exam_qcu_results_pdf(session_id: str, kind: str, attempt_id: str):
     key = "desp_training_qcu_attempts" if kind == "training" else "desp_exam_qcu_attempts"
     attempt = next((a for a in exam.get(key, []) if a.get("id") == attempt_id), None)
     if not attempt: abort(404)
+    attempt = _desp_attempts_for_registered_trainees(exam, [attempt])[0]
     output = BytesIO(); doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm)
     styles = getSampleStyleSheet(); title = ParagraphStyle("QcuTitle", parent=styles["Title"], textColor=colors.HexColor("#312e81"))
     story = [Paragraph("INTÉGRALE ACADEMY", title), Paragraph(f"Résultats QCU — {'Examen' if kind == 'exam' else 'Entraînement'}", styles["Heading2"]),
@@ -44337,6 +44569,7 @@ def admin_exam_training_qcu_play(session_id: str, attempt_id: str):
     attempt = next((a for a in exam.get("desp_training_qcu_attempts", []) if a.get("id") == attempt_id), None)
     if not attempt:
         abort(404)
+    attempt = _desp_attempts_for_registered_trainees(exam, [attempt])[0]
     if attempt.get("status") == "completed":
         return redirect(url_for("admin_exam_detail", session_id=session_id, completed="1"))
     return render_template("admin_exam_qcu.html", exam=exam, attempt=attempt, questions=DESP_TRAINING_QCU_QUESTIONS)
