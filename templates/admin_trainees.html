@@ -3146,6 +3146,7 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
     const counter = document.querySelector("[data-cnaps-accepted-count]");
     if(!counter) return;
     const acceptedCount = Array.from(document.querySelectorAll("[data-cnaps]"))
+      .filter(span => span.closest("[data-registration-cancelled]")?.dataset.registrationCancelled !== "1")
       .filter(span => isCnapsAcceptedForCounter(span.textContent))
       .length;
     counter.textContent = String(acceptedCount);

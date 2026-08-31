@@ -14,6 +14,7 @@ class AdminCnapsAcceptedCounterTests(unittest.TestCase):
                     {"cnaps": "ACCEPTE"},
                     {"cnaps": "CARTE PROFESSIONNELLE OK"},
                     {"cnaps": "TRANSMIS"},
+                    {"cnaps": "ACCEPTÉ", "registration_cancelled": True},
                 ],
             }
         )
@@ -26,6 +27,8 @@ class AdminCnapsAcceptedCounterTests(unittest.TestCase):
         self.assertIn("data-cnaps-accepted-count", template)
         self.assertIn("function isCnapsAcceptedForCounter", template)
         self.assertIn("function refreshCnapsAcceptedCount", template)
+        self.assertIn('closest("[data-registration-cancelled]")', template)
+        self.assertIn('dataset.registrationCancelled !== "1"', template)
         self.assertGreaterEqual(template.count("refreshCnapsAcceptedCount();"), 2)
 
 
