@@ -56,7 +56,49 @@
   .registration-cancelled-banner[hidden]{display:none;}
   .registration-cancelled-banner strong{white-space:nowrap;text-transform:uppercase;font-size:12px;letter-spacing:.04em;}
   .registration-cancelled-banner span{font-size:13px;font-weight:750;line-height:1.4;}
-  @media(max-width:640px){.registration-cancelled-banner{align-items:flex-start;flex-direction:column;gap:5px;}}
+  .cancellation-calculator-button{
+    border-color:#fdba74!important;
+    background:linear-gradient(135deg,#fff7ed,#ffedd5)!important;
+    color:#9a3412!important;
+    box-shadow:0 10px 22px rgba(249,115,22,.12);
+    font-weight:950!important;
+  }
+  .cancellation-calculator-button:hover{border-color:#fb923c!important;background:#ffedd5!important;transform:translateY(-1px);}
+  .cancellation-calculator-button[hidden]{display:none!important;}
+  .cancellation-calculator-modal{width:min(920px,100%);}
+  .cancellation-calculator-intro{margin:0;padding:14px 16px;border:1px solid #fed7aa;border-radius:16px;background:#fff7ed;color:#9a3412;font-weight:800;line-height:1.5;}
+  .cancellation-calculator-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px;}
+  .cancellation-calculator-field{display:grid;gap:6px;min-width:0;}
+  .cancellation-calculator-field label{color:#334155;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.04em;}
+  .cancellation-calculator-field input{width:100%;min-height:44px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;background:#fff;padding:10px 12px;color:#0f172a;font:inherit;font-weight:800;}
+  .cancellation-calculator-field input:focus{outline:3px solid rgba(249,115,22,.16);border-color:#f97316;}
+  .cancellation-calculator-hours{display:contents;}
+  .cancellation-calculator-hours[hidden]{display:none;}
+  .cancellation-calculator-loading{display:flex;align-items:center;justify-content:center;min-height:230px;color:#64748b;font-weight:900;}
+  .cancellation-calculator-error{margin-top:16px;padding:13px 15px;border:1px solid #fecaca;border-radius:14px;background:#fef2f2;color:#991b1b;font-weight:850;}
+  .cancellation-calculator-error[hidden],.cancellation-calculator-result[hidden],.cancellation-calculator-warning[hidden]{display:none!important;}
+  .cancellation-calculator-rule{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:18px;padding:14px 16px;border:1px solid #bfdbfe;border-radius:17px;background:linear-gradient(135deg,#eff6ff,#fff);}
+  .cancellation-calculator-rule strong{color:#1e3a8a;font-size:15px;}
+  .cancellation-calculator-rule span{padding:5px 9px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:950;}
+  .cancellation-calculator-financing{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px;}
+  .cancellation-calculator-card{min-width:0;padding:14px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.05);}
+  .cancellation-calculator-card span{display:block;color:#64748b;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;}
+  .cancellation-calculator-card strong{display:block;margin-top:7px;color:#0f172a;font-size:19px;letter-spacing:-.03em;}
+  .cancellation-calculator-card small{display:block;margin-top:5px;color:#64748b;font-size:11px;font-weight:750;line-height:1.35;}
+  .cancellation-calculator-breakdown{margin-top:14px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;overflow:hidden;}
+  .cancellation-calculator-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:11px 15px;border-bottom:1px solid #eef2f7;color:#475569;font-size:13px;font-weight:800;}
+  .cancellation-calculator-row:last-child{border-bottom:0;}
+  .cancellation-calculator-row strong{color:#0f172a;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .cancellation-calculator-row--total{background:#f8fafc;color:#0f172a;font-size:14px;}
+  .cancellation-calculator-balance{margin-top:14px;padding:18px;border:2px solid #fb923c;border-radius:20px;background:linear-gradient(135deg,#fff7ed,#ffedd5);text-align:center;color:#9a3412;}
+  .cancellation-calculator-balance.is-settled{border-color:#86efac;background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#166534;}
+  .cancellation-calculator-balance.is-refund{border-color:#93c5fd;background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#1e40af;}
+  .cancellation-calculator-balance span{display:block;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.08em;}
+  .cancellation-calculator-balance strong{display:block;margin-top:5px;font-size:30px;letter-spacing:-.05em;}
+  .cancellation-calculator-warning{margin-top:12px;padding:12px 14px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb;color:#92400e;font-size:12px;font-weight:800;line-height:1.5;}
+  .cancellation-calculator-note{margin:14px 0 0;color:#64748b;font-size:11px;font-weight:750;line-height:1.5;}
+  @media(max-width:760px){.cancellation-calculator-financing{grid-template-columns:repeat(2,minmax(0,1fr));}.cancellation-calculator-fields{grid-template-columns:1fr;}.cancellation-calculator-hours{display:grid;grid-template-columns:1fr;gap:12px;}}
+  @media(max-width:640px){.registration-cancelled-banner{align-items:flex-start;flex-direction:column;gap:5px;}.cancellation-calculator-financing{grid-template-columns:1fr 1fr;}.cancellation-calculator-balance strong{font-size:25px;}}
 
   .transfer-session-search{position:relative}.transfer-session-search__icon{position:absolute;left:13px;top:21px;transform:translateY(-50%);color:#64748b;pointer-events:none}.transfer-session-search__input{width:100%;min-height:42px;padding:10px 38px 10px 39px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#0f172a;font:inherit;box-sizing:border-box}.transfer-session-search__input:focus{outline:3px solid rgba(37,99,235,.14);border-color:#2563eb}.transfer-session-search__clear{position:absolute;right:7px;top:21px;transform:translateY(-50%);display:none;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:#64748b;font-size:18px;cursor:pointer}.transfer-session-search__clear:hover{background:#f1f5f9;color:#0f172a}.transfer-session-search.has-value .transfer-session-search__clear{display:grid;place-items:center}.transfer-session-search__status{margin:7px 0 0;color:#64748b;font-size:12px;font-weight:750}.transfer-session-results{display:none;margin-top:8px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.10);overflow:hidden}.transfer-session-results.show{display:block}.transfer-session-result{display:block;width:100%;padding:11px 13px;border:0;border-bottom:1px solid #eef2f7;background:#fff;color:#0f172a;text-align:left;font:inherit;font-size:13px;font-weight:750;line-height:1.4;cursor:pointer}.transfer-session-result:last-child{border-bottom:0}.transfer-session-result:hover,.transfer-session-result:focus,.transfer-session-result.is-selected{outline:0;background:#eff6ff;color:#1d4ed8}.transfer-session-result.is-selected::before{content:'✓';margin-right:8px;color:#16a34a;font-weight:950}.transfer-session-search__empty{display:none;margin-top:8px;padding:9px 11px;border-radius:10px;background:#fff7ed;color:#9a3412;font-size:13px;font-weight:800}.transfer-session-search__empty.show{display:block}
 
@@ -413,6 +455,12 @@
         <input type="checkbox" id="registrationCancelledCheckbox" {% if trainee.registration_cancelled %}checked{% endif %} {% if is_read_only %}disabled{% endif %}>
         <span>Inscription annulée</span>
       </label>
+      <button class="btn btn-uniform cancellation-calculator-button"
+              type="button"
+              id="btnCancellationCalculator"
+              {% if not trainee.registration_cancelled %}hidden{% endif %}>
+        🧮 Calculateur indemnités
+      </button>
       {% if show_automation %}
         <button class="btn btn-outline btn-uniform" type="button" data-open-section="automationHub">
           ⚙️ Automatisation
@@ -490,6 +538,113 @@
 <div class="registration-cancelled-banner" id="registrationCancelledBanner" {% if not trainee.registration_cancelled %}hidden{% endif %}>
   <strong>Inscription annulée</strong>
   <span>Le dossier reste conservé, mais cette personne est exclue des effectifs, des ventes et de tous les KPI{% if trainee.registration_cancelled_at %} depuis le {{ trainee.registration_cancelled_at|frdatetime }}{% endif %}.</span>
+</div>
+
+<div class="modal-backdrop" id="cancellationIndemnityModal" aria-hidden="true">
+  <div class="modal cancellation-calculator-modal" role="dialog" aria-modal="true" aria-labelledby="cancellationCalculatorTitle">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="cancellationCalculatorTitle">Calculateur d’indemnité d’annulation</div>
+        <div class="hint">{{ trainee.first_name }} {{ trainee.last_name }} · {{ session.name }}</div>
+      </div>
+      <button class="icon-btn" type="button" onclick="closeModal('cancellationIndemnityModal')" aria-label="Fermer">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="cancellation-calculator-intro">
+        Le calcul reprend automatiquement le coût initial, les financements et les sommes déjà encaissées. La date d’annulation reste modifiable si la demande a été reçue avant le jour où la case a été cochée.
+      </p>
+
+      <div class="cancellation-calculator-fields">
+        <div class="cancellation-calculator-field">
+          <label for="cancellationCalculatorDate">Date effective de l’annulation</label>
+          <input type="date" id="cancellationCalculatorDate" value="{{ (trainee.registration_cancelled_at or '')[:10] }}">
+        </div>
+        <div class="cancellation-calculator-field">
+          <label for="cancellationCalculatorPrice">Coût total initial</label>
+          <input type="number" id="cancellationCalculatorPrice" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00">
+        </div>
+        <div class="cancellation-calculator-field">
+          <label for="cancellationCalculatorPaid">Déjà encaissé à déduire</label>
+          <input type="number" id="cancellationCalculatorPaid" min="0" step="0.01" inputmode="decimal" placeholder="0,00">
+        </div>
+        <div class="cancellation-calculator-hours" id="cancellationCalculatorHours" hidden>
+          <div class="cancellation-calculator-field">
+            <label for="cancellationCalculatorTotalHours">Durée totale prévue (heures)</label>
+            <input type="number" id="cancellationCalculatorTotalHours" min="0.01" step="0.01" inputmode="decimal">
+          </div>
+          <div class="cancellation-calculator-field">
+            <label for="cancellationCalculatorDeliveredHours">Heures effectivement dispensées</label>
+            <input type="number" id="cancellationCalculatorDeliveredHours" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner">
+          </div>
+        </div>
+      </div>
+
+      <div class="cancellation-calculator-loading" id="cancellationCalculatorLoading" hidden>Calcul en cours…</div>
+      <div class="cancellation-calculator-error" id="cancellationCalculatorError" role="alert" hidden></div>
+
+      <div class="cancellation-calculator-result" id="cancellationCalculatorResult" hidden>
+        <div class="cancellation-calculator-rule">
+          <strong id="cancellationCalculatorRule">—</strong>
+          <span id="cancellationCalculatorTiming">—</span>
+        </div>
+
+        <div class="cancellation-calculator-financing">
+          <div class="cancellation-calculator-card">
+            <span>Coût initial</span>
+            <strong id="cancellationCalculatorTrainingPrice">—</strong>
+            <small>Base de calcul contractuelle</small>
+          </div>
+          <div class="cancellation-calculator-card">
+            <span>Financement CPF</span>
+            <strong id="cancellationCalculatorCpf">—</strong>
+            <small id="cancellationCalculatorCpfMeta">Non déduit automatiquement</small>
+          </div>
+          <div class="cancellation-calculator-card">
+            <span>Financement personnel</span>
+            <strong id="cancellationCalculatorPersonal">—</strong>
+            <small id="cancellationCalculatorPersonalMeta">—</small>
+          </div>
+          <div class="cancellation-calculator-card">
+            <span>Autre financement</span>
+            <strong id="cancellationCalculatorOther">—</strong>
+            <small id="cancellationCalculatorOtherMeta">—</small>
+          </div>
+        </div>
+
+        <div class="cancellation-calculator-breakdown">
+          <div class="cancellation-calculator-row">
+            <span id="cancellationCalculatorPenaltyLabel">Pénalité contractuelle</span>
+            <strong id="cancellationCalculatorPenalty">—</strong>
+          </div>
+          <div class="cancellation-calculator-row" id="cancellationCalculatorProrataRow" hidden>
+            <span>Prestations effectivement dispensées au prorata</span>
+            <strong id="cancellationCalculatorProrata">—</strong>
+          </div>
+          <div class="cancellation-calculator-row cancellation-calculator-row--total">
+            <span>Total dû avant déduction des sommes encaissées</span>
+            <strong id="cancellationCalculatorTotalDue">—</strong>
+          </div>
+          <div class="cancellation-calculator-row">
+            <span>Sommes déjà encaissées retenues</span>
+            <strong id="cancellationCalculatorDeducted">—</strong>
+          </div>
+        </div>
+
+        <div class="cancellation-calculator-balance" id="cancellationCalculatorBalance">
+          <span id="cancellationCalculatorBalanceLabel">Solde à réclamer</span>
+          <strong id="cancellationCalculatorBalanceAmount">—</strong>
+        </div>
+        <div class="cancellation-calculator-warning" id="cancellationCalculatorWarning" hidden></div>
+        <p class="cancellation-calculator-note">
+          Calcul fondé sur l’article 9 communiqué. Il ne doit pas être utilisé tel quel lorsqu’un cas de force majeure dûment reconnue est invoqué ; cette situation doit être traitée séparément.
+        </p>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" type="button" onclick="closeModal('cancellationIndemnityModal')">Fermer</button>
+      <button class="btn btn-primary" type="button" id="btnCopyCancellationCalculation" disabled>Copier le récapitulatif</button>
+    </div>
+  </div>
 </div>
 
 {% if not is_read_only %}
@@ -4985,14 +5140,224 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   const registrationCancelledCheckbox = document.getElementById("registrationCancelledCheckbox");
   const registrationCancelledControl = document.getElementById("registrationCancelledControl");
   const registrationCancelledBanner = document.getElementById("registrationCancelledBanner");
+  const cancellationCalculatorButton = document.getElementById("btnCancellationCalculator");
+  const cancellationCalculatorModal = document.getElementById("cancellationIndemnityModal");
+  const cancellationCalculatorDate = document.getElementById("cancellationCalculatorDate");
+  const cancellationCalculatorPrice = document.getElementById("cancellationCalculatorPrice");
+  const cancellationCalculatorPaid = document.getElementById("cancellationCalculatorPaid");
+  const cancellationCalculatorHours = document.getElementById("cancellationCalculatorHours");
+  const cancellationCalculatorTotalHours = document.getElementById("cancellationCalculatorTotalHours");
+  const cancellationCalculatorDeliveredHours = document.getElementById("cancellationCalculatorDeliveredHours");
+  const cancellationCalculatorLoading = document.getElementById("cancellationCalculatorLoading");
+  const cancellationCalculatorError = document.getElementById("cancellationCalculatorError");
+  const cancellationCalculatorResult = document.getElementById("cancellationCalculatorResult");
+  const copyCancellationCalculationButton = document.getElementById("btnCopyCancellationCalculation");
+  const cancellationCalculatorEndpoint = {{ url_for('api_registration_cancellation_indemnity', session_id=session.id, trainee_id=trainee.id)|tojson }};
   const adminTraineeHero = document.getElementById("adminTraineeHero");
   const registrationCancellationReadOnly = {{ 'true' if is_read_only else 'false' }};
+  const cancellationMoneyFormatter = new Intl.NumberFormat("fr-FR", {style:"currency", currency:"EUR"});
+  let currentCancellationCalculation = null;
+  let cancellationCalculationTimer = null;
+  let cancellationCalculationRequest = 0;
+
+  function cancellationLocalIsoDate(){
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  }
+
+  function cancellationFormatMoney(cents){
+    return cancellationMoneyFormatter.format(Number(cents || 0) / 100);
+  }
+
+  function cancellationFormatDate(isoDate){
+    if(!isoDate) return "—";
+    const parsed = new Date(`${isoDate}T12:00:00`);
+    return Number.isNaN(parsed.getTime()) ? isoDate : parsed.toLocaleDateString("fr-FR");
+  }
+
+  function cancellationSetText(id, value){
+    const node = document.getElementById(id);
+    if(node) node.textContent = value;
+  }
+
+  function cancellationSetError(message){
+    if(!cancellationCalculatorError) return;
+    cancellationCalculatorError.textContent = message || "Le calcul est momentanément indisponible.";
+    cancellationCalculatorError.hidden = false;
+    if(cancellationCalculatorResult) cancellationCalculatorResult.hidden = true;
+    if(copyCancellationCalculationButton) copyCancellationCalculationButton.disabled = true;
+  }
+
+  function renderCancellationCalculation(calculation){
+    currentCancellationCalculation = calculation;
+    if(cancellationCalculatorError) cancellationCalculatorError.hidden = true;
+    if(cancellationCalculatorResult) cancellationCalculatorResult.hidden = false;
+    if(cancellationCalculatorHours) cancellationCalculatorHours.hidden = !calculation.during_training;
+
+    if(cancellationCalculatorPaid && cancellationCalculatorPaid.value === ""){
+      cancellationCalculatorPaid.value = (Number(calculation.deductible_paid_cents || 0) / 100).toFixed(2);
+    }
+    if(cancellationCalculatorPrice && cancellationCalculatorPrice.value === ""){
+      cancellationCalculatorPrice.value = (Number(calculation.training_price_cents || 0) / 100).toFixed(2);
+    }
+    if(cancellationCalculatorTotalHours && cancellationCalculatorTotalHours.value === "" && calculation.total_training_hours != null){
+      cancellationCalculatorTotalHours.value = String(calculation.total_training_hours);
+    }
+
+    cancellationSetText("cancellationCalculatorRule", calculation.rule_label || "Règle contractuelle");
+    const daysBefore = Number(calculation.days_before_start || 0);
+    const timing = calculation.during_training
+      ? (daysBefore === 0 ? "Le jour du démarrage" : `${Math.abs(daysBefore)} jour${Math.abs(daysBefore) > 1 ? "s" : ""} après le début`)
+      : `${daysBefore} jour${daysBefore > 1 ? "s" : ""} avant le début`;
+    cancellationSetText("cancellationCalculatorTiming", timing);
+    cancellationSetText("cancellationCalculatorTrainingPrice", cancellationFormatMoney(calculation.training_price_cents));
+    cancellationSetText("cancellationCalculatorCpf", cancellationFormatMoney(calculation.cpf_amount_cents));
+    cancellationSetText("cancellationCalculatorPersonal", cancellationFormatMoney(calculation.personal_amount_cents));
+    cancellationSetText("cancellationCalculatorOther", cancellationFormatMoney(calculation.other_amount_cents));
+    cancellationSetText(
+      "cancellationCalculatorCpfMeta",
+      calculation.cpf_paid_cents > 0
+        ? `${cancellationFormatMoney(calculation.cpf_paid_cents)} encaissé côté CPF · non déduit`
+        : "Non déduit automatiquement"
+    );
+    cancellationSetText("cancellationCalculatorPersonalMeta", `${cancellationFormatMoney(calculation.personal_paid_cents)} déjà encaissé`);
+    cancellationSetText(
+      "cancellationCalculatorOtherMeta",
+      calculation.other_paid_cents > 0
+        ? `${cancellationFormatMoney(calculation.other_paid_cents)} encaissé · non déduit`
+        : "Aucun encaissement détecté"
+    );
+    cancellationSetText("cancellationCalculatorPenaltyLabel", `Pénalité contractuelle (${Number(calculation.penalty_rate || 0)} %)`);
+    cancellationSetText("cancellationCalculatorPenalty", cancellationFormatMoney(calculation.penalty_cents));
+    const prorataRow = document.getElementById("cancellationCalculatorProrataRow");
+    if(prorataRow) prorataRow.hidden = !calculation.during_training;
+    cancellationSetText("cancellationCalculatorProrata", cancellationFormatMoney(calculation.prorata_cents));
+    cancellationSetText("cancellationCalculatorTotalDue", cancellationFormatMoney(calculation.total_due_cents));
+    cancellationSetText("cancellationCalculatorDeducted", `− ${cancellationFormatMoney(calculation.deductible_paid_cents)}`);
+
+    const balance = document.getElementById("cancellationCalculatorBalance");
+    balance?.classList.remove("is-settled", "is-refund");
+    if(!calculation.calculation_complete){
+      cancellationSetText("cancellationCalculatorBalanceLabel", "Minimum provisoire à réclamer");
+      cancellationSetText("cancellationCalculatorBalanceAmount", cancellationFormatMoney(calculation.balance_due_cents));
+    }else if(calculation.balance_status === "refund_due"){
+      balance?.classList.add("is-refund");
+      cancellationSetText("cancellationCalculatorBalanceLabel", "Somme à rembourser au stagiaire");
+      cancellationSetText("cancellationCalculatorBalanceAmount", cancellationFormatMoney(calculation.refund_due_cents));
+    }else if(calculation.balance_status === "settled"){
+      balance?.classList.add("is-settled");
+      cancellationSetText("cancellationCalculatorBalanceLabel", "Dossier soldé");
+      cancellationSetText("cancellationCalculatorBalanceAmount", cancellationFormatMoney(0));
+    }else{
+      cancellationSetText("cancellationCalculatorBalanceLabel", "Solde à réclamer au stagiaire");
+      cancellationSetText("cancellationCalculatorBalanceAmount", cancellationFormatMoney(calculation.balance_due_cents));
+    }
+
+    const warnings = [];
+    if(!calculation.calculation_complete){
+      warnings.push("Renseignez la durée totale et les heures effectivement dispensées pour intégrer le prorata de formation. Le montant affiché est seulement un minimum provisoire.");
+    }
+    if(Math.abs(Number(calculation.financing_gap_cents || 0)) > 1){
+      warnings.push(`Les financements renseignés diffèrent du coût initial de ${cancellationFormatMoney(Math.abs(calculation.financing_gap_cents))}. Vérifiez les montants avant d’utiliser le résultat.`);
+    }
+    if(["financing", "default"].includes(calculation.training_price_source)){
+      warnings.push("Le coût initial n’était pas enregistré sur le dossier : il a été prérempli automatiquement. Vérifiez-le dans le champ prévu avant d’utiliser le résultat.");
+    }
+    if(Number(calculation.cpf_paid_cents || 0) > 0 || Number(calculation.other_paid_cents || 0) > 0){
+      warnings.push("Un encaissement CPF ou autre financeur a été détecté. Il est affiché mais n’est pas déduit automatiquement du solde dû par le stagiaire.");
+    }
+    if(calculation.cancellation_after_training){
+      warnings.push("La date choisie est postérieure à la fin de formation : vérifiez manuellement la situation avant toute demande de paiement.");
+    }
+    const warningNode = document.getElementById("cancellationCalculatorWarning");
+    if(warningNode){
+      warningNode.textContent = warnings.join(" ");
+      warningNode.hidden = warnings.length === 0;
+    }
+    if(copyCancellationCalculationButton) copyCancellationCalculationButton.disabled = !calculation.calculation_complete;
+  }
+
+  async function refreshCancellationCalculation(){
+    if(!cancellationCalculatorDate?.value) return;
+    const requestNumber = ++cancellationCalculationRequest;
+    if(cancellationCalculatorLoading) cancellationCalculatorLoading.hidden = !!currentCancellationCalculation;
+    const params = new URLSearchParams({cancellation_date:cancellationCalculatorDate.value});
+    if(cancellationCalculatorPrice?.value !== "") params.set("training_price_amount", cancellationCalculatorPrice.value);
+    if(cancellationCalculatorPaid?.value !== "") params.set("deductible_paid_amount", cancellationCalculatorPaid.value);
+    if(cancellationCalculatorTotalHours?.value !== "") params.set("total_training_hours", cancellationCalculatorTotalHours.value);
+    if(cancellationCalculatorDeliveredHours?.value !== "") params.set("delivered_hours", cancellationCalculatorDeliveredHours.value);
+    try{
+      const response = await fetch(`${cancellationCalculatorEndpoint}?${params.toString()}`, {headers:{"Accept":"application/json"}});
+      const payload = await response.json().catch(()=>({}));
+      if(requestNumber !== cancellationCalculationRequest) return;
+      if(!response.ok || payload.ok === false) throw new Error(payload.error || "Calcul impossible.");
+      renderCancellationCalculation(payload.calculation || {});
+    }catch(error){
+      if(requestNumber !== cancellationCalculationRequest) return;
+      cancellationSetError(error.message || "Calcul impossible.");
+    }finally{
+      if(requestNumber === cancellationCalculationRequest && cancellationCalculatorLoading) cancellationCalculatorLoading.hidden = true;
+    }
+  }
+
+  function scheduleCancellationCalculation(){
+    clearTimeout(cancellationCalculationTimer);
+    cancellationCalculationTimer = setTimeout(refreshCancellationCalculation, 220);
+  }
+
+  cancellationCalculatorButton?.addEventListener("click", ()=>{
+    if(cancellationCalculatorDate && !cancellationCalculatorDate.value){
+      cancellationCalculatorDate.value = cancellationLocalIsoDate();
+    }
+    openModal("cancellationIndemnityModal");
+    refreshCancellationCalculation();
+  });
+  [cancellationCalculatorDate, cancellationCalculatorPrice, cancellationCalculatorPaid, cancellationCalculatorTotalHours, cancellationCalculatorDeliveredHours].forEach((input)=>{
+    input?.addEventListener("input", scheduleCancellationCalculation);
+    input?.addEventListener("change", scheduleCancellationCalculation);
+  });
+
+  copyCancellationCalculationButton?.addEventListener("click", async ()=>{
+    const calculation = currentCancellationCalculation;
+    if(!calculation || !calculation.calculation_complete) return;
+    const summary = [
+      `Date d’annulation : ${cancellationFormatDate(calculation.cancellation_date)}`,
+      `Coût total initial de la formation : ${cancellationFormatMoney(calculation.training_price_cents)}`,
+      `Financement Compte Personnel de Formation (CPF) : ${cancellationFormatMoney(calculation.cpf_amount_cents)}`,
+      `Financement personnel prévu : ${cancellationFormatMoney(calculation.personal_amount_cents)}`,
+      `Somme déjà versée retenue : ${cancellationFormatMoney(calculation.deductible_paid_cents)}`,
+      `Pénalité financière appliquée : ${cancellationFormatMoney(calculation.penalty_cents)} (${Number(calculation.penalty_rate || 0)} % du coût initial)`,
+      ...(calculation.during_training ? [`Prestations effectivement dispensées : ${cancellationFormatMoney(calculation.prorata_cents)} (${calculation.delivered_hours || 0} h sur ${calculation.total_training_hours || 0} h)`] : []),
+      calculation.balance_status === "refund_due"
+        ? `Somme à rembourser : ${cancellationFormatMoney(calculation.refund_due_cents)}`
+        : `Solde à régler : ${cancellationFormatMoney(calculation.balance_due_cents)}`,
+    ].join("\n");
+    try{
+      await navigator.clipboard.writeText(summary);
+    }catch(error){
+      const textarea = document.createElement("textarea");
+      textarea.value = summary;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    const original = copyCancellationCalculationButton.textContent;
+    copyCancellationCalculationButton.textContent = "Récapitulatif copié ✓";
+    setTimeout(()=>{ copyCancellationCalculationButton.textContent = original; }, 1800);
+  });
 
   function renderRegistrationCancellation(cancelled){
     if(registrationCancelledCheckbox) registrationCancelledCheckbox.checked = cancelled;
     registrationCancelledControl?.classList.toggle("is-cancelled", cancelled);
     adminTraineeHero?.classList.toggle("is-registration-cancelled", cancelled);
     if(registrationCancelledBanner) registrationCancelledBanner.hidden = !cancelled;
+    if(cancellationCalculatorButton) cancellationCalculatorButton.hidden = !cancelled;
+    if(!cancelled && cancellationCalculatorModal?.classList.contains("show")){
+      closeModal("cancellationIndemnityModal");
+    }
   }
 
   registrationCancelledCheckbox?.addEventListener("change", async ()=>{
