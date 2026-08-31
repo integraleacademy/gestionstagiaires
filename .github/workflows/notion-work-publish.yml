@@ -117,13 +117,33 @@ jobs:
           HEAD_REF: ${{ needs.inspect.outputs.head_ref }}
         run: |
           set -euo pipefail
-          current="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state,headRefOid,isDraft --jq '[.state,.headRefOid,.isDraft] | @tsv')"
-          state="$(printf '%s' "$current" | cut -f1)"; current_head="$(printf '%s' "$current" | cut -f2)"; is_draft="$(printf '%s' "$current" | cut -f3)"
+          current="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state,headRefOid,isDraft,autoMergeRequest)"
+          state="$(printf '%s' "$current" | jq -r '.state')"
+          current_head="$(printf '%s' "$current" | jq -r '.headRefOid')"
+          is_draft="$(printf '%s' "$current" | jq -r '.isDraft')"
           [ "$state" = "OPEN" ] || exit 0
           [ "$current_head" = "$EXPECTED_HEAD" ] || { echo "::error::La tête a changé après la revue ou les tests."; exit 1; }
           first_number="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --base main --limit 100 --json number,headRefName,body --jq '[.[] | select(.headRefName | startswith("work/notion-gestion-stagiaires-")) | select((.body // "") | contains("<!-- notion-page-id:")) | .number] | sort | .[0] // empty')"
           [ -z "$first_number" ] || [ "$PR_NUMBER" = "$first_number" ] || { echo "::error::La PR #$first_number doit être publiée avant."; exit 1; }
           behind="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${HEAD_REF}" --jq '.behind_by')"
           [ "$behind" = "0" ] || { echo "::error::La PR n'est plus à jour avec main."; exit 1; }
+
+          marker="<!-- work-independent-review: approved sha=${EXPECTED_HEAD} -->"
+          reviews="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100")"
+          approved="$(printf '%s' "$reviews" | jq -r --arg sha "$EXPECTED_HEAD" --arg marker "$marker" '[.[] | select(.user.login == "integraleacademy" and .commit_id == $sha and ((.body // "") | contains($marker)))] | length')"
+          [ "$approved" != "0" ] || { echo "::error::La revue indépendante exacte n'existe plus pour le SHA courant."; exit 1; }
+
+          if [ "$(printf '%s' "$current" | jq -r '.autoMergeRequest != null')" = "true" ]; then
+            gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --disable-auto
+          fi
           if [ "$is_draft" = "true" ]; then gh pr ready "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"; fi
-          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --merge --delete-branch
+
+          current="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json state,headRefOid,isDraft --jq '[.state,.headRefOid,.isDraft] | @tsv')"
+          state="$(printf '%s' "$current" | cut -f1)"; current_head="$(printf '%s' "$current" | cut -f2)"; is_draft="$(printf '%s' "$current" | cut -f3)"
+          [ "$state" = "OPEN" ] || { echo "::error::La PR a été fermée avant la fusion protégée."; exit 1; }
+          [ "$current_head" = "$EXPECTED_HEAD" ] || { echo "::error::La tête a changé pendant la sortie du brouillon."; exit 1; }
+          [ "$is_draft" = "false" ] || { echo "::error::La PR est toujours en brouillon."; exit 1; }
+          behind="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${HEAD_REF}" --jq '.behind_by')"
+          [ "$behind" = "0" ] || { echo "::error::main a avancé avant la fusion."; exit 1; }
+
+          gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --merge --delete-branch --match-head-commit "$EXPECTED_HEAD"
