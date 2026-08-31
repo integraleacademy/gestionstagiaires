@@ -73,7 +73,8 @@ def validation_errors(candidate: Dict[str, Any]) -> List[str]:
         errors.append("Nom obligatoire")
     if not candidate.get("first_names"):
         errors.append("Prénom(s) obligatoire(s)")
-    if not re.fullmatch(r"0\d{9}", candidate.get("_keys", {}).get("phone", "")):
+    phone_key = candidate.get("_keys", {}).get("phone", "")
+    if phone_key and not re.fullmatch(r"0\d{9}", phone_key):
         errors.append("Numéro de téléphone invalide")
     if not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", candidate.get("email", "")):
         errors.append("Adresse e-mail invalide")

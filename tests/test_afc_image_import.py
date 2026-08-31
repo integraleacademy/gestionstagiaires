@@ -1,4 +1,5 @@
 import io, unittest
+from pathlib import Path
 from unittest.mock import patch
 from PIL import Image
 import afc_import
@@ -32,6 +33,26 @@ class AfcImageImportTests(unittest.TestCase):
   self.login(); r=self.client.post('/admin/afc/import-image/preview',data={'image':(io.BytesIO(b'x'*(afc_import.MAX_IMAGE_BYTES+1)),'x.png')},content_type='multipart/form-data'); self.assertIn(r.status_code,(400,413))
  def test_normalizations(self):
   self.assertEqual(afc_import.normalize_ft_id('5216923u 032')[0],afc_import.normalize_ft_id('5216923U - 032')[0]); self.assertEqual(afc_import.normalize_phone('+33 6 02 40 43 09')[0],afc_import.normalize_phone('06 02 40 43 09')[0])
+ def test_missing_phone_is_importable_but_malformed_phone_stays_invalid(self):
+  missing={**SAMPLE[0],'phone':''}
+  malformed={**SAMPLE[0],'phone':'12345'}
+  ready=gestion_app._afc_classify_import_candidates([missing],[])[0]
+  invalid=gestion_app._afc_classify_import_candidates([malformed],[])[0]
+  self.assertEqual(ready['status'],'ready')
+  self.assertTrue(ready['selected'])
+  self.assertEqual(invalid['status'],'invalid')
+  self.assertIn('Numéro de téléphone invalide',invalid['reason'])
+ def test_confirmation_imports_candidate_without_phone(self):
+  self.login(); persisted={'afc':{'candidates':[]}}; missing={**SAMPLE[0],'phone':''}
+  def atomic(mutator): return mutator(persisted)
+  with patch.object(gestion_app,'_atomic_update_data',side_effect=atomic),patch.object(gestion_app,'fetch_cnaps_lookup_by_name',return_value={}),patch.object(gestion_app,'brevo_send_email',return_value=True),patch.object(gestion_app,'brevo_send_sms',return_value=False):
+   result=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[missing],'date_icop':'2026-09-15'}).get_json()
+  self.assertEqual(result['imported'],1)
+  self.assertEqual(persisted['afc']['candidates'][0]['telephone'],'')
+ def test_import_modal_allows_an_empty_phone_and_displays_a_warning(self):
+  template=Path('templates/admin_afc.html').read_text(encoding='utf-8')
+  self.assertIn("(!phone||/^0\\d{9}$/.test(phone))",template)
+  self.assertIn('Numéro de téléphone manquant : import autorisé, SMS non envoyé.',template)
  def test_ft_identifier_is_valid_with_or_without_three_digit_suffix(self):
   short={**SAMPLE[0],'france_travail_id':'5216923U'}
   long={**SAMPLE[0],'france_travail_id':'5216923U - 032'}
