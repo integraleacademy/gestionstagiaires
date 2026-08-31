@@ -20,8 +20,9 @@ class AdminMailsCatalogTest(unittest.TestCase):
         self.assertIn("VTC", page)
         self.assertIn("Hébergement A3P", page)
         self.assertIn("Convention à signer", page)
-        self.assertIn("12 modèles vérifiés", page)
-        self.assertEqual(page.count("data-mail-preview="), 12)
+        self.assertIn("Annulation d’inscription", page)
+        self.assertIn("13 modèles vérifiés", page)
+        self.assertEqual(page.count("data-mail-preview="), 13)
         self.assertNotIn("Ceci est un aperçu", page)
         self.assertIn("Objet réel :", page)
 
