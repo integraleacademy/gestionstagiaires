@@ -45,9 +45,13 @@ class AfcImageImportTests(unittest.TestCase):
  def test_confirmation_imports_candidate_without_phone(self):
   self.login(); persisted={'afc':{'candidates':[]}}; missing={**SAMPLE[0],'phone':''}
   def atomic(mutator): return mutator(persisted)
-  with patch.object(gestion_app,'_atomic_update_data',side_effect=atomic),patch.object(gestion_app,'fetch_cnaps_lookup_by_name',return_value={}),patch.object(gestion_app,'brevo_send_email',return_value=True),patch.object(gestion_app,'brevo_send_sms',return_value=False):
+  with patch.object(gestion_app,'_atomic_update_data',side_effect=atomic),patch.object(gestion_app,'fetch_cnaps_lookup_by_name',return_value={}),patch.object(gestion_app,'brevo_send_email',return_value=True),patch.object(gestion_app,'brevo_send_sms',return_value=False) as sms:
    result=self.client.post('/admin/afc/import-image/confirm',json={'candidates':[missing],'date_icop':'2026-09-15'}).get_json()
   self.assertEqual(result['imported'],1)
+  self.assertEqual(result['sms_skipped_no_phone'],1)
+  self.assertIn('Aucun SMS n’a été envoyé pour 1 candidat sans numéro de téléphone.',result['message'])
+  self.assertNotIn('e-mail et SMS ont été envoyées',result['message'])
+  sms.assert_not_called()
   self.assertEqual(persisted['afc']['candidates'][0]['telephone'],'')
  def test_import_modal_allows_an_empty_phone_and_displays_a_warning(self):
   template=Path('templates/admin_afc.html').read_text(encoding='utf-8')

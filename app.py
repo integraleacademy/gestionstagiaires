@@ -18606,7 +18606,7 @@ def api_admin_afc_import_image_confirm():
     def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
         bucket = _afc_bucket(data)
         classified = _afc_classify_import_candidates(selected, bucket["candidates"])
-        imported, skipped, errors, notification_failures = [], 0, [], 0
+        imported, skipped, errors, notification_failures, sms_skipped_no_phone = [], 0, [], 0, 0
         for row in classified:
             if row["status"] != "ready":
                 skipped += row["status"] in {"duplicate", "conflict"}
@@ -18618,6 +18618,8 @@ def api_admin_afc_import_image_confirm():
             candidate["date_icop"] = date_icop
             candidate["presence_afc_status"] = "CONVOQUE"
             candidate["presence_afc"] = False
+            if not (candidate.get("telephone") or "").strip():
+                sms_skipped_no_phone += 1
             notified, notification_error = _send_afc_convocation_notification(bucket, candidate)
             if notified:
                 candidate["notification_status"] = "ENVOYEE"
@@ -18629,7 +18631,8 @@ def api_admin_afc_import_image_confirm():
             imported.append(candidate)
         if imported:
             _append_activity_log(data, "afc_candidates_image_imported", "afc", details={"imported_count": len(imported), "skipped_count": skipped})
-        return {"imported": len(imported), "duplicates_skipped": skipped, "notification_failures": notification_failures, "errors": errors}
+        return {"imported": len(imported), "duplicates_skipped": skipped, "notification_failures": notification_failures,
+                "sms_skipped_no_phone": sms_skipped_no_phone, "errors": errors}
 
     result = _atomic_update_data(mutate)
     imported, skipped = result.get("imported", 0), result.get("duplicates_skipped", 0)
@@ -18637,10 +18640,19 @@ def api_admin_afc_import_image_confirm():
     if skipped:
         message += f" {skipped} candidat{'s' if skipped != 1 else ''} déjà existant{'s' if skipped != 1 else ''} {'ont' if skipped != 1 else 'a'} été ignoré{'s' if skipped != 1 else ''}."
     failures = result.get("notification_failures", 0)
+    sms_skipped_no_phone = result.get("sms_skipped_no_phone", 0)
     if failures:
         message += f" L’envoi de la convocation a échoué pour {failures} candidat{'s' if failures != 1 else ''}."
     elif imported:
-        message += " Les convocations e-mail et SMS ont été envoyées."
+        if sms_skipped_no_phone:
+            message += " Les convocations e-mail ont été envoyées."
+            sms_sent = imported - sms_skipped_no_phone
+            if sms_sent:
+                message += f" Les SMS ont été envoyés pour {sms_sent} candidat{'s' if sms_sent != 1 else ''} disposant d’un numéro."
+        else:
+            message += " Les convocations e-mail et SMS ont été envoyées."
+    if sms_skipped_no_phone:
+        message += f" Aucun SMS n’a été envoyé pour {sms_skipped_no_phone} candidat{'s' if sms_skipped_no_phone != 1 else ''} sans numéro de téléphone."
     return jsonify({"success": True, **result, "message": message})
 
 
