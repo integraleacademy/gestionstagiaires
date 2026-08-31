@@ -185,6 +185,7 @@ class RegistrationCancellationTests(unittest.TestCase):
             "id": "T-INDEMNITY",
             "first_name": "Alex",
             "last_name": "Test",
+            "email": "alex@example.com",
             "registration_cancelled": True,
             "registration_cancelled_at": "2026-09-30T10:00:00Z",
             "training_price": 4200,
@@ -304,6 +305,96 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertEqual(response.get_json()["calculation"]["balance_due_cents"], 0)
         self.assertEqual(blocked.status_code, 409)
 
+    def test_cancellation_email_builder_matches_the_calculation_and_contract(self):
+        session, trainee, lines = self._indemnity_case()
+        calculation = gestion_app.calculate_registration_cancellation_indemnity(
+            session,
+            trainee,
+            lines,
+            cancellation_date="2026-09-30",
+        )
+
+        subject, html_body, text_body = gestion_app.build_registration_cancellation_email(
+            session, trainee, calculation
+        )
+
+        self.assertIn("Suite à votre demande d’annulation", subject)
+        self.assertIn("Article 9", html_body)
+        self.assertIn("Règle appliquée à votre dossier", html_body)
+        self.assertIn("10 % du coût total initial", html_body)
+        self.assertIn("20 % du coût total initial", html_body)
+        self.assertIn("30 % du coût total initial", html_body)
+        self.assertIn("4 200 €", html_body)
+        self.assertIn("2 940 €", html_body)
+        self.assertIn("Somme déjà versée et déduite", html_body)
+        self.assertIn("Solde de votre dossier", html_body)
+        self.assertIn("reporter votre inscription", html_body)
+        self.assertIn("Clément VAILLANT", html_body)
+        self.assertIn("Pouvez-vous nous confirmer", text_body)
+
+    def test_cancellation_email_is_previewed_then_sent_and_recorded(self):
+        session, trainee, lines = self._indemnity_case()
+        data = {"sessions": [session], "billing_lines": lines}
+        saved = None
+
+        def capture(payload):
+            nonlocal saved
+            saved = copy.deepcopy(payload)
+
+        def fake_send(to_email, subject, html_body, **kwargs):
+            target = kwargs["trainee"]
+            target.setdefault("sent_email_history", []).insert(0, {
+                "to_email": to_email,
+                "subject": subject,
+                "html": html_body,
+                "sent_at": "2026-09-30T12:00:00Z",
+            })
+            return {"ok": True, "message_id": "brevo-test", "error": ""}
+
+        request_payload = {
+            "cancellation_date": "2026-09-30",
+            "training_price_amount": "4200",
+            "deductible_paid_amount": "420",
+        }
+        base_url = "/api/sessions/S-INDEMNITY/stagiaires/T-INDEMNITY/cancellation-email"
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data", side_effect=capture
+        ), patch.object(gestion_app, "brevo_send_email", side_effect=fake_send) as send_mock:
+            preview = self.client.post(f"{base_url}/preview", json=request_payload)
+            sent = self.client.post(f"{base_url}/send", json=request_payload)
+
+        self.assertEqual(preview.status_code, 200)
+        preview_payload = preview.get_json()
+        self.assertEqual(preview_payload["recipient"], "alex@example.com")
+        self.assertIn("Article 9", preview_payload["html"])
+        self.assertIn("Suite à votre demande d’annulation", preview_payload["subject"])
+        self.assertTrue(preview_payload["warnings"])
+
+        self.assertEqual(sent.status_code, 200)
+        self.assertTrue(sent.get_json()["mail_sent"])
+        send_mock.assert_called_once()
+        self.assertEqual(send_mock.call_args.args[0], "alex@example.com")
+        self.assertEqual(send_mock.call_args.kwargs["metadata"]["purpose"], "registration_cancellation_summary")
+        saved_trainee = saved["sessions"][0]["trainees"][0]
+        self.assertTrue(saved_trainee["cancellation_email_sent_at"])
+        self.assertEqual(saved_trainee["cancellation_email_sent_count"], 1)
+        self.assertEqual(saved_trainee["sent_email_history"][0]["to_email"], "alex@example.com")
+        self.assertEqual(saved_trainee["activity_history"][0]["label"], "Mail d’annulation envoyé")
+        self.assertEqual(saved["activity_logs"][0]["action"], "registration_cancellation_email_sent")
+
+    def test_cancellation_email_refuses_an_incomplete_during_training_calculation(self):
+        session, trainee, lines = self._indemnity_case()
+        data = {"sessions": [session], "billing_lines": lines}
+
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.post(
+                "/api/sessions/S-INDEMNITY/stagiaires/T-INDEMNITY/cancellation-email/preview",
+                json={"cancellation_date": "2026-11-10"},
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("heures dispensées", response.get_json()["error"])
+
     def test_templates_expose_cancelled_state_and_exclude_it_from_billing_kpis(self):
         detail = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
         listing = Path("templates/admin_trainees.html").read_text(encoding="utf-8")
@@ -314,7 +405,13 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertIn('id="registrationCancelledBanner"', detail)
         self.assertIn('id="btnCancellationCalculator"', detail)
         self.assertIn('id="cancellationIndemnityModal"', detail)
+        self.assertIn('id="btnPrepareCancellationEmail"', detail)
+        self.assertIn('id="cancellationEmailModal"', detail)
+        self.assertIn('id="btnSendCancellationEmail"', detail)
+        self.assertIn(".cancellation-calculator-loading[hidden]", detail)
         self.assertIn("api_registration_cancellation_indemnity", detail)
+        self.assertIn("api_registration_cancellation_email_preview", detail)
+        self.assertIn("api_registration_cancellation_email_send", detail)
         self.assertIn("row-registration-cancelled", listing)
         self.assertIn("Inscription annulée", listing)
         self.assertIn("!l.registrationCancelled&&lineMatchesCurrentFilters", billing)
