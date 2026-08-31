@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import app as gestion_app
@@ -147,6 +148,24 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         client.assert_not_called()
 
+    def test_live_search_requires_authentication(self):
+        anonymous = gestion_app.app.test_client()
+        with patch.object(gestion_app, "WedofClient") as client:
+            response = anonymous.post("/admin/sessions/S1/stagiaires/T1/cpf/live-match")
+        self.assertEqual(response.status_code, 302)
+        client.assert_not_called()
+
+    def test_trainee_page_exposes_an_explicit_live_identity_search(self):
+        root = Path(__file__).resolve().parents[1]
+        template = (root / "templates" / "admin_trainee.html").read_text(encoding="utf-8")
+        script = (root / "static" / "js" / "cpf-auto-match.js").read_text(encoding="utf-8")
+
+        self.assertIn("data-live-search-url", template)
+        self.assertIn("data-cpf-match-live", template)
+        self.assertIn("Rechercher sur WEDOF", template)
+        self.assertIn("root.dataset.liveSearchUrl", script)
+        self.assertIn("search('wedof')", script)
+
     def test_unique_complete_cached_match_is_suggested_without_remote_call(self):
         temp, path = self._store(self._cached_data(remote_folder()))
         with patch.object(gestion_app, "DATA_FILE", path), \
@@ -250,6 +269,90 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         self.assertEqual(len(response.json["candidates"]), 2)
         self.assertEqual(saved["wedof_links"], [])
         client.assert_not_called()
+
+    def test_live_search_finds_a_folder_by_identity_without_its_number(self):
+        temp, path = self._store()
+        remote = Mock()
+        remote.list_registration_folders_interactive.return_value = [remote_folder()]
+        with patch.object(gestion_app, "DATA_FILE", path), \
+             patch.object(gestion_app, "BACKUP_DIR", temp), \
+             patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/live-match")
+        with open(path, encoding="utf-8") as stream:
+            saved = json.load(stream)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["status"], "suggestions")
+        self.assertEqual(response.json["source"], "wedof")
+        self.assertEqual(response.json["candidates"][0]["external_id"], "CPF-1")
+        self.assertEqual(saved["wedof_folder_cache"][0]["external_id"], "CPF-1")
+        self.assertEqual(saved["wedof_links"], [])
+        remote.list_registration_folders_interactive.assert_called_once_with(
+            "accepted", limit=100,
+        )
+        remote.get_registration_folder_interactive.assert_not_called()
+
+    def test_live_search_stops_on_the_first_state_containing_a_candidate(self):
+        temp, path = self._store()
+        unrelated = remote_folder("CPF-OTHER", attendee={
+            "firstName": "Autre", "lastName": "Personne",
+            "email": "other@example.fr", "phoneNumber": "0700000000",
+        })
+        matching = remote_folder("CPF-MATCH", state="inTraining")
+        remote = Mock()
+        remote.list_registration_folders_interactive.side_effect = [
+            [unrelated], [matching],
+        ]
+        with patch.object(gestion_app, "DATA_FILE", path), \
+             patch.object(gestion_app, "BACKUP_DIR", temp), \
+             patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/live-match")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["candidates"][0]["external_id"], "CPF-MATCH")
+        self.assertEqual(
+            [call.args[0] for call in remote.list_registration_folders_interactive.call_args_list],
+            ["accepted", "inTraining"],
+        )
+
+    def test_live_search_is_bounded_to_one_page_for_each_associable_state(self):
+        temp, path = self._store()
+        remote = Mock()
+        remote.list_registration_folders_interactive.return_value = []
+        with patch.object(gestion_app, "DATA_FILE", path), \
+             patch.object(gestion_app, "BACKUP_DIR", temp), \
+             patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/live-match")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["status"], "no_match")
+        self.assertEqual(remote.list_registration_folders_interactive.call_count, 4)
+        self.assertEqual(
+            [call.args[0] for call in remote.list_registration_folders_interactive.call_args_list],
+            list(gestion_app.CPF_ASSOCIATION_STATES),
+        )
+        self.assertTrue(all(
+            call.kwargs == {"limit": 100}
+            for call in remote.list_registration_folders_interactive.call_args_list
+        ))
+        remote.get_registration_folder_interactive.assert_not_called()
+
+    def test_live_search_failure_never_creates_an_association(self):
+        temp, path = self._store()
+        remote = Mock()
+        remote.list_registration_folders_interactive.side_effect = gestion_app.WedofApiError(
+            "timeout", "wedof_timeout",
+        )
+        with patch.object(gestion_app, "DATA_FILE", path), \
+             patch.object(gestion_app, "BACKUP_DIR", temp), \
+             patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/live-match")
+        with open(path, encoding="utf-8") as stream:
+            saved = json.load(stream)
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json["status"], "error")
+        self.assertEqual(saved["wedof_links"], [])
 
     def test_suggested_folder_is_associated_in_one_verified_click(self):
         temp, path = self._store()

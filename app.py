@@ -32428,6 +32428,63 @@ def _cpf_fetch_matchable_folders(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
+def _cpf_match_response_payload(
+    data: Dict[str, Any], local_session: Dict[str, Any], trainee: Dict[str, Any],
+    *, session_id: str, trainee_id: str, live_search: bool = False,
+) -> Dict[str, Any]:
+    candidates = find_trainee_cpf_candidates(
+        _cpf_fetch_matchable_folders(data),
+        local_session,
+        trainee,
+        allowed_states=CPF_ASSOCIATION_STATES,
+    )
+    public_candidates = [
+        _cpf_candidate_payload(item, data, session_id=session_id, trainee_id=trainee_id)
+        for item in candidates
+    ]
+    status = "suggestions" if public_candidates else "no_match"
+    if len(public_candidates) == 1:
+        message = (
+            "Un dossier probable a été trouvé grâce à l’identité, aux coordonnées ou aux dates. "
+            "Vérifiez-le puis cliquez sur « Associer ce dossier »."
+        )
+    elif public_candidates:
+        message = (
+            f"{len(public_candidates)} dossiers possibles ont été trouvés. "
+            "Choisissez le bon dossier."
+        )
+    elif live_search:
+        message = (
+            "Aucun dossier correspondant n’a été trouvé parmi les dossiers WEDOF récents. "
+            "Vous pouvez relancer plus tard ou saisir le numéro exact si vous le retrouvez."
+        )
+    else:
+        message = (
+            "Aucun dossier correspondant n’est présent dans le cache WEDOF. "
+            "Lancez une recherche directe sur WEDOF."
+        )
+    return {
+        "ok": True,
+        "status": status,
+        "message": message,
+        "candidates": public_candidates,
+        "source": "wedof" if live_search else "cache",
+    }
+
+
+def _persist_cpf_search_cache(folders: Iterable[Dict[str, Any]]) -> None:
+    snapshots = [item for item in folders if isinstance(item, dict)]
+    if not snapshots:
+        return
+
+    def mutate(canonical: Dict[str, Any]) -> Dict[str, Any]:
+        for folder in snapshots:
+            _upsert_wedof_folder_cache(canonical, folder)
+        return {"cached": len(snapshots)}
+
+    _atomic_update_data(mutate)
+
+
 def _cpf_active_link(data: Dict[str, Any], *, session_id: str, trainee_id: str) -> Optional[Dict[str, Any]]:
     return next((
         item for item in data.get("wedof_links", [])
@@ -32602,31 +32659,73 @@ def admin_trainee_cpf_auto_match(session_id: str, trainee_id: str):
             "external_id": existing.get("external_id"), "redirect_url": redirect_url,
         })
 
-    folders = _cpf_fetch_matchable_folders(data)
+    return jsonify(_cpf_match_response_payload(
+        data,
+        local_session,
+        trainee,
+        session_id=session_id,
+        trainee_id=trainee_id,
+    ))
 
-    candidates = find_trainee_cpf_candidates(
-        folders, local_session, trainee, allowed_states=CPF_ASSOCIATION_STATES,
-    )
-    public_candidates = [
-        _cpf_candidate_payload(item, data, session_id=session_id, trainee_id=trainee_id)
-        for item in candidates
-    ]
-    status = "suggestions" if public_candidates else "no_match"
-    message = (
-        "Un dossier probable a été trouvé grâce à l’identité, aux coordonnées ou aux dates. "
-        "Vérifiez-le puis cliquez sur « Associer ce dossier »."
-        if len(public_candidates) == 1
-        else f"{len(public_candidates)} dossiers possibles ont été trouvés. Choisissez le bon dossier."
-        if public_candidates
-        else (
-            "Aucun dossier correspondant n’est présent dans le cache WEDOF. "
-            "Saisissez le numéro exact si vous le connaissez."
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/live-match")
+@admin_login_required
+@admin_write_required
+def admin_trainee_cpf_live_match(session_id: str, trainee_id: str):
+    """Recherche manuelle bornée par identité, sans scan à l'ouverture."""
+    data = load_data(run_background_tasks=False)
+    local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
+    if not trainee or not has_cpf_financing(trainee):
+        abort(404)
+
+    existing = _cpf_active_link(data, session_id=session_id, trainee_id=trainee_id)
+    redirect_url = url_for(
+        "admin_trainee_page", session_id=session_id, trainee_id=trainee_id,
+    ) + "#cpfTracking"
+    if existing:
+        session.pop("cpf_association_preview", None)
+        return jsonify({
+            "ok": True,
+            "status": "associated",
+            "automatic": False,
+            "external_id": existing.get("external_id"),
+            "redirect_url": redirect_url,
+        })
+
+    fetched_folders: List[Dict[str, Any]] = []
+    try:
+        client = WedofClient()
+        for state in CPF_ASSOCIATION_STATES:
+            state_folders = client.list_registration_folders_interactive(state, limit=100)
+            fetched_folders.extend(state_folders)
+            state_candidates = find_trainee_cpf_candidates(
+                state_folders,
+                local_session,
+                trainee,
+                allowed_states=CPF_ASSOCIATION_STATES,
+            )
+            if state_candidates:
+                break
+    except (WedofConfigurationError, WedofApiError):
+        _persist_cpf_search_cache(fetched_folders)
+        return _cpf_match_json_error(
+            "WEDOF est momentanément indisponible. Aucune association n’a été modifiée ; réessayez plus tard.",
+            503,
         )
-    )
-    return jsonify({
-        "ok": True, "status": status, "message": message,
-        "candidates": public_candidates,
-    })
+
+    _persist_cpf_search_cache(fetched_folders)
+    data = load_data(run_background_tasks=False)
+    local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
+    if not local_session or not trainee:
+        abort(404)
+    return jsonify(_cpf_match_response_payload(
+        data,
+        local_session,
+        trainee,
+        session_id=session_id,
+        trainee_id=trainee_id,
+        live_search=True,
+    ))
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/cpf/associate-match")

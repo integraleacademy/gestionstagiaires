@@ -285,6 +285,33 @@ class WedofClient:
             time.sleep(0.1)
         return results
 
+    def list_registration_folders_interactive(
+        self, state: str, *, limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """Lit une seule page après une action admin explicite.
+
+        Cette variante ne réessaie jamais la requête et ne suit aucune page
+        supplémentaire. Une recherche d'identité reste ainsi bornée à quatre
+        appels WEDOF au maximum, un par état associable.
+        """
+        if state not in {"accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated"}:
+            raise ValueError("État WEDOF non autorisé pour la recherche manuelle.")
+        page_limit = max(1, min(int(limit), 100))
+        payload, response = self._get_json_response(
+            "/registrationFolders",
+            params={"state": state, "limit": page_limit, "page": 1},
+            timeout=(3, 8),
+            max_attempts=1,
+            backoff=0,
+            operation="cpf_identity_manual_search",
+        )
+        items = self._folder_items(payload)
+        logger.info(
+            "WEDOF GET dossiers manuel code_http=%s etat=%s nombre=%s",
+            response.status_code, state, len(items),
+        )
+        return items
+
     def get_registration_folder(self, external_id: str) -> Dict[str, Any]:
         """Relit un dossier précis sans jamais effectuer de requête mutatrice."""
         identifier = str(external_id or "").strip()

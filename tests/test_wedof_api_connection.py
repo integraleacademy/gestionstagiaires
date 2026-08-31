@@ -170,6 +170,47 @@ class WedofClientTests(unittest.TestCase):
             path="/registrationFolders/:id",
         )
 
+    @patch("wedof_service.reserve_request")
+    @patch("wedof_service.time.sleep")
+    def test_identity_search_reads_exactly_one_page_without_retry(self, sleep, reserve):
+        page = response(payload={"items": [{"externalId": "W1"}]})
+        session = Mock()
+        session.get.return_value = page
+
+        folders = WedofClient(
+            api_key="key", session=session,
+        ).list_registration_folders_interactive("accepted", limit=500)
+
+        self.assertEqual(folders[0]["externalId"], "W1")
+        session.get.assert_called_once()
+        self.assertEqual(
+            session.get.call_args.kwargs["params"],
+            {"state": "accepted", "limit": 100, "page": 1},
+        )
+        self.assertEqual(session.get.call_args.kwargs["timeout"], (3, 8))
+        reserve.assert_called_once_with(
+            origin="gestionstagiaires",
+            operation="cpf_identity_manual_search",
+            method="GET",
+            path="/registrationFolders",
+        )
+        sleep.assert_not_called()
+
+    @patch("wedof_service.reserve_request")
+    @patch("wedof_service.time.sleep")
+    def test_identity_search_timeout_is_never_retried(self, sleep, reserve):
+        session = Mock()
+        session.get.side_effect = requests.Timeout()
+
+        with self.assertRaises(WedofApiError):
+            WedofClient(
+                api_key="key", session=session,
+            ).list_registration_folders_interactive("accepted")
+
+        self.assertEqual(session.get.call_count, 1)
+        self.assertEqual(reserve.call_count, 1)
+        sleep.assert_not_called()
+
     @patch("wedof_service.time.sleep")
     def test_retry_after_and_non_retryable_statuses(self, sleep):
         limited = response(429)
