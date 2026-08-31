@@ -19,6 +19,45 @@
 
 <style>
 
+  .admin-trainee-hero.is-registration-cancelled{
+    border:2px solid #ef4444;
+    background:linear-gradient(135deg,#fff 0%,#fef2f2 100%);
+  }
+  .registration-cancelled-control{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    min-height:40px;
+    padding:0 14px;
+    border:1px solid #fca5a5;
+    border-radius:12px;
+    background:#fff;
+    color:#991b1b;
+    font-size:13px;
+    font-weight:950;
+    cursor:pointer;
+    box-sizing:border-box;
+  }
+  .registration-cancelled-control input{width:18px;height:18px;margin:0;accent-color:#dc2626;}
+  .registration-cancelled-control.is-cancelled{background:#dc2626;color:#fff;border-color:#dc2626;box-shadow:0 12px 24px rgba(220,38,38,.18);}
+  .registration-cancelled-control:has(input:disabled){cursor:not-allowed;opacity:.72;}
+  .registration-cancelled-banner{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin:14px 0 18px;
+    padding:14px 18px;
+    border:1px solid #fca5a5;
+    border-radius:16px;
+    background:#fee2e2;
+    color:#7f1d1d;
+    box-shadow:0 12px 28px rgba(185,28,28,.10);
+  }
+  .registration-cancelled-banner[hidden]{display:none;}
+  .registration-cancelled-banner strong{white-space:nowrap;text-transform:uppercase;font-size:12px;letter-spacing:.04em;}
+  .registration-cancelled-banner span{font-size:13px;font-weight:750;line-height:1.4;}
+  @media(max-width:640px){.registration-cancelled-banner{align-items:flex-start;flex-direction:column;gap:5px;}}
+
   .transfer-session-search{position:relative}.transfer-session-search__icon{position:absolute;left:13px;top:21px;transform:translateY(-50%);color:#64748b;pointer-events:none}.transfer-session-search__input{width:100%;min-height:42px;padding:10px 38px 10px 39px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#0f172a;font:inherit;box-sizing:border-box}.transfer-session-search__input:focus{outline:3px solid rgba(37,99,235,.14);border-color:#2563eb}.transfer-session-search__clear{position:absolute;right:7px;top:21px;transform:translateY(-50%);display:none;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:#64748b;font-size:18px;cursor:pointer}.transfer-session-search__clear:hover{background:#f1f5f9;color:#0f172a}.transfer-session-search.has-value .transfer-session-search__clear{display:grid;place-items:center}.transfer-session-search__status{margin:7px 0 0;color:#64748b;font-size:12px;font-weight:750}.transfer-session-results{display:none;margin-top:8px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.10);overflow:hidden}.transfer-session-results.show{display:block}.transfer-session-result{display:block;width:100%;padding:11px 13px;border:0;border-bottom:1px solid #eef2f7;background:#fff;color:#0f172a;text-align:left;font:inherit;font-size:13px;font-weight:750;line-height:1.4;cursor:pointer}.transfer-session-result:last-child{border-bottom:0}.transfer-session-result:hover,.transfer-session-result:focus,.transfer-session-result.is-selected{outline:0;background:#eff6ff;color:#1d4ed8}.transfer-session-result.is-selected::before{content:'✓';margin-right:8px;color:#16a34a;font-weight:950}.transfer-session-search__empty{display:none;margin-top:8px;padding:9px 11px;border-radius:10px;background:#fff7ed;color:#9a3412;font-size:13px;font-weight:800}.transfer-session-search__empty.show{display:block}
 
   .finance-dashboard{grid-column:1 / -1;position:relative;overflow:hidden;border:1px solid #dbe4f0;border-radius:30px;background:radial-gradient(circle at 0% 0%,rgba(37,99,235,.10),transparent 30%),linear-gradient(135deg,#f8fbff 0%,#fff 58%,#f8fafc 100%);box-shadow:0 28px 80px rgba(15,23,42,.12);padding:28px;}.finance-dashboard.is-hidden{display:none}.finance-dashboard__summary{list-style:none;cursor:pointer;font-weight:950;color:#0f172a;display:flex;justify-content:space-between;align-items:center;gap:14px}.finance-dashboard__summary::-webkit-details-marker{display:none}.finance-dashboard__summary::after{content:'⌄';display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:12px;background:#eff6ff;color:#64748b}.finance-dashboard[open]>.finance-dashboard__summary{margin-bottom:18px}.finance-dashboard[open]>.finance-dashboard__summary::after{content:'⌃'}.finance-dashboard__summary-hint{margin-left:auto;color:#64748b;font-size:12px;font-weight:900}.finance-dashboard[open] .finance-dashboard__summary-hint{display:none}.finance-dashboard__close{position:absolute;top:18px;right:18px;width:38px;height:38px;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#64748b;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 10px 22px rgba(15,23,42,.08)}.finance-dashboard__close:hover{color:#0f172a;border-color:#bfdbfe;background:#eff6ff}
@@ -345,7 +384,7 @@
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
 </div>
 
-<div class="session-header admin-trainee-hero">
+<div class="session-header admin-trainee-hero{% if trainee.registration_cancelled %} is-registration-cancelled{% endif %}" id="adminTraineeHero">
   <div>
     <div class="admin-trainee-hero__eyebrow">Espace de gestion · Dossier stagiaire</div>
     <h1>Fiche stagiaire</h1>
@@ -370,6 +409,10 @@
 
     </div>
     <div class="meta-line" style="margin-top:8px;">
+      <label class="registration-cancelled-control{% if trainee.registration_cancelled %} is-cancelled{% endif %}" id="registrationCancelledControl">
+        <input type="checkbox" id="registrationCancelledCheckbox" {% if trainee.registration_cancelled %}checked{% endif %} {% if is_read_only %}disabled{% endif %}>
+        <span>Inscription annulée</span>
+      </label>
       {% if show_automation %}
         <button class="btn btn-outline btn-uniform" type="button" data-open-section="automationHub">
           ⚙️ Automatisation
@@ -442,6 +485,11 @@
     {% endif %}
   </div>
 
+</div>
+
+<div class="registration-cancelled-banner" id="registrationCancelledBanner" {% if not trainee.registration_cancelled %}hidden{% endif %}>
+  <strong>Inscription annulée</strong>
+  <span>Le dossier reste conservé, mais cette personne est exclue des effectifs, des ventes et de tous les KPI{% if trainee.registration_cancelled_at %} depuis le {{ trainee.registration_cancelled_at|frdatetime }}{% endif %}.</span>
 </div>
 
 {% if not is_read_only %}
@@ -4933,6 +4981,42 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     throw error;
   }
 }
+
+  const registrationCancelledCheckbox = document.getElementById("registrationCancelledCheckbox");
+  const registrationCancelledControl = document.getElementById("registrationCancelledControl");
+  const registrationCancelledBanner = document.getElementById("registrationCancelledBanner");
+  const adminTraineeHero = document.getElementById("adminTraineeHero");
+  const registrationCancellationReadOnly = {{ 'true' if is_read_only else 'false' }};
+
+  function renderRegistrationCancellation(cancelled){
+    if(registrationCancelledCheckbox) registrationCancelledCheckbox.checked = cancelled;
+    registrationCancelledControl?.classList.toggle("is-cancelled", cancelled);
+    adminTraineeHero?.classList.toggle("is-registration-cancelled", cancelled);
+    if(registrationCancelledBanner) registrationCancelledBanner.hidden = !cancelled;
+  }
+
+  registrationCancelledCheckbox?.addEventListener("change", async ()=>{
+    const previous = !registrationCancelledCheckbox.checked;
+    const next = registrationCancelledCheckbox.checked;
+    const message = next
+      ? "Confirmer l’annulation de cette inscription ? Le dossier sera conservé, mais la personne ne comptera plus dans les effectifs, les ventes ni aucun KPI."
+      : "Réactiver cette inscription ? La personne sera de nouveau comptabilisée dans les effectifs, les ventes et les KPI.";
+    if(!window.confirm(message)){
+      renderRegistrationCancellation(previous);
+      return;
+    }
+
+    registrationCancelledCheckbox.disabled = true;
+    try{
+      const result = await updateTrainee({ registration_cancelled: next });
+      renderRegistrationCancellation(Boolean(result.registration_cancelled));
+    }catch(error){
+      renderRegistrationCancellation(previous);
+      window.alert("La modification du statut d’inscription n’a pas pu être enregistrée.");
+    }finally{
+      registrationCancelledCheckbox.disabled = registrationCancellationReadOnly;
+    }
+  });
 
   const contactDebounce = {};
 
