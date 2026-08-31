@@ -3052,10 +3052,6 @@ def inject_read_only():
             ctx_data = load_data()
         except Exception:
             ctx_data = None
-        try:
-            wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
-        except Exception:
-            wedof_new_requests_count = 0
         if ctx_data is not None:
             try:
                 sales_metrics = _build_sales_tracking_metrics(ctx_data, datetime.date.today().year)
@@ -15071,7 +15067,6 @@ def admin_sessions():
             data["crm_prefill_transfers"] = retained
             save_data(data)
     _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
-    wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
     out_sessions = []
     current_year = datetime.date.today().year
     dashboard_start = datetime.date(current_year, 1, 1)
@@ -15310,7 +15305,6 @@ def admin_sessions():
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
         dashboard_training_labels=dashboard_training_labels,
-        wedof_new_requests_count=wedof_new_requests_count,
         crm_prefill=crm_prefill,
         crm_prefill_requested=bool(crm_prefill_id),
     ))
@@ -23904,7 +23898,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["vae_status"] = view["key"]
         t["vae_status_label"] = view["label"]
 
-    _sync_vae_status_with_actions(t)
+    if transmission_only_vae_action_update:
+        # Adding a SCOTIA transmission timestamp must not reinterpret stale
+        # historical action dates and silently promote the displayed status.
+        previous_vae_view = vae_status_view(previous_vae_status)
+        t["vae_status"] = previous_vae_view["key"]
+        t["vae_status_label"] = previous_vae_view["label"]
+    else:
+        _sync_vae_status_with_actions(t)
     _sync_financement_status_from_manual_validation(t)
     registration_cancelled = _trainee_registration_is_cancelled(t)
     t["registration_cancelled"] = registration_cancelled
@@ -35786,6 +35787,265 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
     return summary
 
 
+def _registration_cancellation_one_month_before(day: datetime.date) -> datetime.date:
+    """Return the same calendar day one month earlier, clamped when needed."""
+    if day.month == 1:
+        year, month = day.year - 1, 12
+    else:
+        year, month = day.year, day.month - 1
+    return datetime.date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
+
+
+def _registration_cancellation_positive_decimal(value: Any) -> Optional[Decimal]:
+    if value in (None, "") or isinstance(value, bool):
+        return None
+    match = re.search(r"\d+(?:[.,]\d+)?", str(value).replace("\u202f", " "))
+    if not match:
+        return None
+    try:
+        parsed = Decimal(match.group(0).replace(",", "."))
+    except InvalidOperation:
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _registration_cancellation_total_hours(
+    session_obj: Dict[str, Any], trainee: Dict[str, Any]
+) -> Optional[Decimal]:
+    """Resolve the contractual duration used for a cancellation prorata."""
+    hour_keys = (
+        "training_duration_hours", "duration_hours", "total_hours", "h_total",
+        "duree_heures", "contract_training_hours",
+    )
+    for source in (trainee, session_obj):
+        for key in hour_keys:
+            parsed = _registration_cancellation_positive_decimal(source.get(key))
+            if parsed is not None:
+                return parsed
+
+    training_text = _automation_training_text(session_obj)
+    if "APS" in training_text and "SSIAP" in training_text:
+        return Decimal("393") if "AFC" in training_text else Decimal("245")
+    slug = str(_automation_document_config(session_obj).get("slug") or "")
+    default_hours = CERTIFICATE_REALIZATION_DEFAULT_HOURS.get(slug)
+    return Decimal(str(default_hours)) if default_hours else None
+
+
+def _registration_cancellation_first_positive_cents(*values: Any) -> int:
+    for value in values:
+        try:
+            cents = money_value_to_cents(value)
+        except ValueError:
+            continue
+        if cents > 0:
+            return cents
+    return 0
+
+
+def _registration_cancellation_percentage_cents(amount_cents: int, percentage: Decimal) -> int:
+    return int(
+        (Decimal(amount_cents) * percentage / Decimal("100")).quantize(
+            Decimal("1"), rounding=ROUND_HALF_UP
+        )
+    )
+
+
+def calculate_registration_cancellation_indemnity(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    lines: Optional[List[Dict[str, Any]]] = None,
+    *,
+    cancellation_date: Any,
+    delivered_hours: Any = None,
+    total_training_hours: Any = None,
+    training_price_amount: Any = None,
+    deductible_paid_amount: Any = None,
+) -> Dict[str, Any]:
+    """Calculate the cancellation indemnity from the signed-contract rules.
+
+    CPF funding is reported separately and is never deducted automatically.
+    Only amounts already collected from the trainee are deducted by default;
+    the administrator can override that amount in the calculator when the
+    accounting situation requires it.
+    """
+    start_date = _parse_iso_date(str(_session_get(session_obj, "date_start", "") or ""))
+    end_date = _parse_iso_date(str(_session_get(session_obj, "date_end", "") or ""))
+    if start_date is None:
+        raise ValueError("La date de début de formation n’est pas renseignée.")
+
+    if isinstance(cancellation_date, datetime.datetime):
+        cancelled_on = cancellation_date.date()
+    elif isinstance(cancellation_date, datetime.date):
+        cancelled_on = cancellation_date
+    else:
+        cancelled_on = _parse_iso_date(str(cancellation_date or ""))
+    if cancelled_on is None:
+        raise ValueError("La date d’annulation est invalide.")
+
+    cpf_cents = _registration_cancellation_first_positive_cents(
+        trainee.get("cpf_amount"), trainee.get("montant_cpf")
+    )
+    personal_cents = _registration_cancellation_first_positive_cents(
+        trainee.get("personal_amount"),
+        trainee.get("montant_financement_personnel"),
+        trainee.get("montant_personnel"),
+    )
+    other_cents = _registration_cancellation_first_positive_cents(
+        trainee.get("other_financing_amount"),
+        trainee.get("other_amount"),
+        trainee.get("montant_autre"),
+    )
+    financing_total_cents = cpf_cents + personal_cents + other_cents
+    default_price = default_training_price(str(_session_get(session_obj, "training_type", "") or ""))
+    recorded_training_price_cents = _registration_cancellation_first_positive_cents(
+        trainee.get("training_price"),
+        trainee.get("montant_formation"),
+        _session_get(session_obj, "training_price", ""),
+    )
+    if training_price_amount not in (None, ""):
+        try:
+            training_price_cents = money_value_to_cents(training_price_amount)
+        except ValueError as exc:
+            raise ValueError("Le coût total initial de la formation est invalide.") from exc
+        if training_price_cents <= 0:
+            raise ValueError("Le coût total initial doit être supérieur à zéro.")
+        training_price_source = "manual"
+    elif recorded_training_price_cents > 0:
+        training_price_cents = recorded_training_price_cents
+        training_price_source = "record"
+    elif financing_total_cents > 0:
+        training_price_cents = financing_total_cents
+        training_price_source = "financing"
+    else:
+        training_price_cents = _registration_cancellation_first_positive_cents(default_price)
+        training_price_source = "default"
+    if training_price_cents <= 0:
+        raise ValueError("Le coût total initial de la formation n’est pas renseigné.")
+
+    # Cancelled registrations are deliberately neutral in the normal finance
+    # KPIs. Use a copy marked active so historical collections remain available
+    # to this calculator without changing the persisted registration state.
+    finance_trainee = copy.deepcopy(trainee)
+    finance_trainee["registration_cancelled"] = False
+    finance_trainee["registration_canceled"] = False
+    financial_summary = calculate_trainee_financial_summary(finance_trainee, lines or [])
+    by_financer = financial_summary.get("by_financer") or {}
+    personal_paid_cents = int((by_financer.get("PERSONNEL") or {}).get("paid_amount_cents") or 0)
+    other_paid_cents = int((by_financer.get("AUTRE") or {}).get("paid_amount_cents") or 0)
+    cpf_paid_cents = int((by_financer.get("CPF") or {}).get("paid_amount_cents") or 0)
+
+    if deductible_paid_amount in (None, ""):
+        deductible_paid_cents = personal_paid_cents
+    else:
+        try:
+            deductible_paid_cents = money_value_to_cents(deductible_paid_amount)
+        except ValueError as exc:
+            raise ValueError("Le montant déjà encaissé est invalide.") from exc
+        if deductible_paid_cents < 0:
+            raise ValueError("Le montant déjà encaissé ne peut pas être négatif.")
+
+    one_month_before = _registration_cancellation_one_month_before(start_date)
+    two_weeks_before = start_date - datetime.timedelta(days=14)
+    days_before_start = (start_date - cancelled_on).days
+    during_training = cancelled_on >= start_date
+    if cancelled_on < one_month_before:
+        rule_key = "more_than_one_month"
+        rule_label = "Annulation plus d’un mois avant la formation"
+        penalty_rate = Decimal("10")
+    elif cancelled_on <= two_weeks_before:
+        rule_key = "between_one_month_and_two_weeks"
+        rule_label = "Annulation entre un mois et deux semaines avant la formation"
+        penalty_rate = Decimal("20")
+    elif cancelled_on < start_date:
+        rule_key = "less_than_two_weeks"
+        rule_label = "Annulation moins de deux semaines avant la formation"
+        penalty_rate = Decimal("30")
+    else:
+        rule_key = "during_training"
+        rule_label = "Annulation pendant la formation"
+        penalty_rate = Decimal("30")
+
+    penalty_cents = _registration_cancellation_percentage_cents(
+        training_price_cents, penalty_rate
+    )
+    if total_training_hours not in (None, ""):
+        try:
+            resolved_total_hours = Decimal(str(total_training_hours).replace(",", ".").strip())
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ValueError("La durée totale de formation est invalide.") from exc
+        if resolved_total_hours <= 0:
+            raise ValueError("La durée totale de formation doit être supérieure à zéro.")
+    else:
+        resolved_total_hours = _registration_cancellation_total_hours(session_obj, trainee)
+    delivered_hours_value: Optional[Decimal] = None
+    prorata_cents = 0
+    calculation_complete = True
+    if during_training:
+        if delivered_hours not in (None, ""):
+            try:
+                delivered_hours_value = Decimal(str(delivered_hours).replace(",", ".").strip())
+            except (InvalidOperation, TypeError, ValueError) as exc:
+                raise ValueError("Le nombre d’heures dispensées est invalide.") from exc
+            if delivered_hours_value < 0:
+                raise ValueError("Le nombre d’heures dispensées ne peut pas être négatif.")
+        if resolved_total_hours is None or delivered_hours_value is None:
+            calculation_complete = False
+        else:
+            if delivered_hours_value > resolved_total_hours:
+                raise ValueError("Les heures dispensées ne peuvent pas dépasser la durée totale.")
+            prorata_cents = int(
+                (
+                    Decimal(training_price_cents)
+                    * delivered_hours_value
+                    / resolved_total_hours
+                ).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            )
+
+    total_due_cents = penalty_cents + prorata_cents
+    balance_due_cents = max(total_due_cents - deductible_paid_cents, 0)
+    refund_due_cents = max(deductible_paid_cents - total_due_cents, 0)
+    if balance_due_cents > 0:
+        balance_status = "trainee_owes"
+    elif refund_due_cents > 0:
+        balance_status = "refund_due"
+    else:
+        balance_status = "settled"
+
+    return {
+        "cancellation_date": cancelled_on.isoformat(),
+        "session_start_date": start_date.isoformat(),
+        "session_end_date": end_date.isoformat() if end_date else "",
+        "days_before_start": days_before_start,
+        "one_month_before_date": one_month_before.isoformat(),
+        "two_weeks_before_date": two_weeks_before.isoformat(),
+        "rule_key": rule_key,
+        "rule_label": rule_label,
+        "penalty_rate": float(penalty_rate),
+        "during_training": during_training,
+        "cancellation_after_training": bool(end_date and cancelled_on > end_date),
+        "calculation_complete": calculation_complete,
+        "training_price_cents": training_price_cents,
+        "training_price_source": training_price_source,
+        "cpf_amount_cents": cpf_cents,
+        "personal_amount_cents": personal_cents,
+        "other_amount_cents": other_cents,
+        "financing_total_cents": financing_total_cents,
+        "financing_gap_cents": training_price_cents - financing_total_cents,
+        "personal_paid_cents": personal_paid_cents,
+        "other_paid_cents": other_paid_cents,
+        "cpf_paid_cents": cpf_paid_cents,
+        "deductible_paid_cents": deductible_paid_cents,
+        "total_training_hours": float(resolved_total_hours) if resolved_total_hours is not None else None,
+        "delivered_hours": float(delivered_hours_value) if delivered_hours_value is not None else None,
+        "penalty_cents": penalty_cents,
+        "prorata_cents": prorata_cents,
+        "total_due_cents": total_due_cents,
+        "balance_due_cents": balance_due_cents,
+        "refund_due_cents": refund_due_cents,
+        "balance_status": balance_status,
+    }
+
+
 def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
     for key in (
         'qontoInvoiceId', 'qonto_invoice_id', 'qontoStatus', 'qonto_status', 'invoiceNumber', 'invoice_number',
@@ -36256,6 +36516,53 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
             else {}
         ),
     })
+
+
+@app.get('/api/sessions/<session_id>/stagiaires/<trainee_id>/cancellation-indemnity')
+@admin_login_required
+def api_registration_cancellation_indemnity(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        return jsonify({'ok': False, 'error': 'Session introuvable.'}), 404
+    trainee = next(
+        (
+            item for item in _session_trainees_list(session_obj)
+            if str(item.get('id') or '') == str(trainee_id)
+        ),
+        None,
+    )
+    if not trainee:
+        return jsonify({'ok': False, 'error': 'Stagiaire introuvable.'}), 404
+    if not _trainee_registration_is_cancelled(trainee):
+        return jsonify({
+            'ok': False,
+            'error': 'Le calculateur est disponible uniquement pour une inscription annulée.',
+        }), 409
+
+    stored_cancelled_at = str(trainee.get('registration_cancelled_at') or '').strip()
+    stored_cancellation_date = _parse_iso_date(stored_cancelled_at)
+    default_cancellation_date = (
+        stored_cancellation_date.isoformat()
+        if stored_cancellation_date
+        else datetime.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
+    )
+    cancellation_date = request.args.get('cancellation_date') or default_cancellation_date
+    lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    try:
+        calculation = calculate_registration_cancellation_indemnity(
+            session_obj,
+            trainee,
+            lines,
+            cancellation_date=cancellation_date,
+            delivered_hours=request.args.get('delivered_hours'),
+            total_training_hours=request.args.get('total_training_hours'),
+            training_price_amount=request.args.get('training_price_amount'),
+            deductible_paid_amount=request.args.get('deductible_paid_amount'),
+        )
+    except ValueError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 400
+    return jsonify({'ok': True, 'calculation': calculation})
 
 
 def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:

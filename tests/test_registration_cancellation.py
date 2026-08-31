@@ -179,6 +179,131 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertEqual(trainee["registration_cancelled_at"], "")
         self.assertEqual(gestion_app.compute_stats(data["sessions"][0])["total"], 2)
 
+    @staticmethod
+    def _indemnity_case():
+        trainee = {
+            "id": "T-INDEMNITY",
+            "first_name": "Alex",
+            "last_name": "Test",
+            "registration_cancelled": True,
+            "registration_cancelled_at": "2026-09-30T10:00:00Z",
+            "training_price": 4200,
+            "cpf_amount": 2940,
+            "personal_amount": 1260,
+        }
+        session = {
+            "id": "S-INDEMNITY",
+            "name": "APS + SSIAP",
+            "training_type": "AFC APS + SSIAP",
+            "date_start": "2026-11-01",
+            "date_end": "2026-12-31",
+            "trainees": [trainee],
+        }
+        lines = [{
+            "id": gestion_app._billing_line_id(
+                session["id"], trainee["id"], "PERSONNEL", "legacy"
+            ),
+            "traineeId": trainee["id"],
+            "sessionId": session["id"],
+            "financingType": "PERSONNEL",
+            "amount": 1260,
+            "directDebitInstallments": [
+                {"amount": 420, "status": "completed", "schedule_index": 1}
+            ],
+        }]
+        return session, trainee, lines
+
+    def test_indemnity_calculator_matches_contract_and_financing_example(self):
+        session, trainee, lines = self._indemnity_case()
+
+        result = gestion_app.calculate_registration_cancellation_indemnity(
+            session,
+            trainee,
+            lines,
+            cancellation_date="2026-09-30",
+        )
+
+        self.assertEqual(result["rule_key"], "more_than_one_month")
+        self.assertEqual(result["penalty_rate"], 10.0)
+        self.assertEqual(result["training_price_cents"], 420000)
+        self.assertEqual(result["cpf_amount_cents"], 294000)
+        self.assertEqual(result["personal_paid_cents"], 42000)
+        self.assertEqual(result["deductible_paid_cents"], 42000)
+        self.assertEqual(result["penalty_cents"], 42000)
+        self.assertEqual(result["balance_due_cents"], 0)
+        self.assertEqual(result["balance_status"], "settled")
+
+    def test_indemnity_calculator_applies_every_date_band(self):
+        session, trainee, lines = self._indemnity_case()
+        cases = (
+            ("2026-10-01", "between_one_month_and_two_weeks", 20.0, 84000),
+            ("2026-10-18", "between_one_month_and_two_weeks", 20.0, 84000),
+            ("2026-10-19", "less_than_two_weeks", 30.0, 126000),
+        )
+
+        for cancellation_date, rule_key, rate, penalty_cents in cases:
+            with self.subTest(cancellation_date=cancellation_date):
+                result = gestion_app.calculate_registration_cancellation_indemnity(
+                    session,
+                    trainee,
+                    lines,
+                    cancellation_date=cancellation_date,
+                )
+                self.assertEqual(result["rule_key"], rule_key)
+                self.assertEqual(result["penalty_rate"], rate)
+                self.assertEqual(result["penalty_cents"], penalty_cents)
+
+    def test_indemnity_calculator_adds_training_prorata_during_course(self):
+        session, trainee, lines = self._indemnity_case()
+
+        result = gestion_app.calculate_registration_cancellation_indemnity(
+            session,
+            trainee,
+            lines,
+            cancellation_date="2026-11-10",
+            total_training_hours="100",
+            delivered_hours="25",
+        )
+
+        self.assertEqual(result["rule_key"], "during_training")
+        self.assertTrue(result["calculation_complete"])
+        self.assertEqual(result["penalty_cents"], 126000)
+        self.assertEqual(result["prorata_cents"], 105000)
+        self.assertEqual(result["total_due_cents"], 231000)
+        self.assertEqual(result["balance_due_cents"], 189000)
+
+    def test_indemnity_calculator_requires_actual_hours_during_course(self):
+        session, trainee, lines = self._indemnity_case()
+
+        result = gestion_app.calculate_registration_cancellation_indemnity(
+            session,
+            trainee,
+            lines,
+            cancellation_date="2026-11-10",
+        )
+
+        self.assertFalse(result["calculation_complete"])
+        self.assertEqual(result["total_training_hours"], 393.0)
+        self.assertIsNone(result["delivered_hours"])
+
+    def test_indemnity_api_is_available_only_after_cancellation(self):
+        session, trainee, lines = self._indemnity_case()
+        data = {"sessions": [session], "billing_lines": lines}
+        url = (
+            "/api/sessions/S-INDEMNITY/stagiaires/T-INDEMNITY/"
+            "cancellation-indemnity?cancellation_date=2026-09-30"
+        )
+
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get(url)
+            trainee["registration_cancelled"] = False
+            blocked = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+        self.assertEqual(response.get_json()["calculation"]["balance_due_cents"], 0)
+        self.assertEqual(blocked.status_code, 409)
+
     def test_templates_expose_cancelled_state_and_exclude_it_from_billing_kpis(self):
         detail = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
         listing = Path("templates/admin_trainees.html").read_text(encoding="utf-8")
@@ -187,6 +312,9 @@ class RegistrationCancellationTests(unittest.TestCase):
 
         self.assertIn('id="registrationCancelledCheckbox"', detail)
         self.assertIn('id="registrationCancelledBanner"', detail)
+        self.assertIn('id="btnCancellationCalculator"', detail)
+        self.assertIn('id="cancellationIndemnityModal"', detail)
+        self.assertIn("api_registration_cancellation_indemnity", detail)
         self.assertIn("row-registration-cancelled", listing)
         self.assertIn("Inscription annulée", listing)
         self.assertIn("!l.registrationCancelled&&lineMatchesCurrentFilters", billing)
@@ -204,6 +332,9 @@ class RegistrationCancellationTests(unittest.TestCase):
             detail = self.client.get(
                 "/admin/sessions/S-CANCEL/stagiaires/T-CANCELLED"
             )
+            active_detail = self.client.get(
+                "/admin/sessions/S-CANCEL/stagiaires/T-ACTIVE"
+            )
 
         self.assertEqual(listing.status_code, 200)
         self.assertIn("row-registration-cancelled", listing.get_data(as_text=True))
@@ -212,6 +343,13 @@ class RegistrationCancellationTests(unittest.TestCase):
         detail_html = detail.get_data(as_text=True)
         self.assertIn('id="registrationCancelledCheckbox" checked', detail_html)
         self.assertIn('id="registrationCancelledBanner"', detail_html)
+        self.assertIn('id="btnCancellationCalculator"', detail_html)
+        self.assertNotIn('id="btnCancellationCalculator" hidden', detail_html)
+        self.assertEqual(active_detail.status_code, 200)
+        self.assertRegex(
+            active_detail.get_data(as_text=True),
+            r'id="btnCancellationCalculator"\s+hidden',
+        )
 
 
 if __name__ == "__main__":

@@ -14,28 +14,33 @@ class AdminSessionsSsiapTests(unittest.TestCase):
             sess["admin_role"] = "admin"
 
     def test_ssiap_is_counted_in_dashboard_total_and_available_as_filter(self):
-        current_year = datetime.date.today().year
+        today = datetime.date.today()
+        current_year = today.year
+        date_start = today + datetime.timedelta(days=7)
+        date_end = today + datetime.timedelta(days=21)
         fake_data = {
             "sessions": [
                 {
                     "id": "S-SSIAP",
+                    "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
                     "name": f"SSIAP 1 {current_year}",
                     "training_type": "SSIAP 1",
-                    "date_start": f"{current_year}-06-01",
-                    "date_end": f"{current_year}-06-15",
+                    "date_start": date_start.isoformat(),
+                    "date_end": date_end.isoformat(),
                     "trainees": [
-                        {"id": "T-SSIAP-1", "created_at": f"{current_year}-05-10"},
-                        {"id": "T-SSIAP-2", "created_at": f"{current_year}-05-11"},
+                        {"id": "T-SSIAP-1", "created_at": today.isoformat()},
+                        {"id": "T-SSIAP-2", "created_at": today.isoformat()},
                     ],
                 },
                 {
                     "id": "S-APS",
+                    "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
                     "name": f"APS {current_year}",
                     "training_type": "APS",
-                    "date_start": f"{current_year}-03-01",
-                    "date_end": f"{current_year}-03-15",
+                    "date_start": date_start.isoformat(),
+                    "date_end": date_end.isoformat(),
                     "trainees": [
-                        {"id": "T-APS-1", "created_at": f"{current_year}-02-10"},
+                        {"id": "T-APS-1", "created_at": today.isoformat()},
                     ],
                 },
             ]
