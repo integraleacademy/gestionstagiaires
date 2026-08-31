@@ -1,3 +1,4 @@
+import re
 import unittest
 
 import app as gestion_app
@@ -31,7 +32,12 @@ class AdminDirectDebitsSidebarTests(unittest.TestCase):
         self.assertIn('class="container main-content"', html)
         self.assertIn('href="/admin/sessions/facturation"', html)
         self.assertIn('aria-label="CPF"', html)
-        self.assertIn('>1</span>', html)
+        cpf_navigation = next(
+            link
+            for link in re.findall(r'<a[^>]+href="/admin/wedof"[^>]*>.*?</a>', html, re.DOTALL)
+            if 'aria-label="CPF"' in link
+        )
+        self.assertNotIn("partner-sidebar__badge", cpf_navigation)
         self.assertIn("partner-sidebar__collapse--collapsed", html)
         self.assertIn('aria-label="Déployer la barre"', html)
 

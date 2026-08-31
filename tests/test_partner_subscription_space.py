@@ -1,9 +1,11 @@
 import io
 import json
 import os
+import re
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image
 
@@ -62,6 +64,23 @@ class PartnerSubscriptionSpaceTests(unittest.TestCase):
             sess["admin_role"] = "admin"
             sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
             sess["admin_username"] = "admin@example.com"
+
+    def test_partner_cpf_navigation_has_no_global_request_badge(self):
+        with gestion_app.app.test_request_context("/admin/sessions"):
+            gestion_app.session["admin_logged_in"] = True
+            gestion_app.session["admin_role"] = "partner_admin"
+            gestion_app.session["partner_id"] = self.partner_a
+            gestion_app.session["admin_username"] = "a@example.com"
+            with patch.object(gestion_app, "_load_wedof_webhooks") as load_wedof_webhooks:
+                html = gestion_app.render_template("base.html")
+
+            load_wedof_webhooks.assert_not_called()
+        cpf_navigation = next(
+            link
+            for link in re.findall(r'<a[^>]+href="/admin/wedof"[^>]*>.*?</a>', html, re.DOTALL)
+            if 'aria-label="CPF"' in link
+        )
+        self.assertNotIn("partner-sidebar__badge", cpf_navigation)
 
     def _png(self):
         buf = io.BytesIO()

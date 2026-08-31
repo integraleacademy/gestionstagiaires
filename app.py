@@ -3052,10 +3052,6 @@ def inject_read_only():
             ctx_data = load_data()
         except Exception:
             ctx_data = None
-        try:
-            wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
-        except Exception:
-            wedof_new_requests_count = 0
         if ctx_data is not None:
             try:
                 sales_metrics = _build_sales_tracking_metrics(ctx_data, datetime.date.today().year)
@@ -15071,7 +15067,6 @@ def admin_sessions():
             data["crm_prefill_transfers"] = retained
             save_data(data)
     _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
-    wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
     out_sessions = []
     current_year = datetime.date.today().year
     dashboard_start = datetime.date(current_year, 1, 1)
@@ -15310,7 +15305,6 @@ def admin_sessions():
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
         dashboard_training_labels=dashboard_training_labels,
-        wedof_new_requests_count=wedof_new_requests_count,
         crm_prefill=crm_prefill,
         crm_prefill_requested=bool(crm_prefill_id),
     ))
@@ -23892,7 +23886,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["vae_status"] = view["key"]
         t["vae_status_label"] = view["label"]
 
-    _sync_vae_status_with_actions(t)
+    if transmission_only_vae_action_update:
+        # Adding a SCOTIA transmission timestamp must not reinterpret stale
+        # historical action dates and silently promote the displayed status.
+        previous_vae_view = vae_status_view(previous_vae_status)
+        t["vae_status"] = previous_vae_view["key"]
+        t["vae_status_label"] = previous_vae_view["label"]
+    else:
+        _sync_vae_status_with_actions(t)
     _sync_financement_status_from_manual_validation(t)
     registration_cancelled = _trainee_registration_is_cancelled(t)
     t["registration_cancelled"] = registration_cancelled

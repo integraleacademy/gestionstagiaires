@@ -2,11 +2,32 @@ import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
 
 import app as gestion_app
 
 
 class PersistDirResolutionTests(unittest.TestCase):
+    def test_publish_workflow_provides_a_writable_test_persist_dir(self):
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "notion-work-publish.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist",
+            workflow,
+        )
+        self.assertIn("pytest -q", workflow)
+
+        network_guard = (
+            Path(__file__).resolve().parent / "conftest.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("block_external_network", network_guard)
+        self.assertIn("socket.socket", network_guard)
+
     def test_scores_directory_with_existing_stagiaire_and_vae_data(self):
         with tempfile.TemporaryDirectory() as empty_dir, tempfile.TemporaryDirectory() as data_dir:
             with open(os.path.join(data_dir, "data.json"), "w", encoding="utf-8") as f:

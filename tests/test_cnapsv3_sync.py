@@ -1766,7 +1766,7 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual(calls[0]["url"], "https://cnapsv3.example/api/a-traiter")
         self.assertEqual(calls[0]["headers"], {"Accept": "application/json", "Authorization": "Bearer tracking-token"})
-        self.assertEqual(calls[0]["timeout"], 10)
+        self.assertEqual(calls[0]["timeout"], (3, 10))
         self.assertEqual(rows, [
             {"last_name": "DOE", "first_name": "Jane", "nub": "NUB123", "cnaps_status": "transmis"},
             {"last_name": "SMITH", "first_name": "John", "nub": "NUB456", "cnaps_status": "TRANSMIS"},
@@ -2183,7 +2183,7 @@ class CnapsTrackingTests(unittest.TestCase):
             "results": [],
         }
         gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: None
+        gestion_app.save_data = lambda payload, **kwargs: None
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
         try:
             response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567")
@@ -2210,7 +2210,7 @@ class CnapsTrackingTests(unittest.TestCase):
         gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{"last_name": "DOE", "first_name": "Jane", "nub": "1234567"}], None)
         gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {"check_status": "success", "active_titles": [{"display_status": "AP SH ACTIF"}]}
         gestion_app.load_data = lambda **kwargs: data
-        gestion_app.save_data = lambda payload: None
+        gestion_app.save_data = lambda payload, **kwargs: None
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
         gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = 0
         try:
@@ -2223,7 +2223,10 @@ class CnapsTrackingTests(unittest.TestCase):
             gestion_app.brevo_send_email = original_email
             gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = original_delay
 
-        self.assertEqual(result, {"checked": 1, "notified": 0, "errors": 0})
+        self.assertEqual(
+            result,
+            {"checked": 1, "notified": 0, "errors": 0, "status": "done"},
+        )
         self.assertEqual(sent, [])
         self.assertEqual(
             data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["signature"],

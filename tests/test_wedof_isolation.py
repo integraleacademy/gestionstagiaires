@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from unittest.mock import patch
 
@@ -12,25 +13,29 @@ class WedofIsolationTests(unittest.TestCase):
             sess["admin_logged_in"] = True
 
     def test_admin_sessions_and_search_skip_wedof_leads_session(self):
+        today = gestion_app.datetime.date.today()
+        session_name = f"APS TEST {today.year}"
         fake_data = {
             "sessions": [
                 {
                     "id": "S-APS",
-                    "name": "APS MAI 2026",
+                    "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
+                    "name": session_name,
                     "training_type": "APS",
-                    "date_start": "2026-05-01",
-                    "date_end": "2026-05-31",
+                    "date_start": (today - gestion_app.datetime.timedelta(days=7)).isoformat(),
+                    "date_end": (today + gestion_app.datetime.timedelta(days=7)).isoformat(),
                     "trainees": [
                         {
                             "id": "T-1",
                             "first_name": "Océane",
                             "last_name": "Lassouag",
-                            "created_at": "2026-05-02",
+                            "created_at": today.isoformat(),
                         }
                     ],
                 },
                 {
                     "id": "wedof-cpf-edof",
+                    "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
                     "name": "Leads WeDoF CPF/EDOF",
                     "training_type": "CPF/EDOF",
                     "trainees": [
@@ -38,7 +43,7 @@ class WedofIsolationTests(unittest.TestCase):
                             "id": "T-WEDOF",
                             "first_name": "Océane",
                             "last_name": "Lassouag",
-                            "created_at": "2026-05-02",
+                            "created_at": today.isoformat(),
                         }
                     ],
                 },
@@ -51,7 +56,7 @@ class WedofIsolationTests(unittest.TestCase):
             sessions_resp = self.client.get("/admin/sessions")
             self.assertEqual(sessions_resp.status_code, 200)
             sessions_html = sessions_resp.get_data(as_text=True)
-            self.assertIn("APS MAI 2026", sessions_html)
+            self.assertIn(session_name, sessions_html)
             self.assertNotIn("Leads WeDoF CPF/EDOF", sessions_html)
 
             search_resp = self.client.get("/api/trainees_search?q=lass")
@@ -513,6 +518,13 @@ class WedofIsolationTests(unittest.TestCase):
 
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
+        self.assertIn("1 nouvelle demande", html)
+        cpf_navigation = next(
+            link
+            for link in re.findall(r'<a[^>]+href="/admin/wedof"[^>]*>.*?</a>', html, re.DOTALL)
+            if "CPF" in link
+        )
+        self.assertNotIn("partner-sidebar__badge", cpf_navigation)
         self.assertIn(">Notifier</button>", html)
         self.assertIn("Envoyé à Salesforce le", html)
         self.assertIn("Renvoyer Salesforce", html)
