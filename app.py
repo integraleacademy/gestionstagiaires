@@ -15764,6 +15764,33 @@ def admin_mails():
     sample_session = {"name": "A3P · Protection rapprochée", "training_type": "A3P", "date_start": "2026-09-21", "date_end": "2026-11-20"}
     sample_trainee = {"first_name": "Camille", "last_name": "Martin", "email": "camille@example.com"}
     sample_link = "https://gestionstagiaires-r5no.onrender.com/exemple"
+    sample_cancellation_session = {
+        "name": "APS + SSIAP 1 · Automne 2026",
+        "training_type": "APS + SSIAP 1",
+        "date_start": "2026-10-01",
+        "date_end": "2026-11-30",
+    }
+    sample_cancelled_trainee = {
+        "id": "T-EXEMPLE-ANNULATION",
+        "first_name": "Camille",
+        "last_name": "Martin",
+        "email": "camille@example.com",
+        "registration_cancelled": True,
+        "training_price": 4200,
+        "cpf_amount": 2940,
+        "personal_amount": 1260,
+    }
+    sample_cancellation = calculate_registration_cancellation_indemnity(
+        sample_cancellation_session,
+        sample_cancelled_trainee,
+        [{
+            "traineeId": sample_cancelled_trainee["id"],
+            "financingType": "PERSONNEL",
+            "amount": 1260,
+            "directDebitInstallments": [{"amount": 420, "status": "completed"}],
+        }],
+        cancellation_date="2026-08-20",
+    )
 
     def model(title: str, description: str, built: Tuple[str, str], trigger: str) -> Dict[str, str]:
         subject, preview_html = built
@@ -15784,6 +15811,7 @@ def admin_mails():
             model("Hébergement A3P", "Proposition d’hébergement envoyée aux stagiaires A3P.", build_a3p_hosting_email("Camille", sample_session)[:2], "Relance automatique avant le début d’une session A3P."),
             model("Convention à signer", "Premier lien de signature électronique YouSign.", _build_yousign_signature_link_email(sample_session, sample_trainee, sample_link)[:2], "Envoyé après la création de la demande YouSign."),
             model("Relance convention", "Rappel automatique d’une convention non signée.", _build_yousign_signature_reminder_email(sample_session, sample_trainee, sample_link)[:2], "Envoyé automatiquement tant que la signature est en attente."),
+            model("Annulation d’inscription", "Récapitulatif contractuel et financier relu avant envoi.", build_registration_cancellation_email(sample_cancellation_session, sample_cancelled_trainee, sample_cancellation)[:2], "Envoyé manuellement depuis le calculateur d’indemnité après prévisualisation."),
             model("Convocation A3P", "Mail accompagnant la convocation officielle en pièce jointe.", _build_aps_convocation_email("Camille", "2026-09-21", "2026-11-20", sample_session), "Envoyé après signature de la convention ou depuis la fiche stagiaire."),
             model("Attestation d’entrée A3P", "Mail accompagnant l’attestation d’entrée en pièce jointe.", _build_aps_entry_attestation_email("Camille", "2026-09-21", sample_session), "Envoyé depuis la fiche stagiaire ou l’automatisation documentaire."),
             model("Attestation de fin A3P", "Mail accompagnant l’attestation de fin en pièce jointe.", _build_aps_end_attestation_email("Camille", "2026-11-20", sample_session), "Envoyé depuis la fiche stagiaire ou l’automatisation documentaire."),
@@ -36145,6 +36173,255 @@ def calculate_registration_cancellation_indemnity(
     }
 
 
+def _registration_cancellation_money_label(cents: Any) -> str:
+    try:
+        amount = Decimal(int(cents or 0)) / Decimal("100")
+    except (TypeError, ValueError, InvalidOperation):
+        amount = Decimal("0")
+    return _format_euro_amount(amount)
+
+
+def _registration_cancellation_training_label(session_obj: Dict[str, Any]) -> str:
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    training_text = f"{training_type} {_session_get(session_obj, 'name', '')}".upper()
+    if "APS" in training_text and "SSIAP" in training_text:
+        return "Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1)"
+    return (
+        formation_label(training_type)
+        or str(_session_get(session_obj, "name", "") or "").strip()
+        or "Formation professionnelle"
+    )
+
+
+def build_registration_cancellation_email(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    calculation: Dict[str, Any],
+) -> Tuple[str, str, str]:
+    """Build the exact cancellation email shown in preview and sent by Brevo."""
+    first_name_raw = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+    first_name = html.escape(first_name_raw)
+    training_label_raw = _registration_cancellation_training_label(session_obj)
+    training_label = html.escape(training_label_raw)
+    session_name_raw = str(_session_get(session_obj, "name", "") or "").strip()
+    session_name = html.escape(session_name_raw or training_label_raw)
+    cancellation_date = fr_date(str(calculation.get("cancellation_date") or "")) or "—"
+    session_start = fr_date(str(calculation.get("session_start_date") or "")) or "—"
+    session_end = fr_date(str(calculation.get("session_end_date") or "")) or "—"
+    period = session_start if session_end in {"", "—", session_start} else f"{session_start} au {session_end}"
+
+    money = _registration_cancellation_money_label
+    training_price = money(calculation.get("training_price_cents"))
+    cpf_amount = money(calculation.get("cpf_amount_cents"))
+    personal_amount = money(calculation.get("personal_amount_cents"))
+    other_amount = money(calculation.get("other_amount_cents"))
+    paid_amount = money(calculation.get("deductible_paid_cents"))
+    penalty_amount = money(calculation.get("penalty_cents"))
+    prorata_amount = money(calculation.get("prorata_cents"))
+    total_due = money(calculation.get("total_due_cents"))
+    balance_due = money(calculation.get("balance_due_cents"))
+    refund_due = money(calculation.get("refund_due_cents"))
+    penalty_rate = int(Decimal(str(calculation.get("penalty_rate") or 0)))
+    rule_key = str(calculation.get("rule_key") or "")
+
+    rules = (
+        (
+            "more_than_one_month",
+            "Annulation plus d’un mois avant le début",
+            "10 % du coût total initial de la formation",
+        ),
+        (
+            "between_one_month_and_two_weeks",
+            "Annulation entre un mois et deux semaines avant le début",
+            "20 % du coût total initial de la formation",
+        ),
+        (
+            "less_than_two_weeks",
+            "Annulation moins de deux semaines avant le début",
+            "30 % du coût total initial de la formation",
+        ),
+        (
+            "during_training",
+            "Annulation pendant la formation",
+            "30 % du coût total initial, auxquels s’ajoutent les prestations effectivement dispensées au prorata temporis",
+        ),
+    )
+    rules_html = "".join(
+        f'''<tr><td style="padding:0 0 10px 0;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:{'#fff7ed' if key == rule_key else '#f8fafc'};border:{'2px solid #fb923c' if key == rule_key else '1px solid #e2e8f0'};border-radius:14px;">
+            <tr><td style="padding:14px 16px;">
+              <div style="font-size:14px;font-weight:800;line-height:1.45;color:{'#9a3412' if key == rule_key else '#172033'};">{html.escape(label)}{' · Règle appliquée à votre dossier' if key == rule_key else ''}</div>
+              <div style="margin-top:5px;font-size:13px;line-height:1.5;color:#64748b;">{html.escape(detail)}</div>
+            </td></tr>
+          </table>
+        </td></tr>'''
+        for key, label, detail in rules
+    )
+
+    financing_rows = [
+        ("Coût total initial de la formation", training_price, True),
+        ("Financement Compte Personnel de Formation (CPF)", cpf_amount, False),
+        ("Financement personnel prévu", personal_amount, False),
+    ]
+    if int(calculation.get("other_amount_cents") or 0) > 0:
+        financing_rows.append(("Autre financement", other_amount, False))
+    financing_rows.extend([
+        ("Somme déjà versée et déduite", paid_amount, False),
+        (f"Pénalité financière appliquée ({penalty_rate} %)", penalty_amount, True),
+    ])
+    if calculation.get("during_training"):
+        delivered_hours = calculation.get("delivered_hours") or 0
+        total_hours = calculation.get("total_training_hours") or 0
+        financing_rows.append((
+            f"Prestations effectivement dispensées ({delivered_hours:g} h sur {total_hours:g} h)",
+            prorata_amount,
+            False,
+        ))
+    financing_rows.append(("Total dû avant déduction des sommes versées", total_due, True))
+    financing_rows_html = "".join(
+        f'''<tr><td style="padding:11px 14px;border-bottom:1px solid #e2e8f0;color:#475569;font-size:14px;line-height:1.45;">{html.escape(label)}</td>
+        <td align="right" style="padding:11px 14px;border-bottom:1px solid #e2e8f0;color:#0f172a;font-size:14px;font-weight:{'800' if strong else '700'};white-space:nowrap;">{html.escape(value)}</td></tr>'''
+        for label, value, strong in financing_rows
+    )
+
+    balance_status = str(calculation.get("balance_status") or "")
+    if balance_status == "refund_due":
+        balance_title = "Somme à vous rembourser"
+        balance_value = refund_due
+        balance_detail = "Merci de nous transmettre votre RIB par retour de mail afin que nous puissions procéder au remboursement."
+        balance_background, balance_border, balance_color = "#ecfdf5", "#6ee7b7", "#047857"
+    elif balance_status == "settled":
+        balance_title = "Solde de votre dossier"
+        balance_value = money(0)
+        balance_detail = "Les sommes déjà versées couvrent exactement le montant dû : aucun règlement complémentaire n’est demandé."
+        balance_background, balance_border, balance_color = "#ecfdf5", "#86efac", "#166534"
+    else:
+        balance_title = "Solde restant à régler"
+        balance_value = balance_due
+        balance_detail = "Ce montant correspond au solde restant après déduction des sommes déjà encaissées."
+        balance_background, balance_border, balance_color = "#fff7ed", "#fb923c", "#9a3412"
+
+    cpf_notice = ""
+    cpf_notice_text = ""
+    if int(calculation.get("cpf_amount_cents") or 0) > 0:
+        if int(calculation.get("cpf_paid_cents") or 0) > 0:
+            cpf_detail = (
+                f"Une somme de {money(calculation.get('cpf_paid_cents'))} est enregistrée côté CPF. "
+                "Son traitement est distinct du solde personnel présenté ci-dessous."
+            )
+        else:
+            cpf_detail = (
+                "Vous devez également annuler votre inscription depuis votre Espace personnel CPF. "
+                "À ce jour, nous n’avons perçu aucune somme de votre Compte Personnel de Formation."
+            )
+        cpf_notice = f'''<tr><td style="padding:0 0 12px 0;"><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:15px 17px;color:#1e3a8a;font-size:14px;line-height:1.6;"><strong>Financement CPF</strong><br>{html.escape(cpf_detail)}</div></td></tr>'''
+        cpf_notice_text = f"\nFinancement CPF : {cpf_detail}\n"
+
+    personal_notice = ""
+    personal_notice_text = ""
+    if int(calculation.get("personal_amount_cents") or 0) > 0 or int(calculation.get("deductible_paid_cents") or 0) > 0:
+        personal_detail = (
+            "Aucun nouveau prélèvement ne sera programmé depuis ce dossier annulé. "
+            + (
+                f"Un remboursement de {refund_due} est prévu ; merci de joindre votre RIB à votre réponse."
+                if balance_status == "refund_due"
+                else "Les sommes déjà encaissées ont été prises en compte dans le calcul ci-dessous."
+            )
+        )
+        personal_notice = f'''<tr><td style="padding:0 0 12px 0;"><div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:14px;padding:15px 17px;color:#334155;font-size:14px;line-height:1.6;"><strong>Financement personnel</strong><br>{html.escape(personal_detail)}</div></td></tr>'''
+        personal_notice_text = f"\nFinancement personnel : {personal_detail}\n"
+
+    subject = f"Suite à votre demande d’annulation – {training_label_raw}"
+    safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    html_body = f'''<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{html.escape(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f1f5f9;padding:26px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:680px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 34px rgba(15,23,42,.10);">
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+            <td style="width:86px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="72" alt="Intégrale Academy" style="display:block;width:72px;height:auto;background:#ffffff;border-radius:14px;padding:7px;border:0;"></td>
+            <td style="vertical-align:middle;"><div style="font-size:24px;font-weight:800;line-height:1.2;">Annulation de votre inscription</div><div style="font-size:14px;opacity:.9;margin-top:7px;line-height:1.4;">Récapitulatif contractuel et financier</div></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:30px;">
+          <div style="display:inline-block;margin-bottom:18px;padding:7px 12px;border-radius:999px;background:#fff7ed;color:#9a3412;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;">Confirmation de votre décision requise</div>
+          <p style="margin:0 0 16px;font-size:18px;line-height:1.55;">Bonjour {first_name},</p>
+          <p style="margin:0 0 13px;font-size:15px;line-height:1.65;">Je suis au regret d’apprendre que vous souhaitez annuler votre inscription à la formation <strong>{training_label}</strong>.</p>
+          <p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:#475569;">Nous vous rappelons ci-dessous les modalités d’annulation prévues par le contrat de formation professionnelle que vous avez signé, conformément aux articles L.6353-3 et suivants du Code du travail.</p>
+
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:15px;"><tr><td style="padding:17px 19px;">
+            <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;font-weight:800;">Votre inscription</div>
+            <div style="margin-top:9px;font-size:15px;line-height:1.55;"><strong>Formation :</strong> {training_label}<br><strong>Session :</strong> {session_name}<br><strong>Période :</strong> {html.escape(period)}<br><strong>Date effective d’annulation :</strong> {html.escape(cancellation_date)}</div>
+          </td></tr></table>
+
+          <h2 style="margin:0 0 8px;font-size:19px;color:#172033;">Article 9 — Interruption de stage</h2>
+          <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#64748b;">En cas d’abandon pour un autre motif que la force majeure dûment reconnue, le contrat est résilié selon les modalités financières suivantes :</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:20px;">{rules_html}</table>
+
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">{cpf_notice}{personal_notice}</table>
+
+          <h2 style="margin:12px 0 14px;font-size:19px;color:#172033;">Dans votre cas</h2>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;margin-bottom:16px;">{financing_rows_html}</table>
+
+          <div style="background:{balance_background};border:2px solid {balance_border};border-radius:17px;padding:20px;text-align:center;margin:0 0 22px;color:{balance_color};">
+            <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">{html.escape(balance_title)}</div>
+            <div style="font-size:30px;font-weight:900;margin-top:7px;">{html.escape(balance_value)}</div>
+            <div style="font-size:13px;line-height:1.55;margin-top:8px;">{html.escape(balance_detail)}</div>
+          </div>
+
+          <div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:12px;padding:16px 18px;margin-bottom:22px;color:#1e3a8a;font-size:14px;line-height:1.6;"><strong>Vous souhaitez reporter votre inscription ?</strong><br>En cas de report à une date ultérieure, ces pénalités financières ne sont pas appliquées.</div>
+
+          <div style="background:#172033;border-radius:16px;padding:20px;color:#ffffff;margin-bottom:24px;">
+            <div style="font-size:16px;font-weight:800;line-height:1.45;">Merci de nous répondre pour confirmer votre choix</div>
+            <div style="font-size:14px;line-height:1.6;opacity:.9;margin-top:8px;">Pouvez-vous nous confirmer votre volonté d’annuler votre inscription et nous préciser si vous souhaitez plutôt la reporter à une date ultérieure ?</div>
+          </div>
+
+          <p style="margin:0;font-size:15px;line-height:1.65;">Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,</p>
+          <p style="margin:16px 0 0;font-size:15px;line-height:1.55;"><strong>Clément VAILLANT</strong><br>Intégrale Academy</p>
+        </td></tr>
+        <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:21px 30px;color:#64748b;font-size:12px;line-height:1.6;">Intégrale Academy · 54 chemin du Carreou · 83480 Puget-sur-Argens · 04 22 47 07 68</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>'''
+
+    rule_text = next((f"{label} : {detail}" for key, label, detail in rules if key == rule_key), "")
+    financing_text = "\n".join(f"- {label} : {value}" for label, value, _strong in financing_rows)
+    text_body = f"""Bonjour {first_name_raw},
+
+Je suis au regret d’apprendre que vous souhaitez annuler votre inscription à la formation {training_label_raw}.
+
+Cette annulation relève de l’article 9 de votre contrat de formation professionnelle :
+{rule_text}
+
+Formation : {training_label_raw}
+Session : {session_name_raw or training_label_raw}
+Période : {period}
+Date effective d’annulation : {cancellation_date}
+{cpf_notice_text}{personal_notice_text}
+Dans votre cas :
+{financing_text}
+
+{balance_title} : {balance_value}
+{balance_detail}
+
+Si vous souhaitez reporter votre inscription à une date ultérieure, ces pénalités financières ne sont pas appliquées.
+
+Pouvez-vous nous confirmer par retour de mail votre volonté d’annuler votre inscription et nous préciser si vous souhaitez plutôt la reporter ?
+
+Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,
+
+Clément VAILLANT - Intégrale Academy
+54 chemin du Carreou
+83480 Puget-sur-Argens
+04 22 47 07 68"""
+    return subject, html_body, text_body
+
+
 def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
     for key in (
         'qontoInvoiceId', 'qonto_invoice_id', 'qontoStatus', 'qonto_status', 'invoiceNumber', 'invoice_number',
@@ -36617,13 +36894,12 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
     })
 
 
-@app.get('/api/sessions/<session_id>/stagiaires/<trainee_id>/cancellation-indemnity')
-@admin_login_required
-def api_registration_cancellation_indemnity(session_id: str, trainee_id: str):
-    data = load_data()
+def _registration_cancellation_api_context(
+    data: Dict[str, Any], session_id: str, trainee_id: str
+) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     session_obj = find_session(data, session_id)
     if not session_obj:
-        return jsonify({'ok': False, 'error': 'Session introuvable.'}), 404
+        return None, None, []
     trainee = next(
         (
             item for item in _session_trainees_list(session_obj)
@@ -36631,14 +36907,16 @@ def api_registration_cancellation_indemnity(session_id: str, trainee_id: str):
         ),
         None,
     )
-    if not trainee:
-        return jsonify({'ok': False, 'error': 'Stagiaire introuvable.'}), 404
-    if not _trainee_registration_is_cancelled(trainee):
-        return jsonify({
-            'ok': False,
-            'error': 'Le calculateur est disponible uniquement pour une inscription annulée.',
-        }), 409
+    lines = _billing_lines_for_trainee_session(data, trainee_id, session_id) if trainee else []
+    return session_obj, trainee, lines
 
+
+def _registration_cancellation_calculation_from_values(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    lines: List[Dict[str, Any]],
+    values: Any,
+) -> Dict[str, Any]:
     stored_cancelled_at = str(trainee.get('registration_cancelled_at') or '').strip()
     stored_cancellation_date = _parse_iso_date(stored_cancelled_at)
     default_cancellation_date = (
@@ -36646,22 +36924,192 @@ def api_registration_cancellation_indemnity(session_id: str, trainee_id: str):
         if stored_cancellation_date
         else datetime.datetime.now(ZoneInfo('Europe/Paris')).date().isoformat()
     )
-    cancellation_date = request.args.get('cancellation_date') or default_cancellation_date
-    lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    return calculate_registration_cancellation_indemnity(
+        session_obj,
+        trainee,
+        lines,
+        cancellation_date=values.get('cancellation_date') or default_cancellation_date,
+        delivered_hours=values.get('delivered_hours'),
+        total_training_hours=values.get('total_training_hours'),
+        training_price_amount=values.get('training_price_amount'),
+        deductible_paid_amount=values.get('deductible_paid_amount'),
+    )
+
+
+def _registration_cancellation_api_error(
+    session_obj: Optional[Dict[str, Any]], trainee: Optional[Dict[str, Any]]
+) -> Optional[Tuple[Any, int]]:
+    if not session_obj:
+        return jsonify({'ok': False, 'error': 'Session introuvable.'}), 404
+    if not trainee:
+        return jsonify({'ok': False, 'error': 'Stagiaire introuvable.'}), 404
+    if not _trainee_registration_is_cancelled(trainee):
+        return jsonify({
+            'ok': False,
+            'error': 'Cette action est disponible uniquement pour une inscription annulée.',
+        }), 409
+    return None
+
+
+@app.get('/api/sessions/<session_id>/stagiaires/<trainee_id>/cancellation-indemnity')
+@admin_login_required
+def api_registration_cancellation_indemnity(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainee, lines = _registration_cancellation_api_context(data, session_id, trainee_id)
+    error_response = _registration_cancellation_api_error(session_obj, trainee)
+    if error_response:
+        return error_response
     try:
-        calculation = calculate_registration_cancellation_indemnity(
-            session_obj,
-            trainee,
-            lines,
-            cancellation_date=cancellation_date,
-            delivered_hours=request.args.get('delivered_hours'),
-            total_training_hours=request.args.get('total_training_hours'),
-            training_price_amount=request.args.get('training_price_amount'),
-            deductible_paid_amount=request.args.get('deductible_paid_amount'),
+        calculation = _registration_cancellation_calculation_from_values(
+            session_obj, trainee, lines, request.args
         )
     except ValueError as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 400
     return jsonify({'ok': True, 'calculation': calculation})
+
+
+@app.post('/api/sessions/<session_id>/stagiaires/<trainee_id>/cancellation-email/preview')
+@admin_login_required
+def api_registration_cancellation_email_preview(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainee, lines = _registration_cancellation_api_context(data, session_id, trainee_id)
+    error_response = _registration_cancellation_api_error(session_obj, trainee)
+    if error_response:
+        return error_response
+    recipient = str(trainee.get('email') or '').strip()
+    if not recipient:
+        return jsonify({
+            'ok': False,
+            'error': 'Ajoutez d’abord une adresse e-mail sur la fiche du stagiaire.',
+        }), 400
+    values = request.get_json(silent=True) or {}
+    try:
+        calculation = _registration_cancellation_calculation_from_values(
+            session_obj, trainee, lines, values
+        )
+    except ValueError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 400
+    if not calculation.get('calculation_complete'):
+        return jsonify({
+            'ok': False,
+            'error': 'Complétez le nombre d’heures dispensées avant de préparer le mail.',
+        }), 409
+    subject, html_body, _text_body = build_registration_cancellation_email(
+        session_obj, trainee, calculation
+    )
+    warnings = []
+    if int(calculation.get('personal_amount_cents') or 0) > 0:
+        warnings.append(
+            'Avant l’envoi, vérifiez dans Qonto que toute échéance déjà créée a bien été stoppée. '
+            'Le statut « inscription annulée » bloque les nouveaux prélèvements, mais ne promet pas '
+            'l’annulation d’une échéance bancaire déjà transmise.'
+        )
+    return jsonify({
+        'ok': True,
+        'recipient': recipient,
+        'subject': subject,
+        'html': html_body,
+        'calculation': calculation,
+        'warnings': warnings,
+    })
+
+
+@app.post('/api/sessions/<session_id>/stagiaires/<trainee_id>/cancellation-email/send')
+@admin_login_required
+@admin_write_required
+def api_registration_cancellation_email_send(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainee, lines = _registration_cancellation_api_context(data, session_id, trainee_id)
+    error_response = _registration_cancellation_api_error(session_obj, trainee)
+    if error_response:
+        return error_response
+    recipient = str(trainee.get('email') or '').strip()
+    if not recipient:
+        return jsonify({
+            'ok': False,
+            'error': 'Ajoutez d’abord une adresse e-mail sur la fiche du stagiaire.',
+        }), 400
+    values = request.get_json(silent=True) or {}
+    try:
+        calculation = _registration_cancellation_calculation_from_values(
+            session_obj, trainee, lines, values
+        )
+    except ValueError as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 400
+    if not calculation.get('calculation_complete'):
+        return jsonify({
+            'ok': False,
+            'error': 'Le calcul doit être complet avant l’envoi du mail.',
+        }), 409
+
+    subject, html_body, text_body = build_registration_cancellation_email(
+        session_obj, trainee, calculation
+    )
+    result = brevo_send_email(
+        recipient,
+        subject,
+        html_body,
+        trainee=trainee,
+        text_content=text_body,
+        metadata={
+            'purpose': 'registration_cancellation_summary',
+            'session_id': session_id,
+            'trainee_id': trainee_id,
+        },
+    )
+    if not isinstance(result, dict) or not result.get('ok'):
+        error_message = (
+            str((result or {}).get('error') or '').strip()
+            if isinstance(result, dict)
+            else ''
+        ) or 'Le service d’envoi n’a pas accepté le mail.'
+        trainee['cancellation_email_last_error'] = error_message
+        trainee['updated_at'] = _now_iso()
+        save_data(data)
+        return jsonify({'ok': False, 'error': error_message}), 502
+
+    sent_at = _now_iso()
+    trainee['cancellation_email_sent_at'] = sent_at
+    trainee['cancellation_email_last_error'] = ''
+    trainee['cancellation_email_sent_count'] = int(
+        trainee.get('cancellation_email_sent_count') or 0
+    ) + 1
+    trainee['cancellation_email_last_calculation'] = copy.deepcopy(calculation)
+    trainee['updated_at'] = sent_at
+    append_trainee_history_event(
+        trainee,
+        'Mail d’annulation envoyé',
+        (
+            f"{subject} · Pénalité {_registration_cancellation_money_label(calculation.get('penalty_cents'))} "
+            f"· Solde {_registration_cancellation_money_label(calculation.get('balance_due_cents'))}"
+        ),
+        'mail',
+        at=sent_at,
+    )
+    _append_activity_log(
+        data,
+        'registration_cancellation_email_sent',
+        'trainee',
+        trainee_id,
+        details={
+            'session_id': session_id,
+            'recipient': recipient,
+            'subject': subject,
+            'message_id': str(result.get('message_id') or ''),
+            'penalty_cents': int(calculation.get('penalty_cents') or 0),
+            'balance_due_cents': int(calculation.get('balance_due_cents') or 0),
+            'refund_due_cents': int(calculation.get('refund_due_cents') or 0),
+        },
+    )
+    save_data(data)
+    return jsonify({
+        'ok': True,
+        'mail_sent': True,
+        'email_ok': True,
+        'sent_at': sent_at,
+        'recipient': recipient,
+        'subject': subject,
+    })
 
 
 def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:

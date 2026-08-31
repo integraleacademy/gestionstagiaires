@@ -76,7 +76,7 @@
   .cancellation-calculator-hours[hidden]{display:none;}
   .cancellation-calculator-loading{display:flex;align-items:center;justify-content:center;min-height:230px;color:#64748b;font-weight:900;}
   .cancellation-calculator-error{margin-top:16px;padding:13px 15px;border:1px solid #fecaca;border-radius:14px;background:#fef2f2;color:#991b1b;font-weight:850;}
-  .cancellation-calculator-error[hidden],.cancellation-calculator-result[hidden],.cancellation-calculator-warning[hidden]{display:none!important;}
+  .cancellation-calculator-loading[hidden],.cancellation-calculator-error[hidden],.cancellation-calculator-result[hidden],.cancellation-calculator-warning[hidden]{display:none!important;}
   .cancellation-calculator-rule{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:18px;padding:14px 16px;border:1px solid #bfdbfe;border-radius:17px;background:linear-gradient(135deg,#eff6ff,#fff);}
   .cancellation-calculator-rule strong{color:#1e3a8a;font-size:15px;}
   .cancellation-calculator-rule span{padding:5px 9px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:950;}
@@ -97,8 +97,21 @@
   .cancellation-calculator-balance strong{display:block;margin-top:5px;font-size:30px;letter-spacing:-.05em;}
   .cancellation-calculator-warning{margin-top:12px;padding:12px 14px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb;color:#92400e;font-size:12px;font-weight:800;line-height:1.5;}
   .cancellation-calculator-note{margin:14px 0 0;color:#64748b;font-size:11px;font-weight:750;line-height:1.5;}
+  .cancellation-email-modal{width:min(1050px,100%);}
+  .cancellation-email-intro{margin:0 0 15px;padding:14px 16px;border:1px solid #bfdbfe;border-radius:16px;background:linear-gradient(135deg,#eff6ff,#fff);color:#1e3a8a;font-weight:800;line-height:1.5;}
+  .cancellation-email-meta{display:grid;grid-template-columns:minmax(220px,.85fr) minmax(300px,1.5fr);gap:12px;margin-bottom:14px;}
+  .cancellation-email-field{display:grid;gap:6px;min-width:0;}
+  .cancellation-email-field label{color:#64748b;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.06em;}
+  .cancellation-email-field input{box-sizing:border-box;width:100%;min-height:43px;border:1px solid #cbd5e1;border-radius:12px;background:#f8fafc;padding:10px 12px;color:#172033;font:inherit;font-size:13px;font-weight:800;}
+  .cancellation-email-loading{display:flex;align-items:center;justify-content:center;min-height:420px;border:1px dashed #bfdbfe;border-radius:18px;background:#f8fbff;color:#1d4ed8;font-weight:900;}
+  .cancellation-email-loading[hidden],.cancellation-email-error[hidden],.cancellation-email-preview[hidden],.cancellation-email-warning[hidden]{display:none!important;}
+  .cancellation-email-error{padding:14px 16px;border:1px solid #fecaca;border-radius:14px;background:#fef2f2;color:#991b1b;font-weight:850;line-height:1.5;}
+  .cancellation-email-warning{margin-bottom:14px;padding:13px 15px;border:1px solid #fde68a;border-radius:14px;background:#fffbeb;color:#92400e;font-size:12px;font-weight:850;line-height:1.55;}
+  .cancellation-email-preview{padding:10px;border:1px solid #dbe4f0;border-radius:18px;background:#eaf0f7;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
+  .cancellation-email-preview iframe{display:block;width:100%;min-height:58vh;border:0;border-radius:12px;background:#fff;}
+  .cancellation-email-send{box-shadow:0 12px 26px rgba(37,99,235,.22);font-weight:950!important;}
   @media(max-width:760px){.cancellation-calculator-financing{grid-template-columns:repeat(2,minmax(0,1fr));}.cancellation-calculator-fields{grid-template-columns:1fr;}.cancellation-calculator-hours{display:grid;grid-template-columns:1fr;gap:12px;}}
-  @media(max-width:640px){.registration-cancelled-banner{align-items:flex-start;flex-direction:column;gap:5px;}.cancellation-calculator-financing{grid-template-columns:1fr 1fr;}.cancellation-calculator-balance strong{font-size:25px;}}
+  @media(max-width:640px){.registration-cancelled-banner{align-items:flex-start;flex-direction:column;gap:5px;}.cancellation-calculator-financing{grid-template-columns:1fr 1fr;}.cancellation-calculator-balance strong{font-size:25px;}.cancellation-email-meta{grid-template-columns:1fr;}.cancellation-email-preview iframe{min-height:54vh;}}
 
   .transfer-session-search{position:relative}.transfer-session-search__icon{position:absolute;left:13px;top:21px;transform:translateY(-50%);color:#64748b;pointer-events:none}.transfer-session-search__input{width:100%;min-height:42px;padding:10px 38px 10px 39px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#0f172a;font:inherit;box-sizing:border-box}.transfer-session-search__input:focus{outline:3px solid rgba(37,99,235,.14);border-color:#2563eb}.transfer-session-search__clear{position:absolute;right:7px;top:21px;transform:translateY(-50%);display:none;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:#64748b;font-size:18px;cursor:pointer}.transfer-session-search__clear:hover{background:#f1f5f9;color:#0f172a}.transfer-session-search.has-value .transfer-session-search__clear{display:grid;place-items:center}.transfer-session-search__status{margin:7px 0 0;color:#64748b;font-size:12px;font-weight:750}.transfer-session-results{display:none;margin-top:8px;border:1px solid #dbe4f0;border-radius:12px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.10);overflow:hidden}.transfer-session-results.show{display:block}.transfer-session-result{display:block;width:100%;padding:11px 13px;border:0;border-bottom:1px solid #eef2f7;background:#fff;color:#0f172a;text-align:left;font:inherit;font-size:13px;font-weight:750;line-height:1.4;cursor:pointer}.transfer-session-result:last-child{border-bottom:0}.transfer-session-result:hover,.transfer-session-result:focus,.transfer-session-result.is-selected{outline:0;background:#eff6ff;color:#1d4ed8}.transfer-session-result.is-selected::before{content:'✓';margin-right:8px;color:#16a34a;font-weight:950}.transfer-session-search__empty{display:none;margin-top:8px;padding:9px 11px;border-radius:10px;background:#fff7ed;color:#9a3412;font-size:13px;font-weight:800}.transfer-session-search__empty.show{display:block}
 
@@ -642,7 +655,45 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-outline" type="button" onclick="closeModal('cancellationIndemnityModal')">Fermer</button>
-      <button class="btn btn-primary" type="button" id="btnCopyCancellationCalculation" disabled>Copier le récapitulatif</button>
+      <button class="btn btn-outline" type="button" id="btnCopyCancellationCalculation" disabled>Copier le récapitulatif</button>
+      <button class="btn btn-primary cancellation-email-send" type="button" id="btnPrepareCancellationEmail" disabled {{ read_only_attr }}>✉️ Envoyer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="cancellationEmailModal" aria-hidden="true">
+  <div class="modal cancellation-email-modal" role="dialog" aria-modal="true" aria-labelledby="cancellationEmailTitle">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="cancellationEmailTitle">Vérifier le mail d’annulation</div>
+        <div class="hint">Le mail affiché ci-dessous est exactement celui qui sera envoyé au stagiaire.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close-modal="cancellationEmailModal" aria-label="Fermer">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="cancellation-email-intro">
+        Relisez le destinataire, l’objet, les règles contractuelles et le récapitulatif financier. Aucun envoi n’est effectué tant que vous ne cliquez pas sur « Envoyer le mail ».
+      </p>
+      <div class="cancellation-email-meta">
+        <div class="cancellation-email-field">
+          <label for="cancellationEmailRecipient">Destinataire</label>
+          <input type="email" id="cancellationEmailRecipient" value="{{ trainee.email or '' }}" readonly>
+        </div>
+        <div class="cancellation-email-field">
+          <label for="cancellationEmailSubject">Objet</label>
+          <input type="text" id="cancellationEmailSubject" readonly>
+        </div>
+      </div>
+      <div class="cancellation-email-warning" id="cancellationEmailWarning" hidden></div>
+      <div class="cancellation-email-loading" id="cancellationEmailLoading" hidden>Préparation du mail…</div>
+      <div class="cancellation-email-error" id="cancellationEmailError" role="alert" hidden></div>
+      <div class="cancellation-email-preview" id="cancellationEmailPreview" hidden>
+        <iframe id="cancellationEmailFrame" title="Aperçu du mail d’annulation"></iframe>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" type="button" id="btnBackToCancellationCalculation">← Retour au calcul</button>
+      <button class="btn btn-primary cancellation-email-send" type="button" id="btnSendCancellationEmail" disabled {{ read_only_attr }}>Envoyer le mail</button>
     </div>
   </div>
 </div>
@@ -5156,11 +5207,25 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   const cancellationCalculatorError = document.getElementById("cancellationCalculatorError");
   const cancellationCalculatorResult = document.getElementById("cancellationCalculatorResult");
   const copyCancellationCalculationButton = document.getElementById("btnCopyCancellationCalculation");
+  const prepareCancellationEmailButton = document.getElementById("btnPrepareCancellationEmail");
+  const cancellationEmailModal = document.getElementById("cancellationEmailModal");
+  const cancellationEmailRecipient = document.getElementById("cancellationEmailRecipient");
+  const cancellationEmailSubject = document.getElementById("cancellationEmailSubject");
+  const cancellationEmailLoading = document.getElementById("cancellationEmailLoading");
+  const cancellationEmailError = document.getElementById("cancellationEmailError");
+  const cancellationEmailWarning = document.getElementById("cancellationEmailWarning");
+  const cancellationEmailPreview = document.getElementById("cancellationEmailPreview");
+  const cancellationEmailFrame = document.getElementById("cancellationEmailFrame");
+  const backToCancellationCalculationButton = document.getElementById("btnBackToCancellationCalculation");
+  const sendCancellationEmailButton = document.getElementById("btnSendCancellationEmail");
   const cancellationCalculatorEndpoint = {{ url_for('api_registration_cancellation_indemnity', session_id=session.id, trainee_id=trainee.id)|tojson }};
+  const cancellationEmailPreviewEndpoint = {{ url_for('api_registration_cancellation_email_preview', session_id=session.id, trainee_id=trainee.id)|tojson }};
+  const cancellationEmailSendEndpoint = {{ url_for('api_registration_cancellation_email_send', session_id=session.id, trainee_id=trainee.id)|tojson }};
   const adminTraineeHero = document.getElementById("adminTraineeHero");
   const registrationCancellationReadOnly = {{ 'true' if is_read_only else 'false' }};
   const cancellationMoneyFormatter = new Intl.NumberFormat("fr-FR", {style:"currency", currency:"EUR"});
   let currentCancellationCalculation = null;
+  let currentCancellationEmailPreview = null;
   let cancellationCalculationTimer = null;
   let cancellationCalculationRequest = 0;
 
@@ -5190,6 +5255,7 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     cancellationCalculatorError.hidden = false;
     if(cancellationCalculatorResult) cancellationCalculatorResult.hidden = true;
     if(copyCancellationCalculationButton) copyCancellationCalculationButton.disabled = true;
+    if(prepareCancellationEmailButton) prepareCancellationEmailButton.disabled = true;
   }
 
   function renderCancellationCalculation(calculation){
@@ -5279,6 +5345,11 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
       warningNode.hidden = warnings.length === 0;
     }
     if(copyCancellationCalculationButton) copyCancellationCalculationButton.disabled = !calculation.calculation_complete;
+    if(prepareCancellationEmailButton){
+      const recipient = String(document.getElementById("editEmail")?.value || cancellationEmailRecipient?.value || "").trim();
+      prepareCancellationEmailButton.disabled = !calculation.calculation_complete || !recipient || registrationCancellationReadOnly;
+      prepareCancellationEmailButton.title = recipient ? "Prévisualiser le mail avant envoi" : "Ajoutez d’abord l’adresse e-mail du stagiaire";
+    }
   }
 
   async function refreshCancellationCalculation(){
@@ -5307,6 +5378,15 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   function scheduleCancellationCalculation(){
     clearTimeout(cancellationCalculationTimer);
     cancellationCalculationTimer = setTimeout(refreshCancellationCalculation, 220);
+  }
+
+  function cancellationCalculationPayload(){
+    const payload = {cancellation_date:cancellationCalculatorDate?.value || ""};
+    if(cancellationCalculatorPrice?.value !== "") payload.training_price_amount = cancellationCalculatorPrice.value;
+    if(cancellationCalculatorPaid?.value !== "") payload.deductible_paid_amount = cancellationCalculatorPaid.value;
+    if(cancellationCalculatorTotalHours?.value !== "") payload.total_training_hours = cancellationCalculatorTotalHours.value;
+    if(cancellationCalculatorDeliveredHours?.value !== "") payload.delivered_hours = cancellationCalculatorDeliveredHours.value;
+    return payload;
   }
 
   cancellationCalculatorButton?.addEventListener("click", ()=>{
@@ -5353,6 +5433,104 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     setTimeout(()=>{ copyCancellationCalculationButton.textContent = original; }, 1800);
   });
 
+  function resetCancellationEmailPreview(){
+    currentCancellationEmailPreview = null;
+    if(cancellationEmailLoading) cancellationEmailLoading.hidden = false;
+    if(cancellationEmailError){
+      cancellationEmailError.hidden = true;
+      cancellationEmailError.textContent = "";
+    }
+    if(cancellationEmailWarning){
+      cancellationEmailWarning.hidden = true;
+      cancellationEmailWarning.textContent = "";
+    }
+    if(cancellationEmailPreview) cancellationEmailPreview.hidden = true;
+    if(cancellationEmailFrame) cancellationEmailFrame.srcdoc = "";
+    if(cancellationEmailSubject) cancellationEmailSubject.value = "";
+    if(sendCancellationEmailButton) sendCancellationEmailButton.disabled = true;
+  }
+
+  function showCancellationEmailError(message){
+    if(cancellationEmailLoading) cancellationEmailLoading.hidden = true;
+    if(cancellationEmailPreview) cancellationEmailPreview.hidden = true;
+    if(cancellationEmailError){
+      cancellationEmailError.textContent = message || "Le mail n’a pas pu être préparé.";
+      cancellationEmailError.hidden = false;
+    }
+    if(sendCancellationEmailButton) sendCancellationEmailButton.disabled = true;
+  }
+
+  prepareCancellationEmailButton?.addEventListener("click", async ()=>{
+    if(!currentCancellationCalculation?.calculation_complete) return;
+    resetCancellationEmailPreview();
+    const currentRecipient = String(document.getElementById("editEmail")?.value || cancellationEmailRecipient?.value || "").trim();
+    if(cancellationEmailRecipient) cancellationEmailRecipient.value = currentRecipient;
+    closeModal("cancellationIndemnityModal");
+    openModal("cancellationEmailModal");
+    try{
+      const response = await fetch(cancellationEmailPreviewEndpoint, {
+        method:"POST",
+        headers:{"Accept":"application/json", "Content-Type":"application/json"},
+        body:JSON.stringify(cancellationCalculationPayload()),
+      });
+      const payload = await response.json().catch(()=>({}));
+      if(!response.ok || payload.ok === false) throw new Error(payload.error || "Le mail n’a pas pu être préparé.");
+      currentCancellationEmailPreview = payload;
+      if(cancellationEmailRecipient) cancellationEmailRecipient.value = payload.recipient || currentRecipient;
+      if(cancellationEmailSubject) cancellationEmailSubject.value = payload.subject || "";
+      if(cancellationEmailFrame) cancellationEmailFrame.srcdoc = payload.html || "";
+      const warnings = Array.isArray(payload.warnings) ? payload.warnings.filter(Boolean) : [];
+      if(cancellationEmailWarning){
+        cancellationEmailWarning.textContent = warnings.join(" ");
+        cancellationEmailWarning.hidden = warnings.length === 0;
+      }
+      if(cancellationEmailLoading) cancellationEmailLoading.hidden = true;
+      if(cancellationEmailPreview) cancellationEmailPreview.hidden = false;
+      if(sendCancellationEmailButton) sendCancellationEmailButton.disabled = registrationCancellationReadOnly;
+    }catch(error){
+      showCancellationEmailError(error.message || "Le mail n’a pas pu être préparé.");
+    }
+  });
+
+  backToCancellationCalculationButton?.addEventListener("click", ()=>{
+    closeModal("cancellationEmailModal");
+    openModal("cancellationIndemnityModal");
+  });
+
+  sendCancellationEmailButton?.addEventListener("click", async ()=>{
+    if(!currentCancellationEmailPreview || registrationCancellationReadOnly) return;
+    const originalLabel = sendCancellationEmailButton.textContent;
+    sendCancellationEmailButton.disabled = true;
+    sendCancellationEmailButton.textContent = "Envoi en cours…";
+    if(cancellationEmailError) cancellationEmailError.hidden = true;
+    try{
+      const response = await fetch(cancellationEmailSendEndpoint, {
+        method:"POST",
+        headers:{"Accept":"application/json", "Content-Type":"application/json"},
+        body:JSON.stringify(cancellationCalculationPayload()),
+      });
+      const payload = await response.json().catch(()=>({}));
+      if(!response.ok || payload.ok === false) throw new Error(payload.error || "Le mail n’a pas pu être envoyé.");
+      closeModal("cancellationEmailModal");
+      window.showMailSentBadge?.();
+      const successMessage = `Le mail d’annulation a bien été envoyé à ${payload.recipient || cancellationEmailRecipient?.value || "la personne"}.`;
+      if(window.AppModal){
+        await window.AppModal.alert({type:"success", title:"Mail envoyé", message:successMessage, buttonText:"Fermer"});
+      }else{
+        window.alert(successMessage);
+      }
+      window.location.reload();
+    }catch(error){
+      if(cancellationEmailError){
+        cancellationEmailError.textContent = error.message || "Le mail n’a pas pu être envoyé.";
+        cancellationEmailError.hidden = false;
+      }
+      sendCancellationEmailButton.disabled = false;
+    }finally{
+      sendCancellationEmailButton.textContent = originalLabel;
+    }
+  });
+
   function renderRegistrationCancellation(cancelled){
     if(registrationCancelledCheckbox) registrationCancelledCheckbox.checked = cancelled;
     registrationCancelledControl?.classList.toggle("is-cancelled", cancelled);
@@ -5361,6 +5539,9 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     if(cancellationCalculatorButton) cancellationCalculatorButton.hidden = !cancelled;
     if(!cancelled && cancellationCalculatorModal?.classList.contains("show")){
       closeModal("cancellationIndemnityModal");
+    }
+    if(!cancelled && cancellationEmailModal?.classList.contains("show")){
+      closeModal("cancellationEmailModal");
     }
   }
 
