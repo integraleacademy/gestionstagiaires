@@ -7,6 +7,7 @@
   const status = root.querySelector('[data-cpf-match-status]');
   const message = root.querySelector('[data-cpf-match-message]');
   const retry = root.querySelector('[data-cpf-match-retry]');
+  const liveSearch = root.querySelector('[data-cpf-match-live]');
   const suggestions = root.querySelector('[data-cpf-suggestions]');
   let running = false;
 
@@ -24,10 +25,11 @@
     serviceDoneValidated: 'Service fait validé',
   }[value] || value || 'Statut non communiqué');
 
-  function setStatus(tone, text, showRetry = false) {
+  function setStatus(tone, text) {
     status.className = `cpf-match-status ${tone === 'loading' ? 'is-loading' : `is-${tone}`}`;
     message.textContent = text;
-    retry.hidden = !showRetry;
+    retry.disabled = tone === 'loading';
+    liveSearch.disabled = tone === 'loading';
   }
 
   function refreshAfterAssociation(redirectUrl) {
@@ -132,19 +134,25 @@
     } catch (error) {
       button.disabled = false;
       button.textContent = original;
-      setStatus('error', error.message, true);
+      setStatus('error', error.message);
     } finally {
       running = false;
     }
   }
 
-  async function search() {
+  async function search(source = 'cache') {
     if (running) return;
     running = true;
     suggestions.innerHTML = '';
-    setStatus('loading', 'Comparaison avec les derniers dossiers présents dans le cache WEDOF…');
+    const isLive = source === 'wedof';
+    setStatus(
+      'loading',
+      isLive
+        ? 'Recherche WEDOF en cours à partir du nom, des coordonnées et des dates de formation…'
+        : 'Comparaison avec les derniers dossiers présents dans le cache WEDOF…',
+    );
     try {
-      const payload = await post(root.dataset.searchUrl);
+      const payload = await post(isLive ? root.dataset.liveSearchUrl : root.dataset.searchUrl);
       if (payload.status === 'associated') {
         setStatus('success', payload.message || 'Le bon dossier CPF a été associé automatiquement.');
         window.setTimeout(() => refreshAfterAssociation(payload.redirect_url), 300);
@@ -152,15 +160,16 @@
       }
       const items = Array.isArray(payload.candidates) ? payload.candidates : [];
       renderCandidates(items);
-      setStatus('neutral', payload.message, true);
+      setStatus(items.length ? 'success' : 'neutral', payload.message);
     } catch (error) {
-      setStatus('error', error.message, true);
+      setStatus('error', error.message);
     } finally {
       running = false;
     }
   }
 
-  retry.addEventListener('click', search);
+  retry.addEventListener('click', () => search('cache'));
+  liveSearch.addEventListener('click', () => search('wedof'));
   suggestions.addEventListener('click', event => {
     const button = event.target.closest('[data-cpf-associate]');
     if (button) associate(button);
