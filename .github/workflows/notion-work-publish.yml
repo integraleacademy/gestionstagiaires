@@ -70,6 +70,8 @@ jobs:
     if: needs.inspect.outputs.head_sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist
     permissions:
       contents: read
     steps:

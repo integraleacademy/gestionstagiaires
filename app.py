@@ -23886,7 +23886,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["vae_status"] = view["key"]
         t["vae_status_label"] = view["label"]
 
-    _sync_vae_status_with_actions(t)
+    if transmission_only_vae_action_update:
+        # Adding a SCOTIA transmission timestamp must not reinterpret stale
+        # historical action dates and silently promote the displayed status.
+        previous_vae_view = vae_status_view(previous_vae_status)
+        t["vae_status"] = previous_vae_view["key"]
+        t["vae_status_label"] = previous_vae_view["label"]
+    else:
+        _sync_vae_status_with_actions(t)
     _sync_financement_status_from_manual_validation(t)
     registration_cancelled = _trainee_registration_is_cancelled(t)
     t["registration_cancelled"] = registration_cancelled

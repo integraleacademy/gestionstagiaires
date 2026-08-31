@@ -150,7 +150,7 @@ class AutomationDateTimeFormatTests(unittest.TestCase):
             client = gestion_app.app.test_client()
             with client.session_transaction() as sess:
                 sess["admin_logged_in"] = True
-            response = client.get("/admin/sessions/conventions")
+            response = client.get("/admin/sessions/conventions?status=")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([row["trainee_id"] for row in captured["rows"]], ["generated", "not-generated"])

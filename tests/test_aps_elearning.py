@@ -83,14 +83,19 @@ class ApsElearningTests(unittest.TestCase):
 
     def test_admin_sessions_cards_show_direct_elearning_checkbox_only_for_aps(self):
         self._admin_login()
-        data = self._data("2026-06-15")
+        future_start = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
+        future_end = (datetime.date.today() + datetime.timedelta(days=14)).isoformat()
+        data = self._data(future_start)
+        data["sessions"][0]["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
+        data["sessions"][0]["date_end"] = future_end
         data["sessions"].append(
             {
                 "id": "S-VTC",
+                "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
                 "name": "Session VTC",
                 "training_type": "VTC",
-                "date_start": "2026-06-15",
-                "date_end": "2026-06-20",
+                "date_start": future_start,
+                "date_end": future_end,
                 "aps_elearning_enabled": True,
                 "trainees": [],
             }
