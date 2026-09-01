@@ -112,6 +112,7 @@
   .aps-elearning-tracking__force-button:hover{background:#991b1b;color:#fff;}
   .aps-elearning-tracking__force-note{font-weight:800;}
   .aps-elearning-tracking__actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;}
+  .aps-elearning-tracking__actions form{margin:0;}
   .aps-elearning-tracking__upload{
     display:flex;
     align-items:end;
@@ -1510,6 +1511,13 @@
              href="{{ url_for('admin_download_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">
             ⬇️ Télécharger l’attestation Digiforma
           </a>
+          {% if not is_read_only %}
+            <form method="post"
+                  action="{{ url_for('admin_reset_aps_elearning_tracking', session_id=session.id, trainee_id=trainee.id) }}"
+                  onsubmit="return confirm('Tout remettre à zéro ? Le PDF Digiforma, le tableau de suivi, les fichiers locaux, le suivi Yousign et tout forçage seront supprimés. Toute demande Yousign en cours sera annulée. Le lien e-learning APS restera inchangé. Cette action est irréversible.');">
+              <button class="btn btn-danger" type="submit">↺ Tout remettre à zéro</button>
+            </form>
+          {% endif %}
         </div>
       </div>
       <div class="aps-elearning-tracking__evidence" aria-label="Synthèse du relevé Digiforma">
