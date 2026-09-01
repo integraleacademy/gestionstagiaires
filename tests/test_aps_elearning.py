@@ -116,8 +116,7 @@ class ApsElearningTests(unittest.TestCase):
                             "phone": "06 12 34 56 78",
                             "birth_date": "1994-03-12",
                             "pre_number": "PRE-083-2026-09-01-12345678901",
-                            "aps_elearning_login": "alice.aps",
-                            "aps_elearning_password": "Secret-123",
+                            "aps_elearning_login": "https://ediser.elmg.net/access/alice-aps",
                             "documents": [],
                         }
                     ],
@@ -196,7 +195,7 @@ class ApsElearningTests(unittest.TestCase):
         )
         self.assertIn("🎓 E-learning", html)
 
-    def test_admin_trainee_credentials_are_available_only_for_enabled_aps_session(self):
+    def test_admin_trainee_link_is_available_only_for_enabled_aps_session(self):
         self._admin_login()
         data = self._data("2026-06-15")
 
@@ -207,9 +206,13 @@ class ApsElearningTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("Identifiants e-learning APS", html)
-        self.assertIn('id="editApsElearningLogin"', html)
-        self.assertIn('id="editApsElearningPassword"', html)
+        self.assertIn("Lien e-learning APS", html)
+        self.assertRegex(html, r'id="editApsElearningLogin"\s+type="url"')
+        self.assertIn(
+            'value="https://ediser.elmg.net/access/alice-aps"',
+            html,
+        )
+        self.assertNotIn('id="editApsElearningPassword"', html)
         self.assertIn("Suivi du e-learning", html)
         self.assertIn("Importer le relevé complet", html)
         self.assertIn("TABLEAU DE SUIVI DE LA FORMATION À DISTANCE", html)
@@ -220,7 +223,7 @@ class ApsElearningTests(unittest.TestCase):
             gestion_app, "save_data"
         ):
             response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
-        self.assertNotIn("Identifiants e-learning APS", response.get_data(as_text=True))
+        self.assertNotIn("Lien e-learning APS", response.get_data(as_text=True))
         self.assertNotIn("Suivi du e-learning", response.get_data(as_text=True))
 
     def test_complete_digiforma_pdf_is_imported_and_downloadable(self):
@@ -650,7 +653,7 @@ class ApsElearningTests(unittest.TestCase):
         mark_convention.assert_not_called()
         save_data.assert_called_once()
 
-    def test_trainee_api_saves_credentials_only_when_aps_elearning_is_enabled(self):
+    def test_trainee_api_saves_link_only_when_aps_elearning_is_enabled(self):
         self._admin_login()
         data = self._data("2026-06-15")
 
@@ -660,15 +663,35 @@ class ApsElearningTests(unittest.TestCase):
             response = self.client.post(
                 "/api/sessions/S-APS/stagiaires/T-APS/update",
                 json={
-                    "aps_elearning_login": "nouveau-login",
-                    "aps_elearning_password": "nouveau-password",
+                    "aps_elearning_login": "https://ediser.elmg.net/access/nouveau-lien",
+                    "aps_elearning_password": "doit-etre-ignore",
                 },
             )
 
         self.assertEqual(response.status_code, 200)
         trainee = data["sessions"][0]["trainees"][0]
-        self.assertEqual(trainee["aps_elearning_login"], "nouveau-login")
-        self.assertEqual(trainee["aps_elearning_password"], "nouveau-password")
+        self.assertEqual(
+            trainee["aps_elearning_login"],
+            "https://ediser.elmg.net/access/nouveau-lien",
+        )
+        self.assertNotIn("aps_elearning_password", trainee)
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ):
+            invalid = self.client.post(
+                "/api/sessions/S-APS/stagiaires/T-APS/update",
+                json={"aps_elearning_login": "pas-un-lien"},
+            )
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(
+            invalid.get_json()["error"],
+            "aps_elearning_link_invalid",
+        )
+        self.assertEqual(
+            trainee["aps_elearning_login"],
+            "https://ediser.elmg.net/access/nouveau-lien",
+        )
 
         data["sessions"][0]["aps_elearning_enabled"] = False
         with patch.object(gestion_app, "load_data", return_value=data), patch.object(
@@ -677,16 +700,17 @@ class ApsElearningTests(unittest.TestCase):
             response = self.client.post(
                 "/api/sessions/S-APS/stagiaires/T-APS/update",
                 json={
-                    "aps_elearning_login": "doit-etre-ignore",
-                    "aps_elearning_password": "doit-etre-ignore",
+                    "aps_elearning_login": "https://ediser.elmg.net/access/doit-etre-ignore"
                 },
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(trainee["aps_elearning_login"], "nouveau-login")
-        self.assertEqual(trainee["aps_elearning_password"], "nouveau-password")
+        self.assertEqual(
+            trainee["aps_elearning_login"],
+            "https://ediser.elmg.net/access/nouveau-lien",
+        )
 
-    def test_public_space_hides_credentials_before_first_training_day(self):
+    def test_public_space_hides_link_before_first_training_day(self):
         self._public_login()
         tomorrow = datetime.date.today() + datetime.timedelta(days=1)
         data = self._data(tomorrow.isoformat())
@@ -699,11 +723,11 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertIn(f"Accès disponible le {tomorrow.strftime('%d/%m/%Y')}", html)
-        self.assertNotIn("alice.aps", html)
-        self.assertNotIn("Secret-123", html)
+        self.assertNotIn("https://ediser.elmg.net/access/alice-aps", html)
         self.assertNotIn("Accéder au e-learning", html)
+        self.assertNotIn('id="apsElearningPassword"', html)
 
-    def test_public_space_shows_credentials_and_copy_actions_from_first_day(self):
+    def test_public_space_shows_personal_link_from_first_day(self):
         self._public_login()
         data = self._data(datetime.date.today().isoformat())
 
@@ -714,24 +738,47 @@ class ApsElearningTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("alice.aps", html)
-        self.assertIn("Secret-123", html)
-        self.assertIn('data-copy-target="apsElearningLogin"', html)
-        self.assertIn('data-copy-target="apsElearningPassword"', html)
-        self.assertIn('href="https://ediser.elmg.net/"', html)
+        self.assertIn(
+            'href="https://ediser.elmg.net/access/alice-aps"',
+            html,
+        )
+        self.assertIn("Accéder au e-learning", html)
+        self.assertNotIn('data-copy-target="apsElearningLogin"', html)
+        self.assertNotIn('data-copy-target="apsElearningPassword"', html)
+        self.assertNotIn('id="apsElearningPassword"', html)
+
+    def test_public_space_does_not_make_legacy_login_clickable(self):
+        self._public_login()
+        data = self._data(datetime.date.today().isoformat())
+        data["sessions"][0]["trainees"][0]["aps_elearning_login"] = "alice.aps"
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.get("/espace/PUBLIC-TOKEN")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Le lien enregistré n’est pas valide", html)
+        self.assertNotIn('href="alice.aps"', html)
+        self.assertNotIn("Accéder au e-learning", html)
 
     def test_public_space_does_not_show_aps_card_for_vtc_or_disabled_session(self):
         self._public_login()
         for training_type, enabled in (("VTC", True), ("APS", False)):
-            data = self._data(datetime.date.today().isoformat(), enabled=enabled, training_type=training_type)
+            data = self._data(
+                datetime.date.today().isoformat(),
+                enabled=enabled,
+                training_type=training_type,
+            )
             with patch.object(gestion_app, "load_data", return_value=data), patch.object(
                 gestion_app, "save_data"
             ):
                 response = self.client.get("/espace/PUBLIC-TOKEN")
             html = response.get_data(as_text=True)
             self.assertNotIn("Espace e-learning APS", html)
-            self.assertNotIn("alice.aps", html)
-            self.assertNotIn("Secret-123", html)
+            self.assertNotIn("https://ediser.elmg.net/access/alice-aps", html)
+            self.assertNotIn('id="apsElearningPassword"', html)
 
 
 if __name__ == "__main__":

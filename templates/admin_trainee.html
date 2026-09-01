@@ -1436,31 +1436,23 @@
 
 {% if ((session.training_type or "")|upper).startswith("APS") and session.aps_elearning_enabled %}
 <div class="card" style="grid-column:1 / -1;margin-top:16px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#fff);">
-  <div style="font-weight:900;font-size:18px;">🎓 Identifiants e-learning APS</div>
+  <div style="font-weight:900;font-size:18px;">🔗 Lien e-learning APS</div>
   <div class="hint" style="margin-top:6px;">
-    Ces identifiants seront visibles dans l’espace stagiaire uniquement à partir du premier jour de formation ({{ session.date_start|frdate }}).
+    Ce lien personnel sera visible dans l’espace stagiaire uniquement à partir du premier jour de formation ({{ session.date_start|frdate }}).
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px;max-width:840px;">
+  <div style="display:grid;grid-template-columns:minmax(260px,840px);gap:12px;margin-top:14px;">
     <label>
-      <div class="label">Login e-learning</div>
+      <div class="label">Lien d’accès e-learning</div>
       <input id="editApsElearningLogin"
-             type="text"
+             type="url"
              value="{{ trainee.aps_elearning_login or '' }}"
-             placeholder="Login du stagiaire"
-             autocomplete="off"
-             {{ read_only_attr }}>
-    </label>
-    <label>
-      <div class="label">Mot de passe e-learning</div>
-      <input id="editApsElearningPassword"
-             type="text"
-             value="{{ trainee.aps_elearning_password or '' }}"
-             placeholder="Mot de passe du stagiaire"
-             autocomplete="off"
+             placeholder="https://..."
+             inputmode="url"
+             autocomplete="url"
              {{ read_only_attr }}>
     </label>
   </div>
-  <div class="hint" style="margin-top:8px;">Sauvegarde automatique.</div>
+  <div class="hint" style="margin-top:8px;">Collez le lien personnel complet fourni par la plateforme. Sauvegarde automatique.</div>
 
   {% set aps_tracking = trainee.aps_elearning_tracking or {} %}
   {% set aps_signature = trainee.aps_elearning_signature or {} %}
