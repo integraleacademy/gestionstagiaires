@@ -1,0 +1,252 @@
+name: Codex - accès APS par lien unique
+
+on:
+  push:
+    branches:
+      - codex/aps-elearning-link-only
+
+permissions:
+  contents: write
+
+jobs:
+  apply-change:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remplacer les identifiants APS par un lien personnel
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file_path = Path(path)
+              content = file_path.read_text(encoding="utf-8")
+              count = content.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: remplacement attendu 1 fois, trouvé {count}")
+              file_path.write_text(content.replace(old, new, 1), encoding="utf-8")
+
+          admin_old = """  <div style=\"font-weight:900;font-size:18px;\">🎓 Identifiants e-learning APS</div>
+            <div class=\"hint\" style=\"margin-top:6px;\">
+              Ces identifiants seront visibles dans l’espace stagiaire uniquement à partir du premier jour de formation ({{ session.date_start|frdate }}).
+            </div>
+            <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px;max-width:840px;\">
+              <label>
+                <div class=\"label\">Login e-learning</div>
+                <input id=\"editApsElearningLogin\"
+                       type=\"text\"
+                       value=\"{{ trainee.aps_elearning_login or '' }}\"
+                       placeholder=\"Login du stagiaire\"
+                       autocomplete=\"off\"
+                       {{ read_only_attr }}>
+              </label>
+              <label>
+                <div class=\"label\">Mot de passe e-learning</div>
+                <input id=\"editApsElearningPassword\"
+                       type=\"text\"
+                       value=\"{{ trainee.aps_elearning_password or '' }}\"
+                       placeholder=\"Mot de passe du stagiaire\"
+                       autocomplete=\"off\"
+                       {{ read_only_attr }}>
+              </label>
+            </div>
+            <div class=\"hint\" style=\"margin-top:8px;\">Sauvegarde automatique.</div>"""
+
+          admin_new = """  <div style=\"font-weight:900;font-size:18px;\">🔗 Lien e-learning APS</div>
+            <div class=\"hint\" style=\"margin-top:6px;\">
+              Ce lien personnel sera visible dans l’espace stagiaire uniquement à partir du premier jour de formation ({{ session.date_start|frdate }}).
+            </div>
+            <div style=\"display:grid;grid-template-columns:minmax(260px,840px);gap:12px;margin-top:14px;\">
+              <label>
+                <div class=\"label\">Lien d’accès e-learning</div>
+                <input id=\"editApsElearningLogin\"
+                       type=\"url\"
+                       value=\"{{ trainee.aps_elearning_login or '' }}\"
+                       placeholder=\"https://...\"
+                       inputmode=\"url\"
+                       autocomplete=\"url\"
+                       {{ read_only_attr }}>
+              </label>
+            </div>
+            <div class=\"hint\" style=\"margin-top:8px;\">Collez le lien personnel complet fourni par la plateforme. Sauvegarde automatique.</div>"""
+
+          public_old = """    {% if aps_elearning_enabled %}
+                {% set aps_login = (trainee.aps_elearning_login or '')|trim %}
+                {% set aps_password = (trainee.aps_elearning_password or '')|trim %}
+                <section class=\"card aps-elearning-card\" aria-labelledby=\"apsElearningTitle\">
+                  <div class=\"aps-elearning-icon\" aria-hidden=\"true\">
+                    <svg viewBox=\"0 0 24 24\" fill=\"none\" role=\"img\">
+                      <path d=\"M5 6.5A2.5 2.5 0 0 1 7.5 4H19v13H7.5A2.5 2.5 0 0 0 5 19.5v-13Z\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>
+                      <path d=\"M5 19.5A2.5 2.5 0 0 1 7.5 17H19\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>
+                      <path d=\"M9 8h6M9 11h4\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>
+                    </svg>
+                  </div>
+                  <div class=\"aps-elearning-content\">
+                    <h2 id=\"apsElearningTitle\">Espace e-learning APS</h2>
+                    <p class=\"aps-elearning-subtitle\">Vos accès personnels à la plateforme de formation à distance seront activés au démarrage de la formation.</p>
+                    <div class=\"aps-elearning-badge\">Accès disponible le {{ session.date_start|frdate }}</div>
+                    <p class=\"aps-elearning-note\">Vous pourrez suivre vos modules à distance avec vos identifiants personnels. Votre progression sera suivie pendant toute la formation.</p>
+                  {% if not aps_elearning_available %}
+                    <div class=\"aps-elearning-pending\">
+                      Vos identifiants seront affichés ici le premier jour de formation.
+                    </div>
+                  {% elif aps_login and aps_password %}
+                    <div class=\"aps-elearning-credentials\">
+                      <div class=\"aps-elearning-credential\">
+                        <span class=\"aps-elearning-credential-label\">Login</span>
+                        <div class=\"aps-elearning-value-row\">
+                          <span class=\"aps-elearning-value\" id=\"apsElearningLogin\">{{ aps_login }}</span>
+                          <button class=\"aps-elearning-copy\" type=\"button\" data-copy-target=\"apsElearningLogin\">Copier</button>
+                        </div>
+                      </div>
+                      <div class=\"aps-elearning-credential\">
+                        <span class=\"aps-elearning-credential-label\">Mot de passe</span>
+                        <div class=\"aps-elearning-value-row\">
+                          <span class=\"aps-elearning-value\" id=\"apsElearningPassword\">{{ aps_password }}</span>
+                          <button class=\"aps-elearning-copy\" type=\"button\" data-copy-target=\"apsElearningPassword\">Copier</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class=\"aps-elearning-actions\">
+                      <a class=\"btn\" href=\"https://ediser.elmg.net/\" target=\"_blank\" rel=\"noopener\">🚀 Accéder au e-learning</a>
+                      <span class=\"aps-elearning-copy-status\" id=\"apsElearningCopyStatus\" role=\"status\" aria-live=\"polite\"></span>
+                    </div>
+                  {% else %}
+                    <div class=\"aps-elearning-pending\">Vos identifiants sont en cours de préparation. Ils apparaîtront ici dès qu’ils seront disponibles.</div>
+                  {% endif %}
+                  </div>
+                </section>
+              {% endif %}"""
+
+          public_new = """    {% if aps_elearning_enabled %}
+                {% set aps_link = (trainee.aps_elearning_login or '')|trim %}
+                <section class=\"card aps-elearning-card\" aria-labelledby=\"apsElearningTitle\">
+                  <div class=\"aps-elearning-icon\" aria-hidden=\"true\">
+                    <svg viewBox=\"0 0 24 24\" fill=\"none\" role=\"img\">
+                      <path d=\"M5 6.5A2.5 2.5 0 0 1 7.5 4H19v13H7.5A2.5 2.5 0 0 0 5 19.5v-13Z\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/>
+                      <path d=\"M5 19.5A2.5 2.5 0 0 1 7.5 17H19\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>
+                      <path d=\"M9 8h6M9 11h4\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/>
+                    </svg>
+                  </div>
+                  <div class=\"aps-elearning-content\">
+                    <h2 id=\"apsElearningTitle\">Espace e-learning APS</h2>
+                    <p class=\"aps-elearning-subtitle\">Votre lien personnel vers la plateforme de formation à distance sera activé au démarrage de la formation.</p>
+                    <div class=\"aps-elearning-badge\">Accès disponible le {{ session.date_start|frdate }}</div>
+                    <p class=\"aps-elearning-note\">Votre progression restera suivie pendant toute la formation, sans identifiant ni mot de passe à saisir.</p>
+                  {% if not aps_elearning_available %}
+                    <div class=\"aps-elearning-pending\">
+                      Votre lien d’accès sera affiché ici le premier jour de formation.
+                    </div>
+                  {% elif aps_link %}
+                    <div class=\"aps-elearning-actions\">
+                      <a class=\"btn\" href=\"{{ aps_link }}\" target=\"_blank\" rel=\"noopener noreferrer\">🚀 Accéder au e-learning</a>
+                      <span class=\"aps-elearning-copy-status\">Lien personnel sécurisé</span>
+                    </div>
+                  {% else %}
+                    <div class=\"aps-elearning-pending\">Votre lien personnel est en cours de préparation. Il apparaîtra ici dès qu’il sera disponible.</div>
+                  {% endif %}
+                  </div>
+                </section>
+              {% endif %}"""
+
+          replace_once("templates/admin_trainee.html", admin_old, admin_new)
+          replace_once("templates/public_trainee.html", public_old, public_new)
+
+          test_path = Path("tests/test_aps_elearning.py")
+          tests = test_path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  '                            "aps_elearning_login": "alice.aps",\n                            "aps_elearning_password": "Secret-123",',
+                  '                            "aps_elearning_login": "https://ediser.elmg.net/access/alice-aps",',
+              ),
+              (
+                  "    def test_admin_trainee_credentials_are_available_only_for_enabled_aps_session(self):",
+                  "    def test_admin_trainee_link_is_available_only_for_enabled_aps_session(self):",
+              ),
+              (
+                  '        self.assertIn("Identifiants e-learning APS", html)\n        self.assertIn(\'id="editApsElearningLogin"\', html)\n        self.assertIn(\'id="editApsElearningPassword"\', html)',
+                  '        self.assertIn("Lien e-learning APS", html)\n        self.assertRegex(html, r\'id="editApsElearningLogin"\\s+type="url"\')\n        self.assertIn(\'value="https://ediser.elmg.net/access/alice-aps"\', html)\n        self.assertNotIn(\'id="editApsElearningPassword"\', html)',
+              ),
+              (
+                  '        self.assertNotIn("Identifiants e-learning APS", response.get_data(as_text=True))',
+                  '        self.assertNotIn("Lien e-learning APS", response.get_data(as_text=True))',
+              ),
+              (
+                  "    def test_trainee_api_saves_credentials_only_when_aps_elearning_is_enabled(self):",
+                  "    def test_trainee_api_saves_link_only_when_aps_elearning_is_enabled(self):",
+              ),
+              (
+                  '                json={\n                    "aps_elearning_login": "nouveau-login",\n                    "aps_elearning_password": "nouveau-password",\n                },',
+                  '                json={"aps_elearning_login": "https://ediser.elmg.net/access/nouveau-lien"},',
+              ),
+              (
+                  '        self.assertEqual(trainee["aps_elearning_login"], "nouveau-login")\n        self.assertEqual(trainee["aps_elearning_password"], "nouveau-password")',
+                  '        self.assertEqual(trainee["aps_elearning_login"], "https://ediser.elmg.net/access/nouveau-lien")',
+              ),
+              (
+                  '                json={\n                    "aps_elearning_login": "doit-etre-ignore",\n                    "aps_elearning_password": "doit-etre-ignore",\n                },',
+                  '                json={"aps_elearning_login": "https://ediser.elmg.net/access/doit-etre-ignore"},',
+              ),
+              (
+                  '        self.assertEqual(trainee["aps_elearning_login"], "nouveau-login")\n        self.assertEqual(trainee["aps_elearning_password"], "nouveau-password")',
+                  '        self.assertEqual(trainee["aps_elearning_login"], "https://ediser.elmg.net/access/nouveau-lien")',
+              ),
+              (
+                  "    def test_public_space_hides_credentials_before_first_training_day(self):",
+                  "    def test_public_space_hides_link_before_first_training_day(self):",
+              ),
+              (
+                  "    def test_public_space_shows_credentials_and_copy_actions_from_first_day(self):",
+                  "    def test_public_space_shows_personal_link_from_first_day(self):",
+              ),
+              (
+                  '        self.assertNotIn("alice.aps", html)',
+                  '        self.assertNotIn("https://ediser.elmg.net/access/alice-aps", html)',
+              ),
+              (
+                  '        self.assertNotIn("Secret-123", html)',
+                  '        self.assertNotIn(\'id="apsElearningPassword"\', html)',
+              ),
+              (
+                  '        self.assertIn("alice.aps", html)\n        self.assertIn("Secret-123", html)\n        self.assertIn(\'data-copy-target="apsElearningLogin"\', html)\n        self.assertIn(\'data-copy-target="apsElearningPassword"\', html)\n        self.assertIn(\'href="https://ediser.elmg.net/"\', html)',
+                  '        self.assertIn(\'href="https://ediser.elmg.net/access/alice-aps"\', html)\n        self.assertIn("Accéder au e-learning", html)\n        self.assertNotIn(\'data-copy-target="apsElearningLogin"\', html)\n        self.assertNotIn(\'data-copy-target="apsElearningPassword"\', html)\n        self.assertNotIn(\'id="apsElearningPassword"\', html)',
+              ),
+          ]
+
+          for old, new in replacements:
+              count = tests.count(old)
+              if count < 1:
+                  raise SystemExit(f"tests/test_aps_elearning.py: motif introuvable: {old[:80]!r}")
+              tests = tests.replace(old, new)
+
+          test_path.write_text(tests, encoding="utf-8")
+          PY
+
+      - name: Vérifier le diff
+        run: |
+          git diff --check
+          grep -q 'Lien e-learning APS' templates/admin_trainee.html
+          grep -q 'href="{{ aps_link }}"' templates/public_trainee.html
+          ! grep -q 'id="editApsElearningPassword"' templates/admin_trainee.html
+
+      - name: Installer les dépendances de test
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip install --disable-pip-version-check pytest
+
+      - name: Tester le parcours APS e-learning
+        run: python -m pytest -q tests/test_aps_elearning.py
+
+      - name: Enregistrer les changements
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add templates/admin_trainee.html templates/public_trainee.html tests/test_aps_elearning.py
+          git commit -m "Remplacer les identifiants APS par un lien e-learning"
+          git push origin HEAD:${GITHUB_REF_NAME}
