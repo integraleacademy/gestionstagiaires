@@ -25363,6 +25363,331 @@ def _private_documents(t: dict) -> List[Dict[str, str]]:
     return cleaned
 
 
+APS_ELEARNING_TRACKING_TEMPLATE = os.path.join(
+    app.root_path,
+    "templates_word",
+    "tableau_suivi_foad_cnaps.docx",
+)
+APS_ELEARNING_TRACKING_FOLDER = "aps_elearning_tracking"
+APS_ELEARNING_REQUIRED_PDF_MARKERS = (
+    "attestation d'assiduite",
+    "suivi detaille de l'assiduite e-learning",
+    "releve de connexions",
+)
+APS_ELEARNING_FRENCH_MONTHS = {
+    "janvier": 1,
+    "fevrier": 2,
+    "mars": 3,
+    "avril": 4,
+    "mai": 5,
+    "juin": 6,
+    "juillet": 7,
+    "aout": 8,
+    "septembre": 9,
+    "octobre": 10,
+    "novembre": 11,
+    "decembre": 12,
+}
+
+
+def _is_aps_elearning_session(session_obj: Dict[str, Any]) -> bool:
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip().upper()
+    return training_type.startswith("APS") and bool(session_obj.get("aps_elearning_enabled"))
+
+
+def _aps_elearning_tracking(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    raw = trainee.get("aps_elearning_tracking")
+    if not isinstance(raw, dict):
+        raw = {}
+    try:
+        page_count = max(0, int(raw.get("page_count") or 0))
+    except (TypeError, ValueError):
+        page_count = 0
+    cleaned = {
+        "file": str(raw.get("file") or "").strip(),
+        "original_name": str(raw.get("original_name") or "").strip(),
+        "uploaded_at": str(raw.get("uploaded_at") or "").strip(),
+        "page_count": page_count,
+        "report_created_at": str(raw.get("report_created_at") or "").strip(),
+        "report_issued_date": str(raw.get("report_issued_date") or "").strip(),
+        "digiforma_identifier": str(raw.get("digiforma_identifier") or "").strip(),
+        "training_title": str(raw.get("training_title") or "").strip(),
+        "remote_start": str(raw.get("remote_start") or "").strip(),
+        "remote_end": str(raw.get("remote_end") or "").strip(),
+        "planned_duration": str(raw.get("planned_duration") or "").strip(),
+        "attested_name": str(raw.get("attested_name") or "").strip(),
+    }
+    trainee["aps_elearning_tracking"] = cleaned
+    return cleaned
+
+
+def _aps_elearning_normalized_pdf_text(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    return re.sub(r"\s+", " ", normalized).strip().lower().replace("’", "'")
+
+
+def _aps_elearning_french_date_to_iso(value: Any) -> str:
+    raw = re.sub(r"\s+", " ", str(value or "").strip().rstrip("."))
+    if not raw:
+        return ""
+    numeric = re.search(r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b", raw)
+    if numeric:
+        try:
+            return datetime.date(int(numeric.group(3)), int(numeric.group(2)), int(numeric.group(1))).isoformat()
+        except ValueError:
+            return ""
+    normalized = _aps_elearning_normalized_pdf_text(raw)
+    match = re.search(r"\b(\d{1,2})\s+([a-z]+)\s+(\d{4})\b", normalized)
+    if not match:
+        return ""
+    month = APS_ELEARNING_FRENCH_MONTHS.get(match.group(2))
+    if not month:
+        return ""
+    try:
+        return datetime.date(int(match.group(3)), month, int(match.group(1))).isoformat()
+    except ValueError:
+        return ""
+
+
+def _aps_elearning_pdf_created_at(reader: PdfReader) -> str:
+    try:
+        created_at = getattr(reader.metadata, "creation_date", None)
+    except Exception:
+        created_at = None
+    if not isinstance(created_at, datetime.datetime):
+        return ""
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=datetime.timezone.utc)
+    return created_at.astimezone(ZoneInfo("Europe/Paris")).isoformat()
+
+
+def _extract_digiforma_attendance_metadata(pdf_bytes: bytes) -> Dict[str, Any]:
+    if not pdf_bytes or not pdf_bytes.lstrip().startswith(b"%PDF-"):
+        raise ValueError("Le fichier sélectionné n’est pas un PDF valide.")
+    try:
+        reader = PdfReader(BytesIO(pdf_bytes))
+        if not reader.pages:
+            raise ValueError("Le PDF ne contient aucune page.")
+        extracted_pages = []
+        for page in reader.pages:
+            try:
+                extracted_pages.append(page.extract_text() or "")
+            except Exception:
+                extracted_pages.append("")
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError("Le PDF Digiforma est illisible ou endommagé.") from exc
+
+    full_text = "\n".join(extracted_pages).replace("\u00a0", " ")
+    normalized_text = _aps_elearning_normalized_pdf_text(full_text)
+    missing_markers = [marker for marker in APS_ELEARNING_REQUIRED_PDF_MARKERS if marker not in normalized_text]
+    if missing_markers:
+        raise ValueError(
+            "Import refusé : choisissez l’attestation d’assiduité Digiforma complète, "
+            "avec le suivi détaillé e-learning et le relevé de connexions."
+        )
+
+    def first_match(pattern: str) -> str:
+        match = re.search(pattern, full_text, re.IGNORECASE | re.MULTILINE)
+        return re.sub(r"\s+", " ", match.group(1)).strip() if match else ""
+
+    attested_name = first_match(r"atteste\s+que\s*:\s*([^\r\n]+)")
+    training_title = first_match(r"a\s+suivi\s+la\s+formation\s*:\s*(?:[\r\n]\s*)*([^\r\n]+)")
+    planned_duration = first_match(r"Dur[ée]e\s+de\s+la\s+formation\s*:\s*([0-9]+(?:[.,][0-9]+)?\s+heures?)")
+    digiforma_identifier = first_match(r"Adresse\s+email\s+utilis[ée]e\s*:\s*([^\s]+@[^\s]+)")
+
+    remote_start = ""
+    remote_end = ""
+    period_match = re.search(
+        r"Dates\s+de\s+la\s+formation\s*:\s*du\s+(.+?)\s+au\s+(.+?)(?:\.|\r?\n)",
+        full_text,
+        re.IGNORECASE,
+    )
+    if period_match:
+        remote_start = _aps_elearning_french_date_to_iso(period_match.group(1))
+        remote_end = _aps_elearning_french_date_to_iso(period_match.group(2))
+
+    report_issued_date = ""
+    issued_match = re.search(r"Fait\s+[àa][^,\r\n]*,\s*le\s+([^\r\n]+)", full_text, re.IGNORECASE)
+    if issued_match:
+        report_issued_date = _aps_elearning_french_date_to_iso(issued_match.group(1))
+
+    return {
+        "page_count": len(reader.pages),
+        "report_created_at": _aps_elearning_pdf_created_at(reader),
+        "report_issued_date": report_issued_date,
+        "digiforma_identifier": digiforma_identifier,
+        "training_title": training_title,
+        "remote_start": remote_start,
+        "remote_end": remote_end,
+        "planned_duration": planned_duration,
+        "attested_name": attested_name,
+    }
+
+
+def _aps_elearning_report_matches_trainee(metadata: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    attested_name = _normalize_person_name(str(metadata.get("attested_name") or ""))
+    if not attested_name:
+        return True
+    expected_name = _normalize_person_name(
+        f"{trainee.get('first_name') or trainee.get('prenom') or ''} "
+        f"{trainee.get('last_name') or trainee.get('nom') or ''}"
+    )
+    expected_tokens = set(expected_name.split())
+    return bool(expected_tokens) and expected_tokens.issubset(set(attested_name.split()))
+
+
+def _aps_elearning_tracking_redirect(session_id: str, trainee_id: str):
+    return redirect(
+        url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id)
+        + "#apsElearningTrackingSection"
+    )
+
+
+def _aps_elearning_datetime_label(value: Any) -> str:
+    parsed = _parse_iso_datetime(str(value or ""))
+    if not parsed:
+        return ""
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    parsed = parsed.astimezone(ZoneInfo("Europe/Paris"))
+    return parsed.strftime("%d/%m/%Y à %Hh%M")
+
+
+def _aps_elearning_cnaps_number(trainee: Dict[str, Any]) -> str:
+    for key in ("pre_number", "cnaps_authorization_number", "cnaps_card_number", "carte_professionnelle"):
+        value = str(trainee.get(key) or "").strip()
+        if value:
+            return value
+    nub = str(trainee.get("cnaps_tracking_nub") or trainee.get("cnaps_nub") or trainee.get("nub") or "").strip()
+    return f"NUB {nub}" if nub else "Non renseigné"
+
+
+def _aps_elearning_tracking_context(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    tracking: Optional[Dict[str, Any]] = None,
+) -> Dict[str, str]:
+    tracking = tracking or _aps_elearning_tracking(trainee)
+    page_count = max(1, int(tracking.get("page_count") or 1))
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    remote_start = str(_session_get(session_obj, "aps_remote_start", "") or tracking.get("remote_start") or _session_get(session_obj, "date_start", "") or "").strip()
+    remote_end = str(_session_get(session_obj, "aps_remote_end", "") or tracking.get("remote_end") or remote_start or "").strip()
+    period = _format_period_from_dates(remote_start, remote_end) or "Non renseignée"
+
+    duration = str(tracking.get("planned_duration") or _session_get(session_obj, "h_elearning", "") or "62 heures").strip()
+    if re.fullmatch(r"\d+(?:[.,]\d+)?", duration):
+        duration = f"{duration} heures"
+
+    report_generated_at = _aps_elearning_datetime_label(tracking.get("report_created_at"))
+    if not report_generated_at and tracking.get("report_issued_date"):
+        report_generated_at = f"{fr_date(str(tracking.get('report_issued_date')))} (heure non indiquée)"
+    if not report_generated_at:
+        imported_at = _aps_elearning_datetime_label(tracking.get("uploaded_at"))
+        report_generated_at = f"{imported_at} (date d’import)" if imported_at else "Non renseigné"
+
+    issued_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y")
+    return {
+        "formation_session": str(_session_get(session_obj, "name", "") or tracking.get("training_title") or "Formation APS").strip(),
+        "remote_period": period,
+        "remote_duration": duration,
+        "trainee_last_name": last_name or "Non renseigné",
+        "trainee_first_name": first_name or "Non renseigné",
+        "trainee_full_name": f"{first_name} {last_name}".strip() or "Non renseigné",
+        "birth_date": fr_date(str(trainee.get("birth_date") or "")) or "Non renseignée",
+        "cnaps_number": _aps_elearning_cnaps_number(trainee),
+        "digiforma_identifier": str(tracking.get("digiforma_identifier") or trainee.get("aps_elearning_login") or "Non renseigné").strip(),
+        "report_filename": str(tracking.get("original_name") or "attestation-assiduite-digiforma.pdf").strip(),
+        "report_generated_at": report_generated_at or "Non renseigné",
+        "report_page_range": f"de la page 1 à la page {page_count}",
+        "report_page_count_label": f"{page_count} page{'s' if page_count > 1 else ''}",
+        "signature_place": "Puget-sur-Argens",
+        "issued_date": issued_date,
+    }
+
+
+def _render_docx_tokens_preserving_layout(
+    template_path: str,
+    output_path: str,
+    context: Dict[str, str],
+) -> None:
+    if not os.path.isfile(template_path):
+        raise FileNotFoundError("Le modèle du tableau de suivi FOAD CNAPS est introuvable.")
+    with zipfile.ZipFile(template_path, "r") as source_zip, zipfile.ZipFile(
+        output_path,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+    ) as target_zip:
+        for item in source_zip.infolist():
+            payload = source_zip.read(item.filename)
+            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+                xml_text = payload.decode("utf-8")
+                for key, value in context.items():
+                    xml_text = xml_text.replace("{{ " + key + " }}", escape(str(value or "")))
+                payload = xml_text.encode("utf-8")
+            target_zip.writestr(item, payload)
+    with zipfile.ZipFile(output_path, "r") as rendered_zip:
+        rendered_xml = rendered_zip.read("word/document.xml").decode("utf-8", errors="ignore")
+    unresolved = sorted(set(re.findall(r"\{\{\s*[^{}]+?\s*\}\}", rendered_xml)))
+    if unresolved:
+        raise RuntimeError("Variables non remplacées dans le tableau de suivi FOAD : " + ", ".join(unresolved))
+
+
+def _build_aps_elearning_tracking_table_pdf(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+) -> BytesIO:
+    tracking = _aps_elearning_tracking(trainee)
+    if not tracking.get("file"):
+        raise ValueError("Importez d’abord l’attestation d’assiduité Digiforma complète.")
+    context = _aps_elearning_tracking_context(session_obj, trainee, tracking)
+    with tempfile.TemporaryDirectory(prefix="aps-foad-") as temporary_dir:
+        output_docx = os.path.join(temporary_dir, "tableau_suivi_foad_cnaps.docx")
+        output_pdf = os.path.join(temporary_dir, "tableau_suivi_foad_cnaps.pdf")
+        libreoffice_profile = os.path.join(temporary_dir, "libreoffice-profile")
+        os.makedirs(libreoffice_profile, exist_ok=True)
+        _render_docx_tokens_preserving_layout(APS_ELEARNING_TRACKING_TEMPLATE, output_docx, context)
+        lo_binary = _find_libreoffice_binary()
+        command = [
+            lo_binary,
+            f"-env:UserInstallation=file://{libreoffice_profile}",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            temporary_dir,
+            output_docx,
+        ]
+        try:
+            subprocess.run(
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env={**os.environ, "HOME": temporary_dir},
+            )
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"Conversion PDF impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
+        if not os.path.isfile(output_pdf) or os.path.getsize(output_pdf) <= 0:
+            raise RuntimeError("Le tableau de suivi FOAD n’a pas pu être généré en PDF.")
+        with open(output_pdf, "rb") as generated_pdf:
+            payload = generated_pdf.read()
+    try:
+        if len(PdfReader(BytesIO(payload)).pages) != 1:
+            raise RuntimeError("Le tableau de suivi FOAD doit tenir sur une seule page.")
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError("Le tableau de suivi FOAD généré est illisible.") from exc
+    output = BytesIO(payload)
+    output.seek(0)
+    return output
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/upload")
 @admin_login_required
 @admin_write_required
@@ -25448,6 +25773,132 @@ def admin_view_private_document(session_id: str, trainee_id: str, document_id: s
     extension = _safe_ext(document.get("original_name") or full_path)
     download_name = secure_filename(document.get("name") or "document") + extension
     return send_file(full_path, as_attachment=False, download_name=download_name)
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/digiforma/upload")
+@admin_login_required
+@admin_write_required
+def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+
+    incoming_file = request.files.get("digiforma_pdf")
+    if not incoming_file or not incoming_file.filename:
+        flash("Choisissez l’attestation d’assiduité Digiforma au format PDF.", "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+    if _safe_ext(incoming_file.filename) != ".pdf":
+        flash("Seul le PDF complet généré par Digiforma est accepté.", "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    pdf_bytes = incoming_file.read()
+    try:
+        metadata = _extract_digiforma_attendance_metadata(pdf_bytes)
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+    if not _aps_elearning_report_matches_trainee(metadata, trainee):
+        expected_name = " ".join(filter(None, (
+            str(trainee.get("first_name") or trainee.get("prenom") or "").strip(),
+            str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper(),
+        )))
+        flash(
+            f"Ce relevé Digiforma concerne « {metadata.get('attested_name') or 'un autre stagiaire'} » et non « {expected_name} ».",
+            "error",
+        )
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    incoming_file.stream.seek(0)
+    previous_tracking = dict(_aps_elearning_tracking(trainee))
+    try:
+        stored_path = _store_file(session_id, trainee_id, APS_ELEARNING_TRACKING_FOLDER, incoming_file)
+    except ValueError:
+        flash("Seul le PDF complet généré par Digiforma est accepté.", "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    uploaded_at = _now_iso()
+    trainee["aps_elearning_tracking"] = {
+        "file": _tokenize_path(stored_path),
+        "original_name": secure_filename(incoming_file.filename or "attestation-assiduite-digiforma.pdf")[:180]
+        or "attestation-assiduite-digiforma.pdf",
+        "uploaded_at": uploaded_at,
+        **metadata,
+    }
+    trainee["updated_at"] = uploaded_at
+    append_trainee_history_event(
+        trainee,
+        "Attestation d’assiduité Digiforma importée",
+        f"{metadata.get('page_count') or 0} page(s)",
+        "action",
+        uploaded_at,
+    )
+    session_obj["trainees"] = trainees
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+
+    previous_token = str(previous_tracking.get("file") or "").strip()
+    if previous_token and previous_token != trainee["aps_elearning_tracking"]["file"]:
+        try:
+            previous_path = _detokenize_path(previous_token)
+            if os.path.isfile(previous_path):
+                os.remove(previous_path)
+        except Exception:
+            app.logger.warning(
+                "[APS E-LEARNING] ancien relevé Digiforma non supprimé trainee_id=%s",
+                trainee_id,
+                exc_info=True,
+            )
+
+    flash("L’attestation Digiforma complète a été importée. Le tableau de suivi est prêt.", "success")
+    return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/digiforma")
+@admin_login_required
+def admin_download_aps_elearning_digiforma(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, _, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+    tracking = _aps_elearning_tracking(trainee)
+    full_path = _detokenize_path(tracking.get("file") or "")
+    if not tracking.get("file") or not os.path.isfile(full_path):
+        abort(404)
+    download_name = secure_filename(tracking.get("original_name") or "attestation-assiduite-digiforma.pdf")
+    return send_file(
+        full_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=download_name or "attestation-assiduite-digiforma.pdf",
+    )
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/tableau-suivi.pdf")
+@admin_login_required
+def admin_download_aps_elearning_tracking_table(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, _, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+    try:
+        pdf = _build_aps_elearning_tracking_table_pdf(session_obj, trainee)
+    except ValueError as exc:
+        return make_response(html.escape(str(exc)), 400)
+    except (FileNotFoundError, RuntimeError) as exc:
+        app.logger.exception("[APS E-LEARNING] génération du tableau de suivi impossible")
+        return make_response(f"Tableau de suivi indisponible : {html.escape(str(exc))}", 503)
+
+    base_name = "-".join(filter(None, (
+        _safe_filename_part(trainee.get("last_name") or trainee.get("nom")),
+        _safe_filename_part(trainee.get("first_name") or trainee.get("prenom")),
+    )))
+    return send_file(
+        pdf,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"tableau-suivi-foad-cnaps-{base_name or trainee_id}.pdf",
+    )
 
 
 @app.get("/espace/<token>/download/<path:file_token>")
@@ -32248,6 +32699,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     # ✅ deliverables
     t.setdefault("deliverables", {})
     _private_documents(t)
+    if _is_aps_elearning_session(s):
+        _aps_elearning_tracking(t)
 
     # file tokens for template links (documents)
     for d in (t.get("documents") or []):
