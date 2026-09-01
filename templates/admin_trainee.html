@@ -49,6 +49,11 @@
     font-size:12px;
     font-weight:900;
   }
+  .aps-elearning-tracking__status--warning{
+    border-color:#fed7aa;
+    background:#fff7ed;
+    color:#9a3412;
+  }
   .aps-elearning-tracking__document{
     display:grid;
     grid-template-columns:minmax(0,1fr) auto;
@@ -63,6 +68,35 @@
   }
   .aps-elearning-tracking__filename{color:#172033;font-weight:950;overflow-wrap:anywhere;}
   .aps-elearning-tracking__meta{margin-top:5px;color:#64748b;font-size:12px;font-weight:750;}
+  .aps-elearning-tracking__evidence{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:9px;
+    margin-top:10px;
+  }
+  .aps-elearning-tracking__evidence-item{
+    min-width:0;
+    padding:10px 11px;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    background:#f8fafc;
+  }
+  .aps-elearning-tracking__evidence-item span{display:block;color:#64748b;font-size:11px;font-weight:800;}
+  .aps-elearning-tracking__evidence-item strong{display:block;margin-top:3px;color:#172033;font-size:13px;font-weight:950;overflow-wrap:anywhere;}
+  .aps-elearning-tracking__control{
+    margin-top:11px;
+    padding:12px 14px;
+    border:1px solid #fecaca;
+    border-radius:14px;
+    background:#fef2f2;
+    color:#991b1b;
+    font-size:12px;
+    line-height:1.45;
+  }
+  .aps-elearning-tracking__control--ready{border-color:#bbf7d0;background:#f0fdf4;color:#166534;}
+  .aps-elearning-tracking__control strong{display:block;font-size:13px;font-weight:950;}
+  .aps-elearning-tracking__control ul{margin:6px 0 0;padding-left:18px;}
+  .aps-elearning-tracking__control li+li{margin-top:3px;}
   .aps-elearning-tracking__actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;}
   .aps-elearning-tracking__upload{
     display:flex;
@@ -99,11 +133,13 @@
   .aps-elearning-tracking__signature-state--error{color:#b91c1c!important;}
   @media(max-width:720px){
     .aps-elearning-tracking__document{grid-template-columns:1fr;}
+    .aps-elearning-tracking__evidence{grid-template-columns:1fr 1fr;}
     .aps-elearning-tracking__actions{justify-content:flex-start;}
     .aps-elearning-tracking__signature-actions{width:100%;justify-content:flex-start;}
     .aps-elearning-tracking__signature-actions form{width:100%;}
     .aps-elearning-tracking__upload .btn,.aps-elearning-tracking__download .btn{width:100%;}
   }
+  @media(max-width:480px){.aps-elearning-tracking__evidence{grid-template-columns:1fr;}}
   .registration-cancelled-control{
     display:inline-flex;
     align-items:center;
@@ -1428,6 +1464,8 @@
 
   {% set aps_tracking = trainee.aps_elearning_tracking or {} %}
   {% set aps_signature = trainee.aps_elearning_signature or {} %}
+  {% set aps_signature_ready = trainee.aps_elearning_signature_ready|default(false) %}
+  {% set aps_signature_issues = trainee.aps_elearning_signature_issues|default([]) %}
   {% set aps_signature_status = (aps_signature.status or '')|lower %}
   {% set aps_signature_pending = aps_signature_status in ['ongoing', 'activated', 'pending', 'en_attente'] %}
   {% set aps_signature_signed = aps_signature_status in ['done', 'signed'] and aps_signature.signed_pdf_path %}
@@ -1439,8 +1477,10 @@
           Importez l’attestation d’assiduité Digiforma complète : attestation, détail des modules et relevé individuel de connexions.
         </p>
       </div>
-      {% if aps_tracking.file %}
-        <span class="aps-elearning-tracking__status">✓ Relevé complet importé</span>
+      {% if aps_signature_ready %}
+        <span class="aps-elearning-tracking__status">✓ Dossier contrôlé et signable</span>
+      {% elif aps_tracking.file %}
+        <span class="aps-elearning-tracking__status aps-elearning-tracking__status--warning">⚠ Contrôle requis</span>
       {% endif %}
     </div>
 
@@ -1461,6 +1501,26 @@
           </a>
         </div>
       </div>
+      <div class="aps-elearning-tracking__evidence" aria-label="Synthèse du relevé Digiforma">
+        <div class="aps-elearning-tracking__evidence-item"><span>Réalisation</span><strong>{{ '%g'|format(aps_tracking.completion_rate or 0) }} %</strong></div>
+        <div class="aps-elearning-tracking__evidence-item"><span>Durée suivie / prévue</span><strong>{{ aps_tracking.effective_duration or '—' }} / {{ aps_tracking.planned_duration or '—' }}</strong></div>
+        <div class="aps-elearning-tracking__evidence-item"><span>Connexions (journal)</span><strong>{{ aps_tracking.connection_log_total or aps_tracking.connection_duration or '—' }}</strong></div>
+        <div class="aps-elearning-tracking__evidence-item"><span>Parcours terminés</span><strong>{{ aps_tracking.paths_completed or 0 }} / {{ aps_tracking.paths_total or 0 }}</strong></div>
+        <div class="aps-elearning-tracking__evidence-item"><span>Évaluations validées</span><strong>{{ aps_tracking.evaluations_completed or 0 }} / {{ aps_tracking.evaluations_total or 0 }}</strong></div>
+        <div class="aps-elearning-tracking__evidence-item"><span>Jours d'accès · modules/fractions</span><strong>{{ aps_tracking.access_days or 0 }} · {{ aps_tracking.module_fraction_count or 0 }}</strong></div>
+      </div>
+      {% if aps_signature_issues %}
+        <div class="aps-elearning-tracking__control" role="alert">
+          <strong>Signature et téléchargement du dossier CNAPS bloqués</strong>
+          <ul>{% for issue in aps_signature_issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+          <div style="margin-top:7px;">Corrigez les données du stagiaire si nécessaire, puis importez le relevé Digiforma final à 100 %.</div>
+        </div>
+      {% elif aps_signature_ready %}
+        <div class="aps-elearning-tracking__control aps-elearning-tracking__control--ready">
+          <strong>✓ Contrôles automatiques validés</strong>
+          Le bordereau de 2 pages et les {{ aps_tracking.page_count or '—' }} pages Digiforma seront réunis dans un PDF unique. L'empreinte SHA-256 de l'annexe sera inscrite dans le bordereau.
+        </div>
+      {% endif %}
     {% else %}
       <div class="hint" style="margin-top:14px;padding:12px 14px;border:1px solid #dbeafe;border-radius:14px;background:#fff;">
         Aucun relevé Digiforma importé. Le tableau de suivi sera disponible dès que le PDF complet aura été contrôlé.
@@ -1485,7 +1545,7 @@
     <div class="aps-elearning-tracking__download">
       <div>
         <strong>TABLEAU DE SUIVI DE LA FORMATION À DISTANCE</strong>
-        <span>Complété automatiquement à partir de la session, du dossier stagiaire et du PDF Digiforma. Le tampon et la signature de Clément Vaillant sont intégrés ; le stagiaire signe électroniquement avec Yousign.</span>
+        <span>Bordereau probatoire de 2 pages complété automatiquement, puis assemblé avec toutes les pages Digiforma. Le tampon et la signature de Clément Vaillant sont intégrés ; le stagiaire signe électroniquement le dossier complet avec Yousign.</span>
         {% if aps_signature_signed %}
           <span class="aps-elearning-tracking__signature-state aps-elearning-tracking__signature-state--signed">✓ Tableau signé électroniquement le {{ aps_signature.signed_at|frdatetime }}</span>
         {% elif aps_signature_pending %}
@@ -1495,17 +1555,21 @@
         {% endif %}
       </div>
       <div class="aps-elearning-tracking__signature-actions">
-      {% if aps_tracking.file %}
+      {% if aps_tracking.file and aps_signature_ready %}
         <a class="btn btn-outline"
            href="{{ url_for('admin_download_aps_elearning_tracking_table', session_id=session.id, trainee_id=trainee.id) }}">
-          ⬇️ Télécharger le PDF prérempli
+          ⬇️ Télécharger le dossier CNAPS complet
         </a>
-        {% if aps_signature_signed %}
+      {% else %}
+        <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">⬇️ Dossier CNAPS non disponible</button>
+      {% endif %}
+      {% if aps_signature_signed %}
           <a class="btn btn-primary"
              href="{{ url_for('admin_download_signed_aps_elearning_tracking_table', session_id=session.id, trainee_id=trainee.id) }}">
-            ✓ Télécharger le PDF signé
+            ✓ Télécharger le dossier signé
           </a>
-        {% elif not is_read_only %}
+      {% elif not is_read_only %}
+        {% if aps_signature_ready %}
           <form method="post"
                 action="{{ url_for('admin_create_aps_elearning_tracking_signature', session_id=session.id, trainee_id=trainee.id) }}">
             {% if aps_signature.signature_request_id and not aps_signature_pending %}<input type="hidden" name="force_new" value="1">{% endif %}
@@ -1513,9 +1577,9 @@
               {{ '✉️ Renvoyer le lien Yousign' if aps_signature_pending else '✍️ Envoyer à signer avec Yousign' }}
             </button>
           </form>
+        {% else %}
+          <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">✍️ Signature Yousign bloquée</button>
         {% endif %}
-      {% else %}
-        <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">⬇️ Télécharger le tableau (PDF)</button>
       {% endif %}
       </div>
     </div>
