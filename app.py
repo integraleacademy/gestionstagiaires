@@ -36173,6 +36173,13 @@ def calculate_registration_cancellation_indemnity(
     }
 
 
+REGISTRATION_CANCELLATION_EMAIL_CC = [
+    "elsa@integraleacademy.com",
+    "aurelie@integraleacademy.com",
+    "cassandre@integraleacademy.com",
+]
+
+
 def _registration_cancellation_money_label(cents: Any) -> str:
     try:
         amount = Decimal(int(cents or 0)) / Decimal("100")
@@ -37043,6 +37050,7 @@ def api_registration_cancellation_email_send(session_id: str, trainee_id: str):
         recipient,
         subject,
         html_body,
+        cc_emails=REGISTRATION_CANCELLATION_EMAIL_CC,
         trainee=trainee,
         text_content=text_body,
         metadata={
