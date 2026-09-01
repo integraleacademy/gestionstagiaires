@@ -348,6 +348,20 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(anchors, ["{{s1|signature|160|60}}"])
         self.assertGreaterEqual(len(media), 3)
 
+    def test_yousign_pdf_anchor_exposes_the_marker_top(self):
+        with tempfile.TemporaryDirectory() as directory:
+            pdf_path = os.path.join(directory, "anchor.pdf")
+            generated_pdf = canvas.Canvas(pdf_path, pagesize=(595.304, 841.89))
+            generated_pdf.setFont("Helvetica", 9)
+            generated_pdf.drawString(126, 227.589, "{{s1|signature|160|60}}")
+            generated_pdf.save()
+
+            anchors = gestion_app._detect_yousign_pdf_anchors(pdf_path, signer_index=1)
+
+        self.assertEqual(len(anchors), 1)
+        self.assertEqual(anchors[0]["y"], 554)
+        self.assertEqual(anchors[0]["marker_y"], 605)
+
     def test_yousign_request_uses_the_trainee_anchor(self):
         session_obj = self._data("2026-07-23")["sessions"][0]
         trainee = session_obj["trainees"][0]
@@ -383,7 +397,8 @@ class ApsElearningTests(unittest.TestCase):
                 "type": "signature",
                 "page": 1,
                 "x": 110,
-                "y": 640,
+                "y": 554,
+                "marker_y": 605,
                 "width": 160,
                 "height": 60,
             }]
@@ -407,6 +422,7 @@ class ApsElearningTests(unittest.TestCase):
         request_call = next(call for call in calls if call[1] == "/signature_requests")
         self.assertEqual(request_call[2]["json"]["external_id"], "aps_foad_S-APS_T-APS")
         self.assertEqual(signer_call[2]["json"]["fields"][0]["x"], 110)
+        self.assertEqual(signer_call[2]["json"]["fields"][0]["y"], 605)
         self.assertEqual(signer_call[2]["json"]["fields"][0]["layout"], "detailed")
         self.assertEqual(signer_call[2]["json"]["info"]["phone_number"], "+33612345678")
         self.assertTrue(state["provider_signature_embedded"])

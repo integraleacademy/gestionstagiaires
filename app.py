@@ -30379,12 +30379,17 @@ def _detect_yousign_pdf_anchors(pdf_path: str, signer_index: int = 1) -> List[Di
                 x = float(tm[4] if len(tm) > 4 else 0) + float(cm[4] if len(cm) > 4 else 0)
                 baseline_y = float(tm[5] if len(tm) > 5 else 0) + float(cm[5] if len(cm) > 5 else 0)
                 height = parsed["height"]
+                marker_height = max(0.0, float(font_size or 0))
                 anchors.append({
                     **parsed,
                     "raw": match.group(0),
                     "page": page_number,
                     "x": max(0, int(round(x))),
                     "pdf_y": max(0, float(baseline_y) - 2),
+                    # Yousign's y coordinate starts at the top of the page. Keep
+                    # the marker's actual top separately: the legacy `y` value
+                    # positions a field *above* the marker by its full height.
+                    "marker_y": max(0, int(round(page_height - baseline_y - marker_height))),
                     "y": max(0, int(round(page_height - baseline_y - height))),
                 })
 
@@ -31389,7 +31394,10 @@ def create_yousign_aps_elearning_tracking_signature(
             "type": "signature",
             "page": anchor["page"],
             "x": anchor["x"],
-            "y": anchor["y"],
+            # The technical marker sits at the start of the blank signature
+            # area. Using the legacy anchor y moved the Yousign block upward
+            # over the "Fait à" and "Mention" lines.
+            "y": anchor.get("marker_y", anchor["y"]),
             "width": anchor["width"],
             "height": max(80, int(anchor["height"])),
             "layout": "detailed",
