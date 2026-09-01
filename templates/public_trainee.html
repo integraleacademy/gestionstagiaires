@@ -967,8 +967,8 @@
     {% endif %}
 
     {% if aps_elearning_enabled %}
-      {% set aps_login = (trainee.aps_elearning_login or '')|trim %}
-      {% set aps_password = (trainee.aps_elearning_password or '')|trim %}
+      {% set aps_link = (trainee.aps_elearning_login or '')|trim %}
+      {% set aps_link_is_valid = aps_link[:8] == 'https://' %}
       <section class="card aps-elearning-card" aria-labelledby="apsElearningTitle">
         <div class="aps-elearning-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" role="img">
@@ -979,36 +979,22 @@
         </div>
         <div class="aps-elearning-content">
           <h2 id="apsElearningTitle">Espace e-learning APS</h2>
-          <p class="aps-elearning-subtitle">Vos accès personnels à la plateforme de formation à distance seront activés au démarrage de la formation.</p>
+          <p class="aps-elearning-subtitle">Votre lien personnel vers la plateforme de formation à distance sera activé au démarrage de la formation.</p>
           <div class="aps-elearning-badge">Accès disponible le {{ session.date_start|frdate }}</div>
-          <p class="aps-elearning-note">Vous pourrez suivre vos modules à distance avec vos identifiants personnels. Votre progression sera suivie pendant toute la formation.</p>
+          <p class="aps-elearning-note">Votre progression restera suivie pendant toute la formation, sans identifiant ni mot de passe à saisir.</p>
         {% if not aps_elearning_available %}
           <div class="aps-elearning-pending">
-            Vos identifiants seront affichés ici le premier jour de formation.
+            Votre lien d’accès sera affiché ici le premier jour de formation.
           </div>
-        {% elif aps_login and aps_password %}
-          <div class="aps-elearning-credentials">
-            <div class="aps-elearning-credential">
-              <span class="aps-elearning-credential-label">Login</span>
-              <div class="aps-elearning-value-row">
-                <span class="aps-elearning-value" id="apsElearningLogin">{{ aps_login }}</span>
-                <button class="aps-elearning-copy" type="button" data-copy-target="apsElearningLogin">Copier</button>
-              </div>
-            </div>
-            <div class="aps-elearning-credential">
-              <span class="aps-elearning-credential-label">Mot de passe</span>
-              <div class="aps-elearning-value-row">
-                <span class="aps-elearning-value" id="apsElearningPassword">{{ aps_password }}</span>
-                <button class="aps-elearning-copy" type="button" data-copy-target="apsElearningPassword">Copier</button>
-              </div>
-            </div>
-          </div>
+        {% elif aps_link_is_valid %}
           <div class="aps-elearning-actions">
-            <a class="btn" href="https://ediser.elmg.net/" target="_blank" rel="noopener">🚀 Accéder au e-learning</a>
-            <span class="aps-elearning-copy-status" id="apsElearningCopyStatus" role="status" aria-live="polite"></span>
+            <a class="btn" href="{{ aps_link }}" target="_blank" rel="noopener noreferrer">🚀 Accéder au e-learning</a>
+            <span class="aps-elearning-copy-status">Lien personnel sécurisé</span>
           </div>
+        {% elif aps_link %}
+          <div class="aps-elearning-pending">Le lien enregistré n’est pas valide. Merci de contacter l’équipe pédagogique.</div>
         {% else %}
-          <div class="aps-elearning-pending">Vos identifiants sont en cours de préparation. Ils apparaîtront ici dès qu’ils seront disponibles.</div>
+          <div class="aps-elearning-pending">Votre lien personnel est en cours de préparation. Il apparaîtra ici dès qu’il sera disponible.</div>
         {% endif %}
         </div>
       </section>

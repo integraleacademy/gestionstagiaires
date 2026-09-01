@@ -23770,7 +23770,6 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_exam_center",
         "vtc_real_training_dates",
         "aps_elearning_login",
-        "aps_elearning_password",
 
     }
 
@@ -23836,7 +23835,16 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
         if k not in allowed:
             continue
-        if k in ("aps_elearning_login", "aps_elearning_password") and not aps_elearning_fields_enabled:
+        if k == "aps_elearning_login" and not aps_elearning_fields_enabled:
+            continue
+
+        if k == "aps_elearning_login":
+            link = str(v or "").strip()
+            parsed_link = urlparse(link)
+            if link and (parsed_link.scheme.lower() != "https" or not parsed_link.netloc):
+                return jsonify({"ok": False, "error": "aps_elearning_link_invalid"}), 400
+            t[k] = link
+            t.pop("aps_elearning_password", None)
             continue
 
         if k == "ssiap_exam_status":
