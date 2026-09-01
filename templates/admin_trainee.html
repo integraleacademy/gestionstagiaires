@@ -54,6 +54,11 @@
     background:#fff7ed;
     color:#9a3412;
   }
+  .aps-elearning-tracking__status--forced{
+    border-color:#fdba74;
+    background:#ffedd5;
+    color:#9a3412;
+  }
   .aps-elearning-tracking__document{
     display:grid;
     grid-template-columns:minmax(0,1fr) auto;
@@ -94,9 +99,18 @@
     line-height:1.45;
   }
   .aps-elearning-tracking__control--ready{border-color:#bbf7d0;background:#f0fdf4;color:#166534;}
+  .aps-elearning-tracking__control--forced{border-color:#fdba74;background:#fff7ed;color:#9a3412;}
   .aps-elearning-tracking__control strong{display:block;font-size:13px;font-weight:950;}
   .aps-elearning-tracking__control ul{margin:6px 0 0;padding-left:18px;}
   .aps-elearning-tracking__control li+li{margin-top:3px;}
+  .aps-elearning-tracking__force-form{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;}
+  .aps-elearning-tracking__force-button{
+    border:1px solid #991b1b;
+    background:#b91c1c;
+    color:#fff;
+  }
+  .aps-elearning-tracking__force-button:hover{background:#991b1b;color:#fff;}
+  .aps-elearning-tracking__force-note{font-weight:800;}
   .aps-elearning-tracking__actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;}
   .aps-elearning-tracking__upload{
     display:flex;
@@ -1457,7 +1471,10 @@
   {% set aps_tracking = trainee.aps_elearning_tracking or {} %}
   {% set aps_signature = trainee.aps_elearning_signature or {} %}
   {% set aps_signature_ready = trainee.aps_elearning_signature_ready|default(false) %}
+  {% set aps_signature_allowed = trainee.aps_elearning_signature_allowed|default(false) %}
   {% set aps_signature_issues = trainee.aps_elearning_signature_issues|default([]) %}
+  {% set aps_force = trainee.aps_elearning_force_override or {} %}
+  {% set aps_force_active = trainee.aps_elearning_force_active|default(false) %}
   {% set aps_signature_status = (aps_signature.status or '')|lower %}
   {% set aps_signature_pending = aps_signature_status in ['ongoing', 'activated', 'pending', 'en_attente'] %}
   {% set aps_signature_signed = aps_signature_status in ['done', 'signed'] and aps_signature.signed_pdf_path %}
@@ -1471,6 +1488,8 @@
       </div>
       {% if aps_signature_ready %}
         <span class="aps-elearning-tracking__status">✓ Dossier contrôlé et signable</span>
+      {% elif aps_force_active %}
+        <span class="aps-elearning-tracking__status aps-elearning-tracking__status--forced">⚠ Forçage actif · dossier incomplet</span>
       {% elif aps_tracking.file %}
         <span class="aps-elearning-tracking__status aps-elearning-tracking__status--warning">⚠ Contrôle requis</span>
       {% endif %}
@@ -1502,11 +1521,41 @@
         <div class="aps-elearning-tracking__evidence-item"><span>Jours d'accès · modules/fractions</span><strong>{{ aps_tracking.access_days or 0 }} · {{ aps_tracking.module_fraction_count or 0 }}</strong></div>
       </div>
       {% if aps_signature_issues %}
-        <div class="aps-elearning-tracking__control" role="alert">
-          <strong>Signature et téléchargement du dossier CNAPS bloqués</strong>
-          <ul>{% for issue in aps_signature_issues %}<li>{{ issue }}</li>{% endfor %}</ul>
-          <div style="margin-top:7px;">Corrigez les données du stagiaire si nécessaire, puis importez le relevé Digiforma final à 100 %.</div>
-        </div>
+        {% if aps_force_active %}
+          <div class="aps-elearning-tracking__control aps-elearning-tracking__control--forced" role="alert">
+            <strong>⚠ Forçage administratif actif — génération autorisée malgré les anomalies</strong>
+            <ul>{% for issue in aps_signature_issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+            <div style="margin-top:7px;">
+              Activé le {{ aps_force.forced_at|frdatetime }} par {{ aps_force.forced_by or 'Administrateur' }}.
+              Le PDF indiquera explicitement que le relevé est incomplet et conservera cette liste d’anomalies.
+            </div>
+            {% if not is_read_only %}
+              <form class="aps-elearning-tracking__force-form"
+                    method="post"
+                    action="{{ url_for('admin_force_aps_elearning_tracking', session_id=session.id, trainee_id=trainee.id) }}"
+                    onsubmit="return confirm('Annuler le forçage ? Le téléchargement et toute nouvelle signature seront de nouveau bloqués tant que les contrôles ne seront pas validés.');">
+                <input type="hidden" name="action" value="disable">
+                <button class="btn btn-outline" type="submit">Annuler le forçage</button>
+              </form>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="aps-elearning-tracking__control" role="alert">
+            <strong>Signature et téléchargement du dossier CNAPS bloqués</strong>
+            <ul>{% for issue in aps_signature_issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+            <div style="margin-top:7px;">Corrigez les données du stagiaire si nécessaire, puis importez le relevé Digiforma final à 100 %.</div>
+            {% if not is_read_only %}
+              <form class="aps-elearning-tracking__force-form"
+                    method="post"
+                    action="{{ url_for('admin_force_aps_elearning_tracking', session_id=session.id, trainee_id=trainee.id) }}"
+                    onsubmit="return confirm('Confirmer le forçage ? Le dossier pourra être téléchargé et signé malgré les anomalies. Le PDF portera la mention RELEVÉ INCOMPLET et enregistrera votre identité ainsi que la date.');">
+                <input type="hidden" name="action" value="enable">
+                <button class="btn aps-elearning-tracking__force-button" type="submit">⚠ Forcer</button>
+                <span class="aps-elearning-tracking__force-note">Action tracée dans l’historique du stagiaire.</span>
+              </form>
+            {% endif %}
+          </div>
+        {% endif %}
       {% elif aps_signature_ready %}
         <div class="aps-elearning-tracking__control aps-elearning-tracking__control--ready">
           <strong>✓ Contrôles automatiques validés</strong>
@@ -1547,10 +1596,10 @@
         {% endif %}
       </div>
       <div class="aps-elearning-tracking__signature-actions">
-      {% if aps_tracking.file and aps_signature_ready %}
+      {% if aps_tracking.file and aps_signature_allowed %}
         <a class="btn btn-outline"
            href="{{ url_for('admin_download_aps_elearning_tracking_table', session_id=session.id, trainee_id=trainee.id) }}">
-          ⬇️ Télécharger le dossier CNAPS complet
+          {{ '⚠ Télécharger le dossier forcé' if aps_force_active else '⬇️ Télécharger le dossier CNAPS complet' }}
         </a>
       {% else %}
         <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">⬇️ Dossier CNAPS non disponible</button>
@@ -1561,12 +1610,12 @@
             ✓ Télécharger le dossier signé
           </a>
       {% elif not is_read_only %}
-        {% if aps_signature_ready %}
+        {% if aps_signature_allowed %}
           <form method="post"
                 action="{{ url_for('admin_create_aps_elearning_tracking_signature', session_id=session.id, trainee_id=trainee.id) }}">
             {% if aps_signature.signature_request_id and not aps_signature_pending %}<input type="hidden" name="force_new" value="1">{% endif %}
             <button class="btn btn-primary" type="submit">
-              {{ '✉️ Renvoyer le lien Yousign' if aps_signature_pending else '✍️ Envoyer à signer avec Yousign' }}
+              {{ '✉️ Renvoyer le lien Yousign' if aps_signature_pending else ('⚠ Envoyer à signer (forcé)' if aps_force_active else '✍️ Envoyer à signer avec Yousign') }}
             </button>
           </form>
         {% else %}

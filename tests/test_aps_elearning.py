@@ -21,6 +21,7 @@ class ApsElearningTests(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess["admin_logged_in"] = True
             sess["admin_role"] = "admin"
+            sess["admin_username"] = "admin@integraleacademy.com"
 
     def _public_login(self, token="PUBLIC-TOKEN"):
         with self.client.session_transaction() as sess:
@@ -326,6 +327,155 @@ class ApsElearningTests(unittest.TestCase):
         self.assertTrue(any("parcours Digiforma non terminés" in issue for issue in issues))
         self.assertTrue(any("questionnaires non validés" in issue for issue in issues))
 
+    def test_admin_can_force_and_revoke_an_unfinished_report(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        pdf_bytes = self._digiforma_pdf_bytes(
+            completion_rate=28.49,
+            effective_duration="17h40",
+            completed_paths=1,
+            completed_evaluations=1,
+        )
+
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            gestion_app, "PERSIST_DIR", directory
+        ), patch.object(
+            gestion_app, "UPLOADS_DIR", os.path.join(directory, "uploads")
+        ), patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data"):
+            upload = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/upload",
+                data={"digiforma_pdf": (io.BytesIO(pdf_bytes), "attestation-inachevee.pdf")},
+                content_type="multipart/form-data",
+            )
+            self.assertEqual(upload.status_code, 302)
+
+            blocked_page = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+            blocked_html = blocked_page.get_data(as_text=True)
+            self.assertIn(">⚠ Forcer</button>", blocked_html)
+            self.assertIn("Signature et téléchargement du dossier CNAPS bloqués", blocked_html)
+
+            force = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/force",
+                data={"action": "enable"},
+            )
+            self.assertEqual(force.status_code, 302)
+
+            trainee = data["sessions"][0]["trainees"][0]
+            tracking = trainee["aps_elearning_tracking"]
+            override = trainee["aps_elearning_force_override"]
+            self.assertTrue(override["active"])
+            self.assertEqual(override["forced_by"], "admin@integraleacademy.com")
+            self.assertEqual(override["report_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
+            self.assertGreaterEqual(len(override["issues"]), 4)
+            self.assertEqual(
+                gestion_app._require_aps_elearning_signature_ready(trainee)["file_sha256"],
+                tracking["file_sha256"],
+            )
+
+            context = gestion_app._aps_elearning_tracking_context(data["sessions"][0], trainee)
+            self.assertIn("FORÇAGE ADMINISTRATIF", context["compliance_status"])
+            self.assertIn("RELEVÉ INCOMPLET", context["compliance_status"])
+            self.assertIn("28.49 %", context["compliance_detail"])
+            self.assertIn("admin@integraleacademy.com", context["force_authorization"])
+            self.assertIn("SIGNATURE AVEC FORÇAGE", context["signature_instruction"])
+
+            forced_page = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+            forced_html = forced_page.get_data(as_text=True)
+            self.assertIn("Forçage actif · dossier incomplet", forced_html)
+            self.assertIn("Télécharger le dossier forcé", forced_html)
+            self.assertIn("Envoyer à signer (forcé)", forced_html)
+            self.assertIn("Annuler le forçage", forced_html)
+
+            revoke = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/force",
+                data={"action": "disable"},
+            )
+            self.assertEqual(revoke.status_code, 302)
+            self.assertFalse(trainee["aps_elearning_force_override"]["active"])
+            self.assertEqual(trainee["aps_elearning_force_override"]["revoked_by"], "admin@integraleacademy.com")
+            with self.assertRaisesRegex(ValueError, "Utilisez le bouton « Forcer »"):
+                gestion_app._require_aps_elearning_signature_ready(trainee)
+
+    def test_force_override_does_not_cover_a_new_anomaly(self):
+        trainee = self._data("2026-07-23")["sessions"][0]["trainees"][0]
+        tracking = self._complete_tracking(
+            completion_rate=28.49,
+            effective_duration="17h40",
+            paths_completed=1,
+            evaluations_completed=1,
+        )
+        trainee["aps_elearning_tracking"] = tracking
+        issues = gestion_app._aps_elearning_signature_issues(trainee, tracking)
+        trainee["aps_elearning_force_override"] = {
+            "active": True,
+            "forced_at": "2026-09-01T10:00:00+02:00",
+            "forced_by": "admin@integraleacademy.com",
+            "report_sha256": tracking["file_sha256"],
+            "issues": issues,
+        }
+
+        self.assertEqual(
+            gestion_app._require_aps_elearning_signature_ready(trainee)["file_sha256"],
+            tracking["file_sha256"],
+        )
+        trainee["birth_date"] = ""
+        with self.assertRaisesRegex(ValueError, "date de naissance"):
+            gestion_app._require_aps_elearning_signature_ready(trainee)
+
+    def test_replacing_digiforma_report_archives_force_override(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        old_pdf = self._digiforma_pdf_bytes(
+            completion_rate=28.49,
+            effective_duration="17h40",
+            completed_paths=1,
+            completed_evaluations=1,
+        )
+        new_pdf = self._digiforma_pdf_bytes()
+
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            gestion_app, "PERSIST_DIR", directory
+        ), patch.object(
+            gestion_app, "UPLOADS_DIR", os.path.join(directory, "uploads")
+        ), patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data"):
+            old_path = os.path.join(directory, "uploads", "S-APS", "T-APS", "aps_elearning_tracking", "old.pdf")
+            os.makedirs(os.path.dirname(old_path), exist_ok=True)
+            with open(old_path, "wb") as old_report:
+                old_report.write(old_pdf)
+            old_tracking = self._complete_tracking(
+                file=gestion_app._tokenize_path(old_path),
+                file_sha256=hashlib.sha256(old_pdf).hexdigest(),
+                completion_rate=28.49,
+                effective_duration="17h40",
+                paths_completed=1,
+                evaluations_completed=1,
+            )
+            trainee["aps_elearning_tracking"] = old_tracking
+            trainee["aps_elearning_force_override"] = {
+                "active": True,
+                "forced_at": "2026-09-01T10:00:00+02:00",
+                "forced_by": "admin@integraleacademy.com",
+                "report_sha256": old_tracking["file_sha256"],
+                "issues": gestion_app._aps_elearning_signature_issues(trainee, old_tracking),
+            }
+
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/upload",
+                data={"digiforma_pdf": (io.BytesIO(new_pdf), "attestation-finale.pdf")},
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn("aps_elearning_force_override", trainee)
+        archive = trainee["aps_elearning_force_override_history"]
+        self.assertEqual(archive[-1]["archive_reason"], "digiforma_report_replaced")
+        self.assertEqual(trainee["aps_elearning_tracking"]["completion_rate"], 100)
+
     def test_digiforma_file_integrity_is_rechecked_before_generation(self):
         pdf_bytes = self._digiforma_pdf_bytes()
         with tempfile.TemporaryDirectory() as directory, patch.object(
@@ -444,6 +594,9 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(context["paths_status"], "8 / 8 terminés")
         self.assertEqual(context["evaluations_status"], "8 / 8 validées")
         self.assertEqual(context["compliance_status"], "PARCOURS COMPLET - 100 % - SIGNATURE AUTORISÉE")
+        self.assertEqual(context["compliance_detail"], "Aucune anomalie détectée par les contrôles automatiques.")
+        self.assertEqual(context["force_authorization"], "Aucun forçage administratif nécessaire.")
+        self.assertIn("À SIGNER APRÈS CONTRÔLE", context["signature_instruction"])
         self.assertNotIn("{{", " ".join(context.values()))
 
     def test_tracking_table_pdf_download_uses_generated_file(self):
@@ -475,9 +628,13 @@ class ApsElearningTests(unittest.TestCase):
         )
         with zipfile.ZipFile(gestion_app.APS_ELEARNING_TRACKING_TEMPLATE) as template_zip:
             media = [name for name in template_zip.namelist() if name.startswith("word/media/")]
+            document_xml = template_zip.read("word/document.xml").decode("utf-8")
 
         self.assertEqual(anchors, ["{{s1|signature|160|60}}"])
         self.assertGreaterEqual(len(media), 3)
+        self.assertIn("{{ compliance_detail }}", document_xml)
+        self.assertIn("{{ force_authorization }}", document_xml)
+        self.assertIn("{{ signature_instruction }}", document_xml)
 
     def test_yousign_pdf_anchor_exposes_the_marker_top(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -556,6 +713,8 @@ class ApsElearningTests(unittest.TestCase):
         self.assertTrue(state["provider_signature_embedded"])
         self.assertTrue(state["signed_package_includes_digiforma_annex"])
         self.assertEqual(state["report_sha256"], "a" * 64)
+        self.assertFalse(state["forced_incomplete_report"])
+        self.assertEqual(state["force_override"], {})
         self.assertEqual(state["status"], "ongoing")
 
     def test_admin_can_send_tracking_table_to_yousign(self):
