@@ -342,6 +342,25 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertIn("Merci de répondre à cet email pour confirmer votre choix", text_body)
         self.assertIn("Les pénalités financières seront donc appliquées.", text_body)
         self.assertIn("(chèque, virement, prélèvement)", text_body)
+        self.assertNotIn("<strong>Financement personnel</strong>", html_body)
+        self.assertNotIn(
+            "Aucun nouveau prélèvement ne sera programmé depuis ce dossier annulé",
+            html_body,
+        )
+        self.assertNotIn(
+            "Aucun nouveau prélèvement ne sera programmé depuis ce dossier annulé",
+            text_body,
+        )
+        self.assertIn(
+            "<strong>Clément VAILLANT</strong><br>Directeur général Intégrale Academy - "
+            "Président Intégrale Group",
+            html_body,
+        )
+        self.assertIn(
+            "Clément VAILLANT\nDirecteur général Intégrale Academy - Président "
+            "Intégrale Group",
+            text_body,
+        )
 
     def test_cancellation_email_is_previewed_then_sent_and_recorded(self):
         session, trainee, lines = self._indemnity_case()

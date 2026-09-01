@@ -36317,20 +36317,6 @@ def build_registration_cancellation_email(
         cpf_notice = f'''<tr><td style="padding:0 0 12px 0;"><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:15px 17px;color:#1e3a8a;font-size:14px;line-height:1.6;"><strong>Financement CPF</strong><br>{html.escape(cpf_detail)}</div></td></tr>'''
         cpf_notice_text = f"\nFinancement CPF : {cpf_detail}\n"
 
-    personal_notice = ""
-    personal_notice_text = ""
-    if int(calculation.get("personal_amount_cents") or 0) > 0 or int(calculation.get("deductible_paid_cents") or 0) > 0:
-        personal_detail = (
-            "Aucun nouveau prélèvement ne sera programmé depuis ce dossier annulé. "
-            + (
-                f"Un remboursement de {refund_due} est prévu ; merci de joindre votre RIB à votre réponse."
-                if balance_status == "refund_due"
-                else "Les sommes déjà encaissées ont été prises en compte dans le calcul ci-dessous."
-            )
-        )
-        personal_notice = f'''<tr><td style="padding:0 0 12px 0;"><div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:14px;padding:15px 17px;color:#334155;font-size:14px;line-height:1.6;"><strong>Financement personnel</strong><br>{html.escape(personal_detail)}</div></td></tr>'''
-        personal_notice_text = f"\nFinancement personnel : {personal_detail}\n"
-
     subject = f"Suite à votre demande d’annulation – {training_label_raw}"
     safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
     html_body = f'''<!doctype html>
@@ -36361,7 +36347,7 @@ def build_registration_cancellation_email(
           <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#64748b;">En cas d’abandon pour un autre motif que la force majeure dûment reconnue, le contrat est résilié selon les modalités financières suivantes :</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:20px;">{rules_html}</table>
 
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">{cpf_notice}{personal_notice}</table>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">{cpf_notice}</table>
 
           <h2 style="margin:12px 0 14px;font-size:19px;color:#172033;">Dans votre cas</h2>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;margin-bottom:16px;">{financing_rows_html}</table>
@@ -36382,7 +36368,7 @@ def build_registration_cancellation_email(
           </div>
 
           <p style="margin:0;font-size:15px;line-height:1.65;">Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,</p>
-          <p style="margin:16px 0 0;font-size:15px;line-height:1.55;"><strong>Clément VAILLANT</strong><br>Intégrale Academy</p>
+          <p style="margin:16px 0 0;font-size:15px;line-height:1.55;"><strong>Clément VAILLANT</strong><br>Directeur général Intégrale Academy - Président Intégrale Group</p>
         </td></tr>
         <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:21px 30px;color:#64748b;font-size:12px;line-height:1.6;">Intégrale Academy · 54 chemin du Carreou · 83480 Puget-sur-Argens · 04 22 47 07 68</td></tr>
       </table>
@@ -36404,7 +36390,7 @@ Formation : {training_label_raw}
 Session : {session_name_raw or training_label_raw}
 Période : {period}
 Date effective d’annulation : {cancellation_date}
-{cpf_notice_text}{personal_notice_text}
+{cpf_notice_text}
 Dans votre cas :
 {financing_text}
 
@@ -36422,7 +36408,8 @@ Pouvez-vous nous confirmer votre volonté d’annuler votre inscription et nous 
 
 Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,
 
-Clément VAILLANT - Intégrale Academy
+Clément VAILLANT
+Directeur général Intégrale Academy - Président Intégrale Group
 54 chemin du Carreou
 83480 Puget-sur-Argens
 04 22 47 07 68"""
