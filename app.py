@@ -46867,6 +46867,7 @@ def api_vae_submit(dossier_id: str):
         view = vae_status_view('livret_1_analysis')
         t['vae_status'] = view['key']
         t['vae_status_label'] = view['label']
+        _notify_vae_status_change(t, view['key'])
         if not isinstance(t.get('vae_action_dates'), dict):
             t['vae_action_dates'] = {}
         if not t['vae_action_dates'].get('livret_1_received'):
