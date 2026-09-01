@@ -404,6 +404,14 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertTrue(sent.get_json()["mail_sent"])
         send_mock.assert_called_once()
         self.assertEqual(send_mock.call_args.args[0], "alex@example.com")
+        self.assertEqual(
+            send_mock.call_args.kwargs["cc_emails"],
+            [
+                "elsa@integraleacademy.com",
+                "aurelie@integraleacademy.com",
+                "cassandre@integraleacademy.com",
+            ],
+        )
         self.assertEqual(send_mock.call_args.kwargs["metadata"]["purpose"], "registration_cancellation_summary")
         saved_trainee = saved["sessions"][0]["trainees"][0]
         self.assertTrue(saved_trainee["cancellation_email_sent_at"])
