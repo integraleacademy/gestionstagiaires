@@ -36372,11 +36372,13 @@ def build_registration_cancellation_email(
             <div style="font-size:13px;line-height:1.55;margin-top:8px;">{html.escape(balance_detail)}</div>
           </div>
 
-          <div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:12px;padding:16px 18px;margin-bottom:22px;color:#1e3a8a;font-size:14px;line-height:1.6;"><strong>Vous souhaitez reporter votre inscription ?</strong><br>En cas de report à une date ultérieure, ces pénalités financières ne sont pas appliquées.</div>
+          <div style="background:#eff6ff;border-left:4px solid #2563eb;border-radius:12px;padding:16px 18px;margin-bottom:12px;color:#1e3a8a;font-size:14px;line-height:1.6;"><strong>Vous souhaitez reporter votre inscription ?</strong><br>En cas de report à une date ultérieure, ces pénalités financières ne sont pas appliquées.</div>
+
+          <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:12px;padding:16px 18px;margin-bottom:22px;color:#9a3412;font-size:14px;line-height:1.6;"><strong>Vous confirmez l’annulation de votre inscription ?</strong><br>Les pénalités financières seront donc appliquées.</div>
 
           <div style="background:#172033;border-radius:16px;padding:20px;color:#ffffff;margin-bottom:24px;">
-            <div style="font-size:16px;font-weight:800;line-height:1.45;">Merci de nous répondre pour confirmer votre choix</div>
-            <div style="font-size:14px;line-height:1.6;opacity:.9;margin-top:8px;">Pouvez-vous nous confirmer votre volonté d’annuler votre inscription et nous préciser si vous souhaitez plutôt la reporter à une date ultérieure ?</div>
+            <div style="font-size:16px;font-weight:800;line-height:1.45;">Merci de répondre à cet email pour confirmer votre choix</div>
+            <div style="font-size:14px;line-height:1.6;opacity:.9;margin-top:8px;">Pouvez-vous nous confirmer votre volonté d’annuler votre inscription et nous préciser si vous souhaitez plutôt la reporter à une date ultérieure ? En cas d’annulation définitive, nous vous demandons de bien vouloir nous indiquer par quel mode de paiement vous souhaitez régler la pénalité financière (chèque, virement, prélèvement).</div>
           </div>
 
           <p style="margin:0;font-size:15px;line-height:1.65;">Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,</p>
@@ -36411,7 +36413,12 @@ Dans votre cas :
 
 Si vous souhaitez reporter votre inscription à une date ultérieure, ces pénalités financières ne sont pas appliquées.
 
-Pouvez-vous nous confirmer par retour de mail votre volonté d’annuler votre inscription et nous préciser si vous souhaitez plutôt la reporter ?
+Vous confirmez l’annulation de votre inscription ?
+Les pénalités financières seront donc appliquées.
+
+Merci de répondre à cet email pour confirmer votre choix
+
+Pouvez-vous nous confirmer votre volonté d’annuler votre inscription et nous préciser si vous souhaitez plutôt la reporter à une date ultérieure ? En cas d’annulation définitive, nous vous demandons de bien vouloir nous indiquer par quel mode de paiement vous souhaitez régler la pénalité financière (chèque, virement, prélèvement).
 
 Je vous remercie par avance pour votre retour et vous souhaite une excellente journée,
 
