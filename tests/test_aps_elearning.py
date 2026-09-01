@@ -3,6 +3,7 @@ import io
 import os
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 import app as gestion_app
@@ -59,6 +60,8 @@ class ApsElearningTests(unittest.TestCase):
                             "public_token": "PUBLIC-TOKEN",
                             "last_name": "MARTIN",
                             "first_name": "Alice",
+                            "email": "alice.martin@example.test",
+                            "phone": "06 12 34 56 78",
                             "aps_elearning_login": "alice.aps",
                             "aps_elearning_password": "Secret-123",
                             "documents": [],
@@ -203,7 +206,9 @@ class ApsElearningTests(unittest.TestCase):
             html = page.get_data(as_text=True)
             self.assertIn("Relevé complet importé", html)
             self.assertIn("Télécharger l’attestation Digiforma", html)
-            self.assertIn("Télécharger le tableau (PDF)", html)
+            self.assertIn("Télécharger le PDF prérempli", html)
+            self.assertIn("Envoyer à signer avec Yousign", html)
+            self.assertIn("tampon et la signature de Clément Vaillant sont intégrés", html)
 
             download = self.client.get(
                 "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma"
@@ -331,6 +336,176 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.data, b"%PDF-generated-table")
         self.assertIn("attachment", response.headers.get("Content-Disposition", ""))
         build_pdf.assert_called_once()
+
+    def test_tracking_template_contains_trainee_anchor_and_provider_assets(self):
+        anchors = gestion_app._docx_yousign_smart_anchors(
+            gestion_app.APS_ELEARNING_TRACKING_TEMPLATE,
+            signer_index=1,
+        )
+        with zipfile.ZipFile(gestion_app.APS_ELEARNING_TRACKING_TEMPLATE) as template_zip:
+            media = [name for name in template_zip.namelist() if name.startswith("word/media/")]
+
+        self.assertEqual(anchors, ["{{s1|signature|160|60}}"])
+        self.assertGreaterEqual(len(media), 3)
+
+    def test_yousign_request_uses_the_trainee_anchor(self):
+        session_obj = self._data("2026-07-23")["sessions"][0]
+        trainee = session_obj["trainees"][0]
+        trainee["aps_elearning_tracking"] = {
+            "file": "uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
+            "original_name": "attestation-digiforma.pdf",
+            "page_count": 2,
+        }
+        calls = []
+
+        def fake_yousign_json(method, path, **kwargs):
+            calls.append((method, path, kwargs))
+            if method == "POST" and path == "/signature_requests":
+                return {"id": "foad-request-1"}
+            if path.endswith("/documents"):
+                return {"id": "foad-document-1"}
+            if method == "POST" and path.endswith("/signers"):
+                return {"id": "foad-signer-1", "signature_link": "https://example.test/foad-sign"}
+            if method == "GET" and path.endswith("/signers/foad-signer-1"):
+                return {"id": "foad-signer-1", "signature_link": "https://example.test/foad-sign"}
+            if path.endswith("/activate"):
+                return {"signature_link": "https://example.test/foad-sign"}
+            return {}
+
+        with tempfile.TemporaryDirectory() as directory:
+            docx_path = os.path.join(directory, "tableau.docx")
+            pdf_path = os.path.join(directory, "tableau.pdf")
+            with open(docx_path, "wb") as generated_docx:
+                generated_docx.write(b"docx")
+            with open(pdf_path, "wb") as generated_pdf:
+                generated_pdf.write(b"pdf")
+            anchors = [{
+                "type": "signature",
+                "page": 1,
+                "x": 110,
+                "y": 640,
+                "width": 160,
+                "height": 60,
+            }]
+            with patch.object(gestion_app, "_yousign_is_configured", return_value=True), patch.object(
+                gestion_app,
+                "_generate_aps_elearning_tracking_signature_files",
+                return_value=(docx_path, pdf_path, pdf_path, anchors),
+            ), patch.object(
+                gestion_app,
+                "_yousign_json",
+                side_effect=fake_yousign_json,
+            ), patch.object(gestion_app, "_yousign_environment", return_value="sandbox"):
+                state = gestion_app.create_yousign_aps_elearning_tracking_signature(
+                    session_obj,
+                    trainee,
+                    "S-APS",
+                    "T-APS",
+                )
+
+        signer_call = next(call for call in calls if call[1].endswith("/signers"))
+        request_call = next(call for call in calls if call[1] == "/signature_requests")
+        self.assertEqual(request_call[2]["json"]["external_id"], "aps_foad_S-APS_T-APS")
+        self.assertEqual(signer_call[2]["json"]["fields"][0]["x"], 110)
+        self.assertEqual(signer_call[2]["json"]["fields"][0]["layout"], "detailed")
+        self.assertEqual(signer_call[2]["json"]["info"]["phone_number"], "+33612345678")
+        self.assertTrue(state["provider_signature_embedded"])
+        self.assertEqual(state["status"], "ongoing")
+
+    def test_admin_can_send_tracking_table_to_yousign(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = {
+            "file": "uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
+            "original_name": "attestation-digiforma.pdf",
+            "page_count": 2,
+        }
+
+        def fake_create(session_obj, target, session_id, trainee_id, force_new=False):
+            target["aps_elearning_signature"] = {
+                "status": "ongoing",
+                "signature_request_id": "foad-request-1",
+                "signature_link": "https://example.test/foad-sign",
+            }
+            return target["aps_elearning_signature"]
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data, patch.object(
+            gestion_app,
+            "create_yousign_aps_elearning_tracking_signature",
+            side_effect=fake_create,
+        ) as create_signature, patch.object(
+            gestion_app,
+            "send_yousign_aps_elearning_signature_email",
+            return_value=True,
+        ) as send_email:
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/tableau-suivi/yousign"
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith("#apsElearningTrackingSection"))
+        create_signature.assert_called_once()
+        send_email.assert_called_once_with(
+            data["sessions"][0],
+            trainee,
+            "https://example.test/foad-sign",
+        )
+        save_data.assert_called_once()
+
+    def test_signed_tracking_table_is_downloadable(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        with tempfile.TemporaryDirectory() as directory:
+            signed_path = os.path.join(directory, "tableau-signe.pdf")
+            with open(signed_path, "wb") as signed_pdf:
+                signed_pdf.write(b"%PDF-signed-foad")
+            trainee["aps_elearning_signature"] = {
+                "status": "done",
+                "signed_at": "2026-09-01T10:00:00Z",
+                "signed_pdf_path": signed_path,
+            }
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "YOUSIGN_APS_ELEARNING_SIGNED_DIR", directory
+            ):
+                response = self.client.get(
+                    "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/tableau-suivi/yousign/signed.pdf"
+                )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, b"%PDF-signed-foad")
+        self.assertIn("attachment", response.headers.get("Content-Disposition", ""))
+
+    def test_yousign_webhook_routes_tracking_signature_without_touching_convention(self):
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "foad-request-1",
+        }
+        payload = {
+            "event_name": "signature_request.done",
+            "event_id": "event-1",
+            "data": {"signature_request": {"id": "foad-request-1", "status": "done"}},
+        }
+
+        with patch.object(gestion_app, "_verify_yousign_webhook_signature", return_value=True), patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data") as save_data, patch.object(
+            gestion_app, "_mark_yousign_aps_elearning_tracking_signed"
+        ) as mark_tracking, patch.object(
+            gestion_app, "_mark_yousign_convention_signed"
+        ) as mark_convention:
+            response = self.client.post("/webhooks/yousign", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["document_type"], "aps_elearning")
+        mark_tracking.assert_called_once()
+        mark_convention.assert_not_called()
+        save_data.assert_called_once()
 
     def test_trainee_api_saves_credentials_only_when_aps_elearning_is_enabled(self):
         self._admin_login()

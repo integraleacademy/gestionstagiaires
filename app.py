@@ -25421,6 +25421,14 @@ def _aps_elearning_tracking(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return cleaned
 
 
+def _aps_elearning_signature_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    state = trainee.get("aps_elearning_signature")
+    if not isinstance(state, dict):
+        state = {}
+    trainee["aps_elearning_signature"] = state
+    return state
+
+
 def _aps_elearning_normalized_pdf_text(value: Any) -> str:
     normalized = unicodedata.normalize("NFKD", str(value or ""))
     normalized = "".join(char for char in normalized if not unicodedata.combining(char))
@@ -25613,6 +25621,8 @@ def _render_docx_tokens_preserving_layout(
     template_path: str,
     output_path: str,
     context: Dict[str, str],
+    *,
+    include_yousign_anchors: bool = True,
 ) -> None:
     if not os.path.isfile(template_path):
         raise FileNotFoundError("Le modèle du tableau de suivi FOAD CNAPS est introuvable.")
@@ -25627,29 +25637,50 @@ def _render_docx_tokens_preserving_layout(
                 xml_text = payload.decode("utf-8")
                 for key, value in context.items():
                     xml_text = xml_text.replace("{{ " + key + " }}", escape(str(value or "")))
+                if not include_yousign_anchors:
+                    xml_text = re.sub(
+                        r"\{\{\s*s\d+\|[A-Za-z0-9_-]+\|[^{}]*\}\}",
+                        "\u00a0" * 24,
+                        xml_text,
+                    )
                 payload = xml_text.encode("utf-8")
             target_zip.writestr(item, payload)
     with zipfile.ZipFile(output_path, "r") as rendered_zip:
         rendered_xml = rendered_zip.read("word/document.xml").decode("utf-8", errors="ignore")
-    unresolved = sorted(set(re.findall(r"\{\{\s*[^{}]+?\s*\}\}", rendered_xml)))
+    unresolved = sorted(
+        token
+        for token in set(re.findall(r"\{\{\s*[^{}]+?\s*\}\}", rendered_xml))
+        if not re.fullmatch(r"\{\{\s*s\d+\|[A-Za-z0-9_-]+\|[^{}]*\}\}", token)
+    )
     if unresolved:
         raise RuntimeError("Variables non remplacées dans le tableau de suivi FOAD : " + ", ".join(unresolved))
 
 
-def _build_aps_elearning_tracking_table_pdf(
+def _generate_aps_elearning_tracking_table_files(
     session_obj: Dict[str, Any],
     trainee: Dict[str, Any],
-) -> BytesIO:
+    output_dir: str,
+    base_name: str,
+    *,
+    include_yousign_anchors: bool = True,
+) -> Tuple[str, str]:
     tracking = _aps_elearning_tracking(trainee)
     if not tracking.get("file"):
         raise ValueError("Importez d’abord l’attestation d’assiduité Digiforma complète.")
     context = _aps_elearning_tracking_context(session_obj, trainee, tracking)
-    with tempfile.TemporaryDirectory(prefix="aps-foad-") as temporary_dir:
-        output_docx = os.path.join(temporary_dir, "tableau_suivi_foad_cnaps.docx")
-        output_pdf = os.path.join(temporary_dir, "tableau_suivi_foad_cnaps.pdf")
-        libreoffice_profile = os.path.join(temporary_dir, "libreoffice-profile")
+    os.makedirs(output_dir, exist_ok=True)
+    safe_base_name = _safe_filename_part(base_name) or "tableau-suivi-foad-cnaps"
+    output_docx = os.path.join(output_dir, safe_base_name + ".docx")
+    output_pdf = os.path.join(output_dir, safe_base_name + ".pdf")
+    with tempfile.TemporaryDirectory(prefix="aps-foad-lo-") as libreoffice_home:
+        libreoffice_profile = os.path.join(libreoffice_home, "profile")
         os.makedirs(libreoffice_profile, exist_ok=True)
-        _render_docx_tokens_preserving_layout(APS_ELEARNING_TRACKING_TEMPLATE, output_docx, context)
+        _render_docx_tokens_preserving_layout(
+            APS_ELEARNING_TRACKING_TEMPLATE,
+            output_docx,
+            context,
+            include_yousign_anchors=include_yousign_anchors,
+        )
         lo_binary = _find_libreoffice_binary()
         command = [
             lo_binary,
@@ -25658,7 +25689,7 @@ def _build_aps_elearning_tracking_table_pdf(
             "--convert-to",
             "pdf",
             "--outdir",
-            temporary_dir,
+            output_dir,
             output_docx,
         ]
         try:
@@ -25668,21 +25699,36 @@ def _build_aps_elearning_tracking_table_pdf(
                 capture_output=True,
                 text=True,
                 timeout=120,
-                env={**os.environ, "HOME": temporary_dir},
+                env={**os.environ, "HOME": libreoffice_home},
             )
         except subprocess.CalledProcessError as exc:
             raise RuntimeError(f"Conversion PDF impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
-        if not os.path.isfile(output_pdf) or os.path.getsize(output_pdf) <= 0:
-            raise RuntimeError("Le tableau de suivi FOAD n’a pas pu être généré en PDF.")
-        with open(output_pdf, "rb") as generated_pdf:
-            payload = generated_pdf.read()
+    if not os.path.isfile(output_pdf) or os.path.getsize(output_pdf) <= 0:
+        raise RuntimeError("Le tableau de suivi FOAD n’a pas pu être généré en PDF.")
     try:
-        if len(PdfReader(BytesIO(payload)).pages) != 1:
+        if len(PdfReader(output_pdf).pages) != 1:
             raise RuntimeError("Le tableau de suivi FOAD doit tenir sur une seule page.")
     except RuntimeError:
         raise
     except Exception as exc:
         raise RuntimeError("Le tableau de suivi FOAD généré est illisible.") from exc
+    return output_docx, output_pdf
+
+
+def _build_aps_elearning_tracking_table_pdf(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+) -> BytesIO:
+    with tempfile.TemporaryDirectory(prefix="aps-foad-") as temporary_dir:
+        _, source_pdf = _generate_aps_elearning_tracking_table_files(
+            session_obj,
+            trainee,
+            temporary_dir,
+            "tableau_suivi_foad_cnaps",
+            include_yousign_anchors=False,
+        )
+        with open(source_pdf, "rb") as generated_pdf:
+            payload = generated_pdf.read()
     output = BytesIO(payload)
     output.seek(0)
     return output
@@ -25817,6 +25863,9 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
         flash("Seul le PDF complet généré par Digiforma est accepté.", "error")
         return _aps_elearning_tracking_redirect(session_id, trainee_id)
 
+    if previous_tracking.get("file"):
+        _invalidate_aps_elearning_signature_for_new_report(trainee)
+
     uploaded_at = _now_iso()
     trainee["aps_elearning_tracking"] = {
         "file": _tokenize_path(stored_path),
@@ -25898,6 +25947,80 @@ def admin_download_aps_elearning_tracking_table(session_id: str, trainee_id: str
         mimetype="application/pdf",
         as_attachment=True,
         download_name=f"tableau-suivi-foad-cnaps-{base_name or trainee_id}.pdf",
+    )
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/tableau-suivi/yousign")
+@admin_login_required
+@admin_write_required
+def admin_create_aps_elearning_tracking_signature(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+    try:
+        state = create_yousign_aps_elearning_tracking_signature(
+            session_obj,
+            trainee,
+            session_id,
+            trainee_id,
+            force_new=bool(request.form.get("force_new")),
+        )
+        signature_link = str(state.get("signature_link") or "").strip()
+        email_ok = send_yousign_aps_elearning_signature_email(session_obj, trainee, signature_link)
+        if email_ok:
+            flash("Le tableau de suivi FOAD a été envoyé au stagiaire pour signature Yousign.", "success")
+        else:
+            flash("La demande Yousign a été créée, mais l’e-mail n’a pas pu être envoyé.", "error")
+        append_trainee_history_event(
+            trainee,
+            "Tableau de suivi FOAD envoyé pour signature",
+            "Yousign",
+            "action",
+        )
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        app.logger.exception(
+            "[APS E-LEARNING] création de la signature Yousign impossible trainee_id=%s error=%s",
+            trainee_id,
+            message,
+        )
+        state = _aps_elearning_signature_state(trainee)
+        state["status"] = "error"
+        state["last_error"] = message
+        trainee["updated_at"] = _now_iso()
+        flash(f"Signature du tableau FOAD : {message}", "error")
+    session_obj["trainees"] = trainees
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+    return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/tableau-suivi/yousign/signed.pdf")
+@admin_login_required
+def admin_download_signed_aps_elearning_tracking_table(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, _, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+    state = _aps_elearning_signature_state(trainee)
+    signed_path = os.path.realpath(str(state.get("signed_pdf_path") or ""))
+    signed_root = os.path.realpath(YOUSIGN_APS_ELEARNING_SIGNED_DIR)
+    try:
+        is_allowed = bool(signed_path) and os.path.commonpath((signed_path, signed_root)) == signed_root
+    except ValueError:
+        is_allowed = False
+    if not _is_yousign_signature_done(state) or not is_allowed or not os.path.isfile(signed_path):
+        abort(404)
+    base_name = "-".join(filter(None, (
+        _safe_filename_part(trainee.get("last_name") or trainee.get("nom")),
+        _safe_filename_part(trainee.get("first_name") or trainee.get("prenom")),
+    )))
+    return send_file(
+        signed_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"tableau-suivi-foad-cnaps-{base_name or trainee_id}-signe.pdf",
     )
 
 
@@ -29903,8 +30026,12 @@ os.makedirs(APS_ENTRY_ATTESTATION_DIR, exist_ok=True)
 os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
 YOUSIGN_CONVENTION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "conventions_aps")
 YOUSIGN_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_conventions")
+YOUSIGN_APS_ELEARNING_DIR = os.path.join(PERSIST_DIR, "generated_documents", "aps_elearning_tracking")
+YOUSIGN_APS_ELEARNING_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "aps_elearning_tracking_signed")
 os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
 os.makedirs(YOUSIGN_SIGNED_DIR, exist_ok=True)
+os.makedirs(YOUSIGN_APS_ELEARNING_DIR, exist_ok=True)
+os.makedirs(YOUSIGN_APS_ELEARNING_SIGNED_DIR, exist_ok=True)
 APS_CONVOCATION_VARIABLES = [
     "civilite", "prenom", "nom", "nom_complet", "adresse_ligne1", "adresse_ligne2",
     "adresse_ligne3", "adresse_ligne4", "code_postal", "ville", "formation_nom",
@@ -30332,6 +30459,56 @@ def _yousign_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
+def _archive_aps_elearning_signature_state(trainee: Dict[str, Any], reason: str) -> None:
+    state = _aps_elearning_signature_state(trainee)
+    if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not state.get("signed_pdf_path"):
+        return
+    archive = trainee.setdefault("aps_elearning_signature_history", [])
+    if isinstance(archive, list):
+        archived = dict(state)
+        archived["archived_at"] = _now_iso()
+        archived["archive_reason"] = reason
+        archive.append(archived)
+
+
+def _cancel_yousign_aps_elearning_signature(trainee: Dict[str, Any], reason: str = "other") -> None:
+    state = _aps_elearning_signature_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if request_id and _is_yousign_signature_pending(state) and _yousign_is_configured():
+        _yousign_json("POST", f"/signature_requests/{request_id}/cancel", json={
+            "reason": reason or "other",
+            "custom_note": "Annulation du tableau de suivi FOAD pour régénération.",
+        })
+    _archive_aps_elearning_signature_state(trainee, "canceled_for_regeneration")
+    state.update({
+        "status": "canceled",
+        "canceled_at": _now_iso(),
+        "cancel_reason": reason or "other",
+        "last_error": "",
+    })
+
+
+def _invalidate_aps_elearning_signature_for_new_report(trainee: Dict[str, Any]) -> None:
+    state = _aps_elearning_signature_state(trainee)
+    if not state:
+        return
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if request_id and _is_yousign_signature_pending(state) and _yousign_is_configured():
+        try:
+            _yousign_json("POST", f"/signature_requests/{request_id}/cancel", json={
+                "reason": "other",
+                "custom_note": "Le relevé Digiforma a été remplacé.",
+            })
+        except Exception:
+            app.logger.warning(
+                "[APS E-LEARNING] ancienne demande Yousign non annulée request_id=%s",
+                request_id,
+                exc_info=True,
+            )
+    _archive_aps_elearning_signature_state(trainee, "digiforma_report_replaced")
+    trainee["aps_elearning_signature"] = {}
+
+
 def _extract_yousign_signature_link(payload: Dict[str, Any], signer_id: str = "") -> str:
     candidates = []
     if isinstance(payload, dict):
@@ -30588,23 +30765,35 @@ def run_convocation_signature_reminders(
         _convention_signature_reminders_lock.release()
 
 
-def build_signature_email_text(first_name: str, formation_label: str, dates_session: str, signature_url: str) -> str:
+def build_signature_email_text(
+    first_name: str,
+    formation_label: str,
+    dates_session: str,
+    signature_url: str,
+    *,
+    document_label: str = "Convention de formation",
+    document_subject: str = "votre convention de formation",
+    action_label: str = "Signer ma convention de formation",
+) -> str:
     safe_first_name = str(first_name or "").strip() or "Madame, Monsieur"
     safe_formation_label = str(formation_label or "").strip() or "Formation"
     safe_dates_session = str(dates_session or "").strip() or "Dates à confirmer"
     safe_signature_url = str(signature_url or "").strip()
+    safe_document_label = str(document_label or "Document").strip() or "Document"
+    safe_document_subject = str(document_subject or "votre document").strip() or "votre document"
+    safe_action_label = str(action_label or "Signer le document").strip() or "Signer le document"
     return f"""Bonjour {safe_first_name},
 
-Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.
+Vous trouverez ci-dessous le lien sécurisé pour signer {safe_document_subject}.
 Nous vous remercions de bien vouloir procéder à la signature électronique de ce document.
 
 Récapitulatif :
 - Formation : {safe_formation_label}
 - Session : {safe_dates_session}
-- Document : Convention de formation
+- Document : {safe_document_label}
 - Signature : électronique sécurisée
 
-Signer ma convention de formation :
+{safe_action_label} :
 {safe_signature_url}
 
 Ce lien est personnel. Merci de ne pas le transférer.
@@ -30616,19 +30805,37 @@ Intégrale Academy
 04 22 47 07 68"""
 
 
-def build_signature_email_html(first_name: str, formation_label: str, dates_session: str, signature_url: str, reminder: bool = False) -> str:
+def build_signature_email_html(
+    first_name: str,
+    formation_label: str,
+    dates_session: str,
+    signature_url: str,
+    reminder: bool = False,
+    *,
+    document_label: str = "Convention de formation",
+    document_subject: str = "votre convention de formation",
+    button_label: str = "Signer ma convention",
+) -> str:
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
     safe_formation_label = html.escape(str(formation_label or "").strip() or "Formation")
     safe_dates_session = html.escape(str(dates_session or "").strip() or "Dates à confirmer")
     safe_signature_url = html.escape(str(signature_url or "").strip(), quote=True)
+    safe_document_label = html.escape(str(document_label or "Document").strip() or "Document")
+    safe_document_subject = html.escape(str(document_subject or "votre document").strip() or "votre document")
+    safe_button_label = html.escape(str(button_label or "Signer le document").strip() or "Signer le document")
     safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
-    intro = "Votre convention de formation est toujours en attente de signature." if reminder else "Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation."
+    if reminder and str(document_subject or "").strip() == "votre convention de formation":
+        intro = "Votre convention de formation est toujours en attente de signature."
+    elif reminder:
+        intro = f"{safe_document_label} : la signature est toujours en attente."
+    else:
+        intro = f"Vous trouverez ci-dessous le lien sécurisé pour signer {safe_document_subject}."
     request_text = "Merci de la signer dès maintenant en utilisant le bouton sécurisé ci-dessous." if reminder else "Nous vous remercions de bien vouloir procéder à la signature électronique de ce document."
     banner = '<div style="display:inline-block;margin-bottom:18px;padding:7px 12px;border-radius:999px;background:#fff3cd;color:#8a5700;font-size:13px;font-weight:700;">Rappel de signature</div>' if reminder else ""
     return f'''<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convention de formation</title>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{safe_document_label}</title>
   <style>
     @keyframes signPulse {{ 0% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(11,94,215,.42); }} 70% {{ transform:scale(1.04); box-shadow:0 0 0 14px rgba(11,94,215,0); }} 100% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(11,94,215,0); }} }}
     .signature-button {{ animation:signPulse 1.8s ease-in-out infinite; }}
@@ -30638,15 +30845,15 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
-        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr></table></td></tr>
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">{safe_document_label}</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
           {banner}<p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
           <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">{intro}</p>
           <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">{request_text}</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
-            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convention de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
+            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> {safe_document_label}</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
           </td></tr></table>
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" class="signature-button" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);animation:signPulse 1.8s ease-in-out infinite;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convention</a></td></tr></table>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" class="signature-button" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);animation:signPulse 1.8s ease-in-out infinite;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">{safe_button_label}</a></td></tr></table>
           <p style="margin:0 0 10px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel. Merci de ne pas le transférer.</p><p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#6b7280;">Si le bouton ne fonctionne pas, copiez-collez le lien ci-dessous dans votre navigateur :</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#4b5563;"><a href="{safe_signature_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_signature_url}</a></p>
         </td></tr><tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
       </table>
@@ -30682,6 +30889,64 @@ def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict
     ok = brevo_send_email(email, subject, html_body, trainee=trainee, text_content=text_body)
     now = _now_iso()
     state = _yousign_state(trainee)
+    if ok:
+        state["signature_email_sent_at"] = now
+        state["signature_email_last_error"] = ""
+    else:
+        state["signature_email_last_error"] = "Demande Yousign créée, mais l’e-mail n’a pas pu être envoyé."
+    trainee["updated_at"] = now
+    return ok
+
+
+def _build_yousign_aps_elearning_signature_email(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    signature_link: str,
+) -> Tuple[str, str, str]:
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip() or "Madame, Monsieur"
+    training_name = _signature_email_training_label(session_obj)
+    dates_session = _aps_session_dates_label(session_obj)
+    document_label = "Tableau de suivi de la formation à distance"
+    subject = "Votre tableau de suivi FOAD est à signer"
+    html_body = build_signature_email_html(
+        first_name,
+        training_name,
+        dates_session,
+        signature_link,
+        document_label=document_label,
+        document_subject="votre tableau de suivi de la formation à distance",
+        button_label="Signer mon tableau de suivi",
+    )
+    text_body = build_signature_email_text(
+        first_name,
+        training_name,
+        dates_session,
+        signature_link,
+        document_label=document_label,
+        document_subject="votre tableau de suivi de la formation à distance",
+        action_label="Signer mon tableau de suivi",
+    )
+    return subject, html_body, text_body
+
+
+def send_yousign_aps_elearning_signature_email(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    signature_link: str,
+) -> bool:
+    email = str(trainee.get("email") or "").strip()
+    if not email:
+        raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
+    if not str(signature_link or "").strip():
+        raise RuntimeError("Lien de signature introuvable, impossible d’envoyer l’e-mail au stagiaire.")
+    subject, html_body, text_body = _build_yousign_aps_elearning_signature_email(
+        session_obj,
+        trainee,
+        signature_link,
+    )
+    ok = brevo_send_email(email, subject, html_body, trainee=trainee, text_content=text_body)
+    now = _now_iso()
+    state = _aps_elearning_signature_state(trainee)
     if ok:
         state["signature_email_sent_at"] = now
         state["signature_email_last_error"] = ""
@@ -31014,6 +31279,195 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
     return state
 
 
+def make_yousign_aps_elearning_external_id(session_id: str, trainee_id: str) -> str:
+    raw = f"aps_foad_{session_id}_{trainee_id}"
+    return re.sub(r"[^A-Za-z0-9_\-@.%+ ]", "_", raw)
+
+
+def _generate_aps_elearning_tracking_signature_files(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    trainee_id: str,
+) -> Tuple[str, str, str, List[Dict[str, Any]]]:
+    base_name = "_".join(filter(None, (
+        "tableau_suivi_foad_cnaps",
+        _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or trainee_id),
+        uuid.uuid4().hex[:10],
+    )))
+    docx_path, source_pdf_path = _generate_aps_elearning_tracking_table_files(
+        session_obj,
+        trainee,
+        YOUSIGN_APS_ELEARNING_DIR,
+        base_name,
+    )
+    if not _docx_text_contains_yousign_smart_anchor(docx_path, signer_index=1):
+        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
+    pdf_anchors = _detect_yousign_pdf_anchors(source_pdf_path, signer_index=1)
+    if not pdf_anchors:
+        raise RuntimeError("La zone de signature stagiaire Yousign est introuvable dans le tableau FOAD.")
+    _, clean_pdf_path = _generate_aps_elearning_tracking_table_files(
+        session_obj,
+        trainee,
+        YOUSIGN_APS_ELEARNING_DIR,
+        base_name + "_clean",
+        include_yousign_anchors=False,
+    )
+    return docx_path, clean_pdf_path, source_pdf_path, pdf_anchors
+
+
+def create_yousign_aps_elearning_tracking_signature(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    session_id: str,
+    trainee_id: str,
+    force_new: bool = False,
+) -> Dict[str, Any]:
+    if not _is_aps_elearning_session(session_obj):
+        raise RuntimeError("La signature du tableau FOAD est réservée aux sessions APS avec e-learning.")
+    tracking = _aps_elearning_tracking(trainee)
+    if not tracking.get("file"):
+        raise RuntimeError("Importez d’abord l’attestation d’assiduité Digiforma complète.")
+
+    existing_state = _aps_elearning_signature_state(trainee)
+    existing_request_id = str(existing_state.get("signature_request_id") or "").strip()
+    if existing_request_id and _is_yousign_signature_pending(existing_state) and existing_state.get("signature_link") and not force_new:
+        return existing_state
+    if _is_yousign_signature_done(existing_state) and not force_new:
+        raise RuntimeError("Ce tableau de suivi FOAD est déjà signé.")
+    if force_new and existing_request_id:
+        _cancel_yousign_aps_elearning_signature(trainee, "other")
+
+    if not _yousign_is_configured():
+        raise RuntimeError("Yousign n’est pas configuré : vérifiez YOUSIGN_API_KEY et YOUSIGN_WEBHOOK_SECRET dans Render.")
+    email = str(trainee.get("email") or "").strip()
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip()
+    sms_phone = _normalize_yousign_sms_phone(trainee.get("phone"))
+    if not email:
+        raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
+    if not first_name or not last_name:
+        raise RuntimeError("Prénom et nom du stagiaire sont obligatoires pour créer la signature Yousign.")
+    if not sms_phone:
+        raise RuntimeError(YOUSIGN_SMS_PHONE_ERROR_MESSAGE)
+
+    docx_path, yousign_pdf_path, source_pdf_path, pdf_anchors = _generate_aps_elearning_tracking_signature_files(
+        session_obj,
+        trainee,
+        trainee_id,
+    )
+    if not os.path.isfile(yousign_pdf_path) or os.path.getsize(yousign_pdf_path) <= 0:
+        raise RuntimeError("Le PDF du tableau FOAD préparé pour Yousign est introuvable.")
+
+    training_label = str(_session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "APS").strip()
+    request_name = f"Tableau suivi FOAD APS - {training_label} - {first_name} {last_name}".strip()
+    external_id = make_yousign_aps_elearning_external_id(session_id, trainee_id)
+    yousign_environment = _yousign_environment()
+    signature_request = _yousign_json("POST", "/signature_requests", json={
+        "name": request_name,
+        "delivery_mode": "none",
+        "timezone": "Europe/Paris",
+        "external_id": external_id,
+    })
+    signature_request_id = str(signature_request.get("id") or "").strip()
+    if not signature_request_id:
+        raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de demande de signature.")
+
+    with open(yousign_pdf_path, "rb") as pdf_file:
+        document = _yousign_json(
+            "POST",
+            f"/signature_requests/{signature_request_id}/documents",
+            files={"file": (os.path.basename(yousign_pdf_path), pdf_file, "application/pdf")},
+            data={"nature": "signable_document", "parse_anchors": "false"},
+        )
+    document_id = str(document.get("id") or "").strip()
+    if not document_id:
+        raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de document.")
+
+    fields = [
+        {
+            "document_id": document_id,
+            "type": "signature",
+            "page": anchor["page"],
+            "x": anchor["x"],
+            "y": anchor["y"],
+            "width": anchor["width"],
+            "height": max(80, int(anchor["height"])),
+            "layout": "detailed",
+            "date_time_format": "dd/MM/yyyy",
+            "show_timezone": False,
+        }
+        for anchor in pdf_anchors
+        if anchor.get("type") == "signature"
+    ]
+    if not fields:
+        raise RuntimeError("La zone de signature stagiaire Yousign est invalide.")
+    signer_payload = {
+        "info": {
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "phone_number": sms_phone,
+            "locale": "fr",
+        },
+        "signature_level": "electronic_signature",
+        "signature_authentication_mode": YOUSIGN_SMS_AUTHENTICATION_MODE,
+        "fields": fields,
+    }
+    signer = _yousign_json(
+        "POST",
+        f"/signature_requests/{signature_request_id}/signers",
+        json=signer_payload,
+    )
+    signer_id = str(signer.get("id") or "").strip()
+    signer_fresh = (
+        _yousign_json("GET", f"/signature_requests/{signature_request_id}/signers/{signer_id}")
+        if signer_id
+        else {}
+    )
+    activated = _yousign_json("POST", f"/signature_requests/{signature_request_id}/activate", json={})
+    signature_link = (
+        _extract_yousign_signature_link(activated, signer_id)
+        or _extract_yousign_signature_link(signer, signer_id)
+        or _extract_yousign_signature_link(signer_fresh, signer_id)
+    )
+    if not signature_link:
+        raise RuntimeError("Demande Yousign créée, mais le lien de signature est introuvable.")
+
+    now = _now_iso()
+    state = _aps_elearning_signature_state(trainee)
+    state.clear()
+    state.update({
+        "status": "ongoing",
+        "signature_request_id": signature_request_id,
+        "external_id": external_id,
+        "document_id": document_id,
+        "signer_id": signer_id,
+        "signature_link": signature_link,
+        "signature_link_expires_at": activated.get("signature_link_expiration_date") or signer.get("signature_link_expiration_date") or "",
+        "unsigned_pdf_path": yousign_pdf_path,
+        "source_pdf_with_anchors_path": source_pdf_path,
+        "unsigned_docx_path": docx_path,
+        "created_at": now,
+        "activated_at": now,
+        "signed_at": "",
+        "signed_pdf_path": "",
+        "last_error": "",
+        "signature_email_sent_at": "",
+        "signature_email_last_error": "",
+        "report_file": tracking.get("file") or "",
+        "report_uploaded_at": tracking.get("uploaded_at") or "",
+        "provider_signature_embedded": True,
+    })
+    trainee["updated_at"] = now
+    app.logger.info(
+        "[APS E-LEARNING] Yousign request activated trainee_id=%s request_id=%s environment=%s",
+        trainee_id,
+        signature_request_id,
+        yousign_environment,
+    )
+    return state
+
+
 def _find_trainee_by_yousign_request_id(data: Dict[str, Any], request_id: str):
     for sess in data.get("sessions", []):
         trainees = _session_trainees_list(sess)
@@ -31031,6 +31485,35 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
         fh.write(response.content)
     if not os.path.exists(path) or os.path.getsize(path) <= 0:
         raise RuntimeError("Téléchargement du PDF signé Yousign vide.")
+    return path
+
+
+def _find_trainee_by_aps_elearning_yousign_request_id(data: Dict[str, Any], request_id: str):
+    for sess in data.get("sessions", []):
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            state = _aps_elearning_signature_state(trainee)
+            if str(state.get("signature_request_id") or "") == str(request_id):
+                return sess, trainees, trainee
+    return None, None, None
+
+
+def _download_yousign_aps_elearning_signed_pdf(signature_request_id: str, trainee_id: str) -> str:
+    response = _yousign_request(
+        "GET",
+        f"/signature_requests/{signature_request_id}/documents/download",
+        params={"version": "completed", "archive": "false"},
+        headers={"Accept": "application/pdf"},
+    )
+    os.makedirs(YOUSIGN_APS_ELEARNING_SIGNED_DIR, exist_ok=True)
+    path = os.path.join(
+        YOUSIGN_APS_ELEARNING_SIGNED_DIR,
+        f"tableau_suivi_foad_cnaps_{_safe_filename_part(trainee_id)}_signe.pdf",
+    )
+    with open(path, "wb") as signed_pdf:
+        signed_pdf.write(response.content)
+    if not os.path.isfile(path) or os.path.getsize(path) <= 0:
+        raise RuntimeError("Téléchargement du tableau FOAD signé Yousign vide.")
     return path
 
 
@@ -31226,6 +31709,41 @@ def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], 
     sess.pop("stagiaires", None)
 
 
+def _mark_yousign_aps_elearning_tracking_signed(
+    data: Dict[str, Any],
+    sess: Dict[str, Any],
+    trainees: List[Dict[str, Any]],
+    trainee: Dict[str, Any],
+    request_id: str,
+    event_id: str = "",
+) -> None:
+    state = _aps_elearning_signature_state(trainee)
+    if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
+        return
+    signed_path = _download_yousign_aps_elearning_signed_pdf(
+        request_id,
+        str(trainee.get("id") or ""),
+    )
+    now = _now_iso()
+    state.update({
+        "status": "done",
+        "signed_at": state.get("signed_at") or now,
+        "signed_pdf_path": signed_path,
+        "last_error": "",
+        "last_event_id": event_id or state.get("last_event_id") or "",
+    })
+    trainee["updated_at"] = now
+    append_trainee_history_event(
+        trainee,
+        "Tableau de suivi FOAD signé",
+        "Signature électronique Yousign",
+        "action",
+        now,
+    )
+    sess["trainees"] = trainees
+    sess.pop("stagiaires", None)
+
+
 def _refresh_yousign_convention_status_if_pending(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any]) -> bool:
     state = _yousign_state(trainee)
     request_id = str(state.get("signature_request_id") or "").strip()
@@ -31242,6 +31760,41 @@ def _refresh_yousign_convention_status_if_pending(data: Dict[str, Any], sess: Di
         return False
     if status in YOUSIGN_FINAL_STATUSES:
         _mark_yousign_convention_signed(data, sess, trainees, trainee, request_id)
+        return True
+    if status != _normalize_yousign_status(state.get("status")):
+        state["status"] = status
+        trainee["updated_at"] = _now_iso()
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        return True
+    return False
+
+
+def _refresh_yousign_aps_elearning_status_if_pending(
+    data: Dict[str, Any],
+    sess: Dict[str, Any],
+    trainees: List[Dict[str, Any]],
+    trainee: Dict[str, Any],
+) -> bool:
+    state = _aps_elearning_signature_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if not request_id or not _is_yousign_signature_pending(state) or not _yousign_is_configured():
+        return False
+    try:
+        signature_request = _yousign_json("GET", f"/signature_requests/{request_id}")
+    except Exception as exc:
+        state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
+        app.logger.warning(
+            "[APS E-LEARNING] Yousign status refresh failed request_id=%s error=%s",
+            request_id,
+            state["last_status_sync_error"],
+        )
+        return False
+    status = _yousign_signature_request_status(signature_request)
+    if not status:
+        return False
+    if status in YOUSIGN_FINAL_STATUSES:
+        _mark_yousign_aps_elearning_tracking_signed(data, sess, trainees, trainee, request_id)
         return True
     if status != _normalize_yousign_status(state.get("status")):
         state["status"] = status
@@ -32701,6 +33254,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     _private_documents(t)
     if _is_aps_elearning_session(s):
         _aps_elearning_tracking(t)
+        _aps_elearning_signature_state(t)
 
     # file tokens for template links (documents)
     for d in (t.get("documents") or []):
@@ -32754,6 +33308,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
     _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
+    if _is_aps_elearning_session(s):
+        _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
 
     # ✅ persistance
     s["trainees"] = trainees
@@ -41087,15 +41643,34 @@ def webhooks_yousign():
     if event_name not in done_events and payload_status not in YOUSIGN_FINAL_STATUSES:
         return jsonify({"ok": True, "ignored": True})
     data = load_data()
-    sess, trainees, trainee = _find_trainee_by_yousign_request_id(data, request_id)
+    target_type = "aps_elearning"
+    sess, trainees, trainee = _find_trainee_by_aps_elearning_yousign_request_id(data, request_id)
+    if not trainee:
+        target_type = "convention"
+        sess, trainees, trainee = _find_trainee_by_yousign_request_id(data, request_id)
     if not trainee:
         return jsonify({"ok": True, "updated": False, "reason": "signature_request_not_found"})
-    state = _yousign_state(trainee)
+    state = _aps_elearning_signature_state(trainee) if target_type == "aps_elearning" else _yousign_state(trainee)
     try:
-        _mark_yousign_convention_signed(data, sess, trainees, trainee, request_id, str(payload.get("event_id") or ""))
+        if target_type == "aps_elearning":
+            _mark_yousign_aps_elearning_tracking_signed(
+                data,
+                sess,
+                trainees,
+                trainee,
+                request_id,
+                str(payload.get("event_id") or ""),
+            )
+        else:
+            _mark_yousign_convention_signed(data, sess, trainees, trainee, request_id, str(payload.get("event_id") or ""))
         save_data(data)
-        app.logger.info("[YOUSIGN] convention signed stored trainee_id=%s request_id=%s", trainee.get("id"), request_id)
-        return jsonify({"ok": True, "updated": True, "status": "signed"})
+        app.logger.info(
+            "[YOUSIGN] signed document stored type=%s trainee_id=%s request_id=%s",
+            target_type,
+            trainee.get("id"),
+            request_id,
+        )
+        return jsonify({"ok": True, "updated": True, "status": "signed", "document_type": target_type})
     except Exception as exc:
         message = _sanitize_yousign_error(str(exc))
         app.logger.exception("[YOUSIGN] signed PDF download failed request_id=%s error=%s", request_id, message)
