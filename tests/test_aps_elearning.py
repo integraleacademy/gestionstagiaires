@@ -216,6 +216,7 @@ class ApsElearningTests(unittest.TestCase):
         self.assertNotIn('id="editApsElearningPassword"', html)
         self.assertIn("Suivi du e-learning", html)
         self.assertIn("Importer le relevé complet", html)
+        self.assertNotIn("Tout remettre à zéro", html)
         self.assertIn("TABLEAU DE SUIVI DE LA FORMATION À DISTANCE", html)
         self.assertIn('disabled aria-disabled="true">⬇️ Dossier CNAPS non disponible', html)
 
@@ -275,6 +276,12 @@ class ApsElearningTests(unittest.TestCase):
             html = page.get_data(as_text=True)
             self.assertIn("Dossier contrôlé et signable", html)
             self.assertIn("Télécharger l’attestation Digiforma", html)
+            self.assertIn("Tout remettre à zéro", html)
+            self.assertIn(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/reset",
+                html,
+            )
+            self.assertIn("Le lien e-learning APS restera inchangé", html)
             self.assertIn("Télécharger le dossier CNAPS complet", html)
             self.assertIn("Envoyer à signer avec Yousign", html)
             self.assertIn("Contrôles automatiques validés", html)
@@ -286,6 +293,168 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(download.status_code, 200)
             self.assertEqual(download.data, pdf_bytes)
             self.assertIn("attachment", download.headers.get("Content-Disposition", ""))
+
+    def test_admin_can_reset_all_aps_elearning_data_and_files(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+
+        with tempfile.TemporaryDirectory() as directory:
+            uploads_dir = os.path.join(directory, "uploads")
+            tracking_dir = os.path.join(
+                uploads_dir,
+                "S-APS",
+                "T-APS",
+                gestion_app.APS_ELEARNING_TRACKING_FOLDER,
+            )
+            generated_dir = os.path.join(directory, "generated", "aps-elearning")
+            signed_dir = os.path.join(directory, "generated", "aps-elearning-signed")
+            os.makedirs(tracking_dir, exist_ok=True)
+            os.makedirs(generated_dir, exist_ok=True)
+            os.makedirs(signed_dir, exist_ok=True)
+
+            report_path = os.path.join(tracking_dir, "report.pdf")
+            source_pdf_path = os.path.join(generated_dir, "tableau_current.pdf")
+            source_docx_path = os.path.join(generated_dir, "tableau_current.docx")
+            clean_pdf_path = os.path.join(generated_dir, "tableau_current_clean.pdf")
+            clean_docx_path = os.path.join(generated_dir, "tableau_current_clean.docx")
+            package_path = os.path.join(generated_dir, "tableau_current_dossier_complet.pdf")
+            signed_path = os.path.join(
+                signed_dir,
+                "tableau_suivi_foad_cnaps_T-APS_signe.pdf",
+            )
+            old_package_path = os.path.join(generated_dir, "tableau_old_dossier_complet.pdf")
+            outside_path = os.path.join(directory, "ne-pas-supprimer.pdf")
+            managed_paths = (
+                report_path,
+                source_pdf_path,
+                source_docx_path,
+                clean_pdf_path,
+                clean_docx_path,
+                package_path,
+                signed_path,
+                old_package_path,
+            )
+            for path in (*managed_paths, outside_path):
+                with open(path, "wb") as target:
+                    target.write(b"test")
+
+            trainee["aps_elearning_tracking"] = self._complete_tracking(
+                file="uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
+            )
+            trainee["aps_elearning_signature"] = {
+                "status": "done",
+                "signature_request_id": "foad-request-current",
+                "source_pdf_with_anchors_path": source_pdf_path,
+                "unsigned_docx_path": source_docx_path,
+                "unsigned_pdf_path": package_path,
+                "signed_pdf_path": signed_path,
+            }
+            trainee["aps_elearning_signature_history"] = [
+                {
+                    "status": "canceled",
+                    "unsigned_pdf_path": old_package_path,
+                    "signed_pdf_path": outside_path,
+                }
+            ]
+            trainee["aps_elearning_force_override"] = {"active": True}
+            trainee["aps_elearning_force_override_history"] = [{"active": False}]
+            trainee["aps_elearning_signature_issues"] = ["test"]
+            trainee["aps_elearning_signature_ready"] = False
+            trainee["aps_elearning_signature_allowed"] = True
+            trainee["aps_elearning_force_active"] = True
+
+            with patch.object(gestion_app, "PERSIST_DIR", directory), patch.object(
+                gestion_app, "UPLOADS_DIR", uploads_dir
+            ), patch.object(
+                gestion_app, "YOUSIGN_APS_ELEARNING_DIR", generated_dir
+            ), patch.object(
+                gestion_app, "YOUSIGN_APS_ELEARNING_SIGNED_DIR", signed_dir
+            ), patch.object(
+                gestion_app, "load_data", return_value=data
+            ), patch.object(gestion_app, "save_data") as save_data:
+                response = self.client.post(
+                    "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/reset"
+                )
+
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.location.endswith("#apsElearningTrackingSection"))
+            for key in gestion_app.APS_ELEARNING_RESET_FIELDS:
+                self.assertNotIn(key, trainee)
+            self.assertEqual(
+                trainee["aps_elearning_login"],
+                "https://ediser.elmg.net/access/alice-aps",
+            )
+            self.assertTrue(all(not os.path.exists(path) for path in managed_paths))
+            self.assertTrue(os.path.isfile(outside_path))
+            self.assertEqual(
+                trainee["activity_history"][0]["label"],
+                "Suivi e-learning APS remis à zéro",
+            )
+            self.assertIn("8 fichier(s) local(aux) supprimé(s)", trainee["activity_history"][0]["details"])
+            save_data.assert_called_once_with(data)
+
+    def test_reset_cancels_pending_yousign_request_before_clearing(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "foad-request-pending",
+        }
+
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            gestion_app, "PERSIST_DIR", directory
+        ), patch.object(
+            gestion_app, "UPLOADS_DIR", os.path.join(directory, "uploads")
+        ), patch.object(
+            gestion_app, "YOUSIGN_APS_ELEARNING_DIR", os.path.join(directory, "generated")
+        ), patch.object(
+            gestion_app, "YOUSIGN_APS_ELEARNING_SIGNED_DIR", os.path.join(directory, "signed")
+        ), patch.object(
+            gestion_app, "_yousign_is_configured", return_value=True
+        ), patch.object(
+            gestion_app, "_cancel_yousign_aps_elearning_signature"
+        ) as cancel_signature, patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data") as save_data:
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/reset"
+            )
+
+        self.assertEqual(response.status_code, 302)
+        cancel_signature.assert_called_once_with(trainee, "other")
+        self.assertNotIn("aps_elearning_tracking", trainee)
+        self.assertNotIn("aps_elearning_signature", trainee)
+        save_data.assert_called_once_with(data)
+
+    def test_reset_keeps_data_if_pending_yousign_cannot_be_cancelled(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "foad-request-pending",
+        }
+
+        with patch.object(gestion_app, "_yousign_is_configured", return_value=True), patch.object(
+            gestion_app,
+            "_cancel_yousign_aps_elearning_signature",
+            side_effect=RuntimeError("annulation Yousign indisponible"),
+        ) as cancel_signature, patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data") as save_data:
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/reset"
+            )
+
+        self.assertEqual(response.status_code, 302)
+        cancel_signature.assert_called_once_with(trainee, "other")
+        self.assertIn("aps_elearning_tracking", trainee)
+        self.assertIn("aps_elearning_signature", trainee)
+        save_data.assert_not_called()
 
     def test_incomplete_digiforma_pdf_is_rejected(self):
         self._admin_login()

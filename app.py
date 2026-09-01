@@ -26347,6 +26347,58 @@ def admin_force_aps_elearning_tracking(session_id: str, trainee_id: str):
     return _aps_elearning_tracking_redirect(session_id, trainee_id)
 
 
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/reset")
+@admin_login_required
+@admin_write_required
+def admin_reset_aps_elearning_tracking(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+
+    if not _aps_elearning_has_resettable_data(trainee):
+        flash("Le suivi e-learning APS est déjà à zéro.", "info")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    try:
+        removed_files = _reset_aps_elearning_data(trainee, session_id, trainee_id)
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        app.logger.exception(
+            "[APS E-LEARNING] remise à zéro impossible trainee_id=%s error=%s",
+            trainee_id,
+            message,
+        )
+        flash(
+            "La remise à zéro n’a pas été effectuée : " + message,
+            "error",
+        )
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    now = _now_iso()
+    admin_identity = str(
+        session.get("admin_username") or session.get("admin_email") or "Administrateur"
+    ).strip()
+    trainee["updated_at"] = now
+    append_trainee_history_event(
+        trainee,
+        "Suivi e-learning APS remis à zéro",
+        f"PDF Digiforma, tableau FOAD, état Yousign et forçage supprimés · "
+        f"{removed_files} fichier(s) local(aux) supprimé(s) · Par {admin_identity}",
+        "action",
+        now,
+    )
+    session_obj["trainees"] = trainees
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+    flash(
+        "Le suivi e-learning APS a été entièrement remis à zéro. "
+        "Le lien e-learning du stagiaire a été conservé.",
+        "success",
+    )
+    return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/digiforma")
 @admin_login_required
 def admin_download_aps_elearning_digiforma(session_id: str, trainee_id: str):
@@ -30935,6 +30987,173 @@ def _cancel_yousign_aps_elearning_signature(trainee: Dict[str, Any], reason: str
         "cancel_reason": reason or "other",
         "last_error": "",
     })
+
+
+APS_ELEARNING_RESET_FIELDS = (
+    "aps_elearning_tracking",
+    "aps_elearning_signature",
+    "aps_elearning_signature_history",
+    "aps_elearning_force_override",
+    "aps_elearning_force_override_history",
+    "aps_elearning_signature_issues",
+    "aps_elearning_signature_ready",
+    "aps_elearning_signature_allowed",
+    "aps_elearning_force_active",
+)
+APS_ELEARNING_SIGNATURE_FILE_FIELDS = (
+    "unsigned_pdf_path",
+    "source_pdf_with_anchors_path",
+    "unsigned_docx_path",
+    "signed_pdf_path",
+)
+
+
+def _aps_elearning_has_resettable_data(trainee: Dict[str, Any]) -> bool:
+    tracking = trainee.get("aps_elearning_tracking")
+    if isinstance(tracking, dict) and any(tracking.values()):
+        return True
+    signature = trainee.get("aps_elearning_signature")
+    if isinstance(signature, dict) and any(signature.values()):
+        return True
+    for key in (
+        "aps_elearning_signature_history",
+        "aps_elearning_force_override",
+        "aps_elearning_force_override_history",
+    ):
+        value = trainee.get(key)
+        if isinstance(value, (dict, list)) and bool(value):
+            return True
+    return False
+
+
+def _aps_elearning_tracking_storage_dir(session_id: str, trainee_id: str) -> str:
+    uploads_root = os.path.realpath(UPLOADS_DIR)
+    target = os.path.realpath(os.path.join(
+        uploads_root,
+        str(session_id or ""),
+        str(trainee_id or ""),
+        APS_ELEARNING_TRACKING_FOLDER,
+    ))
+    try:
+        if os.path.commonpath((target, uploads_root)) != uploads_root or target == uploads_root:
+            return ""
+    except ValueError:
+        return ""
+    return target
+
+
+def _remove_aps_elearning_file(path: Any, allowed_directories: Tuple[str, ...]) -> bool:
+    """Delete one FOAD file only when it is contained in an expected directory."""
+    raw_path = str(path or "").strip()
+    if not raw_path:
+        return False
+    real_path = os.path.realpath(raw_path)
+    allowed = False
+    for directory in allowed_directories:
+        root = os.path.realpath(str(directory or ""))
+        if not root:
+            continue
+        try:
+            if real_path != root and os.path.commonpath((real_path, root)) == root:
+                allowed = True
+                break
+        except ValueError:
+            continue
+    if not allowed:
+        app.logger.warning(
+            "[APS E-LEARNING] suppression refusée hors des répertoires autorisés path=%s",
+            raw_path,
+        )
+        return False
+    try:
+        if os.path.isfile(real_path):
+            os.remove(real_path)
+            return True
+    except OSError:
+        app.logger.warning(
+            "[APS E-LEARNING] fichier local non supprimé path=%s",
+            raw_path,
+            exc_info=True,
+        )
+    return False
+
+
+def _aps_elearning_signature_file_paths(trainee: Dict[str, Any], trainee_id: str) -> Set[str]:
+    states: List[Dict[str, Any]] = []
+    current_state = trainee.get("aps_elearning_signature")
+    if isinstance(current_state, dict):
+        states.append(current_state)
+    history = trainee.get("aps_elearning_signature_history")
+    if isinstance(history, list):
+        states.extend(item for item in history if isinstance(item, dict))
+
+    paths: Set[str] = set()
+    for state in states:
+        for key in APS_ELEARNING_SIGNATURE_FILE_FIELDS:
+            path = str(state.get(key) or "").strip()
+            if path:
+                paths.add(path)
+
+        # The clean two-page cover is generated alongside the source PDF but
+        # older records did not store its path. Reconstruct only its exact
+        # sibling names; the directory guard below still applies.
+        source_pdf = str(state.get("source_pdf_with_anchors_path") or "").strip()
+        source_root, source_ext = os.path.splitext(source_pdf)
+        if source_root and source_ext.lower() == ".pdf":
+            paths.add(source_root + "_clean.pdf")
+            paths.add(source_root + "_clean.docx")
+
+    safe_trainee_id = _safe_filename_part(trainee_id)
+    if safe_trainee_id:
+        paths.add(os.path.join(
+            YOUSIGN_APS_ELEARNING_SIGNED_DIR,
+            f"tableau_suivi_foad_cnaps_{safe_trainee_id}_signe.pdf",
+        ))
+    return paths
+
+
+def _reset_aps_elearning_data(
+    trainee: Dict[str, Any],
+    session_id: str,
+    trainee_id: str,
+) -> int:
+    """Clear one trainee's Digiforma/FOAD/Yousign state and local artifacts."""
+    signature_state = trainee.get("aps_elearning_signature")
+    signature_state = signature_state if isinstance(signature_state, dict) else {}
+    request_id = str(signature_state.get("signature_request_id") or "").strip()
+    if request_id and _is_yousign_signature_pending(signature_state):
+        if not _yousign_is_configured():
+            raise RuntimeError(
+                "la demande Yousign est encore en cours, mais Yousign n’est pas configuré pour pouvoir l’annuler"
+            )
+        _cancel_yousign_aps_elearning_signature(trainee, "other")
+
+    removed_files = 0
+    tracking = trainee.get("aps_elearning_tracking")
+    tracking_token = str(tracking.get("file") or "").strip() if isinstance(tracking, dict) else ""
+    tracking_dir = _aps_elearning_tracking_storage_dir(session_id, trainee_id)
+    if tracking_token and tracking_dir:
+        try:
+            tracking_path = _detokenize_path(tracking_token)
+        except Exception:
+            app.logger.warning(
+                "[APS E-LEARNING] chemin Digiforma invalide trainee_id=%s",
+                trainee_id,
+                exc_info=True,
+            )
+        else:
+            removed_files += int(_remove_aps_elearning_file(tracking_path, (tracking_dir,)))
+
+    generated_roots = (
+        YOUSIGN_APS_ELEARNING_DIR,
+        YOUSIGN_APS_ELEARNING_SIGNED_DIR,
+    )
+    for path in _aps_elearning_signature_file_paths(trainee, trainee_id):
+        removed_files += int(_remove_aps_elearning_file(path, generated_roots))
+
+    for key in APS_ELEARNING_RESET_FIELDS:
+        trainee.pop(key, None)
+    return removed_files
 
 
 def _invalidate_aps_elearning_signature_for_new_report(trainee: Dict[str, Any]) -> None:
