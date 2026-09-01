@@ -30,6 +30,11 @@ jobs:
           ! grep -q 'id="editApsElearningPassword"' templates/admin_trainee.html
           ! grep -q 'data-copy-target="apsElearningPassword"' templates/public_trainee.html
 
+      - name: Préparer le stockage persistant de test
+        run: |
+          sudo mkdir -p /var/data /data
+          sudo chown -R "$USER":"$USER" /var/data /data
+
       - name: Installer les dépendances de test
         run: |
           python -m pip install --disable-pip-version-check -r requirements.txt
