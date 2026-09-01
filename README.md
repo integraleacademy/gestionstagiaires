@@ -60,6 +60,12 @@ python app.py
 - `CRM_WEDOF_WEBHOOK_URL` (facultatif, défaut : `https://assistance-alw9.onrender.com/api/webhooks/wedof`)
 - `CRM_WEDOF_WEBHOOK_SECRET` (facultatif : secret partagé avec le CRM ; à défaut, `WEDOF_WEBHOOK_SECRET` est réutilisé)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
+- `AKTO_API_BASE_URL` (URL de l’API Convergence CFA/OPCO communiquée par AKTO)
+- `AKTO_OAUTH_TOKEN_URL` (URL d’obtention du Bearer Token communiquée par AKTO)
+- `AKTO_OAUTH_CLIENT_ID` et `AKTO_OAUTH_CLIENT_SECRET` (identifiants du logiciel Gestion Stagiaires fournis par AKTO)
+- `AKTO_API_KEY` (clé du CFA ; la clé déjà configurée dans YPAREO peut être réutilisée)
+- `AKTO_OAUTH_SCOPE` (optionnel, défaut `.default`)
+- `AKTO_API_EDITOR`, `AKTO_API_SOFTWARE` et `AKTO_API_VERSION` (en-têtes d’identification du logiciel obligatoires dans l’API Convergence)
 - `WEDOF_MAINTENANCE_WINDOW_ENABLED` (facultatif, `true` par défaut ; seules les valeurs `false`, `0`, `no` et `off` désactivent la suspension)
 - `WEDOF_MAINTENANCE_START_TIME` (facultatif, heure de Paris au format `HH:MM`, `05:00` par défaut)
 - `WEDOF_MAINTENANCE_END_TIME` (facultatif, heure de Paris au format `HH:MM`, `07:00` par défaut ; la borne de fin est exclue)
@@ -82,6 +88,16 @@ python app.py
 - Historique webhook persisté dans `PERSIST_DIR/wedof_webhooks.json`
 - Chaque nouvelle demande exploitable est envoyée automatiquement à Salesforce lors de la réception du webhook. Lorsqu'elle est authentifiée, elle est aussi transmise au CRM. Le dossier complet déjà mis en cache est relayé sans nouvelle lecture WEDOF. En cas d'échec, la demande reste enregistrée et l'interface admin permet de relancer séparément chaque envoi.
 - L'action **Notifier** (mail/SMS au candidat) reste volontairement manuelle dans l'interface admin.
+
+## Espace BTS / AKTO
+
+- Interface administrateur autonome : `GET /admin/BTS`
+- Synchronisation complète et volontaire : `POST /admin/BTS/akto/sync`
+- Export du cache sécurisé : `GET /admin/BTS/akto/export.json`
+- Stockage séparé de `data.json` dans `PERSIST_DIR/akto_bts.sqlite3`
+- La consultation et les filtres lisent exclusivement le cache local ; seuls les clics sur « Synchroniser toutes les données » contactent AKTO.
+- L’API Key CFA ne suffit pas à elle seule : AKTO doit aussi attribuer à Gestion Stagiaires un Client ID et un Client Secret OAuth2, ainsi que les deux URL techniques.
+- Les NIR, IBAN et secrets sont masqués avant stockage. Ils ne figurent ni dans le tableau ni dans l’export JSON.
 
 ## Module VAE DESP
 

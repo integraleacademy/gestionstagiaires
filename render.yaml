@@ -53,6 +53,26 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      # Espace BTS autonome : la clé identifie le CFA, tandis que le couple
+      # OAuth identifie spécifiquement Gestion Stagiaires auprès d'AKTO.
+      - key: AKTO_API_BASE_URL
+        sync: false
+      - key: AKTO_OAUTH_TOKEN_URL
+        sync: false
+      - key: AKTO_OAUTH_CLIENT_ID
+        sync: false
+      - key: AKTO_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: AKTO_API_KEY
+        sync: false
+      - key: AKTO_OAUTH_SCOPE
+        value: .default
+      - key: AKTO_API_EDITOR
+        value: Intégrale Academy
+      - key: AKTO_API_SOFTWARE
+        value: Gestion Stagiaires - Espace BTS
+      - key: AKTO_API_VERSION
+        value: "1.0"
       - key: WEDOF_WEBHOOK_SECRET
         sync: false
       - key: AFC_IMPORT_VISION_MODEL

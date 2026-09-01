@@ -59,6 +59,15 @@ from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
+from akto_bts import (
+    AktoApiError,
+    AktoBtsStore,
+    AktoClient,
+    AktoConfig,
+    AktoConfigurationError,
+    new_sync_run_id,
+    sync_akto_bts,
+)
 from wedof_service import WedofApiError, WedofClient, WedofConfigurationError, read_env_bool
 from wedof_governor import (
     WedofGovernorError,
@@ -3047,7 +3056,9 @@ def inject_read_only():
     admin_logged_in = bool(session.get("admin_logged_in"))
     can_view_notifications = admin_logged_in and _admin_can_view_notifications()
     ctx_data: Optional[Dict[str, Any]] = None
-    if admin_logged_in:
+    # The BTS area is intentionally independent from the historical data.json
+    # payload. Its navigation badges stay neutral instead of loading that file.
+    if admin_logged_in and request.endpoint != "admin_bts":
         try:
             ctx_data = load_data()
         except Exception:
@@ -3507,6 +3518,8 @@ def _resolve_persist_dir() -> str:
 PERSIST_DIR = _resolve_persist_dir()
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 WEDOF_WEBHOOK_FILE = os.path.join(PERSIST_DIR, "wedof_webhooks.json")
+AKTO_BTS_DB_FILE = os.path.join(PERSIST_DIR, "akto_bts.sqlite3")
+AKTO_BTS_SYNC_LOCK_FILE = os.path.join(PERSIST_DIR, "akto_bts_sync.lock")
 os.environ.setdefault(
     "WEDOF_GOVERNOR_DB_PATH",
     os.path.join(PERSIST_DIR, "wedof_governor.sqlite3"),
@@ -14372,6 +14385,9 @@ PARTNER_MODULE_ROUTE_ENDPOINTS = {
     "automations": {"admin_sessions_conventions", "admin_sessions_automations"},
 }
 PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
+    "admin_bts",
+    "admin_bts_akto_sync",
+    "admin_bts_akto_export",
     "admin_secretariat",
     "admin_cash_payments",
     "api_cash_payments_settle",
@@ -16456,6 +16472,140 @@ def _admin_wedof_execution_flags() -> Dict[str, bool]:
         ),
         "wedof_dry_run": False,
     }
+
+
+def _akto_bts_store() -> AktoBtsStore:
+    """Open the storage dedicated to BTS apprenticeship contracts."""
+    return AktoBtsStore(AKTO_BTS_DB_FILE)
+
+
+def _akto_bts_sync_is_running() -> bool:
+    """Check the real interprocess lock instead of trusting a stale DB status."""
+    os.makedirs(PERSIST_DIR, exist_ok=True)
+    lock_file = open(AKTO_BTS_SYNC_LOCK_FILE, "a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        return False
+    finally:
+        lock_file.close()
+
+
+def _run_akto_bts_sync(run_id: str, lock_file) -> None:
+    """Run the potentially long AKTO snapshot outside the HTTP request."""
+    store = _akto_bts_store()
+    try:
+        config = AktoConfig.from_env()
+        sync_akto_bts(store, AktoClient(config), run_id)
+        app.logger.info("[AKTO_BTS_SYNC] completed run_id=%s", run_id)
+    except AktoConfigurationError as exc:
+        store.fail_run(run_id, str(exc))
+        app.logger.warning("[AKTO_BTS_SYNC] configuration_incomplete run_id=%s", run_id)
+    except AktoApiError as exc:
+        store.fail_run(run_id, str(exc))
+        app.logger.warning(
+            "[AKTO_BTS_SYNC] api_error run_id=%s code=%s status=%s",
+            run_id,
+            exc.code,
+            exc.status_code,
+        )
+    except Exception as exc:
+        store.fail_run(run_id, "Erreur interne pendant la synchronisation AKTO. Le cache précédent est conservé.")
+        app.logger.error(
+            "[AKTO_BTS_SYNC] unexpected_error run_id=%s type=%s",
+            run_id,
+            type(exc).__name__,
+        )
+    finally:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally:
+            lock_file.close()
+
+
+@app.get("/admin/BTS")
+@admin_login_required
+@require_super_admin
+def admin_bts():
+    query = (request.args.get("q") or "").strip()
+    state = (request.args.get("etat") or "").strip()
+    try:
+        page = max(1, int(request.args.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+    dashboard = _akto_bts_store().dashboard(query=query, state=state, page=page)
+    sync_running = _akto_bts_sync_is_running()
+    if dashboard.get("last_run") and dashboard["last_run"].get("status") == "running" and not sync_running:
+        dashboard["last_run"]["stale"] = True
+    response = make_response(render_template(
+        "admin_bts.html",
+        title="Espace BTS · AKTO",
+        dashboard=dashboard,
+        akto_config=AktoConfig.from_env().diagnostics(),
+        akto_sync_running=sync_running,
+        filters={"query": query, "state": state},
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.post("/admin/BTS/akto/sync")
+@admin_login_required
+@admin_write_required
+@require_super_admin
+def admin_bts_akto_sync():
+    config = AktoConfig.from_env()
+    if not config.ready:
+        labels = ", ".join(config.diagnostics()["missing_labels"])
+        flash(f"Connexion AKTO incomplète. Éléments manquants : {labels}.", "error")
+        return redirect(url_for("admin_bts"))
+
+    os.makedirs(PERSIST_DIR, exist_ok=True)
+    lock_file = open(AKTO_BTS_SYNC_LOCK_FILE, "a+", encoding="utf-8")
+    try:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock_file.close()
+        flash("Une synchronisation AKTO est déjà en cours.", "info")
+        return redirect(url_for("admin_bts"))
+
+    run_id = new_sync_run_id()
+    store = _akto_bts_store()
+    try:
+        store.start_run(run_id)
+        worker = threading.Thread(
+            target=_run_akto_bts_sync,
+            args=(run_id, lock_file),
+            name=f"akto-bts-{run_id[:8]}",
+            daemon=True,
+        )
+        worker.start()
+    except Exception:
+        store.fail_run(run_id, "La synchronisation AKTO n’a pas pu démarrer.")
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        finally:
+            lock_file.close()
+        raise
+
+    flash("Synchronisation AKTO démarrée. L’écran s’actualisera automatiquement.", "success")
+    return redirect(url_for("admin_bts"))
+
+
+@app.get("/admin/BTS/akto/export.json")
+@admin_login_required
+@require_super_admin
+def admin_bts_akto_export():
+    snapshot = _akto_bts_store().export_snapshot()
+    body = json.dumps(snapshot, ensure_ascii=False, indent=2, default=str)
+    response = Response(body, mimetype="application/json")
+    stamp = datetime.date.today().isoformat()
+    response.headers["Content-Disposition"] = f'attachment; filename="akto-bts-{stamp}.json"'
+    return response
 
 
 @app.get("/admin/wedof")
