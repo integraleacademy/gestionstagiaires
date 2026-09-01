@@ -5515,7 +5515,7 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
       window.showMailSentBadge?.();
       const successMessage = `Le mail d’annulation a bien été envoyé à ${payload.recipient || cancellationEmailRecipient?.value || "la personne"}.`;
       if(window.AppModal){
-        await window.AppModal.alert({type:"success", title:"Mail envoyé", message:successMessage, buttonText:"Fermer"});
+        await window.AppModal.alert(successMessage, {type:"success", title:"Mail envoyé", primaryText:"Fermer"});
       }else{
         window.alert(successMessage);
       }
