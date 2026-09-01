@@ -450,6 +450,8 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertIn("api_registration_cancellation_indemnity", detail)
         self.assertIn("api_registration_cancellation_email_preview", detail)
         self.assertIn("api_registration_cancellation_email_send", detail)
+        self.assertIn("window.AppModal.alert(successMessage, {", detail)
+        self.assertNotIn('window.AppModal.alert({type:"success"', detail)
         self.assertIn("row-registration-cancelled", listing)
         self.assertIn("Inscription annulée", listing)
         self.assertIn("!l.registrationCancelled&&lineMatchesCurrentFilters", billing)
