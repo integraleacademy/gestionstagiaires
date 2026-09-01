@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-bts.css', v='20260901-bts-akto-v1') }}">
+{% set st = dashboard.stats %}
+{% set last = dashboard.last_run %}
+{% set pg = dashboard.pagination %}
+{% set sync_running = akto_sync_running %}
+{% macro euros(value) -%}
+  {{ "{:,.2f}".format(value or 0).replace(',', ' ').replace('.', ',') }} €
+{%- endmacro %}
+
+<div class="bts-page" data-sync-running="{{ 'true' if sync_running else 'false' }}">
+  {% set flashes = get_flashed_messages(with_categories=true) %}
+  {% if flashes %}
+    <div class="bts-flash-stack" aria-live="polite">
+      {% for category, message in flashes %}
+        <div class="bts-flash is-{{ category if category in ['error', 'warning', 'info', 'success'] else 'info' }}" role="status">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <header class="bts-hero">
+    <div class="bts-hero__copy">
+      <span class="bts-eyebrow">Espace indépendant · BTS</span>
+      <h1>Contrats d’apprentissage AKTO</h1>
+      <p>Une vue autonome pour suivre les apprentis, employeurs, formations, engagements, échéances et factures transmis par AKTO, sans les mélanger aux sessions de Gestion Stagiaires.</p>
+      <div class="bts-pills">
+        <span class="bts-pill is-private">Base BTS séparée</span>
+        <span class="bts-pill {{ 'is-ready' if akto_config.ready else 'is-warning' }}">
+          {{ 'Connexion AKTO prête' if akto_config.ready else 'Connexion AKTO à terminer' }}
+        </span>
+        {% if last %}
+          <span class="bts-pill is-{{ 'running' if sync_running else ('ready' if last.status == 'success' else 'warning' if last.status == 'partial' else 'error') }}">
+            {% if sync_running %}
+              Synchronisation en cours
+            {% elif last.status == 'success' %}
+              Dernière synchro réussie
+            {% elif last.status == 'partial' %}
+              Dernière synchro partielle
+            {% elif last.stale %}
+              Synchronisation interrompue
+            {% else %}
+              Dernière synchro en erreur
+            {% endif %}
+          </span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="bts-hero__actions" aria-label="Actions AKTO">
+      <form method="post" action="{{ url_for('admin_bts_akto_sync') }}">
+        <button class="btn bts-primary-action" type="submit" {% if not akto_config.ready or is_read_only or sync_running %}disabled{% endif %}>
+          {{ 'Synchronisation en cours…' if sync_running else 'Synchroniser toutes les données' }}
+        </button>
+      </form>
+      <a class="btn btn-outline {{ 'is-disabled' if (st.contracts_total or 0) == 0 else '' }}" href="{{ url_for('admin_bts_akto_export') }}" {% if (st.contracts_total or 0) == 0 %}aria-disabled="true" tabindex="-1"{% endif %}>Exporter le cache JSON</a>
+      <a class="btn btn-outline" href="{{ url_for('admin_bts', q=filters.query, etat=filters.state) }}">Actualiser l’écran</a>
+    </div>
+  </header>
+
+  {% if not akto_config.ready %}
+    <section class="bts-setup" aria-labelledby="bts-setup-title">
+      <div class="bts-setup__icon" aria-hidden="true">⌁</div>
+      <div>
+        <span class="bts-section-label">Configuration Render</span>
+        <h2 id="bts-setup-title">Il manque {{ akto_config.missing|length }} élément{{ 's' if akto_config.missing|length > 1 else '' }} pour contacter AKTO</h2>
+        <p>La clé API CFA déjà utilisée dans YPAREO peut être réutilisée. Pour ce nouveau logiciel, AKTO doit également fournir les identifiants OAuth du SI, l’URL du jeton et l’URL de son API.</p>
+        <ul>
+          {% for name in akto_config.missing %}
+            <li><code>{{ name }}</code><span>{{ akto_config.missing_labels[loop.index0] }}</span></li>
+          {% endfor %}
+        </ul>
+        <small>Ne collez jamais une clé ou un secret dans une page, un ticket ou un commit GitHub : ajoutez-les uniquement comme variables secrètes sur Render.</small>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if last and last.status in ['error', 'partial'] %}
+    <section class="bts-notice is-{{ 'error' if last.status == 'error' else 'warning' }}" role="status">
+      <strong>{{ 'Synchronisation échouée' if last.status == 'error' else 'Synchronisation terminée avec des données partielles' }}</strong>
+      <span>{{ last.error_summary or 'Le cache précédemment disponible a été conservé.' }}</span>
+    </section>
+  {% elif last and last.stale %}
+    <section class="bts-notice is-warning" role="status">
+      <strong>La dernière synchronisation semble avoir été interrompue.</strong>
+      <span>Vous pouvez relancer la synchronisation ; le verrou technique est vérifié avant chaque démarrage.</span>
+    </section>
+  {% endif %}
+
+  <section class="bts-kpis" aria-label="Indicateurs AKTO">
+    <article class="bts-kpi is-indigo">
+      <span>Dossiers</span><strong>{{ st.contracts_total or 0 }}</strong><small>{{ st.details_missing or 0 }} détail{{ 's' if (st.details_missing or 0) != 1 else '' }} manquant{{ 's' if (st.details_missing or 0) != 1 else '' }}</small>
+    </article>
+    <article class="bts-kpi is-violet">
+      <span>Engagement AKTO</span><strong>{{ euros(st.engagement_total) }}</strong><small>Montant pédagogique engagé</small>
+    </article>
+    <article class="bts-kpi is-blue">
+      <span>Échéances</span><strong>{{ euros(st.due_total) }}</strong><small>{{ euros(st.pending_total) }} en instruction</small>
+    </article>
+    <article class="bts-kpi is-green">
+      <span>Réglé sur échéances</span><strong>{{ euros(st.paid_total) }}</strong><small>D’après les dossiers AKTO</small>
+    </article>
+    <article class="bts-kpi is-amber">
+      <span>Factures</span><strong>{{ st.invoices_total or 0 }}</strong><small>{{ euros(st.invoiced_total) }} imputés aux dossiers</small>
+    </article>
+    <article class="bts-kpi is-emerald">
+      <span>Factures réglées</span><strong>{{ st.invoices_paid_count or 0 }}</strong><small>{{ euros(st.invoices_paid_total) }} réglés</small>
+    </article>
+  </section>
+
+  {% if dashboard.states %}
+    <section class="bts-state-strip" aria-label="Répartition par état">
+      {% for item in dashboard.states %}
+        <a href="{{ url_for('admin_bts', etat=item.value) }}" class="bts-state-chip {{ 'is-active' if filters.state == item.value else '' }}">
+          <span>{{ item.label }}</span><strong>{{ item.count }}</strong>
+        </a>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="bts-panel" aria-labelledby="bts-contracts-title">
+    <div class="bts-panel__head">
+      <div>
+        <span class="bts-section-label">Cache local sécurisé</span>
+        <h2 id="bts-contracts-title">Dossiers d’apprentissage</h2>
+        <p>Cette consultation ne déclenche aucun appel vers AKTO.</p>
+      </div>
+      {% if last %}
+        <div class="bts-last-sync">
+          <span>Dernière tentative</span>
+          <strong>{{ last.finished_at|frdatetime if last.finished_at else last.started_at|frdatetime }}</strong>
+        </div>
+      {% endif %}
+    </div>
+
+    <form class="bts-filters" method="get" action="{{ url_for('admin_bts') }}">
+      <label>
+        <span class="sr-only">Rechercher</span>
+        <input type="search" name="q" value="{{ filters.query }}" placeholder="Apprenti, employeur, SIRET, RNCP ou numéro de dossier…">
+      </label>
+      <label>
+        <span class="sr-only">Filtrer par état</span>
+        <select name="etat">
+          <option value="">Tous les états</option>
+          {% for item in dashboard.states %}
+            <option value="{{ item.value }}" {% if filters.state == item.value %}selected{% endif %}>{{ item.label }} ({{ item.count }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button class="btn bts-filter-button" type="submit">Filtrer</button>
+      {% if filters.query or filters.state %}<a class="btn btn-outline" href="{{ url_for('admin_bts') }}">Effacer</a>{% endif %}
+    </form>
+
+    {% if dashboard.contracts %}
+      <div class="bts-table-wrap">
+        <table class="bts-table">
+          <thead>
+            <tr><th>Apprenti</th><th>Employeur</th><th>Formation</th><th>Contrat</th><th>État</th><th>Financement</th><th><span class="sr-only">Détails</span></th></tr>
+          </thead>
+          <tbody>
+            {% for row in dashboard.contracts %}
+              <tr class="bts-contract-row">
+                <td>
+                  <strong>{{ (row.apprentice_first_name ~ ' ' ~ row.apprentice_last_name)|trim or 'Identité non restituée' }}</strong>
+                  <span>{{ row.apprentice_email or '—' }}</span>
+                  <small>{{ row.apprentice_phone or 'Téléphone non renseigné' }}</small>
+                </td>
+                <td>
+                  <strong>{{ row.employer_name or 'Employeur non restitué' }}</strong>
+                  <span>SIRET {{ row.employer_siret or '—' }}</span>
+                </td>
+                <td>
+                  <strong>{{ row.training_title or 'Formation non restituée' }}</strong>
+                  <span>{{ ('RNCP ' ~ row.rncp) if row.rncp else 'RNCP —' }}</span>
+                  <small>{{ row.training_start|format_date_fr }} → {{ row.training_end|format_date_fr }}</small>
+                </td>
+                <td>
+                  <strong>{{ row.external_number or row.internal_number }}</strong>
+                  <span>Interne {{ row.internal_number }}</span>
+                  <small>{{ row.contract_start|format_date_fr }} → {{ row.contract_end|format_date_fr }}</small>
+                </td>
+                <td><span class="bts-status is-{{ row.state|lower|replace('_', '-') }}">{{ row.state_label }}</span></td>
+                <td>
+                  <strong>{{ euros(row.engagement) }}</strong>
+                  <span>{{ euros(row.total_paid) }} réglés</span>
+                  <small>{{ row.schedules|length }} échéance{{ 's' if row.schedules|length != 1 else '' }}</small>
+                </td>
+                <td><button class="bts-details-button" type="button" data-bts-details="bts-detail-{{ loop.index }}" aria-expanded="false">Détails</button></td>
+              </tr>
+              <tr class="bts-detail-row" id="bts-detail-{{ loop.index }}" hidden>
+                <td colspan="7">
+                  <div class="bts-detail-grid">
+                    <article>
+                      <h3>Apprenti & contrat</h3>
+                      <dl>
+                        <div><dt>Date de naissance</dt><dd>{{ row.apprentice_birth_date|format_date_fr }}</dd></div>
+                        <div><dt>N° de contrat</dt><dd>{{ row.contract_number or row.deca_number or '—' }}</dd></div>
+                        <div><dt>Conclusion</dt><dd>{{ row.contract_conclusion|format_date_fr }}</dd></div>
+                        <div><dt>Salaire brut</dt><dd>{{ euros(row.gross_salary) if row.gross_salary else '—' }}</dd></div>
+                        <div><dt>Rupture</dt><dd>{{ row.contract_break_date|format_date_fr if row.contract_break_date else 'Aucune' }}</dd></div>
+                      </dl>
+                    </article>
+                    <article>
+                      <h3>Employeur & formation</h3>
+                      <dl>
+                        <div><dt>Courriel employeur</dt><dd>{{ row.employer_email or '—' }}</dd></div>
+                        <div><dt>Téléphone employeur</dt><dd>{{ row.employer_phone or '—' }}</dd></div>
+                        <div><dt>Code diplôme</dt><dd>{{ row.diploma_code or '—' }}</dd></div>
+                        <div><dt>Durée</dt><dd>{{ "{:g}".format(row.training_hours or 0) }} h</dd></div>
+                        <div><dt>Dont distanciel</dt><dd>{{ "{:g}".format(row.remote_hours or 0) }} h</dd></div>
+                      </dl>
+                    </article>
+                    <article class="bts-detail-finance">
+                      <h3>Financement</h3>
+                      <dl>
+                        <div><dt>Total échéances</dt><dd>{{ euros(row.total_due) }}</dd></div>
+                        <div><dt>Réglé</dt><dd>{{ euros(row.total_paid) }}</dd></div>
+                        <div><dt>En instruction</dt><dd>{{ euros(row.total_pending) }}</dd></div>
+                        <div><dt>Facturé</dt><dd>{{ euros(row.invoice_total) }}</dd></div>
+                        <div><dt>Factures réglées</dt><dd>{{ euros(row.invoice_paid) }}</dd></div>
+                      </dl>
+                    </article>
+                  </div>
+
+                  {% if row.schedules %}
+                    <div class="bts-subtable">
+                      <h3>Échéances AKTO</h3>
+                      <table>
+                        <thead><tr><th>N°</th><th>Période</th><th>Ouverture</th><th>Total</th><th>Réglé</th><th>En instruction</th><th>Codification</th></tr></thead>
+                        <tbody>
+                          {% for schedule in row.schedules %}
+                            <tr>
+                              <td>{{ schedule.numero or '—' }}</td>
+                              <td>{{ schedule.dateDebut|format_date_fr }} → {{ schedule.dateFin|format_date_fr }}</td>
+                              <td>{{ schedule.dateOuverture|format_date_fr }}</td>
+                              <td>{{ euros(schedule.montantTotal) }}</td>
+                              <td>{{ euros(schedule.montantRegle) }}</td>
+                              <td>{{ euros(schedule.montantEnCoursInstruction) }}</td>
+                              <td>{{ schedule.codification or '—' }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  {% endif %}
+
+                  {% if row.invoices %}
+                    <div class="bts-subtable">
+                      <h3>Factures rattachées</h3>
+                      <table>
+                        <thead><tr><th>Référence</th><th>État</th><th>Montant imputé</th><th>Virement</th><th>Règlement</th></tr></thead>
+                        <tbody>
+                          {% for invoice in row.invoices %}
+                            <tr>
+                              <td>{{ invoice.reference or invoice.internal_number }}</td>
+                              <td><span class="bts-status is-{{ invoice.state|lower|replace('_', '-') }}">{{ invoice.state|replace('_', ' ')|title }}</span></td>
+                              <td>{{ euros(invoice.allocated_amount) }}</td>
+                              <td>{{ invoice.payment_reference or '—' }}</td>
+                              <td>{{ invoice.payment_date|format_date_fr }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </div>
+                  {% endif %}
+
+                  {% if row.extra_costs %}
+                    <div class="bts-extra-costs"><strong>Frais annexes engagés</strong>{% for cost in row.extra_costs %}<span>{{ cost.natureFrais|replace('_', ' ')|title }} · {{ euros(cost.montantTotal) }}</span>{% endfor %}</div>
+                  {% endif %}
+                  {% if row.state_comment %}<div class="bts-comment"><strong>Commentaire AKTO</strong><span>{{ row.state_comment }}</span></div>{% endif %}
+                  {% if not row.detail_loaded %}<div class="bts-comment is-warning"><strong>Détail indisponible</strong><span>Seul l’état synthétique de ce dossier a pu être récupéré lors de la dernière synchronisation.</span></div>{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bts-pagination">
+        <span>{{ pg.total }} résultat{{ 's' if pg.total != 1 else '' }} · page {{ pg.page }} sur {{ pg.pages }}</span>
+        <div>
+          {% if pg.has_previous %}<a class="btn btn-outline" href="{{ url_for('admin_bts', q=filters.query, etat=filters.state, page=pg.page - 1) }}">Précédent</a>{% endif %}
+          {% if pg.has_next %}<a class="btn btn-outline" href="{{ url_for('admin_bts', q=filters.query, etat=filters.state, page=pg.page + 1) }}">Suivant</a>{% endif %}
+        </div>
+      </div>
+    {% else %}
+      <div class="bts-empty">
+        <span aria-hidden="true">◎</span>
+        {% if filters.query or filters.state %}
+          <h3>Aucun dossier ne correspond aux filtres</h3><p>Modifiez la recherche ou affichez tous les états.</p><a class="btn btn-outline" href="{{ url_for('admin_bts') }}">Réinitialiser les filtres</a>
+        {% else %}
+          <h3>Aucun contrat AKTO dans le cache BTS</h3><p>Terminez la connexion puis lancez la première synchronisation complète.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <footer class="bts-privacy-note">
+    <strong>Protection des données</strong>
+    <span>Le NIR, l’IBAN et les secrets techniques sont masqués avant l’écriture en base et ne figurent jamais dans l’export.</span>
+  </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  document.querySelectorAll('[data-bts-details]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = document.getElementById(button.dataset.btsDetails);
+      if (!row) return;
+      const willOpen = row.hidden;
+      row.hidden = !willOpen;
+      button.setAttribute('aria-expanded', String(willOpen));
+      button.textContent = willOpen ? 'Fermer' : 'Détails';
+    });
+  });
+  const page = document.querySelector('.bts-page');
+  if (page?.dataset.syncRunning === 'true') {
+    window.setTimeout(() => window.location.reload(), 6000);
+  }
+})();
+</script>
+{% endblock %}
