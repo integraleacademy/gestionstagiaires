@@ -329,8 +329,19 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertIn("Somme déjà versée et déduite", html_body)
         self.assertIn("Solde de votre dossier", html_body)
         self.assertIn("reporter votre inscription", html_body)
+        self.assertIn("Vous confirmez l’annulation de votre inscription ?", html_body)
+        self.assertIn("Les pénalités financières seront donc appliquées.", html_body)
+        self.assertIn("Merci de répondre à cet email pour confirmer votre choix", html_body)
+        self.assertIn(
+            "par quel mode de paiement vous souhaitez régler la pénalité financière "
+            "(chèque, virement, prélèvement)",
+            html_body,
+        )
         self.assertIn("Clément VAILLANT", html_body)
         self.assertIn("Pouvez-vous nous confirmer", text_body)
+        self.assertIn("Merci de répondre à cet email pour confirmer votre choix", text_body)
+        self.assertIn("Les pénalités financières seront donc appliquées.", text_body)
+        self.assertIn("(chèque, virement, prélèvement)", text_body)
 
     def test_cancellation_email_is_previewed_then_sent_and_recorded(self):
         session, trainee, lines = self._indemnity_case()
