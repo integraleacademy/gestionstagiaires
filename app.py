@@ -14179,7 +14179,7 @@ def scotia_resend_mail(session_id: str, trainee_id: str, livret_key: str):
             "scotiaformation@gmail.com",
             subject,
             html,
-            cc_emails=["clement@integraleacademy.com"],
+            cc_emails=["clement@integraleacademy.com", "cassandre@integraleacademy.com"],
             trainee=t,
         )
     elif livret_key == "livret-2":
@@ -24269,7 +24269,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "scotiaformation@gmail.com",
             subject,
             html,
-            cc_emails=["clement@integraleacademy.com"],
+            cc_emails=["clement@integraleacademy.com", "cassandre@integraleacademy.com"],
             trainee=t,
         )
 
