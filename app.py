@@ -25569,11 +25569,60 @@ def _aps_elearning_signature_issues(trainee: Dict[str, Any], tracking: Optional[
     return issues
 
 
+def _aps_elearning_force_override(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    state = trainee.get("aps_elearning_force_override")
+    return state if isinstance(state, dict) else {}
+
+
+def _aps_elearning_force_is_active(
+    trainee: Dict[str, Any],
+    tracking: Optional[Dict[str, Any]] = None,
+    issues: Optional[List[str]] = None,
+) -> bool:
+    tracking = tracking or _aps_elearning_tracking(trainee)
+    state = _aps_elearning_force_override(trainee)
+    if not state.get("active"):
+        return False
+
+    report_sha256 = str(tracking.get("file_sha256") or "").strip().lower()
+    forced_sha256 = str(state.get("report_sha256") or "").strip().lower()
+    if (
+        not re.fullmatch(r"[0-9a-f]{64}", report_sha256)
+        or not re.fullmatch(r"[0-9a-f]{64}", forced_sha256)
+        or not hmac.compare_digest(report_sha256, forced_sha256)
+    ):
+        return False
+
+    current_issues = issues if issues is not None else _aps_elearning_signature_issues(trainee, tracking)
+    forced_issues = {
+        str(issue).strip()
+        for issue in state.get("issues", [])
+        if str(issue).strip()
+    } if isinstance(state.get("issues"), list) else set()
+    return bool(current_issues) and set(current_issues).issubset(forced_issues)
+
+
+def _archive_aps_elearning_force_override(trainee: Dict[str, Any], reason: str) -> None:
+    state = _aps_elearning_force_override(trainee)
+    if not state:
+        return
+    history = trainee.setdefault("aps_elearning_force_override_history", [])
+    if isinstance(history, list):
+        archived = dict(state)
+        archived["archived_at"] = _now_iso()
+        archived["archive_reason"] = reason
+        history.append(archived)
+
+
 def _require_aps_elearning_signature_ready(trainee: Dict[str, Any]) -> Dict[str, Any]:
     tracking = _aps_elearning_tracking(trainee)
     issues = _aps_elearning_signature_issues(trainee, tracking)
-    if issues:
-        raise ValueError("Tableau FOAD non signable : " + " ; ".join(issues) + ".")
+    if issues and not _aps_elearning_force_is_active(trainee, tracking, issues):
+        raise ValueError(
+            "Tableau FOAD non signable : "
+            + " ; ".join(issues)
+            + ". Utilisez le bouton « Forcer » pour autoriser explicitement un dossier incomplet."
+        )
     return tracking
 
 
@@ -25779,6 +25828,40 @@ def _aps_elearning_tracking_context(
     file_sha256 = str(tracking.get("file_sha256") or "").strip().lower()
     file_sha256_display = " ".join(file_sha256[index:index + 16] for index in range(0, len(file_sha256), 16))
     issued_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y")
+    signature_issues = _aps_elearning_signature_issues(trainee, tracking)
+    force_override = _aps_elearning_force_override(trainee)
+    force_active = bool(signature_issues) and _aps_elearning_force_is_active(
+        trainee,
+        tracking,
+        signature_issues,
+    )
+    if force_active:
+        compliance_status = "FORÇAGE ADMINISTRATIF — RELEVÉ INCOMPLET — SIGNATURE AUTORISÉE"
+        compliance_detail = "Anomalies conservées : " + " ; ".join(signature_issues) + "."
+        force_authorization = (
+            f"Forçage activé le {_aps_elearning_datetime_label(force_override.get('forced_at')) or 'date non renseignée'} "
+            f"par {str(force_override.get('forced_by') or 'Administrateur').strip()}."
+        )
+        signature_instruction = (
+            "SIGNATURE AVEC FORÇAGE — Le relevé reste incomplet. Les anomalies sont inscrites page 1 "
+            "et l’administrateur autorise néanmoins la génération et la signature en l’état."
+        )
+    elif signature_issues:
+        compliance_status = "CONTRÔLES NON VALIDÉS — GÉNÉRATION BLOQUÉE"
+        compliance_detail = "Anomalies détectées : " + " ; ".join(signature_issues) + "."
+        force_authorization = "Aucun forçage administratif actif."
+        signature_instruction = (
+            "À SIGNER APRÈS CONTRÔLE — Toute anomalie d’identité, de durée, de connexion, "
+            "de progression ou d’évaluation doit être corrigée dans Digiforma avant signature."
+        )
+    else:
+        compliance_status = "PARCOURS COMPLET - 100 % - SIGNATURE AUTORISÉE"
+        compliance_detail = "Aucune anomalie détectée par les contrôles automatiques."
+        force_authorization = "Aucun forçage administratif nécessaire."
+        signature_instruction = (
+            "À SIGNER APRÈS CONTRÔLE — Toute anomalie d’identité, de durée, de connexion, "
+            "de progression ou d’évaluation doit être corrigée dans Digiforma avant signature."
+        )
     return {
         "formation_session": str(_session_get(session_obj, "name", "") or tracking.get("training_title") or "Formation APS").strip(),
         "remote_period": period,
@@ -25806,7 +25889,10 @@ def _aps_elearning_tracking_context(
             else "Non renseigné"
         ),
         "module_fraction_count": str(int(tracking.get("module_fraction_count") or 0)),
-        "compliance_status": "PARCOURS COMPLET - 100 % - SIGNATURE AUTORISÉE",
+        "compliance_status": compliance_status,
+        "compliance_detail": compliance_detail,
+        "force_authorization": force_authorization,
+        "signature_instruction": signature_instruction,
         "signature_place": "Puget-sur-Argens",
         "issued_date": issued_date,
     }
@@ -26094,6 +26180,9 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
 
     if previous_tracking.get("file"):
         _invalidate_aps_elearning_signature_for_new_report(trainee)
+    if _aps_elearning_force_override(trainee):
+        _archive_aps_elearning_force_override(trainee, "digiforma_report_replaced")
+        trainee.pop("aps_elearning_force_override", None)
 
     uploaded_at = _now_iso()
     trainee["aps_elearning_tracking"] = {
@@ -26131,13 +26220,122 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
     completion_issues = _aps_elearning_report_completion_issues(metadata)
     if completion_issues:
         flash(
-            "Le relevé Digiforma a été importé, mais le tableau reste non signable : "
+            "Le relevé Digiforma a été importé, mais les contrôles ne sont pas validés : "
             + " ; ".join(completion_issues)
-            + ". Importez le relevé final une fois le parcours terminé.",
+            + ". Importez le relevé final une fois le parcours terminé ou utilisez « Forcer » si vous devez générer le dossier en l’état.",
             "warning",
         )
     else:
         flash("L’attestation Digiforma complète a été importée. Le dossier probatoire CNAPS est prêt.", "success")
+    return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/force")
+@admin_login_required
+@admin_write_required
+def admin_force_aps_elearning_tracking(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+
+    action = str(request.form.get("action") or "enable").strip().lower()
+    admin_identity = str(
+        session.get("admin_username") or session.get("admin_email") or "Administrateur"
+    ).strip()
+    now = _now_iso()
+
+    if action == "disable":
+        current_override = _aps_elearning_force_override(trainee)
+        if not current_override.get("active"):
+            flash("Aucun forçage FOAD actif pour ce relevé.", "info")
+            return _aps_elearning_tracking_redirect(session_id, trainee_id)
+        signature_state = _aps_elearning_signature_state(trainee)
+        try:
+            if _is_yousign_signature_pending(signature_state):
+                _cancel_yousign_aps_elearning_signature(trainee, "other")
+        except Exception as exc:
+            app.logger.exception(
+                "[APS E-LEARNING] annulation du forçage impossible trainee_id=%s",
+                trainee_id,
+            )
+            flash(
+                "Le forçage n’a pas été annulé, car la demande Yousign en cours n’a pas pu être annulée : "
+                + _sanitize_yousign_error(str(exc)),
+                "error",
+            )
+            return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+        _archive_aps_elearning_force_override(trainee, "revoked_by_admin")
+        revoked_override = dict(current_override)
+        revoked_override.update({
+            "active": False,
+            "revoked_at": now,
+            "revoked_by": admin_identity,
+        })
+        trainee["aps_elearning_force_override"] = revoked_override
+        trainee["updated_at"] = now
+        append_trainee_history_event(
+            trainee,
+            "Forçage du dossier FOAD annulé",
+            f"Par {admin_identity}",
+            "action",
+            now,
+        )
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+        save_data(data)
+        flash("Le forçage a été annulé. Le dossier incomplet est de nouveau bloqué.", "success")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    if action != "enable":
+        abort(400)
+
+    tracking = _aps_elearning_tracking(trainee)
+    if not tracking.get("file"):
+        flash("Importez d’abord l’attestation d’assiduité Digiforma complète.", "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+    try:
+        _require_aps_elearning_report_file(tracking)
+    except (FileNotFoundError, ValueError) as exc:
+        flash(str(exc), "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    issues = _aps_elearning_signature_issues(trainee, tracking)
+    if not issues:
+        flash("Tous les contrôles sont déjà validés : aucun forçage n’est nécessaire.", "info")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+    if _aps_elearning_force_is_active(trainee, tracking, issues):
+        flash("Le forçage FOAD est déjà actif pour ce relevé Digiforma.", "info")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    if _aps_elearning_force_override(trainee):
+        _archive_aps_elearning_force_override(trainee, "replaced_by_new_force")
+    report_sha256 = str(tracking.get("file_sha256") or "").strip().lower()
+    trainee["aps_elearning_force_override"] = {
+        "active": True,
+        "forced_at": now,
+        "forced_by": admin_identity,
+        "report_sha256": report_sha256,
+        "report_uploaded_at": tracking.get("uploaded_at") or "",
+        "issues": list(issues),
+    }
+    trainee["updated_at"] = now
+    append_trainee_history_event(
+        trainee,
+        "Forçage du dossier FOAD activé",
+        f"{len(issues)} anomalie(s) · SHA-256 {report_sha256[:12]}… · Par {admin_identity}",
+        "action",
+        now,
+    )
+    session_obj["trainees"] = trainees
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+    flash(
+        "Forçage activé : le dossier incomplet peut maintenant être téléchargé ou envoyé à signer. "
+        "Le PDF mentionnera explicitement le forçage et les anomalies.",
+        "warning",
+    )
     return _aps_elearning_tracking_redirect(session_id, trainee_id)
 
 
@@ -31575,6 +31773,17 @@ def create_yousign_aps_elearning_tracking_signature(
     if not _is_aps_elearning_session(session_obj):
         raise RuntimeError("La signature du tableau FOAD est réservée aux sessions APS avec e-learning.")
     tracking = _require_aps_elearning_signature_ready(trainee)
+    signature_issues = _aps_elearning_signature_issues(trainee, tracking)
+    forced_incomplete_report = bool(signature_issues) and _aps_elearning_force_is_active(
+        trainee,
+        tracking,
+        signature_issues,
+    )
+    force_override_snapshot = (
+        dict(_aps_elearning_force_override(trainee))
+        if forced_incomplete_report
+        else {}
+    )
 
     existing_state = _aps_elearning_signature_state(trainee)
     existing_request_id = str(existing_state.get("signature_request_id") or "").strip()
@@ -31710,6 +31919,8 @@ def create_yousign_aps_elearning_tracking_signature(
         "report_sha256": tracking.get("file_sha256") or "",
         "signed_package_includes_digiforma_annex": True,
         "provider_signature_embedded": True,
+        "forced_incomplete_report": forced_incomplete_report,
+        "force_override": force_override_snapshot,
     })
     trainee["updated_at"] = now
     app.logger.info(
@@ -33565,8 +33776,17 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
         aps_tracking = _aps_elearning_tracking(t)
         aps_signature_issues = _aps_elearning_signature_issues(t, aps_tracking) if aps_tracking.get("file") else []
+        aps_force_active = bool(aps_signature_issues) and _aps_elearning_force_is_active(
+            t,
+            aps_tracking,
+            aps_signature_issues,
+        )
         t["aps_elearning_signature_issues"] = aps_signature_issues
         t["aps_elearning_signature_ready"] = bool(aps_tracking.get("file")) and not aps_signature_issues
+        t["aps_elearning_force_active"] = aps_force_active
+        t["aps_elearning_signature_allowed"] = bool(aps_tracking.get("file")) and (
+            not aps_signature_issues or aps_force_active
+        )
 
     # ✅ persistance
     s["trainees"] = trainees
