@@ -25403,6 +25403,17 @@ def _aps_elearning_tracking(trainee: Dict[str, Any]) -> Dict[str, Any]:
         page_count = max(0, int(raw.get("page_count") or 0))
     except (TypeError, ValueError):
         page_count = 0
+    try:
+        completion_rate = max(0.0, min(100.0, float(raw.get("completion_rate") or 0)))
+    except (TypeError, ValueError):
+        completion_rate = 0.0
+
+    def _safe_count(key: str) -> int:
+        try:
+            return max(0, int(raw.get(key) or 0))
+        except (TypeError, ValueError):
+            return 0
+
     cleaned = {
         "file": str(raw.get("file") or "").strip(),
         "original_name": str(raw.get("original_name") or "").strip(),
@@ -25415,6 +25426,17 @@ def _aps_elearning_tracking(trainee: Dict[str, Any]) -> Dict[str, Any]:
         "remote_start": str(raw.get("remote_start") or "").strip(),
         "remote_end": str(raw.get("remote_end") or "").strip(),
         "planned_duration": str(raw.get("planned_duration") or "").strip(),
+        "effective_duration": str(raw.get("effective_duration") or "").strip(),
+        "completion_rate": completion_rate,
+        "connection_duration": str(raw.get("connection_duration") or "").strip(),
+        "connection_log_total": str(raw.get("connection_log_total") or "").strip(),
+        "access_days": _safe_count("access_days"),
+        "paths_total": _safe_count("paths_total"),
+        "paths_completed": _safe_count("paths_completed"),
+        "evaluations_total": _safe_count("evaluations_total"),
+        "evaluations_completed": _safe_count("evaluations_completed"),
+        "module_fraction_count": _safe_count("module_fraction_count"),
+        "file_sha256": str(raw.get("file_sha256") or "").strip().lower(),
         "attested_name": str(raw.get("attested_name") or "").strip(),
     }
     trainee["aps_elearning_tracking"] = cleaned
@@ -25470,6 +25492,107 @@ def _aps_elearning_pdf_created_at(reader: PdfReader) -> str:
     return created_at.astimezone(ZoneInfo("Europe/Paris")).isoformat()
 
 
+def _aps_elearning_duration_minutes(value: Any) -> int:
+    normalized = _aps_elearning_normalized_pdf_text(value).replace(",", " ")
+    if not normalized:
+        return 0
+    hours_match = re.search(r"(\d+)\s*(?:heures?|h)", normalized)
+    minutes_match = re.search(r"(\d+)\s*(?:minutes?|min|m)(?![a-z])", normalized)
+    seconds_match = re.search(r"(\d+)\s*(?:secondes?|s)(?![a-z])", normalized)
+    hours = int(hours_match.group(1)) if hours_match else 0
+    minutes = int(minutes_match.group(1)) if minutes_match else 0
+    seconds = int(seconds_match.group(1)) if seconds_match else 0
+    if hours_match and not minutes_match:
+        compact_minutes = re.match(r"\s*(\d{1,2})(?=\s*(?:$|m|min|minutes?|s|secondes?))", normalized[hours_match.end():])
+        minutes = int(compact_minutes.group(1)) if compact_minutes else 0
+    if minutes_match and not seconds_match:
+        compact_seconds = re.match(r"\s*(\d{1,2})(?=\s*$)", normalized[minutes_match.end():])
+        seconds = int(compact_seconds.group(1)) if compact_seconds else 0
+    if hours or minutes or seconds:
+        return (hours * 60) + minutes + (1 if seconds >= 30 else 0)
+    numeric = re.fullmatch(r"\s*(\d+(?:[.,]\d+)?)\s*", str(value or ""))
+    return int(round(float(numeric.group(1).replace(",", ".")) * 60)) if numeric else 0
+
+
+def _aps_elearning_report_completion_issues(tracking: Dict[str, Any]) -> List[str]:
+    issues: List[str] = []
+    completion_rate = float(tracking.get("completion_rate") or 0)
+    if completion_rate < 99.99:
+        issues.append(f"progression Digiforma incomplète ({completion_rate:g} % au lieu de 100 %)")
+
+    planned_minutes = _aps_elearning_duration_minutes(tracking.get("planned_duration"))
+    effective_minutes = _aps_elearning_duration_minutes(tracking.get("effective_duration"))
+    if not planned_minutes:
+        issues.append("durée théorique prévue absente du relevé Digiforma")
+    if not effective_minutes:
+        issues.append("durée effectivement suivie absente du relevé Digiforma")
+    elif planned_minutes and effective_minutes < planned_minutes:
+        issues.append(
+            "durée effectivement suivie inférieure à la durée prévue "
+            f"({tracking.get('effective_duration')} sur {tracking.get('planned_duration')})"
+        )
+
+    paths_total = int(tracking.get("paths_total") or 0)
+    paths_completed = int(tracking.get("paths_completed") or 0)
+    if not paths_total:
+        issues.append("détail des parcours Digiforma introuvable")
+    elif paths_completed < paths_total:
+        issues.append(f"parcours Digiforma non terminés ({paths_completed}/{paths_total})")
+
+    evaluations_total = int(tracking.get("evaluations_total") or 0)
+    evaluations_completed = int(tracking.get("evaluations_completed") or 0)
+    if not evaluations_total:
+        issues.append("questionnaires d’évaluation introuvables dans le relevé Digiforma")
+    elif evaluations_completed < evaluations_total:
+        issues.append(f"questionnaires non validés ({evaluations_completed}/{evaluations_total})")
+
+    if not int(tracking.get("module_fraction_count") or 0):
+        issues.append("détail des modules ou fractions de module introuvable")
+    if not int(tracking.get("access_days") or 0):
+        issues.append("nombre de jours d’accès absent du relevé Digiforma")
+    if not str(tracking.get("connection_log_total") or tracking.get("connection_duration") or "").strip():
+        issues.append("temps de connexion absent du relevé Digiforma")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(tracking.get("file_sha256") or "").strip().lower()):
+        issues.append("empreinte du relevé Digiforma absente")
+    return issues
+
+
+def _aps_elearning_signature_issues(trainee: Dict[str, Any], tracking: Optional[Dict[str, Any]] = None) -> List[str]:
+    tracking = tracking or _aps_elearning_tracking(trainee)
+    issues = _aps_elearning_report_completion_issues(tracking)
+    if not str(trainee.get("birth_date") or "").strip():
+        issues.append("date de naissance du stagiaire non renseignée")
+    if _aps_elearning_cnaps_number(trainee) == "Non renseigné":
+        issues.append("numéro de carte professionnelle ou d’autorisation préalable CNAPS non renseigné")
+    if not str(tracking.get("digiforma_identifier") or "").strip():
+        issues.append("identifiant individuel Digiforma non renseigné")
+    return issues
+
+
+def _require_aps_elearning_signature_ready(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    tracking = _aps_elearning_tracking(trainee)
+    issues = _aps_elearning_signature_issues(trainee, tracking)
+    if issues:
+        raise ValueError("Tableau FOAD non signable : " + " ; ".join(issues) + ".")
+    return tracking
+
+
+def _require_aps_elearning_report_file(tracking: Dict[str, Any]) -> str:
+    digiforma_pdf_path = _detokenize_path(tracking.get("file") or "")
+    if not os.path.isfile(digiforma_pdf_path):
+        raise FileNotFoundError("Le relevé Digiforma annexé est introuvable.")
+    digest = hashlib.sha256()
+    with open(digiforma_pdf_path, "rb") as report_file:
+        for chunk in iter(lambda: report_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    expected_digest = str(tracking.get("file_sha256") or "").strip().lower()
+    if not hmac.compare_digest(digest.hexdigest(), expected_digest):
+        raise ValueError(
+            "Le relevé Digiforma a changé depuis son import : réimportez le PDF original avant de générer ou signer le dossier."
+        )
+    return digiforma_pdf_path
+
+
 def _extract_digiforma_attendance_metadata(pdf_bytes: bytes) -> Dict[str, Any]:
     if not pdf_bytes or not pdf_bytes.lstrip().startswith(b"%PDF-"):
         raise ValueError("Le fichier sélectionné n’est pas un PDF valide.")
@@ -25504,7 +25627,47 @@ def _extract_digiforma_attendance_metadata(pdf_bytes: bytes) -> Dict[str, Any]:
     attested_name = first_match(r"atteste\s+que\s*:\s*([^\r\n]+)")
     training_title = first_match(r"a\s+suivi\s+la\s+formation\s*:\s*(?:[\r\n]\s*)*([^\r\n]+)")
     planned_duration = first_match(r"Dur[ée]e\s+de\s+la\s+formation\s*:\s*([0-9]+(?:[.,][0-9]+)?\s+heures?)")
+    effective_duration = first_match(r"Dur[ée]e\s+effectivement\s+suivie[^:]*:\s*([^\r\n]+)")
+    effective_duration = re.sub(r"\s+h\s*,?\s*$", "", effective_duration).strip(" ,")
+    completion_rate_raw = first_match(r"taux\s+de\s+r[ée]alisation\s+de\s+([0-9]+(?:[.,][0-9]+)?)\s*%")
+    try:
+        completion_rate = float(completion_rate_raw.replace(",", "."))
+    except (TypeError, ValueError):
+        completion_rate = 0.0
+    connection_duration = first_match(r"Dur[ée]e\s+totale\s+de\s+connexion\s+[àa]\s+l['’]extranet\s*:\s*([^\r\n]+)")
+    access_days_raw = first_match(r"Nombre\s+de\s+jour\(s\)\s+d['’]acc[èe]s\s+[àa]\s+l['’]extranet\s*:\s*(\d+)")
+    access_days = int(access_days_raw) if access_days_raw.isdigit() else 0
     digiforma_identifier = first_match(r"Adresse\s+email\s+utilis[ée]e\s*:\s*([^\s]+@[^\s]+)")
+
+    connection_log_total = ""
+    connection_log_match = re.search(r"Relev[ée]\s+de\s+connexions\s+[àa]\s+l['’]extranet\s*:?", full_text, re.IGNORECASE)
+    if connection_log_match:
+        connection_section = full_text[connection_log_match.end():]
+        totals = re.findall(r"(?:^|\n)\s*Total\s+([^\r\n]+)", connection_section, re.IGNORECASE)
+        if totals:
+            connection_log_total = re.sub(r"\s+", " ", totals[-1]).strip()
+
+    path_blocks = list(re.finditer(r"Parcours\s+(\d+)\s*[—–-]\s*", full_text, re.IGNORECASE))
+    paths_total = len({match.group(1) for match in path_blocks})
+    paths_completed = 0
+    for index, match in enumerate(path_blocks):
+        end = path_blocks[index + 1].start() if index + 1 < len(path_blocks) else len(full_text)
+        block = full_text[match.start():end]
+        if re.search(r"Statut\s+Termin[ée]", block, re.IGNORECASE) and re.search(r"Progression\s+100\s*%", block, re.IGNORECASE):
+            paths_completed += 1
+
+    evaluation_rows = re.findall(
+        r"Evaluation\s+Parcours\s+(\d+)(.*?)(?=\n\s*Total\s)",
+        full_text,
+        re.IGNORECASE | re.DOTALL,
+    )
+    evaluations_total = len({number for number, _ in evaluation_rows})
+    evaluations_completed = sum(
+        1
+        for _, detail in evaluation_rows
+        if re.search(r"\b100\s*%", detail) and re.search(r"\b[1-9]\d*\s+passage", detail, re.IGNORECASE)
+    )
+    module_fraction_count = len(set(re.findall(r"\bP\d+M\d+\b", full_text, re.IGNORECASE)))
 
     remote_start = ""
     remote_end = ""
@@ -25531,6 +25694,17 @@ def _extract_digiforma_attendance_metadata(pdf_bytes: bytes) -> Dict[str, Any]:
         "remote_start": remote_start,
         "remote_end": remote_end,
         "planned_duration": planned_duration,
+        "effective_duration": effective_duration,
+        "completion_rate": completion_rate,
+        "connection_duration": connection_duration,
+        "connection_log_total": connection_log_total,
+        "access_days": access_days,
+        "paths_total": paths_total,
+        "paths_completed": paths_completed,
+        "evaluations_total": evaluations_total,
+        "evaluations_completed": evaluations_completed,
+        "module_fraction_count": module_fraction_count,
+        "file_sha256": hashlib.sha256(pdf_bytes).hexdigest(),
         "attested_name": attested_name,
     }
 
@@ -25597,6 +25771,13 @@ def _aps_elearning_tracking_context(
         imported_at = _aps_elearning_datetime_label(tracking.get("uploaded_at"))
         report_generated_at = f"{imported_at} (date d’import)" if imported_at else "Non renseigné"
 
+    completion_rate = float(tracking.get("completion_rate") or 0)
+    paths_total = int(tracking.get("paths_total") or 0)
+    paths_completed = int(tracking.get("paths_completed") or 0)
+    evaluations_total = int(tracking.get("evaluations_total") or 0)
+    evaluations_completed = int(tracking.get("evaluations_completed") or 0)
+    file_sha256 = str(tracking.get("file_sha256") or "").strip().lower()
+    file_sha256_display = " ".join(file_sha256[index:index + 16] for index in range(0, len(file_sha256), 16))
     issued_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y")
     return {
         "formation_session": str(_session_get(session_obj, "name", "") or tracking.get("training_title") or "Formation APS").strip(),
@@ -25610,8 +25791,22 @@ def _aps_elearning_tracking_context(
         "digiforma_identifier": str(tracking.get("digiforma_identifier") or trainee.get("aps_elearning_login") or "Non renseigné").strip(),
         "report_filename": str(tracking.get("original_name") or "attestation-assiduite-digiforma.pdf").strip(),
         "report_generated_at": report_generated_at or "Non renseigné",
-        "report_page_range": f"de la page 1 à la page {page_count}",
+        "report_page_range": f"pages 3 à {page_count + 2} du dossier signé",
         "report_page_count_label": f"{page_count} page{'s' if page_count > 1 else ''}",
+        "report_sha256": file_sha256_display or "Non renseignée",
+        "effective_duration": str(tracking.get("effective_duration") or "Non renseignée").strip(),
+        "completion_rate": f"{completion_rate:g} %",
+        "connection_duration": str(tracking.get("connection_duration") or "Non renseignée").strip(),
+        "connection_log_total": str(tracking.get("connection_log_total") or "Non renseigné").strip(),
+        "access_days": str(int(tracking.get("access_days") or 0)),
+        "paths_status": f"{paths_completed} / {paths_total} terminés" if paths_total else "Non renseigné",
+        "evaluations_status": (
+            f"{evaluations_completed} / {evaluations_total} validées"
+            if evaluations_total
+            else "Non renseigné"
+        ),
+        "module_fraction_count": str(int(tracking.get("module_fraction_count") or 0)),
+        "compliance_status": "PARCOURS COMPLET - 100 % - SIGNATURE AUTORISÉE",
         "signature_place": "Puget-sur-Argens",
         "issued_date": issued_date,
     }
@@ -25706,8 +25901,8 @@ def _generate_aps_elearning_tracking_table_files(
     if not os.path.isfile(output_pdf) or os.path.getsize(output_pdf) <= 0:
         raise RuntimeError("Le tableau de suivi FOAD n’a pas pu être généré en PDF.")
     try:
-        if len(PdfReader(output_pdf).pages) != 1:
-            raise RuntimeError("Le tableau de suivi FOAD doit tenir sur une seule page.")
+        if len(PdfReader(output_pdf).pages) != 2:
+            raise RuntimeError("Le bordereau de suivi FOAD doit tenir exactement sur deux pages.")
     except RuntimeError:
         raise
     except Exception as exc:
@@ -25715,19 +25910,53 @@ def _generate_aps_elearning_tracking_table_files(
     return output_docx, output_pdf
 
 
+def _combine_aps_elearning_tracking_pdf(
+    cover_pdf_path: str,
+    digiforma_pdf_path: str,
+    output_path: str,
+) -> str:
+    if not os.path.isfile(cover_pdf_path) or not os.path.isfile(digiforma_pdf_path):
+        raise FileNotFoundError("Le bordereau ou son annexe Digiforma est introuvable.")
+    writer = PdfWriter()
+    cover_reader = PdfReader(cover_pdf_path)
+    annex_reader = PdfReader(digiforma_pdf_path)
+    for page in cover_reader.pages:
+        writer.add_page(page)
+    for page in annex_reader.pages:
+        writer.add_page(page)
+    writer.add_metadata({
+        "/Title": "Tableau de suivi de la formation à distance - dossier probatoire CNAPS",
+        "/Subject": "Bordereau signé et relevé individuel Digiforma indissociable",
+        "/Author": "CFA Intégrale Academy - Intégrale Sécurité Formations",
+    })
+    with open(output_path, "wb") as output_file:
+        writer.write(output_file)
+    expected_pages = len(cover_reader.pages) + len(annex_reader.pages)
+    if not os.path.isfile(output_path) or len(PdfReader(output_path).pages) != expected_pages:
+        raise RuntimeError("L’assemblage du bordereau et du relevé Digiforma a échoué.")
+    return output_path
+
+
 def _build_aps_elearning_tracking_table_pdf(
     session_obj: Dict[str, Any],
     trainee: Dict[str, Any],
 ) -> BytesIO:
+    tracking = _require_aps_elearning_signature_ready(trainee)
+    digiforma_pdf_path = _require_aps_elearning_report_file(tracking)
     with tempfile.TemporaryDirectory(prefix="aps-foad-") as temporary_dir:
-        _, source_pdf = _generate_aps_elearning_tracking_table_files(
+        _, cover_pdf = _generate_aps_elearning_tracking_table_files(
             session_obj,
             trainee,
             temporary_dir,
             "tableau_suivi_foad_cnaps",
             include_yousign_anchors=False,
         )
-        with open(source_pdf, "rb") as generated_pdf:
+        complete_pdf = _combine_aps_elearning_tracking_pdf(
+            cover_pdf,
+            digiforma_pdf_path,
+            os.path.join(temporary_dir, "tableau_suivi_foad_cnaps_dossier_complet.pdf"),
+        )
+        with open(complete_pdf, "rb") as generated_pdf:
             payload = generated_pdf.read()
     output = BytesIO(payload)
     output.seek(0)
@@ -25899,7 +26128,16 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
                 exc_info=True,
             )
 
-    flash("L’attestation Digiforma complète a été importée. Le tableau de suivi est prêt.", "success")
+    completion_issues = _aps_elearning_report_completion_issues(metadata)
+    if completion_issues:
+        flash(
+            "Le relevé Digiforma a été importé, mais le tableau reste non signable : "
+            + " ; ".join(completion_issues)
+            + ". Importez le relevé final une fois le parcours terminé.",
+            "warning",
+        )
+    else:
+        flash("L’attestation Digiforma complète a été importée. Le dossier probatoire CNAPS est prêt.", "success")
     return _aps_elearning_tracking_redirect(session_id, trainee_id)
 
 
@@ -31294,6 +31532,8 @@ def _generate_aps_elearning_tracking_signature_files(
     trainee: Dict[str, Any],
     trainee_id: str,
 ) -> Tuple[str, str, str, List[Dict[str, Any]]]:
+    tracking = _require_aps_elearning_signature_ready(trainee)
+    digiforma_pdf_path = _require_aps_elearning_report_file(tracking)
     base_name = "_".join(filter(None, (
         "tableau_suivi_foad_cnaps",
         _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or trainee_id),
@@ -31317,7 +31557,12 @@ def _generate_aps_elearning_tracking_signature_files(
         base_name + "_clean",
         include_yousign_anchors=False,
     )
-    return docx_path, clean_pdf_path, source_pdf_path, pdf_anchors
+    complete_pdf_path = _combine_aps_elearning_tracking_pdf(
+        clean_pdf_path,
+        digiforma_pdf_path,
+        os.path.join(YOUSIGN_APS_ELEARNING_DIR, base_name + "_dossier_complet.pdf"),
+    )
+    return docx_path, complete_pdf_path, source_pdf_path, pdf_anchors
 
 
 def create_yousign_aps_elearning_tracking_signature(
@@ -31329,9 +31574,7 @@ def create_yousign_aps_elearning_tracking_signature(
 ) -> Dict[str, Any]:
     if not _is_aps_elearning_session(session_obj):
         raise RuntimeError("La signature du tableau FOAD est réservée aux sessions APS avec e-learning.")
-    tracking = _aps_elearning_tracking(trainee)
-    if not tracking.get("file"):
-        raise RuntimeError("Importez d’abord l’attestation d’assiduité Digiforma complète.")
+    tracking = _require_aps_elearning_signature_ready(trainee)
 
     existing_state = _aps_elearning_signature_state(trainee)
     existing_request_id = str(existing_state.get("signature_request_id") or "").strip()
@@ -31464,6 +31707,8 @@ def create_yousign_aps_elearning_tracking_signature(
         "signature_email_last_error": "",
         "report_file": tracking.get("file") or "",
         "report_uploaded_at": tracking.get("uploaded_at") or "",
+        "report_sha256": tracking.get("file_sha256") or "",
+        "signed_package_includes_digiforma_annex": True,
         "provider_signature_embedded": True,
     })
     trainee["updated_at"] = now
@@ -33318,6 +33563,10 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
     if _is_aps_elearning_session(s):
         _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
+        aps_tracking = _aps_elearning_tracking(t)
+        aps_signature_issues = _aps_elearning_signature_issues(t, aps_tracking) if aps_tracking.get("file") else []
+        t["aps_elearning_signature_issues"] = aps_signature_issues
+        t["aps_elearning_signature_ready"] = bool(aps_tracking.get("file")) and not aps_signature_issues
 
     # ✅ persistance
     s["trainees"] = trainees

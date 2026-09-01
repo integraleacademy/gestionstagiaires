@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import io
 import os
 import tempfile
@@ -7,6 +8,7 @@ import zipfile
 from unittest.mock import patch
 
 import app as gestion_app
+from pypdf import PdfReader
 from reportlab.pdfgen import canvas
 
 
@@ -25,7 +27,15 @@ class ApsElearningTests(unittest.TestCase):
             sess[f"public_auth_{token}"] = True
 
     @staticmethod
-    def _digiforma_pdf_bytes(*, trainee_name="ALICE MARTIN", complete=True):
+    def _digiforma_pdf_bytes(
+        *,
+        trainee_name="ALICE MARTIN",
+        complete=True,
+        completion_rate=100,
+        effective_duration="62 heures",
+        completed_paths=8,
+        completed_evaluations=8,
+    ):
         output = io.BytesIO()
         pdf = canvas.Canvas(output)
         pdf.drawString(72, 790, "Attestation d'assiduité")
@@ -35,13 +45,55 @@ class ApsElearningTests(unittest.TestCase):
         pdf.drawString(72, 690, "Durée de la formation : 62 heures")
         if complete:
             pdf.drawString(72, 665, "Suivi détaillé de l'assiduité e-learning")
+            pdf.drawString(72, 640, f"Durée effectivement suivie sur la plateforme : {effective_duration}")
+            pdf.drawString(72, 615, f"taux de réalisation de {completion_rate} %")
+            pdf.drawString(72, 590, "Durée totale de connexion à l'extranet : 62h")
+            pdf.drawString(72, 565, "Nombre de jour(s) d'accès à l'extranet : 8")
+            y = 535
+            for index in range(1, 9):
+                status = "Statut Terminé Progression 100 %" if index <= completed_paths else "Statut En cours Progression 0 %"
+                pdf.drawString(72, y, f"Parcours {index} — Bloc {index} {status}")
+                y -= 22
         pdf.showPage()
         pdf.drawString(72, 790, "Adresse email utilisée : alice.martin@example.test")
         if complete:
             pdf.drawString(72, 765, "Relevé de connexions à l'extranet")
-        pdf.drawString(72, 740, "Fait à Puget-sur-Argens, le 31 août 2026")
+            y = 735
+            for index in range(1, 9):
+                result = "100% 1 passage" if index <= completed_evaluations else "0% 0 passage"
+                pdf.drawString(72, y, f"Evaluation Parcours {index}")
+                pdf.drawString(90, y - 14, result)
+                pdf.drawString(72, y - 28, "Total 7 heures 45 minutes")
+                y -= 50
+            pdf.drawString(72, 315, "P1M1 P2M1 P3M1 P4M1 P5M1 P6M1 P7M1 P8M1")
+            pdf.drawString(72, 290, "Total 62 heures")
+        pdf.drawString(72, 255, "Fait à Puget-sur-Argens, le 31 août 2026")
         pdf.save()
         return output.getvalue()
+
+    @staticmethod
+    def _complete_tracking(**overrides):
+        tracking = {
+            "file": "uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
+            "original_name": "attestation-digiforma.pdf",
+            "page_count": 2,
+            "report_issued_date": "2026-08-31",
+            "digiforma_identifier": "alice.martin@example.test",
+            "planned_duration": "62 heures",
+            "effective_duration": "62 heures",
+            "completion_rate": 100,
+            "connection_duration": "62h",
+            "connection_log_total": "62 heures",
+            "access_days": 8,
+            "paths_total": 8,
+            "paths_completed": 8,
+            "evaluations_total": 8,
+            "evaluations_completed": 8,
+            "module_fraction_count": 8,
+            "file_sha256": "a" * 64,
+        }
+        tracking.update(overrides)
+        return tracking
 
     @staticmethod
     def _data(date_start, *, enabled=True, training_type="APS"):
@@ -62,6 +114,8 @@ class ApsElearningTests(unittest.TestCase):
                             "first_name": "Alice",
                             "email": "alice.martin@example.test",
                             "phone": "06 12 34 56 78",
+                            "birth_date": "1994-03-12",
+                            "pre_number": "PRE-083-2026-09-01-12345678901",
                             "aps_elearning_login": "alice.aps",
                             "aps_elearning_password": "Secret-123",
                             "documents": [],
@@ -159,7 +213,7 @@ class ApsElearningTests(unittest.TestCase):
         self.assertIn("Suivi du e-learning", html)
         self.assertIn("Importer le relevé complet", html)
         self.assertIn("TABLEAU DE SUIVI DE LA FORMATION À DISTANCE", html)
-        self.assertIn('disabled aria-disabled="true">⬇️ Télécharger le tableau (PDF)', html)
+        self.assertIn('disabled aria-disabled="true">⬇️ Dossier CNAPS non disponible', html)
 
         data["sessions"][0]["aps_elearning_enabled"] = False
         with patch.object(gestion_app, "load_data", return_value=data), patch.object(
@@ -197,6 +251,17 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(tracking["report_issued_date"], "2026-08-31")
             self.assertEqual(tracking["digiforma_identifier"], "alice.martin@example.test")
             self.assertEqual(tracking["planned_duration"], "62 heures")
+            self.assertEqual(tracking["effective_duration"], "62 heures")
+            self.assertEqual(tracking["completion_rate"], 100)
+            self.assertEqual(tracking["connection_duration"], "62h")
+            self.assertEqual(tracking["connection_log_total"], "62 heures")
+            self.assertEqual(tracking["access_days"], 8)
+            self.assertEqual(tracking["paths_completed"], 8)
+            self.assertEqual(tracking["paths_total"], 8)
+            self.assertEqual(tracking["evaluations_completed"], 8)
+            self.assertEqual(tracking["evaluations_total"], 8)
+            self.assertEqual(tracking["module_fraction_count"], 8)
+            self.assertEqual(tracking["file_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
             self.assertEqual(tracking["remote_start"], "2026-07-23")
             self.assertEqual(tracking["remote_end"], "2026-09-03")
             self.assertTrue(os.path.isfile(gestion_app._detokenize_path(tracking["file"])))
@@ -204,10 +269,11 @@ class ApsElearningTests(unittest.TestCase):
             page = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
             self.assertEqual(page.status_code, 200)
             html = page.get_data(as_text=True)
-            self.assertIn("Relevé complet importé", html)
+            self.assertIn("Dossier contrôlé et signable", html)
             self.assertIn("Télécharger l’attestation Digiforma", html)
-            self.assertIn("Télécharger le PDF prérempli", html)
+            self.assertIn("Télécharger le dossier CNAPS complet", html)
             self.assertIn("Envoyer à signer avec Yousign", html)
+            self.assertIn("Contrôles automatiques validés", html)
             self.assertIn("tampon et la signature de Clément Vaillant sont intégrés", html)
 
             download = self.client.get(
@@ -237,6 +303,68 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         save_data.assert_not_called()
         self.assertFalse(data["sessions"][0]["trainees"][0].get("aps_elearning_tracking", {}).get("file"))
+
+    def test_structurally_complete_but_unfinished_report_is_blocked_from_signature(self):
+        pdf_bytes = self._digiforma_pdf_bytes(
+            completion_rate=28.49,
+            effective_duration="17h40",
+            completed_paths=1,
+            completed_evaluations=1,
+        )
+        metadata = gestion_app._extract_digiforma_attendance_metadata(pdf_bytes)
+        issues = gestion_app._aps_elearning_report_completion_issues(metadata)
+
+        self.assertEqual(metadata["completion_rate"], 28.49)
+        self.assertEqual(metadata["effective_duration"], "17h40")
+        self.assertEqual(metadata["paths_completed"], 1)
+        self.assertEqual(metadata["evaluations_completed"], 1)
+        self.assertTrue(any("progression Digiforma incomplète" in issue for issue in issues))
+        self.assertTrue(any("durée effectivement suivie inférieure" in issue for issue in issues))
+        self.assertTrue(any("parcours Digiforma non terminés" in issue for issue in issues))
+        self.assertTrue(any("questionnaires non validés" in issue for issue in issues))
+
+    def test_digiforma_file_integrity_is_rechecked_before_generation(self):
+        pdf_bytes = self._digiforma_pdf_bytes()
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            gestion_app, "PERSIST_DIR", directory
+        ):
+            report_path = os.path.join(directory, "report.pdf")
+            with open(report_path, "wb") as report_file:
+                report_file.write(pdf_bytes)
+            tracking = self._complete_tracking(
+                file="report.pdf",
+                file_sha256=hashlib.sha256(pdf_bytes).hexdigest(),
+            )
+
+            self.assertEqual(
+                gestion_app._require_aps_elearning_report_file(tracking),
+                report_path,
+            )
+            with open(report_path, "ab") as report_file:
+                report_file.write(b"tampered")
+            with self.assertRaisesRegex(ValueError, "a changé depuis son import"):
+                gestion_app._require_aps_elearning_report_file(tracking)
+
+    def test_complete_package_appends_every_digiforma_page(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cover_path = os.path.join(directory, "cover.pdf")
+            annex_path = os.path.join(directory, "annex.pdf")
+            output_path = os.path.join(directory, "complete.pdf")
+            for path, page_count in ((cover_path, 2), (annex_path, 3)):
+                generated = canvas.Canvas(path)
+                for page_number in range(1, page_count + 1):
+                    generated.drawString(72, 790, f"{os.path.basename(path)} page {page_number}")
+                    generated.showPage()
+                generated.save()
+
+            gestion_app._combine_aps_elearning_tracking_pdf(cover_path, annex_path, output_path)
+            reader = PdfReader(output_path)
+
+        self.assertEqual(len(reader.pages), 5)
+        self.assertEqual(
+            reader.metadata.title,
+            "Tableau de suivi de la formation à distance - dossier probatoire CNAPS",
+        )
 
     def test_digiforma_pdf_for_another_trainee_is_rejected(self):
         self._admin_login()
@@ -293,14 +421,9 @@ class ApsElearningTests(unittest.TestCase):
         trainee.update({
             "birth_date": "1994-03-12",
             "pre_number": "PRE-083-2026-09-01-12345678901",
-            "aps_elearning_tracking": {
-                "file": "uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
-                "original_name": "attestation-digiforma.pdf",
-                "page_count": 7,
-                "report_issued_date": "2026-08-31",
-                "digiforma_identifier": "alice.martin@example.test",
-                "planned_duration": "62 heures",
-            },
+            "aps_elearning_tracking": self._complete_tracking(
+                page_count=7,
+            ),
         })
 
         context = gestion_app._aps_elearning_tracking_context(session_obj, trainee)
@@ -311,8 +434,13 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(context["birth_date"], "12/03/1994")
         self.assertEqual(context["cnaps_number"], "PRE-083-2026-09-01-12345678901")
         self.assertEqual(context["digiforma_identifier"], "alice.martin@example.test")
-        self.assertEqual(context["report_page_range"], "de la page 1 à la page 7")
+        self.assertEqual(context["report_page_range"], "pages 3 à 9 du dossier signé")
         self.assertEqual(context["report_page_count_label"], "7 pages")
+        self.assertEqual(context["effective_duration"], "62 heures")
+        self.assertEqual(context["completion_rate"], "100 %")
+        self.assertEqual(context["paths_status"], "8 / 8 terminés")
+        self.assertEqual(context["evaluations_status"], "8 / 8 validées")
+        self.assertEqual(context["compliance_status"], "PARCOURS COMPLET - 100 % - SIGNATURE AUTORISÉE")
         self.assertNotIn("{{", " ".join(context.values()))
 
     def test_tracking_table_pdf_download_uses_generated_file(self):
@@ -365,11 +493,7 @@ class ApsElearningTests(unittest.TestCase):
     def test_yousign_request_uses_the_trainee_anchor(self):
         session_obj = self._data("2026-07-23")["sessions"][0]
         trainee = session_obj["trainees"][0]
-        trainee["aps_elearning_tracking"] = {
-            "file": "uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
-            "original_name": "attestation-digiforma.pdf",
-            "page_count": 2,
-        }
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
         calls = []
 
         def fake_yousign_json(method, path, **kwargs):
@@ -395,7 +519,7 @@ class ApsElearningTests(unittest.TestCase):
                 generated_pdf.write(b"pdf")
             anchors = [{
                 "type": "signature",
-                "page": 1,
+                "page": 2,
                 "x": 110,
                 "y": 554,
                 "marker_y": 605,
@@ -421,11 +545,14 @@ class ApsElearningTests(unittest.TestCase):
         signer_call = next(call for call in calls if call[1].endswith("/signers"))
         request_call = next(call for call in calls if call[1] == "/signature_requests")
         self.assertEqual(request_call[2]["json"]["external_id"], "aps_foad_S-APS_T-APS")
+        self.assertEqual(signer_call[2]["json"]["fields"][0]["page"], 2)
         self.assertEqual(signer_call[2]["json"]["fields"][0]["x"], 110)
         self.assertEqual(signer_call[2]["json"]["fields"][0]["y"], 605)
         self.assertEqual(signer_call[2]["json"]["fields"][0]["layout"], "detailed")
         self.assertEqual(signer_call[2]["json"]["info"]["phone_number"], "+33612345678")
         self.assertTrue(state["provider_signature_embedded"])
+        self.assertTrue(state["signed_package_includes_digiforma_annex"])
+        self.assertEqual(state["report_sha256"], "a" * 64)
         self.assertEqual(state["status"], "ongoing")
 
     def test_admin_can_send_tracking_table_to_yousign(self):
