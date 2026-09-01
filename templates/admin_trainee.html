@@ -23,6 +23,79 @@
     border:2px solid #ef4444;
     background:linear-gradient(135deg,#fff 0%,#fef2f2 100%);
   }
+  .aps-elearning-tracking{
+    margin-top:22px;
+    padding-top:20px;
+    border-top:1px solid #bfdbfe;
+  }
+  .aps-elearning-tracking__header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .aps-elearning-tracking__title{margin:0;color:#172033;font-size:18px;font-weight:950;}
+  .aps-elearning-tracking__subtitle{margin:6px 0 0;max-width:780px;color:#64748b;font-size:13px;line-height:1.5;}
+  .aps-elearning-tracking__status{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:7px 11px;
+    border:1px solid #bbf7d0;
+    border-radius:999px;
+    background:#f0fdf4;
+    color:#166534;
+    font-size:12px;
+    font-weight:900;
+  }
+  .aps-elearning-tracking__document{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:14px;
+    align-items:center;
+    margin-top:14px;
+    padding:15px 16px;
+    border:1px solid #dbeafe;
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 10px 24px rgba(37,99,235,.07);
+  }
+  .aps-elearning-tracking__filename{color:#172033;font-weight:950;overflow-wrap:anywhere;}
+  .aps-elearning-tracking__meta{margin-top:5px;color:#64748b;font-size:12px;font-weight:750;}
+  .aps-elearning-tracking__actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;}
+  .aps-elearning-tracking__upload{
+    display:flex;
+    align-items:end;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+    padding:14px;
+    border:1px dashed #93c5fd;
+    border-radius:15px;
+    background:rgba(239,246,255,.72);
+  }
+  .aps-elearning-tracking__upload label{display:grid;gap:6px;min-width:min(100%,360px);color:#334155;font-size:12px;font-weight:900;}
+  .aps-elearning-tracking__upload input{max-width:100%;}
+  .aps-elearning-tracking__download{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:14px;
+    padding:14px 16px;
+    border:1px solid #fde68a;
+    border-radius:16px;
+    background:linear-gradient(135deg,#fffbeb,#fff);
+  }
+  .aps-elearning-tracking__download strong{display:block;color:#78350f;}
+  .aps-elearning-tracking__download span{display:block;margin-top:3px;color:#92400e;font-size:12px;line-height:1.45;}
+  @media(max-width:720px){
+    .aps-elearning-tracking__document{grid-template-columns:1fr;}
+    .aps-elearning-tracking__actions{justify-content:flex-start;}
+    .aps-elearning-tracking__upload .btn,.aps-elearning-tracking__download .btn{width:100%;}
+  }
   .registration-cancelled-control{
     display:inline-flex;
     align-items:center;
@@ -1317,7 +1390,7 @@
 {% endif %}
 
 
-{% if is_aps and session.aps_elearning_enabled %}
+{% if ((session.training_type or "")|upper).startswith("APS") and session.aps_elearning_enabled %}
 <div class="card" style="grid-column:1 / -1;margin-top:16px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#fff);">
   <div style="font-weight:900;font-size:18px;">🎓 Identifiants e-learning APS</div>
   <div class="hint" style="margin-top:6px;">
@@ -1344,6 +1417,74 @@
     </label>
   </div>
   <div class="hint" style="margin-top:8px;">Sauvegarde automatique.</div>
+
+  {% set aps_tracking = trainee.aps_elearning_tracking or {} %}
+  <section class="aps-elearning-tracking" id="apsElearningTrackingSection" aria-labelledby="apsElearningTrackingTitle">
+    <div class="aps-elearning-tracking__header">
+      <div>
+        <h3 class="aps-elearning-tracking__title" id="apsElearningTrackingTitle">📊 Suivi du e-learning</h3>
+        <p class="aps-elearning-tracking__subtitle">
+          Importez l’attestation d’assiduité Digiforma complète : attestation, détail des modules et relevé individuel de connexions.
+        </p>
+      </div>
+      {% if aps_tracking.file %}
+        <span class="aps-elearning-tracking__status">✓ Relevé complet importé</span>
+      {% endif %}
+    </div>
+
+    {% if aps_tracking.file %}
+      <div class="aps-elearning-tracking__document">
+        <div>
+          <div class="aps-elearning-tracking__filename">{{ aps_tracking.original_name or 'attestation-assiduite-digiforma.pdf' }}</div>
+          <div class="aps-elearning-tracking__meta">
+            {{ aps_tracking.page_count or '—' }} page(s)
+            {% if aps_tracking.uploaded_at %} · Importé le {{ aps_tracking.uploaded_at|frdatetime }}{% endif %}
+            {% if aps_tracking.digiforma_identifier %} · {{ aps_tracking.digiforma_identifier }}{% endif %}
+          </div>
+        </div>
+        <div class="aps-elearning-tracking__actions">
+          <a class="btn btn-outline"
+             href="{{ url_for('admin_download_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">
+            ⬇️ Télécharger l’attestation Digiforma
+          </a>
+        </div>
+      </div>
+    {% else %}
+      <div class="hint" style="margin-top:14px;padding:12px 14px;border:1px solid #dbeafe;border-radius:14px;background:#fff;">
+        Aucun relevé Digiforma importé. Le tableau de suivi sera disponible dès que le PDF complet aura été contrôlé.
+      </div>
+    {% endif %}
+
+    {% if not is_read_only %}
+      <form class="aps-elearning-tracking__upload"
+            method="post"
+            enctype="multipart/form-data"
+            action="{{ url_for('admin_upload_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">
+        <label>
+          {{ 'Remplacer le PDF Digiforma' if aps_tracking.file else 'Attestation d’assiduité Digiforma (PDF)' }}
+          <input type="file" name="digiforma_pdf" accept=".pdf,application/pdf" required>
+        </label>
+        <button class="btn btn-primary" type="submit">
+          {{ '↻ Remplacer le relevé' if aps_tracking.file else '⬆️ Importer le relevé complet' }}
+        </button>
+      </form>
+    {% endif %}
+
+    <div class="aps-elearning-tracking__download">
+      <div>
+        <strong>TABLEAU DE SUIVI DE LA FORMATION À DISTANCE</strong>
+        <span>Complété automatiquement à partir de la session, du dossier stagiaire et du PDF Digiforma. Les deux signatures restent à apposer manuellement.</span>
+      </div>
+      {% if aps_tracking.file %}
+        <a class="btn btn-primary"
+           href="{{ url_for('admin_download_aps_elearning_tracking_table', session_id=session.id, trainee_id=trainee.id) }}">
+          ⬇️ Télécharger le tableau (PDF)
+        </a>
+      {% else %}
+        <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">⬇️ Télécharger le tableau (PDF)</button>
+      {% endif %}
+    </div>
+  </section>
 </div>
 {% endif %}
 
