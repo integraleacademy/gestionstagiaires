@@ -38,3 +38,4 @@ xcodebuild \
 
 La fréquence d’actualisation d’une complication reste décidée par watchOS. L’application tente une nouvelle lecture à chaque ouverture et WidgetKit demande une actualisation environ toutes les quinze minutes.
 
+Chaque pull request modifiant l’API ou l’application déclenche automatiquement les tests Python et une compilation pour le simulateur watchOS.
