@@ -88,7 +88,7 @@ struct PairingResponse: Codable, Sendable {
     let ok: Bool
     let token: String
     let tokenType: String
-    let deviceID: String
+    let deviceId: String
     let deviceName: String
     let dashboardPath: String
 }
@@ -98,4 +98,3 @@ struct APIErrorEnvelope: Codable, Sendable {
     let error: String?
     let retryAfter: Int?
 }
-
