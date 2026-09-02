@@ -239,7 +239,12 @@
     </div>
   {% endif %}
 
-  {% if wedof_last_run and wedof_last_run.status == 'partial_success' %}
+  {% if wedof_last_run and wedof_last_run.status == 'quota_blocked' %}
+    <div class="wedof-notice is-warning" role="alert">
+      <strong>Automatisations temporairement arrêtées par le quota WEDOF</strong>
+      <span>Les dossiers restent programmés et reprendront automatiquement au prochain passage disposant de requêtes.</span>
+    </div>
+  {% elif wedof_last_run and wedof_last_run.status == 'partial_success' %}
     <div class="wedof-notice is-warning" role="alert">
       <strong>Actualisation partielle : les dernières données connues sont conservées</strong>
       <ul>
@@ -321,7 +326,7 @@
           {% for item in wedof_dashboard.rows %}
             <tr
               data-wedof-panel="{{ item.tab }}"
-              data-wedof-planned="{{ 'true' if item.automation_status == 'planned' else 'false' }}"
+              data-wedof-planned="{{ 'true' if item.automation_status in ['planned','quota_blocked'] else 'false' }}"
               data-wedof-blocked="{{ 'true' if item.automation_blocked else 'false' }}"
               data-wedof-entry-success="{{ 'true' if item.entry_success else 'false' }}"
               data-wedof-service-success="{{ 'true' if item.service_success else 'false' }}"
@@ -352,6 +357,9 @@
                 <div class="wedof-badges">
                   {% if item.automation_status == 'planned' %}
                     <span class="wedof-badge is-success">{{ 'Automatisation prévue' if wedof_automation_enabled else 'Simulation prévue' }}</span>
+                  {% elif item.automation_status == 'quota_blocked' %}
+                    <span class="wedof-badge is-warning">Bloquée par le quota WEDOF</span>
+                    <small>Nouvelle tentative automatique au prochain passage disponible</small>
                   {% elif item.automation_status == 'dry_run_due' %}
                     <span class="wedof-badge is-warning">Prête en mode test</span>
                   {% elif item.automation_status == 'dry_run_due_late' %}
@@ -370,7 +378,7 @@
                     <span class="wedof-badge is-danger">Anomalie</span>
                   {% endif %}
                   {% if item.tab == 'anomaly' and item.automation_status != 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
-                  {% if item.planned_date and item.automation_status in ['planned','dry_run_due','dry_run_due_late'] and not item.automation_blocked %}
+                  {% if item.planned_date and item.automation_status in ['planned','quota_blocked','dry_run_due','dry_run_due_late'] and not item.automation_blocked %}
                     <small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>
                   {% endif %}
                   {% if item.entry_success %}

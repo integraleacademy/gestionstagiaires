@@ -95,6 +95,10 @@ services:
         value: "500"
       - key: WEDOF_REQUEST_LIMIT_PER_MONTH
         value: "15000"
+      # Une action réussie utilise normalement un GET de contrôle, un POST et
+      # un GET de confirmation. Trente dossiers gardent une marge sous 100 appels/h.
+      - key: WEDOF_LIVE_MAX_CANDIDATES_PER_RUN
+        value: "30"
       - key: WEDOF_MAINTENANCE_WINDOW_ENABLED
         value: "true"
       - key: WEDOF_MAINTENANCE_START_TIME
