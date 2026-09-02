@@ -171,6 +171,31 @@ class WedofClientTests(unittest.TestCase):
         )
 
     @patch("wedof_service.reserve_request")
+    def test_urgent_automation_operations_bypass_only_the_internal_limit(self, reserve):
+        session = Mock()
+        session.get.return_value = response(payload={"externalId": "W1"})
+        session.post.return_value = response(status=204, payload=None)
+        session.post.return_value.content = b""
+        client = WedofClient(api_key="key", session=session)
+
+        client.get_registration_folder_for_automation("W1")
+        client.declare_registration_folder_in_training("W1", "2026-09-01")
+
+        self.assertEqual(reserve.call_count, 2)
+        self.assertTrue(all(
+            call.kwargs["allow_over_limit"] is True
+            for call in reserve.call_args_list
+        ))
+        self.assertEqual(
+            [call.kwargs["operation"] for call in reserve.call_args_list],
+            ["urgent_automation_due_get", "urgent_automation_entry_training"],
+        )
+
+        reserve.reset_mock()
+        client.get_registration_folder("W1")
+        self.assertNotIn("allow_over_limit", reserve.call_args.kwargs)
+
+    @patch("wedof_service.reserve_request")
     @patch("wedof_service.time.sleep")
     def test_identity_search_reads_exactly_one_page_without_retry(self, sleep, reserve):
         page = response(payload={"items": [{"externalId": "W1"}]})
