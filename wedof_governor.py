@@ -304,7 +304,7 @@ def acquire_lease(
     try:
         db.execute("BEGIN IMMEDIATE")
         existing = db.execute(
-            "SELECT owner, lease_token, expires_at FROM wedof_governor_leases "
+            "SELECT owner, lease_token, expires_at, updated_at FROM wedof_governor_leases "
             "WHERE lease_name=?",
             (lease_name,),
         ).fetchone()
@@ -313,7 +313,31 @@ def acquire_lease(
                 active_until = dt.datetime.fromisoformat(existing["expires_at"])
             except (TypeError, ValueError):
                 active_until = current - dt.timedelta(seconds=1)
-            if active_until > current:
+            orphaned_live_lease = False
+            if lease_name == "wedof-live-automation":
+                try:
+                    lease_updated_at = dt.datetime.fromisoformat(existing["updated_at"])
+                except (TypeError, ValueError):
+                    lease_updated_at = current
+                minimum_age = dt.timedelta(minutes=5)
+                inactivity_window = dt.timedelta(minutes=3)
+                if lease_updated_at <= current - minimum_age:
+                    last_activity_row = db.execute(
+                        "SELECT MAX(requested_at) AS requested_at "
+                        "FROM wedof_request_events WHERE origin=?",
+                        ("gestionstagiaires",),
+                    ).fetchone()
+                    try:
+                        last_activity = dt.datetime.fromisoformat(
+                            last_activity_row["requested_at"],
+                        ) if last_activity_row and last_activity_row["requested_at"] else None
+                    except (TypeError, ValueError):
+                        last_activity = None
+                    orphaned_live_lease = (
+                        last_activity is None
+                        or last_activity <= current - inactivity_window
+                    )
+            if active_until > current and not orphaned_live_lease:
                 db.rollback()
                 return {
                     "ok": True, "enabled": True, "acquired": False,
