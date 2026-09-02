@@ -131,6 +131,59 @@ def test_lease_is_cross_process_safe_and_releasable():
             assert third["acquired"] is True
 
 
+def test_live_lease_is_recovered_only_after_five_minutes_without_recent_activity():
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "governor.sqlite3")
+        started_at = dt.datetime(2026, 9, 2, 7, 35, tzinfo=PARIS)
+        with governor_env(path):
+            first = acquire_lease(
+                "wedof-live-automation", owner="old-worker",
+                now=started_at,
+            )
+            reserve_request(
+                origin="gestionstagiaires", operation="urgent_check",
+                method="GET", path="/registrationFolders/:id",
+                now=started_at + dt.timedelta(minutes=2),
+                allow_over_limit=True,
+            )
+            too_soon = acquire_lease(
+                "wedof-live-automation", owner="new-worker",
+                now=started_at + dt.timedelta(minutes=4),
+            )
+            recovered = acquire_lease(
+                "wedof-live-automation", owner="new-worker",
+                now=started_at + dt.timedelta(minutes=6),
+            )
+
+        assert first["acquired"] is True
+        assert too_soon["acquired"] is False
+        assert recovered["acquired"] is True
+
+
+def test_live_lease_is_not_recovered_while_requests_are_still_active():
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "governor.sqlite3")
+        started_at = dt.datetime(2026, 9, 2, 7, 35, tzinfo=PARIS)
+        with governor_env(path):
+            first = acquire_lease(
+                "wedof-live-automation", owner="active-worker",
+                now=started_at,
+            )
+            reserve_request(
+                origin="gestionstagiaires", operation="urgent_check",
+                method="GET", path="/registrationFolders/:id",
+                now=started_at + dt.timedelta(minutes=5),
+                allow_over_limit=True,
+            )
+            concurrent = acquire_lease(
+                "wedof-live-automation", owner="new-worker",
+                now=started_at + dt.timedelta(minutes=6),
+            )
+
+        assert first["acquired"] is True
+        assert concurrent["acquired"] is False
+
+
 def test_governor_http_contract_requires_shared_token_and_enforces_limit():
     with tempfile.TemporaryDirectory() as directory:
         path = os.path.join(directory, "governor.sqlite3")
