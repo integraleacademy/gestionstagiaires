@@ -8315,27 +8315,35 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
 
 
 def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> None:
-    """Persist business data without letting stale requests erase OAuth.
+    """Persist business data without letting stale requests erase secure state.
 
     Most handlers load the whole JSON document and save it later. A handler
     which loaded before a Qonto token rotation therefore carries an obsolete
-    ``qonto_oauth`` object. Preserve the canonical on-disk object at the last
-    possible moment, while holding the file lock. Only the OAuth callback,
-    refresh and explicit reset opt out.
+    ``qonto_oauth`` object. The same risk applies to Apple Watch pairings and
+    revocations. Preserve those canonical on-disk objects at the last possible
+    moment, while holding the file lock. Only the OAuth callback, refresh and
+    explicit reset opt out of the Qonto preservation.
     """
     if _is_partner_scoped_session():
         data = _merge_partner_scoped_payload(data, _current_partner_id())
     _ensure_multi_partner_payload(data)
     normalize_all_partner_subscriptions(data)
 
-    def preserve_canonical_oauth(payload: Dict[str, Any]) -> Dict[str, Any]:
+    def preserve_canonical_secure_state(payload: Dict[str, Any]) -> Dict[str, Any]:
         canonical = _load_valid_json_payload(DATA_FILE)
-        if isinstance(canonical, dict) and isinstance(canonical.get("qonto_oauth"), dict):
-            payload["qonto_oauth"] = canonical["qonto_oauth"]
+        if isinstance(canonical, dict):
+            if preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
+                payload["qonto_oauth"] = canonical["qonto_oauth"]
+            if isinstance(canonical.get("integrale_watch"), dict):
+                payload["integrale_watch"] = canonical["integrale_watch"]
         return payload
 
-    transform = preserve_canonical_oauth if preserve_qonto_oauth else None
-    _write_json_with_backups(DATA_FILE, data, _data_lock, payload_transform=transform)
+    _write_json_with_backups(
+        DATA_FILE,
+        data,
+        _data_lock,
+        payload_transform=preserve_canonical_secure_state,
+    )
 
 
 def update_data(
@@ -18064,8 +18072,13 @@ def _sales_trainee_price(trainee: Dict[str, Any], training_type: str, training_l
     return unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
 
 
-def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> Dict[str, Any]:
-    today = datetime.date.today()
+def _build_sales_tracking_metrics(
+    data: Dict[str, Any],
+    selected_year: int,
+    today: Optional[datetime.date] = None,
+    include_trainee_details: bool = True,
+) -> Dict[str, Any]:
+    today = today or datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
     week_start = today - datetime.timedelta(days=today.weekday())
 
@@ -18112,20 +18125,23 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
             training_price = _sales_trainee_price(trainee, training_type_raw, training_label)
             trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
             sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
-            trainee_item = _sales_trainee_item(trainee, session_id)
+            trainee_item = _sales_trainee_item(trainee, session_id) if include_trainee_details else None
 
             if anchor_date == today:
                 today_revenue += training_price
                 today_inscriptions += 1
-                today_sales_names.append(trainee_item)
+                if trainee_item:
+                    today_sales_names.append(trainee_item)
             if anchor_date == yesterday:
                 yesterday_revenue += training_price
                 yesterday_inscriptions += 1
-                yesterday_sales_names.append(trainee_item)
+                if trainee_item:
+                    yesterday_sales_names.append(trainee_item)
             if week_start <= anchor_date <= today:
                 week_revenue += training_price
                 week_inscriptions += 1
-                week_sales_names.append(trainee_item)
+                if trainee_item:
+                    week_sales_names.append(trainee_item)
 
             if anchor_date.year != selected_year:
                 continue
@@ -18147,7 +18163,8 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
             })
             training_metrics["inscriptions"] += 1
             training_metrics["revenue"] += training_price
-            training_metrics.setdefault("trainees", []).append(trainee_item)
+            if trainee_item:
+                training_metrics.setdefault("trainees", []).append(trainee_item)
             if training_metrics.get("training_price", 0) <= 0 and training_price > 0:
                 training_metrics["training_price"] = training_price
 
@@ -18160,7 +18177,8 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
             })
             annual_training_metrics["inscriptions"] += 1
             annual_training_metrics["revenue"] += training_price
-            annual_training_metrics.setdefault("trainees", []).append(trainee_item)
+            if trainee_item:
+                annual_training_metrics.setdefault("trainees", []).append(trainee_item)
             if annual_training_metrics.get("training_price", 0) <= 0 and training_price > 0:
                 annual_training_metrics["training_price"] = training_price
 
@@ -18365,6 +18383,379 @@ def admin_sales_tracking_save_objectives():
         "annual_objective": annual_objective,
         "monthly_objectives": monthly_objectives,
     })
+
+
+# =========================
+# Intégrale Watch
+# =========================
+
+INTEGRALE_WATCH_PAIRING_TTL_SECONDS = max(
+    300,
+    min(_int_env("INTEGRALE_WATCH_PAIRING_TTL_SECONDS", 600), 1800),
+)
+INTEGRALE_WATCH_PAIRING_MAX_ATTEMPTS = max(
+    5,
+    min(_int_env("INTEGRALE_WATCH_PAIRING_MAX_ATTEMPTS", 12), 30),
+)
+INTEGRALE_WATCH_PAIRING_WINDOW_SECONDS = 600
+_integrale_watch_pairing_attempts: Dict[str, List[float]] = {}
+_integrale_watch_pairing_attempts_lock = threading.Lock()
+
+
+def _integrale_watch_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
+    bucket = data.setdefault("integrale_watch", {})
+    if not isinstance(bucket, dict):
+        bucket = {}
+        data["integrale_watch"] = bucket
+    if not isinstance(bucket.get("pairing_codes"), list):
+        bucket["pairing_codes"] = []
+    if not isinstance(bucket.get("devices"), list):
+        bucket["devices"] = []
+    return bucket
+
+
+def _integrale_watch_pairing_code_hash(code: str) -> str:
+    signing_key = (app.secret_key or "dev-secret-change-me").encode("utf-8")
+    return hmac.new(
+        signing_key,
+        f"integrale-watch-pairing:{code}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _integrale_watch_prune_pairing_codes(bucket: Dict[str, Any]) -> None:
+    now = datetime.datetime.utcnow()
+    kept: List[Dict[str, Any]] = []
+    for item in bucket.get("pairing_codes", []):
+        if not isinstance(item, dict) or item.get("used_at") or item.get("revoked_at"):
+            continue
+        expires_at = _parse_iso_datetime(item.get("expires_at"))
+        if expires_at and expires_at > now:
+            kept.append(item)
+    bucket["pairing_codes"] = kept[-20:]
+
+
+def _integrale_watch_create_pairing_code() -> Dict[str, Any]:
+    raw_code = ""
+
+    def create_code(data: Dict[str, Any]) -> Dict[str, Any]:
+        nonlocal raw_code
+        bucket = _integrale_watch_bucket(data)
+        _integrale_watch_prune_pairing_codes(bucket)
+        active_hashes = {
+            str(item.get("code_hash") or "")
+            for item in bucket.get("pairing_codes", [])
+            if isinstance(item, dict)
+        }
+        for _attempt in range(10):
+            candidate = f"{secrets.randbelow(1_000_000):06d}"
+            if _integrale_watch_pairing_code_hash(candidate) not in active_hashes:
+                raw_code = candidate
+                break
+        if not raw_code:
+            raise RuntimeError("unable_to_generate_unique_watch_pairing_code")
+
+        created_at = datetime.datetime.utcnow()
+        expires_at = created_at + datetime.timedelta(seconds=INTEGRALE_WATCH_PAIRING_TTL_SECONDS)
+        pairing = {
+            "id": str(uuid.uuid4()),
+            "code_hash": _integrale_watch_pairing_code_hash(raw_code),
+            "partner_id": INTEGRALE_PARTNER_ID,
+            "created_at": created_at.isoformat() + "Z",
+            "expires_at": expires_at.isoformat() + "Z",
+            "created_by": str(session.get("admin_username") or session.get("admin_user_id") or "admin"),
+        }
+        bucket["pairing_codes"].append(pairing)
+        _append_activity_log(
+            data,
+            "integrale_watch_pairing_code_created",
+            "integrale_watch_pairing",
+            pairing["id"],
+            INTEGRALE_PARTNER_ID,
+        )
+        return {
+            "code": raw_code,
+            "expires_at": pairing["expires_at"],
+            "expires_in_seconds": INTEGRALE_WATCH_PAIRING_TTL_SECONDS,
+        }
+
+    return _atomic_update_data(create_code)
+
+
+def _integrale_watch_consume_pairing_code(code: str, device_name: str) -> Dict[str, Any]:
+    raw_token = ""
+
+    def consume_code(data: Dict[str, Any]) -> Dict[str, Any]:
+        nonlocal raw_token
+        bucket = _integrale_watch_bucket(data)
+        now = datetime.datetime.utcnow()
+        code_hash = _integrale_watch_pairing_code_hash(code)
+        pairing: Optional[Dict[str, Any]] = None
+        for item in bucket.get("pairing_codes", []):
+            if not isinstance(item, dict) or item.get("used_at") or item.get("revoked_at"):
+                continue
+            stored_hash = str(item.get("code_hash") or "")
+            expires_at = _parse_iso_datetime(item.get("expires_at"))
+            if (
+                stored_hash
+                and hmac.compare_digest(stored_hash, code_hash)
+                and expires_at
+                and expires_at > now
+            ):
+                pairing = item
+                break
+        if not pairing:
+            _integrale_watch_prune_pairing_codes(bucket)
+            return {"ok": False, "error": "pairing_code_invalid"}
+
+        raw_token = "iw_" + secrets.token_urlsafe(32)
+        device_id = str(uuid.uuid4())
+        created_at = now.isoformat() + "Z"
+        device = {
+            "id": device_id,
+            "name": (device_name or "Apple Watch").strip()[:60] or "Apple Watch",
+            "token_hash": _hash_token(raw_token),
+            "partner_id": str(pairing.get("partner_id") or INTEGRALE_PARTNER_ID),
+            "created_at": created_at,
+            "last_seen_at": created_at,
+            "revoked_at": "",
+        }
+        bucket["devices"].append(device)
+        pairing["used_at"] = created_at
+        pairing["device_id"] = device_id
+        _integrale_watch_prune_pairing_codes(bucket)
+        _append_activity_log(
+            data,
+            "integrale_watch_device_paired",
+            "integrale_watch_device",
+            device_id,
+            device["partner_id"],
+            {"device_name": device["name"]},
+        )
+        return {
+            "ok": True,
+            "token": raw_token,
+            "token_type": "Bearer",
+            "device_id": device_id,
+            "device_name": device["name"],
+        }
+
+    return _atomic_update_data(consume_code)
+
+
+def _integrale_watch_bearer_token() -> str:
+    authorization = (request.headers.get("Authorization") or "").strip()
+    scheme, separator, value = authorization.partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return ""
+    token = value.strip()
+    if len(token) < 24 or len(token) > 200:
+        return ""
+    return token
+
+
+def _integrale_watch_authorized_device(
+    data: Dict[str, Any], raw_token: str,
+) -> Optional[Dict[str, Any]]:
+    if not raw_token:
+        return None
+    token_hash = _hash_token(raw_token)
+    bucket = _integrale_watch_bucket(data)
+    for item in bucket.get("devices", []):
+        if not isinstance(item, dict) or item.get("revoked_at"):
+            continue
+        stored_hash = str(item.get("token_hash") or "")
+        if stored_hash and hmac.compare_digest(stored_hash, token_hash):
+            return item
+    return None
+
+
+def _integrale_watch_pairing_rate_limit() -> Tuple[bool, int, str]:
+    now = time.monotonic()
+    identifier = str(request.remote_addr or "unknown")
+    with _integrale_watch_pairing_attempts_lock:
+        recent = [
+            attempt
+            for attempt in _integrale_watch_pairing_attempts.get(identifier, [])
+            if now - attempt < INTEGRALE_WATCH_PAIRING_WINDOW_SECONDS
+        ]
+        if len(recent) >= INTEGRALE_WATCH_PAIRING_MAX_ATTEMPTS:
+            retry_after = max(
+                1,
+                round(INTEGRALE_WATCH_PAIRING_WINDOW_SECONDS - (now - recent[0])),
+            )
+            _integrale_watch_pairing_attempts[identifier] = recent
+            return False, retry_after, identifier
+        recent.append(now)
+        _integrale_watch_pairing_attempts[identifier] = recent
+        return True, 0, identifier
+
+
+def _integrale_watch_clear_pairing_rate_limit(identifier: str) -> None:
+    with _integrale_watch_pairing_attempts_lock:
+        _integrale_watch_pairing_attempts.pop(identifier, None)
+
+
+def _integrale_watch_euros_to_cents(value: Any) -> int:
+    try:
+        amount = Decimal(str(value or 0)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        return int(amount * 100)
+    except (InvalidOperation, TypeError, ValueError):
+        return 0
+
+
+def _build_integrale_watch_dashboard(
+    data: Dict[str, Any],
+    today: Optional[datetime.date] = None,
+) -> Dict[str, Any]:
+    paris_today = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    metrics = _build_sales_tracking_metrics(
+        data,
+        paris_today.year,
+        today=paris_today,
+        include_trainee_details=False,
+    )
+    current_month = metrics["monthly_rows"][paris_today.month - 1]
+    trainings = [
+        {
+            "label": str(item.get("label") or "Autre"),
+            "sales_count": int(item.get("inscriptions") or 0),
+            "revenue_cents": _integrale_watch_euros_to_cents(item.get("revenue")),
+        }
+        for item in current_month.get("trainings", [])
+        if isinstance(item, dict)
+    ]
+    return {
+        "ok": True,
+        "schema_version": 1,
+        "generated_at": datetime.datetime.now(ZoneInfo("Europe/Paris")).isoformat(),
+        "timezone": "Europe/Paris",
+        "currency": "EUR",
+        "today": {
+            "date": paris_today.isoformat(),
+            "revenue_cents": _integrale_watch_euros_to_cents(metrics.get("today_revenue")),
+            "sales_count": int(metrics.get("today_inscriptions") or 0),
+        },
+        "week": {
+            "start_date": str(metrics.get("week_start_iso") or ""),
+            "revenue_cents": _integrale_watch_euros_to_cents(metrics.get("week_revenue")),
+            "sales_count": int(metrics.get("week_inscriptions") or 0),
+        },
+        "month": {
+            "key": f"{paris_today.year:04d}-{paris_today.month:02d}",
+            "label": str(metrics.get("current_month_name") or ""),
+            "revenue_cents": _integrale_watch_euros_to_cents(metrics.get("current_month_revenue")),
+            "sales_count": int(metrics.get("current_month_inscriptions") or 0),
+            "objective_cents": _integrale_watch_euros_to_cents(metrics.get("current_month_objective")),
+            "remaining_cents": _integrale_watch_euros_to_cents(metrics.get("current_month_remaining")),
+            "progress_percent": round(float(metrics.get("current_month_progress_ratio") or 0) * 100, 1),
+            "status": str(metrics.get("current_month_status") or "unset"),
+        },
+        "year": {
+            "value": paris_today.year,
+            "revenue_cents": _integrale_watch_euros_to_cents(metrics.get("annual_revenue")),
+            "sales_count": int(metrics.get("annual_inscriptions") or 0),
+            "objective_cents": _integrale_watch_euros_to_cents(metrics.get("annual_objective")),
+            "progress_percent": round(float(metrics.get("annual_progress_ratio") or 0) * 100, 1),
+        },
+        "trainings": trainings,
+    }
+
+
+@app.get("/admin/integrale-watch")
+@admin_login_required
+@require_super_admin
+def admin_integrale_watch():
+    data = load_data(run_background_tasks=False)
+    bucket = _integrale_watch_bucket(data)
+    devices = [dict(item) for item in bucket.get("devices", []) if isinstance(item, dict)]
+    devices.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
+    return render_template(
+        "admin_integrale_watch.html",
+        devices=devices,
+        pairing_ttl_minutes=INTEGRALE_WATCH_PAIRING_TTL_SECONDS // 60,
+    )
+
+
+@app.post("/api/admin/integrale-watch/pairing-code")
+@admin_login_required
+@require_super_admin
+@admin_write_required
+def api_admin_integrale_watch_pairing_code():
+    result = _integrale_watch_create_pairing_code()
+    return jsonify({"ok": True, **result})
+
+
+@app.post("/api/admin/integrale-watch/devices/<device_id>/revoke")
+@admin_login_required
+@require_super_admin
+@admin_write_required
+def api_admin_integrale_watch_revoke_device(device_id: str):
+    def revoke(data: Dict[str, Any]) -> Dict[str, Any]:
+        bucket = _integrale_watch_bucket(data)
+        device = next(
+            (
+                item
+                for item in bucket.get("devices", [])
+                if isinstance(item, dict) and str(item.get("id") or "") == str(device_id)
+            ),
+            None,
+        )
+        if not device:
+            return {"ok": False, "error": "device_not_found"}
+        device["revoked_at"] = device.get("revoked_at") or _now_iso()
+        _append_activity_log(
+            data,
+            "integrale_watch_device_revoked",
+            "integrale_watch_device",
+            device_id,
+            str(device.get("partner_id") or INTEGRALE_PARTNER_ID),
+            {"device_name": str(device.get("name") or "Apple Watch")},
+        )
+        return {"ok": True, "device_id": device_id, "revoked_at": device["revoked_at"]}
+
+    result = _atomic_update_data(revoke)
+    status = 200 if result.get("ok") else 404
+    return jsonify(result), status
+
+
+@app.post("/api/watch/v1/pair")
+def api_integrale_watch_pair():
+    allowed, retry_after, rate_limit_identifier = _integrale_watch_pairing_rate_limit()
+    if not allowed:
+        response = jsonify({"ok": False, "error": "rate_limited", "retry_after": retry_after})
+        response.status_code = 429
+        response.headers["Retry-After"] = str(retry_after)
+        return response
+
+    payload = request.get_json(silent=True) or {}
+    code = re.sub(r"\s+", "", str(payload.get("code") or ""))
+    if not re.fullmatch(r"\d{6}", code):
+        return jsonify({"ok": False, "error": "pairing_code_invalid"}), 400
+    device_name = str(payload.get("device_name") or "Apple Watch")
+    result = _integrale_watch_consume_pairing_code(code, device_name)
+    if not result.get("ok"):
+        return jsonify(result), 400
+    _integrale_watch_clear_pairing_rate_limit(rate_limit_identifier)
+    return jsonify({
+        **result,
+        "dashboard_path": "/api/watch/v1/dashboard",
+    })
+
+
+@app.get("/api/watch/v1/dashboard")
+def api_integrale_watch_dashboard():
+    data = load_data(run_background_tasks=False)
+    device = _integrale_watch_authorized_device(data, _integrale_watch_bearer_token())
+    if not device:
+        response = jsonify({"ok": False, "error": "unauthorized"})
+        response.status_code = 401
+        response.headers["WWW-Authenticate"] = 'Bearer realm="Integrale Watch"'
+        return response
+
+    partner_id = str(device.get("partner_id") or INTEGRALE_PARTNER_ID)
+    scoped_data = _filter_data_for_partner(data, partner_id)
+    return jsonify(_build_integrale_watch_dashboard(scoped_data))
 
 def _normalize_afc_cnaps_status(value: Any) -> str:
     raw = str(value or "").strip()
@@ -43218,6 +43609,7 @@ ADMIN_SEARCH_TOOLS = {
     "admin_sessions_conventions": ("Conventions", "Gérer les conventions", "▤"),
     "admin_sessions_automations": ("Automatisations", "Configurer les envois", "⚡"),
     "admin_sales_tracking": ("Suivi des ventes", "Piloter l’activité commerciale", "↗"),
+    "admin_integrale_watch": ("Apple Watch", "Afficher les KPI au poignet", "⌚"),
     "admin_sessions_billing": ("Facturation", "Factures et règlements", "€"),
     "admin_direct_debits": ("Prélèvements", "Gérer les prélèvements directs", "↻"),
     "admin_qonto_settings": ("Réglages Qonto", "Paramètres de facturation", "⚙"),

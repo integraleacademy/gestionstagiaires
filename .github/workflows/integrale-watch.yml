@@ -1,0 +1,60 @@
+name: Intégrale Watch
+
+on:
+  pull_request:
+    paths:
+      - "app.py"
+      - "templates/admin_integrale_watch.html"
+      - "templates/admin_sales_tracking.html"
+      - "tests/test_integrale_watch.py"
+      - "apple-watch/**"
+      - ".github/workflows/integrale-watch.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Tester l’API Watch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip install --disable-pip-version-check pytest
+      - name: Vérifier l’API et les régressions liées
+        run: |
+          python -m py_compile app.py
+          python -m pytest -q tests/test_integrale_watch.py tests/test_registration_cancellation.py tests/test_cpu_load_guards.py
+
+  watchos:
+    name: Compiler l’app watchOS
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Installer XcodeGen
+        run: brew install xcodegen
+      - name: Générer le projet
+        working-directory: apple-watch/IntegraleWatch
+        run: xcodegen generate
+      - name: Compiler pour le simulateur Apple Watch
+        working-directory: apple-watch/IntegraleWatch
+        run: |
+          xcodebuild \
+            -project IntegraleWatch.xcodeproj \
+            -scheme IntegraleWatch \
+            -sdk watchsimulator \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build

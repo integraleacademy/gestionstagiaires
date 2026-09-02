@@ -186,6 +186,7 @@
         <div class="sales-sub">Tableau de bord commercial : priorité au mois en cours, progression vers l’objectif, rythme à tenir et ventes récentes.</div>
       </div>
       <div class="sales-controls">
+        {% if is_super_admin %}<a href="{{ url_for('admin_integrale_watch') }}" class="sales-btn sales-btn--ghost">⌚ Apple Watch</a>{% endif %}
         <button id="dailyPreviewOpen" class="sales-btn sales-btn--ghost" type="button">✉ Aperçu du mail de demain</button>
         <button id="dailyRecapSend" class="sales-btn" type="button">📨 Envoyer le mail de 08h</button>
         <span id="dailyRecapSendFeedback" role="status" aria-live="polite" style="font-size:13px;font-weight:800;"></span>
