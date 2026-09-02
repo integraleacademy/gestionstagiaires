@@ -813,7 +813,8 @@ def _dashboard_automation_sort_key(row: Dict[str, Any]) -> tuple:
 
 def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iterable[Dict[str, Any]] = (),
                                statuses: Iterable[Dict[str, Any]] = (), exceptions: Iterable[Dict[str, Any]] = (),
-                               local_associations: Iterable[Dict[str, Any]] = ()) -> Dict[str, Any]:
+                               local_associations: Iterable[Dict[str, Any]] = (),
+                               actions: Iterable[Dict[str, Any]] = ()) -> Dict[str, Any]:
     """Construit les lignes sans accès réseau et sans déduire de dates depuis les sessions locales."""
     links_by_id = {str(x.get("external_id") or ""): x for x in links
                    if isinstance(x, dict) and x.get("active") is True}
@@ -821,6 +822,13 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                           if isinstance(x, dict)}
     rows = []
     status_by_id = {str(x.get("external_id") or ""): x for x in statuses if isinstance(x, dict)}
+    successful_service_actions = {
+        str(item.get("external_id") or "")
+        for item in actions
+        if isinstance(item, dict)
+        and str(item.get("action") or "") == "service_done"
+        and str(item.get("status") or "") in {"success", "executed"}
+    }
     blocks_by_key = _active_blocks_by_key(exceptions)
     seen = set()
     for item in folders:
@@ -830,6 +838,15 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         action = (history.get("entry_training", {}) if state == "accepted"
                   else history.get("service_done", {}) if state in {"inTraining", *SERVICE_DONE_STATES}
                   else {})
+        service_success = (
+            history.get("service_done", {}).get("status") in {"success", "executed"}
+            or external_id in successful_service_actions
+        )
+        # Les états terminaux WEDOF comprennent tout l'historique de
+        # l'organisme. Le tableau opérationnel ne doit montrer que les services
+        # faits réellement déclarés par Gestion Stagiaires.
+        if state in SERVICE_DONE_STATES and not service_success:
+            continue
         value = action.get("status") or ("completed_in_wedof" if state in SERVICE_DONE_STATES else "planned")
         automation_action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
         block = _indexed_block(blocks_by_key, external_id, automation_action)
@@ -846,7 +863,8 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                     (link or {}).get("wedof_date_end"))
         linked = link is not None
         rows.append({**remote, "wedof_type": remote.get("type") or "",
-                     "tab": "anomaly" if anomaly else {"accepted":"accepted", "inTraining":"training"}.get(state, "service"),
+                     "tab": ("service" if state in SERVICE_DONE_STATES else
+                             "anomaly" if anomaly else {"accepted":"accepted", "inTraining":"training"}.get(state, "service")),
                      "wedof_date_start": date_start, "wedof_date_end": date_end,
                      "start_date": date_start, "end_date": date_end,
                      "automation_status": value, "automation_planned": value == "planned",
@@ -862,7 +880,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "association_source": (link or {}).get("source"),
                      "association_orphan": bool(association.get("orphaned")), "matching_status": item.get("status"),
                      "entry_success": history.get("entry_training", {}).get("status") == "success",
-                     "service_success": history.get("service_done", {}).get("status") == "success",
+                     "service_success": service_success,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     for status in status_by_id.values():
         if not isinstance(status, dict): continue
@@ -871,13 +889,21 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         action = (status.get("entry_training", {}) if state == "accepted"
                   else status.get("service_done", {}) if state in {"inTraining", *SERVICE_DONE_STATES}
                   else {})
+        external_id = str(status.get("external_id") or "")
+        service_success = (
+            status.get("service_done", {}).get("status") in {"success", "executed"}
+            or external_id in successful_service_actions
+        )
+        if state in SERVICE_DONE_STATES and not service_success:
+            continue
         value = action.get("status") or ("completed_in_wedof" if state in SERVICE_DONE_STATES else "not_applicable")
         automation_action = "entry_training" if state == "accepted" else "service_done" if state == "inTraining" else None
         block = _indexed_block(blocks_by_key, str(status.get("external_id") or ""), automation_action)
         underlying = value
         if block: value = "blocked"
-        tab = "anomaly" if value in {"anomaly", "blocked", "dry_run_due_late"} else {"accepted":"accepted", "inTraining":"training"}.get(state, "service")
-        external_id = str(status.get("external_id") or "")
+        tab = ("service" if state in SERVICE_DONE_STATES else
+               "anomaly" if value in {"anomaly", "blocked", "dry_run_due_late"}
+               else {"accepted":"accepted", "inTraining":"training"}.get(state, "service"))
         link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
         date_start = status.get("wedof_date_start") or (link or {}).get("wedof_date_start")
         date_end = status.get("wedof_date_end") or (link or {}).get("wedof_date_end")
@@ -895,11 +921,12 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "linked": link is not None, "association": association.get("association_label", "À rattacher localement"),
                      "association_source": (link or {}).get("source"),
                      "association_orphan": bool(association.get("orphaned")),
-                     "entry_success": status.get("entry_training", {}).get("status") == "success", "service_success": status.get("service_done", {}).get("status") == "success",
+                     "entry_success": status.get("entry_training", {}).get("status") == "success",
+                     "service_success": service_success,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     # Le suivi des rattachements a démarré avec les formations de juin 2026. Les
-    # dossiers antérieurs restent consultables dans leurs onglets WEDOF, mais ne
-    # doivent pas gonfler l'indicateur opérationnel des rattachements à traiter.
+    # dossiers actifs antérieurs ne doivent pas gonfler l'indicateur
+    # opérationnel des rattachements à traiter.
     unlinked_tracking_start = "2026-06-01"
     for row in rows:
         row["unlinked_since_tracking_start"] = (

@@ -16630,7 +16630,7 @@ def admin_wedof_requests():
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
         wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", []),
-            local_associations=displayed_links),
+            local_associations=displayed_links, actions=data.get("wedof_automation_actions", [])),
         wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
         wedof_sync=data.get("wedof_automation_sync", {}),
         wedof_dashboard_state=automation_dashboard_state(data),
@@ -16901,7 +16901,7 @@ def admin_wedof_matching_preview():
         dashboard = build_automation_dashboard(
             accepted + in_training + service_done, links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", []),
-            local_associations=_wedof_links_for_display(data),
+            local_associations=_wedof_links_for_display(data), actions=data.get("wedof_automation_actions", []),
         )
         displayed_by_id = {str(x.get("external_id") or ""): x for x in _wedof_links_for_display(data)}
         preview_by_id = {str(x.get("external_id") or ""): x for x in preview["results"]}
