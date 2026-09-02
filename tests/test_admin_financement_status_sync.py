@@ -198,6 +198,8 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn('id="financeSummaryCards" class="finance-kpi-groups"', template)
         self.assertIn("finance-kpi-group--funding", template)
         self.assertIn("finance-kpi-group--payment", template)
+        self.assertIn("grid-template-columns:repeat(2,minmax(0,1fr))", template)
+        self.assertIn("grid-template-columns:repeat(var(--finance-kpi-count,3),minmax(0,1fr))", template)
         self.assertIn("const fundingCards=[", template)
         self.assertIn("{label:'Financement personnel'", template)
         self.assertIn("{label:'Autres financements'", template)
