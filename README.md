@@ -132,6 +132,18 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 
 > Sans les clés VAPID (`WEB_PUSH_VAPID_PUBLIC_KEY` / `WEB_PUSH_VAPID_PRIVATE_KEY`), le bouton restera désactivé côté interface.
 
+## Intégrale Watch
+
+- Page de jumelage administrateur : `GET /admin/integrale-watch`.
+- Création d’un code temporaire : `POST /api/admin/integrale-watch/pairing-code`.
+- Jumelage de la montre : `POST /api/watch/v1/pair`.
+- Lecture des KPI : `GET /api/watch/v1/dashboard` avec le jeton Bearer propre à la montre.
+- Révocation immédiate depuis la page d’administration.
+
+Les codes à six chiffres sont à usage unique, expirent après dix minutes par défaut et sont protégés contre les essais répétés. Seules leurs empreintes sont persistées. Le jeton longue durée n’est renvoyé qu’une fois à la montre et seule son empreinte est conservée côté serveur. L’API expose exclusivement des agrégats de ventes, sans identité ni coordonnée de stagiaire.
+
+Le code source watchOS et sa procédure de compilation se trouvent dans `apple-watch/IntegraleWatch`. `INTEGRALE_WATCH_PAIRING_TTL_SECONDS` permet d’ajuster la durée des codes entre 5 et 30 minutes et `INTEGRALE_WATCH_PAIRING_MAX_ATTEMPTS` le nombre d’essais admis sur dix minutes.
+
 
 ## Surveillance automatique des statuts CNAPS
 

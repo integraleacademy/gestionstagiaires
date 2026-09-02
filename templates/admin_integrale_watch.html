@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.watch-page{max-width:1120px;margin:0 auto;display:grid;gap:18px;color:#0f172a}
+.watch-hero{position:relative;overflow:hidden;border-radius:28px;padding:28px;background:radial-gradient(circle at 85% 10%,rgba(96,165,250,.34),transparent 32%),linear-gradient(135deg,#020617,#172554 58%,#1d4ed8);color:#fff;box-shadow:0 26px 70px rgba(15,23,42,.25)}
+.watch-hero h1{margin:0;font-size:clamp(30px,5vw,48px);letter-spacing:-.045em}.watch-hero p{max-width:720px;margin:10px 0 0;color:#dbeafe;line-height:1.55}.watch-back{display:inline-flex;margin-bottom:18px;color:#bfdbfe;text-decoration:none;font-weight:850}.watch-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:18px}.watch-card{border:1px solid #e2e8f0;border-radius:22px;background:#fff;padding:20px;box-shadow:0 16px 40px rgba(15,23,42,.08)}
+.watch-card h2{margin:0;font-size:22px}.watch-card p{color:#64748b;line-height:1.5}.watch-step{display:grid;grid-template-columns:34px 1fr;gap:11px;align-items:start;margin-top:16px}.watch-step span{display:grid;place-items:center;width:34px;height:34px;border-radius:12px;background:#dbeafe;color:#1d4ed8;font-weight:950}.watch-step strong{display:block;margin-top:2px}.watch-step small{display:block;margin-top:4px;color:#64748b;line-height:1.45}
+.watch-generate{width:100%;border:0;border-radius:14px;padding:14px 18px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font:inherit;font-weight:900;cursor:pointer;box-shadow:0 12px 28px rgba(37,99,235,.24)}.watch-generate:disabled{opacity:.58;cursor:wait}.pairing-result{display:none;margin-top:16px;border:1px solid #93c5fd;border-radius:18px;padding:18px;text-align:center;background:#eff6ff}.pairing-result.is-visible{display:block}.pairing-label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#1d4ed8;font-weight:900}.pairing-code{margin:8px 0;font-size:clamp(42px,8vw,68px);font-variant-numeric:tabular-nums;font-weight:950;letter-spacing:.12em;color:#0f172a}.pairing-expiry{font-size:13px;color:#475569}.watch-feedback{min-height:20px;margin-top:10px;font-size:13px;font-weight:800;color:#475569}.watch-feedback.is-error{color:#b91c1c}
+.device-list{display:grid;gap:10px;margin-top:14px}.device-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid #e2e8f0;border-radius:15px;padding:13px;background:#f8fafc}.device-main strong{display:block}.device-main small{display:block;color:#64748b;margin-top:3px}.device-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#dcfce7;color:#166534;font-size:11px;font-weight:900}.device-status.is-revoked{background:#e2e8f0;color:#475569}.device-revoke{border:1px solid #fecaca;border-radius:10px;background:#fff;color:#b91c1c;padding:8px 10px;font-weight:850;cursor:pointer}.watch-empty{border:1px dashed #cbd5e1;border-radius:14px;padding:16px;color:#64748b;text-align:center;background:#f8fafc}.watch-note{margin-top:16px;border-radius:14px;padding:12px;background:#f8fafc;color:#475569;font-size:13px;line-height:1.5}
+@media(max-width:820px){.watch-grid{grid-template-columns:1fr}.watch-hero{padding:22px}.device-row{align-items:flex-start;flex-direction:column}.device-revoke{width:100%}}
+</style>
+
+<div class="watch-page">
+  <section class="watch-hero">
+    <a class="watch-back" href="{{ url_for('admin_sales_tracking') }}">← Retour au suivi des ventes</a>
+    <h1>Intégrale sur l’Apple Watch</h1>
+    <p>Le cadran et l’application affichent uniquement le chiffre d’affaires, les ventes, l’objectif du mois et le détail par formation. Aucun nom, aucune adresse et aucune donnée de stagiaire ne quittent Gestion Stagiaires.</p>
+  </section>
+
+  <div class="watch-grid">
+    <section class="watch-card">
+      <h2>Jumeler une montre</h2>
+      <p>Le code est utilisable une seule fois et expire après {{ pairing_ttl_minutes }} minutes.</p>
+      <div class="watch-step"><span>1</span><div><strong>Ouvre Intégrale sur l’Apple Watch</strong><small>L’écran de jumelage demande un code à 6 chiffres.</small></div></div>
+      <div class="watch-step"><span>2</span><div><strong>Génère un code ci-dessous</strong><small>Ne le communique à personne : il donne accès aux KPI de vente.</small></div></div>
+      <div class="watch-step"><span>3</span><div><strong>Saisis le code sur la montre</strong><small>La montre reçoit ensuite son propre jeton sécurisé et actualise les complications.</small></div></div>
+      <button id="watchGenerate" class="watch-generate" type="button">Générer un code de jumelage</button>
+      <div id="pairingResult" class="pairing-result" role="status" aria-live="polite">
+        <div class="pairing-label">Code temporaire</div>
+        <div id="pairingCode" class="pairing-code">------</div>
+        <div id="pairingExpiry" class="pairing-expiry"></div>
+      </div>
+      <div id="watchFeedback" class="watch-feedback" role="status" aria-live="polite"></div>
+      <div class="watch-note">Si la montre est perdue, vendue ou réinitialisée, révoque-la ici. Son accès est coupé immédiatement, sans modifier ton mot de passe administrateur.</div>
+    </section>
+
+    <section class="watch-card">
+      <h2>Montres autorisées</h2>
+      <p>Chaque installation possède un accès distinct et révocable.</p>
+      <div id="deviceList" class="device-list">
+        {% for device in devices %}
+          <article class="device-row" data-device-id="{{ device.id }}">
+            <div class="device-main">
+              <strong>{{ device.name or 'Apple Watch' }}</strong>
+              <small>Jumelée le {{ device.created_at|frdatetime }}</small>
+              {% if device.revoked_at %}<small>Révoquée le {{ device.revoked_at|frdatetime }}</small>{% endif %}
+            </div>
+            <div>
+              {% if device.revoked_at %}
+                <span class="device-status is-revoked">Révoquée</span>
+              {% else %}
+                <button class="device-revoke" type="button" data-revoke-device="{{ device.id }}">Révoquer</button>
+              {% endif %}
+            </div>
+          </article>
+        {% else %}
+          <div class="watch-empty">Aucune Apple Watch jumelée pour le moment.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const generateButton = document.getElementById('watchGenerate');
+  const result = document.getElementById('pairingResult');
+  const codeNode = document.getElementById('pairingCode');
+  const expiryNode = document.getElementById('pairingExpiry');
+  const feedback = document.getElementById('watchFeedback');
+
+  generateButton?.addEventListener('click', async () => {
+    generateButton.disabled = true;
+    feedback.textContent = 'Génération en cours…';
+    feedback.classList.remove('is-error');
+    try {
+      const response = await fetch('{{ url_for("api_admin_integrale_watch_pairing_code") }}', {
+        method: 'POST',
+        headers: {'Accept': 'application/json'}
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) throw new Error(payload.error || 'Impossible de générer le code.');
+      codeNode.textContent = payload.code;
+      const expiresAt = new Date(payload.expires_at);
+      expiryNode.textContent = `Valable jusqu’à ${expiresAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}`;
+      result.classList.add('is-visible');
+      feedback.textContent = 'Code prêt. Saisis-le maintenant sur la montre.';
+    } catch (error) {
+      feedback.textContent = error.message || 'Impossible de générer le code.';
+      feedback.classList.add('is-error');
+    } finally {
+      generateButton.disabled = false;
+    }
+  });
+
+  document.querySelectorAll('[data-revoke-device]').forEach(button => {
+    button.addEventListener('click', async () => {
+      if (!confirm('Révoquer définitivement l’accès de cette montre ?')) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/admin/integrale-watch/devices/${encodeURIComponent(button.dataset.revokeDevice)}/revoke`, {
+          method: 'POST',
+          headers: {'Accept': 'application/json'}
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) throw new Error(payload.error || 'Révocation impossible.');
+        window.location.reload();
+      } catch (error) {
+        button.disabled = false;
+        feedback.textContent = error.message || 'Révocation impossible.';
+        feedback.classList.add('is-error');
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}
