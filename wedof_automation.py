@@ -47,6 +47,14 @@ def _capacity_error_code(exc: Exception) -> Optional[str]:
     return "wedof_rate_limited" if getattr(exc, "http_status", None) == 429 else None
 
 
+def _get_live_registration_folder(client: Any, external_id: str) -> Dict[str, Any]:
+    """Utilise la voie prioritaire uniquement pendant une automatisation live."""
+    priority_get = getattr(client, "get_registration_folder_for_automation", None)
+    if callable(priority_get):
+        return priority_get(external_id)
+    return client.get_registration_folder(external_id)
+
+
 def _maintenance_enabled() -> bool:
     """La fenêtre reste active sauf désactivation explicite."""
     value = os.environ.get("WEDOF_MAINTENANCE_WINDOW_ENABLED")
@@ -657,7 +665,7 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             continue
         expected_done = ENTRY_DONE_STATES if action == "entry_training" else SERVICE_DONE_STATES
         try:
-            fresh = client.get_registration_folder(external_id)
+            fresh = _get_live_registration_folder(client, external_id)
             remote = extract_folder(fresh)
         except Exception as exc:
             counts["errors"] += 1
@@ -725,7 +733,7 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
                 duration = extract_folder(fresh).get("training_duration")
                 reliable = duration if isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration >= 0 else None
                 client.declare_registration_folder_service_done(external_id, business_date, training_duration=reliable)
-            verified = client.get_registration_folder(external_id)
+            verified = _get_live_registration_folder(client, external_id)
             after = extract_folder(verified).get("state")
             if after not in expected_done:
                 raise RuntimeError("wedof_state_not_confirmed")
@@ -750,7 +758,7 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             # Timeout/connection ambiguity and 409 require one GET reconciliation, never another POST.
             if getattr(exc, "ambiguous", False) or http_status == 409:
                 try:
-                    verified = client.get_registration_folder(external_id)
+                    verified = _get_live_registration_folder(client, external_id)
                     after = extract_folder(verified).get("state")
                 except Exception:
                     verified, after = fresh, remote.get("state")
