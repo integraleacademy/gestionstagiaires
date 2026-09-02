@@ -29,6 +29,25 @@ class WedofDashboardUnitTests(unittest.TestCase):
         self.assertEqual(dashboard["rows"][0]["automation_status"], "quota_blocked")
         self.assertEqual(dashboard["stats"]["planned"], 1)
 
+    def test_retry_pending_stays_planned_and_exposes_the_remote_error(self):
+        dashboard = build_automation_dashboard([], statuses=[{
+            "external_id": "RETRY", "wedof_state": "accepted", "wedof_type": "cpf",
+            "wedof_date_start": "2026-09-01", "wedof_date_end": "2026-10-01",
+            "entry_training": {
+                "status": "retry_pending", "planned_date": "2026-09-01",
+                "planned_time": "18:00", "last_error_code": "wedof_server_error",
+                "last_http_status": 503,
+                "last_error_message": "L’API WEDOF est temporairement indisponible.",
+                "retry_at": "2026-09-02T07:15:00+02:00",
+            },
+        }])
+
+        row = dashboard["rows"][0]
+        self.assertEqual(row["automation_status"], "retry_pending")
+        self.assertEqual(row["last_http_status"], 503)
+        self.assertEqual(row["retry_at"], "2026-09-02T07:15:00+02:00")
+        self.assertEqual(dashboard["stats"]["planned"], 1)
+
     def test_rows_are_sorted_by_nearest_active_automation(self):
         statuses = [
             {"external_id": "LATER", "wedof_state": "accepted", "wedof_type": "cpf",
@@ -420,11 +439,13 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertIn(response.status_code, {302, 401, 403})
 
     def test_snapshot_rows_offer_manual_link_without_matching_preview(self):
-        statuses = [
-            {"external_id": state, "wedof_state": state, "wedof_type": "cpf",
-             "wedof_date_start": "2026-09-07", "wedof_date_end": "2026-10-09"}
-            for state in ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated")
-        ]
+        statuses = []
+        for state in ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated"):
+            row = {"external_id": state, "wedof_state": state, "wedof_type": "cpf",
+                   "wedof_date_start": "2026-09-07", "wedof_date_end": "2026-10-09"}
+            if state in {"serviceDoneDeclared", "serviceDoneValidated"}:
+                row["service_done"] = {"status": "success"}
+            statuses.append(row)
         statuses.extend([
             {"external_id": "OTHER", "wedof_state": "accepted", "wedof_type": "other"},
             {"external_id": "", "wedof_state": "accepted", "wedof_type": "cpf"},
@@ -505,6 +526,28 @@ class WedofDashboardViewTests(unittest.TestCase):
             html = self.client.get("/admin/wedof").get_data(as_text=True)
         self.assertNotIn("Données WEDOF non encore synchronisées.", html)
         self.assertRegex(html, r'data-wedof-counter="accepted"[^>]*>\s*<strong>0</strong>\s*<span>Acceptés</span>')
+
+    def test_transient_failure_notice_shows_exact_status_and_retry_time(self):
+        data = {
+            "sessions": [], "wedof_links": [], "wedof_automation_status": [],
+            "wedof_automation_runs": [{
+                "status": "retry_scheduled",
+                "last_error_message": "L’API WEDOF est temporairement indisponible.",
+                "last_http_status": 503,
+                "retry_at": "2026-09-02T07:15:00+02:00",
+            }],
+            "wedof_automation_sync": {},
+        }
+        maintenance = {"active": False, "start_time": "05:00", "end_time": "07:00",
+                       "timezone": "Europe/Paris"}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "is_wedof_maintenance_window", return_value=maintenance):
+            html = self.client.get("/admin/wedof").get_data(as_text=True)
+
+        self.assertIn("WEDOF ne répond pas correctement", html)
+        self.assertIn("code HTTP 503", html)
+        self.assertIn("02/09/2026 à 07h15", html)
 
 
 if __name__ == "__main__":

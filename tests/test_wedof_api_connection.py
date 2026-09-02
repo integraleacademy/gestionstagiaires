@@ -258,6 +258,19 @@ class WedofClientTests(unittest.TestCase):
         self.assertEqual((raised.exception.code, raised.exception.retryable), ("wedof_timeout", True))
         self.assertEqual(session.get.call_count, 3)
 
+    @patch("wedof_service.time.sleep")
+    def test_exhausted_server_error_keeps_exact_http_status_after_three_reads(self, sleep):
+        session = Mock(); session.get.return_value = response(503)
+
+        with self.assertRaises(WedofApiError) as raised:
+            WedofClient(api_key="key", session=session).get_registration_folder_for_automation("W1")
+
+        self.assertEqual(
+            (raised.exception.code, raised.exception.retryable, raised.exception.http_status),
+            ("wedof_server_error", True, 503),
+        )
+        self.assertEqual(session.get.call_count, 3)
+
     def test_numeric_configuration_is_bounded_and_page_default_is_50(self):
         session = Mock(); page = response(payload=[]); page.headers = {}
         session.get.return_value = page

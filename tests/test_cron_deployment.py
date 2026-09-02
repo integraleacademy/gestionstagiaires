@@ -38,6 +38,15 @@ class CronDeploymentTests(unittest.TestCase):
         self.assertIn('key: WEDOF_GOVERNOR_ENABLED\n        value: "true"', web)
         self.assertIn('key: WEDOF_REQUEST_LIMIT_PER_MONTH\n        value: "15000"', web)
         self.assertIn('key: WEDOF_LIVE_MAX_CANDIDATES_PER_RUN\n        value: "30"', web)
+        self.assertIn('key: WEDOF_LIVE_RETRY_MINUTES\n        value: "10"', web)
+
+    def test_wedof_live_retries_transient_failures_every_ten_minutes(self):
+        blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
+        block = blueprint.split(
+            "name: gestionstagiaires-wedof-automation", 1,
+        )[1].split("  - type:", 1)[0]
+        self.assertIn('schedule: "5,15,25,35,45,55 * * * *"', block)
+        self.assertIn("scripts/run_wedof_automation.py", block)
 
     def test_global_reconciliation_runs_at_most_four_times_a_day(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
