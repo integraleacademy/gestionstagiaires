@@ -67,7 +67,7 @@ class WedofDashboardUnitTests(unittest.TestCase):
 
         self.assertEqual(
             [row["external_id"] for row in rows],
-            ["A-NOT-APPLICABLE", "M-BLOCKED", "Z-NO-DATE"],
+            ["M-BLOCKED", "Z-NO-DATE"],
         )
 
     def test_rows_with_invalid_or_missing_time_follow_all_valid_schedules(self):
@@ -144,19 +144,37 @@ class WedofDashboardUnitTests(unittest.TestCase):
         )["rows"][0]
         self.assertEqual((row["wedof_date_start"], row["wedof_date_end"]), ("2026-07-01", "2026-07-31"))
 
-    def test_classification_follows_remote_state(self):
+    def test_service_done_only_includes_declarations_sent_by_gestion_stagiaires(self):
         dashboard = build_automation_dashboard([
             folder("A", "accepted"), folder("T", "inTraining"),
             folder("D", "serviceDoneDeclared"), folder("V", "serviceDoneValidated"),
-        ])
+        ], statuses=[{"external_id": "D", "service_done": {"status": "success"}}])
         self.assertEqual([row["tab"] for row in dashboard["rows"]],
-                         ["accepted", "training", "service", "service"])
-        self.assertEqual((dashboard["stats"]["accepted"], dashboard["stats"]["training"], dashboard["stats"]["service"]), (1, 1, 2))
+                         ["accepted", "training", "service"])
         self.assertEqual(
-            [row["automation_status"] for row in dashboard["rows"][2:]],
-            ["completed_in_wedof", "completed_in_wedof"],
+            (dashboard["stats"]["accepted"], dashboard["stats"]["training"], dashboard["stats"]["service"]),
+            (1, 1, 1),
         )
-        self.assertTrue(all(not row["automation_planned"] for row in dashboard["rows"][2:]))
+        self.assertEqual(dashboard["rows"][2]["external_id"], "D")
+        self.assertTrue(dashboard["rows"][2]["service_success"])
+        self.assertNotIn("V", {row["external_id"] for row in dashboard["rows"]})
+
+    def test_service_done_action_journal_is_durable_proof_of_local_declaration(self):
+        dashboard = build_automation_dashboard(
+            [folder("LOCAL", "serviceDoneValidated"), folder("REMOTE", "serviceDoneValidated")],
+            statuses=[
+                {"external_id": "LOCAL", "service_done": {"status": "completed_in_wedof"}},
+                {"external_id": "REMOTE", "service_done": {"status": "completed_in_wedof"}},
+            ],
+            actions=[
+                {"external_id": "LOCAL", "action": "service_done", "status": "success"},
+                {"external_id": "REMOTE", "action": "service_done", "status": "already_done"},
+            ],
+        )
+
+        self.assertEqual(dashboard["stats"]["service"], 1)
+        self.assertEqual([row["external_id"] for row in dashboard["rows"]], ["LOCAL"])
+        self.assertTrue(dashboard["rows"][0]["service_success"])
 
     def test_unlinked_folder_stays_automatable(self):
         row = build_automation_dashboard([folder("A")])["rows"][0]
@@ -180,7 +198,7 @@ class WedofDashboardUnitTests(unittest.TestCase):
         self.assertTrue(rows["BOUNDARY"]["unlinked_since_tracking_start"])
         self.assertFalse(rows["AFTER"]["unlinked_since_tracking_start"])
         self.assertTrue(rows["TRAINING"]["unlinked_since_tracking_start"])
-        self.assertFalse(rows["COMPLETED"]["unlinked_since_tracking_start"])
+        self.assertNotIn("COMPLETED", rows)
         self.assertFalse(rows["MISSING"]["unlinked_since_tracking_start"])
 
     def test_anomalies_and_successes_come_from_server_data(self):
