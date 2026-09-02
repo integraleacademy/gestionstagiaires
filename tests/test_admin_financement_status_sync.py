@@ -208,7 +208,46 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         payment_start = template.index("    const paymentCards=[")
         payment_end = template.index("\n    ];", payment_start)
         payment_cards = template[payment_start:payment_end]
+        self.assertIn("...(showDirectDebitKpi?[{label:'Prélèvements'", payment_cards)
         self.assertLess(payment_cards.index("{label:'Prélèvements'"), payment_cards.index("{label:'Payé'"))
+
+    def test_direct_debit_kpi_is_hidden_when_cash_covers_personal_funding(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js is required to execute the cash financing KPI rule")
+
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+        start = template.index("  function cashCoversEntirePersonalFunding(c){")
+        end = template.index("\n  function renderSummary(c){", start)
+        helper = template[start:end]
+        script = f"""
+{helper}
+const states = {{
+  fullCash: cashCoversEntirePersonalFunding({{cashPaymentEnabled:true,cashPlanned:1470,personalFundingPlanned:1470}}),
+  overCash: cashCoversEntirePersonalFunding({{cashPaymentEnabled:true,cashPlanned:1500,personalFundingPlanned:1470}}),
+  partialCash: cashCoversEntirePersonalFunding({{cashPaymentEnabled:true,cashPlanned:1000,personalFundingPlanned:1470}}),
+  cashDisabled: cashCoversEntirePersonalFunding({{cashPaymentEnabled:false,cashPlanned:1470,personalFundingPlanned:1470}}),
+  noPersonalFunding: cashCoversEntirePersonalFunding({{cashPaymentEnabled:true,cashPlanned:1470,personalFundingPlanned:0}})
+}};
+process.stdout.write(JSON.stringify(states));
+"""
+
+        completed = subprocess.run(
+            [node, "-e", script],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        states = json.loads(completed.stdout)
+
+        self.assertTrue(states["fullCash"])
+        self.assertTrue(states["overCash"])
+        self.assertFalse(states["partialCash"])
+        self.assertFalse(states["cashDisabled"])
+        self.assertFalse(states["noPersonalFunding"])
 
     def test_fully_paid_other_funding_is_automatically_validated(self):
         node = shutil.which("node")
