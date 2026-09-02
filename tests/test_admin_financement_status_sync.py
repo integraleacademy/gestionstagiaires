@@ -180,10 +180,33 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("/api/sessions/${encodeURIComponent(sessionId)}/stagiaires/${encodeURIComponent(traineeId)}/update", template)
         self.assertNotIn("/admin/sessions/${encodeURIComponent(sessionId)}/trainees/${encodeURIComponent(traineeId)}/update", template)
         self.assertIn("setFinanceSaveIndicator('Financement validé','saved')", template)
+        self.assertIn("computed.personalFundingPlanned", template)
+        self.assertIn("computed.personalFundingInvoiced", template)
+        self.assertIn("value:`${fmtMoney(c.personalFundingInvoiced)} / ${fmtMoney(c.personalFundingPlanned)}`", template)
+        self.assertIn("badge(personalFundingFact[0],personalFundingFact[1])", template)
         self.assertIn("computed.otherFundingPlanned", template)
         self.assertIn("computed.otherFundingInvoiced", template)
         self.assertIn("value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`", template)
         self.assertIn("badge(otherFundingFact[0],otherFundingFact[1])", template)
+
+    def test_finance_kpis_distinguish_funding_sources_and_payment_statuses(self):
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+
+        self.assertIn('id="financeSummaryCards" class="finance-kpi-groups"', template)
+        self.assertIn("finance-kpi-group--funding", template)
+        self.assertIn("finance-kpi-group--payment", template)
+        self.assertIn("const fundingCards=[", template)
+        self.assertIn("{label:'Financement personnel'", template)
+        self.assertIn("{label:'Autres financements'", template)
+        self.assertNotIn("{label:'AUTRES FINANCEMENTS'", template)
+
+        payment_start = template.index("    const paymentCards=[")
+        payment_end = template.index("\n    ];", payment_start)
+        payment_cards = template[payment_start:payment_end]
+        self.assertLess(payment_cards.index("{label:'Prélèvements'"), payment_cards.index("{label:'Payé'"))
 
     def test_fully_paid_other_funding_is_automatically_validated(self):
         node = shutil.which("node")
@@ -238,7 +261,8 @@ process.stdout.write(JSON.stringify({{paid, unpaid}}));
         self.assertIn("badge('Générée ailleurs','purple')", template)
         self.assertIn("finance-badge--black", template)
         self.assertIn("finance-badge--purple", template)
-        self.assertIn("invoiceOriginBadges(currentLines)", template)
+        self.assertIn("invoiceOriginBadges(personalFundingLines)", template)
+        self.assertIn("invoiceOriginBadges(otherFundingLines)", template)
 
     def test_completed_invoice_generation_is_not_a_notification(self):
         template = gestion_app.app.jinja_loader.get_source(
