@@ -175,19 +175,40 @@ class WedofClient:
             time.sleep(delay)
 
         if response.status_code == 401:
-            raise WedofApiError("La clé API WEDOF est invalide ou refusée.", "wedof_unauthorized")
+            raise WedofApiError(
+                "La clé API WEDOF est invalide ou refusée.",
+                "wedof_unauthorized", False, response.status_code,
+            )
         if response.status_code == 403:
             if path == "/registrationFolders":
-                raise WedofApiError("L’abonnement ou le jeton ne permet pas d’accéder aux dossiers WEDOF.", "wedof_forbidden")
-            raise WedofApiError("La clé API WEDOF ne permet pas d’accéder à cet organisme.", "wedof_forbidden")
+                raise WedofApiError(
+                    "L’abonnement ou le jeton ne permet pas d’accéder aux dossiers WEDOF.",
+                    "wedof_forbidden", False, response.status_code,
+                )
+            raise WedofApiError(
+                "La clé API WEDOF ne permet pas d’accéder à cet organisme.",
+                "wedof_forbidden", False, response.status_code,
+            )
         if response.status_code == 404:
-            raise WedofApiError("La ressource WEDOF demandée est introuvable.", "wedof_not_found")
+            raise WedofApiError(
+                "La ressource WEDOF demandée est introuvable.",
+                "wedof_not_found", False, response.status_code,
+            )
         if response.status_code == 429:
-            raise WedofApiError("L’API WEDOF reçoit trop de demandes. Réessayez plus tard.", "wedof_rate_limited", True)
+            raise WedofApiError(
+                "L’API WEDOF reçoit trop de demandes. Réessayez plus tard.",
+                "wedof_rate_limited", True, response.status_code,
+            )
         if response.status_code >= 500:
-            raise WedofApiError("L’API WEDOF est temporairement indisponible.", "wedof_server_error", True)
+            raise WedofApiError(
+                "L’API WEDOF est temporairement indisponible.",
+                "wedof_server_error", True, response.status_code,
+            )
         if not 200 <= response.status_code < 300:
-            raise WedofApiError("L’API WEDOF a refusé la demande de vérification.")
+            raise WedofApiError(
+                "L’API WEDOF a refusé la demande de vérification.",
+                "wedof_api_error", False, response.status_code,
+            )
         try:
             return response.json(), response
         except (ValueError, TypeError) as exc:

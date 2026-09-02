@@ -16,6 +16,7 @@ ENTRY_DONE_STATES = {"inTraining", "terminated", *SERVICE_DONE_STATES}
 ALL_STATES = ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated")
 RUN_HISTORY_LIMIT = 100
 LIVE_CANDIDATE_LIMIT_DEFAULT = 30
+LIVE_RETRY_MINUTES_DEFAULT = 10
 MAINTENANCE_TIMEZONE = "Europe/Paris"
 MAINTENANCE_START_DEFAULT = "05:00"
 MAINTENANCE_END_DEFAULT = "07:00"
@@ -45,6 +46,75 @@ def _capacity_error_code(exc: Exception) -> Optional[str]:
     if code in _CAPACITY_ERROR_CODES:
         return code
     return "wedof_rate_limited" if getattr(exc, "http_status", None) == 429 else None
+
+
+def _live_retry_minutes() -> int:
+    """Borne le délai entre deux contrôles urgents après une panne WEDOF."""
+    try:
+        configured = int(os.environ.get(
+            "WEDOF_LIVE_RETRY_MINUTES",
+            str(LIVE_RETRY_MINUTES_DEFAULT),
+        ))
+    except (TypeError, ValueError):
+        configured = LIVE_RETRY_MINUTES_DEFAULT
+    return max(5, min(configured, 60))
+
+
+def _parse_retry_at(value: Any) -> Optional[dt.datetime]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=PARIS_TZ)
+    return parsed.astimezone(PARIS_TZ)
+
+
+def _active_live_retry(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Retrouve le dernier circuit ouvert dans l'historique déjà persistant."""
+    retry = data.get("wedof_automation_retry")
+    if isinstance(retry, dict) and retry.get("active") is True:
+        return retry
+    runs = data.get("wedof_automation_runs")
+    last_run = runs[-1] if isinstance(runs, list) and runs else {}
+    if isinstance(last_run, dict) and last_run.get("status") == "retry_scheduled":
+        return {"active": True, **last_run}
+    return {}
+
+
+def _schedule_live_retry(
+    data: Dict[str, Any], current: dt.datetime, *, external_id: str,
+    action: str, error_code: str, http_status: Optional[int],
+    error_message: str,
+) -> Dict[str, Any]:
+    """Ouvre le circuit WEDOF et programme une seule nouvelle tentative globale."""
+    previous = _active_live_retry(data)
+    retry_at = current.replace(second=0, microsecond=0) + dt.timedelta(
+        minutes=_live_retry_minutes(),
+    )
+    retry = {
+        "active": True,
+        "scheduled_at": current.isoformat(),
+        "retry_at": retry_at.isoformat(),
+        "external_id": external_id,
+        "action": action,
+        "last_error_code": error_code,
+        "last_http_status": http_status,
+        "last_error_message": error_message,
+        "consecutive_failures": int(previous.get("consecutive_failures") or 0) + 1,
+    }
+    return retry
+
+
+def _read_error_requires_global_retry(exc: Exception) -> bool:
+    """Une panne globale ne doit jamais être répétée sur tous les dossiers dus."""
+    http_status = getattr(exc, "http_status", None)
+    if http_status in {400, 404}:
+        return False
+    return True
 
 
 def _get_live_registration_folder(client: Any, external_id: str) -> Dict[str, Any]:
@@ -130,16 +200,16 @@ def automation_dashboard_state(data: Dict[str, Any]) -> str:
 
 
 def next_automatic_attempt(now: Optional[dt.datetime] = None) -> dt.datetime:
-    """Retourne le prochain passage horaire à :05 qui n'est pas en maintenance."""
+    """Retourne le prochain passage à :05, :15, … hors maintenance."""
     current = now or dt.datetime.now(PARIS_TZ)
     if current.tzinfo is None:
         current = current.replace(tzinfo=PARIS_TZ)
     current = current.astimezone(PARIS_TZ)
-    candidate = current.replace(minute=5, second=0, microsecond=0)
-    if candidate <= current:
-        candidate += dt.timedelta(hours=1)
+    candidate = current.replace(second=0, microsecond=0) + dt.timedelta(minutes=1)
+    while candidate.minute % 10 != 5:
+        candidate += dt.timedelta(minutes=1)
     while is_wedof_maintenance_window(candidate)["active"]:
-        candidate += dt.timedelta(hours=1)
+        candidate += dt.timedelta(minutes=10)
     return candidate
 
 
@@ -496,7 +566,10 @@ def _set_dashboard_action(data: Dict[str, Any], external_id: str, action: str,
                    "executed_at": journal.get("executed_at"),
                    "wedof_state_before": journal.get("wedof_state_before"),
                    "wedof_state_after": journal.get("wedof_state_after"),
-                   "last_error_code": journal.get("last_error_code")}
+                   "last_error_code": journal.get("last_error_code"),
+                   "last_http_status": journal.get("last_http_status"),
+                   "last_error_message": journal.get("last_error_message"),
+                   "retry_at": journal.get("retry_at")}
 
 
 def _planned_datetime(record: Dict[str, Any], current: dt.datetime) -> Optional[dt.datetime]:
@@ -631,10 +704,21 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         result["mode"] = "live"
         data["wedof_automation_runs"][-1]["mode"] = "live"
         return result
+    pending_retry = _active_live_retry(data)
+    retry_at = _parse_retry_at(pending_retry.get("retry_at"))
+    if retry_at is not None and current < retry_at:
+        return {
+            "ok": True,
+            "mode": "live",
+            "status": "retry_waiting",
+            "retry_at": retry_at.isoformat(),
+            "stop_reason": pending_retry.get("last_error_code"),
+        }
     actions = data.setdefault("wedof_automation_actions", [])
     counts = {"entry_success": 0, "service_done_success": 0, "already_done": 0,
               "blocked": 0, "errors": 0, "uncertain": 0, "quota_blocked": 0,
-              "candidates": 0, "selected": 0, "processed": 0, "remaining": 0}
+              "retry_scheduled": 0, "candidates": 0, "selected": 0,
+              "processed": 0, "remaining": 0}
     # Aucun listing WEDOF ici : le cache/webhook fournit les échéances et seul
     # le dossier réellement dû est relu avant une éventuelle mutation.
     all_candidates = _due_live_candidates(data, current)
@@ -644,6 +728,8 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
     counts["selected"] = len(candidates)
     counts["remaining"] = len(all_candidates)
     stop_reason = None
+    stop_status = None
+    scheduled_retry: Dict[str, Any] = {}
     for external_id, action, listed in candidates:
         counts["processed"] += 1
         counts["remaining"] = max(0, len(all_candidates) - counts["processed"])
@@ -669,12 +755,48 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             remote = extract_folder(fresh)
         except Exception as exc:
             counts["errors"] += 1
-            capacity_code = _capacity_error_code(exc)
-            if capacity_code:
-                _mark_capacity_blocked(data, external_id, action, current, capacity_code)
-                counts["quota_blocked"] += 1
-                stop_reason = capacity_code
+            error_code = str(getattr(exc, "code", "") or "wedof_api_error")
+            http_status = getattr(exc, "http_status", None)
+            error_message = str(
+                getattr(exc, "user_message", "") or str(exc) or
+                "La lecture du dossier WEDOF a échoué."
+            )[:240]
+            date_key = "start_date" if action == "entry_training" else "end_date"
+            business_date = (
+                str((existing or {}).get("business_date") or "").strip()
+                or normalize_date(listed.get(date_key))
+                or ""
+            )
+            journal = existing or _new_action(external_id, action, business_date, current)
+            if not existing:
+                actions.append(journal)
+            previous_status = str(journal.get("status") or "")
+            journal.update(
+                status=("uncertain_after_timeout" if previous_status in {
+                    "processing", "uncertain_after_timeout",
+                } else "error"),
+                updated_at=current.isoformat(),
+                last_http_status=http_status,
+                last_error_code=error_code,
+                last_error_message=error_message,
+                precheck_failures=int(journal.get("precheck_failures") or 0) + 1,
+            )
+            if _read_error_requires_global_retry(exc):
+                scheduled_retry = _schedule_live_retry(
+                    data, current, external_id=external_id, action=action,
+                    error_code=error_code, http_status=http_status,
+                    error_message=error_message,
+                )
+                if journal["status"] != "uncertain_after_timeout":
+                    journal["status"] = "retry_pending"
+                journal["retry_at"] = scheduled_retry["retry_at"]
+                _set_dashboard_action(data, external_id, action, listed, journal, current)
+                counts["retry_scheduled"] += 1
+                stop_reason = error_code
+                stop_status = "retry_scheduled"
                 break
+            journal["retry_at"] = None
+            _set_dashboard_action(data, external_id, action, listed, journal, current)
             continue
         # Reconcile durable success/uncertainty/processing before considering a POST.
         if existing and existing.get("status") in {"success", "already_done"}:
@@ -778,17 +900,26 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
                 journal["status"] = "error"
                 counts["errors"] += 1
                 _set_dashboard_action(data, external_id, action, fresh, journal, current)
-    run_status = "quota_blocked" if stop_reason else "success"
+    run_status = stop_status or ("quota_blocked" if stop_reason else "success")
     run = {"run_id": "WRUN-" + uuid.uuid4().hex[:12].upper(), "started_at": current.isoformat(),
            "finished_at": dt.datetime.now(PARIS_TZ).isoformat(), "mode": "live", "status": run_status,
-           "candidate_limit": candidate_limit, "stop_reason": stop_reason, **counts}
+           "candidate_limit": candidate_limit, "stop_reason": stop_reason,
+           "retry_at": scheduled_retry.get("retry_at"),
+           "last_error_code": scheduled_retry.get("last_error_code"),
+           "last_http_status": scheduled_retry.get("last_http_status"),
+           "last_error_message": scheduled_retry.get("last_error_message"),
+           "retry_external_id": scheduled_retry.get("external_id"),
+           "retry_action": scheduled_retry.get("action"),
+           "consecutive_failures": scheduled_retry.get("consecutive_failures", 0),
+           **counts}
     data["wedof_automation_runs"] = (data.get("wedof_automation_runs", []) + [run])[-RUN_HISTORY_LIMIT:]
     return {"ok": True, "mode": "live", "status": run_status,
-            "candidate_limit": candidate_limit, "stop_reason": stop_reason, **counts}
+            "candidate_limit": candidate_limit, "stop_reason": stop_reason,
+            "retry_at": scheduled_retry.get("retry_at"), **counts}
 
 
 _DASHBOARD_SCHEDULED_STATUSES = {
-    "planned", "dry_run_due", "dry_run_due_late", "quota_blocked",
+    "planned", "dry_run_due", "dry_run_due_late", "quota_blocked", "retry_pending",
 }
 
 
@@ -874,6 +1005,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "block_created_at": (block or {}).get("created_at"), "block_updated_at": (block or {}).get("updated_at"),
                      "planned_date": action.get("planned_date") or (remote.get("start_date") if state == "accepted" else remote.get("end_date")),
                      "planned_time": action.get("planned_time") or ("18:00" if state == "accepted" else "23:00"),
+                     "last_error_code": action.get("last_error_code"),
+                     "last_http_status": action.get("last_http_status"),
+                     "last_error_message": action.get("last_error_message"),
+                     "retry_at": action.get("retry_at"),
                      "session_id": (link or {}).get("session_id"), "session": association.get("session_label", "Non rattachée"),
                      "trainee_id": (link or {}).get("trainee_id"), "trainee": association.get("trainee_label", "Non rattaché"),
                      "linked": linked, "association": association.get("association_label", "À rattacher localement"),
@@ -916,6 +1051,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "wedof_date_start": date_start, "wedof_date_end": date_end,
                      "start_date": date_start, "end_date": date_end,
                      "planned_date": action.get("planned_date"), "planned_time": action.get("planned_time"),
+                     "last_error_code": action.get("last_error_code"),
+                     "last_http_status": action.get("last_http_status"),
+                     "last_error_message": action.get("last_error_message"),
+                     "retry_at": action.get("retry_at"),
                      "session_id": (link or {}).get("session_id"), "session": association.get("session_label", "Non rattachée"),
                      "trainee_id": (link or {}).get("trainee_id"), "trainee": association.get("trainee_label", "Non rattaché"),
                      "linked": link is not None, "association": association.get("association_label", "À rattacher localement"),
@@ -943,7 +1082,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
 
     stats = {"accepted":sum(x["tab"]=="accepted" for x in rows), "training":sum(x["tab"]=="training" for x in rows),
              "service":sum(x["tab"]=="service" for x in rows), "anomaly":sum(x["tab"]=="anomaly" for x in rows),
-             "planned":sum(x["automation_status"] in {"planned", "quota_blocked"} for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
+             "planned":sum(x["automation_status"] in {"planned", "quota_blocked", "retry_pending"} for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
              "blocked":sum(x["automation_blocked"] for x in rows),
              "unlinked":sum(x["unlinked_since_tracking_start"] for x in rows)}
     return {"rows": rows, "stats": stats}

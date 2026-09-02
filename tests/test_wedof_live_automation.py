@@ -83,6 +83,7 @@ def test_live_mode_only_obeys_explicit_kill_switch():
         with patch.dict(os.environ, env, clear=False):
             assert gestion_app._wedof_live_mode_enabled() is expected
 
+
 def test_entry_due_and_not_before_target_using_only_wedof_date():
     for hour, expected in [(17, 0), (18, 1)]:
         now = dt.datetime(2026, 8, 11, hour, 1, tzinfo=PARIS)
@@ -158,29 +159,81 @@ def test_generic_folder_cache_never_enrols_a_dossier_into_live_automation():
     assert data["wedof_automation_status"] == []
 
 
-def test_live_candidates_are_oldest_first_and_bounded_per_run():
+def test_transient_read_failure_stops_after_one_candidate_and_schedules_retry():
     now = dt.datetime(2026, 9, 3, 19, 0, tzinfo=PARIS)
     data = automation_rows([
         folder("NEWEST", start="2026-09-02"),
         folder("OLDEST", start="2026-08-31"),
         folder("MIDDLE", start="2026-09-01"),
     ], now)
-    client = Mock()
-    client.get_registration_folder.side_effect = WedofApiError(
-        "temporary", "wedof_server_error", True, 500,
+    error = WedofApiError(
+        "L’API WEDOF est temporairement indisponible.",
+        "wedof_server_error", True, 503,
     )
+
+    class FailingClient:
+        def __init__(self):
+            self.gets = []
+
+        def get_registration_folder_for_automation(self, external_id):
+            self.gets.append(external_id)
+            raise error
+
+    client = FailingClient()
 
     with patch.dict(os.environ, {"WEDOF_LIVE_MAX_CANDIDATES_PER_RUN": "2"}):
         result = run_live_automation(client, data, now=now)
 
-    assert [call.args[0] for call in client.get_registration_folder.call_args_list] == [
-        "OLDEST", "MIDDLE",
-    ]
+    assert client.gets == ["OLDEST"]
+    assert result["status"] == "retry_scheduled"
+    assert result["stop_reason"] == "wedof_server_error"
     assert result["candidates"] == 3
     assert result["selected"] == 2
-    assert result["processed"] == 2
-    assert result["remaining"] == 1
+    assert result["processed"] == 1
+    assert result["remaining"] == 2
     assert result["candidate_limit"] == 2
+    assert result["retry_at"] == "2026-09-03T19:10:00+02:00"
+    assert data["wedof_automation_runs"][-1]["last_http_status"] == 503
+    action = data["wedof_automation_actions"][0]
+    assert action["status"] == "retry_pending"
+    assert action["last_error_code"] == "wedof_server_error"
+    assert action["last_http_status"] == 503
+
+
+def test_retry_waits_ten_minutes_then_resumes_the_overdue_declaration():
+    failed_at = dt.datetime(2026, 9, 2, 7, 5, tzinfo=PARIS)
+    initial = folder("OVERDUE", start="2026-09-01")
+    data = automation_data(initial, failed_at)
+
+    class FailingClient:
+        def get_registration_folder_for_automation(self, external_id):
+            raise WedofApiError(
+                "L’API WEDOF est temporairement indisponible.",
+                "wedof_server_error", True, 503,
+            )
+
+    run_live_automation(FailingClient(), data, now=failed_at)
+
+    waiting_client = Client(initial, folder("OVERDUE", state="inTraining", start="2026-09-01"))
+    waiting = run_live_automation(
+        waiting_client, data,
+        now=dt.datetime(2026, 9, 2, 7, 14, tzinfo=PARIS),
+    )
+    assert waiting["status"] == "retry_waiting"
+    assert waiting_client.gets == 0
+    assert waiting_client.posts == []
+
+    recovered_client = Client(
+        initial, folder("OVERDUE", state="inTraining", start="2026-09-01"),
+    )
+    recovered = run_live_automation(
+        recovered_client, data,
+        now=dt.datetime(2026, 9, 2, 7, 15, tzinfo=PARIS),
+    )
+    assert recovered["status"] == "success"
+    assert recovered["entry_success"] == 1
+    assert recovered_client.posts == [("entry_training", "OVERDUE", "2026-09-01")]
+    assert data["wedof_automation_runs"][-1]["status"] == "success"
 
 
 def test_permanent_error_never_hides_a_later_executable_action():
@@ -193,42 +246,54 @@ def test_permanent_error_never_hides_a_later_executable_action():
         "external_id": "PERMANENT", "action": "entry_training",
         "status": "error", "last_http_status": 400,
     }]
-    client = Mock()
-    client.get_registration_folder.side_effect = WedofApiError(
-        "temporary", "wedof_server_error", True, 500,
-    )
+    class FailingClient:
+        def __init__(self):
+            self.gets = []
+
+        def get_registration_folder(self, external_id):
+            self.gets.append(external_id)
+            raise WedofApiError("temporary", "wedof_server_error", True, 500)
+
+    client = FailingClient()
 
     with patch.dict(os.environ, {"WEDOF_LIVE_MAX_CANDIDATES_PER_RUN": "1"}):
         result = run_live_automation(client, data, now=now)
 
-    client.get_registration_folder.assert_called_once_with("EXECUTABLE")
+    assert client.gets == ["EXECUTABLE"]
     assert result["candidates"] == 1
     assert result["processed"] == 1
     assert result["remaining"] == 0
 
 
-def test_quota_error_stops_the_run_and_keeps_every_due_action_pending():
+def test_unexpected_internal_quota_error_stops_and_schedules_a_retry():
     now = dt.datetime(2026, 9, 2, 19, 0, tzinfo=PARIS)
     data = automation_rows([
         folder("A", start="2026-09-01"),
         folder("B", start="2026-09-01"),
         folder("C", start="2026-09-01"),
     ], now)
-    client = Mock()
-    client.get_registration_folder.side_effect = WedofApiError(
-        "quota", "wedof_quota_exceeded", False, 429,
-    )
+    class LimitedClient:
+        def __init__(self):
+            self.gets = []
+
+        def get_registration_folder_for_automation(self, external_id):
+            self.gets.append(external_id)
+            raise WedofApiError(
+                "quota", "wedof_quota_exceeded", False, 429,
+            )
+
+    client = LimitedClient()
 
     result = run_live_automation(client, data, now=now)
 
-    client.get_registration_folder.assert_called_once_with("A")
-    assert result["status"] == "quota_blocked"
+    assert client.gets == ["A"]
+    assert result["status"] == "retry_scheduled"
     assert result["stop_reason"] == "wedof_quota_exceeded"
-    assert result["quota_blocked"] == 1
+    assert result["retry_scheduled"] == 1
     assert result["processed"] == 1
     assert result["remaining"] == 2
     statuses = {row["external_id"]: row for row in data["wedof_automation_status"]}
-    assert statuses["A"]["entry_training"]["status"] == "quota_blocked"
+    assert statuses["A"]["entry_training"]["status"] == "retry_pending"
     assert statuses["A"]["entry_training"]["planned_date"] == "2026-09-01"
     assert statuses["B"]["entry_training"]["status"] == "dry_run_due_late"
     assert statuses["C"]["entry_training"]["status"] == "dry_run_due_late"

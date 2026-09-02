@@ -245,7 +245,17 @@
     </div>
   {% endif %}
 
-  {% if wedof_last_run and wedof_last_run.status == 'quota_blocked' %}
+  {% if wedof_last_run and wedof_last_run.status == 'retry_scheduled' %}
+    <div class="wedof-notice is-warning" role="alert">
+      <strong>WEDOF ne répond pas correctement : nouvelle tentative automatique programmée</strong>
+      <span>
+        {{ wedof_last_run.last_error_message or 'La lecture d’un dossier WEDOF a échoué.' }}
+        {% if wedof_last_run.last_http_status %} · code HTTP {{ wedof_last_run.last_http_status }}{% endif %}
+        {% if wedof_last_run.retry_at %} · nouvel essai le {{ wedof_last_run.retry_at|frdatetime }}{% endif %}.
+        Les autres dossiers urgents restent en attente afin d’éviter des dizaines de contrôles inutiles.
+      </span>
+    </div>
+  {% elif wedof_last_run and wedof_last_run.status == 'quota_blocked' %}
     <div class="wedof-notice is-warning" role="alert">
       <strong>Automatisations temporairement arrêtées par le quota WEDOF</strong>
       <span>Les dossiers restent programmés et reprendront automatiquement au prochain passage disposant de requêtes.</span>
@@ -332,7 +342,7 @@
           {% for item in wedof_dashboard.rows %}
             <tr
               data-wedof-panel="{{ item.tab }}"
-              data-wedof-planned="{{ 'true' if item.automation_status in ['planned','quota_blocked'] else 'false' }}"
+              data-wedof-planned="{{ 'true' if item.automation_status in ['planned','quota_blocked','retry_pending'] else 'false' }}"
               data-wedof-blocked="{{ 'true' if item.automation_blocked else 'false' }}"
               data-wedof-entry-success="{{ 'true' if item.entry_success else 'false' }}"
               data-wedof-service-success="{{ 'true' if item.service_success else 'false' }}"
@@ -366,6 +376,13 @@
                   {% elif item.automation_status == 'quota_blocked' %}
                     <span class="wedof-badge is-warning">Bloquée par le quota WEDOF</span>
                     <small>Nouvelle tentative automatique au prochain passage disponible</small>
+                  {% elif item.automation_status == 'retry_pending' %}
+                    <span class="wedof-badge is-warning">Lecture WEDOF temporairement impossible</span>
+                    <small>
+                      {{ item.last_error_message or 'Nouvelle tentative automatique programmée' }}
+                      {% if item.last_http_status %} · HTTP {{ item.last_http_status }}{% endif %}
+                      {% if item.retry_at %} · nouvel essai le {{ item.retry_at|frdatetime }}{% endif %}
+                    </small>
                   {% elif item.automation_status == 'dry_run_due' %}
                     <span class="wedof-badge is-warning">Prête en mode test</span>
                   {% elif item.automation_status == 'dry_run_due_late' %}
@@ -384,8 +401,8 @@
                     <span class="wedof-badge is-danger">Anomalie</span>
                   {% endif %}
                   {% if item.tab == 'anomaly' and item.automation_status != 'anomaly' %}<span class="wedof-badge is-danger">Anomalie</span>{% endif %}
-                  {% if item.planned_date and item.automation_status in ['planned','quota_blocked','dry_run_due','dry_run_due_late'] and not item.automation_blocked %}
-                    <small>{{ 'Entrée' if item.state == 'accepted' else 'Service fait' }} prévu le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>
+                  {% if item.planned_date and item.automation_status in ['planned','quota_blocked','retry_pending','dry_run_due','dry_run_due_late'] and not item.automation_blocked %}
+                    <small>{{ 'Entrée prévue' if item.state == 'accepted' else 'Service fait prévu' }} le {{ item.planned_date|format_date_fr }} à {{ item.planned_time }}</small>
                   {% endif %}
                   {% if item.entry_success %}
                     <span class="wedof-badge is-success">Entrée en formation déclarée ✅</span>
