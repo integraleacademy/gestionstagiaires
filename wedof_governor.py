@@ -221,8 +221,15 @@ def quota_snapshot(
 def reserve_request(
     *, origin: str, operation: str, method: str, path: str,
     now: Optional[dt.datetime] = None,
+    allow_over_limit: bool = False,
 ) -> Dict[str, Any]:
-    """Compte une tentative avant son envoi et bloque tout dépassement."""
+    """Compte une tentative avant son envoi et bloque tout dépassement.
+
+    ``allow_over_limit`` est réservé aux déclarations métier urgentes du moteur
+    live (entrée en formation et service fait). Ces appels restent comptés et
+    auditables, mais ne sont pas empêchés par les plafonds internes. Les limites
+    de cadence du moteur et les réponses 429 de WEDOF restent inchangées.
+    """
     if not governor_enabled():
         return {"ok": True, "enabled": False}
     current = _current(now)
@@ -237,10 +244,11 @@ def reserve_request(
     try:
         db.execute("BEGIN IMMEDIATE")
         snapshot = _snapshot_with_connection(db, current)
-        if any(
+        over_limit = any(
             snapshot["periods"][period]["used"] + 1 > limits[period]
             for period in ("hour", "day", "month")
-        ):
+        )
+        if over_limit and not allow_over_limit:
             db.rollback()
             raise WedofQuotaExceeded(snapshot)
         for period, bucket in bucket_keys.items():
@@ -265,7 +273,11 @@ def reserve_request(
         )
         db.commit()
         updated = _snapshot_with_connection(db, current)
-        return {"ok": True, **updated}
+        return {
+            "ok": True,
+            "internal_limit_bypassed": bool(over_limit and allow_over_limit),
+            **updated,
+        }
     except WedofQuotaExceeded:
         raise
     except sqlite3.Error as exc:

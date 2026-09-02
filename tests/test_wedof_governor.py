@@ -74,6 +74,38 @@ def test_counter_is_shared_by_origin_and_blocks_before_overrun():
         }
 
 
+def test_urgent_automation_is_counted_and_continues_after_internal_limit():
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "governor.sqlite3")
+        now = dt.datetime(2026, 9, 2, 19, 0, tzinfo=PARIS)
+        with governor_env(path):
+            for operation in ("ordinary_get", "ordinary_search"):
+                reserve_request(
+                    origin="gestionstagiaires", operation=operation,
+                    method="GET", path="/registrationFolders/:id", now=now,
+                )
+
+            urgent = reserve_request(
+                origin="gestionstagiaires", operation="registration_folder_action",
+                method="POST", path="/registrationFolders/:id/inTraining",
+                now=now, allow_over_limit=True,
+            )
+
+            with pytest.raises(WedofQuotaExceeded):
+                reserve_request(
+                    origin="gestionstagiaires", operation="ordinary_get",
+                    method="GET", path="/registrationFolders/:id", now=now,
+                )
+            snapshot = quota_snapshot(now=now)
+
+        assert urgent["internal_limit_bypassed"] is True
+        assert snapshot["periods"]["hour"]["used"] == 3
+        assert snapshot["periods"]["day"]["used"] == 3
+        assert snapshot["periods"]["month"]["used"] == 3
+        assert snapshot["periods"]["day"]["remaining"] == 0
+        assert snapshot["periods"]["day"]["status"] == "blocked"
+
+
 def test_lease_is_cross_process_safe_and_releasable():
     with tempfile.TemporaryDirectory() as directory:
         path = os.path.join(directory, "governor.sqlite3")

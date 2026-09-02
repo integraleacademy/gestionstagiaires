@@ -87,7 +87,10 @@ class WedofClient:
         self._backoff = _bounded_env("WEDOF_GET_BACKOFF_SECONDS", 1, 0, 10)
         self._page_limit = _bounded_env("WEDOF_PAGE_LIMIT", 50, 10, 100, integer=True)
 
-    def _reserve(self, method: str, path: str, *, operation: Optional[str] = None) -> None:
+    def _reserve(
+        self, method: str, path: str, *, operation: Optional[str] = None,
+        allow_over_limit: bool = False,
+    ) -> None:
         safe_path = re.sub(r"(/registrationFolders/)[^/]+", r"\1:id", path)
         resolved_operation = str(operation or "").strip()[:80]
         if not resolved_operation:
@@ -100,10 +103,15 @@ class WedofClient:
             else:
                 resolved_operation = "wedof_request"
         try:
-            reserve_request(
-                origin=self._origin, operation=resolved_operation,
-                method=method, path=safe_path,
-            )
+            reservation: Dict[str, Any] = {
+                "origin": self._origin,
+                "operation": resolved_operation,
+                "method": method,
+                "path": safe_path,
+            }
+            if allow_over_limit:
+                reservation["allow_over_limit"] = True
+            reserve_request(**reservation)
         except WedofQuotaExceeded as exc:
             raise WedofApiError(
                 "Le plafond interne de requêtes WEDOF est atteint.",
@@ -118,7 +126,8 @@ class WedofClient:
     def _get_json_response(self, path: str, *, params: Optional[Mapping[str, Any]] = None,
                            timeout: Optional[Tuple[float, float]] = None,
                            max_attempts: Optional[int] = None, backoff: Optional[float] = None,
-                           operation: Optional[str] = None) -> Tuple[Any, Any]:
+                           operation: Optional[str] = None,
+                           allow_over_limit: bool = False) -> Tuple[Any, Any]:
         response = None
         request_timeout = timeout or self._timeout
         attempts = self._max_attempts if max_attempts is None else max(1, int(max_attempts))
@@ -126,7 +135,10 @@ class WedofClient:
         for attempt in range(1, attempts + 1):
             started = time.monotonic()
             try:
-                self._reserve("GET", path, operation=operation)
+                self._reserve(
+                    "GET", path, operation=operation,
+                    allow_over_limit=allow_over_limit,
+                )
                 response = self._session.get(f"{WEDOF_BASE_URL}{path}", headers=self._headers,
                                              params=params, timeout=request_timeout)
             except requests.Timeout as exc:
@@ -184,10 +196,16 @@ class WedofClient:
     def _get_json(self, path: str, *, params: Optional[Mapping[str, Any]] = None) -> Any:
         return self._get_json_response(path, params=params)[0]
 
-    def _post_json_response(self, path: str, payload: Mapping[str, Any]) -> Tuple[Any, Any]:
+    def _post_json_response(
+        self, path: str, payload: Mapping[str, Any], *,
+        operation: Optional[str] = None, allow_over_limit: bool = False,
+    ) -> Tuple[Any, Any]:
         """Envoie exactement une fois une mutation; le moteur réconcilie toute ambiguïté."""
         try:
-            self._reserve("POST", path)
+            self._reserve(
+                "POST", path, operation=operation,
+                allow_over_limit=allow_over_limit,
+            )
             response = self._session.post(f"{WEDOF_BASE_URL}{path}", headers=self._mutation_headers,
                                           json=dict(payload), timeout=self._timeout)
         except requests.Timeout as exc:
@@ -222,7 +240,9 @@ class WedofClient:
         identifier = self._identifier(external_id)
         business_date = self._validated_date(date)
         return self._post_json_response(f"/registrationFolders/{identifier}/inTraining",
-                                        {"date": business_date})[0]
+                                        {"date": business_date},
+                                        operation="urgent_automation_entry_training",
+                                        allow_over_limit=True)[0]
 
     def declare_registration_folder_service_done(self, external_id: str, date: str,
                                                   absence_duration: float = 0,
@@ -234,7 +254,11 @@ class WedofClient:
                                   "date": self._validated_date(date)}
         if isinstance(training_duration, (int, float)) and not isinstance(training_duration, bool) and training_duration >= 0:
             payload["trainingDuration"] = training_duration
-        return self._post_json_response(f"/registrationFolders/{identifier}/serviceDone", payload)[0]
+        return self._post_json_response(
+            f"/registrationFolders/{identifier}/serviceDone", payload,
+            operation="urgent_automation_service_done",
+            allow_over_limit=True,
+        )[0]
 
     @staticmethod
     def _validated_date(value: str) -> str:
@@ -318,6 +342,18 @@ class WedofClient:
         if not identifier or "/" in identifier:
             raise WedofApiError("L’identifiant du dossier WEDOF est invalide.")
         payload = self._get_json(f"/registrationFolders/{identifier}")
+        if not isinstance(payload, dict):
+            raise WedofApiError("La réponse WEDOF concernant le dossier est inattendue.")
+        return payload
+
+    def get_registration_folder_for_automation(self, external_id: str) -> Dict[str, Any]:
+        """Relit un dossier dû sans que les plafonds internes annulent l’action."""
+        identifier = self._identifier(external_id)
+        payload = self._get_json_response(
+            f"/registrationFolders/{identifier}",
+            operation="urgent_automation_due_get",
+            allow_over_limit=True,
+        )[0]
         if not isinstance(payload, dict):
             raise WedofApiError("La réponse WEDOF concernant le dossier est inattendue.")
         return payload

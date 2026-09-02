@@ -96,6 +96,30 @@ def test_entry_due_and_not_before_target_using_only_wedof_date():
         assert client.gets == expected * 2
 
 
+def test_live_engine_prefers_the_priority_read_path_when_available():
+    now = dt.datetime(2026, 9, 2, 19, 0, tzinfo=PARIS)
+    initial = folder(start="2026-09-01")
+    after = folder(state="inTraining", start="2026-09-01")
+
+    class PriorityClient(Client):
+        def __init__(self):
+            super().__init__(initial, after)
+            self.priority_gets = 0
+
+        def get_registration_folder_for_automation(self, external_id):
+            self.priority_gets += 1
+            return self.after if self.posts else self.initial
+
+        def get_registration_folder(self, external_id):
+            raise AssertionError("Le moteur live doit utiliser la voie prioritaire")
+
+    client = PriorityClient()
+    result = run_live_automation(client, automation_data(initial, now), now=now)
+
+    assert result["entry_success"] == 1
+    assert client.priority_gets == 2
+
+
 def test_future_live_action_is_persisted_as_planned_without_remote_mutation():
     now = dt.datetime(2026, 8, 12, 15, 25, tzinfo=PARIS)
     initial = folder(start="2026-09-07", end="2026-10-09")

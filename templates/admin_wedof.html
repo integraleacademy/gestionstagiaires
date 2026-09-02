@@ -24,6 +24,9 @@
   'cpf_identity_manual_search': 'Recherche manuelle par identité',
   'cpf_invoice_manual_refresh': 'Actualisation manuelle facture CPF',
   'registration_folder_action': 'Action sur un dossier',
+  'urgent_automation_due_get': 'Contrôle urgent d’une échéance',
+  'urgent_automation_entry_training': 'Entrée en formation urgente',
+  'urgent_automation_service_done': 'Service fait urgent',
   'get_current_organism': 'Lecture de l’organisme',
   'targeted_get': 'Lecture ciblée',
   'due_get': 'Contrôle d’une échéance',
@@ -75,7 +78,7 @@
       <div>
         <span class="wedof-section-label">Surveillance de l’API</span>
         <h2 id="wedof-consumption-title">Consommation WEDOF</h2>
-        <p>Chaque tentative est comptée avant son envoi. Les plafonds bloquent automatiquement tout dépassement.</p>
+        <p>Chaque tentative est comptée avant son envoi. Les plafonds bloquent les appels ordinaires, mais les déclarations urgentes d’entrée en formation et de service fait restent prioritaires.</p>
       </div>
       <a class="btn btn-outline wedof-quota-refresh" href="{{ url_for('admin_wedof_requests') }}#wedof-consumption">Actualiser les compteurs</a>
     </div>
@@ -173,7 +176,10 @@
                     {% if quota.status == 'blocked' %}Plafond atteint{% elif quota.status == 'critical' %}Plafond presque atteint{% else %}Consommation à surveiller{% endif %}
                     · {{ quota_period_labels[period_key][0]|lower }}
                   </strong>
-                  <span>{{ "{:.1f}".format(quota.utilization_percent or 0).replace('.', ',') }} % utilisé · {{ quota.remaining or 0 }} restant</span>
+                  <span>
+                    {{ "{:.1f}".format(quota.utilization_percent or 0).replace('.', ',') }} % utilisé · {{ quota.remaining or 0 }} restant
+                    {% if quota.status == 'blocked' %} · les déclarations urgentes continuent{% endif %}
+                  </span>
                 </div>
               {% endif %}
             {% endfor %}
