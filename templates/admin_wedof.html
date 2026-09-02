@@ -277,11 +277,11 @@
       <div>
         <span class="wedof-section-label">Vue d’ensemble</span>
         <h2 id="wedof-overview-title">État des dossiers</h2>
-        <p>Cliquez sur un indicateur pour afficher immédiatement les dossiers concernés.</p>
+        <p>Les services faits comptent uniquement les déclarations envoyées par Gestion Stagiaires. Cliquez sur un indicateur pour afficher les dossiers concernés.</p>
       </div>
     </div>
     <div class="wedof-counters" aria-label="États WEDOF">
-      {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits'),('anomaly','Anomalies')] %}
+      {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits par Gestion Stagiaires'),('anomaly','Anomalies')] %}
         <button type="button" class="wedof-counter" data-wedof-counter="{{ key }}" aria-label="Afficher les dossiers : {{ label }}">
           <strong>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong>
           <span>{{ label }}</span>
@@ -308,7 +308,7 @@
     </div>
     <div class="wedof-table-topbar">
       <div class="wedof-tabs" role="tablist" aria-label="Filtrer par état WEDOF">
-        {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits'),('anomaly','Anomalies')] %}
+        {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits par Gestion Stagiaires'),('anomaly','Anomalies')] %}
           <button type="button" role="tab" class="wedof-tab{% if loop.first %} is-active{% endif %}" data-wedof-tab="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">
             {{ label }}{% if wedof_dashboard_state != 'never_synchronized' %}<span>{{ st[key] }}</span>{% endif %}
           </button>
