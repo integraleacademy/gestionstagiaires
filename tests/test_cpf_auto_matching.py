@@ -285,7 +285,8 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
         self.assertEqual(response.json["status"], "suggestions")
         self.assertEqual(response.json["source"], "wedof")
         self.assertEqual(response.json["candidates"][0]["external_id"], "CPF-1")
-        self.assertEqual(saved["wedof_folder_cache"][0]["external_id"], "CPF-1")
+        self.assertEqual(saved.get("wedof_folder_cache", []), [])
+        self.assertEqual(saved.get("wedof_automation_status", []), [])
         self.assertEqual(saved["wedof_links"], [])
         remote.list_registration_folders_interactive.assert_called_once_with(
             "accepted", limit=100,
@@ -352,6 +353,33 @@ class CpfAutoMatchRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json["status"], "error")
+        self.assertEqual(saved["wedof_links"], [])
+
+    def test_partial_live_search_never_changes_the_shared_wedof_cache(self):
+        existing = remote_folder("CPF-KEEP")
+        temp, path = self._store(self._cached_data(existing))
+        unrelated = remote_folder("CPF-UNRELATED", attendee={
+            "firstName": "Autre", "lastName": "Personne",
+            "email": "other@example.fr", "phoneNumber": "0700000000",
+        })
+        remote = Mock()
+        remote.list_registration_folders_interactive.side_effect = [
+            [unrelated],
+            gestion_app.WedofApiError("timeout", "wedof_timeout"),
+        ]
+        with patch.object(gestion_app, "DATA_FILE", path), \
+             patch.object(gestion_app, "BACKUP_DIR", temp), \
+             patch.object(gestion_app, "WedofClient", return_value=remote):
+            response = self.client.post("/admin/sessions/S1/stagiaires/T1/cpf/live-match")
+        with open(path, encoding="utf-8") as stream:
+            saved = json.load(stream)
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            [item["external_id"] for item in saved["wedof_folder_cache"]],
+            ["CPF-KEEP"],
+        )
+        self.assertEqual(saved.get("wedof_automation_status", []), [])
         self.assertEqual(saved["wedof_links"], [])
 
     def test_suggested_folder_is_associated_in_one_verified_click(self):

@@ -16,6 +16,19 @@ def folder(external_id, state="accepted", **changes):
 
 
 class WedofDashboardUnitTests(unittest.TestCase):
+    def test_quota_blocked_action_stays_scheduled_and_sorted(self):
+        dashboard = build_automation_dashboard([], statuses=[{
+            "external_id": "QUOTA", "wedof_state": "accepted", "wedof_type": "cpf",
+            "wedof_date_start": "2026-09-01", "wedof_date_end": "2026-10-01",
+            "entry_training": {
+                "status": "quota_blocked", "planned_date": "2026-09-01",
+                "planned_time": "18:00", "last_error_code": "wedof_quota_exceeded",
+            },
+        }])
+
+        self.assertEqual(dashboard["rows"][0]["automation_status"], "quota_blocked")
+        self.assertEqual(dashboard["stats"]["planned"], 1)
+
     def test_rows_are_sorted_by_nearest_active_automation(self):
         statuses = [
             {"external_id": "LATER", "wedof_state": "accepted", "wedof_type": "cpf",
@@ -267,6 +280,30 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertIn("Déclarations automatiques actives</span><strong>Oui", html)
         self.assertIn("Cron de déclarations autorisé</span><strong>Oui", html)
         self.assertIn("Réconciliation en lecture seule</span><strong>Oui", html)
+
+    def test_admin_explains_a_quota_block_without_hiding_the_due_action(self):
+        data = {
+            "sessions": [], "wedof_links": [], "wedof_automation_runs": [{"status": "quota_blocked"}],
+            "wedof_automation_status": [{
+                "external_id": "QUOTA", "wedof_state": "accepted", "wedof_type": "cpf",
+                "wedof_date_start": "2026-09-01", "wedof_date_end": "2026-10-01",
+                "entry_training": {
+                    "status": "quota_blocked", "planned_date": "2026-09-01",
+                    "planned_time": "18:00", "last_error_code": "wedof_quota_exceeded",
+                },
+            }],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "_admin_wedof_quota_dashboard", return_value={"available": False}):
+            response = self.client.get("/admin/wedof")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Bloquée par le quota WEDOF", html)
+        self.assertIn("Nouvelle tentative automatique au prochain passage disponible", html)
+        self.assertIn("Automatisations temporairement arrêtées par le quota WEDOF", html)
+        self.assertIn("Entrée prévue le 01/09/2026 à 18:00", html)
 
     def test_compact_dashboard_tabs_counters_badges_and_sidebar(self):
         remote = Mock()

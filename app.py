@@ -34322,9 +34322,15 @@ def _cpf_fetch_matchable_folders(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _cpf_match_response_payload(
     data: Dict[str, Any], local_session: Dict[str, Any], trainee: Dict[str, Any],
     *, session_id: str, trainee_id: str, live_search: bool = False,
+    folders: Optional[Iterable[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
+    matchable_folders = (
+        _cpf_fetch_matchable_folders(data)
+        if folders is None
+        else [item for item in folders if isinstance(item, dict)]
+    )
     candidates = find_trainee_cpf_candidates(
-        _cpf_fetch_matchable_folders(data),
+        matchable_folders,
         local_session,
         trainee,
         allowed_states=CPF_ASSOCIATION_STATES,
@@ -34361,19 +34367,6 @@ def _cpf_match_response_payload(
         "candidates": public_candidates,
         "source": "wedof" if live_search else "cache",
     }
-
-
-def _persist_cpf_search_cache(folders: Iterable[Dict[str, Any]]) -> None:
-    snapshots = [item for item in folders if isinstance(item, dict)]
-    if not snapshots:
-        return
-
-    def mutate(canonical: Dict[str, Any]) -> Dict[str, Any]:
-        for folder in snapshots:
-            _upsert_wedof_folder_cache(canonical, folder)
-        return {"cached": len(snapshots)}
-
-    _atomic_update_data(mutate)
 
 
 def _cpf_active_link(data: Dict[str, Any], *, session_id: str, trainee_id: str) -> Optional[Dict[str, Any]]:
@@ -34598,13 +34591,14 @@ def admin_trainee_cpf_live_match(session_id: str, trainee_id: str):
             if state_candidates:
                 break
     except (WedofConfigurationError, WedofApiError):
-        _persist_cpf_search_cache(fetched_folders)
         return _cpf_match_json_error(
             "WEDOF est momentanément indisponible. Aucune association n’a été modifiée ; réessayez plus tard.",
             503,
         )
 
-    _persist_cpf_search_cache(fetched_folders)
+    # Les résultats d'une recherche manuelle restent propres à cette réponse.
+    # Seul le dossier explicitement associé est ensuite persisté dans le cache
+    # WEDOF et inscrit dans le suivi d'automatisation.
     data = load_data(run_background_tasks=False)
     local_session, trainee = _cpf_local_registration(data, session_id, trainee_id)
     if not local_session or not trainee:
@@ -34616,6 +34610,7 @@ def admin_trainee_cpf_live_match(session_id: str, trainee_id: str):
         session_id=session_id,
         trainee_id=trainee_id,
         live_search=True,
+        folders=fetched_folders,
     ))
 
 

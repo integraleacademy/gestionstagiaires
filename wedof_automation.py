@@ -15,10 +15,36 @@ SERVICE_DONE_STATES = {"serviceDoneDeclared", "serviceDoneValidated"}
 ENTRY_DONE_STATES = {"inTraining", "terminated", *SERVICE_DONE_STATES}
 ALL_STATES = ("accepted", "inTraining", "serviceDoneDeclared", "serviceDoneValidated")
 RUN_HISTORY_LIMIT = 100
+LIVE_CANDIDATE_LIMIT_DEFAULT = 30
 MAINTENANCE_TIMEZONE = "Europe/Paris"
 MAINTENANCE_START_DEFAULT = "05:00"
 MAINTENANCE_END_DEFAULT = "07:00"
 logger = logging.getLogger(__name__)
+
+_CAPACITY_ERROR_CODES = {
+    "wedof_quota_exceeded",
+    "wedof_governor_unavailable",
+    "wedof_rate_limited",
+}
+
+
+def _live_candidate_limit() -> int:
+    """Borne un passage live pour conserver une marge sous le plafond horaire."""
+    try:
+        configured = int(os.environ.get(
+            "WEDOF_LIVE_MAX_CANDIDATES_PER_RUN",
+            str(LIVE_CANDIDATE_LIMIT_DEFAULT),
+        ))
+    except (TypeError, ValueError):
+        configured = LIVE_CANDIDATE_LIMIT_DEFAULT
+    return max(1, min(configured, 100))
+
+
+def _capacity_error_code(exc: Exception) -> Optional[str]:
+    code = str(getattr(exc, "code", "") or "")
+    if code in _CAPACITY_ERROR_CODES:
+        return code
+    return "wedof_rate_limited" if getattr(exc, "http_status", None) == 429 else None
 
 
 def _maintenance_enabled() -> bool:
@@ -492,21 +518,12 @@ def _planned_datetime(record: Dict[str, Any], current: dt.datetime) -> Optional[
 def _due_live_candidates(
     data: Dict[str, Any], current: dt.datetime,
 ) -> list[tuple[str, str, Dict[str, Any]]]:
-    """Sélectionne uniquement les actions arrivées à échéance depuis le cache."""
+    """Sélectionne les actions suivies arrivées à échéance, par priorité métier."""
     cached_by_id = {
         str(item.get("external_id") or ""): item
         for item in data.get("wedof_folder_cache", [])
         if isinstance(item, dict) and item.get("external_id")
     }
-    status_ids = {
-        str(item.get("external_id") or "")
-        for item in data.get("wedof_automation_status", [])
-        if isinstance(item, dict)
-    }
-    for external_id, cached in cached_by_id.items():
-        if external_id not in status_ids:
-            sync_folder_automation_status(data, cached, now=current)
-
     actions = {
         (str(item.get("external_id") or ""), str(item.get("action") or "")): item
         for item in data.get("wedof_automation_actions", [])
@@ -528,7 +545,17 @@ def _due_live_candidates(
         journal = actions.get((external_id, action), {})
         if journal.get("status") in {"success", "already_done"}:
             continue
+        if (journal.get("status") == "error"
+                and journal.get("last_http_status") in {400, 401, 403, 404}):
+            # Une erreur fonctionnelle définitive ne doit pas occuper à chaque
+            # heure une place réservée aux dossiers encore exécutables.
+            continue
         record = row.get(action) if isinstance(row.get(action), dict) else {}
+        if record.get("status") in {"anomaly", "not_applicable"}:
+            # Une nouvelle donnée vérifiée (webhook, rattachement ou
+            # réconciliation) recalculera ce statut. Le cron ne doit pas relire
+            # indéfiniment un dossier inexploitable.
+            continue
         due_at = _planned_datetime(record, current)
         needs_reconciliation = journal.get("status") in {
             "processing", "uncertain_after_timeout",
@@ -541,8 +568,47 @@ def _due_live_candidates(
                 "start_date": row.get("wedof_date_start"),
                 "end_date": row.get("wedof_date_end"),
             }
-            candidates.append((external_id, action, cached))
-    return candidates
+            candidates.append((
+                0 if needs_reconciliation else 1,
+                due_at or current,
+                external_id,
+                action,
+                cached,
+            ))
+    candidates.sort(key=lambda item: (item[0], item[1], item[2].casefold(), item[3]))
+    return [(external_id, action, cached)
+            for _, _, external_id, action, cached in candidates]
+
+
+def _mark_capacity_blocked(
+    data: Dict[str, Any], external_id: str, action: str,
+    current: dt.datetime, error_code: str,
+) -> None:
+    """Expose un arrêt de capacité sans supprimer ni invalider l'échéance."""
+    row = next((
+        item for item in data.get("wedof_automation_status", [])
+        if isinstance(item, dict)
+        and str(item.get("external_id") or "") == external_id
+    ), None)
+    if row is None:
+        return
+    record = row.get(action) if isinstance(row.get(action), dict) else None
+    if record is None:
+        date_key = "wedof_date_start" if action == "entry_training" else "wedof_date_end"
+        record = _action_record(
+            "quota_blocked",
+            normalize_date(row.get(date_key)),
+            "18:00" if action == "entry_training" else "23:00",
+            current,
+            error_code,
+        )
+        row[action] = record
+    else:
+        record.update(
+            status="quota_blocked",
+            last_error_code=error_code,
+            last_evaluated_at=current.isoformat(),
+        )
 
 
 def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.datetime] = None,
@@ -559,12 +625,20 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         return result
     actions = data.setdefault("wedof_automation_actions", [])
     counts = {"entry_success": 0, "service_done_success": 0, "already_done": 0,
-              "blocked": 0, "errors": 0, "uncertain": 0, "candidates": 0}
+              "blocked": 0, "errors": 0, "uncertain": 0, "quota_blocked": 0,
+              "candidates": 0, "selected": 0, "processed": 0, "remaining": 0}
     # Aucun listing WEDOF ici : le cache/webhook fournit les échéances et seul
     # le dossier réellement dû est relu avant une éventuelle mutation.
-    candidates = _due_live_candidates(data, current)
-    counts["candidates"] = len(candidates)
+    all_candidates = _due_live_candidates(data, current)
+    candidate_limit = _live_candidate_limit()
+    candidates = all_candidates[:candidate_limit]
+    counts["candidates"] = len(all_candidates)
+    counts["selected"] = len(candidates)
+    counts["remaining"] = len(all_candidates)
+    stop_reason = None
     for external_id, action, listed in candidates:
+        counts["processed"] += 1
+        counts["remaining"] = max(0, len(all_candidates) - counts["processed"])
         # La donnée persistante est relue avant toute réservation et même avant le GET distant.
         block = _indexed_block(_active_blocks_by_key(data.get("wedof_automation_blocks", [])), external_id, action)
         existing = next((x for x in actions if isinstance(x, dict) and
@@ -585,8 +659,14 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
         try:
             fresh = client.get_registration_folder(external_id)
             remote = extract_folder(fresh)
-        except Exception:
+        except Exception as exc:
             counts["errors"] += 1
+            capacity_code = _capacity_error_code(exc)
+            if capacity_code:
+                _mark_capacity_blocked(data, external_id, action, current, capacity_code)
+                counts["quota_blocked"] += 1
+                stop_reason = capacity_code
+                break
             continue
         # Reconcile durable success/uncertainty/processing before considering a POST.
         if existing and existing.get("status") in {"success", "already_done"}:
@@ -658,6 +738,15 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
             http_status = getattr(exc, "http_status", None)
             code = getattr(exc, "code", "wedof_state_not_confirmed")
             journal.update(last_http_status=http_status, last_error_code=code, updated_at=current.isoformat())
+            capacity_code = _capacity_error_code(exc)
+            if capacity_code:
+                journal.update(status="quota_blocked", last_error_code=capacity_code,
+                               processing_started_at=None)
+                _set_dashboard_action(data, external_id, action, fresh, journal, current)
+                counts["errors"] += 1
+                counts["quota_blocked"] += 1
+                stop_reason = capacity_code
+                break
             # Timeout/connection ambiguity and 409 require one GET reconciliation, never another POST.
             if getattr(exc, "ambiguous", False) or http_status == 409:
                 try:
@@ -681,13 +770,18 @@ def run_live_automation(client: Any, data: Dict[str, Any], *, now: Optional[dt.d
                 journal["status"] = "error"
                 counts["errors"] += 1
                 _set_dashboard_action(data, external_id, action, fresh, journal, current)
+    run_status = "quota_blocked" if stop_reason else "success"
     run = {"run_id": "WRUN-" + uuid.uuid4().hex[:12].upper(), "started_at": current.isoformat(),
-           "finished_at": dt.datetime.now(PARIS_TZ).isoformat(), "mode": "live", "status": "success", **counts}
+           "finished_at": dt.datetime.now(PARIS_TZ).isoformat(), "mode": "live", "status": run_status,
+           "candidate_limit": candidate_limit, "stop_reason": stop_reason, **counts}
     data["wedof_automation_runs"] = (data.get("wedof_automation_runs", []) + [run])[-RUN_HISTORY_LIMIT:]
-    return {"ok": True, "mode": "live", **counts}
+    return {"ok": True, "mode": "live", "status": run_status,
+            "candidate_limit": candidate_limit, "stop_reason": stop_reason, **counts}
 
 
-_DASHBOARD_SCHEDULED_STATUSES = {"planned", "dry_run_due", "dry_run_due_late"}
+_DASHBOARD_SCHEDULED_STATUSES = {
+    "planned", "dry_run_due", "dry_run_due_late", "quota_blocked",
+}
 
 
 def _dashboard_automation_sort_key(row: Dict[str, Any]) -> tuple:
@@ -814,7 +908,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
 
     stats = {"accepted":sum(x["tab"]=="accepted" for x in rows), "training":sum(x["tab"]=="training" for x in rows),
              "service":sum(x["tab"]=="service" for x in rows), "anomaly":sum(x["tab"]=="anomaly" for x in rows),
-             "planned":sum(x["automation_status"]=="planned" for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
+             "planned":sum(x["automation_status"] in {"planned", "quota_blocked"} for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
              "blocked":sum(x["automation_blocked"] for x in rows),
              "unlinked":sum(x["unlinked_since_tracking_start"] for x in rows)}
     return {"rows": rows, "stats": stats}

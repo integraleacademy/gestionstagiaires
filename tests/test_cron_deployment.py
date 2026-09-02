@@ -37,6 +37,7 @@ class CronDeploymentTests(unittest.TestCase):
         self.assertIn("key: WEDOF_WEBHOOK_SECRET\n        sync: false", web)
         self.assertIn('key: WEDOF_GOVERNOR_ENABLED\n        value: "true"', web)
         self.assertIn('key: WEDOF_REQUEST_LIMIT_PER_MONTH\n        value: "15000"', web)
+        self.assertIn('key: WEDOF_LIVE_MAX_CANDIDATES_PER_RUN\n        value: "30"', web)
 
     def test_global_reconciliation_runs_at_most_four_times_a_day(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")

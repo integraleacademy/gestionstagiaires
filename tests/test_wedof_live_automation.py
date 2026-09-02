@@ -54,6 +54,22 @@ def automation_data(initial, now, **extra):
     return data
 
 
+def automation_rows(folders, now):
+    data = {
+        "wedof_automation_actions": [],
+        "wedof_automation_status": [],
+        "wedof_automation_runs": [],
+        "wedof_folder_cache": [],
+    }
+    for current in folders:
+        data["wedof_folder_cache"].append({
+            **extract_folder(current),
+            "synced_at": now.isoformat(),
+        })
+        sync_folder_automation_status(data, current, now=now)
+    return data
+
+
 def test_live_mode_only_obeys_explicit_kill_switch():
     legacy_values = {
         "WEDOF_AUTOMATION_ENABLED": "false",
@@ -97,6 +113,101 @@ def test_future_live_action_is_persisted_as_planned_without_remote_mutation():
     assert status["entry_training"]["status"] == "planned"
     assert status["service_done"]["status"] == "waiting_for_in_training"
     assert status["local_link_status"] == "linked"
+
+
+def test_generic_folder_cache_never_enrols_a_dossier_into_live_automation():
+    now = dt.datetime(2026, 9, 2, 19, 0, tzinfo=PARIS)
+    initial = folder("SEARCH-RESULT", start="2026-09-01")
+    data = {
+        "wedof_automation_actions": [],
+        "wedof_automation_status": [],
+        "wedof_automation_runs": [],
+        "wedof_folder_cache": [{**extract_folder(initial), "synced_at": now.isoformat()}],
+    }
+    client = Client(initial, folder("SEARCH-RESULT", state="inTraining"))
+
+    result = run_live_automation(client, data, now=now)
+
+    assert result["candidates"] == 0
+    assert client.gets == 0
+    assert client.posts == []
+    assert data["wedof_automation_status"] == []
+
+
+def test_live_candidates_are_oldest_first_and_bounded_per_run():
+    now = dt.datetime(2026, 9, 3, 19, 0, tzinfo=PARIS)
+    data = automation_rows([
+        folder("NEWEST", start="2026-09-02"),
+        folder("OLDEST", start="2026-08-31"),
+        folder("MIDDLE", start="2026-09-01"),
+    ], now)
+    client = Mock()
+    client.get_registration_folder.side_effect = WedofApiError(
+        "temporary", "wedof_server_error", True, 500,
+    )
+
+    with patch.dict(os.environ, {"WEDOF_LIVE_MAX_CANDIDATES_PER_RUN": "2"}):
+        result = run_live_automation(client, data, now=now)
+
+    assert [call.args[0] for call in client.get_registration_folder.call_args_list] == [
+        "OLDEST", "MIDDLE",
+    ]
+    assert result["candidates"] == 3
+    assert result["selected"] == 2
+    assert result["processed"] == 2
+    assert result["remaining"] == 1
+    assert result["candidate_limit"] == 2
+
+
+def test_permanent_error_never_hides_a_later_executable_action():
+    now = dt.datetime(2026, 9, 3, 19, 0, tzinfo=PARIS)
+    data = automation_rows([
+        folder("PERMANENT", start="2026-08-31"),
+        folder("EXECUTABLE", start="2026-09-01"),
+    ], now)
+    data["wedof_automation_actions"] = [{
+        "external_id": "PERMANENT", "action": "entry_training",
+        "status": "error", "last_http_status": 400,
+    }]
+    client = Mock()
+    client.get_registration_folder.side_effect = WedofApiError(
+        "temporary", "wedof_server_error", True, 500,
+    )
+
+    with patch.dict(os.environ, {"WEDOF_LIVE_MAX_CANDIDATES_PER_RUN": "1"}):
+        result = run_live_automation(client, data, now=now)
+
+    client.get_registration_folder.assert_called_once_with("EXECUTABLE")
+    assert result["candidates"] == 1
+    assert result["processed"] == 1
+    assert result["remaining"] == 0
+
+
+def test_quota_error_stops_the_run_and_keeps_every_due_action_pending():
+    now = dt.datetime(2026, 9, 2, 19, 0, tzinfo=PARIS)
+    data = automation_rows([
+        folder("A", start="2026-09-01"),
+        folder("B", start="2026-09-01"),
+        folder("C", start="2026-09-01"),
+    ], now)
+    client = Mock()
+    client.get_registration_folder.side_effect = WedofApiError(
+        "quota", "wedof_quota_exceeded", False, 429,
+    )
+
+    result = run_live_automation(client, data, now=now)
+
+    client.get_registration_folder.assert_called_once_with("A")
+    assert result["status"] == "quota_blocked"
+    assert result["stop_reason"] == "wedof_quota_exceeded"
+    assert result["quota_blocked"] == 1
+    assert result["processed"] == 1
+    assert result["remaining"] == 2
+    statuses = {row["external_id"]: row for row in data["wedof_automation_status"]}
+    assert statuses["A"]["entry_training"]["status"] == "quota_blocked"
+    assert statuses["A"]["entry_training"]["planned_date"] == "2026-09-01"
+    assert statuses["B"]["entry_training"]["status"] == "dry_run_due_late"
+    assert statuses["C"]["entry_training"]["status"] == "dry_run_due_late"
 
 
 def test_generic_late_service_done_uses_previous_day_and_is_journalled_for_dashboard():
