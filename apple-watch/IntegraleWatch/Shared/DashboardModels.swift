@@ -98,3 +98,8 @@ struct APIErrorEnvelope: Codable, Sendable {
     let error: String?
     let retryAfter: Int?
 }
+
+struct PushTokenResponse: Codable, Sendable {
+    let ok: Bool
+    let notificationsReady: Bool
+}

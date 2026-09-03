@@ -10,6 +10,7 @@
   <array>
     <string>$(AppIdentifierPrefix)com.integraleacademy.IntegraleWatch.shared</string>
   </array>
+  <key>aps-environment</key>
+  <string>$(APS_ENVIRONMENT)</string>
 </dict>
 </plist>
-

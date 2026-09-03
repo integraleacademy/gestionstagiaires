@@ -18668,7 +18668,17 @@ def _build_integrale_watch_dashboard(
 def admin_integrale_watch():
     data = load_data(run_background_tasks=False)
     bucket = _integrale_watch_bucket(data)
-    devices = [dict(item) for item in bucket.get("devices", []) if isinstance(item, dict)]
+    devices = []
+    for item in bucket.get("devices", []):
+        if not isinstance(item, dict):
+            continue
+        public_device = {
+            key: value
+            for key, value in item.items()
+            if key not in {"token_hash", "apns_token"}
+        }
+        public_device["notifications_ready"] = bool(item.get("apns_token"))
+        devices.append(public_device)
     devices.sort(key=lambda item: str(item.get("created_at") or ""), reverse=True)
     return render_template(
         "admin_integrale_watch.html",
@@ -18756,6 +18766,70 @@ def api_integrale_watch_dashboard():
     partner_id = str(device.get("partner_id") or INTEGRALE_PARTNER_ID)
     scoped_data = _filter_data_for_partner(data, partner_id)
     return jsonify(_build_integrale_watch_dashboard(scoped_data))
+
+
+def _integrale_watch_update_push_token(
+    raw_access_token: str,
+    *,
+    apns_token: str = "",
+    environment: str = "",
+    remove: bool = False,
+) -> Dict[str, Any]:
+    def update(data: Dict[str, Any]) -> Dict[str, Any]:
+        device = _integrale_watch_authorized_device(data, raw_access_token)
+        if not device:
+            return {"ok": False, "error": "unauthorized"}
+
+        if remove:
+            device.pop("apns_token", None)
+            device.pop("apns_environment", None)
+            device.pop("push_registered_at", None)
+            return {"ok": True, "notifications_ready": False}
+
+        device["apns_token"] = apns_token.lower()
+        device["apns_environment"] = environment
+        device["push_registered_at"] = _now_iso()
+        return {"ok": True, "notifications_ready": True}
+
+    return _atomic_update_data(update)
+
+
+@app.put("/api/watch/v1/push-token")
+def api_integrale_watch_push_token_register():
+    raw_access_token = _integrale_watch_bearer_token()
+    if not raw_access_token:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    payload = request.get_json(silent=True) or {}
+    apns_token = re.sub(r"\s+", "", str(payload.get("token") or ""))
+    environment = str(payload.get("environment") or "").strip().lower()
+
+    if (
+        not re.fullmatch(r"[0-9a-fA-F]{32,512}", apns_token)
+        or len(apns_token) % 2
+        or environment not in {"sandbox", "production"}
+    ):
+        return jsonify({"ok": False, "error": "invalid_push_token"}), 400
+
+    result = _integrale_watch_update_push_token(
+        raw_access_token,
+        apns_token=apns_token,
+        environment=environment,
+    )
+    status = 200 if result.get("ok") else 401
+    return jsonify(result), status
+
+
+@app.delete("/api/watch/v1/push-token")
+def api_integrale_watch_push_token_delete():
+    raw_access_token = _integrale_watch_bearer_token()
+    if not raw_access_token:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+    result = _integrale_watch_update_push_token(
+        raw_access_token,
+        remove=True,
+    )
+    status = 200 if result.get("ok") else 401
+    return jsonify(result), status
 
 def _normalize_afc_cnaps_status(value: Any) -> str:
     raw = str(value or "").strip()

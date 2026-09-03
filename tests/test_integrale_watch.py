@@ -1,6 +1,10 @@
 import datetime
 import copy
+import json
+import plistlib
+import struct
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
@@ -116,6 +120,7 @@ class IntegraleWatchTests(unittest.TestCase):
             "created_at": "2026-09-02T12:00:00Z",
             "revoked_at": "",
             "token_hash": "not-rendered",
+            "apns_token": "a" * 64,
             "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
         })
         with patch.object(gestion_app, "load_data", return_value=self.data):
@@ -125,7 +130,9 @@ class IntegraleWatchTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("Jumeler une montre", html)
         self.assertIn("Apple Watch Ultra 2", html)
+        self.assertIn("Alertes actives", html)
         self.assertNotIn("not-rendered", html)
+        self.assertNotIn("a" * 64, html)
 
     def test_one_time_pairing_issues_only_a_hashed_device_token(self):
         token = self._pair_watch()
@@ -202,6 +209,46 @@ class IntegraleWatchTests(unittest.TestCase):
             )
         self.assertEqual(rejected.status_code, 401)
 
+    def test_push_token_registration_is_authenticated_and_removable(self):
+        token = self._pair_watch()
+        apns_token = "ab" * 32
+
+        invalid = self.client.put(
+            "/api/watch/v1/push-token",
+            json={"token": "invalid", "environment": "sandbox"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(invalid.status_code, 400)
+
+        with patch.object(gestion_app, "_atomic_update_data", side_effect=self._atomic_update):
+            registered = self.client.put(
+                "/api/watch/v1/push-token",
+                json={"token": apns_token.upper(), "environment": "sandbox"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        self.assertEqual(registered.status_code, 200)
+        self.assertTrue(registered.get_json()["notifications_ready"])
+        device = self.data["integrale_watch"]["devices"][0]
+        self.assertEqual(device["apns_token"], apns_token)
+        self.assertEqual(device["apns_environment"], "sandbox")
+
+        with patch.object(gestion_app, "_atomic_update_data", side_effect=self._atomic_update):
+            removed = self.client.delete(
+                "/api/watch/v1/push-token",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        self.assertEqual(removed.status_code, 200)
+        self.assertFalse(removed.get_json()["notifications_ready"])
+        self.assertNotIn("apns_token", device)
+
+        unauthorized = self.client.put(
+            "/api/watch/v1/push-token",
+            json={"token": apns_token, "environment": "production"},
+        )
+        self.assertEqual(unauthorized.status_code, 401)
+        unauthorized_delete = self.client.delete("/api/watch/v1/push-token")
+        self.assertEqual(unauthorized_delete.status_code, 401)
+
     def test_pairing_admin_endpoints_are_not_available_to_viewers(self):
         anonymous = gestion_app.app.test_client()
         response = anonymous.post("/api/admin/integrale-watch/pairing-code")
@@ -214,6 +261,46 @@ class IntegraleWatchTests(unittest.TestCase):
             flask_session["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
         response = viewer.post("/api/admin/integrale-watch/pairing-code")
         self.assertEqual(response.status_code, 403)
+
+    def test_watch_release_assets_are_ready_for_app_store_connect(self):
+        watch_root = Path(__file__).resolve().parents[1] / "apple-watch" / "IntegraleWatch"
+        manifest_path = watch_root / "Shared" / "PrivacyInfo.xcprivacy"
+        with manifest_path.open("rb") as manifest_file:
+            manifest = plistlib.load(manifest_file)
+
+        self.assertFalse(manifest["NSPrivacyTracking"])
+        accessed_types = manifest["NSPrivacyAccessedAPITypes"]
+        user_defaults = next(
+            item
+            for item in accessed_types
+            if item["NSPrivacyAccessedAPIType"] == "NSPrivacyAccessedAPICategoryUserDefaults"
+        )
+        self.assertIn("1C8F.1", user_defaults["NSPrivacyAccessedAPITypeReasons"])
+
+        icon_catalog = watch_root / "WatchAppResources" / "Assets.xcassets" / "AppIcon.appiconset"
+        catalog = json.loads((icon_catalog / "Contents.json").read_text(encoding="utf-8"))
+        for item in catalog["images"]:
+            filename = item.get("filename")
+            if not filename:
+                continue
+            icon_path = icon_catalog / filename
+            self.assertTrue(icon_path.is_file(), filename)
+            png_data = icon_path.read_bytes()
+            self.assertEqual(png_data[:8], b"\x89PNG\r\n\x1a\n")
+            width, height = struct.unpack(">II", png_data[16:24])
+            expected_pixels = round(float(item["size"].split("x", 1)[0]) * int(item["scale"][0]))
+            self.assertEqual((width, height), (expected_pixels, expected_pixels), filename)
+
+        project_spec = (watch_root / "project.yml").read_text(encoding="utf-8")
+        self.assertEqual(project_spec.count("ITSAppUsesNonExemptEncryption: false"), 4)
+        self.assertIn("APS_ENVIRONMENT: production", project_spec)
+
+        widget_bundle = (
+            watch_root / "IntegraleWatchWidget" / "IntegraleWatchWidgetBundle.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("SalesComplication()", widget_bundle)
+        self.assertIn("MonthComplication()", widget_bundle)
+        self.assertIn("GoalComplication()", widget_bundle)
 
 
 if __name__ == "__main__":
