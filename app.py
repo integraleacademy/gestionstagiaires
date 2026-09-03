@@ -86,7 +86,7 @@ from wedof_automation import (automation_dashboard_state, build_automation_dashb
                               next_automatic_attempt,
                               record_maintenance_skip, run_dry_run, run_live_automation,
                               sync_folder_automation_status)
-from cpf_tracking import build_cpf_view, has_cpf_financing
+from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_invoice
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -16616,6 +16616,33 @@ def admin_bts_akto_export():
     return response
 
 
+def _wedof_invoiced_external_ids(data: Dict[str, Any]) -> Set[str]:
+    """Retourne les dossiers CPF associés à une facture réellement générée."""
+    sessions = {
+        str(item.get("id") or ""): item
+        for item in data.get("sessions", [])
+        if isinstance(item, dict)
+    }
+    invoiced = set()
+    for link in data.get("wedof_links", []) or []:
+        if not isinstance(link, dict) or link.get("active") is not True:
+            continue
+        external_id = str(link.get("external_id") or "").strip()
+        if not external_id:
+            continue
+        session_obj = sessions.get(str(link.get("session_id") or ""), {})
+        trainee = next((
+            item for item in _session_trainees_list(session_obj)
+            if str(item.get("id") or "") == str(link.get("trainee_id") or "")
+        ), {})
+        snapshot = dict(link)
+        if isinstance(link.get("cpf_snapshot"), dict):
+            snapshot.update(link["cpf_snapshot"])
+        if has_generated_cpf_invoice(snapshot, trainee, session_obj, data):
+            invoiced.add(external_id)
+    return invoiced
+
+
 @app.get("/admin/wedof")
 @admin_login_required
 def admin_wedof_requests():
@@ -16638,7 +16665,8 @@ def admin_wedof_requests():
         wedof_links_count=sum(item.get("active") is True for item in data.get("wedof_links", []) if isinstance(item, dict)),
         wedof_dashboard=build_automation_dashboard([], links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_blocks", []),
-            local_associations=displayed_links, actions=data.get("wedof_automation_actions", [])),
+            local_associations=displayed_links, actions=data.get("wedof_automation_actions", []),
+            invoiced_external_ids=_wedof_invoiced_external_ids(data)),
         wedof_last_run=(data.get("wedof_automation_runs") or [{}])[-1],
         wedof_sync=data.get("wedof_automation_sync", {}),
         wedof_dashboard_state=automation_dashboard_state(data),
@@ -16910,6 +16938,7 @@ def admin_wedof_matching_preview():
             accepted + in_training + service_done, links=data.get("wedof_links", []),
             statuses=data.get("wedof_automation_status", []), exceptions=data.get("wedof_automation_exceptions", []),
             local_associations=_wedof_links_for_display(data), actions=data.get("wedof_automation_actions", []),
+            invoiced_external_ids=_wedof_invoiced_external_ids(data),
         )
         displayed_by_id = {str(x.get("external_id") or ""): x for x in _wedof_links_for_display(data)}
         preview_by_id = {str(x.get("external_id") or ""): x for x in preview["results"]}

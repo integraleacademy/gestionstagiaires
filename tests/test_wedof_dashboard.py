@@ -228,13 +228,35 @@ class WedofDashboardUnitTests(unittest.TestCase):
                 {"external_id": "D", "entry_training": {"status": "success"},
                  "service_done": {"status": "success"}},
             ],
+            invoiced_external_ids={"D"},
         )
         rows = {row["external_id"]: row for row in dashboard["rows"]}
         self.assertEqual(rows["BAD"]["tab"], "anomaly")
         self.assertTrue(rows["T"]["entry_success"])
         self.assertFalse(rows["D"]["entry_success"])
         self.assertTrue(rows["D"]["service_success"])
+        self.assertTrue(rows["D"]["invoiced"])
         self.assertEqual((dashboard["stats"]["entry_success"], dashboard["stats"]["service_success"]), (1, 1))
+        self.assertEqual(dashboard["stats"]["invoiced"], 1)
+
+    def test_invoiced_kpi_requires_a_generated_cpf_invoice(self):
+        data = {
+            "sessions": [{
+                "id": "S1",
+                "trainees": [{"id": "T1"}, {"id": "T2"}, {"id": "T3"}],
+            }],
+            "wedof_links": [
+                {"external_id": "SNAPSHOT", "active": True, "session_id": "S1", "trainee_id": "T1",
+                 "cpf_snapshot": {"invoice_status": "sent", "qonto_invoice_number": "F-2026-1"}},
+                {"external_id": "DRAFT", "active": True, "session_id": "S1", "trainee_id": "T2",
+                 "cpf_snapshot": {"invoice_status": "draft", "qonto_invoice_id": "draft-1"}},
+                {"external_id": "BILLING", "active": True, "session_id": "S1", "trainee_id": "T3"},
+            ],
+            "billing_lines": [{"sessionId": "S1", "traineeId": "T3", "financingType": "CPF",
+                               "qontoInvoiceId": "invoice-3", "invoiceStatus": "sent"}],
+        }
+
+        self.assertEqual(gestion_app._wedof_invoiced_external_ids(data), {"SNAPSHOT", "BILLING"})
 
 
 class WedofDashboardViewTests(unittest.TestCase):
@@ -351,7 +373,11 @@ class WedofDashboardViewTests(unittest.TestCase):
             [folder("A"), folder("BAD", trainingActionInfo={})],
             [folder("T", "inTraining")], [folder("D", "serviceDoneDeclared")], [],
         ]
-        data = {"sessions": [], "wedof_links": [], "wedof_automation_exceptions": [],
+        data = {"sessions": [],
+                "wedof_links": [{"external_id": "D", "active": True,
+                                  "cpf_snapshot": {"invoice_status": "sent",
+                                                   "qonto_invoice_number": "F-2026-1"}}],
+                "wedof_automation_exceptions": [],
                 "wedof_automation_status": [
                     {"external_id": "T"},
                     {"external_id": "D", "entry_training": {"status": "success"},
@@ -364,27 +390,27 @@ class WedofDashboardViewTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         for text in ("Accepté", "En formation", "Service fait déclaré", "Anomalie",
-                     "Automatisation prévue", "Entrée en formation déclarée ✅",
-                     "Service fait déclaré ✅", "À rattacher localement", "Dossiers non rattachés localement"):
+                     "Automatisations prévues", "Services faits", "Facturés",
+                     "Entrée en formation déclarée ✅", "Service fait déclaré ✅",
+                     "À rattacher localement"):
             self.assertIn(text, html)
+        for removed in ("Automatisations bloquées", "Entrées déclarées",
+                        "Services faits déclarés", "Dossiers non rattachés localement"):
+            self.assertNotIn(removed, html)
         self.assertNotIn("En formation dans WEDOF", html)
         self.assertEqual(html.count("Entrée en formation déclarée ✅"), 1)
         self.assertIn('data-wedof-panel="accepted"', html)
         self.assertIn('data-wedof-panel="training"', html)
         self.assertIn('data-wedof-panel="service"', html)
         self.assertIn('data-wedof-panel="anomaly"', html)
-        self.assertIn('data-wedof-counter="accepted"', html)
-        self.assertIn('data-wedof-counter="planned"', html)
-        self.assertIn('data-wedof-counter="unlinked"', html)
+        for key in ("planned", "accepted", "training", "service", "invoiced", "anomaly"):
+            self.assertIn(f'data-wedof-counter="{key}"', html)
+        self.assertNotIn('class="wedof-operations"', html)
         self.assertIn('data-wedof-planned="true"', html)
-        self.assertIn('data-wedof-entry-success="true"', html)
-        self.assertIn('data-wedof-service-success="true"', html)
-        self.assertIn('data-wedof-unlinked="true"', html)
+        self.assertIn('data-wedof-invoiced="true"', html)
         self.assertIn("js/admin-wedof-dashboard.js", html)
         dashboard_script = Path("static/js/admin-wedof-dashboard.js").read_text(encoding="utf-8")
-        self.assertIn("row.dataset.wedofEntrySuccess === 'true'", dashboard_script)
-        self.assertIn("row.dataset.wedofServiceSuccess === 'true'", dashboard_script)
-        self.assertIn("row.dataset.wedofUnlinked === 'true'", dashboard_script)
+        self.assertIn("row.dataset.wedofInvoiced === 'true'", dashboard_script)
         self.assertIn("counter.addEventListener('click'", dashboard_script)
         self.assertIn("table?.scrollIntoView", dashboard_script)
         self.assertIn("admin-sidebar", html)
