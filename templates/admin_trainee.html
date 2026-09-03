@@ -2505,7 +2505,7 @@
               {{ d.label }}{% if d.optional|default(false) %} <span class="badge" style="margin-left:8px;">Facultatif</span>{% endif %}
               {% if d.key in ["certificat_medical_ssiap", "certificat_medical_ssiap_afc"] %}
                 <div class="hint" style="margin-top:6px;">
-                  <a href="{{ url_for('public_ssiap_medical_certificate_template') }}" target="_blank" rel="noopener">Télécharger le modèle officiel du certificat médical</a>
+                  <a href="{{ url_for('public_ssiap_medical_certificate_template') }}" target="_blank" rel="noopener" style="color:#0d6efd;font-weight:800;text-decoration:underline;text-underline-offset:2px;">Télécharger le modèle officiel du certificat médical</a>
                 </div>
               {% endif %}
             </td>
