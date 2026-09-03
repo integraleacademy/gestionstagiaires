@@ -805,6 +805,7 @@ class ApsElearningTests(unittest.TestCase):
         self.assertGreaterEqual(len(media), 3)
         self.assertIn("{{ formation_session }}", document_xml)
         self.assertIn("Intégrale Sécurité Formations", document_xml)
+        self.assertIn("Adresse organisme de formation", document_xml)
         self.assertIn("54 chemin du Carreou", document_xml)
         self.assertIn("840 899 884 00026", document_xml)
         self.assertIn("93830600283", document_xml)
@@ -817,6 +818,7 @@ class ApsElearningTests(unittest.TestCase):
             "Anomalies conservées",
             "Le relevé Digiforma annexé demeure la pièce source détaillée",
             "SIGNATURE AVEC FORÇAGE",
+            "Lieu d’établissement",
             "compliance_status",
             "compliance_detail",
             "force_authorization",
