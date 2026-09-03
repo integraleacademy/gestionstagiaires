@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260824-quota-dashboard') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260903-overview-kpis') }}">
 {% set st = wedof_dashboard.stats %}
 {% set state_labels = {
   'accepted': 'Accepté',
@@ -287,21 +287,13 @@
       <div>
         <span class="wedof-section-label">Vue d’ensemble</span>
         <h2 id="wedof-overview-title">État des dossiers</h2>
-        <p>Les services faits comptent uniquement les déclarations envoyées par Gestion Stagiaires. Cliquez sur un indicateur pour afficher les dossiers concernés.</p>
+        <p>Les services faits comptent uniquement les déclarations envoyées par Gestion Stagiaires. « Facturés » correspond aux dossiers associés à une facture CPF réellement générée.</p>
       </div>
     </div>
     <div class="wedof-counters" aria-label="États WEDOF">
-      {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits par Gestion Stagiaires'),('anomaly','Anomalies')] %}
+      {% for key, label in [('planned','Automatisations prévues'),('accepted','Acceptés'),('training','En formation'),('service','Services faits'),('invoiced','Facturés'),('anomaly','Anomalies')] %}
         <button type="button" class="wedof-counter" data-wedof-counter="{{ key }}" aria-label="Afficher les dossiers : {{ label }}">
           <strong>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong>
-          <span>{{ label }}</span>
-        </button>
-      {% endfor %}
-    </div>
-    <div class="wedof-operations" aria-label="Suivi des automatisations et rattachements">
-      {% for key, label in [('planned','Automatisations prévues'),('blocked','Automatisations bloquées'),('entry_success','Entrées déclarées'),('service_success','Services faits déclarés'),('unlinked','Dossiers non rattachés localement')] %}
-        <button type="button" class="wedof-operation" data-wedof-counter="{{ key }}" aria-label="Afficher : {{ label }}"{% if key == 'unlinked' %} data-wedof-unlinked-counter{% endif %}>
-          <strong{% if key == 'unlinked' %} id="wedof-unlinked-count"{% endif %}>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong>
           <span>{{ label }}</span>
         </button>
       {% endfor %}
@@ -343,10 +335,7 @@
             <tr
               data-wedof-panel="{{ item.tab }}"
               data-wedof-planned="{{ 'true' if item.automation_status in ['planned','quota_blocked','retry_pending'] else 'false' }}"
-              data-wedof-blocked="{{ 'true' if item.automation_blocked else 'false' }}"
-              data-wedof-entry-success="{{ 'true' if item.entry_success else 'false' }}"
-              data-wedof-service-success="{{ 'true' if item.service_success else 'false' }}"
-              data-wedof-unlinked="{{ 'true' if item.unlinked_since_tracking_start else 'false' }}"
+              data-wedof-invoiced="{{ 'true' if item.invoiced else 'false' }}"
               data-wedof-row="{{ item.external_id|e }}"
               {% if item.tab != 'accepted' %}hidden{% endif %}
             >
@@ -694,7 +683,7 @@
 <div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
 
 <script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260811-counter-fix') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260903-overview-kpis') }}" defer></script>
 <script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20260811-exact-auto-link') }}" defer></script>
 
 <script>

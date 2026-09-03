@@ -207,8 +207,8 @@ def _billing_line_is_cpf(line: Dict[str, Any]) -> bool:
     )
 
 
-def _has_generated_cpf_invoice(snapshot: Dict[str, Any], trainee: Dict[str, Any],
-                               session_obj: Dict[str, Any], data: Dict[str, Any]) -> bool:
+def has_generated_cpf_invoice(snapshot: Dict[str, Any], trainee: Dict[str, Any],
+                              session_obj: Dict[str, Any], data: Dict[str, Any]) -> bool:
     if _invoice_record_is_generated(snapshot):
         return True
     trainee_id = str(trainee.get("id") or "")
@@ -334,7 +334,7 @@ def build_cpf_view(trainee: Dict[str, Any], session_obj: Dict[str, Any], data: D
         if not snapshot.get("created_at"):
             snapshot["created_at"] = link.get("created_at")
     result = {"found": bool(link), "snapshot": snapshot, "link": link, "sync_error": (link or {}).get("cpf_sync_error") or ""}
-    invoice_generated = _has_generated_cpf_invoice(snapshot, trainee, session_obj, data)
+    invoice_generated = has_generated_cpf_invoice(snapshot, trainee, session_obj, data)
     result.update(build_steps(snapshot, invoice_generated=invoice_generated))
     result["automation"] = automation_view(
         str(snapshot.get("external_id") or ""), data.get("wedof_automation_status", []),

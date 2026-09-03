@@ -13,10 +13,7 @@
     service: row => row.dataset.wedofPanel === 'service',
     anomaly: row => row.dataset.wedofPanel === 'anomaly',
     planned: row => row.dataset.wedofPlanned === 'true',
-    blocked: row => row.dataset.wedofBlocked === 'true',
-    entry_success: row => row.dataset.wedofEntrySuccess === 'true',
-    service_success: row => row.dataset.wedofServiceSuccess === 'true',
-    unlinked: row => row.dataset.wedofUnlinked === 'true',
+    invoiced: row => row.dataset.wedofInvoiced === 'true',
   };
 
   function show(filter, source, {scroll = true} = {}) {

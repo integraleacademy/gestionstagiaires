@@ -945,7 +945,8 @@ def _dashboard_automation_sort_key(row: Dict[str, Any]) -> tuple:
 def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iterable[Dict[str, Any]] = (),
                                statuses: Iterable[Dict[str, Any]] = (), exceptions: Iterable[Dict[str, Any]] = (),
                                local_associations: Iterable[Dict[str, Any]] = (),
-                               actions: Iterable[Dict[str, Any]] = ()) -> Dict[str, Any]:
+                               actions: Iterable[Dict[str, Any]] = (),
+                               invoiced_external_ids: Iterable[str] = ()) -> Dict[str, Any]:
     """Construit les lignes sans accès réseau et sans déduire de dates depuis les sessions locales."""
     links_by_id = {str(x.get("external_id") or ""): x for x in links
                    if isinstance(x, dict) and x.get("active") is True}
@@ -953,6 +954,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                           if isinstance(x, dict)}
     rows = []
     status_by_id = {str(x.get("external_id") or ""): x for x in statuses if isinstance(x, dict)}
+    invoiced_ids = {str(external_id) for external_id in invoiced_external_ids if str(external_id)}
     successful_service_actions = {
         str(item.get("external_id") or "")
         for item in actions
@@ -1019,6 +1021,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      # ne doit plus apparaître dans la ligne ni dans son compteur.
                      "entry_success": state == "inTraining",
                      "service_success": service_success,
+                     "invoiced": external_id in invoiced_ids,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     for status in status_by_id.values():
         if not isinstance(status, dict): continue
@@ -1065,6 +1068,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "association_orphan": bool(association.get("orphaned")),
                      "entry_success": state == "inTraining",
                      "service_success": service_success,
+                     "invoiced": external_id in invoiced_ids,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     # Le suivi des rattachements a démarré avec les formations de juin 2026. Les
     # dossiers actifs antérieurs ne doivent pas gonfler l'indicateur
@@ -1085,6 +1089,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
 
     stats = {"accepted":sum(x["tab"]=="accepted" for x in rows), "training":sum(x["tab"]=="training" for x in rows),
              "service":sum(x["tab"]=="service" for x in rows), "anomaly":sum(x["tab"]=="anomaly" for x in rows),
+             "invoiced":sum(x["invoiced"] for x in rows),
              "planned":sum(x["automation_status"] in {"planned", "quota_blocked", "retry_pending"} for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
              "blocked":sum(x["automation_blocked"] for x in rows),
              "unlinked":sum(x["unlinked_since_tracking_start"] for x in rows)}
