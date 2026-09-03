@@ -990,14 +990,18 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                    remote.get("type", "").casefold() != "cpf" or not normalize_date(remote.get("start_date")) or
                    not normalize_date(remote.get("end_date")) or value in {"anomaly", "blocked", "dry_run_due_late"})
         link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
+        invoiced = external_id in invoiced_ids
+        tab = ("invoiced" if state in SERVICE_DONE_STATES and invoiced else
+               "service" if state in SERVICE_DONE_STATES else
+               "anomaly" if anomaly else
+               {"accepted": "accepted", "inTraining": "training"}.get(state, "service"))
         date_start = (history.get("wedof_date_start") or normalize_date(remote.get("start_date")) or
                       (link or {}).get("wedof_date_start"))
         date_end = (history.get("wedof_date_end") or normalize_date(remote.get("end_date")) or
                     (link or {}).get("wedof_date_end"))
         linked = link is not None
         rows.append({**remote, "wedof_type": remote.get("type") or "",
-                     "tab": ("service" if state in SERVICE_DONE_STATES else
-                             "anomaly" if anomaly else {"accepted":"accepted", "inTraining":"training"}.get(state, "service")),
+                     "tab": tab,
                      "wedof_date_start": date_start, "wedof_date_end": date_end,
                      "start_date": date_start, "end_date": date_end,
                      "automation_status": value, "automation_planned": value == "planned",
@@ -1021,7 +1025,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      # ne doit plus apparaître dans la ligne ni dans son compteur.
                      "entry_success": state == "inTraining",
                      "service_success": service_success,
-                     "invoiced": external_id in invoiced_ids,
+                     "invoiced": invoiced,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     for status in status_by_id.values():
         if not isinstance(status, dict): continue
@@ -1042,7 +1046,9 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         block = _indexed_block(blocks_by_key, str(status.get("external_id") or ""), automation_action)
         underlying = value
         if block: value = "blocked"
-        tab = ("service" if state in SERVICE_DONE_STATES else
+        invoiced = external_id in invoiced_ids
+        tab = ("invoiced" if state in SERVICE_DONE_STATES and invoiced else
+               "service" if state in SERVICE_DONE_STATES else
                "anomaly" if value in {"anomaly", "blocked", "dry_run_due_late"}
                else {"accepted":"accepted", "inTraining":"training"}.get(state, "service"))
         link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
@@ -1068,7 +1074,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "association_orphan": bool(association.get("orphaned")),
                      "entry_success": state == "inTraining",
                      "service_success": service_success,
-                     "invoiced": external_id in invoiced_ids,
+                     "invoiced": invoiced,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     # Le suivi des rattachements a démarré avec les formations de juin 2026. Les
     # dossiers actifs antérieurs ne doivent pas gonfler l'indicateur

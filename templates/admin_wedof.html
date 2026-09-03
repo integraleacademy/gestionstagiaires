@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260903-overview-kpis') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260903-page-tabs') }}">
 {% set st = wedof_dashboard.stats %}
+{% set active_section = wedof_active_section|default('consumption', true) %}
 {% set state_labels = {
   'accepted': 'Accepté',
   'inTraining': 'En formation',
@@ -73,6 +74,32 @@
     </div>
   </header>
 
+  <nav class="wedof-page-tabs" role="tablist" aria-label="Sections de la page WEDOF">
+    {% for key, label in [('consumption','Consommation WEDOF'),('state','État des dossiers'),('technical','Connexion et paramètres techniques'),('requests','Demandes entrantes WEDOF')] %}
+      <button
+        id="wedof-page-tab-{{ key }}"
+        type="button"
+        role="tab"
+        class="wedof-page-tab{% if active_section == key %} is-active{% endif %}"
+        data-wedof-page-tab="{{ key }}"
+        aria-controls="wedof-page-panel-{{ key }}"
+        aria-selected="{{ 'true' if active_section == key else 'false' }}"
+        tabindex="{{ '0' if active_section == key else '-1' }}"
+      >
+        <span>{{ label }}</span>
+        {% if key == 'requests' and wedof_new_requests_count %}<b>{{ wedof_new_requests_count }}</b>{% endif %}
+      </button>
+    {% endfor %}
+  </nav>
+
+  <div
+    id="wedof-page-panel-consumption"
+    class="wedof-page-section"
+    data-wedof-page-panel="consumption"
+    role="tabpanel"
+    aria-labelledby="wedof-page-tab-consumption"
+    {% if active_section != 'consumption' %}hidden{% endif %}
+  >
   <section id="wedof-consumption" class="wedof-panel wedof-quota-panel" aria-labelledby="wedof-consumption-title">
     <div class="wedof-panel-header wedof-quota-header">
       <div>
@@ -80,7 +107,7 @@
         <h2 id="wedof-consumption-title">Consommation WEDOF</h2>
         <p>Chaque tentative est comptée avant son envoi. Les plafonds bloquent les appels ordinaires, mais les déclarations urgentes d’entrée en formation et de service fait restent prioritaires.</p>
       </div>
-      <a class="btn btn-outline wedof-quota-refresh" href="{{ url_for('admin_wedof_requests') }}#wedof-consumption">Actualiser les compteurs</a>
+      <a class="btn btn-outline wedof-quota-refresh" href="{{ url_for('admin_wedof_requests', section='consumption') }}">Actualiser les compteurs</a>
     </div>
 
     {% if not wedof_quota.available %}
@@ -228,7 +255,16 @@
       </details>
     {% endif %}
   </section>
+  </div>
 
+  <div
+    id="wedof-page-panel-state"
+    class="wedof-page-section"
+    data-wedof-page-panel="state"
+    role="tabpanel"
+    aria-labelledby="wedof-page-tab-state"
+    {% if active_section != 'state' %}hidden{% endif %}
+  >
   {% if wedof_dashboard_state == 'never_synchronized' %}
     <div class="wedof-notice is-warning" role="status">
       <strong>Données WEDOF non encore synchronisées.</strong>
@@ -287,7 +323,7 @@
       <div>
         <span class="wedof-section-label">Vue d’ensemble</span>
         <h2 id="wedof-overview-title">État des dossiers</h2>
-        <p>Les services faits comptent uniquement les déclarations envoyées par Gestion Stagiaires. « Facturés » correspond aux dossiers associés à une facture CPF réellement générée.</p>
+        <p>Les services faits comptent uniquement les déclarations envoyées par Gestion Stagiaires. Dès qu’un dossier possède une facture CPF générée, il quitte « Services faits » et passe dans « Facturés ».</p>
       </div>
     </div>
     <div class="wedof-counters" aria-label="États WEDOF">
@@ -396,7 +432,9 @@
                   {% if item.entry_success %}
                     <span class="wedof-badge is-success">Entrée en formation déclarée ✅</span>
                   {% endif %}
-                  {% if item.service_success %}
+                  {% if item.invoiced %}
+                    <span class="wedof-badge is-invoiced">Facturé ✅</span>
+                  {% elif item.service_success %}
                     <span class="wedof-badge is-success">Service fait déclaré ✅</span>
                   {% elif item.state in ['serviceDoneDeclared','serviceDoneValidated'] %}
                     <span class="wedof-badge is-info">{{ item.wedof_state_label }}</span>
@@ -481,7 +519,6 @@
     </div>
   </section>
 
-  <div class="wedof-secondary-grid">
     <details class="wedof-disclosure">
       <summary>
         <div>
@@ -514,16 +551,25 @@
         {% endif %}
       </div>
     </details>
+  </div>
 
-    <details class="wedof-disclosure">
-      <summary>
+  <div
+    id="wedof-page-panel-technical"
+    class="wedof-page-section"
+    data-wedof-page-panel="technical"
+    role="tabpanel"
+    aria-labelledby="wedof-page-tab-technical"
+    {% if active_section != 'technical' %}hidden{% endif %}
+  >
+    <section class="wedof-panel wedof-content-panel" aria-labelledby="wedof-technical-title">
+      <div class="wedof-panel-header">
         <div>
-          <strong>Connexion et paramètres techniques</strong>
-          <small>Configuration API et mode d’exécution</small>
+          <span class="wedof-section-label">Configuration WEDOF</span>
+          <h2 id="wedof-technical-title">Connexion et paramètres techniques</h2>
+          <p>État de la connexion API et des différents modes d’exécution.</p>
         </div>
-        <span class="wedof-summary-badge">Technique</span>
-      </summary>
-      <div class="wedof-disclosure-body">
+      </div>
+      <div class="wedof-content-body">
         <div class="wedof-technical-list">
           <div><span>Clé API configurée</span><strong>{{ 'Oui' if wedof_api_key_configured else 'Non' }}</strong></div>
           <div><span>Déclarations automatiques actives</span><strong>{{ 'Oui' if wedof_automation_enabled else 'Non' }}</strong></div>
@@ -535,18 +581,27 @@
           <button class="btn btn-outline" type="submit">Tester la connexion API</button>
         </form>
       </div>
-    </details>
+    </section>
   </div>
 
-  <details class="wedof-disclosure">
-    <summary>
+  <div
+    id="wedof-page-panel-requests"
+    class="wedof-page-section"
+    data-wedof-page-panel="requests"
+    role="tabpanel"
+    aria-labelledby="wedof-page-tab-requests"
+    {% if active_section != 'requests' %}hidden{% endif %}
+  >
+  <section class="wedof-panel wedof-content-panel" aria-labelledby="wedof-requests-title">
+    <div class="wedof-panel-header">
       <div>
-        <strong>Demandes entrantes WeDoF CPF / EDOF</strong>
-        <small>Webhooks, notifications et transmissions automatiques vers Salesforce et le CRM · {{ public_base_url }}/api/webhooks/wedof</small>
+        <span class="wedof-section-label">Webhooks CPF / EDOF</span>
+        <h2 id="wedof-requests-title">Demandes entrantes WEDOF</h2>
+        <p>Notifications et transmissions automatiques vers Salesforce et le CRM · {{ public_base_url }}/api/webhooks/wedof</p>
       </div>
-      <span class="wedof-summary-badge">{{ wedof_webhooks|length }} demande{{ 's' if wedof_webhooks|length > 1 else '' }}</span>
-    </summary>
-    <div class="wedof-disclosure-body">
+      <span class="wedof-content-count">{{ wedof_webhooks|length }} demande{{ 's' if wedof_webhooks|length > 1 else '' }}</span>
+    </div>
+    <div class="wedof-content-body">
       <div class="wedof-subtable-wrap">
         <table class="table">
           <thead><tr><th>Nom</th><th>Prénom</th><th>E-mail</th><th>Téléphone</th><th>Formation</th><th>Dates sélectionnées</th><th>Actions</th></tr></thead>
@@ -624,7 +679,8 @@
         </table>
       </div>
     </div>
-  </details>
+  </section>
+  </div>
 </div>
 
 <dialog id="wedof-loading-modal" class="wedof-loading" aria-labelledby="wedof-loading-title" aria-describedby="wedof-loading-description">
@@ -683,7 +739,7 @@
 <div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
 
 <script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260903-overview-kpis') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260903-page-tabs') }}" defer></script>
 <script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20260811-exact-auto-link') }}" defer></script>
 
 <script>

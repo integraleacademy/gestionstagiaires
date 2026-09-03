@@ -1,4 +1,48 @@
 (() => {
+  const pageTabs = [...document.querySelectorAll('[data-wedof-page-tab]')];
+  const pagePanels = [...document.querySelectorAll('[data-wedof-page-panel]')];
+
+  function showPageSection(section, {updateUrl = true} = {}) {
+    if (!pageTabs.some(tab => tab.dataset.wedofPageTab === section)) return;
+    pageTabs.forEach(tab => {
+      const active = tab.dataset.wedofPageTab === section;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+    });
+    pagePanels.forEach(panel => {
+      panel.hidden = panel.dataset.wedofPagePanel !== section;
+    });
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('section', section);
+      window.history.replaceState({}, '', url);
+    }
+  }
+
+  if (pageTabs.length && pagePanels.length) {
+    const requestedSection = new URLSearchParams(window.location.search).get('section');
+    const initialSection = pageTabs.some(tab => tab.dataset.wedofPageTab === requestedSection)
+      ? requestedSection
+      : (pageTabs.find(tab => tab.classList.contains('is-active'))?.dataset.wedofPageTab || 'consumption');
+    showPageSection(initialSection, {updateUrl: false});
+
+    pageTabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => showPageSection(tab.dataset.wedofPageTab));
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        let nextIndex = index;
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = pageTabs.length - 1;
+        if (event.key === 'ArrowRight') nextIndex = (index + 1) % pageTabs.length;
+        if (event.key === 'ArrowLeft') nextIndex = (index - 1 + pageTabs.length) % pageTabs.length;
+        pageTabs[nextIndex].focus();
+        showPageSection(pageTabs[nextIndex].dataset.wedofPageTab);
+      });
+    });
+  }
+
   const tabs = [...document.querySelectorAll('[data-wedof-tab]')];
   const counters = [...document.querySelectorAll('[data-wedof-counter]')];
   const rows = [...document.querySelectorAll('[data-wedof-panel]')];
