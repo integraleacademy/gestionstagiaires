@@ -19,8 +19,6 @@ jobs:
     name: Tester l’API Watch
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -32,6 +30,8 @@ jobs:
           python -m pip install --disable-pip-version-check -r requirements.txt
           python -m pip install --disable-pip-version-check pytest
       - name: Vérifier l’API et les régressions liées
+        env:
+          PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist
         run: |
           python -m py_compile app.py
           python -m pytest -q tests/test_integrale_watch.py tests/test_registration_cancellation.py tests/test_cpu_load_guards.py
