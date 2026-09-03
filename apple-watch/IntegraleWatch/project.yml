@@ -25,6 +25,7 @@ targets:
         CFBundleDisplayName: Intégrale
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
         WKWatchOnly: true
     settings:
       base:
@@ -44,6 +45,7 @@ targets:
         CFBundleDisplayName: Intégrale
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
         WKWatchKitApp: true
         CFBundleURLTypes:
           - CFBundleURLName: com.integraleacademy.IntegraleWatch
@@ -71,6 +73,7 @@ targets:
         CFBundleDisplayName: Intégrale
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
         IntegraleWatchKeychainAccessGroup: $(AppIdentifierPrefix)com.integraleacademy.IntegraleWatch.shared
         WKWatchOnly: true
         WKRunsIndependentlyOfCompanionApp: true
@@ -85,6 +88,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.integraleacademy.IntegraleWatch.watchkitapp.watchkitextension
         PRODUCT_NAME: Intégrale
         APPLICATION_EXTENSION_API_ONLY: true
+      configs:
+        Debug:
+          APS_ENVIRONMENT: development
+        Release:
+          APS_ENVIRONMENT: production
 
   IntegraleWatchWidget:
     type: app-extension
@@ -98,6 +106,7 @@ targets:
         CFBundleDisplayName: KPI Intégrale
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
         IntegraleWatchKeychainAccessGroup: $(AppIdentifierPrefix)com.integraleacademy.IntegraleWatch.shared
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension

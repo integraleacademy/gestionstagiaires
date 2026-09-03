@@ -21,6 +21,7 @@ final class DashboardSession: ObservableObject {
 
     func start() async {
         guard isPaired else { return }
+        await PushNotifications.requestAuthorizationAndRegister()
         await refresh(showSpinner: dashboard == nil)
     }
 
@@ -37,6 +38,7 @@ final class DashboardSession: ObservableObject {
             )
             try TokenStore.save(response.token)
             isPaired = true
+            await PushNotifications.requestAuthorizationAndRegister()
             await refresh(showSpinner: false)
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
@@ -66,6 +68,10 @@ final class DashboardSession: ObservableObject {
     }
 
     func disconnect() {
+        if let accessToken = TokenStore.read() {
+            Task { await PushNotifications.unregister(accessToken: accessToken) }
+        }
+        WKExtension.shared().unregisterForRemoteNotifications()
         TokenStore.delete()
         SnapshotStore.clear()
         dashboard = nil

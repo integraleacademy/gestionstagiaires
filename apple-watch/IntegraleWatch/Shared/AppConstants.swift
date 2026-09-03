@@ -6,6 +6,14 @@ enum AppConstants {
     static let keychainService = "com.integraleacademy.IntegraleWatch.api"
     static let keychainAccount = "dashboard-token"
 
+    static var pushEnvironment: String {
+#if DEBUG
+        return "sandbox"
+#else
+        return "production"
+#endif
+    }
+
     static var keychainAccessGroup: String? {
         guard let value = Bundle.main.object(
             forInfoDictionaryKey: "IntegraleWatchKeychainAccessGroup"
@@ -19,4 +27,3 @@ enum AppConstants {
         return trimmed
     }
 }
-

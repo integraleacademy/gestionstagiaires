@@ -63,6 +63,46 @@ struct SalesComplication: Widget {
     }
 }
 
+struct MonthComplication: Widget {
+    private let kind = "IntegraleMonthComplication"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: SalesComplicationProvider()) { entry in
+            MonthComplicationView(entry: entry)
+                .containerBackground(.clear, for: .widget)
+                .widgetURL(URL(string: "integralewatch://dashboard"))
+        }
+        .configurationDisplayName("CA du mois")
+        .description("Chiffre d’affaires, ventes et objectif du mois.")
+        .supportedFamilies([
+            .accessoryCircular,
+            .accessoryCorner,
+            .accessoryInline,
+            .accessoryRectangular
+        ])
+    }
+}
+
+struct GoalComplication: Widget {
+    private let kind = "IntegraleGoalComplication"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: SalesComplicationProvider()) { entry in
+            GoalComplicationView(entry: entry)
+                .containerBackground(.clear, for: .widget)
+                .widgetURL(URL(string: "integralewatch://dashboard"))
+        }
+        .configurationDisplayName("Objectif mensuel")
+        .description("Progression et reste à vendre sur l’objectif du mois.")
+        .supportedFamilies([
+            .accessoryCircular,
+            .accessoryCorner,
+            .accessoryInline,
+            .accessoryRectangular
+        ])
+    }
+}
+
 private struct SalesComplicationView: View {
     @Environment(\.widgetFamily) private var family
     let entry: SalesComplicationEntry
@@ -113,6 +153,143 @@ private struct SalesComplicationView: View {
                     .font(.caption2)
                     .multilineTextAlignment(.center)
             }
+        }
+    }
+}
+
+private struct MonthComplicationView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: SalesComplicationEntry
+
+    var body: some View {
+        if let dashboard = entry.dashboard {
+            switch family {
+            case .accessoryInline:
+                Text("Mois \(MoneyText.compact(dashboard.month.revenueCents)) · \(dashboard.month.salesCount) ventes")
+
+            case .accessoryCircular:
+                VStack(spacing: 0) {
+                    Image(systemName: "calendar")
+                        .font(.caption2.bold())
+                    Text(MoneyText.compact(dashboard.month.revenueCents))
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .minimumScaleFactor(0.5)
+                }
+
+            case .accessoryCorner:
+                Text(MoneyText.compact(dashboard.month.revenueCents))
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .widgetLabel {
+                        Text("\(dashboard.month.salesCount) ventes")
+                    }
+
+            default:
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Label(dashboard.month.label, systemImage: "calendar")
+                            .font(.caption2.bold())
+                        Spacer()
+                        Text("\(dashboard.month.salesCount) ventes")
+                            .font(.system(size: 9))
+                    }
+                    Text(MoneyText.full(dashboard.month.revenueCents))
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .minimumScaleFactor(0.65)
+                    Text("Objectif : \(dashboard.month.progressPercent, specifier: "%.0f") %")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } else {
+            LockedComplicationView()
+        }
+    }
+}
+
+private struct GoalComplicationView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: SalesComplicationEntry
+
+    var body: some View {
+        if let dashboard = entry.dashboard {
+            let hasObjective = dashboard.month.objectiveCents > 0
+            let percentage = hasObjective
+                ? Int(dashboard.month.progressPercent.rounded())
+                : 0
+
+            switch family {
+            case .accessoryInline:
+                if hasObjective {
+                    Text("Objectif \(percentage) % · reste \(MoneyText.compact(dashboard.month.remainingCents))")
+                } else {
+                    Text("Objectif mensuel à définir")
+                }
+
+            case .accessoryCircular:
+                if hasObjective {
+                    ZStack {
+                        Circle()
+                            .stroke(Color.secondary.opacity(0.25), lineWidth: 4)
+                        Circle()
+                            .trim(
+                                from: 0,
+                                to: CGFloat(min(max(dashboard.month.progressPercent, 0), 100) / 100)
+                            )
+                            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                        Text("\(percentage)%")
+                            .font(.system(size: 11, weight: .heavy, design: .rounded))
+                            .minimumScaleFactor(0.6)
+                    }
+                    .padding(2)
+                } else {
+                    Image(systemName: "target")
+                }
+
+            case .accessoryCorner:
+                Text(hasObjective ? "\(percentage)%" : "—")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .widgetLabel {
+                        Text(hasObjective ? "reste \(MoneyText.compact(dashboard.month.remainingCents))" : "Objectif")
+                    }
+
+            default:
+                VStack(alignment: .leading, spacing: 3) {
+                    Label("Objectif du mois", systemImage: "target")
+                        .font(.caption2.bold())
+                    if hasObjective {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("\(percentage) %")
+                                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                            Spacer()
+                            Text("reste \(MoneyText.compact(dashboard.month.remainingCents))")
+                                .font(.system(size: 9))
+                        }
+                        ProgressView(
+                            value: min(max(dashboard.month.progressPercent, 0), 100),
+                            total: 100
+                        )
+                        .tint(dashboard.month.status == "ahead" ? .green : .orange)
+                    } else {
+                        Text("À définir dans Gestion Stagiaires")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } else {
+            LockedComplicationView()
+        }
+    }
+}
+
+private struct LockedComplicationView: View {
+    var body: some View {
+        VStack(spacing: 2) {
+            Image(systemName: "lock.fill")
+            Text("Ouvre Intégrale")
+                .font(.caption2)
+                .multilineTextAlignment(.center)
         }
     }
 }

@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct IntegraleWatchApp: App {
+    @WKExtensionDelegateAdaptor private var extensionDelegate: WatchExtensionDelegate
     @StateObject private var dashboardSession = DashboardSession()
 
     var body: some Scene {
@@ -21,4 +22,3 @@ struct IntegraleWatchApp: App {
         }
     }
 }
-

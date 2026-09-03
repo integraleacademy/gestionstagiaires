@@ -5,6 +5,7 @@ import WidgetKit
 struct IntegraleWatchWidgetBundle: WidgetBundle {
     var body: some Widget {
         SalesComplication()
+        MonthComplication()
+        GoalComplication()
     }
 }
-

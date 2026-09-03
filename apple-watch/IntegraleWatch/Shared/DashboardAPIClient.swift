@@ -56,6 +56,37 @@ struct DashboardAPIClient: Sendable {
         return try await perform(request, as: DashboardEnvelope.self)
     }
 
+    func registerPushToken(
+        _ deviceToken: String,
+        environment: String,
+        token: String
+    ) async throws {
+        let endpoint = AppConstants.apiBaseURL.appendingPathComponent("api/watch/v1/push-token")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "PUT"
+        request.timeoutInterval = 15
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "token": deviceToken,
+            "environment": environment
+        ])
+        _ = try await perform(request, as: PushTokenResponse.self)
+    }
+
+    func unregisterPushToken(token: String) async throws {
+        let endpoint = AppConstants.apiBaseURL.appendingPathComponent("api/watch/v1/push-token")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "DELETE"
+        request.timeoutInterval = 15
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        _ = try await perform(request, as: PushTokenResponse.self)
+    }
+
     private func perform<Response: Decodable>(
         _ request: URLRequest,
         as responseType: Response.Type
