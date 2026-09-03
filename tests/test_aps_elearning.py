@@ -544,11 +544,10 @@ class ApsElearningTests(unittest.TestCase):
             )
 
             context = gestion_app._aps_elearning_tracking_context(data["sessions"][0], trainee)
-            self.assertIn("FORÇAGE ADMINISTRATIF", context["compliance_status"])
-            self.assertIn("RELEVÉ INCOMPLET", context["compliance_status"])
-            self.assertIn("28.49 %", context["compliance_detail"])
-            self.assertIn("admin@integraleacademy.com", context["force_authorization"])
-            self.assertIn("SIGNATURE AVEC FORÇAGE", context["signature_instruction"])
+            self.assertNotIn("compliance_status", context)
+            self.assertNotIn("compliance_detail", context)
+            self.assertNotIn("force_authorization", context)
+            self.assertNotIn("signature_instruction", context)
 
             forced_page = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
             forced_html = forced_page.get_data(as_text=True)
@@ -687,6 +686,10 @@ class ApsElearningTests(unittest.TestCase):
             reader.metadata.title,
             "Tableau de suivi de la formation à distance - dossier probatoire CNAPS",
         )
+        self.assertEqual(
+            reader.metadata.subject,
+            "Bordereau de suivi FOAD et relevé individuel Digiforma annexé",
+        )
 
     def test_digiforma_pdf_for_another_trainee_is_rejected(self):
         self._admin_login()
@@ -750,7 +753,10 @@ class ApsElearningTests(unittest.TestCase):
 
         context = gestion_app._aps_elearning_tracking_context(session_obj, trainee)
 
-        self.assertEqual(context["formation_session"], "Session APS e-learning")
+        self.assertEqual(
+            context["formation_session"],
+            "Agent de prévention et de sécurité (APS)",
+        )
         self.assertEqual(context["remote_period"], "du 23/07/2026 au 03/09/2026")
         self.assertEqual(context["remote_duration"], "62 heures")
         self.assertEqual(context["birth_date"], "12/03/1994")
@@ -762,10 +768,6 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(context["completion_rate"], "100 %")
         self.assertEqual(context["paths_status"], "8 / 8 terminés")
         self.assertEqual(context["evaluations_status"], "8 / 8 validées")
-        self.assertEqual(context["compliance_status"], "PARCOURS COMPLET - 100 % - SIGNATURE AUTORISÉE")
-        self.assertEqual(context["compliance_detail"], "Aucune anomalie détectée par les contrôles automatiques.")
-        self.assertEqual(context["force_authorization"], "Aucun forçage administratif nécessaire.")
-        self.assertIn("À SIGNER APRÈS CONTRÔLE", context["signature_instruction"])
         self.assertNotIn("{{", " ".join(context.values()))
 
     def test_tracking_table_pdf_download_uses_generated_file(self):
@@ -801,9 +803,26 @@ class ApsElearningTests(unittest.TestCase):
 
         self.assertEqual(anchors, ["{{s1|signature|160|60}}"])
         self.assertGreaterEqual(len(media), 3)
-        self.assertIn("{{ compliance_detail }}", document_xml)
-        self.assertIn("{{ force_authorization }}", document_xml)
-        self.assertIn("{{ signature_instruction }}", document_xml)
+        self.assertIn("{{ formation_session }}", document_xml)
+        self.assertIn("Intégrale Sécurité Formations", document_xml)
+        self.assertIn("54 chemin du Carreou", document_xml)
+        self.assertIn("840 899 884 00026", document_xml)
+        self.assertIn("93830600283", document_xml)
+        self.assertIn("03169", document_xml)
+        self.assertIn("FOR-083-2027-02-08-20200755135", document_xml)
+        self.assertIn("8320032701", document_xml)
+        for removed_text in (
+            "DOSSIER INDISSOCIABLE",
+            "DÉCISION DE GÉNÉRATION",
+            "Anomalies conservées",
+            "Le relevé Digiforma annexé demeure la pièce source détaillée",
+            "SIGNATURE AVEC FORÇAGE",
+            "compliance_status",
+            "compliance_detail",
+            "force_authorization",
+            "signature_instruction",
+        ):
+            self.assertNotIn(removed_text, document_xml)
 
     def test_yousign_pdf_anchor_exposes_the_marker_top(self):
         with tempfile.TemporaryDirectory() as directory:
