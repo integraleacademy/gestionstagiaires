@@ -427,6 +427,9 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertIn('data-wedof-panel="anomaly"', html)
         for key in ("planned", "accepted", "training", "service", "invoiced", "anomaly"):
             self.assertIn(f'data-wedof-counter="{key}"', html)
+        self.assertNotIn("data-wedof-tab", html)
+        self.assertNotIn('class="wedof-tabs"', html)
+        self.assertIn("Sélectionnez un KPI coloré ci-dessus pour filtrer cette liste.", html)
         self.assertNotIn('class="wedof-operations"', html)
         self.assertIn('data-wedof-planned="true"', html)
         self.assertIn('data-wedof-invoiced="true"', html)
@@ -434,6 +437,8 @@ class WedofDashboardViewTests(unittest.TestCase):
         dashboard_script = Path("static/js/admin-wedof-dashboard.js").read_text(encoding="utf-8")
         self.assertIn("row.dataset.wedofInvoiced === 'true'", dashboard_script)
         self.assertIn("counter.addEventListener('click'", dashboard_script)
+        self.assertNotIn("const tabs =", dashboard_script)
+        self.assertIn("show('accepted', {scroll: false})", dashboard_script)
         self.assertIn("table?.scrollIntoView", dashboard_script)
         for key, label in (
             ("consumption", "Consommation WEDOF"),

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260903-page-tabs') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260903-deduplicated-filters') }}">
 {% set st = wedof_dashboard.stats %}
 {% set active_section = wedof_active_section|default('consumption', true) %}
 {% set state_labels = {
@@ -341,16 +341,7 @@
       <div>
         <span class="wedof-section-label">Dossiers synchronisés</span>
         <h2 id="wedof-list-title">Dossiers WEDOF</h2>
-        <p>Les coordonnées WEDOF et le rattachement local sont volontairement séparés.</p>
-      </div>
-    </div>
-    <div class="wedof-table-topbar">
-      <div class="wedof-tabs" role="tablist" aria-label="Filtrer par état WEDOF">
-        {% for key, label in [('accepted','Acceptés'),('training','En formation'),('service','Services faits par Gestion Stagiaires'),('anomaly','Anomalies')] %}
-          <button type="button" role="tab" class="wedof-tab{% if loop.first %} is-active{% endif %}" data-wedof-tab="{{ key }}" aria-selected="{{ 'true' if loop.first else 'false' }}">
-            {{ label }}{% if wedof_dashboard_state != 'never_synchronized' %}<span>{{ st[key] }}</span>{% endif %}
-          </button>
-        {% endfor %}
+        <p>Sélectionnez un KPI coloré ci-dessus pour filtrer cette liste.</p>
       </div>
       <span class="wedof-result-summary" id="wedof-visible-results">0 dossier</span>
     </div>
@@ -739,7 +730,7 @@
 <div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
 
 <script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260903-page-tabs') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260903-deduplicated-filters') }}" defer></script>
 <script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20260811-exact-auto-link') }}" defer></script>
 
 <script>
