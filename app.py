@@ -26485,42 +26485,8 @@ def _aps_elearning_tracking_context(
     file_sha256 = str(tracking.get("file_sha256") or "").strip().lower()
     file_sha256_display = " ".join(file_sha256[index:index + 16] for index in range(0, len(file_sha256), 16))
     issued_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y")
-    signature_issues = _aps_elearning_signature_issues(trainee, tracking)
-    force_override = _aps_elearning_force_override(trainee)
-    force_active = bool(signature_issues) and _aps_elearning_force_is_active(
-        trainee,
-        tracking,
-        signature_issues,
-    )
-    if force_active:
-        compliance_status = "FORÇAGE ADMINISTRATIF — RELEVÉ INCOMPLET — SIGNATURE AUTORISÉE"
-        compliance_detail = "Anomalies conservées : " + " ; ".join(signature_issues) + "."
-        force_authorization = (
-            f"Forçage activé le {_aps_elearning_datetime_label(force_override.get('forced_at')) or 'date non renseignée'} "
-            f"par {str(force_override.get('forced_by') or 'Administrateur').strip()}."
-        )
-        signature_instruction = (
-            "SIGNATURE AVEC FORÇAGE — Le relevé reste incomplet. Les anomalies sont inscrites page 1 "
-            "et l’administrateur autorise néanmoins la génération et la signature en l’état."
-        )
-    elif signature_issues:
-        compliance_status = "CONTRÔLES NON VALIDÉS — GÉNÉRATION BLOQUÉE"
-        compliance_detail = "Anomalies détectées : " + " ; ".join(signature_issues) + "."
-        force_authorization = "Aucun forçage administratif actif."
-        signature_instruction = (
-            "À SIGNER APRÈS CONTRÔLE — Toute anomalie d’identité, de durée, de connexion, "
-            "de progression ou d’évaluation doit être corrigée dans Digiforma avant signature."
-        )
-    else:
-        compliance_status = "PARCOURS COMPLET - 100 % - SIGNATURE AUTORISÉE"
-        compliance_detail = "Aucune anomalie détectée par les contrôles automatiques."
-        force_authorization = "Aucun forçage administratif nécessaire."
-        signature_instruction = (
-            "À SIGNER APRÈS CONTRÔLE — Toute anomalie d’identité, de durée, de connexion, "
-            "de progression ou d’évaluation doit être corrigée dans Digiforma avant signature."
-        )
     return {
-        "formation_session": str(_session_get(session_obj, "name", "") or tracking.get("training_title") or "Formation APS").strip(),
+        "formation_session": "Agent de prévention et de sécurité (APS)",
         "remote_period": period,
         "remote_duration": duration,
         "trainee_last_name": last_name or "Non renseigné",
@@ -26546,10 +26512,6 @@ def _aps_elearning_tracking_context(
             else "Non renseigné"
         ),
         "module_fraction_count": str(int(tracking.get("module_fraction_count") or 0)),
-        "compliance_status": compliance_status,
-        "compliance_detail": compliance_detail,
-        "force_authorization": force_authorization,
-        "signature_instruction": signature_instruction,
         "signature_place": "Puget-sur-Argens",
         "issued_date": issued_date,
     }
@@ -26669,7 +26631,7 @@ def _combine_aps_elearning_tracking_pdf(
         writer.add_page(page)
     writer.add_metadata({
         "/Title": "Tableau de suivi de la formation à distance - dossier probatoire CNAPS",
-        "/Subject": "Bordereau signé et relevé individuel Digiforma indissociable",
+        "/Subject": "Bordereau de suivi FOAD et relevé individuel Digiforma annexé",
         "/Author": "CFA Intégrale Academy - Intégrale Sécurité Formations",
     })
     with open(output_path, "wb") as output_file:
