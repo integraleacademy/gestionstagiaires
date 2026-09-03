@@ -430,6 +430,8 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertNotIn("data-wedof-tab", html)
         self.assertNotIn('class="wedof-tabs"', html)
         self.assertIn("Sélectionnez un KPI coloré ci-dessus pour filtrer cette liste.", html)
+        self.assertNotIn("Écarts entre les dates WEDOF et locales", html)
+        self.assertNotIn("Aucun écart détecté", html)
         self.assertNotIn('class="wedof-operations"', html)
         self.assertIn('data-wedof-planned="true"', html)
         self.assertIn('data-wedof-invoiced="true"', html)
