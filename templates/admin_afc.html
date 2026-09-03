@@ -115,6 +115,81 @@
     font-weight:700;
     color:#334155;
   }
+  .afc-cnaps-overview{
+    margin-top:12px;
+  }
+  .afc-cnaps-overview-head{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:14px;
+  }
+  .afc-cnaps-overview-head h2{
+    margin:0;
+    font-size:18px;
+  }
+  .afc-cnaps-overview-head p{
+    margin:0;
+    color:#64748b;
+    font-size:12px;
+  }
+  .afc-cnaps-kpis{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:10px;
+  }
+  .afc-cnaps-kpi{
+    --afc-cnaps-kpi-color:#6366f1;
+    position:relative;
+    min-height:92px;
+    overflow:hidden;
+    border:1px solid #e2e8f0;
+    border-radius:14px;
+    padding:15px 16px 13px 19px;
+    background:#fff;
+    color:#0f172a;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+  }
+  .afc-cnaps-kpi::before{
+    content:"";
+    position:absolute;
+    inset:0 auto 0 0;
+    width:6px;
+    background:var(--afc-cnaps-kpi-color);
+  }
+  .afc-cnaps-kpi:hover{
+    border-color:var(--afc-cnaps-kpi-color);
+    transform:translateY(-1px);
+  }
+  .afc-cnaps-kpi:focus-visible{
+    outline:3px solid color-mix(in srgb,var(--afc-cnaps-kpi-color) 25%,transparent);
+    outline-offset:2px;
+  }
+  .afc-cnaps-kpi.is-active{
+    border-color:var(--afc-cnaps-kpi-color);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--afc-cnaps-kpi-color) 14%,transparent);
+    background:color-mix(in srgb,var(--afc-cnaps-kpi-color) 5%,#fff);
+  }
+  .afc-cnaps-kpi strong{
+    display:block;
+    margin-bottom:5px;
+    color:var(--afc-cnaps-kpi-color);
+    font-size:28px;
+    line-height:1;
+  }
+  .afc-cnaps-kpi span{
+    display:block;
+    font-size:12px;
+    font-weight:850;
+    line-height:1.25;
+  }
+  .afc-cnaps-kpi[data-afc-cnaps-kpi="inconnu"]{--afc-cnaps-kpi-color:#f59e0b;}
+  .afc-cnaps-kpi[data-afc-cnaps-kpi="en_cours"]{--afc-cnaps-kpi-color:#0ea5e9;}
+  .afc-cnaps-kpi[data-afc-cnaps-kpi="accepte"]{--afc-cnaps-kpi-color:#16a34a;}
+  .afc-cnaps-kpi[data-afc-cnaps-kpi="refuse"]{--afc-cnaps-kpi-color:#ef4444;}
 
   #afcTable tbody tr.afc-row-enrolled td{
     background:#ecfdf3 !important;
@@ -136,6 +211,8 @@
   .afc-status{display:inline-block;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;white-space:nowrap;}
   .afc-status-ready{background:#dcfce7;color:#166534}.afc-status-duplicate{background:#e2e8f0;color:#475569}
   .afc-status-invalid{background:#ffedd5;color:#9a3412}.afc-status-conflict{background:#fee2e2;color:#991b1b}
+  @media(max-width:1100px){.afc-cnaps-kpis{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media(max-width:700px){.afc-cnaps-overview-head{align-items:flex-start;flex-direction:column}.afc-cnaps-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.afc-cnaps-kpi{min-height:84px}.afc-cnaps-kpi strong{font-size:24px}}
   @media(max-width:700px){.afc-import-modal{width:100vw;max-width:100vw;max-height:100vh;border-radius:0}.afc-dropzone{padding:20px 10px}}
 </style>
 
@@ -158,6 +235,38 @@
     </div>
   </div>
 </div>
+
+<section class="card afc-cnaps-overview" aria-labelledby="afcCnapsOverviewTitle">
+  <div class="afc-cnaps-overview-head">
+    <div>
+      <h2 id="afcCnapsOverviewTitle">Suivi CNAPS</h2>
+      <p>Répartition des candidats selon leur statut actuel.</p>
+    </div>
+    <p>Cliquez sur un indicateur pour filtrer le tableau.</p>
+  </div>
+  <div class="afc-cnaps-kpis">
+    <button type="button" class="afc-cnaps-kpi is-active" data-afc-cnaps-kpi="all" aria-pressed="true">
+      <strong data-afc-cnaps-kpi-count>{{ candidates|length }}</strong>
+      <span>Total candidats</span>
+    </button>
+    <button type="button" class="afc-cnaps-kpi" data-afc-cnaps-kpi="inconnu" aria-pressed="false">
+      <strong data-afc-cnaps-kpi-count>0</strong>
+      <span>CNAPS à transmettre / inconnu</span>
+    </button>
+    <button type="button" class="afc-cnaps-kpi" data-afc-cnaps-kpi="en_cours" aria-pressed="false">
+      <strong data-afc-cnaps-kpi-count>0</strong>
+      <span>CNAPS transmis / en cours</span>
+    </button>
+    <button type="button" class="afc-cnaps-kpi" data-afc-cnaps-kpi="accepte" aria-pressed="false">
+      <strong data-afc-cnaps-kpi-count>0</strong>
+      <span>CNAPS acceptés</span>
+    </button>
+    <button type="button" class="afc-cnaps-kpi" data-afc-cnaps-kpi="refuse" aria-pressed="false">
+      <strong data-afc-cnaps-kpi-count>0</strong>
+      <span>CNAPS refusés</span>
+    </button>
+  </div>
+</section>
 
 <div class="card" style="margin-top:12px;">
   <button
@@ -213,13 +322,6 @@
       <option value="all">Test français : Tous</option>
       <option value="passed">Test français : Réussi</option>
       <option value="failed">Test français : Non réussi</option>
-    </select>
-    <select id="afcCnapsFilter">
-      <option value="all">Statut CNAPS : Tous</option>
-      <option value="accepte">Statut CNAPS : Accepté</option>
-      <option value="refuse">Statut CNAPS : Refusé</option>
-      <option value="en_cours">Statut CNAPS : En cours</option>
-      <option value="inconnu">Statut CNAPS : Inconnu</option>
     </select>
     <button id="afcGoodProfilesFilter" class="afc-quick-filter-btn" type="button">Bons profils</button>
     <span class="afc-count" id="afcCandidateCount" aria-live="polite"></span>
@@ -400,9 +502,9 @@ const afcSearchInput = document.getElementById('afcSearchInput');
 const afcDecisionFilter = document.getElementById('afcDecisionFilter');
 const afcPresenceFilter = document.getElementById('afcPresenceFilter');
 const afcFrenchFilter = document.getElementById('afcFrenchFilter');
-const afcCnapsFilter = document.getElementById('afcCnapsFilter');
 const afcGoodProfilesFilter = document.getElementById('afcGoodProfilesFilter');
 let goodProfilesOnly = false;
+let activeAfcCnapsFilter = 'all';
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
 function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
@@ -557,11 +659,28 @@ function rowMatchesPresenceFilter(tr, filter){
 
 function cnapsStatusGroup(tr){
   const cnapsEl = tr.querySelector('[data-cnaps]');
-  const txt = (cnapsEl?.dataset.cnapsStatus || cnapsEl?.textContent || '').trim().toUpperCase();
-  if(!txt || txt === 'INCONNU') return 'inconnu';
+  const txt = (cnapsEl?.dataset.cnapsStatus || cnapsEl?.textContent || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if(!txt || ['INCONNU','UNKNOWN','AUCUN DOSSIER','PAS DE DOSSIER','NON TRANSMIS','A TRANSMETTRE','STATUT CNAPS'].includes(txt)) return 'inconnu';
   if(txt.includes('ACCEPT') || txt.includes('CARTE PROFESSIONNELLE OK')) return 'accepte';
   if(txt.includes('REFUS')) return 'refuse';
   return 'en_cours';
+}
+
+function updateAfcCnapsKpis(){
+  const counts = { all:0, inconnu:0, en_cours:0, accepte:0, refuse:0 };
+  document.querySelectorAll('#afcTable tbody tr').forEach((tr)=>{
+    counts.all += 1;
+    const group = cnapsStatusGroup(tr);
+    counts[group] = (counts[group] || 0) + 1;
+  });
+  document.querySelectorAll('[data-afc-cnaps-kpi]').forEach((button)=>{
+    const filter = button.dataset.afcCnapsKpi || 'all';
+    const count = button.querySelector('[data-afc-cnaps-kpi-count]');
+    if(count) count.textContent = String(counts[filter] || 0);
+    const isActive = activeAfcCnapsFilter === filter;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
 }
 
 function rowMatchesCnapsFilter(tr, filter){
@@ -591,7 +710,7 @@ function applyAfcFilters(){
   const decisionFilter = afcDecisionFilter.value;
   const presenceFilter = afcPresenceFilter.value;
   const frenchFilter = afcFrenchFilter.value;
-  const cnapsFilter = afcCnapsFilter.value;
+  const cnapsFilter = activeAfcCnapsFilter;
 
   document.querySelectorAll('#afcTable tbody tr').forEach((tr)=>{
     const searchableParts = [
@@ -611,6 +730,7 @@ function applyAfcFilters(){
     tr.style.display = searchOk && decisionOk && presenceOk && frenchOk && cnapsOk && goodProfileOk ? '' : 'none';
   });
 
+  updateAfcCnapsKpis();
   updateCandidateCount();
 }
 
@@ -943,7 +1063,13 @@ afcSearchInput.addEventListener('input', applyAfcFilters);
 afcDecisionFilter.addEventListener('change', applyAfcFilters);
 afcPresenceFilter.addEventListener('change', applyAfcFilters);
 afcFrenchFilter.addEventListener('change', applyAfcFilters);
-afcCnapsFilter.addEventListener('change', applyAfcFilters);
+document.querySelectorAll('[data-afc-cnaps-kpi]').forEach((button)=>{
+  button.addEventListener('click', ()=>{
+    activeAfcCnapsFilter = button.dataset.afcCnapsKpi || 'all';
+    applyAfcFilters();
+    document.getElementById('afcTable')?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+});
 afcGoodProfilesFilter.addEventListener('click', ()=>{
   goodProfilesOnly = !goodProfilesOnly;
   afcGoodProfilesFilter.classList.toggle('active', goodProfilesOnly);
