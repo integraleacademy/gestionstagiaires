@@ -510,38 +510,6 @@
     </div>
   </section>
 
-    <details class="wedof-disclosure">
-      <summary>
-        <div>
-          <strong>Écarts entre les dates WEDOF et locales</strong>
-          <small>Information uniquement · les automatisations utilisent toujours les dates WEDOF</small>
-        </div>
-        <span class="wedof-summary-badge">{{ wedof_date_differences|length }} écart{{ 's' if wedof_date_differences|length > 1 else '' }}</span>
-      </summary>
-      <div class="wedof-disclosure-body">
-        {% if wedof_date_differences %}
-          <div class="wedof-subtable-wrap">
-            <table class="table">
-              <thead><tr><th>Numéro WEDOF</th><th>Session locale</th><th>Stagiaire</th><th>Dates WEDOF</th><th>Dates locales</th><th>Constat</th></tr></thead>
-              <tbody>
-                {% for link in wedof_date_differences %}
-                  <tr>
-                    <td><strong>{{ link.external_id }}</strong></td>
-                    <td>{{ link.session_label }}</td>
-                    <td>{{ link.trainee_label }}</td>
-                    <td>Du {{ link.date_consistency.wedof_date_start|format_date_fr }} au {{ link.date_consistency.wedof_date_end|format_date_fr }}</td>
-                    <td>Du {{ link.date_consistency.local_date_start|format_date_fr }} au {{ link.date_consistency.local_date_end|format_date_fr }}</td>
-                    <td>{{ 'Dates différentes' if link.date_consistency.status == 'date_mismatch' else 'Dates locales non disponibles' }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        {% else %}
-          <div class="wedof-empty-search"><strong>Aucun écart détecté</strong><span>Les dates des rattachements locaux correspondent aux dates WEDOF.</span></div>
-        {% endif %}
-      </div>
-    </details>
   </div>
 
   <div
