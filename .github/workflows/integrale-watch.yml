@@ -52,7 +52,7 @@ jobs:
         run: |
           xcodebuild \
             -project IntegraleWatch.xcodeproj \
-            -scheme IntegraleWatch \
+            -target "IntegraleWatch Watch App" \
             -sdk watchsimulator \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
