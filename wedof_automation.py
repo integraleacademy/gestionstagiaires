@@ -1014,7 +1014,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "linked": linked, "association": association.get("association_label", "À rattacher localement"),
                      "association_source": (link or {}).get("source"),
                      "association_orphan": bool(association.get("orphaned")), "matching_status": item.get("status"),
-                     "entry_success": history.get("entry_training", {}).get("status") == "success",
+                     # Le jalon affiché doit refléter l'étape actuelle du dossier.
+                     # Une fois le service fait déclaré, l'ancien jalon d'entrée
+                     # ne doit plus apparaître dans la ligne ni dans son compteur.
+                     "entry_success": state == "inTraining",
                      "service_success": service_success,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     for status in status_by_id.values():
@@ -1060,7 +1063,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
                      "linked": link is not None, "association": association.get("association_label", "À rattacher localement"),
                      "association_source": (link or {}).get("source"),
                      "association_orphan": bool(association.get("orphaned")),
-                     "entry_success": status.get("entry_training", {}).get("status") == "success",
+                     "entry_success": state == "inTraining",
                      "service_success": service_success,
                      "wedof_state_label": {"inTraining":"En formation — état WEDOF", "serviceDoneDeclared":"Service fait déclaré dans WEDOF", "serviceDoneValidated":"Service fait validé dans WEDOF"}.get(state, "")})
     # Le suivi des rattachements a démarré avec les formations de juin 2026. Les

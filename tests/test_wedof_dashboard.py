@@ -220,18 +220,21 @@ class WedofDashboardUnitTests(unittest.TestCase):
         self.assertNotIn("COMPLETED", rows)
         self.assertFalse(rows["MISSING"]["unlinked_since_tracking_start"])
 
-    def test_anomalies_and_successes_come_from_server_data(self):
+    def test_dashboard_displays_only_the_current_declared_milestone(self):
         dashboard = build_automation_dashboard(
             [folder("BAD", trainingActionInfo={}), folder("T", "inTraining"), folder("D", "serviceDoneDeclared")],
             statuses=[
-                {"external_id": "T", "entry_training": {"status": "success"}},
-                {"external_id": "D", "service_done": {"status": "success"}},
+                {"external_id": "T"},
+                {"external_id": "D", "entry_training": {"status": "success"},
+                 "service_done": {"status": "success"}},
             ],
         )
         rows = {row["external_id"]: row for row in dashboard["rows"]}
         self.assertEqual(rows["BAD"]["tab"], "anomaly")
         self.assertTrue(rows["T"]["entry_success"])
+        self.assertFalse(rows["D"]["entry_success"])
         self.assertTrue(rows["D"]["service_success"])
+        self.assertEqual((dashboard["stats"]["entry_success"], dashboard["stats"]["service_success"]), (1, 1))
 
 
 class WedofDashboardViewTests(unittest.TestCase):
@@ -350,8 +353,9 @@ class WedofDashboardViewTests(unittest.TestCase):
         ]
         data = {"sessions": [], "wedof_links": [], "wedof_automation_exceptions": [],
                 "wedof_automation_status": [
-                    {"external_id": "T", "entry_training": {"status": "success"}},
-                    {"external_id": "D", "service_done": {"status": "success"}},
+                    {"external_id": "T"},
+                    {"external_id": "D", "entry_training": {"status": "success"},
+                     "service_done": {"status": "success"}},
                 ]}
         with patch.object(gestion_app, "WedofClient", return_value=remote), \
              patch.object(gestion_app, "load_data", return_value=data), \
@@ -363,6 +367,8 @@ class WedofDashboardViewTests(unittest.TestCase):
                      "Automatisation prévue", "Entrée en formation déclarée ✅",
                      "Service fait déclaré ✅", "À rattacher localement", "Dossiers non rattachés localement"):
             self.assertIn(text, html)
+        self.assertNotIn("En formation dans WEDOF", html)
+        self.assertEqual(html.count("Entrée en formation déclarée ✅"), 1)
         self.assertIn('data-wedof-panel="accepted"', html)
         self.assertIn('data-wedof-panel="training"', html)
         self.assertIn('data-wedof-panel="service"', html)
