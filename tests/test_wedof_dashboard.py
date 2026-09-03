@@ -236,8 +236,25 @@ class WedofDashboardUnitTests(unittest.TestCase):
         self.assertFalse(rows["D"]["entry_success"])
         self.assertTrue(rows["D"]["service_success"])
         self.assertTrue(rows["D"]["invoiced"])
+        self.assertEqual(rows["D"]["tab"], "invoiced")
         self.assertEqual((dashboard["stats"]["entry_success"], dashboard["stats"]["service_success"]), (1, 1))
         self.assertEqual(dashboard["stats"]["invoiced"], 1)
+        self.assertEqual(dashboard["stats"]["service"], 0)
+
+    def test_invoiced_service_done_is_removed_from_service_done_category(self):
+        dashboard = build_automation_dashboard(
+            [folder("INVOICED", "serviceDoneDeclared"), folder("TO-INVOICE", "serviceDoneValidated")],
+            statuses=[
+                {"external_id": "INVOICED", "service_done": {"status": "success"}},
+                {"external_id": "TO-INVOICE", "service_done": {"status": "success"}},
+            ],
+            invoiced_external_ids={"INVOICED"},
+        )
+
+        rows = {row["external_id"]: row for row in dashboard["rows"]}
+        self.assertEqual(rows["INVOICED"]["tab"], "invoiced")
+        self.assertEqual(rows["TO-INVOICE"]["tab"], "service")
+        self.assertEqual((dashboard["stats"]["service"], dashboard["stats"]["invoiced"]), (1, 1))
 
     def test_invoiced_kpi_requires_a_generated_cpf_invoice(self):
         data = {
@@ -371,7 +388,8 @@ class WedofDashboardViewTests(unittest.TestCase):
         remote = Mock()
         remote.list_registration_folders.side_effect = [
             [folder("A"), folder("BAD", trainingActionInfo={})],
-            [folder("T", "inTraining")], [folder("D", "serviceDoneDeclared")], [],
+            [folder("T", "inTraining")],
+            [folder("D", "serviceDoneDeclared"), folder("S", "serviceDoneDeclared")], [],
         ]
         data = {"sessions": [],
                 "wedof_links": [{"external_id": "D", "active": True,
@@ -382,6 +400,7 @@ class WedofDashboardViewTests(unittest.TestCase):
                     {"external_id": "T"},
                     {"external_id": "D", "entry_training": {"status": "success"},
                      "service_done": {"status": "success"}},
+                    {"external_id": "S", "service_done": {"status": "success"}},
                 ]}
         with patch.object(gestion_app, "WedofClient", return_value=remote), \
              patch.object(gestion_app, "load_data", return_value=data), \
@@ -399,9 +418,12 @@ class WedofDashboardViewTests(unittest.TestCase):
             self.assertNotIn(removed, html)
         self.assertNotIn("En formation dans WEDOF", html)
         self.assertEqual(html.count("Entrée en formation déclarée ✅"), 1)
+        self.assertEqual(html.count("Service fait déclaré ✅"), 1)
+        self.assertEqual(html.count("Facturé ✅"), 1)
         self.assertIn('data-wedof-panel="accepted"', html)
         self.assertIn('data-wedof-panel="training"', html)
         self.assertIn('data-wedof-panel="service"', html)
+        self.assertIn('data-wedof-panel="invoiced"', html)
         self.assertIn('data-wedof-panel="anomaly"', html)
         for key in ("planned", "accepted", "training", "service", "invoiced", "anomaly"):
             self.assertIn(f'data-wedof-counter="{key}"', html)
@@ -413,6 +435,16 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.assertIn("row.dataset.wedofInvoiced === 'true'", dashboard_script)
         self.assertIn("counter.addEventListener('click'", dashboard_script)
         self.assertIn("table?.scrollIntoView", dashboard_script)
+        for key, label in (
+            ("consumption", "Consommation WEDOF"),
+            ("state", "État des dossiers"),
+            ("technical", "Connexion et paramètres techniques"),
+            ("requests", "Demandes entrantes WEDOF"),
+        ):
+            self.assertIn(f'data-wedof-page-tab="{key}"', html)
+            self.assertIn(f'data-wedof-page-panel="{key}"', html)
+            self.assertIn(label, html)
+        self.assertIn("showPageSection(initialSection, {updateUrl: false})", dashboard_script)
         self.assertIn("admin-sidebar", html)
         self.assertIn("css/admin-wedof.css", html)
         self.assertIn("Pilotage des dossiers CPF", html)
@@ -455,6 +487,7 @@ class WedofDashboardViewTests(unittest.TestCase):
             self.assertEqual(len(data["wedof_automation_blocks"]), 1)
             self.assertTrue(data["wedof_automation_blocks"][0]["active"])
             self.assertIn("tab=anomaly", first.location)
+            self.assertIn("section=state", first.location)
             with self.client.session_transaction() as session:
                 self.assertTrue(any("Aucune déclaration ne sera envoyée" in message
                                     for _category, message in session.get("_flashes", [])))
@@ -463,6 +496,28 @@ class WedofDashboardViewTests(unittest.TestCase):
             self.assertFalse(data["wedof_automation_blocks"][0]["active"])
             self.assertEqual(response.status_code, 302)
             remote.assert_not_called()
+
+    def test_page_opens_on_consumption_and_allows_direct_section_links(self):
+        data = {
+            "sessions": [], "wedof_links": [], "wedof_automation_status": [],
+            "wedof_automation_runs": [{"status": "success"}], "wedof_automation_sync": {},
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "_admin_wedof_quota_dashboard", return_value={"available": False}):
+            default_html = self.client.get("/admin/wedof").get_data(as_text=True)
+            technical_html = self.client.get("/admin/wedof?section=technical").get_data(as_text=True)
+
+        default_tab = default_html.split('id="wedof-page-tab-consumption"', 1)[1].split(">", 1)[0]
+        default_panel = default_html.split('id="wedof-page-panel-consumption"', 1)[1].split(">", 1)[0]
+        hidden_state = default_html.split('id="wedof-page-panel-state"', 1)[1].split(">", 1)[0]
+        technical_tab = technical_html.split('id="wedof-page-tab-technical"', 1)[1].split(">", 1)[0]
+        technical_panel = technical_html.split('id="wedof-page-panel-technical"', 1)[1].split(">", 1)[0]
+        self.assertIn("is-active", default_tab)
+        self.assertNotIn("hidden", default_panel)
+        self.assertIn("hidden", hidden_state)
+        self.assertIn("is-active", technical_tab)
+        self.assertNotIn("hidden", technical_panel)
 
     def test_block_route_requires_authentication(self):
         anonymous = gestion_app.app.test_client()

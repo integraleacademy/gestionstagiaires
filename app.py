@@ -16647,6 +16647,9 @@ def _wedof_invoiced_external_ids(data: Dict[str, Any]) -> Set[str]:
 @admin_login_required
 def admin_wedof_requests():
     data = load_data(run_background_tasks=False)
+    requested_section = str(request.args.get("section") or "").strip()
+    if requested_section not in {"consumption", "state", "technical", "requests"}:
+        requested_section = "state" if request.args.get("tab") else "consumption"
     wedof_webhooks = _load_wedof_webhooks()[:100]
     for item in wedof_webhooks:
         if isinstance(item, dict):
@@ -16658,6 +16661,7 @@ def admin_wedof_requests():
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=wedof_new_requests_count,
+        wedof_active_section=requested_section,
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
         **_admin_wedof_execution_flags(),
         wedof_links=displayed_links,
@@ -16847,7 +16851,7 @@ def admin_wedof_automation_analyze():
         except Exception:
             app.logger.exception("Erreur technique nettoyée pendant l’analyse WEDOF")
             flash("L’API WEDOF est temporairement indisponible. Aucune donnée existante n’a été supprimée. Réessayez ultérieurement.", "error")
-    return redirect(url_for("admin_wedof_requests"))
+    return redirect(url_for("admin_wedof_requests", section="state"))
 
 
 @app.post("/admin/wedof/automation/block")
@@ -16880,7 +16884,7 @@ def admin_wedof_automation_block():
         return data
     _atomic_update_data(mutate)
     flash("Automatisation WEDOF bloquée. Aucune déclaration ne sera envoyée pour cette action tant que le blocage restera actif.", "success")
-    return redirect(url_for("admin_wedof_requests", tab=request.form.get("tab") or "anomaly"))
+    return redirect(url_for("admin_wedof_requests", section="state", tab=request.form.get("tab") or "anomaly"))
 
 
 @app.post("/admin/wedof/automation/unblock")
@@ -16896,7 +16900,7 @@ def admin_wedof_automation_unblock():
         return data
     _atomic_update_data(mutate)
     flash("Automatisation WEDOF réactivée. Le dossier sera réévalué lors de la prochaine analyse automatique.", "success")
-    return redirect(url_for("admin_wedof_requests", tab=request.form.get("tab") or "anomaly"))
+    return redirect(url_for("admin_wedof_requests", section="state", tab=request.form.get("tab") or "anomaly"))
 
 
 def _decorate_wedof_preview(preview: Dict[str, Any], data: Dict[str, Any]) -> None:
@@ -16953,7 +16957,7 @@ def admin_wedof_matching_preview():
         )
     except (WedofConfigurationError, WedofApiError) as exc:
         flash(str(exc), "error")
-        return redirect(url_for("admin_wedof_requests"))
+        return redirect(url_for("admin_wedof_requests", section="state"))
 
     wedof_webhooks = _load_wedof_webhooks()[:100]
     for item in wedof_webhooks:
@@ -16964,6 +16968,7 @@ def admin_wedof_matching_preview():
         "admin_wedof.html",
         wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=sum(1 for item in wedof_webhooks if not bool(item.get("processed"))),
+        wedof_active_section="state",
         wedof_api_key_configured=True,
         **_admin_wedof_execution_flags(),
         matching_preview=preview,
@@ -17257,7 +17262,7 @@ def _manual_link_response(message: str, status: int, *, result: Optional[Dict[st
             body.update(result)
         return jsonify(body), status
     flash(message, "success" if status < 400 else "error")
-    return redirect(url_for("admin_wedof_requests"))
+    return redirect(url_for("admin_wedof_requests", section="state"))
 
 
 @app.post("/admin/wedof/matching/manual-link")
@@ -17380,7 +17385,7 @@ def admin_wedof_matching_sync_exact():
         )
     except (WedofConfigurationError, WedofApiError) as exc:
         flash(str(exc), "error")
-    return redirect(url_for("admin_wedof_requests"))
+    return redirect(url_for("admin_wedof_requests", section="state"))
 
 
 @app.post("/admin/wedof/api/test")
@@ -17396,7 +17401,7 @@ def admin_test_wedof_api():
         )
     except (WedofConfigurationError, WedofApiError) as exc:
         flash(str(exc), "error")
-    return redirect(url_for("admin_wedof_requests"))
+    return redirect(url_for("admin_wedof_requests", section="technical"))
 
 @app.post("/admin/wedof/mark-treated/<entry_id>")
 @admin_login_required
@@ -17412,7 +17417,7 @@ def admin_mark_wedof_treated(entry_id: str):
             break
     if changed:
         _save_wedof_webhooks(entries)
-    return redirect(url_for("admin_wedof_requests"))
+    return redirect(url_for("admin_wedof_requests", section="requests"))
 
 
 @app.post("/admin/wedof/delete/<entry_id>")
@@ -17423,7 +17428,7 @@ def admin_delete_wedof_entry(entry_id: str):
     filtered = [item for item in entries if str(item.get("id") or "") != str(entry_id)]
     if len(filtered) != len(entries):
         _save_wedof_webhooks(filtered)
-    return redirect(url_for("admin_wedof_requests"))
+    return redirect(url_for("admin_wedof_requests", section="requests"))
 
 def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     entry_id = str(entry.get("id") or "")
