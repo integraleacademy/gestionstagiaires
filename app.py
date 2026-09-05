@@ -22331,6 +22331,48 @@ def admin_trainees_print(session_id: str):
     )
 
 
+@app.get("/admin/sessions/<session_id>/trainees/aps-kickoff-attendance/print")
+@admin_login_required
+def admin_aps_kickoff_attendance_print(session_id: str):
+    """Render the attendance sheet for the APS e-learning kickoff meeting."""
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item:
+        abort(404)
+
+    training_type = str(_session_get(session_item, "training_type", "") or "").strip().upper()
+    if not re.search(r"\bAPS\b", training_type):
+        abort(404)
+
+    session_view = {
+        "id": session_item.get("id"),
+        "name": _session_get(session_item, "name", ""),
+        "training_type": _session_get(session_item, "training_type", ""),
+        "date_start": _session_get(session_item, "date_start", ""),
+        "date_end": _session_get(session_item, "date_end", ""),
+        "aps_in_person_start": _session_get(session_item, "aps_in_person_start", ""),
+    }
+    session_view["kickoff_date"] = (
+        session_view["aps_in_person_start"] or session_view["date_start"]
+    )
+
+    trainees = [
+        {
+            "last_name": normalize_last_name(trainee.get("last_name") or ""),
+            "first_name": normalize_first_name(trainee.get("first_name") or ""),
+        }
+        for trainee in _registered_trainees(session_item)
+    ]
+    trainees.sort(key=_trainee_alpha_sort_key)
+
+    return render_template(
+        "admin_aps_kickoff_attendance_print.html",
+        session=session_view,
+        trainees=trainees,
+        auto_print=(request.args.get("autoprint") or "").strip() == "1",
+    )
+
+
 def _require_exam_dossier_session(data: Dict[str, Any], session_id: str, training: str = "A3P") -> Dict[str, Any]:
     session_item = find_session(data, session_id)
     if not session_item:
@@ -22977,6 +23019,9 @@ def admin_trainees(session_id: str):
     show_hosting = (session_view["training_type"] == "A3P")
     is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
     is_aps = _is_aps_session(session_view)
+    is_aps_training = bool(re.search(
+        r"\bAPS\b", (session_view["training_type"] or "").strip().upper()
+    ))
     is_dirigeant = ("DIRIGEANT" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
@@ -23040,6 +23085,7 @@ def admin_trainees(session_id: str):
         show_vae=show_vae,
         is_vtc=is_vtc,
         is_aps=is_aps,
+        is_aps_training=is_aps_training,
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
         finance_summary=_admin_trainees_finance_summary(session_view, trainees),
@@ -23128,6 +23174,7 @@ def admin_vtc_trainees_all():
         show_vae=False,
         is_vtc=True,
         is_aps=False,
+        is_aps_training=False,
         is_dirigeant=False,
         enums=ENUMS,
         is_adef=False,
