@@ -170,6 +170,12 @@
     {% if not is_all_vtc %}
     <a class="btn btn-primary" id="btnFinancialReport" href="{{ url_for('admin_session_financial_report', session_id=session.id) }}">💶 Financier</a>
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
+    {% if is_aps_training %}
+    <a class="btn btn-outline" id="btnPrintApsKickoffAttendance"
+       href="{{ url_for('admin_aps_kickoff_attendance_print', session_id=session.id, autoprint=1) }}"
+       target="_blank" rel="noopener"
+       title="Imprimer la feuille de présence de la réunion de démarrage APS">📝 Feuille de présence e-learning</a>
+    {% endif %}
     {% if is_ssiap_session and not is_read_only and registered_trainees|selectattr('ssiap_exam_status', 'equalto', 'certified')|list %}
     <form class="ssiap-diploma-generation-form" method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
       <button class="btn btn-primary" id="btnGenerateSsiapDiplomas" type="submit">🎓 Générer les diplômes certifiés</button>
