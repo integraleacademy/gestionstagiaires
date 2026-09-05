@@ -103,6 +103,14 @@ services:
         value: "30"
       - key: WEDOF_LIVE_RETRY_MINUTES
         value: "10"
+      # Le cron live appelle fréquemment l'application, mais ce contrôle GET
+      # ciblé ne s'exécute qu'une fois par heure et sur dix dossiers maximum.
+      - key: WEDOF_INVOICE_RECONCILIATION_ENABLED
+        value: "true"
+      - key: WEDOF_INVOICE_RECONCILIATION_INTERVAL_MINUTES
+        value: "60"
+      - key: WEDOF_INVOICE_RECONCILIATION_MAX_CANDIDATES
+        value: "10"
       - key: WEDOF_MAINTENANCE_WINDOW_ENABLED
         value: "true"
       - key: WEDOF_MAINTENANCE_START_TIME
@@ -114,9 +122,9 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    # Le moteur ne contacte WEDOF que lorsqu'une action est réellement due.
-    # Ces passages rapprochés permettent de reprendre une panne transitoire
-    # dix minutes plus tard sans augmenter les synchronisations globales.
+    # Le moteur relit les actions réellement dues. Il porte aussi le contrôle
+    # facturation, dont l'application limite elle-même la cadence à une heure.
+    # Les passages rapprochés permettent de reprendre une panne transitoire.
     schedule: "5,15,25,35,45,55 * * * *"
     dockerCommand: python scripts/run_wedof_automation.py
     envVars:

@@ -39,6 +39,9 @@ class CronDeploymentTests(unittest.TestCase):
         self.assertIn('key: WEDOF_REQUEST_LIMIT_PER_MONTH\n        value: "15000"', web)
         self.assertIn('key: WEDOF_LIVE_MAX_CANDIDATES_PER_RUN\n        value: "30"', web)
         self.assertIn('key: WEDOF_LIVE_RETRY_MINUTES\n        value: "10"', web)
+        self.assertIn('key: WEDOF_INVOICE_RECONCILIATION_ENABLED\n        value: "true"', web)
+        self.assertIn('key: WEDOF_INVOICE_RECONCILIATION_INTERVAL_MINUTES\n        value: "60"', web)
+        self.assertIn('key: WEDOF_INVOICE_RECONCILIATION_MAX_CANDIDATES\n        value: "10"', web)
 
     def test_wedof_live_retries_transient_failures_every_ten_minutes(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
