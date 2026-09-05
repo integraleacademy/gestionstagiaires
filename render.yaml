@@ -75,6 +75,8 @@ services:
         value: "1.0"
       - key: WEDOF_WEBHOOK_SECRET
         sync: false
+      - key: WEDOF_API_KEY
+        sync: false
       - key: AFC_IMPORT_VISION_MODEL
         value: gpt-4.1-mini
       # Automatisation réelle active par défaut. Ce seul arrêt d'urgence peut

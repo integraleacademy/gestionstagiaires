@@ -56,10 +56,10 @@ python app.py
 - `CNAPS_MONITOR_TOKEN` (secret partagé entre le cron Render et le endpoint interne de suivi CNAPS)
 - `CRON_SECRET` est généré et partagé automatiquement par le Blueprint Render entre le service web et les tâches cron ; il ne doit pas être créé séparément sur chaque service.
 - `CNAPSV3_API_TOKEN` (obligatoire sur le service web pour que le suivi automatique lise les dossiers CNAPS)
-- `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
+- `WEDOF_WEBHOOK_SECRET` (obligatoire pour autoriser les lectures et mutations WEDOF déclenchées par webhook ; un webhook non authentifié reste archivé sans action distante)
 - `CRM_WEDOF_WEBHOOK_URL` (facultatif, défaut : `https://assistance-alw9.onrender.com/api/webhooks/wedof`)
 - `CRM_WEDOF_WEBHOOK_SECRET` (facultatif : secret partagé avec le CRM ; à défaut, `WEDOF_WEBHOOK_SECRET` est réutilisé)
-- `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
+- `WEDOF_API_KEY` (clé API WeDoF utilisée pour lire un dossier et exécuter les mutations autorisées)
 - `AKTO_API_BASE_URL` (URL de l’API Convergence CFA/OPCO communiquée par AKTO)
 - `AKTO_OAUTH_TOKEN_URL` (URL d’obtention du Bearer Token communiquée par AKTO)
 - `AKTO_OAUTH_CLIENT_ID` et `AKTO_OAUTH_CLIENT_SECRET` (identifiants du logiciel Gestion Stagiaires fournis par AKTO)

@@ -59,7 +59,7 @@ def read_env_bool(name: str, default: bool = False) -> bool:
 
 
 class WedofClient:
-    """Client WEDOF dont les deux seules mutations sont explicites et sans retry."""
+    """Client WEDOF dont les mutations sont explicites et sans retry."""
 
     def __init__(
         self,
@@ -264,6 +264,15 @@ class WedofClient:
                                         {"date": business_date},
                                         operation="urgent_automation_entry_training",
                                         allow_over_limit=True)[0]
+
+    def validate_registration_folder(self, external_id: str) -> Any:
+        """Passe un dossier ``notProcessed`` à ``validated`` une seule fois."""
+        identifier = self._identifier(external_id)
+        return self._post_json_response(
+            f"/registrationFolders/{identifier}/validate", {},
+            operation="urgent_vtc_cpf_auto_validation",
+            allow_over_limit=True,
+        )[0]
 
     def declare_registration_folder_service_done(self, external_id: str, date: str,
                                                   absence_duration: float = 0,

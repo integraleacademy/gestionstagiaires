@@ -196,6 +196,35 @@ class WedofClientTests(unittest.TestCase):
         self.assertNotIn("allow_over_limit", reserve.call_args.kwargs)
 
     @patch("wedof_service.reserve_request")
+    def test_validate_registration_folder_posts_once_to_the_official_action(self, reserve):
+        session = Mock()
+        session.post.return_value = response(payload={
+            "externalId": "W1",
+            "state": "validated",
+        })
+        client = WedofClient(
+            api_key="key", session=session,
+            origin="gestionstagiaires-vtc-cpf",
+        )
+
+        result = client.validate_registration_folder("W1")
+
+        self.assertEqual(result["state"], "validated")
+        session.post.assert_called_once_with(
+            "https://www.wedof.fr/api/registrationFolders/W1/validate",
+            headers=client._mutation_headers,
+            json={},
+            timeout=(5, 45),
+        )
+        reserve.assert_called_once_with(
+            origin="gestionstagiaires-vtc-cpf",
+            operation="urgent_vtc_cpf_auto_validation",
+            method="POST",
+            path="/registrationFolders/:id/validate",
+            allow_over_limit=True,
+        )
+
+    @patch("wedof_service.reserve_request")
     @patch("wedof_service.time.sleep")
     def test_identity_search_reads_exactly_one_page_without_retry(self, sleep, reserve):
         page = response(payload={"items": [{"externalId": "W1"}]})
