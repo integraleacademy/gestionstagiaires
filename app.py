@@ -3518,6 +3518,9 @@ def _resolve_persist_dir() -> str:
 PERSIST_DIR = _resolve_persist_dir()
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 WEDOF_WEBHOOK_FILE = os.path.join(PERSIST_DIR, "wedof_webhooks.json")
+VTC_CPF_TRAINING_ID = "84089988400026_vtc2022"
+VTC_CPF_TRAINING_ACTION_ID = "84089988400026_vtc2022mixte"
+VTC_CPF_ACCOUNT_URL = "https://www.moncompteformation.gouv.fr/espace-prive/html/#/"
 AKTO_BTS_DB_FILE = os.path.join(PERSIST_DIR, "akto_bts.sqlite3")
 AKTO_BTS_SYNC_LOCK_FILE = os.path.join(PERSIST_DIR, "akto_bts_sync.lock")
 os.environ.setdefault(
@@ -8426,6 +8429,9 @@ def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
         "zip_code": pick(attendee_address.get("zipCode")),
         "date_of_birth": pick(attendee.get("dateOfBirth")),
         "training_title": pick(training.get("title"), payload.get("training_title"), payload.get("formation"), payload.get("formation_title"), payload.get("intitule_formation")),
+        "training_id": pick(training.get("trainingId"), payload.get("trainingId"), payload.get("training_id")),
+        "training_action_id": pick(training.get("externalId"), training.get("trainingActionId"), payload.get("trainingActionId"), payload.get("training_action_id")),
+        "folder_type": pick(payload.get("type"), payload.get("folderType"), payload.get("folder_type")),
         "status": pick(payload.get("state"), payload.get("status"), payload.get("dossier_status"), payload.get("statut")),
         "external_link": pick(payload.get("externalLink")),
         "training_date": pick(
@@ -8474,18 +8480,22 @@ def _wedof_entry_display_fields(entry: Dict[str, Any]) -> Dict[str, str]:
 def _find_wedof_folder_id(payload: Any) -> str:
     if not isinstance(payload, dict):
         return ""
-    data_obj = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    external_id = str(payload.get("externalId") or "").strip()
+    if external_id:
+        return external_id
+    for key in ("registrationFolder", "folder", "resource", "data", "payload"):
+        nested_id = _find_wedof_folder_id(payload.get(key))
+        if nested_id:
+            return nested_id
     candidates = [
         payload.get("id"),
+        payload.get("dataProviderId"),
         payload.get("folderId"),
         payload.get("registrationFolderId"),
         payload.get("registration_folder_id"),
         payload.get("resourceId"),
         payload.get("objectId"),
         payload.get("dossierId"),
-        data_obj.get("id"),
-        data_obj.get("folderId"),
-        data_obj.get("registrationFolderId"),
     ]
     for value in candidates:
         if value is None:
@@ -8523,6 +8533,277 @@ def _fetch_wedof_folder_details(folder_id: str) -> Dict[str, Any]:
             folder_id, getattr(exc, "code", "wedof_unavailable"),
         )
         return {}
+
+
+def _is_vtc_cpf_registration_folder(folder: Dict[str, Any]) -> bool:
+    """Limite l'automatisation à l'unique action CPF VTC publiée."""
+    fields = _extract_wedof_payload_fields(folder)
+    return (
+        fields.get("folder_type", "").casefold() == "cpf"
+        and fields.get("training_action_id", "").casefold()
+        == VTC_CPF_TRAINING_ACTION_ID.casefold()
+    )
+
+
+def _vtc_cpf_prior_workflow_state(
+        entries: List[Dict[str, Any]], folder_id: str) -> Tuple[bool, Set[str]]:
+    """Retrouve la validation et les notifications déjà réussies pour un dossier."""
+    validation_done = False
+    sent_channels: Set[str] = set()
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        workflow = item.get("vtc_cpf_workflow")
+        if not isinstance(workflow, dict) \
+                or str(workflow.get("folder_id") or "") != folder_id:
+            continue
+        validation = workflow.get("validation")
+        if isinstance(validation, dict) and validation.get("status") in {
+                "succeeded", "already_validated", "previously_validated"}:
+            validation_done = True
+        notifications = workflow.get("notifications")
+        if not isinstance(notifications, dict):
+            continue
+        for channel in ("email", "sms"):
+            channel_result = notifications.get(channel)
+            if isinstance(channel_result, dict) and channel_result.get("status") in {
+                    "sent", "already_sent"}:
+                sent_channels.add(channel)
+    return validation_done, sent_channels
+
+
+def _vtc_cpf_confirmation_message(folder: Dict[str, Any]) -> Dict[str, str]:
+    fields = _extract_wedof_payload_fields(folder)
+    first_name = fields.get("first_name", "").strip()
+    greeting_text = f"Bonjour {first_name}," if first_name else "Bonjour,"
+    greeting_html = html.escape(greeting_text)
+    account_url = html.escape(VTC_CPF_ACCOUNT_URL, quote=True)
+    subject = "Action requise – confirmez votre inscription VTC"
+    text_content = (
+        f"{greeting_text}\n\n"
+        "Intégrale Academy a validé votre demande d'inscription à la formation "
+        "Chauffeur VTC.\n\n"
+        "Dernière étape : connectez-vous à Mon Compte Formation, ouvrez votre "
+        "dossier et acceptez l'inscription pour la rendre définitive.\n\n"
+        f"{VTC_CPF_ACCOUNT_URL}\n\n"
+        "Besoin d'aide ? Contactez-nous au 04 22 47 07 68."
+    )
+    email_html = mail_layout(f"""
+      <h2 style="margin:0 0 16px;color:#17152f;text-align:center;">Votre inscription VTC attend votre confirmation</h2>
+      <p>{greeting_html}</p>
+      <p>Intégrale Academy a validé votre demande d'inscription à la formation <strong>Chauffeur VTC</strong>.</p>
+      <div style="background:#f3edff;border:1px solid #ddd1fb;border-radius:14px;padding:16px;margin:18px 0;">
+        <strong>Dernière étape obligatoire</strong>
+        <p style="margin:8px 0 0;">Connectez-vous à Mon Compte Formation, ouvrez votre dossier puis acceptez l'inscription. Votre inscription deviendra alors définitive.</p>
+      </div>
+      <p style="text-align:center;margin:24px 0;">
+        <a href="{account_url}" style="display:inline-block;background:#6d28d9;color:#fff;text-decoration:none;font-weight:700;padding:13px 20px;border-radius:10px;">Terminer mon inscription CPF</a>
+      </p>
+      <p style="color:#5f5b72;font-size:14px;">Tant que cette confirmation n'est pas effectuée dans votre compte CPF, votre place n'est pas définitivement réservée.</p>
+      <p style="color:#5f5b72;font-size:14px;">Besoin d'aide ? Appelez-nous au <strong>04 22 47 07 68</strong>.</p>
+    """)
+    sms = (
+        "Intégrale Academy : votre demande VTC est validée. Dernière étape : "
+        "connectez-vous à Mon Compte Formation et acceptez l'inscription pour "
+        f"la rendre définitive. {VTC_CPF_ACCOUNT_URL}"
+    )
+    return {
+        "email": fields.get("email", "").strip(),
+        "phone": fields.get("phone", "").strip(),
+        "subject": subject,
+        "html": email_html,
+        "text": text_content,
+        "sms": sms,
+    }
+
+
+def _process_vtc_cpf_auto_workflow(
+        folder_details: Dict[str, Any], entries: List[Dict[str, Any]],
+        entry: Dict[str, Any], *, allow_validation: bool = True) -> Dict[str, Any]:
+    """Valide le dossier VTC ciblé puis notifie le candidat, sans doublon connu."""
+    folder = _embedded_wedof_folder(folder_details) or folder_details
+    if not isinstance(folder, dict) or not _is_vtc_cpf_registration_folder(folder):
+        return folder_details
+
+    fields = _extract_wedof_payload_fields(folder)
+    folder_id = fields.get("wedof_case_id", "").strip()
+    if not folder_id:
+        return folder_details
+
+    workflow = entry.setdefault("vtc_cpf_workflow", {})
+    workflow.update({
+        "eligible": True,
+        "folder_id": folder_id,
+        "training_id": fields.get("training_id") or VTC_CPF_TRAINING_ID,
+        "training_action_id": fields.get("training_action_id"),
+    })
+    workflow.setdefault("state_before", fields.get("status"))
+    state = fields.get("status", "")
+    state_key = state.casefold()
+    previously_validated, sent_channels = _vtc_cpf_prior_workflow_state(
+        entries, folder_id,
+    )
+    resulting_folder = dict(folder)
+
+    if state_key == "notprocessed":
+        if previously_validated:
+            resulting_folder["state"] = "validated"
+            workflow["validation"] = {
+                "status": "previously_validated",
+                "recorded_at": _now_iso(),
+            }
+        elif not allow_validation:
+            workflow.setdefault("validation", {
+                "status": "deferred_duplicate",
+                "recorded_at": _now_iso(),
+            })
+            _save_wedof_webhooks(entries)
+            return resulting_folder
+        elif read_env_bool("WEDOF_AUTOMATION_KILL_SWITCH", False):
+            workflow["validation"] = {
+                "status": "blocked_kill_switch",
+                "recorded_at": _now_iso(),
+            }
+            _save_wedof_webhooks(entries)
+            app.logger.warning(
+                "[VTC CPF] validation suspendue par arrêt d'urgence dossier=%s",
+                folder_id,
+            )
+            return resulting_folder
+        else:
+            try:
+                validation_response = WedofClient(
+                    origin="gestionstagiaires-vtc-cpf",
+                ).validate_registration_folder(folder_id)
+            except WedofConfigurationError:
+                workflow["validation"] = {
+                    "status": "configuration_error",
+                    "error_code": "wedof_configuration_error",
+                    "recorded_at": _now_iso(),
+                }
+                _save_wedof_webhooks(entries)
+                app.logger.error(
+                    "[VTC CPF] validation impossible dossier=%s code=configuration",
+                    folder_id,
+                )
+                return resulting_folder
+            except WedofApiError as exc:
+                workflow["validation"] = {
+                    "status": "ambiguous" if exc.ambiguous else "failed",
+                    "error_code": exc.code,
+                    "retryable": bool(exc.retryable),
+                    "recorded_at": _now_iso(),
+                }
+                _save_wedof_webhooks(entries)
+                app.logger.warning(
+                    "[VTC CPF] validation échouée dossier=%s code=%s ambigu=%s",
+                    folder_id, exc.code, bool(exc.ambiguous),
+                )
+                return resulting_folder
+
+            response_folder = (
+                _embedded_wedof_folder(validation_response)
+                if isinstance(validation_response, dict) else {}
+            )
+            if response_folder:
+                resulting_folder.update(response_folder)
+            resulting_folder["externalId"] = (
+                resulting_folder.get("externalId") or folder_id
+            )
+            resulting_folder["state"] = "validated"
+            workflow["validation"] = {
+                "status": "succeeded",
+                "completed_at": _now_iso(),
+            }
+            entry["folder_id"] = folder_id
+            entry["wedof_folder_details"] = resulting_folder
+            _save_wedof_webhooks(entries)
+            app.logger.info(
+                "[VTC CPF] dossier validé automatiquement dossier=%s", folder_id,
+            )
+    elif state_key == "validated":
+        existing_validation = workflow.get("validation")
+        if not isinstance(existing_validation, dict) \
+                or existing_validation.get("status") != "succeeded":
+            workflow["validation"] = {
+                "status": "already_validated",
+                "recorded_at": _now_iso(),
+            }
+    else:
+        workflow["validation"] = {
+            "status": "not_applicable",
+            "recorded_at": _now_iso(),
+        }
+        _save_wedof_webhooks(entries)
+        return resulting_folder
+
+    workflow["state_after"] = "validated"
+    entry["folder_id"] = folder_id
+    entry["wedof_folder_details"] = resulting_folder
+    _save_wedof_webhooks(entries)
+
+    message = _vtc_cpf_confirmation_message(resulting_folder)
+    notifications = workflow.setdefault("notifications", {})
+    current_email = notifications.get("email")
+    if isinstance(current_email, dict) and current_email.get("status") == "sent":
+        pass
+    elif "email" in sent_channels:
+        notifications["email"] = {
+            "status": "already_sent", "recorded_at": _now_iso(),
+        }
+    elif not message["email"]:
+        notifications["email"] = {
+            "status": "missing", "recorded_at": _now_iso(),
+        }
+    else:
+        try:
+            email_result = brevo_send_email(
+                message["email"], message["subject"], message["html"],
+                text_content=message["text"],
+                metadata={"purpose": "vtc_cpf_confirmation"},
+            )
+            email_ok = bool(
+                email_result.get("ok")
+                if isinstance(email_result, dict) else email_result
+            )
+        except Exception:
+            app.logger.exception(
+                "[VTC CPF] exception notification email dossier=%s", folder_id,
+            )
+            email_ok = False
+        notifications["email"] = {
+            "status": "sent" if email_ok else "failed",
+            "recorded_at": _now_iso(),
+        }
+        _save_wedof_webhooks(entries)
+
+    current_sms = notifications.get("sms")
+    if isinstance(current_sms, dict) and current_sms.get("status") == "sent":
+        pass
+    elif "sms" in sent_channels:
+        notifications["sms"] = {
+            "status": "already_sent", "recorded_at": _now_iso(),
+        }
+    elif not message["phone"]:
+        notifications["sms"] = {
+            "status": "missing", "recorded_at": _now_iso(),
+        }
+    else:
+        try:
+            sms_ok = bool(brevo_send_sms(message["phone"], message["sms"]))
+        except Exception:
+            app.logger.exception(
+                "[VTC CPF] exception notification SMS dossier=%s", folder_id,
+            )
+            sms_ok = False
+        notifications["sms"] = {
+            "status": "sent" if sms_ok else "failed",
+            "recorded_at": _now_iso(),
+        }
+        _save_wedof_webhooks(entries)
+
+    _save_wedof_webhooks(entries)
+    return resulting_folder
 
 
 def _notification_id(prefix: str) -> str:
@@ -17867,6 +18148,12 @@ def wedof_webhook():
                 )
                 _save_wedof_webhooks(entries)
                 response["crm_relayed"] = bool(crm_result.get("success"))
+            duplicate_folder = duplicate_entry.get("wedof_folder_details")
+            if trusted_for_wedof and isinstance(duplicate_folder, dict):
+                _process_vtc_cpf_auto_workflow(
+                    duplicate_folder, entries, duplicate_entry,
+                    allow_validation=False,
+                )
             return jsonify(response), 200
         folder_id = _find_wedof_folder_id(payload)
         app.logger.info("[WEDOF] identifiant dossier trouvé = %s", folder_id or "(aucun)")
@@ -17890,6 +18177,11 @@ def wedof_webhook():
             "signature_valid": bool(sig_valid),
         }
         entries.insert(0, entry)
+        if trusted_for_wedof and isinstance(wedof_folder_details, dict):
+            wedof_folder_details = _process_vtc_cpf_auto_workflow(
+                wedof_folder_details, entries, entry,
+            )
+            entry["wedof_folder_details"] = wedof_folder_details
         salesforce_result, salesforce_status = _send_wedof_entry_to_salesforce(entry)
         if not salesforce_result.get("success"):
             app.logger.warning(
