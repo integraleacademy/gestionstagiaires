@@ -176,6 +176,31 @@
        target="_blank" rel="noopener"
        title="Imprimer la feuille de présence de la réunion de démarrage APS">📝 Feuille de présence e-learning</a>
     {% endif %}
+    {% if is_desp_initial %}
+    <a class="btn btn-outline" id="btnPreviewDespKickoffAttendance"
+       href="{{ url_for('admin_desp_kickoff_attendance_preview', session_id=session.id) }}"
+       target="_blank" rel="noopener"
+       title="Prévisualiser la feuille de présence de la réunion DESP sur Zoom">👁️ Aperçu présence Zoom</a>
+      {% if desp_kickoff_attendance.is_done and desp_kickoff_attendance.has_signed_pdf %}
+      <a class="btn btn-primary" id="btnSignedDespKickoffAttendance"
+         href="{{ url_for('admin_view_signed_desp_kickoff_attendance', session_id=session.id) }}"
+         target="_blank" rel="noopener">✅ Présence Zoom signée</a>
+      {% elif not is_read_only %}
+      <form method="post"
+            action="{{ url_for('admin_send_desp_kickoff_attendance_yousign', session_id=session.id) }}"
+            style="display:inline;"
+            onsubmit="return confirm('Confirmer l’envoi de la feuille de présence DESP à tous les stagiaires via Yousign ?');">
+        <button class="btn btn-primary" id="btnSendDespKickoffAttendance" type="submit">
+          {% if desp_kickoff_attendance.is_pending %}📨 Renvoyer les liens Yousign{% else %}✍️ Envoyer la présence via Yousign{% endif %}
+        </button>
+      </form>
+      {% endif %}
+      {% if desp_kickoff_attendance.is_pending %}
+      <span class="pill" title="Signatures électroniques reçues">Yousign : {{ desp_kickoff_attendance.signed_count }}/{{ desp_kickoff_attendance.signer_count }} signature(s)</span>
+      {% elif desp_kickoff_attendance.last_error %}
+      <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur</span>
+      {% endif %}
+    {% endif %}
     {% if is_ssiap_session and not is_read_only and registered_trainees|selectattr('ssiap_exam_status', 'equalto', 'certified')|list %}
     <form class="ssiap-diploma-generation-form" method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
       <button class="btn btn-primary" id="btnGenerateSsiapDiplomas" type="submit">🎓 Générer les diplômes certifiés</button>
