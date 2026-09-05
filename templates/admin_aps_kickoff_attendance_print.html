@@ -129,8 +129,7 @@
     }
     td { height: 16mm; padding: 3mm; font-size: 11px; vertical-align: middle; }
     .col-number { width: 12mm; text-align: center; }
-    .col-name { width: 67mm; }
-    .col-time { width: 32mm; text-align: center; }
+    .col-name { width: 82mm; }
     .empty td { color: var(--muted); font-style: italic; text-align: center; }
     .meeting-footer {
       display: flex;
@@ -140,12 +139,16 @@
     }
     .footer-field {
       flex: 1 1 0;
-      min-height: 22mm;
+      min-height: 29mm;
       padding: 3.5mm;
       border: 1px solid var(--line);
       border-radius: 2mm;
     }
     .footer-field strong { display: block; margin-bottom: 5mm; }
+    .facilitator-names { font-size: 11px; font-weight: 800; line-height: 1.55; }
+    .provider-assets { display: flex; align-items: flex-end; justify-content: center; gap: 4mm; min-height: 17mm; }
+    .provider-stamp { width: 43mm; max-height: 16mm; object-fit: contain; }
+    .provider-signature { width: 25mm; max-height: 16mm; object-fit: contain; }
     .line { display: inline-block; min-width: 38mm; border-bottom: 1px solid #7b8798; }
     .document-footer {
       margin-top: 6mm;
@@ -195,7 +198,7 @@
       </div>
       <div class="detail">
         <span class="detail-label">Horaires</span>
-        <span class="detail-value">De <span class="line"></span> à <span class="line"></span></span>
+        <span class="detail-value">08h30 à 10h30</span>
       </div>
       <div class="detail detail--full">
         <span class="detail-label">Lieu</span>
@@ -211,12 +214,11 @@
     <table aria-label="Liste de présence des stagiaires">
       <thead>
         <tr class="table-context">
-          <th colspan="4">{{ session.name }} · Réunion e-learning APS · {{ session.kickoff_date|frdate }}</th>
+          <th colspan="3">{{ session.name }} · Réunion e-learning APS · {{ session.kickoff_date|frdate }} · 08h30 à 10h30</th>
         </tr>
         <tr>
           <th class="col-number">N°</th>
           <th class="col-name">Nom et prénom du stagiaire</th>
-          <th class="col-time">Heure d’arrivée</th>
           <th>Signature du stagiaire</th>
         </tr>
       </thead>
@@ -226,11 +228,10 @@
           <td class="col-number">{{ loop.index }}</td>
           <td><strong>{{ trainee.last_name }}</strong> {{ trainee.first_name }}</td>
           <td></td>
-          <td></td>
         </tr>
         {% else %}
         <tr class="empty">
-          <td colspan="4">Aucun stagiaire inscrit à cette session.</td>
+          <td colspan="3">Aucun stagiaire inscrit à cette session.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -238,11 +239,15 @@
 
     <section class="meeting-footer" aria-label="Validation de la réunion">
       <div class="footer-field">
-        <strong>Nom de l’animateur / formateur</strong>
-        <span class="line"></span>
+        <strong>Animateurs / formateurs</strong>
+        <div class="facilitator-names">Cassandre MENARD<br>Clément VAILLANT</div>
       </div>
       <div class="footer-field">
-        <strong>Signature de l’animateur / formateur</strong>
+        <strong>Cachet et signature du centre de formation</strong>
+        <div class="provider-assets">
+          <img class="provider-stamp" src="{{ provider_assets.stamp_data_uri }}" alt="Tampon d’Intégrale Sécurité Formations">
+          <img class="provider-signature" src="{{ provider_assets.signature_data_uri }}" alt="Signature de Clément VAILLANT">
+        </div>
       </div>
     </section>
 

@@ -29,7 +29,7 @@ try:
 except ImportError:
     resource = None
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set, Callable
-from functools import wraps
+from functools import lru_cache, wraps
 from zoneinfo import ZoneInfo
 from flask import session
 import werkzeug.security as werkzeug_security
@@ -22369,7 +22369,101 @@ def admin_aps_kickoff_attendance_print(session_id: str):
         "admin_aps_kickoff_attendance_print.html",
         session=session_view,
         trainees=trainees,
+        provider_assets=_training_center_signature_assets(),
         auto_print=(request.args.get("autoprint") or "").strip() == "1",
+    )
+
+
+@app.get("/admin/sessions/<session_id>/trainees/desp-kickoff-attendance/preview.pdf")
+@admin_login_required
+def admin_desp_kickoff_attendance_preview(session_id: str):
+    """Preview the collective DESP kickoff attendance sheet sent through Yousign."""
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item or not _is_desp_initial_session(session_item):
+        abort(404)
+    pdf_buffer, _fields = _build_desp_kickoff_attendance_pdf(session_item)
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"feuille-presence-demarrage-desp-{_safe_filename_part(session_id)}.pdf",
+    )
+
+
+@app.post("/admin/sessions/<session_id>/trainees/desp-kickoff-attendance/yousign")
+@admin_login_required
+@admin_write_required
+def admin_send_desp_kickoff_attendance_yousign(session_id: str):
+    """Create the collective DESP attendance request or resend its signer links."""
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item or not _is_desp_initial_session(session_item):
+        abort(404)
+
+    state = _desp_kickoff_attendance_state(session_item)
+    try:
+        reused_request = bool(
+            state.get("signature_request_id")
+            and _is_yousign_signature_pending(state)
+        )
+        if reused_request:
+            active_state = state
+        else:
+            active_state = create_yousign_desp_kickoff_attendance_signature(
+                session_item,
+                session_id,
+            )
+        sent_count, failed_names = send_yousign_desp_kickoff_attendance_emails(
+            session_item,
+            active_state,
+        )
+        save_data(data)
+        action = "renvoyé" if reused_request else "envoyé"
+        if failed_names:
+            flash(
+                f"Feuille DESP créée : {sent_count} lien(s) {action}(s). "
+                f"Échec d’envoi pour : {', '.join(failed_names)}.",
+                "warning",
+            )
+        else:
+            flash(
+                f"Feuille de présence DESP {action}e via Yousign à {sent_count} stagiaire(s).",
+                "success",
+            )
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        if not _is_yousign_signature_done(state):
+            state = _desp_kickoff_attendance_state(session_item, create=True)
+            state["status"] = "error"
+            state["last_error"] = message
+            state["updated_at"] = _now_iso()
+        save_data(data)
+        flash(f"Feuille de présence DESP : {message}", "error")
+    return redirect(url_for("admin_trainees", session_id=session_id))
+
+
+@app.get("/admin/sessions/<session_id>/trainees/desp-kickoff-attendance/signed.pdf")
+@admin_login_required
+def admin_view_signed_desp_kickoff_attendance(session_id: str):
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item or not _is_desp_initial_session(session_item):
+        abort(404)
+    state = _desp_kickoff_attendance_state(session_item)
+    signed_path = os.path.abspath(str(state.get("signed_pdf_path") or ""))
+    signed_root = os.path.abspath(YOUSIGN_DESP_KICKOFF_SIGNED_DIR)
+    if (
+        not signed_path
+        or not signed_path.startswith(signed_root + os.sep)
+        or not os.path.isfile(signed_path)
+    ):
+        abort(404)
+    return send_file(
+        signed_path,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=os.path.basename(signed_path),
     )
 
 
@@ -23011,6 +23105,17 @@ def admin_trainees(session_id: str):
     if session_view["training_type"] in {"APS", "A3P"}:
         _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
 
+    if _is_desp_initial_session(s):
+        try:
+            _refresh_yousign_desp_kickoff_status_if_pending(s)
+        except Exception as exc:
+            state = _desp_kickoff_attendance_state(s, create=True)
+            state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
+            app.logger.exception(
+                "[DESP KICKOFF] impossible de finaliser la feuille signée session_id=%s",
+                session_id,
+            )
+
     # persist normalized trainees back into storage
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -23088,6 +23193,7 @@ def admin_trainees(session_id: str):
         is_aps_training=is_aps_training,
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
+        desp_kickoff_attendance=_desp_kickoff_attendance_view(s),
         finance_summary=_admin_trainees_finance_summary(session_view, trainees),
         registered_trainees=_registered_trainees(trainees),
         vae_dashboard_counts=vae_dashboard_counts,
@@ -23176,6 +23282,8 @@ def admin_vtc_trainees_all():
         is_aps=False,
         is_aps_training=False,
         is_dirigeant=False,
+        is_desp_initial=False,
+        desp_kickoff_attendance={},
         enums=ENUMS,
         is_adef=False,
         all_vtc=True,
@@ -26364,6 +26472,8 @@ APS_ELEARNING_TRACKING_TEMPLATE = os.path.join(
     "templates_word",
     "tableau_suivi_foad_cnaps.docx",
 )
+TRAINING_CENTER_STAMP_MEDIA = "word/media/image2.png"
+TRAINING_CENTER_SIGNATURE_MEDIA = "word/media/image3.png"
 APS_ELEARNING_TRACKING_FOLDER = "aps_elearning_tracking"
 APS_ELEARNING_REQUIRED_PDF_MARKERS = (
     "attestation d'assiduite",
@@ -26384,6 +26494,25 @@ APS_ELEARNING_FRENCH_MONTHS = {
     "novembre": 11,
     "decembre": 12,
 }
+
+
+@lru_cache(maxsize=1)
+def _training_center_signature_assets() -> Dict[str, Any]:
+    """Return the official provider stamp/signature already used in CNAPS files."""
+    try:
+        with zipfile.ZipFile(APS_ELEARNING_TRACKING_TEMPLATE, "r") as template_zip:
+            stamp = template_zip.read(TRAINING_CENTER_STAMP_MEDIA)
+            signature = template_zip.read(TRAINING_CENTER_SIGNATURE_MEDIA)
+    except (OSError, KeyError, zipfile.BadZipFile) as exc:
+        raise RuntimeError(
+            "Le tampon ou la signature officiels du centre de formation sont introuvables."
+        ) from exc
+    return {
+        "stamp": stamp,
+        "signature": signature,
+        "stamp_data_uri": "data:image/png;base64," + base64.b64encode(stamp).decode("ascii"),
+        "signature_data_uri": "data:image/png;base64," + base64.b64encode(signature).decode("ascii"),
+    }
 
 
 def _is_aps_elearning_session(session_obj: Dict[str, Any]) -> bool:
@@ -31474,10 +31603,14 @@ YOUSIGN_CONVENTION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "conve
 YOUSIGN_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_conventions")
 YOUSIGN_APS_ELEARNING_DIR = os.path.join(PERSIST_DIR, "generated_documents", "aps_elearning_tracking")
 YOUSIGN_APS_ELEARNING_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "aps_elearning_tracking_signed")
+YOUSIGN_DESP_KICKOFF_DIR = os.path.join(PERSIST_DIR, "generated_documents", "desp_kickoff_attendance")
+YOUSIGN_DESP_KICKOFF_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "desp_kickoff_attendance_signed")
 os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
 os.makedirs(YOUSIGN_SIGNED_DIR, exist_ok=True)
 os.makedirs(YOUSIGN_APS_ELEARNING_DIR, exist_ok=True)
 os.makedirs(YOUSIGN_APS_ELEARNING_SIGNED_DIR, exist_ok=True)
+os.makedirs(YOUSIGN_DESP_KICKOFF_DIR, exist_ok=True)
+os.makedirs(YOUSIGN_DESP_KICKOFF_SIGNED_DIR, exist_ok=True)
 APS_CONVOCATION_VARIABLES = [
     "civilite", "prenom", "nom", "nom_complet", "adresse_ligne1", "adresse_ligne2",
     "adresse_ligne3", "adresse_ligne4", "code_postal", "ville", "formation_nom",
@@ -33156,6 +33289,670 @@ def _download_yousign_aps_elearning_signed_pdf(signature_request_id: str, traine
     if not os.path.isfile(path) or os.path.getsize(path) <= 0:
         raise RuntimeError("Téléchargement du tableau FOAD signé Yousign vide.")
     return path
+
+
+def _desp_kickoff_attendance_state(
+    session_obj: Dict[str, Any],
+    *,
+    create: bool = False,
+) -> Dict[str, Any]:
+    raw = session_obj.get("desp_kickoff_attendance_signature")
+    if isinstance(raw, dict):
+        return raw
+    if create:
+        session_obj["desp_kickoff_attendance_signature"] = {}
+        return session_obj["desp_kickoff_attendance_signature"]
+    return {}
+
+
+def _desp_kickoff_attendance_view(session_obj: Dict[str, Any]) -> Dict[str, Any]:
+    state = _desp_kickoff_attendance_state(session_obj)
+    signers = state.get("signers") if isinstance(state.get("signers"), list) else []
+    signed_count = sum(
+        1 for signer in signers
+        if _normalize_yousign_status(signer.get("status")) in YOUSIGN_FINAL_STATUSES
+    )
+    status = _normalize_yousign_status(state.get("status"))
+    return {
+        "status": status,
+        "is_pending": status in YOUSIGN_PENDING_STATUSES,
+        "is_done": status in YOUSIGN_FINAL_STATUSES,
+        "signed_count": signed_count,
+        "signer_count": len(signers),
+        "last_error": str(state.get("last_error") or ""),
+        "has_signed_pdf": bool(state.get("signed_pdf_path")),
+    }
+
+
+def _desp_kickoff_attendance_trainees(session_obj: Dict[str, Any]) -> List[Dict[str, str]]:
+    trainees = []
+    for trainee in _registered_trainees(session_obj):
+        trainees.append({
+            "id": str(trainee.get("id") or "").strip(),
+            "last_name": normalize_last_name(trainee.get("last_name") or trainee.get("nom") or ""),
+            "first_name": normalize_first_name(trainee.get("first_name") or trainee.get("prenom") or ""),
+            "email": str(trainee.get("email") or "").strip(),
+            "phone": str(trainee.get("phone") or "").strip(),
+        })
+    trainees.sort(key=_trainee_alpha_sort_key)
+    return trainees
+
+
+def _desp_kickoff_date(session_obj: Dict[str, Any]) -> str:
+    return str(
+        _session_get(session_obj, "dirigeant_remote_start", "")
+        or _session_get(session_obj, "date_start", "")
+        or ""
+    ).strip()
+
+
+def _build_desp_kickoff_attendance_pdf(
+    session_obj: Dict[str, Any],
+    trainees: Optional[List[Dict[str, str]]] = None,
+) -> Tuple[BytesIO, Dict[str, List[Dict[str, Any]]]]:
+    """Build the signed-once collective sheet and exact Yousign field positions."""
+    if not REPORTLAB_LIBRARY_AVAILABLE:
+        raise RuntimeError("Le moteur PDF est indisponible sur le serveur.")
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
+
+    participants = trainees if trainees is not None else _desp_kickoff_attendance_trainees(session_obj)
+    assets = _training_center_signature_assets()
+    output = BytesIO()
+    page_width, page_height = A4
+    pdf = canvas.Canvas(output, pagesize=A4, pageCompression=1)
+    pdf.setTitle("Feuille de présence - réunion de démarrage DESP initial")
+    pdf.setAuthor("Intégrale Sécurité Formations")
+    pdf.setSubject("Réunion de démarrage DESP initial en visioconférence Zoom")
+
+    ink = colors.HexColor("#172033")
+    muted = colors.HexColor("#596579")
+    line = colors.HexColor("#9ca8b8")
+    soft = colors.HexColor("#f3f6fa")
+    accent = colors.HexColor("#d9a52e")
+    accent_soft = colors.HexColor("#fff7dc")
+    margin = 13 * mm
+    table_width = page_width - (2 * margin)
+    number_width = 12 * mm
+    name_width = 78 * mm
+    signature_width = table_width - number_width - name_width
+    row_height = 23 * mm
+    table_bottom = 46 * mm
+    signature_fields: Dict[str, List[Dict[str, Any]]] = {}
+    page_number = 0
+
+    def draw_fitted_image(image_bytes: bytes, x: float, y: float, max_width: float, max_height: float) -> None:
+        image_reader = ImageReader(BytesIO(image_bytes))
+        image_width, image_height = image_reader.getSize()
+        ratio = min(max_width / image_width, max_height / image_height)
+        width = image_width * ratio
+        height = image_height * ratio
+        pdf.drawImage(
+            image_reader,
+            x + (max_width - width) / 2,
+            y + (max_height - height) / 2,
+            width=width,
+            height=height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+
+    def draw_page_header() -> float:
+        nonlocal page_number
+        page_number += 1
+        logo_path = os.path.join(app.root_path, "static", "logo-integrale.png")
+        if os.path.isfile(logo_path):
+            pdf.drawImage(
+                logo_path,
+                margin,
+                page_height - margin - 19 * mm,
+                width=19 * mm,
+                height=19 * mm,
+                preserveAspectRatio=True,
+                mask="auto",
+            )
+        pdf.setFillColor(ink)
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(margin + 23 * mm, page_height - margin - 6 * mm, "Intégrale Sécurité Formations")
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica", 7.5)
+        pdf.drawString(margin + 23 * mm, page_height - margin - 11 * mm, "54 chemin du Carreou")
+        pdf.drawString(margin + 23 * mm, page_height - margin - 15 * mm, "83480 PUGET-SUR-ARGENS")
+
+        pdf.setFillColor(colors.HexColor("#8d6511"))
+        pdf.setFont("Helvetica-Bold", 7.5)
+        pdf.drawRightString(page_width - margin, page_height - margin - 3 * mm, "DOCUMENT DE PRÉSENCE · DESP INITIAL")
+        pdf.setFillColor(ink)
+        pdf.setFont("Helvetica-Bold", 17)
+        pdf.drawRightString(page_width - margin, page_height - margin - 10 * mm, "Feuille de présence")
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica", 8.5)
+        pdf.drawRightString(page_width - margin, page_height - margin - 15 * mm, "Réunion de démarrage en visioconférence Zoom")
+
+        details_top = page_height - margin - 25 * mm
+        details_height = 28 * mm
+        pdf.setFillColor(soft)
+        pdf.setStrokeColor(colors.HexColor("#cbd3df"))
+        pdf.roundRect(margin, details_top - details_height, table_width, details_height, 3 * mm, fill=1, stroke=1)
+        session_label = str(_session_get(session_obj, "name", "") or "Session DESP initial").strip()
+        training_type = str(_session_get(session_obj, "training_type", "") or "DESP initial").strip()
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica-Bold", 6.5)
+        pdf.drawString(margin + 4 * mm, details_top - 6 * mm, "FORMATION / SESSION")
+        pdf.setFillColor(ink)
+        pdf.setFont("Helvetica-Bold", 8.5)
+        pdf.drawString(margin + 4 * mm, details_top - 11 * mm, f"{session_label} — {training_type}"[:96])
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica-Bold", 6.5)
+        pdf.drawString(margin + 4 * mm, details_top - 18 * mm, "DATE")
+        pdf.drawString(margin + 64 * mm, details_top - 18 * mm, "HORAIRES")
+        pdf.drawString(margin + 112 * mm, details_top - 18 * mm, "LIEU")
+        pdf.setFillColor(ink)
+        pdf.setFont("Helvetica-Bold", 8.5)
+        pdf.drawString(margin + 4 * mm, details_top - 23 * mm, fr_date(_desp_kickoff_date(session_obj)) or "Non renseignée")
+        pdf.drawString(margin + 64 * mm, details_top - 23 * mm, "08h30 à 10h30")
+        pdf.drawString(margin + 112 * mm, details_top - 23 * mm, "Visioconférence ZOOM")
+
+        topic_top = details_top - details_height - 4 * mm
+        topic_height = 17 * mm
+        pdf.setFillColor(accent_soft)
+        pdf.setStrokeColor(accent)
+        pdf.rect(margin, topic_top - topic_height, table_width, topic_height, fill=1, stroke=0)
+        pdf.setFillColor(accent)
+        pdf.rect(margin, topic_top - topic_height, 1.5 * mm, topic_height, fill=1, stroke=0)
+        pdf.setFillColor(ink)
+        pdf.setFont("Helvetica-Bold", 8.5)
+        pdf.drawString(margin + 5 * mm, topic_top - 5.5 * mm, "Objet de la réunion")
+        pdf.setFont("Helvetica", 7.5)
+        pdf.drawString(margin + 5 * mm, topic_top - 11 * mm, "Présentation du déroulement de la formation, des accès et des modalités d’accompagnement à distance.")
+        return topic_top - topic_height - 5 * mm
+
+    def draw_table_header(table_top: float) -> float:
+        header_height = 11 * mm
+        pdf.setFillColor(colors.HexColor("#e9edf3"))
+        pdf.setStrokeColor(line)
+        pdf.rect(margin, table_top - header_height, table_width, header_height, fill=1, stroke=1)
+        pdf.line(margin + number_width, table_top, margin + number_width, table_top - header_height)
+        pdf.line(margin + number_width + name_width, table_top, margin + number_width + name_width, table_top - header_height)
+        pdf.setFillColor(ink)
+        pdf.setFont("Helvetica-Bold", 7.5)
+        pdf.drawCentredString(margin + number_width / 2, table_top - 7 * mm, "N°")
+        pdf.drawString(margin + number_width + 3 * mm, table_top - 7 * mm, "NOM ET PRÉNOM DU STAGIAIRE")
+        pdf.drawString(margin + number_width + name_width + 3 * mm, table_top - 7 * mm, "SIGNATURE ÉLECTRONIQUE YOUSIGN")
+        return table_top - header_height
+
+    def draw_page_footer() -> None:
+        box_y = 17 * mm
+        box_height = 25 * mm
+        left_width = 78 * mm
+        gap = 4 * mm
+        right_x = margin + left_width + gap
+        right_width = table_width - left_width - gap
+        pdf.setStrokeColor(colors.HexColor("#cbd3df"))
+        pdf.setFillColor(colors.white)
+        pdf.roundRect(margin, box_y, left_width, box_height, 2 * mm, fill=1, stroke=1)
+        pdf.roundRect(right_x, box_y, right_width, box_height, 2 * mm, fill=1, stroke=1)
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica-Bold", 6.5)
+        pdf.drawString(margin + 3 * mm, box_y + box_height - 5 * mm, "ANIMATEURS / FORMATEURS")
+        pdf.setFillColor(ink)
+        pdf.setFont("Helvetica-Bold", 9)
+        pdf.drawString(margin + 3 * mm, box_y + 11 * mm, "Cassandre MENARD")
+        pdf.drawString(margin + 3 * mm, box_y + 6 * mm, "Clément VAILLANT")
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica-Bold", 6.5)
+        pdf.drawString(right_x + 3 * mm, box_y + box_height - 5 * mm, "CACHET ET SIGNATURE DU CENTRE DE FORMATION")
+        draw_fitted_image(assets["stamp"], right_x + 2 * mm, box_y + 2 * mm, 44 * mm, 14 * mm)
+        draw_fitted_image(assets["signature"], right_x + 48 * mm, box_y + 1.5 * mm, 26 * mm, 15 * mm)
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica", 6.5)
+        pdf.drawCentredString(page_width / 2, 8 * mm, f"Réunion DESP initial sur Zoom · 08h30 à 10h30 · Page {page_number}")
+
+    current_y = draw_table_header(draw_page_header())
+    if not participants:
+        pdf.setStrokeColor(line)
+        pdf.rect(margin, current_y - 18 * mm, table_width, 18 * mm, fill=0, stroke=1)
+        pdf.setFillColor(muted)
+        pdf.setFont("Helvetica-Oblique", 9)
+        pdf.drawCentredString(page_width / 2, current_y - 11 * mm, "Aucun stagiaire inscrit à cette session.")
+    else:
+        for index, trainee in enumerate(participants, start=1):
+            if current_y - row_height < table_bottom:
+                draw_page_footer()
+                pdf.showPage()
+                current_y = draw_table_header(draw_page_header())
+            row_bottom = current_y - row_height
+            pdf.setFillColor(colors.white if index % 2 else colors.HexColor("#fbfcfe"))
+            pdf.setStrokeColor(line)
+            pdf.rect(margin, row_bottom, table_width, row_height, fill=1, stroke=1)
+            pdf.line(margin + number_width, current_y, margin + number_width, row_bottom)
+            pdf.line(margin + number_width + name_width, current_y, margin + number_width + name_width, row_bottom)
+            pdf.setFillColor(ink)
+            pdf.setFont("Helvetica-Bold", 9)
+            pdf.drawCentredString(margin + number_width / 2, row_bottom + row_height / 2 - 2, str(index))
+            full_name = f"{trainee.get('last_name', '')} {trainee.get('first_name', '')}".strip()
+            pdf.drawString(margin + number_width + 3 * mm, row_bottom + row_height / 2 - 2, full_name[:55])
+            field_x = margin + number_width + name_width + 3 * mm
+            field_width = signature_width - 6 * mm
+            field_height = row_height - 6 * mm
+            field_bottom = row_bottom + 3 * mm
+            pdf.setStrokeColor(colors.HexColor("#d4dae3"))
+            pdf.setDash(2, 2)
+            pdf.roundRect(field_x, field_bottom, field_width, field_height, 2 * mm, fill=0, stroke=1)
+            pdf.setDash()
+            pdf.setFillColor(colors.HexColor("#8a94a4"))
+            pdf.setFont("Helvetica-Oblique", 6.5)
+            pdf.drawCentredString(field_x + field_width / 2, field_bottom + field_height / 2 - 2, "Signature électronique Yousign")
+            trainee_id = str(trainee.get("id") or "").strip()
+            signature_fields[trainee_id] = [{
+                "type": "signature",
+                "page": page_number,
+                "x": int(round(field_x)),
+                "y": int(round(page_height - (field_bottom + field_height))),
+                "width": int(round(field_width)),
+                "height": int(round(field_height)),
+                "layout": "detailed",
+                "date_time_format": "dd/MM/yyyy",
+                "show_timezone": False,
+            }]
+            current_y = row_bottom
+
+    draw_page_footer()
+    pdf.save()
+    output.seek(0)
+    return output, signature_fields
+
+
+def make_yousign_desp_kickoff_external_id(session_id: str) -> str:
+    raw = f"desp_kickoff_{session_id}_{uuid.uuid4().hex[:10]}"
+    return re.sub(r"[^A-Za-z0-9_\-@.%+ ]", "_", raw)
+
+
+def create_yousign_desp_kickoff_attendance_signature(
+    session_obj: Dict[str, Any],
+    session_id: str,
+) -> Dict[str, Any]:
+    if not _is_desp_initial_session(session_obj):
+        raise RuntimeError("Cette feuille de présence est réservée aux sessions DESP initial.")
+    existing_state = _desp_kickoff_attendance_state(session_obj)
+    if _is_yousign_signature_done(existing_state):
+        raise RuntimeError("La feuille de présence de cette réunion est déjà signée.")
+    if _is_yousign_signature_pending(existing_state):
+        return existing_state
+    if not _yousign_is_configured():
+        raise RuntimeError("Yousign n’est pas configuré : vérifiez les variables Yousign dans Render.")
+
+    trainees = _desp_kickoff_attendance_trainees(session_obj)
+    if not trainees:
+        raise RuntimeError("Aucun stagiaire inscrit : la demande Yousign ne peut pas être créée.")
+    issues = []
+    for trainee in trainees:
+        missing = []
+        if not trainee.get("id"):
+            missing.append("identifiant")
+        if not trainee.get("first_name") or not trainee.get("last_name"):
+            missing.append("nom/prénom")
+        if not trainee.get("email"):
+            missing.append("e-mail")
+        if not _normalize_yousign_sms_phone(trainee.get("phone")):
+            missing.append("téléphone mobile")
+        if missing:
+            name = f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip() or "Stagiaire sans nom"
+            issues.append(f"{name} ({', '.join(missing)})")
+    if issues:
+        raise RuntimeError("Informations manquantes pour Yousign : " + "; ".join(issues))
+
+    pdf_buffer, signature_fields = _build_desp_kickoff_attendance_pdf(session_obj, trainees)
+    os.makedirs(YOUSIGN_DESP_KICKOFF_DIR, exist_ok=True)
+    base_name = "_".join(filter(None, (
+        "feuille_presence_demarrage_desp",
+        _safe_filename_part(session_id),
+        uuid.uuid4().hex[:10],
+    )))
+    unsigned_pdf_path = os.path.join(YOUSIGN_DESP_KICKOFF_DIR, base_name + ".pdf")
+    with open(unsigned_pdf_path, "wb") as unsigned_pdf:
+        unsigned_pdf.write(pdf_buffer.getvalue())
+    if not os.path.isfile(unsigned_pdf_path) or os.path.getsize(unsigned_pdf_path) <= 0:
+        raise RuntimeError("La feuille de présence DESP n’a pas pu être générée.")
+
+    signature_request_id = ""
+    activated_request = False
+    try:
+        external_id = make_yousign_desp_kickoff_external_id(session_id)
+        session_label = str(_session_get(session_obj, "name", "") or "DESP initial").strip()
+        signature_request = _yousign_json("POST", "/signature_requests", json={
+            "name": f"Présence réunion de démarrage DESP - {session_label}",
+            "delivery_mode": "none",
+            "timezone": "Europe/Paris",
+            "external_id": external_id,
+        })
+        signature_request_id = str(signature_request.get("id") or "").strip()
+        if not signature_request_id:
+            raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de demande de signature.")
+
+        with open(unsigned_pdf_path, "rb") as pdf_file:
+            document = _yousign_json(
+                "POST",
+                f"/signature_requests/{signature_request_id}/documents",
+                files={"file": (os.path.basename(unsigned_pdf_path), pdf_file, "application/pdf")},
+                data={"nature": "signable_document", "parse_anchors": "false"},
+            )
+        document_id = str(document.get("id") or "").strip()
+        if not document_id:
+            raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de document.")
+
+        signer_records = []
+        signer_payloads = {}
+        for trainee in trainees:
+            trainee_id = trainee["id"]
+            fields = [
+                {**field, "document_id": document_id}
+                for field in signature_fields.get(trainee_id, [])
+            ]
+            if not fields:
+                raise RuntimeError(f"Zone de signature introuvable pour {trainee['first_name']} {trainee['last_name']}.")
+            signer_payload = {
+                "info": {
+                    "first_name": trainee["first_name"],
+                    "last_name": trainee["last_name"],
+                    "email": trainee["email"],
+                    "phone_number": _normalize_yousign_sms_phone(trainee["phone"]),
+                    "locale": "fr",
+                },
+                "signature_level": "electronic_signature",
+                "signature_authentication_mode": YOUSIGN_SMS_AUTHENTICATION_MODE,
+                "fields": fields,
+            }
+            signer = _yousign_json(
+                "POST",
+                f"/signature_requests/{signature_request_id}/signers",
+                json=signer_payload,
+            )
+            signer_id = str(signer.get("id") or "").strip()
+            if not signer_id:
+                raise RuntimeError(f"Yousign n’a pas créé le signataire {trainee['first_name']} {trainee['last_name']}.")
+            signer_payloads[signer_id] = signer
+            signer_records.append({
+                "trainee_id": trainee_id,
+                "signer_id": signer_id,
+                "first_name": trainee["first_name"],
+                "last_name": trainee["last_name"],
+                "email": trainee["email"],
+                "status": "ongoing",
+                "signature_link": "",
+                "signature_email_sent_at": "",
+                "signature_email_last_error": "",
+                "signed_at": "",
+            })
+
+        activated = _yousign_json("POST", f"/signature_requests/{signature_request_id}/activate", json={})
+        activated_request = True
+        for signer_record in signer_records:
+            signer_id = signer_record["signer_id"]
+            signer_fresh = _yousign_json(
+                "GET",
+                f"/signature_requests/{signature_request_id}/signers/{signer_id}",
+            )
+            signature_link = (
+                _extract_yousign_signature_link(activated, signer_id)
+                or _extract_yousign_signature_link(signer_payloads.get(signer_id, {}), signer_id)
+                or _extract_yousign_signature_link(signer_fresh, signer_id)
+            )
+            if not signature_link:
+                raise RuntimeError(
+                    f"Lien Yousign introuvable pour {signer_record['first_name']} {signer_record['last_name']}."
+                )
+            signer_record["signature_link"] = signature_link
+
+        now = _now_iso()
+        state = _desp_kickoff_attendance_state(session_obj, create=True)
+        state.clear()
+        state.update({
+            "status": "ongoing",
+            "signature_request_id": signature_request_id,
+            "external_id": external_id,
+            "document_id": document_id,
+            "unsigned_pdf_path": unsigned_pdf_path,
+            "created_at": now,
+            "activated_at": now,
+            "updated_at": now,
+            "signed_at": "",
+            "signed_pdf_path": "",
+            "last_error": "",
+            "signers": signer_records,
+            "meeting_date": _desp_kickoff_date(session_obj),
+            "meeting_time": "08h30 à 10h30",
+            "meeting_location": "Visioconférence ZOOM",
+            "provider_signature_embedded": True,
+        })
+        return state
+    except Exception:
+        if signature_request_id:
+            try:
+                _yousign_json(
+                    "POST",
+                    f"/signature_requests/{signature_request_id}/cancel",
+                    json={"reason": "other", "custom_note": "Échec de création de la feuille de présence DESP"},
+                )
+            except Exception:
+                app.logger.warning(
+                    "[DESP KICKOFF] impossible d’annuler la demande Yousign incomplète request_id=%s activated=%s",
+                    signature_request_id,
+                    activated_request,
+                    exc_info=True,
+                )
+        raise
+
+
+def send_yousign_desp_kickoff_attendance_emails(
+    session_obj: Dict[str, Any],
+    state: Dict[str, Any],
+) -> Tuple[int, List[str]]:
+    trainees_by_id = {
+        str(trainee.get("id") or ""): trainee
+        for trainee in _registered_trainees(session_obj)
+    }
+    signers = state.get("signers") if isinstance(state.get("signers"), list) else []
+    sent_count = 0
+    failed_names = []
+    meeting_label = (
+        f"Réunion Zoom du {fr_date(_desp_kickoff_date(session_obj)) or 'date à confirmer'}, "
+        "de 08h30 à 10h30"
+    )
+    formation_label = str(
+        _session_get(session_obj, "name", "")
+        or _session_get(session_obj, "training_type", "")
+        or "DESP initial"
+    ).strip()
+    now = _now_iso()
+    for signer in signers:
+        trainee = trainees_by_id.get(str(signer.get("trainee_id") or ""))
+        signature_link = str(signer.get("signature_link") or "").strip()
+        display_name = f"{signer.get('first_name', '')} {signer.get('last_name', '')}".strip() or "Stagiaire"
+        if not trainee or not signature_link:
+            signer["signature_email_last_error"] = "Stagiaire ou lien de signature introuvable."
+            failed_names.append(display_name)
+            continue
+        subject = "Votre présence à la réunion de démarrage DESP est à signer"
+        html_body = build_signature_email_html(
+            signer.get("first_name") or "Madame, Monsieur",
+            formation_label,
+            meeting_label,
+            signature_link,
+            document_label="Feuille de présence — réunion de démarrage DESP initial",
+            document_subject="votre feuille de présence à la réunion de démarrage DESP initial sur Zoom",
+            button_label="Signer ma présence",
+        )
+        text_body = build_signature_email_text(
+            signer.get("first_name") or "Madame, Monsieur",
+            formation_label,
+            meeting_label,
+            signature_link,
+            document_label="Feuille de présence — réunion de démarrage DESP initial",
+            document_subject="votre feuille de présence à la réunion de démarrage DESP initial sur Zoom",
+            action_label="Signer ma présence",
+        )
+        try:
+            sent = bool(
+                brevo_send_email(
+                    str(trainee.get("email") or "").strip(),
+                    subject,
+                    html_body,
+                    trainee=trainee,
+                    text_content=text_body,
+                )
+            )
+        except Exception as exc:
+            sent = False
+            signer["signature_email_last_error"] = _sanitize_yousign_error(str(exc))
+        if sent:
+            signer["signature_email_sent_at"] = now
+            signer["signature_email_last_error"] = ""
+            sent_count += 1
+            append_trainee_history_event(
+                trainee,
+                "Feuille de présence DESP envoyée",
+                "Réunion de démarrage Zoom · signature Yousign",
+                "action",
+                now,
+            )
+        else:
+            if not signer.get("signature_email_last_error"):
+                signer["signature_email_last_error"] = "L’e-mail n’a pas pu être envoyé."
+            failed_names.append(display_name)
+        trainee["updated_at"] = now
+    state["updated_at"] = now
+    state["last_email_sent_at"] = now if sent_count else state.get("last_email_sent_at") or ""
+    state["last_error"] = (
+        "Échec d’envoi de certains liens Yousign."
+        if failed_names
+        else ""
+    )
+    return sent_count, failed_names
+
+
+def _find_session_by_desp_kickoff_yousign_request_id(
+    data: Dict[str, Any],
+    request_id: str,
+) -> Optional[Dict[str, Any]]:
+    for session_obj in data.get("sessions", []):
+        state = _desp_kickoff_attendance_state(session_obj)
+        if str(state.get("signature_request_id") or "") == str(request_id):
+            return session_obj
+    return None
+
+
+def _download_yousign_desp_kickoff_signed_pdf(signature_request_id: str, session_id: str) -> str:
+    response = _yousign_request(
+        "GET",
+        f"/signature_requests/{signature_request_id}/documents/download",
+        params={"version": "completed", "archive": "false"},
+        headers={"Accept": "application/pdf"},
+    )
+    os.makedirs(YOUSIGN_DESP_KICKOFF_SIGNED_DIR, exist_ok=True)
+    path = os.path.join(
+        YOUSIGN_DESP_KICKOFF_SIGNED_DIR,
+        f"feuille_presence_demarrage_desp_{_safe_filename_part(session_id)}_signee.pdf",
+    )
+    with open(path, "wb") as signed_pdf:
+        signed_pdf.write(response.content)
+    if not os.path.isfile(path) or os.path.getsize(path) <= 0:
+        raise RuntimeError("Téléchargement de la feuille de présence DESP signée vide.")
+    return path
+
+
+def _mark_yousign_desp_kickoff_signer_signed(
+    session_obj: Dict[str, Any],
+    signer_id: str,
+    event_id: str = "",
+) -> bool:
+    state = _desp_kickoff_attendance_state(session_obj)
+    signers = state.get("signers") if isinstance(state.get("signers"), list) else []
+    signer = next(
+        (item for item in signers if str(item.get("signer_id") or "") == str(signer_id)),
+        None,
+    )
+    if not signer:
+        return False
+    now = _now_iso()
+    signer["status"] = "done"
+    signer["signed_at"] = signer.get("signed_at") or now
+    signer["last_event_id"] = event_id or signer.get("last_event_id") or ""
+    state["updated_at"] = now
+    return True
+
+
+def _mark_yousign_desp_kickoff_signed(
+    session_obj: Dict[str, Any],
+    request_id: str,
+    event_id: str = "",
+) -> None:
+    state = _desp_kickoff_attendance_state(session_obj)
+    if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
+        return
+    signed_path = _download_yousign_desp_kickoff_signed_pdf(
+        request_id,
+        str(session_obj.get("id") or "desp"),
+    )
+    now = _now_iso()
+    state.update({
+        "status": "done",
+        "signed_at": state.get("signed_at") or now,
+        "signed_pdf_path": signed_path,
+        "last_error": "",
+        "last_event_id": event_id or state.get("last_event_id") or "",
+        "updated_at": now,
+    })
+    signers = state.get("signers") if isinstance(state.get("signers"), list) else []
+    trainees_by_id = {
+        str(trainee.get("id") or ""): trainee
+        for trainee in _session_trainees_list(session_obj)
+    }
+    for signer in signers:
+        signer["status"] = "done"
+        signer["signed_at"] = signer.get("signed_at") or now
+        trainee = trainees_by_id.get(str(signer.get("trainee_id") or ""))
+        if trainee:
+            append_trainee_history_event(
+                trainee,
+                "Feuille de présence DESP signée",
+                "Réunion de démarrage Zoom · signature électronique Yousign",
+                "action",
+                now,
+            )
+            trainee["updated_at"] = now
+
+
+def _refresh_yousign_desp_kickoff_status_if_pending(session_obj: Dict[str, Any]) -> bool:
+    state = _desp_kickoff_attendance_state(session_obj)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if not request_id or not _is_yousign_signature_pending(state) or not _yousign_is_configured():
+        return False
+    try:
+        signature_request = _yousign_json("GET", f"/signature_requests/{request_id}")
+    except Exception as exc:
+        state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
+        app.logger.warning(
+            "[DESP KICKOFF] Yousign status refresh failed request_id=%s error=%s",
+            request_id,
+            state["last_status_sync_error"],
+        )
+        return False
+    status = _yousign_signature_request_status(signature_request)
+    if not status:
+        return False
+    if status in YOUSIGN_FINAL_STATUSES:
+        _mark_yousign_desp_kickoff_signed(session_obj, request_id)
+        return True
+    if status != _normalize_yousign_status(state.get("status")):
+        state["status"] = status
+        state["updated_at"] = _now_iso()
+        return True
+    return False
 
 
 APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS = 5 * 60
@@ -43292,6 +44089,62 @@ def webhooks_yousign():
     if event_name not in done_events and payload_status not in YOUSIGN_FINAL_STATUSES:
         return jsonify({"ok": True, "ignored": True})
     data = load_data()
+    desp_session = _find_session_by_desp_kickoff_yousign_request_id(data, request_id)
+    if desp_session:
+        event_id = str(payload.get("event_id") or "")
+        is_request_done_event = event_name in {
+            "signature_request.done",
+            "signature_request.completed",
+        }
+        if is_request_done_event or payload_status in YOUSIGN_FINAL_STATUSES:
+            try:
+                _mark_yousign_desp_kickoff_signed(desp_session, request_id, event_id)
+                save_data(data)
+                app.logger.info(
+                    "[YOUSIGN] signed document stored type=desp_kickoff session_id=%s request_id=%s",
+                    desp_session.get("id"),
+                    request_id,
+                )
+                return jsonify({
+                    "ok": True,
+                    "updated": True,
+                    "status": "signed",
+                    "document_type": "desp_kickoff",
+                })
+            except Exception as exc:
+                message = _sanitize_yousign_error(str(exc))
+                state = _desp_kickoff_attendance_state(desp_session, create=True)
+                state["status"] = "download_error"
+                state["last_error"] = message
+                state["updated_at"] = _now_iso()
+                save_data(data)
+                app.logger.exception(
+                    "[YOUSIGN] DESP signed PDF download failed request_id=%s error=%s",
+                    request_id,
+                    message,
+                )
+                return jsonify({"ok": False, "error": "signed_pdf_download_failed"}), 500
+
+        payload_data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+        signer_payload = payload_data.get("signer") if isinstance(payload_data.get("signer"), dict) else {}
+        signer_id = str(signer_payload.get("id") or payload_data.get("signer_id") or "").strip()
+        updated = bool(
+            signer_id
+            and _mark_yousign_desp_kickoff_signer_signed(
+                desp_session,
+                signer_id,
+                event_id,
+            )
+        )
+        if updated:
+            save_data(data)
+        return jsonify({
+            "ok": True,
+            "updated": updated,
+            "status": "partially_signed",
+            "document_type": "desp_kickoff",
+        })
+
     target_type = "aps_elearning"
     sess, trainees, trainee = _find_trainee_by_aps_elearning_yousign_request_id(data, request_id)
     if not trainee:
