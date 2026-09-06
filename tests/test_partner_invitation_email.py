@@ -85,6 +85,17 @@ class PartnerInvitationEmailTests(unittest.TestCase):
         self.assertTrue(activation_url.startswith("https://gestionstagiaires-r5no.onrender.com/activate-account?token="))
         self.assertNotIn("gestionstagiaires-test-v2.onrender.com", activation_url)
 
+    def test_partner_detail_explains_first_login_and_shows_safe_login_url(self):
+        response = self.client.get(f"/admin/partners/{self.partner_id}")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Première connexion non terminée", html)
+        self.assertIn("/admin/partners/…", html)
+        self.assertIn("https://test.example.com/admin/login?next=/admin/sessions", html)
+        self.assertIn("Envoyer l’e-mail d’activation", html)
+        self.assertIn("Créer et envoyer une nouvelle invitation", html)
+
     def test_resend_invitation_reuses_existing_link_and_test_url(self):
         gestion_app.BREVO_API_KEY = "key"
         gestion_app.BREVO_SENDER_EMAIL = "sender@example.com"

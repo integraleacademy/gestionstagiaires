@@ -51,7 +51,14 @@
 <div class="card" style="grid-column:1/-1">
   <h2>Accès au compte</h2>
   {% set account_user = users[0] if users else {} %}
+  {% if account_user and not account_user.password_hash %}
+  <div style="margin:0 0 16px;padding:14px 16px;border:1px solid #fdba74;border-radius:14px;background:#fff7ed;color:#9a3412;line-height:1.55;">
+    <strong>Première connexion non terminée.</strong><br>
+    Le partenaire doit ouvrir l’e-mail « Activation de votre espace partenaire », cliquer sur « Définir mon mot de passe », puis choisir son mot de passe. Ne transmettez pas l’adresse de cette fiche : <code>/admin/partners/…</code> est réservée à l’administration.
+  </div>
+  {% endif %}
   <p><strong>Adresse e-mail de connexion :</strong> {{ account_user.email if account_user else partner.email }}</p>
+  <p><strong>Page de connexion après activation :</strong> <a href="{{ partner_login_url }}" target="_blank" rel="noopener">{{ partner_login_url }}</a></p>
   <p><strong>Rôle :</strong> {{ account_user.role if account_user else '—' }}</p>
   <p><strong>Statut de l’utilisateur :</strong> {{ 'actif' if account_user and account_user.active else 'désactivé' }}</p>
   <p><strong>Compte activé :</strong> {{ 'oui' if account_user and account_user.invitation_activated_at else 'non' }}</p>
@@ -63,6 +70,7 @@
 
 <div class="card" style="grid-column:1/-1">
   <h2>Invitation partenaire</h2>
+  <p style="padding:12px 14px;border-radius:12px;background:#eff6ff;color:#1e3a8a;line-height:1.5;">Pour la première connexion, seul le lien contenu dans l’e-mail d’activation permet de définir le mot de passe. Cette page d’administration n’est pas l’espace du partenaire.</p>
   <p><strong>E-mail de connexion :</strong> {{ users[0].email if users else partner.email }}</p>
   <p><strong>Statut du compte :</strong> {{ 'actif' if users and users[0].active else 'désactivé' }}</p>
   <p><strong>Statut de l’invitation :</strong> {% if invitation %}{% if invitation.used_at %}utilisée{% elif invitation.cancelled_at %}annulée{% else %}active{% endif %}{% else %}aucune{% endif %}</p>
@@ -79,9 +87,9 @@
   <p>BREVO_SENDER_NAME : {{ brevo_diag.sender_name }}</p>
   <p>APP_BASE_URL / PUBLIC_BASE_URL : {{ brevo_diag.base_url }}</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <form method="post" action="{{ url_for('admin_partner_send_invitation', partner_id=partner.id) }}" data-single-submit><button class="btn btn-blue" type="submit">{{ 'Renvoyer l’invitation' if invitation and invitation.last_sent_at else 'Envoyer l’invitation' }}</button></form>
-    <form method="post" action="{{ url_for('admin_partner_new_invitation', partner_id=partner.id) }}" data-single-submit onsubmit="return confirm('Annuler le lien actif et générer une nouvelle invitation ?');"><button class="btn" type="submit">Générer un nouveau lien</button></form>
-    {% if can_copy_test_activation_link %}<button class="btn" type="button" data-copy-activation-url="{{ url_for('admin_partner_activation_link', partner_id=partner.id) }}">Générer un nouveau lien d’activation</button>{% endif %}
+    <form method="post" action="{{ url_for('admin_partner_send_invitation', partner_id=partner.id) }}" data-single-submit><button class="btn btn-blue" type="submit">{{ 'Renvoyer l’e-mail d’activation' if invitation and invitation.last_sent_at else 'Envoyer l’e-mail d’activation' }}</button></form>
+    <form method="post" action="{{ url_for('admin_partner_new_invitation', partner_id=partner.id) }}" data-single-submit onsubmit="return confirm('Annuler le lien actif, en créer un nouveau et l’envoyer par e-mail ?');"><button class="btn" type="submit">Créer et envoyer une nouvelle invitation</button></form>
+    {% if can_copy_test_activation_link %}<button class="btn" type="button" data-copy-activation-url="{{ url_for('admin_partner_activation_link', partner_id=partner.id) }}">Copier le lien d’activation (test)</button>{% endif %}
   </div>
 </div>
 </div>

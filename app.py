@@ -33,6 +33,7 @@ from functools import lru_cache, wraps
 from zoneinfo import ZoneInfo
 from flask import session
 import werkzeug.security as werkzeug_security
+from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 from PIL import Image, ImageOps
 import tempfile
@@ -3272,7 +3273,7 @@ def admin_login_post():
         session["partner_id"] = INTEGRALE_PARTNER_ID
         _stamp_authenticated_session()
         session.permanent = True
-        return redirect(next_url)
+        return redirect(_post_login_redirect_target(next_url, url_for("admin_sessions")))
 
     if SECRETARY_USER and SECRETARY_PASSWORD and _static_credentials_match(username_normalized, password, SECRETARY_USER, SECRETARY_PASSWORD):
         session.clear()
@@ -3283,7 +3284,7 @@ def admin_login_post():
         session["partner_id"] = INTEGRALE_PARTNER_ID
         _stamp_authenticated_session()
         session.permanent = True
-        return redirect(next_url)
+        return redirect(_post_login_redirect_target(next_url, url_for("admin_sessions")))
 
     # Reject repeated unauthenticated work before parsing the potentially
     # large tenant store or evaluating a password hash.
@@ -3373,7 +3374,7 @@ def admin_login_post():
         _stamp_authenticated_session()
         session.permanent = True
         _clear_partner_login_account_limit(username_normalized)
-        return redirect(next_url)
+        return redirect(_post_login_redirect_target(next_url, url_for("admin_sessions")))
 
     _log_partner_auth_event("utilisateur partenaire introuvable", data, username_normalized)
 
@@ -3890,6 +3891,35 @@ def _safe_local_redirect_target(value: str, default: str, *, prefixes: Tuple[str
     if prefixes and not any(parsed.path == prefix or parsed.path.startswith(prefix + "/") for prefix in prefixes):
         return default
     return raw
+
+
+def _post_login_redirect_target(value: str, default: str) -> str:
+    """Keep a signed-in user away from routes reserved to super admins.
+
+    ``next`` is captured before authentication, when the application does not
+    yet know which role will sign in. A partner who was given an internal
+    ``/admin/partners/...`` URL would otherwise authenticate successfully and
+    immediately land on a 403 page.
+    """
+    target = _safe_local_redirect_target(value, default)
+    if _is_super_admin_session():
+        return target
+    try:
+        endpoint, _route_values = app.url_map.bind_to_environ(request.environ).match(
+            urlparse(target).path,
+            method="GET",
+        )
+    except HTTPException:
+        return default
+    view = app.view_functions.get(endpoint)
+    if view is not None and getattr(view, "_requires_super_admin", False):
+        app.logger.info(
+            "auth_redirect_sanitized role=%s endpoint=%s",
+            _current_session_role() or "unknown",
+            endpoint,
+        )
+        return default
+    return target
 
 
 def _partner_login_rate_limit_keys(username: str) -> Tuple[str, str]:
@@ -5254,6 +5284,7 @@ def require_super_admin(view):
         if not _is_super_admin_session():
             abort(403)
         return view(*args, **kwargs)
+    wrapped._requires_super_admin = True
     return wrapped
 
 
@@ -16580,7 +16611,8 @@ def admin_partner_detail(partner_id: str):
     users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
-    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner), subscription_module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING)
+    partner_login_url = f"{_public_base_url()}{url_for('admin_login', next=url_for('admin_sessions'))}"
+    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), partner_login_url=partner_login_url, module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner), subscription_module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING)
 
 
 def _can_show_test_activation_link() -> bool:
@@ -16813,7 +16845,7 @@ def admin_partner_send_invitation(partner_id: str):
     elif not result.get("ok") and result.get("error") == "partner_admin_not_found":
         abort(400, "Aucun utilisateur partner_admin")
     else:
-        flash("Invitation envoyée." if result.get("ok") else "Le partenaire existe, mais l’e-mail d’invitation n’a pas pu être envoyé : " + str(result.get("error") or ""), "success" if result.get("ok") else "error")
+        flash("Invitation envoyée. Le partenaire doit cliquer sur « Définir mon mot de passe » dans cet e-mail." if result.get("ok") else "Le partenaire existe, mais l’e-mail d’invitation n’a pas pu être envoyé : " + str(result.get("error") or ""), "success" if result.get("ok") else "error")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id))
 
 
@@ -16831,7 +16863,7 @@ def admin_partner_new_invitation(partner_id: str):
     elif result.get("reason") in {"recently_sent", "recently_attempted"}:
         flash("Un envoi vient déjà d’être effectué ; patientez avant de générer un nouveau lien.", "success")
     else:
-        flash("Nouvelle invitation envoyée." if result.get("ok") else "Nouvelle invitation créée, mais l’e-mail n’a pas pu être envoyé : " + str(result.get("error") or ""), "success" if result.get("ok") else "error")
+        flash("Nouvelle invitation envoyée. Le partenaire doit cliquer sur « Définir mon mot de passe » dans cet e-mail." if result.get("ok") else "Nouvelle invitation créée, mais l’e-mail n’a pas pu être envoyé : " + str(result.get("error") or ""), "success" if result.get("ok") else "error")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id))
 
 
