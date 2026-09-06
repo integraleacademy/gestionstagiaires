@@ -25,6 +25,14 @@ Le passage direct de `off` à `active` est interdit en exploitation. La phase
 - `PARTNER_POSTGRES_POOL_MAX_SIZE` : `4` avec le service Gunicorn actuel.
 - `PARTNER_POSTGRES_TIMEOUT_SECONDS` : `5`.
 
+Une réparation ponctuelle d’un ancien compte dupliqué peut être autorisée avec
+`PARTNER_POSTGRES_REPAIR_EXACT_USER_DUPLICATES`, au format
+`partner_id:user_id:empreinte_email_16_caractères:nombre_attendu`. Elle ne
+conserve qu’une copie si toutes les occurrences sont strictement identiques et
+si chaque valeur du sélecteur correspond. Toute différence interrompt la
+migration. Retirer la variable immédiatement après le déploiement de
+réparation.
+
 Ne jamais enregistrer l’URL de connexion dans Git.
 
 ## Séquence de mise en production

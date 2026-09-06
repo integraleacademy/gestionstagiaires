@@ -159,6 +159,7 @@ class PartnerPostgresHybridTests(unittest.TestCase):
                 "PARTNER_POSTGRES_MODE",
                 "PARTNER_DATABASE_URL",
                 "PARTNER_POSTGRES_AUTO_MIGRATE",
+                "PARTNER_POSTGRES_REPAIR_EXACT_USER_DUPLICATES",
             )
         }
         gestion_app.PERSIST_DIR = self.temp_dir.name
@@ -427,6 +428,74 @@ class PartnerPostgresHybridTests(unittest.TestCase):
         self.assertTrue(report["ok"])
         self.assertEqual(set(report["imported"]), {self.partner_a, self.partner_b})
         self.assertNotIn(gestion_app.INTEGRALE_PARTNER_ID, self.store.bundles)
+        self.assertEqual(report["stats"]["partners"], 2)
+        self.assertEqual(report["stats"]["users"], 2)
+        self.assertEqual(report["stats"]["checksums_verified"], 2)
+
+    def test_guarded_shadow_repair_keeps_one_exact_user_and_its_invitation(self):
+        canonical = gestion_app._load_valid_json_payload(gestion_app.DATA_FILE)
+        target_user = next(
+            item for item in canonical["users"] if item["id"] == "user-a"
+        )
+        canonical["users"] = [
+            item for item in canonical["users"] if item["id"] != "user-a"
+        ] + [copy.deepcopy(target_user) for _index in range(8)]
+        canonical["invitations"] = [{
+            "id": "invite-a",
+            "partner_id": self.partner_a,
+            "user_id": "user-a",
+            "token_hash": "preserved-token-hash",
+        }]
+        with open(gestion_app.DATA_FILE, "w", encoding="utf-8") as handle:
+            json.dump(canonical, handle)
+
+        email_hash = gestion_app.hashlib.sha256(
+            target_user["email"].lower().encode("utf-8")
+        ).hexdigest()[:16]
+        os.environ["PARTNER_POSTGRES_MODE"] = "shadow"
+        os.environ["PARTNER_POSTGRES_AUTO_MIGRATE"] = "true"
+        os.environ["PARTNER_POSTGRES_REPAIR_EXACT_USER_DUPLICATES"] = (
+            f"{self.partner_a}:user-a:{email_hash}:8"
+        )
+        self.store = InMemoryPartnerStore()
+        gestion_app._partner_postgres_store_override = self.store
+        original_bootstrap_done = gestion_app._partner_postgres_bootstrap_done
+        gestion_app._partner_postgres_bootstrap_done = False
+        try:
+            report = gestion_app._bootstrap_partner_postgres_shadow()
+        finally:
+            gestion_app._partner_postgres_bootstrap_done = original_bootstrap_done
+
+        persisted = gestion_app._load_valid_json_payload(gestion_app.DATA_FILE)
+        repaired_users = [
+            item for item in persisted["users"] if item.get("id") == "user-a"
+        ]
+        self.assertEqual(repaired_users, [target_user])
+        self.assertEqual(persisted["invitations"][0]["token_hash"], "preserved-token-hash")
+        self.assertEqual(report["repair"]["removed"], 7)
+        self.assertEqual(len(self.store.bundles[self.partner_a]["users"]), 1)
+        self.assertEqual(len(self.store.bundles[self.partner_a]["invitations"]), 1)
+        self.assertTrue(any(Path(gestion_app.BACKUP_DIR).iterdir()))
+
+    def test_guarded_shadow_repair_refuses_non_identical_users(self):
+        canonical = gestion_app._load_valid_json_payload(gestion_app.DATA_FILE)
+        target_user = next(
+            item for item in canonical["users"] if item["id"] == "user-a"
+        )
+        changed_user = copy.deepcopy(target_user)
+        changed_user["active"] = False
+        canonical["users"].append(changed_user)
+        before = copy.deepcopy(canonical)
+
+        email_hash = gestion_app.hashlib.sha256(
+            target_user["email"].lower().encode("utf-8")
+        ).hexdigest()[:16]
+        with self.assertRaises(gestion_app.PartnerPostgresValidationError):
+            gestion_app._repair_exact_partner_user_duplicates(
+                canonical,
+                (self.partner_a, "user-a", email_hash, 2),
+            )
+        self.assertEqual(canonical, before)
 
     def test_schema_forces_row_level_security_on_every_partner_table(self):
         self.assertIn("ALTER TABLE partner_store.tenants FORCE ROW LEVEL SECURITY", SCHEMA_SQL)
