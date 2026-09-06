@@ -871,6 +871,13 @@ def _contains_invalid_qonto_search_marker(value: Any) -> bool:
 
 
 def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    if has_request_context() and (
+        _is_external_partner_session()
+        or (session.get("assist_partner_id") and _is_super_admin_session())
+    ):
+        raise QontoConfigurationError(
+            "Qonto n’est pas disponible tant que ce partenaire ne possède pas sa propre connexion OAuth."
+        )
     endpoint = path if path.startswith("/") else f"/{path}"
     is_webhook_endpoint = endpoint.startswith("/v2/webhook_subscriptions")
     is_sepa_endpoint = endpoint.startswith("/v2/sepa/direct_debit")
@@ -3018,6 +3025,16 @@ def protect_sensitive_routes():
         if path.startswith("/api/"):
             return jsonify({"ok": False, "error": "session_expired"}), 401
 
+    # Never trust a role stored on a partner user as a platform role.  This
+    # also invalidates legacy cookies created before partner roles were
+    # constrained at login time.
+    if _is_external_partner_session() and _current_session_role() not in PARTNER_ACCOUNT_ROLES:
+        app.logger.warning("[SECURITY] invalid_partner_role_session path=%s role=%s", path, _current_session_role())
+        session.clear()
+        if path.startswith("/api/"):
+            return jsonify({"ok": False, "error": "invalid_partner_session"}), 401
+        return redirect(url_for("admin_login", error="invalid"))
+
     if path.startswith("/admin/") and path != "/admin/login":
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
@@ -3034,8 +3051,31 @@ def protect_sensitive_routes():
         if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
             return jsonify({"ok": False, "error": "read_only"}), 403
 
-    if session.get("admin_logged_in") and (session.get("admin_role") == "partner_admin" or session.get("assist_partner_id")):
+    partner_context = bool(
+        session.get("admin_logged_in")
+        and (_is_external_partner_session() or (session.get("assist_partner_id") and _is_super_admin_session()))
+    )
+    if partner_context:
         endpoint = request.endpoint or ""
+        endpoint_lower = endpoint.lower()
+        global_integration_path = (
+            path.startswith(("/admin/qonto", "/admin/reglages/qonto", "/admin/wedof", "/api/send-to-"))
+            or "qonto" in endpoint_lower
+            or "wedof" in endpoint_lower
+            or (
+                "/cpf/" in path
+                and path.rsplit("/", 1)[-1] in {"live-match", "associate-match", "refresh", "search", "associate"}
+            )
+        )
+        if global_integration_path:
+            app.logger.warning(
+                "[SECURITY] partner_global_integration_blocked partner_id=%s endpoint=%s path=%s",
+                _current_partner_id(), endpoint, path,
+            )
+            if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
+                return jsonify({"ok": False, "error": "tenant_integration_not_configured"}), 403
+            flash("Cette intégration nécessite des identifiants propres à votre organisme.", "error")
+            return redirect(url_for("admin_sessions"))
         if endpoint in PARTNER_SPACE_FORBIDDEN_ENDPOINTS:
             if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
                 return jsonify({"ok": False, "error": "partner_space_forbidden"}), 403
@@ -3108,7 +3148,7 @@ def inject_read_only():
         "is_super_admin": _is_super_admin_session(),
         "current_partner_name": current_partner_name,
         "assisted_partner_name": assisted_partner_name,
-        "is_partner_space": session.get("admin_role") == "partner_admin" or bool(session.get("assist_partner_id")),
+        "is_partner_space": _is_external_partner_session() or bool(session.get("assist_partner_id")),
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
@@ -3127,7 +3167,9 @@ def inject_read_only():
 
 @app.get("/admin/login")
 def admin_login():
-    next_url = request.args.get("next") or url_for("admin_sessions")
+    next_url = _safe_local_redirect_target(
+        request.args.get("next") or "", url_for("admin_sessions")
+    )
     error_code = (request.args.get("error") or "").strip()
     messages = {
         "invalid": "Identifiant ou mot de passe incorrect.",
@@ -3136,6 +3178,7 @@ def admin_login():
         "partner_status": "L’espace partenaire est suspendu ou archivé. Contactez l’administrateur.",
         "partner_suspended": "L’espace partenaire est suspendu. Contactez l’administrateur.",
         "partner_archived": "L’espace partenaire est archivé. Contactez l’administrateur.",
+        "rate_limited": "Trop de tentatives de connexion. Patientez quelques minutes avant de réessayer.",
     }
     activated_message = "Votre compte est activé. Vous pouvez maintenant vous connecter." if request.args.get("activated") == "1" else ""
     return render_template(
@@ -3150,29 +3193,33 @@ def admin_login_post():
     username = (request.form.get("username") or "").strip()
     username_normalized = username.lower()
     password = request.form.get("password") or ""
-    next_url = request.form.get("next") or url_for("admin_sessions")
-
-    data = load_data(run_background_tasks=False)
-    _log_partner_auth_event("login_attempt", data, username_normalized)
-
-    # sécurité minimale : si aucun accès plateforme ni partenaire n’est configuré, on refuse.
-    if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD) and not data.get("users"):
-        _log_partner_auth_event("data_file_inaccessible_or_no_auth_config", data, username_normalized)
-        abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
+    next_url = _safe_local_redirect_target(
+        request.form.get("next") or "", url_for("admin_sessions")
+    )
+    # A login attempt always starts a new authentication transaction.  This
+    # prevents an existing tenant cookie from influencing the data scope used
+    # to authenticate another account.
+    session.clear()
+    if len(username) > 320 or len(password) > 4096:
+        return redirect(url_for("admin_login", next=next_url, error="invalid"))
 
     # Les accès plateforme (admin / consultation) sont prioritaires sur les
     # comptes partenaires. Un administrateur peut partager la même adresse
     # e-mail qu'un utilisateur partenaire ; dans ce cas ses identifiants
     # statiques doivent toujours ouvrir l'espace d'administration complet.
     if _static_credentials_match(username_normalized, password, ADMIN_USER, ADMIN_PASSWORD):
+        def record_platform_login(data: Dict[str, Any]) -> Dict[str, Any]:
+            _append_activity_log(data, "login", "user", username_normalized, INTEGRALE_PARTNER_ID)
+            return {"ok": True}
+
+        _atomic_update_data(record_platform_login)
         session.clear()
-        _append_activity_log(data, "login", "user", username_normalized, INTEGRALE_PARTNER_ID)
-        save_data(data)
         session["admin_logged_in"] = True
         session["admin_role"] = "admin"
         session["platform_role"] = "super_admin"
         session["admin_username"] = username_normalized
         session["partner_id"] = INTEGRALE_PARTNER_ID
+        _stamp_authenticated_session()
         session.permanent = True
         return redirect(next_url)
 
@@ -3180,61 +3227,98 @@ def admin_login_post():
         session.clear()
         session["admin_logged_in"] = True
         session["admin_role"] = "viewer"
+        session["platform_role"] = "viewer"
         session["admin_username"] = username_normalized
         session["partner_id"] = INTEGRALE_PARTNER_ID
+        _stamp_authenticated_session()
         session.permanent = True
         return redirect(next_url)
+
+    # Reject repeated unauthenticated work before parsing the potentially
+    # large tenant store or evaluating a password hash.
+    if _partner_login_is_rate_limited(username_normalized):
+        app.logger.warning("partner_auth reason=rate_limited username_hash=%s", hashlib.sha256(username_normalized.encode()).hexdigest()[:16])
+        return redirect(url_for("admin_login", next=next_url, error="rate_limited"))
+
+    data = _load_partner_auth_data()
+    _log_partner_auth_event("login_attempt", data, username_normalized)
+
+    # sécurité minimale : si aucun accès plateforme ni partenaire n’est configuré, on refuse.
+    if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD) and not data.get("users"):
+        _log_partner_auth_event("data_file_inaccessible_or_no_auth_config", data, username_normalized)
+        abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
     user = _find_user_by_email(data, username_normalized)
     if user:
         partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == user.get("partner_id")), None)
         if not user.get("active", True):
             _log_partner_auth_event("utilisateur désactivé", data, username_normalized, user, partner)
-            _append_activity_log(data, "login_blocked_inactive", "user", user.get("id"), user.get("partner_id") or "")
-            save_data(data)
             return redirect(url_for("admin_login", next=next_url, error="inactive"))
         if not user.get("password_hash"):
             _log_partner_auth_event("aucun mot de passe défini", data, username_normalized, user, partner)
-            _append_activity_log(data, "login_blocked_not_activated", "user", user.get("id"), user.get("partner_id") or "")
-            save_data(data)
             return redirect(url_for("admin_login", next=next_url, error="not_activated"))
         password_ok = _verify_password(password, user.get("password_hash") or "")
         if not password_ok:
             _log_partner_auth_event("mauvais mot de passe", data, username_normalized, user, partner, password_ok=False)
-            _append_activity_log(data, "login_failed", "user", user.get("id"), user.get("partner_id") or "")
-            save_data(data)
             return redirect(url_for("admin_login", next=next_url, error="invalid"))
         if not partner:
             _log_partner_auth_event("partenaire introuvable", data, username_normalized, user, None, password_ok=True)
-            _append_activity_log(data, "login_blocked_partner_missing", "user", user.get("id"), user.get("partner_id") or "")
-            save_data(data)
             return redirect(url_for("admin_login", next=next_url, error="invalid"))
         if partner.get("status") == "suspended":
             _log_partner_auth_event("partenaire suspendu", data, username_normalized, user, partner, password_ok=True)
-            _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
-            save_data(data)
             return redirect(url_for("admin_login", next=next_url, error="partner_suspended"))
         if partner.get("status") == "archived":
             _log_partner_auth_event("partenaire archivé", data, username_normalized, user, partner, password_ok=True)
-            _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
-            save_data(data)
             return redirect(url_for("admin_login", next=next_url, error="partner_archived"))
         if partner.get("status") not in {"active", "trial"}:
             _log_partner_auth_event("statut partenaire refusé", data, username_normalized, user, partner, password_ok=True)
             return redirect(url_for("admin_login", next=next_url, error="invalid"))
 
+        partner_role = str(user.get("role") or "partner_admin").strip()
+        if partner_role not in PARTNER_ACCOUNT_ROLES:
+            _log_partner_auth_event("rôle partenaire refusé", data, username_normalized, user, partner, password_ok=True)
+            app.logger.warning(
+                "[SECURITY] partner_login_invalid_role user_id=%s partner_id=%s role=%s",
+                user.get("id"), user.get("partner_id"), partner_role,
+            )
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
+
         _log_partner_auth_event("connexion partenaire réussie", data, username_normalized, user, partner, password_ok=True)
+        def record_partner_login(canonical: Dict[str, Any]) -> Dict[str, Any]:
+            current_user = next((
+                item for item in canonical.get("users", [])
+                if isinstance(item, dict) and str(item.get("id") or "") == str(user.get("id") or "")
+            ), None)
+            current_partner = next((
+                item for item in canonical.get("partners", [])
+                if isinstance(item, dict) and str(item.get("id") or "") == str(partner.get("id") or "")
+            ), None)
+            if (
+                not current_user
+                or not current_partner
+                or not current_user.get("active", True)
+                or str(current_user.get("role") or "partner_admin").strip() != partner_role
+                or current_partner.get("status") not in {"active", "trial"}
+            ):
+                return {"ok": False}
+            current_user["last_login_at"] = _now_iso()
+            _append_activity_log(
+                canonical, "login", "user", current_user.get("id"), current_partner.get("id"),
+            )
+            return {"ok": True}
+
+        if not _atomic_update_data(record_partner_login).get("ok"):
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
         session.clear()
         session["admin_logged_in"] = True
         session["admin_username"] = user.get("email") or username_normalized
         session["user_id"] = user.get("id")
         session["admin_user_id"] = user.get("id")
-        session["admin_role"] = user.get("role") or "partner_admin"
+        session["admin_role"] = partner_role
         session["partner_id"] = user.get("partner_id")
+        _stamp_authenticated_session()
         session.permanent = True
-        user["last_login_at"] = _now_iso()
-        _append_activity_log(data, "login", "user", user.get("id"), partner.get("id"))
-        save_data(data)
+        _clear_partner_login_account_limit(username_normalized)
         return redirect(next_url)
 
     _log_partner_auth_event("utilisateur partenaire introuvable", data, username_normalized)
@@ -3554,6 +3638,12 @@ MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS = max(30, _int_env("QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS", 300))
 
 _data_lock = threading.RLock()
+_partner_login_rate_limit_lock = threading.Lock()
+_partner_login_attempts: Dict[str, List[float]] = {}
+_partner_auth_index_lock = threading.RLock()
+_partner_auth_index_cache: Dict[str, Any] = {
+    "path": "", "fingerprint": None, "users": [], "partners": [], "invitations": [],
+}
 _cnaps_public_annuaire_monitor_lock = threading.Lock()
 _afc_documents_reminders_lock = threading.Lock()
 _convention_signature_reminders_lock = threading.Lock()
@@ -3569,6 +3659,13 @@ PARTNER_STORAGE_CATEGORIES = {"stagiaires", "contrats", "conventions", "signatur
 INTEGRALE_PARTNER_ID = "11111111-1111-4111-8111-111111111111"
 PARTNER_STATUSES = {"active", "trial", "suspended", "archived"}
 PLATFORM_ROLES = {"super_admin", "partner_admin", "admin", "viewer"}
+PARTNER_ACCOUNT_ROLES = {"partner_admin", "viewer"}
+PARTNER_LOGIN_WINDOW_SECONDS = max(60, _int_env("PARTNER_LOGIN_WINDOW_SECONDS", 300))
+PARTNER_LOGIN_MAX_ATTEMPTS = max(3, _int_env("PARTNER_LOGIN_MAX_ATTEMPTS", 8))
+PARTNER_LOGIN_MAX_ATTEMPTS_PER_IP = max(
+    PARTNER_LOGIN_MAX_ATTEMPTS,
+    _int_env("PARTNER_LOGIN_MAX_ATTEMPTS_PER_IP", 40),
+)
 
 
 def get_partner_storage_path(partner_id: str, category: str) -> str:
@@ -3592,7 +3689,28 @@ def _current_session_role() -> str:
 
 
 def _is_super_admin_session() -> bool:
-    return bool(session.get("admin_logged_in")) and _current_session_role() in {"super_admin", "admin"}
+    """Only an internal platform session may ever be a super administrator.
+
+    Partner roles live in the same historical ``admin_role`` cookie field.  A
+    corrupted partner record must therefore not become a platform admin merely
+    by containing ``admin`` or ``super_admin``.
+    """
+    if not has_request_context() or not session.get("admin_logged_in"):
+        return False
+    partner_id = str(session.get("partner_id") or "")
+    if partner_id and partner_id != INTEGRALE_PARTNER_ID:
+        return False
+    return bool(
+        session.get("platform_role") == "super_admin"
+        or _current_session_role() in {"super_admin", "admin"}
+    )
+
+
+def _is_external_partner_session() -> bool:
+    if not has_request_context() or not session.get("admin_logged_in"):
+        return False
+    partner_id = str(session.get("partner_id") or "")
+    return bool(partner_id and partner_id != INTEGRALE_PARTNER_ID and not _is_super_admin_session())
 
 
 def _current_partner_id() -> str:
@@ -3607,6 +3725,143 @@ def _is_partner_scoped_session() -> bool:
     if not has_request_context() or not session.get("admin_logged_in"):
         return False
     return bool(_current_partner_id()) and not _is_super_admin_session()
+
+
+def _safe_local_redirect_target(value: str, default: str, *, prefixes: Tuple[str, ...] = ("/admin",)) -> str:
+    """Return a same-origin application path or a known-safe default."""
+    raw = str(value or "").strip()
+    if not raw or any(ord(char) < 32 for char in raw):
+        return default
+    parsed = urlparse(raw)
+    if parsed.scheme or parsed.netloc or not parsed.path.startswith("/") or parsed.path.startswith("//"):
+        return default
+    if prefixes and not any(parsed.path == prefix or parsed.path.startswith(prefix + "/") for prefix in prefixes):
+        return default
+    return raw
+
+
+def _partner_login_rate_limit_keys(username: str) -> Tuple[str, str]:
+    forwarded = request.headers.get("X-Forwarded-For", "") if has_request_context() else ""
+    ip = (forwarded.split(",", 1)[0].strip() or (request.remote_addr or "unknown")) if has_request_context() else "unknown"
+    email_digest = hashlib.sha256(str(username or "").strip().lower().encode("utf-8")).hexdigest()[:24]
+    ip_digest = hashlib.sha256(ip.encode("utf-8")).hexdigest()[:24]
+    return f"account:{ip_digest}:{email_digest}", f"ip:{ip_digest}"
+
+
+def _partner_login_is_rate_limited(username: str) -> bool:
+    """Bound unauthenticated JSON/password work without persisting attempts."""
+    now = time.monotonic()
+    cutoff = now - PARTNER_LOGIN_WINDOW_SECONDS
+    account_key, ip_key = _partner_login_rate_limit_keys(username)
+    with _partner_login_rate_limit_lock:
+        for key in list(_partner_login_attempts):
+            kept = [stamp for stamp in _partner_login_attempts[key] if stamp >= cutoff]
+            if kept:
+                _partner_login_attempts[key] = kept
+            else:
+                _partner_login_attempts.pop(key, None)
+        account_attempts = _partner_login_attempts.setdefault(account_key, [])
+        ip_attempts = _partner_login_attempts.setdefault(ip_key, [])
+        if len(account_attempts) >= PARTNER_LOGIN_MAX_ATTEMPTS or len(ip_attempts) >= PARTNER_LOGIN_MAX_ATTEMPTS_PER_IP:
+            return True
+        account_attempts.append(now)
+        ip_attempts.append(now)
+        # The dictionary is process-local and deliberately bounded.
+        if len(_partner_login_attempts) > 4096:
+            for key in list(_partner_login_attempts)[:1024]:
+                _partner_login_attempts.pop(key, None)
+        return False
+
+
+def _clear_partner_login_account_limit(username: str) -> None:
+    account_key, _ip_key = _partner_login_rate_limit_keys(username)
+    with _partner_login_rate_limit_lock:
+        _partner_login_attempts.pop(account_key, None)
+
+
+def _partner_auth_file_fingerprint(path: str) -> Optional[Tuple[int, int]]:
+    try:
+        stat_result = os.stat(path)
+        return stat_result.st_mtime_ns, stat_result.st_size
+    except OSError:
+        return None
+
+
+def _store_partner_auth_index(
+    payload: Dict[str, Any],
+    path: Optional[str] = None,
+    fingerprint: Optional[Tuple[int, int]] = None,
+) -> None:
+    """Keep only the fields required for authentication in process memory."""
+    auth_path = os.path.abspath(path or DATA_FILE)
+    user_fields = {
+        "id", "partner_id", "email", "role", "active", "password_hash",
+        "invitation_activated_at", "last_login_at",
+    }
+    partner_fields = {"id", "name", "status"}
+    invitation_fields = {
+        "id", "user_id", "partner_id", "token_hash", "token_encrypted",
+        "expires_at", "used_at", "cancelled_at",
+    }
+    users = [
+        {key: value for key, value in item.items() if key in user_fields}
+        for item in payload.get("users", [])
+        if isinstance(item, dict)
+    ]
+    partners = [
+        {key: value for key, value in item.items() if key in partner_fields}
+        for item in payload.get("partners", [])
+        if isinstance(item, dict)
+    ]
+    invitations = [
+        {key: value for key, value in item.items() if key in invitation_fields}
+        for item in payload.get("invitations", [])
+        if isinstance(item, dict)
+    ]
+    with _partner_auth_index_lock:
+        _partner_auth_index_cache.update({
+            "path": auth_path,
+            "fingerprint": fingerprint if fingerprint is not None else _partner_auth_file_fingerprint(auth_path),
+            "users": users,
+            "partners": partners,
+            "invitations": invitations,
+        })
+
+
+def _load_partner_auth_data() -> Dict[str, List[Dict[str, Any]]]:
+    """Load a small cached auth index without running business normalizers."""
+    auth_path = os.path.abspath(DATA_FILE)
+    fingerprint = _partner_auth_file_fingerprint(auth_path)
+    with _partner_auth_index_lock:
+        if (
+            _partner_auth_index_cache.get("path") == auth_path
+            and _partner_auth_index_cache.get("fingerprint") == fingerprint
+        ):
+            return {
+                "users": [dict(item) for item in _partner_auth_index_cache.get("users", [])],
+                "partners": [dict(item) for item in _partner_auth_index_cache.get("partners", [])],
+                "invitations": [dict(item) for item in _partner_auth_index_cache.get("invitations", [])],
+            }
+        # Keep the lock across the cold load so concurrent first logins do not
+        # materialize several copies of the full JSON document at once.
+        payload: Optional[Dict[str, Any]] = None
+        stable_fingerprint: Optional[Tuple[int, int]] = None
+        for _attempt in range(3):
+            before_read = _partner_auth_file_fingerprint(auth_path)
+            candidate = _load_valid_json_payload(DATA_FILE)
+            after_read = _partner_auth_file_fingerprint(auth_path)
+            if isinstance(candidate, dict) and before_read == after_read:
+                payload = candidate
+                stable_fingerprint = after_read
+                break
+        if payload is None:
+            return {"users": [], "partners": []}
+        _store_partner_auth_index(payload, auth_path, fingerprint=stable_fingerprint)
+        return {
+            "users": [dict(item) for item in _partner_auth_index_cache.get("users", [])],
+            "partners": [dict(item) for item in _partner_auth_index_cache.get("partners", [])],
+            "invitations": [dict(item) for item in _partner_auth_index_cache.get("invitations", [])],
+        }
 
 
 def _integrale_partner() -> Dict[str, Any]:
@@ -3679,37 +3934,238 @@ def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
         for t in _session_trainees_list(s) if isinstance(s, dict) else []:
             if isinstance(t, dict) and not t.get("partner_id"):
                 t["partner_id"] = s.get("partner_id") or INTEGRALE_PARTNER_ID; changed = True
-    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+    tenant_collection_keys = {
+        "positioning_tests", "notifications_edof", "notifications_financement_refuse",
+        "notifications_prelevements", "notifications_prelevement_non_valides",
+        "notifications_phone_relances", "notifications_vae_relances",
+        "notifications_cnaps_pre_relances", "notifications_test_fr",
+        "notifications_convention_unsigned", "notifications_vtc_books",
+        "notifications_admin",
+    }
+    tenant_collection_keys.update(globals().get("PARTNER_SCOPED_COLLECTION_KEYS", set()))
+    for key in tenant_collection_keys:
         for item in data.get(key) or []:
             if isinstance(item, dict) and not item.get("partner_id"):
                 item["partner_id"] = INTEGRALE_PARTNER_ID; changed = True
     return changed
 
 
+PARTNER_SCOPED_COLLECTION_KEYS = {
+    "sessions",
+    "activity_logs",
+    "admin_push_subscriptions",
+    "billing_lines",
+    "subscription_requests",
+    "positioning_tests",
+    "notifications_edof",
+    "notifications_financement_refuse",
+    "notifications_prelevements",
+    "notifications_prelevement_non_valides",
+    "notifications_phone_relances",
+    "notifications_vae_relances",
+    "notifications_cnaps_pre_relances",
+    "notifications_test_fr",
+    "notifications_convention_unsigned",
+    "notifications_vtc_books",
+    "notifications_admin",
+    "cnaps_pending_imports",
+    "cnaps_public_annuaire_statuses",
+    "cnaps_status_change_notifications",
+    "cnaps_tracking_manual_nubs",
+    "wedof_links",
+    "wedof_folder_cache",
+}
+PARTNER_SCOPED_VALUE_KEYS = {
+    "sales_tracking",
+    "ssiap_diploma_sequences",
+    "daily_recap_sent_dates",
+    "cnaps_tracking_deleted_keys",
+}
+PARTNER_VISIBLE_FIELDS = {
+    "id", "name", "legal_name", "siret", "activity_declaration_number",
+    "address", "address_extra", "postal_code", "city", "country",
+    "contact_first_name", "contact_last_name", "contact_role", "email",
+    "phone", "website", "logo_url", "logo_path", "logo_filename",
+    "status", "subscription_plan", "max_users", "storage_limit",
+    "trial_ends_at", "subscription_started_at", "subscription_ends_at",
+    "enabled_modules", "subscription", "created_at", "updated_at",
+}
+PARTNER_VISIBLE_USER_FIELDS = {
+    "id", "partner_id", "email", "first_name", "last_name", "role", "active",
+    "invitation_activated_at", "created_at", "updated_at", "last_login_at",
+}
+PARTNER_SELF_EDITABLE_FIELDS = {
+    "name", "legal_name", "siret", "activity_declaration_number", "address",
+    "address_extra", "postal_code", "city", "country", "contact_first_name",
+    "contact_last_name", "contact_role", "email", "phone", "website",
+    "logo_url", "logo_path", "logo_filename", "updated_at",
+}
+PARTNER_SUBSCRIPTION_USAGE_FIELDS = {
+    "trainee_usage_count", "trainee_usage_migrated_at",
+}
+
+
+def _partner_tenant_values(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    container = data.get("partner_scoped_data")
+    if not isinstance(container, dict):
+        return {}
+    values = container.get(partner_id)
+    return values if isinstance(values, dict) else {}
+
+
 def _filter_data_for_partner(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
-    # Avoid copy.deepcopy(data): partner requests only need a shallow top-level
-    # payload with filtered collection lists. Deep-copying the full production
-    # JSON temporarily duplicated every nested trainee/session/document object.
-    scoped = dict(data)
-    scoped["sessions"] = [s for s in data.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
-    scoped["users"] = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
-    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
-        if isinstance(data.get(key), list):
-            scoped[key] = [x for x in data[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
+    """Build a deny-by-default tenant view of the canonical JSON payload.
+
+    Never start from ``dict(data)`` here: doing so made every newly introduced
+    top-level key visible to every partner until somebody remembered to add a
+    filter.  Only explicitly tenant-aware collections and values cross this
+    boundary.
+    """
+    partner_id = str(partner_id or "")
+    scoped: Dict[str, Any] = {}
+    own_partner = next((
+        item for item in data.get("partners", [])
+        if isinstance(item, dict) and str(item.get("id") or "") == partner_id
+    ), None)
+    scoped["partners"] = [
+        {key: value for key, value in own_partner.items() if key in PARTNER_VISIBLE_FIELDS}
+    ] if own_partner else []
+    scoped["users"] = [
+        {key: value for key, value in user.items() if key in PARTNER_VISIBLE_USER_FIELDS}
+        for user in data.get("users", [])
+        if isinstance(user, dict) and str(user.get("partner_id") or "") == partner_id
+    ]
+    # Invitations contain reusable encrypted activation tokens and are managed
+    # only from the platform administration area.
+    scoped["invitations"] = []
+    for key in PARTNER_SCOPED_COLLECTION_KEYS:
+        values = data.get(key)
+        if not isinstance(values, list):
+            scoped[key] = []
+            continue
+        scoped_values = [
+            item for item in values
+            if isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id
+        ]
+        if key == "sessions":
+            safe_sessions = []
+            for item in scoped_values:
+                safe_session = dict(item)
+                for trainee_key in ("trainees", "stagiaires"):
+                    trainees = item.get(trainee_key)
+                    if isinstance(trainees, list):
+                        safe_session[trainee_key] = [
+                            trainee for trainee in trainees
+                            if isinstance(trainee, dict)
+                            and str(trainee.get("partner_id") or partner_id) == partner_id
+                        ]
+                safe_sessions.append(safe_session)
+            scoped_values = safe_sessions
+        scoped[key] = scoped_values
+    # Tenant routes may append audit events, but they do not need the existing
+    # log history (which can contain IP addresses and other operational data).
+    scoped["activity_logs"] = []
+
+    tenant_values = _partner_tenant_values(data, partner_id)
+    for key in PARTNER_SCOPED_VALUE_KEYS:
+        if partner_id == INTEGRALE_PARTNER_ID and key in data:
+            scoped[key] = data[key]
+        elif key in tenant_values:
+            scoped[key] = tenant_values[key]
+        else:
+            scoped[key] = [] if key.endswith("_dates") or key.endswith("_keys") else {}
+
+    legacy_dismissed = data.get("notifications_admin_dismissed_schedule_keys")
+    scoped["notifications_admin_dismissed_schedule_keys"] = [
+        value for value in legacy_dismissed or []
+        if isinstance(value, str) and value.startswith(f"{partner_id}:")
+    ]
     return scoped
 
 
-def _merge_partner_scoped_payload(scoped: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
-    current = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+def _merge_partner_scoped_payload(
+    scoped: Dict[str, Any], partner_id: str, current: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Merge one tenant view while preserving every other tenant atomically."""
+    current = current if isinstance(current, dict) else (_load_valid_json_payload(DATA_FILE) or _empty_data_payload())
     _ensure_multi_partner_payload(current)
-    current["sessions"] = [s for s in current.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") != partner_id] + [s for s in scoped.get("sessions", []) if isinstance(s, dict)]
+    partner_id = str(partner_id or "")
+
+    for key in PARTNER_SCOPED_COLLECTION_KEYS - {"activity_logs"}:
+        if not isinstance(scoped.get(key), list):
+            continue
+        replacements = []
+        for item in scoped[key]:
+            if not isinstance(item, dict):
+                continue
+            item["partner_id"] = partner_id
+            if key == "sessions":
+                for trainee in _session_trainees_list(item):
+                    if isinstance(trainee, dict):
+                        trainee["partner_id"] = partner_id
+            replacements.append(item)
+        canonical_values = current.get(key) if isinstance(current.get(key), list) else []
+        current[key] = [
+            item for item in canonical_values
+            if not (isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id)
+        ] + replacements
+
+    # Audit history is append-only from a tenant request.  A stale form or a
+    # malicious payload cannot delete or rewrite prior events.
+    canonical_logs = current.get("activity_logs") if isinstance(current.get("activity_logs"), list) else []
+    known_log_ids = {str(item.get("id") or "") for item in canonical_logs if isinstance(item, dict)}
+    for item in scoped.get("activity_logs", []) if isinstance(scoped.get("activity_logs"), list) else []:
+        if not isinstance(item, dict) or str(item.get("id") or "") in known_log_ids:
+            continue
+        item["partner_id"] = partner_id
+        canonical_logs.append(item)
+        known_log_ids.add(str(item.get("id") or ""))
+    current["activity_logs"] = canonical_logs[-1000:]
+
     if isinstance(scoped.get("partners"), list):
         scoped_partner = next((p for p in scoped.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
         if scoped_partner:
-            current["partners"] = [p for p in current.get("partners", []) if not isinstance(p, dict) or p.get("id") != partner_id] + [scoped_partner]
-    for key in ("users", "positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
-        if isinstance(scoped.get(key), list):
-            current[key] = [x for x in current.get(key, []) if not isinstance(x, dict) or x.get("partner_id") != partner_id] + [x for x in scoped.get(key, []) if isinstance(x, dict)]
+            canonical_partner = next((
+                p for p in current.get("partners", [])
+                if isinstance(p, dict) and str(p.get("id") or "") == partner_id
+            ), None)
+            if canonical_partner:
+                for key in PARTNER_SELF_EDITABLE_FIELDS:
+                    if key in scoped_partner:
+                        canonical_partner[key] = scoped_partner[key]
+                scoped_subscription = scoped_partner.get("subscription")
+                canonical_subscription = canonical_partner.get("subscription")
+                if isinstance(scoped_subscription, dict) and isinstance(canonical_subscription, dict):
+                    for key in PARTNER_SUBSCRIPTION_USAGE_FIELDS:
+                        if key in scoped_subscription:
+                            canonical_subscription[key] = scoped_subscription[key]
+
+    if partner_id == INTEGRALE_PARTNER_ID:
+        for key in PARTNER_SCOPED_VALUE_KEYS:
+            if key in scoped:
+                current[key] = scoped[key]
+    else:
+        container = current.setdefault("partner_scoped_data", {})
+        if not isinstance(container, dict):
+            container = {}
+            current["partner_scoped_data"] = container
+        tenant_values = container.setdefault(partner_id, {})
+        if not isinstance(tenant_values, dict):
+            tenant_values = {}
+            container[partner_id] = tenant_values
+        for key in PARTNER_SCOPED_VALUE_KEYS:
+            if key in scoped:
+                tenant_values[key] = scoped[key]
+
+    dismissed = current.get("notifications_admin_dismissed_schedule_keys")
+    dismissed = dismissed if isinstance(dismissed, list) else []
+    current["notifications_admin_dismissed_schedule_keys"] = [
+        value for value in dismissed
+        if not (isinstance(value, str) and value.startswith(f"{partner_id}:"))
+    ] + [
+        value for value in scoped.get("notifications_admin_dismissed_schedule_keys", [])
+        if isinstance(value, str) and value.startswith(f"{partner_id}:")
+    ]
     return current
 
 
@@ -3889,6 +4345,7 @@ def _create_invitation(data: Dict[str, Any], user_id: str, partner_id: str, hour
         "token_hash": _hash_token(raw), "token_encrypted": _encrypt_invitation_token(raw), "created_at": _now_iso(),
         "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(hours=hours)).isoformat() + "Z",
         "used_at": "", "cancelled_at": "", "last_send_status": "", "last_send_error": "", "last_sent_at": "", "brevo_message_id": "",
+        "delivery_state": "pending", "send_attempt_id": "", "send_started_at": "", "send_attempt_count": 0,
     })
     return raw
 
@@ -4037,8 +4494,48 @@ def require_super_admin(view):
     return wrapped
 
 
+def _safe_upload_identifier(value: str, label: str) -> str:
+    normalized = str(value or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,160}", normalized):
+        raise ValueError(f"{label} invalide")
+    return normalized
+
+
+def _partner_id_for_upload(session_id: str, trainee_id: str) -> str:
+    current_partner_id = _current_partner_id()
+    if current_partner_id and (
+        _is_external_partner_session()
+        or (session.get("assist_partner_id") and _is_super_admin_session())
+    ):
+        return current_partner_id
+    # Public trainee uploads do not carry an admin cookie. Resolve the tenant
+    # from the server-side session record so those files are isolated too.
+    if has_request_context():
+        try:
+            data = load_data(run_background_tasks=False)
+            session_obj = next((
+                item for item in data.get("sessions", [])
+                if isinstance(item, dict) and str(item.get("id") or "") == str(session_id)
+            ), None)
+            if session_obj and any(
+                str(item.get("id") or "") == str(trainee_id)
+                for item in _session_trainees_list(session_obj) if isinstance(item, dict)
+            ):
+                return str(session_obj.get("partner_id") or INTEGRALE_PARTNER_ID)
+        except Exception:
+            app.logger.exception("Unable to resolve upload tenant session_id=%s", session_id)
+    return current_partner_id or INTEGRALE_PARTNER_ID
+
+
 def trainee_upload_dir(session_id: str, trainee_id: str) -> str:
-    d = os.path.join(UPLOADS_DIR, session_id, trainee_id)
+    safe_session_id = _safe_upload_identifier(session_id, "session_id")
+    safe_trainee_id = _safe_upload_identifier(trainee_id, "trainee_id")
+    partner_id = _partner_id_for_upload(safe_session_id, safe_trainee_id)
+    d = os.path.join(
+        get_partner_storage_path(partner_id, "stagiaires"),
+        safe_session_id,
+        safe_trainee_id,
+    )
     os.makedirs(d, exist_ok=True)
     return d
 
@@ -4157,6 +4654,8 @@ def _write_json_with_backups(
                         os.fsync(f.fileno())
                     os.replace(tmp, path)
                     _fsync_parent_dir(path)
+                    if os.path.abspath(path) == os.path.abspath(DATA_FILE) and isinstance(payload, dict):
+                        _store_partner_auth_index(payload, path)
                 finally:
                     if os.path.exists(tmp):
                         try:
@@ -8146,10 +8645,37 @@ def run_deferred_background_tasks(data: Dict[str, Any], force: bool = False) -> 
         _BACKGROUND_TASKS_LOCK.release()
 
 
+def _request_data_cache_key(run_background_tasks: bool) -> Tuple[str, str, bool]:
+    if _is_partner_scoped_session():
+        return ("partner", _current_partner_id(), bool(run_background_tasks))
+    return ("global", "", bool(run_background_tasks))
+
+
+def _cache_request_data(cache_key: Tuple[str, str, bool], data: Dict[str, Any]) -> Dict[str, Any]:
+    if has_request_context():
+        cache = getattr(g, "data_payload_cache", None)
+        if not isinstance(cache, dict):
+            cache = {}
+            g.data_payload_cache = cache
+        cache[cache_key] = data
+    return data
+
+
+def _invalidate_request_data_cache() -> None:
+    if has_request_context():
+        g.data_payload_cache = {}
+
+
 def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     load_started_at = time.monotonic()
+    cache_key = _request_data_cache_key(run_background_tasks)
     if has_request_context():
         g.load_data_call_count = getattr(g, "load_data_call_count", 0) + 1
+        cached = getattr(g, "data_payload_cache", {}).get(cache_key)
+        if isinstance(cached, dict):
+            _log_memory_stage("LOAD_DATA_REQUEST_CACHE_HIT", load_started_at, _current_route_for_log())
+            return cached
+        g.load_data_disk_read_count = getattr(g, "load_data_disk_read_count", 0) + 1
     baseline_mb = _log_memory_stage("LOAD_DATA_BEGIN", load_started_at, _current_route_for_log())
     if not os.path.exists(DATA_FILE):
         recovered_from = _recover_data_file(DATA_FILE)
@@ -8170,12 +8696,14 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
                 _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
-                return _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_scoped_session() else loaded
+                result = _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_scoped_session() else loaded
+                return _cache_request_data(cache_key, result)
         base = _empty_data_payload()
         _ensure_multi_partner_payload(base)
         _log_storage_state(base)
         _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
-        return _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
+        result = _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
+        return _cache_request_data(cache_key, result)
 
     _log_memory_stage("BEFORE_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
     data = _load_valid_json_payload(DATA_FILE)
@@ -8189,7 +8717,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
             base = _empty_data_payload()
             _log_storage_state(base)
             _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
-            return base
+            result = _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
+            return _cache_request_data(cache_key, result)
 
     # Compatibilité ascendante : exposer une collection vide sans provoquer à
     # elle seule une réécriture du fichier lors d'une simple lecture.
@@ -8302,7 +8831,10 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         baseline_mb = _log_memory_stage("NORMALIZATION vae_action_dates_and_vtc_book_notifications", load_started_at, _current_route_for_log(), baseline_mb)
 
         if changed:
-            save_data(data)
+            # ``data`` is still the canonical/global payload at this point;
+            # never reinterpret it as a tenant view merely because the caller
+            # currently has a partner cookie.
+            save_data(data, force_global=True)
 
     except Exception:
         app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
@@ -8314,10 +8846,12 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     result = _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
     _log_memory_stage("AFTER_PARTNER_FILTER", load_started_at, _current_route_for_log(), baseline_mb)
     _log_memory_stage("LOAD_DATA_END", load_started_at, _current_route_for_log())
-    return result
+    return _cache_request_data(cache_key, result)
 
 
-def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> None:
+def save_data(
+    data: Dict[str, Any], *, preserve_qonto_oauth: bool = True, force_global: bool = False,
+) -> None:
     """Persist business data without letting stale requests erase secure state.
 
     Most handlers load the whole JSON document and save it later. A handler
@@ -8327,18 +8861,26 @@ def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> Non
     moment, while holding the file lock. Only the OAuth callback, refresh and
     explicit reset opt out of the Qonto preservation.
     """
-    if _is_partner_scoped_session():
-        data = _merge_partner_scoped_payload(data, _current_partner_id())
-    _ensure_multi_partner_payload(data)
-    normalize_all_partner_subscriptions(data)
+    scoped_partner_id = _current_partner_id() if _is_partner_scoped_session() and not force_global else ""
+    if not scoped_partner_id:
+        _ensure_multi_partner_payload(data)
+        normalize_all_partner_subscriptions(data)
 
     def preserve_canonical_secure_state(payload: Dict[str, Any]) -> Dict[str, Any]:
         canonical = _load_valid_json_payload(DATA_FILE)
+        if scoped_partner_id:
+            payload = _merge_partner_scoped_payload(
+                payload,
+                scoped_partner_id,
+                canonical if isinstance(canonical, dict) else _empty_data_payload(),
+            )
         if isinstance(canonical, dict):
-            if preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
+            if not scoped_partner_id and preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
                 payload["qonto_oauth"] = canonical["qonto_oauth"]
-            if isinstance(canonical.get("integrale_watch"), dict):
+            if not scoped_partner_id and isinstance(canonical.get("integrale_watch"), dict):
                 payload["integrale_watch"] = canonical["integrale_watch"]
+        _ensure_multi_partner_payload(payload)
+        normalize_all_partner_subscriptions(payload)
         return payload
 
     _write_json_with_backups(
@@ -8347,6 +8889,7 @@ def save_data(data: Dict[str, Any], *, preserve_qonto_oauth: bool = True) -> Non
         _data_lock,
         payload_transform=preserve_canonical_secure_state,
     )
+    _invalidate_request_data_cache()
 
 
 def update_data(
@@ -8374,13 +8917,18 @@ def _atomic_update_data(mutator: Callable[[Dict[str, Any]], Dict[str, Any]]) -> 
     def transform(caller_payload: Dict[str, Any]) -> Dict[str, Any]:
         nonlocal result
         canonical = _load_valid_json_payload(DATA_FILE)
-        payload = canonical if isinstance(canonical, dict) else caller_payload
-        _ensure_multi_partner_payload(payload)
-        result = mutator(payload)
-        return payload
+        canonical = canonical if isinstance(canonical, dict) else caller_payload
+        _ensure_multi_partner_payload(canonical)
+        if _is_partner_scoped_session():
+            partner_id = _current_partner_id()
+            scoped = _filter_data_for_partner(canonical, partner_id)
+            result = mutator(scoped)
+            return _merge_partner_scoped_payload(scoped, partner_id, canonical)
+        result = mutator(canonical)
+        return canonical
 
-    seed = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
-    _write_json_with_backups(DATA_FILE, seed, _data_lock, payload_transform=transform)
+    _write_json_with_backups(DATA_FILE, _empty_data_payload(), _data_lock, payload_transform=transform)
+    _invalidate_request_data_cache()
     return result
 
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
@@ -15015,12 +15563,15 @@ def admin_partners():
 def admin_partner_new():
     if request.method == "GET":
         return render_template("admin_partner_new.html")
-    data = load_data()
     email = (request.form.get("email") or "").strip().lower()
-    if not email or _find_user_by_email(data, email):
+    if not email:
         abort(400, "Email responsable invalide ou déjà utilisé")
     now = _now_iso()
     partner_id = str(uuid.uuid4())
+    try:
+        max_users = max(1, min(int((request.form.get("max_users") or "5").strip() or 5), 1000))
+    except ValueError:
+        max_users = 5
     partner = {
         "id": partner_id,
         "name": (request.form.get("name") or "").strip(),
@@ -15036,7 +15587,7 @@ def admin_partner_new():
         "logo_path": "",
         "status": (request.form.get("status") or "trial").strip() if (request.form.get("status") or "trial").strip() in PARTNER_STATUSES else "trial",
         "subscription_plan": (request.form.get("subscription_plan") or "starter").strip(),
-        "max_users": int((request.form.get("max_users") or "5").strip() or 5),
+        "max_users": max_users,
         "storage_limit": 0,
         "trial_ends_at": (request.form.get("trial_ends_at") or "").strip(),
         "subscription_started_at": now,
@@ -15047,20 +15598,26 @@ def admin_partner_new():
         "updated_at": now,
     }
     user = {"id": str(uuid.uuid4()), "partner_id": partner_id, "email": email, "first_name": partner["contact_first_name"], "last_name": partner["contact_last_name"], "role": "partner_admin", "active": True, "password_hash": "", "invitation_activated_at": "", "created_at": now, "updated_at": now}
-    token = _create_invitation(data, user["id"], partner_id)
-    data.setdefault("partners", []).append(partner)
-    data.setdefault("users", []).append(user)
-    send_result = _send_partner_invitation_email(user, partner, token)
-    invitation = data.get("invitations", [])[-1]
-    invitation["last_sent_at"] = _now_iso()
-    invitation["last_send_status"] = "réussi" if send_result.get("ok") else "échoué"
-    invitation["last_send_error"] = "" if send_result.get("ok") else (send_result.get("error") or "Erreur Brevo inconnue")
-    invitation["brevo_message_id"] = send_result.get("message_id") or ""
-    _append_activity_log(data, "partner_created", "partner", partner_id, partner_id)
-    _append_activity_log(data, "invitation_sent" if send_result.get("ok") else "invitation_send_failed", "user", user["id"], partner_id, {"status_code": send_result.get("status_code"), "error": invitation["last_send_error"], "message_id": invitation["brevo_message_id"]})
-    save_data(data)
+
+    def persist_partner_before_delivery(data: Dict[str, Any]) -> Dict[str, Any]:
+        if _find_user_by_email(data, email):
+            return {"ok": False, "error": "duplicate_email"}
+        data.setdefault("partners", []).append(partner)
+        data.setdefault("users", []).append(user)
+        _create_invitation(data, user["id"], partner_id)
+        _append_activity_log(data, "partner_created", "partner", partner_id, partner_id)
+        return {"ok": True, "partner_id": partner_id}
+
+    persisted = _atomic_update_data(persist_partner_before_delivery)
+    if not persisted.get("ok"):
+        abort(400, "Email responsable invalide ou déjà utilisé")
+
+    # Network I/O happens only after the partner, user and pending invitation
+    # are durably stored.  A worker restart can no longer replay creation in a
+    # loop or lose the account while an e-mail is already in flight.
+    send_result = _deliver_partner_invitation(partner_id)
     if not send_result.get("ok"):
-        flash("Le partenaire a été créé, mais l’e-mail d’invitation n’a pas pu être envoyé : " + invitation["last_send_error"], "error")
+        flash("Le partenaire a été créé, mais l’e-mail d’invitation n’a pas pu être envoyé : " + str(send_result.get("error") or "Erreur Brevo inconnue"), "error")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id))
 
 
@@ -15154,37 +15711,190 @@ def _find_invitation_by_raw_token(data: Dict[str, Any], raw_token: str) -> Optio
     return None
 
 
-def _send_and_record_invitation(data: Dict[str, Any], partner: Dict[str, Any], user: Dict[str, Any], invitation: Dict[str, Any]) -> Dict[str, Any]:
-    raw_token = _decrypt_invitation_token(invitation.get("token_encrypted") or "")
-    if not raw_token:
-        invitation["cancelled_at"] = _now_iso()
-        invitation["last_send_status"] = "annulé"
-        invitation["last_send_error"] = "Token d’invitation sécurisé indisponible ; une nouvelle invitation a été générée."
-        _append_activity_log(data, "invitation_cancelled", "user", user.get("id"), partner.get("id"), {"reason": "missing_secure_token_for_resend"})
-        raw_token = _create_invitation(data, user.get("id"), partner.get("id"))
-        invitation = data.get("invitations", [])[-1]
-    result = _send_partner_invitation_email(user, partner, raw_token)
-    invitation["last_sent_at"] = _now_iso()
-    invitation["last_send_status"] = "réussi" if result.get("ok") else "échoué"
-    invitation["last_send_error"] = "" if result.get("ok") else (result.get("error") or "Erreur Brevo inconnue")
-    invitation["brevo_message_id"] = result.get("message_id") or ""
-    _append_activity_log(data, "invitation_sent" if result.get("ok") else "invitation_send_failed", "user", user.get("id"), partner.get("id"), {"status_code": result.get("status_code"), "error": invitation["last_send_error"], "message_id": invitation["brevo_message_id"]})
-    return result
+PARTNER_INVITATION_SEND_LEASE_SECONDS = max(
+    30, _int_env("PARTNER_INVITATION_SEND_LEASE_SECONDS", 120),
+)
+PARTNER_INVITATION_RESEND_COOLDOWN_SECONDS = max(
+    10, _int_env("PARTNER_INVITATION_RESEND_COOLDOWN_SECONDS", 60),
+)
+
+
+def _claim_partner_invitation_delivery(partner_id: str, *, force_new: bool = False) -> Dict[str, Any]:
+    """Atomically claim one invitation send lease.
+
+    The lease makes repeated clicks and concurrent requests idempotent.  A
+    stale lease can be reclaimed after a worker crash.
+    """
+    now_dt = datetime.datetime.utcnow()
+
+    def claim(data: Dict[str, Any]) -> Dict[str, Any]:
+        partner = next((
+            item for item in data.get("partners", [])
+            if isinstance(item, dict) and str(item.get("id") or "") == str(partner_id)
+        ), None)
+        user = _partner_admin_user(data, partner_id)
+        if not partner:
+            return {"ok": False, "error": "partner_not_found"}
+        if not user:
+            return {"ok": False, "error": "partner_admin_not_found"}
+
+        existing_invitations = [
+            item for item in data.get("invitations", [])
+            if isinstance(item, dict)
+            and item.get("partner_id") == partner_id
+            and not item.get("cancelled_at")
+        ]
+        for existing in existing_invitations:
+            started_at = _parse_iso_datetime(existing.get("send_started_at"))
+            if (
+                existing.get("delivery_state") == "sending"
+                and started_at
+                and (now_dt - started_at).total_seconds() < PARTNER_INVITATION_SEND_LEASE_SECONDS
+            ):
+                return {
+                    "ok": True, "skipped": True, "reason": "already_sending",
+                    "invitation_id": existing.get("id"),
+                }
+
+        recent_attempts = [
+            (sent_at, existing)
+            for existing in existing_invitations
+            for sent_at in [_parse_iso_datetime(existing.get("last_sent_at"))]
+            if sent_at
+        ]
+        if recent_attempts:
+            last_sent_at, last_invitation = max(recent_attempts, key=lambda pair: pair[0])
+            if (now_dt - last_sent_at).total_seconds() < PARTNER_INVITATION_RESEND_COOLDOWN_SECONDS:
+                return {
+                    "ok": True, "skipped": True,
+                    "reason": "recently_sent" if last_invitation.get("delivery_state") == "sent" else "recently_attempted",
+                    "invitation_id": last_invitation.get("id"),
+                }
+
+        if force_new:
+            for item in data.get("invitations", []):
+                if (
+                    isinstance(item, dict)
+                    and item.get("partner_id") == partner_id
+                    and not item.get("used_at")
+                    and not item.get("cancelled_at")
+                ):
+                    item["cancelled_at"] = _now_iso()
+                    item["delivery_state"] = "cancelled"
+
+        invitation = None if force_new else _active_partner_invitation(data, partner_id)
+        if not invitation:
+            _create_invitation(data, user.get("id"), partner_id)
+            invitation = data.get("invitations", [])[-1]
+
+        raw_token = _decrypt_invitation_token(invitation.get("token_encrypted") or "")
+        if not raw_token:
+            invitation["cancelled_at"] = _now_iso()
+            invitation["delivery_state"] = "cancelled"
+            invitation["last_send_status"] = "annulé"
+            invitation["last_send_error"] = "Token d’invitation sécurisé indisponible ; une nouvelle invitation a été générée."
+            _append_activity_log(
+                data, "invitation_cancelled", "user", user.get("id"), partner_id,
+                {"reason": "missing_secure_token_for_resend"},
+            )
+            raw_token = _create_invitation(data, user.get("id"), partner_id)
+            invitation = data.get("invitations", [])[-1]
+
+        attempt_id = str(uuid.uuid4())
+        invitation["delivery_state"] = "sending"
+        invitation["send_attempt_id"] = attempt_id
+        invitation["send_started_at"] = _now_iso()
+        invitation["send_attempt_count"] = int(invitation.get("send_attempt_count") or 0) + 1
+        invitation["last_send_status"] = "en cours"
+        invitation["last_send_error"] = ""
+        return {
+            "ok": True,
+            "claimed": True,
+            "attempt_id": attempt_id,
+            "invitation_id": invitation.get("id"),
+            "raw_token": raw_token,
+            "partner": dict(partner),
+            "user": dict(user),
+        }
+
+    return _atomic_update_data(claim)
+
+
+def _finalize_partner_invitation_delivery(claim: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+    invitation_id = str(claim.get("invitation_id") or "")
+    attempt_id = str(claim.get("attempt_id") or "")
+    partner_id = str((claim.get("partner") or {}).get("id") or "")
+    user_id = str((claim.get("user") or {}).get("id") or "")
+
+    def finalize(data: Dict[str, Any]) -> Dict[str, Any]:
+        invitation = next((
+            item for item in data.get("invitations", [])
+            if isinstance(item, dict) and str(item.get("id") or "") == invitation_id
+        ), None)
+        if not invitation or not hmac.compare_digest(str(invitation.get("send_attempt_id") or ""), attempt_id):
+            return {"ok": False, "error": "invitation_send_lease_lost"}
+        succeeded = bool(result.get("ok"))
+        invitation["last_sent_at"] = _now_iso()
+        invitation["last_send_status"] = "réussi" if succeeded else "échoué"
+        invitation["last_send_error"] = "" if succeeded else str(result.get("error") or "Erreur Brevo inconnue")[:1000]
+        invitation["brevo_message_id"] = str(result.get("message_id") or "")[:200]
+        invitation["delivery_state"] = "sent" if succeeded else "failed"
+        invitation["send_started_at"] = ""
+        _append_activity_log(
+            data,
+            "invitation_sent" if succeeded else "invitation_send_failed",
+            "user",
+            user_id,
+            partner_id,
+            {
+                "status_code": result.get("status_code"),
+                "error": invitation["last_send_error"],
+                "message_id": invitation["brevo_message_id"],
+                "attempt_id": attempt_id,
+            },
+        )
+        return {
+            **result,
+            "ok": succeeded,
+            "error": invitation["last_send_error"],
+            "invitation_id": invitation_id,
+            "delivery_state": invitation["delivery_state"],
+        }
+
+    return _atomic_update_data(finalize)
+
+
+def _deliver_partner_invitation(partner_id: str, *, force_new: bool = False) -> Dict[str, Any]:
+    claim = _claim_partner_invitation_delivery(partner_id, force_new=force_new)
+    if not claim.get("ok") or claim.get("skipped"):
+        return claim
+    try:
+        result = _send_partner_invitation_email(
+            claim["user"], claim["partner"], claim["raw_token"],
+        )
+    except Exception as exc:
+        app.logger.exception("partner_invitation_delivery_failed partner_id=%s", partner_id)
+        result = {"ok": False, "error": str(exc)[:500], "status_code": None}
+    return _finalize_partner_invitation_delivery(claim, result)
 
 
 @app.post("/admin/partners/<partner_id>/send-invitation")
 @admin_login_required
 @require_super_admin
 def admin_partner_send_invitation(partner_id: str):
-    data = load_data(); partner = _partner_or_404(data, partner_id); user = _partner_admin_user(data, partner_id)
-    if not user:
+    result = _deliver_partner_invitation(partner_id)
+    if result.get("reason") == "already_sending":
+        flash("Un envoi est déjà en cours ; aucun second e-mail n’a été déclenché.", "success")
+    elif result.get("reason") == "recently_sent":
+        flash("L’invitation vient déjà d’être envoyée ; aucun doublon n’a été créé.", "success")
+    elif result.get("reason") == "recently_attempted":
+        flash("Un envoi vient déjà d’être tenté ; patientez avant de recommencer.", "success")
+    elif not result.get("ok") and result.get("error") == "partner_not_found":
+        abort(404)
+    elif not result.get("ok") and result.get("error") == "partner_admin_not_found":
         abort(400, "Aucun utilisateur partner_admin")
-    invitation = _active_partner_invitation(data, partner_id)
-    if not invitation:
-        raw = _create_invitation(data, user.get("id"), partner_id); invitation = data.get("invitations", [])[-1]
-    result = _send_and_record_invitation(data, partner, user, invitation)
-    save_data(data)
-    flash("Invitation envoyée." if result.get("ok") else "Le partenaire existe, mais l’e-mail d’invitation n’a pas pu être envoyé : " + invitation.get("last_send_error", ""), "success" if result.get("ok") else "error")
+    else:
+        flash("Invitation envoyée." if result.get("ok") else "Le partenaire existe, mais l’e-mail d’invitation n’a pas pu être envoyé : " + str(result.get("error") or ""), "success" if result.get("ok") else "error")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id))
 
 
@@ -15192,16 +15902,17 @@ def admin_partner_send_invitation(partner_id: str):
 @admin_login_required
 @require_super_admin
 def admin_partner_new_invitation(partner_id: str):
-    data = load_data(); partner = _partner_or_404(data, partner_id); user = _partner_admin_user(data, partner_id)
-    if not user:
+    result = _deliver_partner_invitation(partner_id, force_new=True)
+    if not result.get("ok") and result.get("error") == "partner_not_found":
+        abort(404)
+    if not result.get("ok") and result.get("error") == "partner_admin_not_found":
         abort(400, "Aucun utilisateur partner_admin")
-    for inv in data.get("invitations", []):
-        if isinstance(inv, dict) and inv.get("partner_id") == partner_id and not inv.get("used_at") and not inv.get("cancelled_at"):
-            inv["cancelled_at"] = _now_iso()
-    raw = _create_invitation(data, user.get("id"), partner_id); invitation = data.get("invitations", [])[-1]
-    result = _send_and_record_invitation(data, partner, user, invitation)
-    save_data(data)
-    flash("Nouvelle invitation envoyée." if result.get("ok") else "Nouvelle invitation créée, mais l’e-mail n’a pas pu être envoyé : " + invitation.get("last_send_error", ""), "success" if result.get("ok") else "error")
+    if result.get("reason") == "already_sending":
+        flash("Un envoi est déjà en cours ; aucun nouveau lien n’a été créé.", "success")
+    elif result.get("reason") in {"recently_sent", "recently_attempted"}:
+        flash("Un envoi vient déjà d’être effectué ; patientez avant de générer un nouveau lien.", "success")
+    else:
+        flash("Nouvelle invitation envoyée." if result.get("ok") else "Nouvelle invitation créée, mais l’e-mail n’a pas pu être envoyé : " + str(result.get("error") or ""), "success" if result.get("ok") else "error")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id))
 
 
@@ -15294,7 +16005,9 @@ def activate_account():
     if request.method == "POST":
         password = request.form.get("password") or ""
         confirm = request.form.get("confirm") or ""
-        data = load_data(run_background_tasks=False)
+        # Invalid/expired activation attempts use the small authentication
+        # index and never run business normalizers over the full tenant store.
+        data = _load_partner_auth_data()
         invitation = _find_invitation_by_raw_token(data, token)
         now_dt = datetime.datetime.utcnow()
         if not invitation:
@@ -15306,42 +16019,52 @@ def activate_account():
         elif password != confirm or not _password_is_valid(password):
             error = "Le mot de passe doit contenir au moins 10 caractères, avec lettres et chiffres."
         else:
-            user = next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("id") == invitation.get("user_id")), None)
-            if not user:
-                error = "Utilisateur introuvable."
-            elif user.get("partner_id") != invitation.get("partner_id"):
-                app.logger.warning("activation_failed invitation_user_partner_mismatch data_file=%s exists=%s user_id=%s partner_id_present=%s", os.path.abspath(DATA_FILE), os.path.exists(DATA_FILE), user.get("id"), bool(user.get("partner_id")))
-                error = "Invitation invalide."
-            else:
-                user["password_hash"] = _hash_password(password)
-                if not user.get("role"):
-                    user["role"] = "partner_admin"
-                user["invitation_activated_at"] = _now_iso()
-                user["updated_at"] = _now_iso()
-                invitation["used_at"] = _now_iso()
-                _append_activity_log(data, "invitation_activated", "user", user.get("id"), user.get("partner_id") or "")
-                save_data(data)
-                reloaded = load_data(run_background_tasks=False)
-                persisted_user = next((u for u in reloaded.get("users", []) if isinstance(u, dict) and u.get("id") == user.get("id")), None)
-                persisted_invitation = next((i for i in reloaded.get("invitations", []) if isinstance(i, dict) and i.get("id") == invitation.get("id")), None)
-                persisted_ok = bool(
-                    persisted_user
-                    and persisted_user.get("password_hash")
-                    and persisted_user.get("role") == "partner_admin"
-                    and persisted_user.get("partner_id")
-                    and persisted_invitation
-                    and persisted_invitation.get("used_at")
+            password_hash = _hash_password(password)
+
+            def activate_once(canonical: Dict[str, Any]) -> Dict[str, Any]:
+                current_invitation = _find_invitation_by_raw_token(canonical, token)
+                if not current_invitation:
+                    return {"ok": False, "error": "Invitation invalide. Demandez une nouvelle invitation depuis la fiche partenaire."}
+                if current_invitation.get("used_at") or current_invitation.get("cancelled_at"):
+                    return {"ok": False, "error": "Invitation déjà utilisée ou annulée. Demandez une nouvelle invitation depuis la fiche partenaire."}
+                if _invitation_is_expired(current_invitation):
+                    return {"ok": False, "error": "Invitation expirée."}
+                current_user = next((
+                    item for item in canonical.get("users", [])
+                    if isinstance(item, dict) and item.get("id") == current_invitation.get("user_id")
+                ), None)
+                if not current_user:
+                    return {"ok": False, "error": "Utilisateur introuvable."}
+                if current_user.get("partner_id") != current_invitation.get("partner_id"):
+                    app.logger.warning(
+                        "activation_failed invitation_user_partner_mismatch data_file=%s exists=%s user_id=%s partner_id_present=%s",
+                        os.path.abspath(DATA_FILE), os.path.exists(DATA_FILE), current_user.get("id"), bool(current_user.get("partner_id")),
+                    )
+                    return {"ok": False, "error": "Invitation invalide."}
+                role = str(current_user.get("role") or "partner_admin").strip()
+                if role not in PARTNER_ACCOUNT_ROLES:
+                    app.logger.warning(
+                        "activation_failed invalid_partner_role user_id=%s partner_id=%s role=%s",
+                        current_user.get("id"), current_user.get("partner_id"), role,
+                    )
+                    return {"ok": False, "error": "Invitation invalide."}
+                current_user["role"] = role
+                current_user["password_hash"] = password_hash
+                current_user["invitation_activated_at"] = _now_iso()
+                current_user["updated_at"] = _now_iso()
+                current_invitation["used_at"] = _now_iso()
+                current_invitation["delivery_state"] = "used"
+                _append_activity_log(
+                    canonical, "invitation_activated", "user", current_user.get("id"),
+                    current_user.get("partner_id") or "",
                 )
-                app.logger.info(
-                    "activation_persist_check ok=%s data_file=%s persist_dir=%s exists=%s user_present=%s role=%s partner_id_present=%s password_hash_present=%s invitation_used=%s",
-                    persisted_ok, os.path.abspath(DATA_FILE), os.path.abspath(PERSIST_DIR), os.path.exists(DATA_FILE), bool(persisted_user),
-                    (persisted_user or {}).get("role") or "", bool((persisted_user or {}).get("partner_id")),
-                    bool((persisted_user or {}).get("password_hash")), bool((persisted_invitation or {}).get("used_at")),
-                )
-                if not persisted_ok:
-                    error = "Activation impossible : l’enregistrement persistant du compte n’a pas pu être confirmé."
-                else:
-                    return redirect(url_for("admin_login", activated="1"))
+                return {"ok": True}
+
+            activation_result = _atomic_update_data(activate_once)
+            if activation_result.get("ok"):
+                app.logger.info("activation_persist_check ok=true invitation_id=%s", invitation.get("id"))
+                return redirect(url_for("admin_login", activated="1"))
+            error = str(activation_result.get("error") or "Activation impossible : l’enregistrement persistant du compte n’a pas pu être confirmé.")
     return render_template("activate_account.html", token=token, error=error)
 
 
@@ -26391,9 +27114,61 @@ def _detokenize_path(token: str) -> str:
         abort(403)
     return candidate
 
+
+def _partner_can_access_upload_token(file_token: str) -> bool:
+    partner_context = _is_external_partner_session() or bool(
+        session.get("assist_partner_id") and _is_super_admin_session()
+    )
+    if not partner_context:
+        return True
+
+    normalized = str(file_token or "").replace("\\", "/").lstrip("/")
+    partner_id = _current_partner_id()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", partner_id):
+        return False
+    candidate = os.path.realpath(os.path.join(PERSIST_DIR, normalized))
+    tenant_root = os.path.realpath(os.path.join(PERSIST_DIR, "partners", partner_id))
+    try:
+        if candidate != tenant_root and os.path.commonpath((candidate, tenant_root)) == tenant_root:
+            return True
+    except ValueError:
+        return False
+
+    legacy_root = os.path.realpath(UPLOADS_DIR)
+    try:
+        if candidate == legacy_root or os.path.commonpath((candidate, legacy_root)) != legacy_root:
+            return False
+    except ValueError:
+        return False
+
+    # Compatibility for files created before tenant directories existed.  A
+    # legacy token is served only if it is referenced by this tenant's own
+    # partner or trainee record; knowing another token/path is insufficient.
+    data = load_data(run_background_tasks=False)
+    if session.get("assist_partner_id") and _is_super_admin_session():
+        data = _filter_data_for_partner(data, partner_id)
+    partner = next((
+        item for item in data.get("partners", [])
+        if isinstance(item, dict) and str(item.get("id") or "") == partner_id
+    ), None)
+    if partner and normalized in {
+        str(partner.get("logo_url") or "").strip(),
+        str(partner.get("logo_path") or "").strip(),
+    }:
+        return True
+    for session_obj in data.get("sessions", []):
+        if not isinstance(session_obj, dict) or str(session_obj.get("partner_id") or "") != partner_id:
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            if isinstance(trainee, dict) and _partner_token_belongs_to_trainee(trainee, normalized):
+                return True
+    return False
+
 @app.get("/admin/uploads/<path:path>")
 @admin_login_required
 def admin_view_upload(path: str):
+    if not _partner_can_access_upload_token(path):
+        abort(404)
     full = _detokenize_path(path)
     if not os.path.exists(full):
         abort(404)
@@ -26404,6 +27179,8 @@ def admin_view_upload(path: str):
 @app.get("/admin/uploads/<path:path>/download")
 @admin_login_required
 def admin_download_upload(path: str):
+    if not _partner_can_access_upload_token(path):
+        abort(404)
     full = _detokenize_path(path)
     if not os.path.exists(full):
         abort(404)
@@ -26440,6 +27217,23 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
         if (t.get(key) or "").strip() == file_token:
             return True
 
+    return False
+
+
+def _partner_token_belongs_to_trainee(t: dict, file_token: str) -> bool:
+    """Include admin-only legacy files for tenant download authorization."""
+    if _token_belongs_to_trainee(t, file_token):
+        return True
+    for document in (t.get("private_documents") or []):
+        if isinstance(document, dict) and (document.get("file") or "").strip() == file_token:
+            return True
+    for group in (t.get("scotia_added_documents") or []):
+        if not isinstance(group, dict):
+            continue
+        if (group.get("file") or "").strip() == file_token:
+            return True
+        if file_token in [value.strip() for value in group.get("files", []) if isinstance(value, str)]:
+            return True
     return False
 
 
@@ -32110,19 +32904,45 @@ def _aps_elearning_has_resettable_data(trainee: Dict[str, Any]) -> bool:
 
 
 def _aps_elearning_tracking_storage_dir(session_id: str, trainee_id: str) -> str:
-    uploads_root = os.path.realpath(UPLOADS_DIR)
-    target = os.path.realpath(os.path.join(
-        uploads_root,
-        str(session_id or ""),
-        str(trainee_id or ""),
-        APS_ELEARNING_TRACKING_FOLDER,
-    ))
+    try:
+        uploads_root = os.path.realpath(trainee_upload_dir(session_id, trainee_id))
+    except ValueError:
+        return ""
+    target = os.path.realpath(os.path.join(uploads_root, APS_ELEARNING_TRACKING_FOLDER))
     try:
         if os.path.commonpath((target, uploads_root)) != uploads_root or target == uploads_root:
             return ""
     except ValueError:
         return ""
     return target
+
+
+def _aps_elearning_tracking_storage_dirs(session_id: str, trainee_id: str) -> Tuple[str, ...]:
+    """Return the current tenant path plus the exact legacy trainee path."""
+    directories: List[str] = []
+    current = _aps_elearning_tracking_storage_dir(session_id, trainee_id)
+    if current:
+        directories.append(current)
+
+    try:
+        safe_session_id = _safe_upload_identifier(session_id, "session_id")
+        safe_trainee_id = _safe_upload_identifier(trainee_id, "trainee_id")
+    except ValueError:
+        return tuple(directories)
+    legacy_root = os.path.realpath(UPLOADS_DIR)
+    legacy = os.path.realpath(os.path.join(
+        legacy_root,
+        safe_session_id,
+        safe_trainee_id,
+        APS_ELEARNING_TRACKING_FOLDER,
+    ))
+    try:
+        if legacy != legacy_root and os.path.commonpath((legacy, legacy_root)) == legacy_root:
+            if legacy not in directories:
+                directories.append(legacy)
+    except ValueError:
+        pass
+    return tuple(directories)
 
 
 def _remove_aps_elearning_file(path: Any, allowed_directories: Tuple[str, ...]) -> bool:
@@ -32214,8 +33034,8 @@ def _reset_aps_elearning_data(
     removed_files = 0
     tracking = trainee.get("aps_elearning_tracking")
     tracking_token = str(tracking.get("file") or "").strip() if isinstance(tracking, dict) else ""
-    tracking_dir = _aps_elearning_tracking_storage_dir(session_id, trainee_id)
-    if tracking_token and tracking_dir:
+    tracking_dirs = _aps_elearning_tracking_storage_dirs(session_id, trainee_id)
+    if tracking_token and tracking_dirs:
         try:
             tracking_path = _detokenize_path(tracking_token)
         except Exception:
@@ -32225,7 +33045,7 @@ def _reset_aps_elearning_data(
                 exc_info=True,
             )
         else:
-            removed_files += int(_remove_aps_elearning_file(tracking_path, (tracking_dir,)))
+            removed_files += int(_remove_aps_elearning_file(tracking_path, tracking_dirs))
 
     generated_roots = (
         YOUSIGN_APS_ELEARNING_DIR,
@@ -35883,6 +36703,13 @@ def _upsert_wedof_folder_cache(
 
 def _refresh_cpf_link_from_wedof(data: Dict[str, Any], link: Dict[str, Any]) -> Dict[str, Any]:
     """Actualise en lecture seule le cache d'un lien CPF depuis WEDOF."""
+    if has_request_context() and (
+        _is_external_partner_session()
+        or (session.get("assist_partner_id") and _is_super_admin_session())
+    ):
+        raise WedofConfigurationError(
+            "WEDOF nécessite des identifiants propres à l’organisme partenaire."
+        )
     remote_folder = WedofClient().get_registration_folder_interactive(
         str(link.get("external_id") or ""),
         operation="cpf_invoice_manual_refresh",

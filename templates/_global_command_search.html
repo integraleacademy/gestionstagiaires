@@ -1,5 +1,28 @@
 {% set command_items = [
-  {"label":"Tableau de bord", "description":"Sessions et activité", "icon":"⌂", "href":url_for('admin_sessions'), "keywords":"accueil dashboard sessions"},
+  {"label":"Tableau de bord", "description":"Sessions et activité", "icon":"⌂", "href":url_for('admin_sessions'), "keywords":"accueil dashboard sessions"}
+] %}
+{% if is_partner_space %}
+  {% if partner_has_module('cnaps') %}
+    {% set command_items = command_items + [
+      {"label":"Suivi CNAPS", "description":"Suivre vos dossiers CNAPS", "icon":"◇", "href":url_for('admin_cnaps_tracking'), "keywords":"cnaps suivi dracar sécurité autorisation carte professionnelle"},
+      {"label":"CNAPS inconnus", "description":"Dossiers à rapprocher", "icon":"?", "href":url_for('admin_cnaps_unknown'), "keywords":"cnaps inconnus rapprochement pré cnaps"}
+    ] %}
+  {% endif %}
+  {% if partner_has_module('automations') %}
+    {% set command_items = command_items + [
+      {"label":"Conventions", "description":"Gérer les conventions", "icon":"▤", "href":url_for('admin_sessions_conventions'), "keywords":"convention signature document"},
+      {"label":"Automatisations", "description":"Configurer les envois", "icon":"⚡", "href":url_for('admin_sessions_automations'), "keywords":"automatisation email sms convocation"}
+    ] %}
+  {% endif %}
+  {% if partner_has_module('sales') %}
+    {% set command_items = command_items + [{"label":"Suivi des ventes", "description":"Piloter votre activité commerciale", "icon":"↗", "href":url_for('admin_sales_tracking'), "keywords":"vente commercial chiffre affaires statistiques"}] %}
+  {% endif %}
+  {% if partner_has_module('billing') %}
+    {% set command_items = command_items + [{"label":"Facturation", "description":"Factures et règlements locaux", "icon":"€", "href":url_for('admin_sessions_billing'), "keywords":"fact facture facturation paiement règlement"}] %}
+  {% endif %}
+  {% set command_items = command_items + [{"label":"Sessions archivées", "description":"Retrouver les anciennes sessions", "icon":"□", "href":url_for('admin_sessions_archived'), "keywords":"archive anciennes sessions historique"}] %}
+{% else %}
+{% set command_items = command_items + [
   {"label":"Tests de positionnement", "description":"Consulter les tests", "icon":"✓", "href":url_for('admin_positioning_tests'), "keywords":"test évaluation positionnement"},
   {"label":"CPF · EDOF", "description":"Demandes de financement", "icon":"€", "href":url_for('admin_wedof_requests'), "keywords":"cpf edof financement mon compte formation"},
   {"label":"Suivi CNAPS", "description":"Suivre les dossiers CNAPS", "icon":"◇", "href":url_for('admin_cnaps_tracking'), "keywords":"cnaps suivi dracar sécurité autorisation carte professionnelle"},
@@ -12,6 +35,7 @@
   {"label":"Réglages Qonto", "description":"Paramètres de facturation", "icon":"⚙", "href":url_for('admin_qonto_settings'), "keywords":"qonto banque facturation réglages paramètres"},
   {"label":"Sessions archivées", "description":"Retrouver les anciennes sessions", "icon":"□", "href":url_for('admin_sessions_archived'), "keywords":"archive anciennes sessions historique"}
 ] %}
+{% endif %}
 {% if is_super_admin %}
   {% set command_items = command_items + [
     {"label":"Gérer les partenaires", "description":"Comptes et abonnements", "icon":"◎", "href":url_for('admin_partners'), "keywords":"partenaire compte abonnement organisme"},

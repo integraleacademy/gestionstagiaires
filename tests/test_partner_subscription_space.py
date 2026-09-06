@@ -65,7 +65,7 @@ class PartnerSubscriptionSpaceTests(unittest.TestCase):
             sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
             sess["admin_username"] = "admin@example.com"
 
-    def test_partner_cpf_navigation_has_no_global_request_badge(self):
+    def test_partner_cpf_navigation_is_locked_until_dedicated_credentials_exist(self):
         with gestion_app.app.test_request_context("/admin/sessions"):
             gestion_app.session["admin_logged_in"] = True
             gestion_app.session["admin_role"] = "partner_admin"
@@ -75,12 +75,8 @@ class PartnerSubscriptionSpaceTests(unittest.TestCase):
                 html = gestion_app.render_template("base.html")
 
             load_wedof_webhooks.assert_not_called()
-        cpf_navigation = next(
-            link
-            for link in re.findall(r'<a[^>]+href="/admin/wedof"[^>]*>.*?</a>', html, re.DOTALL)
-            if 'aria-label="CPF"' in link
-        )
-        self.assertNotIn("partner-sidebar__badge", cpf_navigation)
+        self.assertNotIn('href="/admin/wedof"', html)
+        self.assertIn('data-locked-module="CPF · connexion dédiée requise"', html)
 
     def _png(self):
         buf = io.BytesIO()
