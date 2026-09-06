@@ -89,6 +89,48 @@ class InMemoryPartnerStore:
         return existed
 
 
+class PartnerPostgresMigrationDiagnosticsTests(unittest.TestCase):
+    def test_duplicate_email_diagnostics_are_safe_and_actionable(self):
+        email = "Duplicate@Example.com"
+        bundle = {
+            "users": [
+                {
+                    "id": "user-old",
+                    "partner_id": "partner-test",
+                    "email": email,
+                    "role": "partner_admin",
+                    "active": True,
+                    "password_hash": "",
+                    "created_at": "2026-01-01T00:00:00Z",
+                },
+                {
+                    "id": "user-live",
+                    "partner_id": "partner-test",
+                    "email": email.lower(),
+                    "role": "partner_admin",
+                    "active": True,
+                    "password_hash": "secret-hash",
+                    "last_login_at": "2026-09-01T00:00:00Z",
+                },
+            ],
+            "invitations": [{"id": "invite-old", "user_id": "user-old"}],
+        }
+
+        diagnostics = gestion_app._partner_duplicate_email_diagnostics(bundle)
+        rendered = json.dumps(diagnostics, sort_keys=True)
+
+        self.assertEqual(len(diagnostics), 1)
+        self.assertNotIn(email.lower(), rendered.lower())
+        self.assertEqual(
+            [item["id"] for item in diagnostics[0]["records"]],
+            ["user-old", "user-live"],
+        )
+        self.assertEqual(diagnostics[0]["records"][0]["invitation_count"], 1)
+        self.assertFalse(diagnostics[0]["records"][0]["has_password_hash"])
+        self.assertTrue(diagnostics[0]["records"][1]["has_password_hash"])
+        self.assertIn("password_hash", diagnostics[0]["differing_fields"])
+
+
 class UnavailablePartnerStore:
     def stats(self):
         raise gestion_app.PartnerPostgresUnavailable("unavailable")
