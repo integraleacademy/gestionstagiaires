@@ -4873,7 +4873,7 @@ def _bootstrap_partner_postgres_shadow() -> Dict[str, Any]:
             )
         report = _sync_partner_postgres_from_canonical(canonical, strict=True)
         _partner_postgres_bootstrap_done = True
-        app.logger.info(
+        app.logger.warning(
             "partner_postgres shadow_bootstrap ok=%s imported=%s unchanged=%s "
             "repaired_duplicates=%s db_partners=%s db_users=%s "
             "db_invitations=%s checksums_verified=%s backup=%s",
@@ -4894,6 +4894,44 @@ def _bootstrap_partner_postgres_shadow() -> Dict[str, Any]:
         }
 
 
+
+
+def _verify_partner_postgres_initial_cutover() -> Dict[str, Any]:
+    """Read-only gate for the first active deployment, before serving traffic.
+
+    Disable the one-deploy flag immediately after success: once active writes
+    start, JSON is deliberately no longer the authoritative partner source.
+    """
+    enabled = str(os.environ.get("PARTNER_POSTGRES_VERIFY_INITIAL_CUTOVER") or "").lower()
+    if not _partner_postgres_active() or enabled not in {"1", "true", "yes", "on"}:
+        return {"ok": True, "skipped": "initial_cutover_check_disabled"}
+    before = _partner_auth_file_fingerprint(DATA_FILE)
+    canonical = _load_valid_json_payload(DATA_FILE)
+    if before is None or not isinstance(canonical, dict):
+        raise PartnerPostgresValidationError("source JSON illisible avant bascule")
+    _ensure_multi_partner_payload(canonical)
+    store = _get_partner_postgres_store()
+    expected_ids = set()
+    for partner in canonical.get("partners", []):
+        if not isinstance(partner, dict):
+            continue
+        partner_id = str(partner.get("id") or "")
+        if not partner_id or partner_id == INTEGRALE_PARTNER_ID:
+            continue
+        source = _partner_bundle_from_canonical(canonical, partner_id)
+        target, _version = store.load_bundle(partner_id)
+        if _partner_bundle_checksum(source) != _partner_bundle_checksum(target):
+            raise PartnerPostgresValidationError("données partenaire modifiées depuis le miroir")
+        expected_ids.add(partner_id)
+    stats = store.stats()
+    actual_ids = {str(row.get("partner_id") or "") for row in stats.get("tenants", [])}
+    if actual_ids != expected_ids or _partner_auth_file_fingerprint(DATA_FILE) != before:
+        raise PartnerPostgresValidationError("source partenaire modifiée pendant la vérification")
+    app.logger.warning(
+        "partner_postgres initial_cutover_verified mode=active partners=%s users=%s invitations=%s",
+        len(expected_ids), int(stats.get("users") or 0), int(stats.get("invitations") or 0),
+    )
+    return {"ok": True, "partners_verified": len(expected_ids)}
 
 
 def _data_file_diagnostics() -> Dict[str, Any]:
@@ -50899,6 +50937,12 @@ if _partner_postgres_shadow():
         # Shadow mode is intentionally non-disruptive: JSON remains the source
         # and active mode will not be enabled until verification succeeds.
         app.logger.exception("partner_postgres shadow_bootstrap_failed")
+
+
+if _partner_postgres_active():
+    # A failed initial-cutover gate must prevent the new worker from serving
+    # traffic. Never import stale JSON automatically in active mode.
+    _verify_partner_postgres_initial_cutover()
 
 
 _log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
