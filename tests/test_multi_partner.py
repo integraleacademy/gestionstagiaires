@@ -246,7 +246,11 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             sess["partner_id"] = self.partner_a
         self.assertEqual(self.client.get("/admin/partners").status_code, 403)
         with self.client.session_transaction() as sess:
+            sess.clear()
+            sess["admin_logged_in"] = True
             sess["admin_role"] = "super_admin"
+            sess["platform_role"] = "super_admin"
+            sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
         self.assertEqual(self.client.get("/admin/partners").status_code, 200)
 
     def test_partner_space_uses_partner_logo_only(self):
