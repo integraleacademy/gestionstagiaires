@@ -415,7 +415,7 @@ class PartnerPostgresStore:
             cursor.execute(
                 "INSERT INTO partner_store.tenants "
                 "(partner_id, partner, payload, version, source_checksum, imported_at) "
-                "VALUES (%s, %s, %s, 1, %s, CASE WHEN %s IS NULL THEN NULL ELSE NOW() END) "
+                "VALUES (%s, %s, %s, 1, %s, CASE WHEN %s::text IS NULL THEN NULL ELSE NOW() END) "
                 "RETURNING version",
                 (
                     partner_id,
@@ -429,7 +429,7 @@ class PartnerPostgresStore:
             cursor.execute(
                 "INSERT INTO partner_store.tenants "
                 "(partner_id, partner, payload, version, source_checksum, imported_at) "
-                "VALUES (%s, %s, %s, 1, %s, CASE WHEN %s IS NULL THEN NULL ELSE NOW() END) "
+                "VALUES (%s, %s, %s, 1, %s, CASE WHEN %s::text IS NULL THEN NULL ELSE NOW() END) "
                 "ON CONFLICT (partner_id) DO UPDATE SET "
                 "partner = EXCLUDED.partner, payload = EXCLUDED.payload, "
                 "version = partner_store.tenants.version + 1, "
