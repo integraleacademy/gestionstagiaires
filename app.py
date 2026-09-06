@@ -4425,6 +4425,161 @@ def _partner_duplicate_email_diagnostics(bundle: Dict[str, Any]) -> List[Dict[st
     return diagnostics
 
 
+def _partner_exact_duplicate_repair_spec() -> Optional[Tuple[str, str, str, int]]:
+    """Parse the deliberately narrow one-shot legacy repair selector.
+
+    Format: ``partner_id:user_id:email_sha256_prefix:expected_occurrences``.
+    Requiring every observed value prevents an accidentally retained flag from
+    modifying another account in a later deployment.
+    """
+    raw = str(
+        os.environ.get("PARTNER_POSTGRES_REPAIR_EXACT_USER_DUPLICATES") or ""
+    ).strip()
+    if not raw:
+        return None
+    parts = [part.strip() for part in raw.split(":")]
+    if len(parts) != 4 or not all(parts):
+        raise PartnerPostgresValidationError(
+            "sélecteur de réparation des doublons partenaire invalide"
+        )
+    partner_id, user_id, email_hash, expected_raw = parts
+    if partner_id == INTEGRALE_PARTNER_ID:
+        raise PartnerPostgresValidationError(
+            "la réparation ne peut pas cibler le partenaire Intégrale"
+        )
+    if not re.fullmatch(r"[0-9a-f]{16}", email_hash.lower()):
+        raise PartnerPostgresValidationError(
+            "empreinte e-mail de réparation invalide"
+        )
+    try:
+        expected_occurrences = int(expected_raw)
+    except ValueError as exc:
+        raise PartnerPostgresValidationError(
+            "nombre attendu de doublons partenaire invalide"
+        ) from exc
+    if expected_occurrences < 2 or expected_occurrences > 100:
+        raise PartnerPostgresValidationError(
+            "nombre attendu de doublons partenaire hors limites"
+        )
+    return partner_id, user_id, email_hash.lower(), expected_occurrences
+
+
+def _repair_exact_partner_user_duplicates(
+    data: Dict[str, Any], repair_spec: Tuple[str, str, str, int],
+) -> Dict[str, Any]:
+    """Keep one of several byte-for-byte equivalent legacy user records.
+
+    No fuzzy merge is permitted: partner, user ID, anonymised e-mail hash and
+    occurrence count must match the operator-provided selector, and every
+    selected record must contain exactly the same JSON fields and values.
+    Invitations are left untouched because they already reference the shared
+    user ID.
+    """
+    partner_id, user_id, expected_email_hash, expected_occurrences = repair_spec
+    users = data.get("users")
+    if not isinstance(users, list):
+        raise PartnerPostgresValidationError(
+            "collection utilisateurs absente avant réparation"
+        )
+    if not any(
+        isinstance(partner, dict)
+        and str(partner.get("id") or "") == partner_id
+        for partner in data.get("partners", []) or []
+    ):
+        raise PartnerPostgresValidationError(
+            "partenaire ciblé absent avant réparation"
+        )
+
+    matching_positions = [
+        position
+        for position, user in enumerate(users)
+        if isinstance(user, dict)
+        and str(user.get("partner_id") or "") == partner_id
+        and str(user.get("id") or "") == user_id
+    ]
+    if len(matching_positions) != expected_occurrences:
+        raise PartnerPostgresValidationError(
+            "nombre de doublons partenaire différent de la valeur attendue"
+        )
+    selected = [users[position] for position in matching_positions]
+    canonical_record = _partner_canonical_json(selected[0])
+    if any(_partner_canonical_json(user) != canonical_record for user in selected[1:]):
+        raise PartnerPostgresValidationError(
+            "les comptes partenaire ciblés ne sont pas strictement identiques"
+        )
+    normalized_email = str(selected[0].get("email") or "").strip().lower()
+    actual_email_hash = hashlib.sha256(normalized_email.encode("utf-8")).hexdigest()[:16]
+    if not normalized_email or not hmac.compare_digest(actual_email_hash, expected_email_hash):
+        raise PartnerPostgresValidationError(
+            "empreinte e-mail différente de la valeur attendue"
+        )
+
+    first_position = matching_positions[0]
+    duplicate_positions = set(matching_positions[1:])
+    data["users"] = [
+        user for position, user in enumerate(users) if position not in duplicate_positions
+    ]
+    remaining = [
+        user for user in data["users"]
+        if isinstance(user, dict)
+        and str(user.get("partner_id") or "") == partner_id
+        and str(user.get("id") or "") == user_id
+    ]
+    if len(remaining) != 1 or _partner_canonical_json(remaining[0]) != canonical_record:
+        raise PartnerPostgresValidationError(
+            "vérification en mémoire de la réparation partenaire échouée"
+        )
+    return {
+        "partner_id": partner_id,
+        "user_id": user_id,
+        "email_hash": actual_email_hash,
+        "expected_occurrences": expected_occurrences,
+        "kept_position": first_position,
+        "removed": len(duplicate_positions),
+    }
+
+
+def _repair_exact_partner_user_duplicates_on_disk(
+    repair_spec: Tuple[str, str, str, int],
+) -> Dict[str, Any]:
+    """Apply and verify the guarded repair while holding the JSON file lock."""
+    result: Dict[str, Any] = {}
+
+    def repair_current_payload(_payload: Dict[str, Any]) -> Dict[str, Any]:
+        current = _load_valid_json_payload(DATA_FILE)
+        if not isinstance(current, dict):
+            raise PartnerPostgresValidationError(
+                "data.json illisible pendant la réparation partenaire"
+            )
+        _ensure_multi_partner_payload(current)
+        result.update(_repair_exact_partner_user_duplicates(current, repair_spec))
+        return current
+
+    _write_json_with_backups(
+        DATA_FILE,
+        {},
+        _data_lock,
+        payload_transform=repair_current_payload,
+    )
+    verified = _load_valid_json_payload(DATA_FILE)
+    if not isinstance(verified, dict):
+        raise PartnerPostgresValidationError(
+            "data.json illisible après réparation partenaire"
+        )
+    partner_id, user_id, _email_hash, _expected_occurrences = repair_spec
+    matching = [
+        user for user in verified.get("users", []) or []
+        if isinstance(user, dict)
+        and str(user.get("partner_id") or "") == partner_id
+        and str(user.get("id") or "") == user_id
+    ]
+    if len(matching) != 1:
+        raise PartnerPostgresValidationError(
+            "vérification sur disque de la réparation partenaire échouée"
+        )
+    return result
+
+
 def _overlay_partner_bundle(
     canonical: Dict[str, Any], bundle: Dict[str, Any], partner_id: str,
 ) -> Dict[str, Any]:
@@ -4585,6 +4740,9 @@ def _sync_partner_postgres_from_canonical(
             for item in store.stats().get("tenants", [])
             if isinstance(item, dict)
         }
+        expected_checksums: Dict[str, str] = {}
+        expected_users = 0
+        expected_invitations = 0
         for partner in canonical.get("partners", []):
             if not isinstance(partner, dict):
                 continue
@@ -4594,6 +4752,9 @@ def _sync_partner_postgres_from_canonical(
             try:
                 bundle = _partner_bundle_from_canonical(canonical, partner_id)
                 checksum = _partner_bundle_checksum(bundle)
+                expected_checksums[partner_id] = checksum
+                expected_users += len(bundle.get("users", []))
+                expected_invitations += len(bundle.get("invitations", []))
                 if existing_checksums.get(partner_id) == checksum:
                     report["unchanged"].append(partner_id)
                     continue
@@ -4631,6 +4792,37 @@ def _sync_partner_postgres_from_canonical(
                 })
                 if strict:
                     raise
+        if strict:
+            # Re-read every tenant, including rows skipped as unchanged, then
+            # compare aggregate indexed-table counts. This is the final gate
+            # before an operator may switch the source to active mode.
+            for partner_id, checksum in expected_checksums.items():
+                reloaded, _version = store.load_bundle(partner_id)
+                if _partner_bundle_checksum(reloaded) != checksum:
+                    raise PartnerPostgresValidationError(
+                        "la vérification complète après import ne correspond pas"
+                    )
+            stats = store.stats()
+            actual_partner_ids = {
+                str(item.get("partner_id") or "")
+                for item in stats.get("tenants", [])
+                if isinstance(item, dict)
+            }
+            if (
+                actual_partner_ids != set(expected_checksums)
+                or int(stats.get("partners") or 0) != len(expected_checksums)
+                or int(stats.get("users") or 0) != expected_users
+                or int(stats.get("invitations") or 0) != expected_invitations
+            ):
+                raise PartnerPostgresValidationError(
+                    "les totaux PostgreSQL ne correspondent pas au miroir partenaire"
+                )
+            report["stats"] = {
+                "partners": len(expected_checksums),
+                "users": expected_users,
+                "invitations": expected_invitations,
+                "checksums_verified": len(expected_checksums),
+            }
     except PartnerPostgresError:
         if strict:
             raise
@@ -4660,16 +4852,46 @@ def _bootstrap_partner_postgres_shadow() -> Dict[str, Any]:
             raise PartnerPostgresValidationError(
                 "sauvegarde data.json impossible avant migration"
             )
+        repair_report: Optional[Dict[str, Any]] = None
+        repair_spec = _partner_exact_duplicate_repair_spec()
+        if repair_spec:
+            repair_report = _repair_exact_partner_user_duplicates_on_disk(repair_spec)
+            canonical = _load_valid_json_payload(DATA_FILE)
+            if not isinstance(canonical, dict):
+                raise PartnerPostgresValidationError(
+                    "data.json illisible après réparation partenaire"
+                )
+            _ensure_multi_partner_payload(canonical)
+            app.logger.warning(
+                "partner_postgres exact_duplicate_user_repaired "
+                "partner_id=%s user_id=%s email_hash=%s removed=%s backup=%s",
+                repair_report["partner_id"],
+                repair_report["user_id"],
+                repair_report["email_hash"],
+                repair_report["removed"],
+                os.path.basename(snapshot),
+            )
         report = _sync_partner_postgres_from_canonical(canonical, strict=True)
         _partner_postgres_bootstrap_done = True
         app.logger.info(
-            "partner_postgres shadow_bootstrap ok=%s imported=%s unchanged=%s backup=%s",
+            "partner_postgres shadow_bootstrap ok=%s imported=%s unchanged=%s "
+            "repaired_duplicates=%s db_partners=%s db_users=%s "
+            "db_invitations=%s checksums_verified=%s backup=%s",
             bool(report.get("ok")),
             len(report.get("imported", [])),
             len(report.get("unchanged", [])),
+            int((repair_report or {}).get("removed") or 0),
+            int((report.get("stats") or {}).get("partners") or 0),
+            int((report.get("stats") or {}).get("users") or 0),
+            int((report.get("stats") or {}).get("invitations") or 0),
+            int((report.get("stats") or {}).get("checksums_verified") or 0),
             os.path.basename(snapshot),
         )
-        return {**report, "backup": os.path.basename(snapshot)}
+        return {
+            **report,
+            "repair": repair_report,
+            "backup": os.path.basename(snapshot),
+        }
 
 
 
