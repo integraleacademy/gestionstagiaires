@@ -160,6 +160,7 @@ class PartnerPostgresHybridTests(unittest.TestCase):
                 "PARTNER_DATABASE_URL",
                 "PARTNER_POSTGRES_AUTO_MIGRATE",
                 "PARTNER_POSTGRES_REPAIR_EXACT_USER_DUPLICATES",
+                "PARTNER_POSTGRES_VERIFY_INITIAL_CUTOVER",
             )
         }
         gestion_app.PERSIST_DIR = self.temp_dir.name
@@ -502,6 +503,28 @@ class PartnerPostgresHybridTests(unittest.TestCase):
         self.assertIn("ALTER TABLE partner_store.users FORCE ROW LEVEL SECURITY", SCHEMA_SQL)
         self.assertIn("ALTER TABLE partner_store.invitations FORCE ROW LEVEL SECURITY", SCHEMA_SQL)
         self.assertEqual(SCHEMA_SQL.count("CREATE POLICY tenant_scope"), 3)
+
+    def test_initial_cutover_verifies_every_partner_without_writing(self):
+        os.environ["PARTNER_POSTGRES_VERIFY_INITIAL_CUTOVER"] = "true"
+        before_json = Path(gestion_app.DATA_FILE).read_bytes()
+        before_db = copy.deepcopy(self.store.bundles)
+        with mock.patch.object(self.store, "import_bundle", side_effect=AssertionError("read-only gate")):
+            report = gestion_app._verify_partner_postgres_initial_cutover()
+        self.assertEqual(report, {"ok": True, "partners_verified": 2})
+        self.assertEqual(Path(gestion_app.DATA_FILE).read_bytes(), before_json)
+        self.assertEqual(self.store.bundles, before_db)
+
+    def test_initial_cutover_refuses_a_stale_mirror(self):
+        os.environ["PARTNER_POSTGRES_VERIFY_INITIAL_CUTOVER"] = "true"
+        self.store.bundles[self.partner_a]["users"][0]["active"] = False
+        with self.assertRaises(gestion_app.PartnerPostgresValidationError):
+            gestion_app._verify_partner_postgres_initial_cutover()
+
+    def test_initial_cutover_disabled_after_first_activation(self):
+        os.environ["PARTNER_POSTGRES_VERIFY_INITIAL_CUTOVER"] = "false"
+        with mock.patch.object(gestion_app, "_load_valid_json_payload", side_effect=AssertionError("no JSON")):
+            report = gestion_app._verify_partner_postgres_initial_cutover()
+        self.assertEqual(report["skipped"], "initial_cutover_check_disabled")
 
     def test_shadow_database_outage_never_interrupts_json_save(self):
         os.environ["PARTNER_POSTGRES_MODE"] = "shadow"

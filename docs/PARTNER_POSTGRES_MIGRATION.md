@@ -46,9 +46,14 @@ Ne jamais enregistrer l’URL de connexion dans Git.
    checksum.
 5. Vérifier les journaux, les lignes `partner_store.tenants`, `users` et
    `invitations`, puis remettre `PARTNER_POSTGRES_AUTO_MIGRATE=false`.
-6. Passer à `active`, tester un compte partenaire, un compte administrateur et
-   deux locataires différents, puis surveiller CPU, mémoire, erreurs et
-   connexions PostgreSQL.
+6. Passer à `active` avec `PARTNER_POSTGRES_VERIFY_INITIAL_CUTOVER=true` :
+   le nouveau worker relit JSON et PostgreSQL avant d’accepter du trafic et
+   refuse le démarrage si les partenaires ont changé depuis le miroir.
+7. Dès le journal `initial_cutover_verified`, remettre immédiatement
+   `PARTNER_POSTGRES_VERIFY_INITIAL_CUTOVER=false`. Ce contrôle ne doit plus
+   comparer le JSON devenu ancien après les premières écritures PostgreSQL.
+8. Tester un compte partenaire, un compte administrateur et deux locataires
+   différents, puis surveiller CPU, mémoire, erreurs et connexions PostgreSQL.
 
 La commande manuelle équivalente est :
 
