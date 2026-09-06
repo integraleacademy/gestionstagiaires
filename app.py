@@ -4371,6 +4371,60 @@ def _partner_bundle_checksum(bundle: Dict[str, Any]) -> str:
     return hashlib.sha256(_partner_canonical_json(normalized).encode("utf-8")).hexdigest()
 
 
+def _partner_duplicate_email_diagnostics(bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Describe legacy duplicate logins without exposing e-mail addresses.
+
+    A duplicate account must stop the migration because authentication by
+    e-mail would otherwise be ambiguous.  The private Render log still needs
+    enough non-secret metadata to select the correct record for a backed-up,
+    explicit repair.
+    """
+    invitations_by_user: Dict[str, int] = {}
+    for invitation in bundle.get("invitations", []) or []:
+        if not isinstance(invitation, dict):
+            continue
+        user_id = str(invitation.get("user_id") or "").strip()
+        if user_id:
+            invitations_by_user[user_id] = invitations_by_user.get(user_id, 0) + 1
+
+    groups: Dict[str, List[Tuple[int, Dict[str, Any]]]] = {}
+    for position, user in enumerate(bundle.get("users", []) or []):
+        if not isinstance(user, dict):
+            continue
+        normalized = str(user.get("email") or "").strip().lower()
+        if normalized:
+            groups.setdefault(normalized, []).append((position, user))
+
+    diagnostics: List[Dict[str, Any]] = []
+    for normalized, records in groups.items():
+        if len(records) < 2:
+            continue
+        all_keys = sorted({str(key) for _position, user in records for key in user})
+        differing_fields = [
+            key for key in all_keys
+            if len({_partner_canonical_json(user.get(key)) for _position, user in records}) > 1
+        ]
+        diagnostics.append({
+            "email_hash": hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16],
+            "differing_fields": differing_fields,
+            "records": [
+                {
+                    "position": position,
+                    "id": str(user.get("id") or ""),
+                    "role": str(user.get("role") or ""),
+                    "active": bool(user.get("active", True)),
+                    "has_password_hash": bool(str(user.get("password_hash") or "")),
+                    "created_at": str(user.get("created_at") or ""),
+                    "updated_at": str(user.get("updated_at") or ""),
+                    "last_login_at": str(user.get("last_login_at") or ""),
+                    "invitation_count": invitations_by_user.get(str(user.get("id") or ""), 0),
+                }
+                for position, user in records
+            ],
+        })
+    return diagnostics
+
+
 def _overlay_partner_bundle(
     canonical: Dict[str, Any], bundle: Dict[str, Any], partner_id: str,
 ) -> Dict[str, Any]:
@@ -4543,6 +4597,23 @@ def _sync_partner_postgres_from_canonical(
                 if existing_checksums.get(partner_id) == checksum:
                     report["unchanged"].append(partner_id)
                     continue
+                duplicate_diagnostics = _partner_duplicate_email_diagnostics(bundle)
+                if duplicate_diagnostics:
+                    partner_name = re.sub(
+                        r"[\r\n\t]+", " ", str(partner.get("name") or "")
+                    ).strip()[:120]
+                    app.logger.error(
+                        "partner_postgres duplicate_auth_email partner_id=%s "
+                        "partner_name=%s details=%s",
+                        partner_id,
+                        partner_name,
+                        json.dumps(
+                            duplicate_diagnostics,
+                            ensure_ascii=True,
+                            separators=(",", ":"),
+                            sort_keys=True,
+                        ),
+                    )
                 store.import_bundle(
                     partner_id, bundle, source_checksum=checksum,
                 )
