@@ -45,6 +45,19 @@ services:
         value: https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto
       - key: PUBLIC_STUDENT_PORTAL_BASE
         value: https://gestionstagiaires-r5no.onrender.com
+      # Stockage hybride : seuls les partenaires externes utilisent cette
+      # base. Ces valeurs restent pilotées depuis Render pour permettre la
+      # séquence sûre off -> shadow -> active sans secret dans Git.
+      - key: PARTNER_DATABASE_URL
+        sync: false
+      - key: PARTNER_POSTGRES_MODE
+        sync: false
+      - key: PARTNER_POSTGRES_AUTO_MIGRATE
+        sync: false
+      - key: PARTNER_POSTGRES_POOL_MAX_SIZE
+        value: "4"
+      - key: PARTNER_POSTGRES_TIMEOUT_SECONDS
+        value: "5"
       - key: HEBERGEMENT_STATUS_ENDPOINT
         value: https://assistance-alw9.onrender.com/lookup_hebergement.json
       - key: CNAPSV3_API_TOKEN

@@ -87,6 +87,16 @@ from wedof_automation import (automation_dashboard_state, build_automation_dashb
                               record_maintenance_skip, run_dry_run, run_live_automation,
                               sync_folder_automation_status)
 from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_invoice
+from partner_postgres import (
+    PartnerPostgresDuplicateEmail,
+    PartnerPostgresError,
+    PartnerPostgresNotFound,
+    PartnerPostgresStore,
+    PartnerPostgresUnavailable,
+    PartnerPostgresValidationError,
+    PartnerPostgresWriteConflict,
+    canonical_json as _partner_canonical_json,
+)
 
 
 _APP_IMPORT_STARTED_AT = time.monotonic()
@@ -294,6 +304,47 @@ def page_not_found(error):
         )
 
     return render_template("404.html", trainee_login_url=trainee_login_url), 404
+
+
+@app.errorhandler(PartnerPostgresWriteConflict)
+def partner_postgres_write_conflict(_error):
+    app.logger.warning(
+        "partner_postgres write_conflict partner_id=%s path=%s",
+        _current_partner_id() if has_request_context() else "",
+        request.path if has_request_context() else "",
+    )
+    if has_request_context() and _request_expects_json():
+        return jsonify({
+            "ok": False,
+            "error": "partner_data_changed",
+            "message": "Ces données viennent d’être modifiées. Rechargez la page avant de recommencer.",
+        }), 409
+    return make_response(
+        "Ces données viennent d’être modifiées. Rechargez la page avant de recommencer.",
+        409,
+    )
+
+
+@app.errorhandler(PartnerPostgresError)
+def partner_postgres_unavailable(_error):
+    # Never fall back to the global JSON store for an authenticated external
+    # tenant: stale data is preferable to neither cross-tenant exposure nor a
+    # partially persisted write.
+    app.logger.exception(
+        "partner_postgres request_failed partner_id=%s path=%s",
+        _current_partner_id() if has_request_context() else "",
+        request.path if has_request_context() else "",
+    )
+    if has_request_context() and _request_expects_json():
+        return jsonify({
+            "ok": False,
+            "error": "partner_database_unavailable",
+            "message": "L’espace partenaire est temporairement indisponible. Réessayez dans quelques instants.",
+        }), 503
+    return make_response(
+        "L’espace partenaire est temporairement indisponible. Réessayez dans quelques instants.",
+        503,
+    )
 
 # =========================
 # Auth (admin)
@@ -3307,7 +3358,10 @@ def admin_login_post():
             )
             return {"ok": True}
 
-        if not _atomic_update_data(record_partner_login).get("ok"):
+        if not _atomic_update_data(
+            record_partner_login,
+            partner_id=str(user.get("partner_id") or ""),
+        ).get("ok"):
             return redirect(url_for("admin_login", next=next_url, error="invalid"))
         session.clear()
         session["admin_logged_in"] = True
@@ -3644,6 +3698,14 @@ _partner_auth_index_lock = threading.RLock()
 _partner_auth_index_cache: Dict[str, Any] = {
     "path": "", "fingerprint": None, "users": [], "partners": [], "invitations": [],
 }
+_partner_postgres_store_lock = threading.RLock()
+_partner_postgres_bootstrap_lock = threading.RLock()
+_partner_postgres_store_instance: Optional[PartnerPostgresStore] = None
+_partner_postgres_store_config: Tuple[str, int, float] = ("", 0, 0.0)
+# Tests can inject a deterministic in-memory repository without installing a
+# PostgreSQL driver.  Production never sets this value.
+_partner_postgres_store_override: Any = None
+_partner_postgres_bootstrap_done = False
 _cnaps_public_annuaire_monitor_lock = threading.Lock()
 _afc_documents_reminders_lock = threading.Lock()
 _convention_signature_reminders_lock = threading.Lock()
@@ -3666,6 +3728,73 @@ PARTNER_LOGIN_MAX_ATTEMPTS_PER_IP = max(
     PARTNER_LOGIN_MAX_ATTEMPTS,
     _int_env("PARTNER_LOGIN_MAX_ATTEMPTS_PER_IP", 40),
 )
+
+PARTNER_POSTGRES_MODES = {"off", "shadow", "active"}
+
+
+def _partner_postgres_mode() -> str:
+    """Return the safe runtime mode for the external-partner store.
+
+    ``off`` keeps the historical JSON behaviour. ``shadow`` copies and checks
+    external tenants while JSON remains authoritative. ``active`` makes
+    PostgreSQL authoritative only for external partner contexts.
+    """
+    value = str(os.environ.get("PARTNER_POSTGRES_MODE") or "off").strip().lower()
+    return value if value in PARTNER_POSTGRES_MODES else "off"
+
+
+def _partner_postgres_active() -> bool:
+    return _partner_postgres_mode() == "active"
+
+
+def _partner_postgres_shadow() -> bool:
+    return _partner_postgres_mode() == "shadow"
+
+
+def _partner_postgres_configured() -> bool:
+    return bool(str(os.environ.get("PARTNER_DATABASE_URL") or "").strip())
+
+
+def _get_partner_postgres_store() -> PartnerPostgresStore:
+    global _partner_postgres_store_instance, _partner_postgres_store_config
+    if _partner_postgres_store_override is not None:
+        return _partner_postgres_store_override
+    database_url = str(os.environ.get("PARTNER_DATABASE_URL") or "").strip()
+    if not database_url:
+        raise PartnerPostgresUnavailable("PARTNER_DATABASE_URL absent")
+    max_pool_size = max(1, min(_int_env("PARTNER_POSTGRES_POOL_MAX_SIZE", 4), 10))
+    try:
+        timeout_seconds = max(
+            1.0,
+            min(float(os.environ.get("PARTNER_POSTGRES_TIMEOUT_SECONDS") or "5"), 30.0),
+        )
+    except (TypeError, ValueError):
+        timeout_seconds = 5.0
+    config = (database_url, max_pool_size, timeout_seconds)
+    with _partner_postgres_store_lock:
+        if _partner_postgres_store_instance is not None and _partner_postgres_store_config != config:
+            _partner_postgres_store_instance.close()
+            _partner_postgres_store_instance = None
+        if _partner_postgres_store_instance is None:
+            _partner_postgres_store_instance = PartnerPostgresStore(
+                database_url,
+                min_pool_size=0,
+                max_pool_size=max_pool_size,
+                timeout_seconds=timeout_seconds,
+            )
+            _partner_postgres_store_config = config
+        return _partner_postgres_store_instance
+
+
+def _close_partner_postgres_store() -> None:
+    global _partner_postgres_store_instance
+    with _partner_postgres_store_lock:
+        store, _partner_postgres_store_instance = _partner_postgres_store_instance, None
+    if store is not None:
+        store.close()
+
+
+atexit.register(_close_partner_postgres_store)
 
 
 def get_partner_storage_path(partner_id: str, category: str) -> str:
@@ -3725,6 +3854,29 @@ def _is_partner_scoped_session() -> bool:
     if not has_request_context() or not session.get("admin_logged_in"):
         return False
     return bool(_current_partner_id()) and not _is_super_admin_session()
+
+
+def _is_partner_data_scope_session() -> bool:
+    """Whether this request must read exactly one external tenant's data.
+
+    Super-admin assistance is deliberately included even though it remains a
+    privileged session.  This prevents assistance pages from materialising the
+    global JSON document and makes the PostgreSQL row-level policy apply to the
+    same tenant the administrator is viewing.
+    """
+    if not has_request_context() or not session.get("admin_logged_in"):
+        return False
+    partner_id = _current_partner_id()
+    if not partner_id or partner_id == INTEGRALE_PARTNER_ID:
+        return False
+    return bool(
+        _is_external_partner_session()
+        or (
+            _partner_postgres_active()
+            and session.get("assist_partner_id")
+            and _is_super_admin_session()
+        )
+    )
 
 
 def _safe_local_redirect_target(value: str, default: str, *, prefixes: Tuple[str, ...] = ("/admin",)) -> str:
@@ -3830,6 +3982,14 @@ def _store_partner_auth_index(
 
 def _load_partner_auth_data() -> Dict[str, List[Dict[str, Any]]]:
     """Load a small cached auth index without running business normalizers."""
+    if _partner_postgres_active():
+        if not _partner_postgres_configured():
+            raise PartnerPostgresUnavailable(
+                "PARTNER_DATABASE_URL absent en mode active"
+            )
+        # PostgreSQL exposes only the indexed partner/authentication tables;
+        # no session, trainee, invoice or document payload is materialised.
+        return _get_partner_postgres_store().load_auth_data()
     auth_path = os.path.abspath(DATA_FILE)
     fingerprint = _partner_auth_file_fingerprint(auth_path)
     with _partner_auth_index_lock:
@@ -4085,10 +4245,16 @@ def _filter_data_for_partner(data: Dict[str, Any], partner_id: str) -> Dict[str,
 
 def _merge_partner_scoped_payload(
     scoped: Dict[str, Any], partner_id: str, current: Optional[Dict[str, Any]] = None,
+    *, global_payload: bool = True,
 ) -> Dict[str, Any]:
     """Merge one tenant view while preserving every other tenant atomically."""
     current = current if isinstance(current, dict) else (_load_valid_json_payload(DATA_FILE) or _empty_data_payload())
-    _ensure_multi_partner_payload(current)
+    if global_payload:
+        _ensure_multi_partner_payload(current)
+    else:
+        for key in ("partners", "users", "invitations", "activity_logs"):
+            if not isinstance(current.get(key), list):
+                current[key] = []
     partner_id = str(partner_id or "")
 
     for key in PARTNER_SCOPED_COLLECTION_KEYS - {"activity_logs"}:
@@ -4167,6 +4333,272 @@ def _merge_partner_scoped_payload(
         if isinstance(value, str) and value.startswith(f"{partner_id}:")
     ]
     return current
+
+
+def _partner_bundle_from_canonical(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    """Extract one complete external tenant without any other tenant data."""
+    partner_id = str(partner_id or "").strip()
+    partner = next((
+        copy.deepcopy(item) for item in data.get("partners", [])
+        if isinstance(item, dict) and str(item.get("id") or "") == partner_id
+    ), None)
+    if not partner or partner_id == INTEGRALE_PARTNER_ID:
+        raise PartnerPostgresValidationError("partenaire externe introuvable")
+    bundle = _filter_data_for_partner(data, partner_id)
+    # PostgreSQL keeps the complete protected records. Tenant-facing reads are
+    # filtered again before leaving load_data(), so hashes, tokens and internal
+    # notes never cross the application boundary.
+    bundle["partners"] = [partner]
+    bundle["users"] = [
+        copy.deepcopy(item) for item in data.get("users", [])
+        if isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id
+    ]
+    bundle["invitations"] = [
+        copy.deepcopy(item) for item in data.get("invitations", [])
+        if isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id
+    ]
+    return bundle
+
+
+def _partner_bundle_checksum(bundle: Dict[str, Any]) -> str:
+    normalized = copy.deepcopy(bundle)
+    for key in ("partners", "users", "invitations"):
+        if isinstance(normalized.get(key), list):
+            normalized[key] = sorted(
+                normalized[key],
+                key=lambda item: str(item.get("id") or "") if isinstance(item, dict) else "",
+            )
+    return hashlib.sha256(_partner_canonical_json(normalized).encode("utf-8")).hexdigest()
+
+
+def _overlay_partner_bundle(
+    canonical: Dict[str, Any], bundle: Dict[str, Any], partner_id: str,
+) -> Dict[str, Any]:
+    """Replace exactly one external tenant in a platform/admin data view."""
+    partner_id = str(partner_id or "").strip()
+    partner = next((
+        copy.deepcopy(item) for item in bundle.get("partners", [])
+        if isinstance(item, dict) and str(item.get("id") or "") == partner_id
+    ), None)
+    if not partner:
+        raise PartnerPostgresValidationError("bundle PostgreSQL sans partenaire")
+
+    for key in ("partners", "users", "invitations"):
+        values = canonical.get(key) if isinstance(canonical.get(key), list) else []
+        canonical[key] = [
+            item for item in values
+            if not (
+                isinstance(item, dict)
+                and str(item.get("id") if key == "partners" else item.get("partner_id") or "") == partner_id
+            )
+        ]
+    canonical["partners"].append(partner)
+    canonical["users"].extend([
+        copy.deepcopy(item) for item in bundle.get("users", [])
+        if isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id
+    ])
+    canonical["invitations"].extend([
+        copy.deepcopy(item) for item in bundle.get("invitations", [])
+        if isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id
+    ])
+
+    for key in PARTNER_SCOPED_COLLECTION_KEYS:
+        canonical_values = canonical.get(key) if isinstance(canonical.get(key), list) else []
+        canonical[key] = [
+            item for item in canonical_values
+            if not (isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id)
+        ]
+        canonical[key].extend([
+            copy.deepcopy(item) for item in bundle.get(key, [])
+            if isinstance(item, dict) and str(item.get("partner_id") or "") == partner_id
+        ])
+
+    container = canonical.setdefault("partner_scoped_data", {})
+    if not isinstance(container, dict):
+        container = {}
+        canonical["partner_scoped_data"] = container
+    container[partner_id] = {
+        key: copy.deepcopy(bundle[key])
+        for key in PARTNER_SCOPED_VALUE_KEYS if key in bundle
+    }
+
+    dismissed = canonical.get("notifications_admin_dismissed_schedule_keys")
+    dismissed = dismissed if isinstance(dismissed, list) else []
+    canonical["notifications_admin_dismissed_schedule_keys"] = [
+        value for value in dismissed
+        if not (isinstance(value, str) and value.startswith(f"{partner_id}:"))
+    ] + [
+        value for value in bundle.get("notifications_admin_dismissed_schedule_keys", [])
+        if isinstance(value, str) and value.startswith(f"{partner_id}:")
+    ]
+    return canonical
+
+
+def _overlay_partner_postgres_for_platform(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge authoritative external tenants into a privileged platform view."""
+    if not _partner_postgres_active():
+        return data
+    try:
+        baselines: Dict[str, Dict[str, Any]] = {}
+        for bundle, version in _get_partner_postgres_store().load_all_bundles():
+            partner = next((
+                item for item in bundle.get("partners", []) if isinstance(item, dict)
+            ), None)
+            partner_id = str((partner or {}).get("id") or "")
+            if partner_id and partner_id != INTEGRALE_PARTNER_ID:
+                _overlay_partner_bundle(data, bundle, partner_id)
+                baselines[partner_id] = {
+                    "version": int(version),
+                    "checksum": _partner_bundle_checksum(bundle),
+                }
+        if has_request_context():
+            g.partner_postgres_platform_baselines = baselines
+    except PartnerPostgresError:
+        # Internal Intégrale work must remain available during a partner DB
+        # outage. External logins and tenant routes still fail closed.
+        app.logger.exception("partner_postgres platform_overlay_unavailable")
+    return data
+
+
+def _persist_changed_partner_postgres_from_platform(data: Dict[str, Any]) -> None:
+    """Persist only DB tenant bundles changed by a global/public request.
+
+    Public trainee links do not carry an admin partner cookie. Their handlers
+    historically load the global document, update one trainee and save it. A
+    per-request baseline lets those existing routes keep working while an
+    optimistic version check prevents a stale global request from overwriting
+    a newer partner write.
+    """
+    if not _partner_postgres_active() or not has_request_context():
+        return
+    baselines = getattr(g, "partner_postgres_platform_baselines", None)
+    if not isinstance(baselines, dict):
+        return
+    store = _get_partner_postgres_store()
+    for partner_id, baseline in list(baselines.items()):
+        if not isinstance(baseline, dict):
+            continue
+        try:
+            candidate = _partner_bundle_from_canonical(data, partner_id)
+        except PartnerPostgresValidationError:
+            # Deletion is always explicit through the protected admin route;
+            # a generic save can never erase a whole PostgreSQL tenant.
+            continue
+        checksum = _partner_bundle_checksum(candidate)
+        if checksum == str(baseline.get("checksum") or ""):
+            continue
+
+        def replace_bundle(_current: Dict[str, Any]) -> Dict[str, Any]:
+            return copy.deepcopy(candidate)
+
+        _updated, version = store.mutate_bundle(
+            partner_id,
+            replace_bundle,
+            expected_version=int(baseline.get("version") or 0),
+        )
+        baselines[partner_id] = {"version": version, "checksum": checksum}
+
+
+def _load_partner_postgres_bundle(partner_id: str) -> Tuple[Dict[str, Any], int]:
+    if not _partner_postgres_configured():
+        raise PartnerPostgresUnavailable("PARTNER_DATABASE_URL absent en mode active")
+    bundle, version = _get_partner_postgres_store().load_bundle(partner_id)
+    if has_request_context():
+        versions = getattr(g, "partner_postgres_versions", None)
+        if not isinstance(versions, dict):
+            versions = {}
+            g.partner_postgres_versions = versions
+        versions[partner_id] = version
+    return bundle, version
+
+
+def _sync_partner_postgres_from_canonical(
+    canonical: Dict[str, Any], *, strict: bool = False,
+) -> Dict[str, Any]:
+    """Idempotently copy every external JSON tenant into PostgreSQL."""
+    report: Dict[str, Any] = {"ok": True, "imported": [], "unchanged": [], "errors": []}
+    if not _partner_postgres_configured():
+        error = "PARTNER_DATABASE_URL absent"
+        if strict:
+            raise PartnerPostgresUnavailable(error)
+        report.update({"ok": False, "errors": [error]})
+        return report
+    existing_checksums: Dict[str, str] = {}
+    try:
+        store = _get_partner_postgres_store()
+        existing_checksums = {
+            str(item.get("partner_id") or ""): str(item.get("source_checksum") or "")
+            for item in store.stats().get("tenants", [])
+            if isinstance(item, dict)
+        }
+        for partner in canonical.get("partners", []):
+            if not isinstance(partner, dict):
+                continue
+            partner_id = str(partner.get("id") or "")
+            if not partner_id or partner_id == INTEGRALE_PARTNER_ID:
+                continue
+            try:
+                bundle = _partner_bundle_from_canonical(canonical, partner_id)
+                checksum = _partner_bundle_checksum(bundle)
+                if existing_checksums.get(partner_id) == checksum:
+                    report["unchanged"].append(partner_id)
+                    continue
+                store.import_bundle(
+                    partner_id, bundle, source_checksum=checksum,
+                )
+                reloaded, _version = store.load_bundle(partner_id)
+                if _partner_bundle_checksum(reloaded) != checksum:
+                    raise PartnerPostgresValidationError(
+                        "la vérification après import ne correspond pas"
+                    )
+                report["imported"].append(partner_id)
+            except PartnerPostgresError as exc:
+                report["ok"] = False
+                report["errors"].append({
+                    "partner_id": partner_id,
+                    "error": type(exc).__name__,
+                })
+                if strict:
+                    raise
+    except PartnerPostgresError:
+        if strict:
+            raise
+        report["ok"] = False
+        if not report["errors"]:
+            report["errors"].append("postgres_unavailable")
+    return report
+
+
+def _bootstrap_partner_postgres_shadow() -> Dict[str, Any]:
+    """Back up JSON then perform an idempotent shadow import at startup."""
+    global _partner_postgres_bootstrap_done
+    if not _partner_postgres_shadow():
+        return {"ok": True, "skipped": "mode_not_shadow"}
+    enabled = str(os.environ.get("PARTNER_POSTGRES_AUTO_MIGRATE") or "0").strip().lower()
+    if enabled not in {"1", "true", "yes", "on"}:
+        return {"ok": True, "skipped": "auto_migrate_disabled"}
+    with _partner_postgres_bootstrap_lock:
+        if _partner_postgres_bootstrap_done:
+            return {"ok": True, "skipped": "already_done"}
+        canonical = _load_valid_json_payload(DATA_FILE)
+        if not isinstance(canonical, dict):
+            raise PartnerPostgresValidationError("data.json illisible avant migration")
+        _ensure_multi_partner_payload(canonical)
+        snapshot = _force_backup_snapshot(DATA_FILE, reason="pre-partner-postgres")
+        if not snapshot:
+            raise PartnerPostgresValidationError(
+                "sauvegarde data.json impossible avant migration"
+            )
+        report = _sync_partner_postgres_from_canonical(canonical, strict=True)
+        _partner_postgres_bootstrap_done = True
+        app.logger.info(
+            "partner_postgres shadow_bootstrap ok=%s imported=%s unchanged=%s backup=%s",
+            bool(report.get("ok")),
+            len(report.get("imported", [])),
+            len(report.get("unchanged", [])),
+            os.path.basename(snapshot),
+        )
+        return {**report, "backup": os.path.basename(snapshot)}
 
 
 
@@ -8646,7 +9078,7 @@ def run_deferred_background_tasks(data: Dict[str, Any], force: bool = False) -> 
 
 
 def _request_data_cache_key(run_background_tasks: bool) -> Tuple[str, str, bool]:
-    if _is_partner_scoped_session():
+    if _is_partner_data_scope_session():
         return ("partner", _current_partner_id(), bool(run_background_tasks))
     return ("global", "", bool(run_background_tasks))
 
@@ -8669,15 +9101,27 @@ def _invalidate_request_data_cache() -> None:
 def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     load_started_at = time.monotonic()
     cache_key = _request_data_cache_key(run_background_tasks)
+    partner_postgres_source = bool(
+        _partner_postgres_active() and _is_partner_data_scope_session()
+    )
     if has_request_context():
         g.load_data_call_count = getattr(g, "load_data_call_count", 0) + 1
         cached = getattr(g, "data_payload_cache", {}).get(cache_key)
         if isinstance(cached, dict):
             _log_memory_stage("LOAD_DATA_REQUEST_CACHE_HIT", load_started_at, _current_route_for_log())
             return cached
-        g.load_data_disk_read_count = getattr(g, "load_data_disk_read_count", 0) + 1
+        if partner_postgres_source:
+            g.partner_postgres_read_count = getattr(g, "partner_postgres_read_count", 0) + 1
+        else:
+            g.load_data_disk_read_count = getattr(g, "load_data_disk_read_count", 0) + 1
     baseline_mb = _log_memory_stage("LOAD_DATA_BEGIN", load_started_at, _current_route_for_log())
-    if not os.path.exists(DATA_FILE):
+    if partner_postgres_source:
+        _log_memory_stage("BEFORE_PARTNER_POSTGRES_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
+        data, _partner_version = _load_partner_postgres_bundle(_current_partner_id())
+        baseline_mb = _log_memory_stage(
+            "AFTER_PARTNER_POSTGRES_LOAD", load_started_at, _current_route_for_log(), baseline_mb,
+        )
+    elif not os.path.exists(DATA_FILE):
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
             loaded = _load_valid_json_payload(DATA_FILE)
@@ -8696,29 +9140,33 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                 _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
                 _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
-                result = _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_scoped_session() else loaded
+                loaded = _overlay_partner_postgres_for_platform(loaded)
+                result = _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_data_scope_session() else loaded
                 return _cache_request_data(cache_key, result)
         base = _empty_data_payload()
         _ensure_multi_partner_payload(base)
+        base = _overlay_partner_postgres_for_platform(base)
         _log_storage_state(base)
         _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
-        result = _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
+        result = _filter_data_for_partner(base, _current_partner_id()) if _is_partner_data_scope_session() else base
         return _cache_request_data(cache_key, result)
-
-    _log_memory_stage("BEFORE_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
-    data = _load_valid_json_payload(DATA_FILE)
-    baseline_mb = _log_memory_stage("AFTER_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
-    if data is None:
-        recovered_from = _recover_data_file(DATA_FILE)
-        if recovered_from:
-            data = _load_valid_json_payload(DATA_FILE)
+    else:
+        _log_memory_stage("BEFORE_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
+        data = _load_valid_json_payload(DATA_FILE)
+        baseline_mb = _log_memory_stage("AFTER_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
         if data is None:
-            app.logger.error("Unable to read %s and no valid recovery source found", DATA_FILE)
-            base = _empty_data_payload()
-            _log_storage_state(base)
-            _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
-            result = _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
-            return _cache_request_data(cache_key, result)
+            recovered_from = _recover_data_file(DATA_FILE)
+            if recovered_from:
+                data = _load_valid_json_payload(DATA_FILE)
+            if data is None:
+                app.logger.error("Unable to read %s and no valid recovery source found", DATA_FILE)
+                base = _empty_data_payload()
+                base = _overlay_partner_postgres_for_platform(base)
+                _log_storage_state(base)
+                _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
+                result = _filter_data_for_partner(base, _current_partner_id()) if _is_partner_data_scope_session() else base
+                return _cache_request_data(cache_key, result)
+        data = _overlay_partner_postgres_for_platform(data)
 
     # Compatibilité ascendante : exposer une collection vide sans provoquer à
     # elle seule une réécriture du fichier lors d'une simple lecture.
@@ -8796,7 +9244,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
             data["notifications_admin_dismissed_schedule_keys"] = []
             changed = True
 
-        if _ensure_multi_partner_payload(data):
+        if not partner_postgres_source and _ensure_multi_partner_payload(data):
             changed = True
         baseline_mb = _log_memory_stage("NORMALIZATION _ensure_multi_partner_payload", load_started_at, _current_route_for_log(), baseline_mb)
         if normalize_all_partner_subscriptions(data):
@@ -8831,10 +9279,9 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         baseline_mb = _log_memory_stage("NORMALIZATION vae_action_dates_and_vtc_book_notifications", load_started_at, _current_route_for_log(), baseline_mb)
 
         if changed:
-            # ``data`` is still the canonical/global payload at this point;
-            # never reinterpret it as a tenant view merely because the caller
-            # currently has a partner cookie.
-            save_data(data, force_global=True)
+            # A PostgreSQL tenant bundle must be written back to its own row;
+            # the global JSON path remains correct for every other data source.
+            save_data(data, force_global=not partner_postgres_source)
 
     except Exception:
         app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
@@ -8843,7 +9290,7 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     baseline_mb = _log_memory_stage("AFTER_PASSWORD_HASH_INSPECTION", load_started_at, _current_route_for_log(), baseline_mb)
     _log_storage_state(data)
     _log_memory_stage("BEFORE_PARTNER_FILTER", load_started_at, _current_route_for_log(), baseline_mb)
-    result = _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
+    result = _filter_data_for_partner(data, _current_partner_id()) if _is_partner_data_scope_session() else data
     _log_memory_stage("AFTER_PARTNER_FILTER", load_started_at, _current_route_for_log(), baseline_mb)
     _log_memory_stage("LOAD_DATA_END", load_started_at, _current_route_for_log())
     return _cache_request_data(cache_key, result)
@@ -8861,10 +9308,39 @@ def save_data(
     moment, while holding the file lock. Only the OAuth callback, refresh and
     explicit reset opt out of the Qonto preservation.
     """
-    scoped_partner_id = _current_partner_id() if _is_partner_scoped_session() and not force_global else ""
+    scoped_partner_id = _current_partner_id() if _is_partner_data_scope_session() and not force_global else ""
+    if scoped_partner_id and _partner_postgres_active():
+        expected_version: Optional[int] = None
+        if has_request_context():
+            versions = getattr(g, "partner_postgres_versions", {})
+            if isinstance(versions, dict) and scoped_partner_id in versions:
+                expected_version = int(versions[scoped_partner_id])
+
+        def merge_scoped(current: Dict[str, Any]) -> Dict[str, Any]:
+            return _merge_partner_scoped_payload(
+                data,
+                scoped_partner_id,
+                current,
+                global_payload=False,
+            )
+
+        _updated, version = _get_partner_postgres_store().mutate_bundle(
+            scoped_partner_id,
+            merge_scoped,
+            expected_version=expected_version,
+        )
+        if has_request_context():
+            versions = getattr(g, "partner_postgres_versions", None)
+            if not isinstance(versions, dict):
+                versions = {}
+                g.partner_postgres_versions = versions
+            versions[scoped_partner_id] = version
+        _invalidate_request_data_cache()
+        return
     if not scoped_partner_id:
         _ensure_multi_partner_payload(data)
         normalize_all_partner_subscriptions(data)
+        _persist_changed_partner_postgres_from_platform(data)
 
     def preserve_canonical_secure_state(payload: Dict[str, Any]) -> Dict[str, Any]:
         canonical = _load_valid_json_payload(DATA_FILE)
@@ -8890,6 +9366,15 @@ def save_data(
         payload_transform=preserve_canonical_secure_state,
     )
     _invalidate_request_data_cache()
+    if _partner_postgres_shadow():
+        canonical = _load_valid_json_payload(DATA_FILE)
+        if isinstance(canonical, dict):
+            report = _sync_partner_postgres_from_canonical(canonical, strict=False)
+            if not report.get("ok"):
+                app.logger.warning(
+                    "partner_postgres shadow_sync_failed errors=%s",
+                    len(report.get("errors", [])),
+                )
 
 
 def update_data(
@@ -8904,27 +9389,95 @@ def update_data(
     replace so gthread requests cannot overwrite each other's changes with a
     stale in-memory copy. Do not perform network I/O or sleeps inside mutator.
     """
+    if _partner_postgres_active() and _is_partner_data_scope_session():
+        partner_id = _current_partner_id()
+        mutation_result: Any = None
+
+        def mutate_tenant(current: Dict[str, Any]) -> Dict[str, Any]:
+            nonlocal mutation_result
+            scoped = _filter_data_for_partner(current, partner_id)
+            if run_background_tasks:
+                run_deferred_background_tasks(scoped)
+            mutation_result = mutator(scoped)
+            return _merge_partner_scoped_payload(
+                scoped, partner_id, current, global_payload=False,
+            )
+
+        updated, version = _get_partner_postgres_store().mutate_bundle(
+            partner_id, mutate_tenant,
+        )
+        if has_request_context():
+            g.partner_postgres_versions = {partner_id: version}
+        _invalidate_request_data_cache()
+        return _filter_data_for_partner(updated, partner_id) if mutation_result is None else mutation_result
     with _data_lock:
         data = load_data(run_background_tasks=run_background_tasks)
         result = mutator(data)
         save_data(data, preserve_qonto_oauth=preserve_qonto_oauth)
         return data if result is None else result
 
-def _atomic_update_data(mutator: Callable[[Dict[str, Any]], Dict[str, Any]]) -> Dict[str, Any]:
+def _atomic_update_data(
+    mutator: Callable[[Dict[str, Any]], Dict[str, Any]],
+    *,
+    partner_id: str = "",
+    seed_bundle: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Apply a business mutation while holding the JSON store's process/file locks."""
     result: Dict[str, Any] = {}
+
+    target_partner_id = str(partner_id or "").strip()
+    use_scoped_session = _is_partner_data_scope_session()
+    if not target_partner_id and use_scoped_session:
+        target_partner_id = _current_partner_id()
+    if (
+        _partner_postgres_active()
+        and target_partner_id
+        and target_partner_id != INTEGRALE_PARTNER_ID
+    ):
+        explicit_full_bundle = bool(partner_id)
+
+        def mutate_postgres(current: Dict[str, Any]) -> Dict[str, Any]:
+            nonlocal result
+            if explicit_full_bundle:
+                result = mutator(current)
+                return current
+            scoped = _filter_data_for_partner(current, target_partner_id)
+            result = mutator(scoped)
+            return _merge_partner_scoped_payload(
+                scoped,
+                target_partner_id,
+                current,
+                global_payload=False,
+            )
+
+        _updated, version = _get_partner_postgres_store().mutate_bundle(
+            target_partner_id,
+            mutate_postgres,
+            seed_bundle=seed_bundle,
+        )
+        if has_request_context():
+            versions = getattr(g, "partner_postgres_versions", None)
+            if not isinstance(versions, dict):
+                versions = {}
+                g.partner_postgres_versions = versions
+            versions[target_partner_id] = version
+        _invalidate_request_data_cache()
+        return result
 
     def transform(caller_payload: Dict[str, Any]) -> Dict[str, Any]:
         nonlocal result
         canonical = _load_valid_json_payload(DATA_FILE)
         canonical = canonical if isinstance(canonical, dict) else caller_payload
         _ensure_multi_partner_payload(canonical)
-        if _is_partner_scoped_session():
-            partner_id = _current_partner_id()
-            scoped = _filter_data_for_partner(canonical, partner_id)
+        if _partner_postgres_active():
+            canonical = _overlay_partner_postgres_for_platform(canonical)
+        if _is_partner_data_scope_session():
+            scoped_id = _current_partner_id()
+            scoped = _filter_data_for_partner(canonical, scoped_id)
             result = mutator(scoped)
-            return _merge_partner_scoped_payload(scoped, partner_id, canonical)
+            return _merge_partner_scoped_payload(scoped, scoped_id, canonical)
         result = mutator(canonical)
+        _persist_changed_partner_postgres_from_platform(canonical)
         return canonical
 
     _write_json_with_backups(DATA_FILE, _empty_data_payload(), _data_lock, payload_transform=transform)
@@ -15521,14 +16074,31 @@ def partner_subscription_request():
 @admin_login_required
 @require_super_admin
 def admin_partner_reset_usage(partner_id: str):
-    data = load_data(); partner = _partner_or_404(data, partner_id); normalize_partner_subscription(data, partner)
-    sub = partner.setdefault("subscription", {})
-    old = int(sub.get("trainee_usage_count") or 0); now = _now_iso()
-    sub["trainee_usage_count"] = 0; sub["trainee_usage_reset_at"] = now
-    sub.setdefault("trainee_usage_reset_history", []).insert(0, {"date": now, "admin": session.get("admin_username") or "admin", "old_value": old, "new_value": 0})
-    del sub["trainee_usage_reset_history"][10:]
-    _append_activity_log(data, "partner_subscription_usage_reset", "partner", partner_id, partner_id, {"old_value": old, "new_value": 0})
-    save_data(data); flash("Compteur remis à zéro.", "success")
+    def reset_usage(data: Dict[str, Any]) -> Dict[str, Any]:
+        partner = _partner_or_404(data, partner_id)
+        normalize_partner_subscription(data, partner)
+        sub = partner.setdefault("subscription", {})
+        old = int(sub.get("trainee_usage_count") or 0)
+        now = _now_iso()
+        sub["trainee_usage_count"] = 0
+        sub["trainee_usage_reset_at"] = now
+        sub.setdefault("trainee_usage_reset_history", []).insert(0, {
+            "date": now,
+            "admin": session.get("admin_username") or "admin",
+            "old_value": old,
+            "new_value": 0,
+        })
+        del sub["trainee_usage_reset_history"][10:]
+        _append_activity_log(data, "partner_subscription_usage_reset", "partner", partner_id, partner_id, {"old_value": old, "new_value": 0})
+        return {"ok": True}
+
+    if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
+        _atomic_update_data(reset_usage, partner_id=partner_id)
+    else:
+        data = load_data()
+        reset_usage(data)
+        save_data(data)
+    flash("Compteur remis à zéro.", "success")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id) + "#subscription")
 
 @app.get("/admin/partners")
@@ -15608,7 +16178,16 @@ def admin_partner_new():
         _append_activity_log(data, "partner_created", "partner", partner_id, partner_id)
         return {"ok": True, "partner_id": partner_id}
 
-    persisted = _atomic_update_data(persist_partner_before_delivery)
+    seed_bundle = _empty_data_payload()
+    seed_bundle.update({"partners": [], "users": [], "invitations": [], "activity_logs": []})
+    try:
+        persisted = _atomic_update_data(
+            persist_partner_before_delivery,
+            partner_id=partner_id,
+            seed_bundle=seed_bundle,
+        )
+    except PartnerPostgresDuplicateEmail:
+        abort(400, "Email responsable invalide ou déjà utilisé")
     if not persisted.get("ok"):
         abort(400, "Email responsable invalide ou déjà utilisé")
 
@@ -15625,39 +16204,48 @@ def admin_partner_new():
 @admin_login_required
 @require_super_admin
 def admin_partner_detail(partner_id: str):
+    if request.method == "POST":
+        def update_partner(data: Dict[str, Any]) -> Dict[str, Any]:
+            partner = _partner_or_404(data, partner_id)
+            for key in ("name", "legal_name", "siret", "address", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "subscription_plan", "internal_notes"):
+                partner[key] = (request.form.get(key) or "").strip()
+            partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
+            partner["enabled_modules"] = [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS]
+            normalize_partner_subscription(data, partner)
+            sub = partner.setdefault("subscription", {})
+            sub["plan_name"] = (request.form.get("subscription_plan_name") or sub.get("plan_name") or "Essentiel").strip()
+            sub["status"] = (request.form.get("subscription_status") or sub.get("status") or "active").strip()
+            sub["trainee_unlimited"] = bool(request.form.get("trainee_unlimited"))
+            try:
+                sub["trainee_limit"] = None if sub["trainee_unlimited"] else int(request.form.get("trainee_limit") or 0)
+            except ValueError:
+                sub["trainee_limit"] = None
+            sub["modules"] = {key: (key in request.form.getlist("subscription_modules")) for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}
+            prices = {}
+            for key, cfg in PARTNER_SUBSCRIPTION_MODULE_PRICING.items():
+                try:
+                    prices[key] = int(request.form.get(f"module_price_{key}") or cfg["price"])
+                except ValueError:
+                    prices[key] = cfg["price"]
+            sub["module_prices"] = prices
+            for int_key in ("max_users", "storage_limit"):
+                try:
+                    partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
+                except ValueError:
+                    pass
+            partner["updated_at"] = _now_iso()
+            _append_activity_log(data, "partner_updated", "partner", partner_id, partner_id)
+            return {"ok": True}
+
+        if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
+            _atomic_update_data(update_partner, partner_id=partner_id)
+        else:
+            data = load_data()
+            update_partner(data)
+            save_data(data)
+        return redirect(url_for("admin_partner_detail", partner_id=partner_id))
     data = load_data()
     partner = _partner_or_404(data, partner_id)
-    if request.method == "POST":
-        for key in ("name", "legal_name", "siret", "address", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "subscription_plan", "internal_notes"):
-            partner[key] = (request.form.get(key) or "").strip()
-        partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
-        partner["enabled_modules"] = [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS]
-        normalize_partner_subscription(data, partner)
-        sub = partner.setdefault("subscription", {})
-        sub["plan_name"] = (request.form.get("subscription_plan_name") or sub.get("plan_name") or "Essentiel").strip()
-        sub["status"] = (request.form.get("subscription_status") or sub.get("status") or "active").strip()
-        sub["trainee_unlimited"] = bool(request.form.get("trainee_unlimited"))
-        try:
-            sub["trainee_limit"] = None if sub["trainee_unlimited"] else int(request.form.get("trainee_limit") or 0)
-        except ValueError:
-            sub["trainee_limit"] = None
-        sub["modules"] = {key: (key in request.form.getlist("subscription_modules")) for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}
-        prices = {}
-        for key, cfg in PARTNER_SUBSCRIPTION_MODULE_PRICING.items():
-            try:
-                prices[key] = int(request.form.get(f"module_price_{key}") or cfg["price"])
-            except ValueError:
-                prices[key] = cfg["price"]
-        sub["module_prices"] = prices
-        for int_key in ("max_users", "storage_limit"):
-            try:
-                partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
-            except ValueError:
-                pass
-        partner["updated_at"] = _now_iso()
-        _append_activity_log(data, "partner_updated", "partner", partner_id, partner_id)
-        save_data(data)
-        return redirect(url_for("admin_partner_detail", partner_id=partner_id))
     users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
@@ -15817,7 +16405,7 @@ def _claim_partner_invitation_delivery(partner_id: str, *, force_new: bool = Fal
             "user": dict(user),
         }
 
-    return _atomic_update_data(claim)
+    return _atomic_update_data(claim, partner_id=partner_id)
 
 
 def _finalize_partner_invitation_delivery(claim: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
@@ -15861,7 +16449,7 @@ def _finalize_partner_invitation_delivery(claim: Dict[str, Any], result: Dict[st
             "delivery_state": invitation["delivery_state"],
         }
 
-    return _atomic_update_data(finalize)
+    return _atomic_update_data(finalize, partner_id=partner_id)
 
 
 def _deliver_partner_invitation(partner_id: str, *, force_new: bool = False) -> Dict[str, Any]:
@@ -15946,11 +16534,19 @@ def admin_brevo_test():
 @admin_login_required
 @require_super_admin
 def admin_partner_toggle_status(partner_id: str):
-    data = load_data(); partner = _partner_or_404(data, partner_id)
-    partner["status"] = "active" if partner.get("status") in {"suspended", "archived"} else "suspended"
-    partner["updated_at"] = _now_iso()
-    _append_activity_log(data, "partner_status_changed", "partner", partner_id, partner_id, {"status": partner["status"]})
-    save_data(data)
+    def toggle(data: Dict[str, Any]) -> Dict[str, Any]:
+        partner = _partner_or_404(data, partner_id)
+        partner["status"] = "active" if partner.get("status") in {"suspended", "archived"} else "suspended"
+        partner["updated_at"] = _now_iso()
+        _append_activity_log(data, "partner_status_changed", "partner", partner_id, partner_id, {"status": partner["status"]})
+        return {"ok": True}
+
+    if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
+        _atomic_update_data(toggle, partner_id=partner_id)
+    else:
+        data = load_data()
+        toggle(data)
+        save_data(data)
     return redirect(url_for("admin_partners"))
 
 
@@ -15960,6 +16556,41 @@ def admin_partner_toggle_status(partner_id: str):
 def admin_partner_delete(partner_id: str):
     if partner_id == INTEGRALE_PARTNER_ID:
         abort(400, "Le partenaire Intégrale Connect ne peut pas être supprimé")
+    if _partner_postgres_active():
+        bundle, _version = _get_partner_postgres_store().load_bundle(partner_id)
+        partner = _partner_or_404(bundle, partner_id)
+        partner_name = partner.get("name") or partner_id
+        stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S.%fZ")
+        recovery_path = os.path.join(
+            BACKUP_DIR, f"partner_{partner_id}.{stamp}.before-delete.json",
+        )
+        _write_json_with_backups(recovery_path, bundle, _data_lock)
+
+        # Clean the non-authoritative JSON mirror first. If the PostgreSQL
+        # deletion then fails, the authoritative row is still intact and will
+        # be overlaid again on the next privileged read.
+        canonical = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+        _overlay_partner_bundle(canonical, bundle, partner_id)
+        removed = _delete_partner_everywhere(canonical, partner_id)
+        _append_activity_log(canonical, "partner_deleted", "partner", partner_id, "", {
+            "partner_name": partner_name,
+            "removed": removed,
+            "recovery_backup": os.path.basename(recovery_path),
+        })
+        save_data(canonical, force_global=True)
+        if not _get_partner_postgres_store().delete_partner(partner_id):
+            abort(404)
+        storage_removed = _remove_partner_storage(partner_id)
+        app.logger.info(
+            "partner_postgres partner_deleted partner_id=%s storage_removed=%s backup=%s",
+            partner_id, storage_removed, os.path.basename(recovery_path),
+        )
+        if session.get("assist_partner_id") == partner_id:
+            session.pop("assist_partner_id", None)
+            session.pop("assist_started_at", None)
+        flash(f"Le partenaire {partner_name} et toutes ses données ont été supprimés.", "success")
+        return redirect(url_for("admin_partners"))
+
     data = load_data()
     partner = _partner_or_404(data, partner_id)
     partner_name = partner.get("name") or partner_id
@@ -15978,11 +16609,17 @@ def admin_partner_delete(partner_id: str):
 @admin_login_required
 @require_super_admin
 def admin_partner_assist(partner_id: str):
-    data = load_data(); partner = _partner_or_404(data, partner_id)
+    data = load_data(); _partner_or_404(data, partner_id)
     session["assist_partner_id"] = partner_id
     session["assist_started_at"] = _now_iso()
-    _append_activity_log(data, "super_admin_assist_started", "partner", partner_id, partner_id)
-    save_data(data)
+    if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
+        def record_start(bundle: Dict[str, Any]) -> Dict[str, Any]:
+            _append_activity_log(bundle, "super_admin_assist_started", "partner", partner_id, partner_id)
+            return {"ok": True}
+        _atomic_update_data(record_start, partner_id=partner_id)
+    else:
+        _append_activity_log(data, "super_admin_assist_started", "partner", partner_id, partner_id)
+        save_data(data)
     return redirect(url_for("admin_sessions"))
 
 
@@ -15990,11 +16627,19 @@ def admin_partner_assist(partner_id: str):
 @admin_login_required
 @require_super_admin
 def admin_partner_assist_exit():
-    data = load_data(); partner_id = session.pop("assist_partner_id", "")
+    partner_id = str(session.get("assist_partner_id") or "")
+    data = load_data()
+    session.pop("assist_partner_id", None)
     started = session.pop("assist_started_at", "")
     if partner_id:
-        _append_activity_log(data, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
-        save_data(data)
+        if _partner_postgres_active() and partner_id != INTEGRALE_PARTNER_ID:
+            def record_finish(bundle: Dict[str, Any]) -> Dict[str, Any]:
+                _append_activity_log(bundle, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
+                return {"ok": True}
+            _atomic_update_data(record_finish, partner_id=partner_id)
+        else:
+            _append_activity_log(data, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
+            save_data(data)
     return redirect(url_for("admin_partners"))
 
 
@@ -16060,7 +16705,10 @@ def activate_account():
                 )
                 return {"ok": True}
 
-            activation_result = _atomic_update_data(activate_once)
+            activation_result = _atomic_update_data(
+                activate_once,
+                partner_id=str(invitation.get("partner_id") or ""),
+            )
             if activation_result.get("ok"):
                 app.logger.info("activation_persist_check ok=true invitation_id=%s", invitation.get("id"))
                 return redirect(url_for("admin_login", activated="1"))
@@ -49950,6 +50598,14 @@ def admin_exam_official_qcu_answer(session_id: str, attempt_id: str, index: int)
 def admin_sessions_slash_redirect():
     return redirect(url_for("admin_sessions"), code=301)
 
+
+if _partner_postgres_shadow():
+    try:
+        _bootstrap_partner_postgres_shadow()
+    except PartnerPostgresError:
+        # Shadow mode is intentionally non-disruptive: JSON remains the source
+        # and active mode will not be enabled until verification succeeds.
+        app.logger.exception("partner_postgres shadow_bootstrap_failed")
 
 
 _log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
