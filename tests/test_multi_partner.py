@@ -476,6 +476,55 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             self.assertEqual(sess["partner_id"], self.partner_a)
 
 
+    def test_partner_login_replaces_super_admin_next_with_tenant_home(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": gestion_app._hash_password("Password1234"),
+        })
+        gestion_app.save_data(data)
+
+        response = self.client.post(
+            "/admin/login",
+            data={
+                "username": "admin@example.com",
+                "password": "Password1234",
+                "next": f"/admin/partners/{self.partner_b}",
+            },
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/sessions")
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["admin_role"], "partner_admin")
+            self.assertEqual(sess["partner_id"], self.partner_a)
+
+    def test_platform_admin_login_keeps_super_admin_next_target(self):
+        original_admin_user = gestion_app.ADMIN_USER
+        original_admin_password = gestion_app.ADMIN_PASSWORD
+        try:
+            gestion_app.ADMIN_USER = "platform@example.com"
+            gestion_app.ADMIN_PASSWORD = "AdminPassword123"
+            response = self.client.post(
+                "/admin/login",
+                data={
+                    "username": "platform@example.com",
+                    "password": "AdminPassword123",
+                    "next": f"/admin/partners/{self.partner_b}",
+                },
+                follow_redirects=False,
+            )
+        finally:
+            gestion_app.ADMIN_USER = original_admin_user
+            gestion_app.ADMIN_PASSWORD = original_admin_password
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], f"/admin/partners/{self.partner_b}")
 
     def test_partner_login_rejects_unsafe_scrypt_hash_without_verifying_it(self):
         data = gestion_app.load_data()
