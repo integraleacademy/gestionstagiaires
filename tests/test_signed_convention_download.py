@@ -1,3 +1,4 @@
+import io
 import os
 import tempfile
 import unittest
@@ -67,6 +68,8 @@ class SignedConventionDownloadTests(unittest.TestCase):
         self.assertIn("/convention/signed-pdf", status["convention"]["download_url"])
         self.assertIn("download=1", status["convention"]["download_url"])
         self.assertNotIn("download=1", status["convention"]["view_url"])
+        self.assertTrue(status["convention"]["can_import_signed_pdf"])
+        self.assertIn("/convention/signed-pdf/upload", status["convention"]["signed_pdf_upload_url"])
 
     def test_signed_route_recovers_missing_pdf_from_yousign_and_serves_it(self):
         trainee = self._signed_trainee()
@@ -219,6 +222,7 @@ class SignedConventionDownloadTests(unittest.TestCase):
             "status": "done",
             "completed_at": "2026-07-21T08:27:00Z",
         }
+        identity_queries = []
 
         def yousign_response(_method, path, **kwargs):
             if path.endswith("/signers"):
@@ -227,11 +231,14 @@ class SignedConventionDownloadTests(unittest.TestCase):
             if "external_id[eq]" in params:
                 self.assertEqual(params["external_id[eq]"], external_id)
                 return {"data": []}
-            self.assertEqual(params["q"], "Mikael PETRICCIOLI")
+            identity_queries.append(params["q"])
             self.assertEqual(params["status[eq]"], "done")
             self.assertEqual(params["source[in]"], "public_api,app")
-            self.assertEqual(params["completed_at[between]"], "2026-07-20,2026-07-22")
-            return {"data": [legacy_request]}
+            return {
+                "data": [legacy_request]
+                if params["q"] == "Mikael PETRICCIOLI"
+                else []
+            }
 
         with patch.object(gestion_app, "_yousign_json", side_effect=yousign_response):
             result = gestion_app._find_completed_yousign_convention_request(
@@ -241,6 +248,127 @@ class SignedConventionDownloadTests(unittest.TestCase):
             )
 
         self.assertEqual(result["id"], "legacy-request")
+        self.assertEqual(
+            identity_queries,
+            ["Mikael PETRICCIOLI", "PETRICCIOLI Mikael", "PETRICCIOLI"],
+        )
+
+    def test_legacy_yousign_lookup_scans_date_for_generic_request_name(self):
+        trainee = {
+            "id": "T-OLD",
+            "first_name": "Mikael",
+            "last_name": "PETRICCIOLI",
+            "email": "mikaelpetriccioli@gmail.com",
+            "convention_aps_signed_at": "2026-07-21T08:27:00Z",
+            "convention_signature": {},
+        }
+        generic_request = {
+            "id": "generic-request",
+            "name": "Signature du dossier stagiaire",
+            "status": "done",
+            "completed_at": "2026-07-21T08:27:00Z",
+        }
+
+        def yousign_response(_method, path, **kwargs):
+            if path.endswith("/signers"):
+                return {"data": [{"info": {"email": "mikaelpetriccioli@gmail.com"}}]}
+            if path.endswith("/documents"):
+                return {"data": [{"name": "Convention de formation professionnelle.pdf"}]}
+            params = kwargs["params"]
+            if "external_id[eq]" in params or "q" in params:
+                return {"data": []}
+            self.assertEqual(params["status[eq]"], "done")
+            self.assertEqual(params["source[in]"], "public_api,app")
+            self.assertEqual(params["completed_at[between]"], "2026-07-19,2026-07-23")
+            return {"data": [generic_request]}
+
+        with patch.object(gestion_app, "_yousign_json", side_effect=yousign_response):
+            result = gestion_app._find_completed_yousign_convention_request(
+                "S-APS",
+                "T-OLD",
+                trainee,
+            )
+
+        self.assertEqual(result["id"], "generic-request")
+
+    def test_missing_legacy_pdf_records_visible_recovery_error(self):
+        trainee = {
+            "id": "T-OLD",
+            "email": "mikaelpetriccioli@gmail.com",
+            "convention_legacy_signed": True,
+            "convention_legacy_signed_at": "2026-07-21T08:27:00Z",
+            "convention_signature": {"status": "done", "legacy_signed": True},
+        }
+        data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [trainee],
+            }]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data") as save_data, \
+             patch.object(gestion_app, "_yousign_is_configured", return_value=True), \
+             patch.object(gestion_app, "_find_completed_yousign_convention_request", return_value={}):
+            response = self.client.get(
+                "/admin/sessions/S-APS/stagiaires/T-OLD/convention/signed-pdf"
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("ancien logiciel", trainee["convention_signature"]["signed_pdf_recovery_error"])
+        save_data.assert_called_once_with(data)
+
+    def test_admin_can_import_and_then_download_a_legacy_signed_pdf(self):
+        trainee = {
+            "id": "T-OLD",
+            "convention_legacy_signed": True,
+            "convention_legacy_signed_at": "2026-07-21T08:27:00Z",
+            "convention_signature": {
+                "status": "done",
+                "legacy_signed": True,
+                "signed_pdf_recovery_error": "Document introuvable",
+            },
+        }
+        data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [trainee],
+            }]
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            signed_dir = os.path.join(directory, "generated_documents", "yousign_signed_conventions")
+            with patch.object(gestion_app, "PERSIST_DIR", directory), \
+                 patch.object(gestion_app, "YOUSIGN_SIGNED_DIR", signed_dir), \
+                 patch.object(gestion_app, "load_data", return_value=data), \
+                 patch.object(gestion_app, "save_data") as save_data:
+                response = self.client.post(
+                    "/admin/sessions/S-APS/stagiaires/T-OLD/convention/signed-pdf/upload",
+                    data={
+                        "signed_pdf": (
+                            io.BytesIO(b"%PDF-1.4\nlegacy signed convention"),
+                            "convention-signee.pdf",
+                        )
+                    },
+                    content_type="multipart/form-data",
+                )
+
+                self.assertEqual(response.status_code, 302)
+                signed_path = trainee["convention_signature"]["signed_pdf_path"]
+                self.assertTrue(os.path.isfile(signed_path))
+                self.assertEqual(trainee["convention_signature"]["signed_pdf_source"], "manual_upload")
+                self.assertNotIn("signed_pdf_recovery_error", trainee["convention_signature"])
+                save_data.assert_called_once_with(data)
+
+                download = self.client.get(
+                    "/admin/sessions/S-APS/stagiaires/T-OLD/convention/signed-pdf?download=1"
+                )
+
+                self.assertEqual(download.status_code, 200)
+                self.assertEqual(download.mimetype, "application/pdf")
+                self.assertIn("attachment", download.headers["Content-Disposition"])
 
     def test_yousign_download_rejects_an_html_error_page(self):
         with tempfile.TemporaryDirectory() as directory, \

@@ -35213,6 +35213,144 @@ def _yousign_signature_request_items(payload: Any) -> List[Dict[str, Any]]:
     return []
 
 
+def _yousign_collection_next_cursor(payload: Any) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    return str(meta.get("next_cursor") or "").strip()
+
+
+def _list_yousign_signature_requests(
+    params: Dict[str, Any],
+    *,
+    max_pages: int = 5,
+) -> List[Dict[str, Any]]:
+    """List bounded, de-duplicated request pages from Yousign."""
+    items: List[Dict[str, Any]] = []
+    seen_request_ids: Set[str] = set()
+    cursor = ""
+    seen_cursors: Set[str] = set()
+    for _ in range(max(1, max_pages)):
+        query = dict(params)
+        if cursor:
+            query["after"] = cursor
+        payload = _yousign_json("GET", "/signature_requests", params=query)
+        for item in _yousign_signature_request_items(payload):
+            request_id = str(item.get("id") or "").strip()
+            if not request_id or request_id in seen_request_ids:
+                continue
+            seen_request_ids.add(request_id)
+            items.append(item)
+        next_cursor = _yousign_collection_next_cursor(payload)
+        if not next_cursor or next_cursor in seen_cursors:
+            break
+        seen_cursors.add(next_cursor)
+        cursor = next_cursor
+    return items
+
+
+def _yousign_request_document_looks_like_convention(request_id: str) -> bool:
+    try:
+        payload = _yousign_json(
+            "GET",
+            f"/signature_requests/{request_id}/documents",
+        )
+    except Exception:
+        app.logger.warning(
+            "[YOUSIGN] unable to inspect documents during convention recovery request_id=%s",
+            request_id,
+            exc_info=True,
+        )
+        return False
+    document_text = " ".join(
+        str(document.get(key) or "")
+        for document in _yousign_signature_request_items(payload)
+        for key in ("name", "filename", "file_name", "original_name")
+    ).lower()
+    return any(
+        keyword in document_text
+        for keyword in ("convention", "convocation", "contrat de formation")
+    )
+
+
+def _completed_yousign_convention_for_email(
+    candidates: Iterable[Dict[str, Any]],
+    email: str,
+    *,
+    inspect_documents: bool = False,
+    target_date: Optional[datetime.date] = None,
+) -> Dict[str, Any]:
+    verified_candidates: List[Dict[str, Any]] = []
+    seen_request_ids: Set[str] = set()
+    for item in candidates:
+        request_id = str(item.get("id") or "").strip()
+        status = _normalize_yousign_status(item.get("status"))
+        if not request_id or request_id in seen_request_ids or status not in YOUSIGN_FINAL_STATUSES:
+            continue
+        seen_request_ids.add(request_id)
+        request_text = " ".join(
+            str(item.get(key) or "")
+            for key in ("name", "external_id")
+        ).lower()
+        request_looks_like_convention = any(
+            keyword in request_text
+            for keyword in ("convention", "convocation", "contrat de formation")
+        )
+        if not request_looks_like_convention and not inspect_documents:
+            continue
+        try:
+            signers_payload = _yousign_json(
+                "GET",
+                f"/signature_requests/{request_id}/signers",
+            )
+        except Exception:
+            app.logger.warning(
+                "[YOUSIGN] unable to inspect signers during convention recovery request_id=%s",
+                request_id,
+                exc_info=True,
+            )
+            continue
+        signer_emails = {
+            str(
+                (signer.get("info") or {}).get("email")
+                or signer.get("email")
+                or ""
+            ).strip().lower()
+            for signer in _yousign_signature_request_items(signers_payload)
+            if isinstance(signer, dict)
+        }
+        if email not in signer_emails:
+            continue
+        if (
+            not request_looks_like_convention
+            and not _yousign_request_document_looks_like_convention(request_id)
+        ):
+            continue
+        verified_candidates.append(item)
+    if not verified_candidates:
+        return {}
+
+    def candidate_key(item: Dict[str, Any]) -> Tuple[int, str]:
+        timestamp = str(
+            item.get("completed_at")
+            or item.get("updated_at")
+            or item.get("created_at")
+            or ""
+        )
+        distance = 10 ** 6
+        if target_date:
+            try:
+                distance = abs((datetime.date.fromisoformat(timestamp[:10]) - target_date).days)
+            except (TypeError, ValueError):
+                pass
+        return (-distance, timestamp)
+
+    return max(
+        verified_candidates,
+        key=candidate_key,
+    )
+
+
 def _find_completed_yousign_convention_request(
     session_id: str,
     trainee_id: str,
@@ -35252,12 +35390,11 @@ def _find_completed_yousign_convention_request(
 
     trainee = trainee if isinstance(trainee, dict) else {}
     email = str(trainee.get("email") or "").strip().lower()
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip()
     full_name = " ".join(
         part
-        for part in (
-            str(trainee.get("first_name") or "").strip(),
-            str(trainee.get("last_name") or "").strip(),
-        )
+        for part in (first_name, last_name)
         if part
     )
     state = _yousign_state(trainee) if trainee else {}
@@ -35274,57 +35411,61 @@ def _find_completed_yousign_convention_request(
     if not email or not full_name or signed_date is None:
         return {}
 
-    lookup_params = {
-        "q": full_name,
+    identity_queries = []
+    for value in (
+        full_name,
+        " ".join(part for part in (last_name, first_name) if part),
+        last_name,
+    ):
+        if value and value not in identity_queries:
+            identity_queries.append(value)
+    identity_candidates: List[Dict[str, Any]] = []
+    for identity_query in identity_queries:
+        identity_candidates.extend(_list_yousign_signature_requests({
+            "q": identity_query,
+            "status[eq]": "done",
+            "source[in]": "public_api,app",
+            "limit": 100,
+        }, max_pages=3))
+    verified_request = _completed_yousign_convention_for_email(
+        identity_candidates,
+        email,
+        target_date=signed_date,
+    )
+    if verified_request:
+        return verified_request
+
+    # A request created from the Yousign app can have a generic title that
+    # contains no trainee name. Scan the narrow completion window, then verify
+    # both the signer email and the attached document name before accepting it.
+    date_candidates = _list_yousign_signature_requests({
         "status[eq]": "done",
         "source[in]": "public_api,app",
         "completed_at[between]": ",".join(
             (
-                (signed_date - datetime.timedelta(days=1)).isoformat(),
-                (signed_date + datetime.timedelta(days=1)).isoformat(),
+                (signed_date - datetime.timedelta(days=2)).isoformat(),
+                (signed_date + datetime.timedelta(days=2)).isoformat(),
             )
         ),
         "limit": 100,
-    }
-    legacy_payload = _yousign_json("GET", "/signature_requests", params=lookup_params)
-    verified_candidates = []
-    for item in _yousign_signature_request_items(legacy_payload):
-        request_id = str(item.get("id") or "").strip()
-        status = _normalize_yousign_status(item.get("status"))
-        request_name = str(item.get("name") or "").strip().lower()
-        if not request_id or status not in YOUSIGN_FINAL_STATUSES:
-            continue
-        if not any(word in request_name for word in ("convention", "convocation")):
-            continue
-        signers_payload = _yousign_json(
-            "GET",
-            f"/signature_requests/{request_id}/signers",
-        )
-        signer_emails = {
-            str((signer.get("info") or {}).get("email") or "").strip().lower()
-            for signer in _yousign_signature_request_items(signers_payload)
-            if isinstance(signer.get("info"), dict)
-        }
-        if email in signer_emails:
-            verified_candidates.append(item)
-    if not verified_candidates:
-        return {}
-    return max(
-        verified_candidates,
-        key=lambda item: str(
-            item.get("completed_at")
-            or item.get("updated_at")
-            or item.get("created_at")
-            or ""
-        ),
+    }, max_pages=5)
+    app.logger.info(
+        "[YOUSIGN] legacy convention recovery search trainee_id=%s identity_candidates=%s date_candidates=%s",
+        trainee_id,
+        len(identity_candidates),
+        len(date_candidates),
+    )
+    return _completed_yousign_convention_for_email(
+        date_candidates,
+        email,
+        inspect_documents=True,
+        target_date=signed_date,
     )
 
 
-def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> str:
-    response = _yousign_request("GET", f"/signature_requests/{signature_request_id}/documents/download", params={"version": "completed", "archive": "false"}, headers={"Accept": "application/pdf"})
-    pdf_bytes = response.content or b""
+def _store_signed_convention_pdf_bytes(pdf_bytes: bytes, trainee_id: str) -> str:
     if b"%PDF-" not in pdf_bytes[:1024]:
-        raise RuntimeError("Yousign n’a pas renvoyé un PDF signé valide.")
+        raise RuntimeError("Le fichier reçu n’est pas un PDF valide.")
     os.makedirs(YOUSIGN_SIGNED_DIR, exist_ok=True)
     path = os.path.join(YOUSIGN_SIGNED_DIR, f"convention_formation_aps_{_safe_filename_part(trainee_id)}_signee.pdf")
     temporary_path = f"{path}.{uuid.uuid4().hex}.tmp"
@@ -35336,8 +35477,17 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
         if os.path.exists(temporary_path):
             os.remove(temporary_path)
     if not _is_pdf_file(path):
-        raise RuntimeError("Téléchargement du PDF signé Yousign vide.")
+        raise RuntimeError("Le PDF signé enregistré est vide ou invalide.")
     return path
+
+
+def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> str:
+    response = _yousign_request("GET", f"/signature_requests/{signature_request_id}/documents/download", params={"version": "completed", "archive": "false"}, headers={"Accept": "application/pdf"})
+    pdf_bytes = response.content or b""
+    try:
+        return _store_signed_convention_pdf_bytes(pdf_bytes, trainee_id)
+    except RuntimeError as exc:
+        raise RuntimeError("Yousign n’a pas renvoyé un PDF signé valide.") from exc
 
 
 def _find_trainee_by_aps_elearning_yousign_request_id(data: Dict[str, Any], request_id: str):
@@ -37572,7 +37722,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     signed_at = _format_automation_datetime(signed_at_raw)
     has_generated_convention = _has_generated_yousign_convention(trainee)
     has_signature_request = bool(state.get("signature_request_id"))
-    convention_error = state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
+    convention_error = state.get("signed_pdf_recovery_error") or state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
     if raw_status in {"error", "download_error"}:
         convention_status = "error"
     elif raw_status in {"declined", "refused"}:
@@ -37592,6 +37742,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
 
     convention_signed = convention_status == "signed"
     convention_sent = convention_status in {"sent", "waiting_signature", "signed"}
+    signed_pdf_path = _existing_yousign_signed_convention_pdf(state, trainee_id) if convention_signed else ""
     convention_view_url = ""
     if convention_signed:
         convention_view_url = url_for(
@@ -37744,6 +37895,13 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
             "view_url": convention_view_url,
             "download_url": convention_download_url,
+            "signed_pdf_available": bool(signed_pdf_path),
+            "can_import_signed_pdf": bool(convention_signed and not signed_pdf_path),
+            "signed_pdf_upload_url": url_for(
+                "admin_upload_signed_convention",
+                session_id=session_id,
+                trainee_id=trainee_id,
+            ) if convention_signed and not signed_pdf_path else "",
             "error": convention_error,
             "timeline_steps": [
                 {"label": "Générée", "value": generated_at or "Pas encore effectué", "state": "done" if generated_at else "blocked"},
@@ -47851,11 +48009,23 @@ def admin_view_signed_convention(session_id: str, trainee_id: str):
                 recovered_request = _find_completed_yousign_convention_request(session_id, trainee_id, t)
                 request_id = str(recovered_request.get("id") or "").strip()
             if not request_id:
+                recovery_message = (
+                    "Ce dossier a été marqué signé via l’ancien logiciel, mais son PDF n’est pas présent dans Yousign. "
+                    "Importez le PDF signé ci-dessous pour le rendre consultable et téléchargeable."
+                    if _has_legacy_signed_convention(t)
+                    else "Le PDF signé n’a pas été retrouvé dans Yousign. Importez-le ci-dessous pour le rattacher au dossier."
+                )
                 app.logger.warning(
                     "[YOUSIGN] signed convention unavailable trainee_id=%s reason=request_not_found",
                     trainee_id,
                 )
-                flash("Le PDF signé n’a pas été retrouvé dans Yousign pour ce dossier.", "error")
+                state["signed_pdf_recovery_error"] = recovery_message
+                state["signed_pdf_recovery_checked_at"] = _now_iso()
+                t["updated_at"] = _now_iso()
+                s["trainees"] = trainees
+                s.pop("stagiaires", None)
+                save_data(data)
+                flash(recovery_message, "error")
                 return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub"))
             if recovered_request:
                 state.update({
@@ -47864,6 +48034,8 @@ def admin_view_signed_convention(session_id: str, trainee_id: str):
                     "status": recovered_request.get("status") or "done",
                     "signed_at": state.get("signed_at") or recovered_request.get("completed_at") or _now_iso(),
                 })
+            state.pop("signed_pdf_recovery_error", None)
+            state.pop("signed_pdf_recovery_checked_at", None)
             _mark_yousign_convention_signed(data, s, trainees, t, request_id)
             save_data(data)
             state = _yousign_state(t)
@@ -47874,18 +48046,98 @@ def admin_view_signed_convention(session_id: str, trainee_id: str):
                 request_id,
             )
         except Exception as exc:
+            recovery_message = "La récupération automatique depuis Yousign a échoué. Réessayez ou importez le PDF signé ci-dessous."
             app.logger.exception(
                 "[YOUSIGN] signed convention recovery failed trainee_id=%s request_id=%s error=%s",
                 trainee_id,
                 request_id,
                 _sanitize_yousign_error(str(exc)),
             )
-            flash("La convention signée existe, mais sa récupération depuis Yousign a échoué. Réessayez dans quelques instants.", "error")
+            state["signed_pdf_recovery_error"] = recovery_message
+            state["signed_pdf_recovery_checked_at"] = _now_iso()
+            t["updated_at"] = _now_iso()
+            s["trainees"] = trainees
+            s.pop("stagiaires", None)
+            try:
+                save_data(data)
+            except Exception:
+                app.logger.exception(
+                    "[YOUSIGN] unable to persist convention recovery error trainee_id=%s",
+                    trainee_id,
+                )
+            flash(recovery_message, "error")
             return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub"))
     if not abs_path:
-        abort(404)
+        flash("Le PDF signé est introuvable. Importez-le depuis le bloc Convention.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, _anchor="automationHub"))
     as_attachment = str(request.args.get("download") or "").strip().lower() in {"1", "true", "yes", "on"}
     return send_file(abs_path, mimetype="application/pdf", as_attachment=as_attachment, download_name=os.path.basename(abs_path))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signed-pdf/upload")
+@admin_login_required
+@admin_write_required
+def admin_upload_signed_convention(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    redirect_url = url_for(
+        "admin_trainee_page",
+        session_id=session_id,
+        trainee_id=trainee_id,
+        _anchor="automationHub",
+    )
+    if not _trainee_convention_is_signed(t):
+        flash("La convention doit être marquée comme signée avant d’importer son PDF.", "error")
+        return redirect(redirect_url)
+    incoming_file = request.files.get("signed_pdf")
+    if not incoming_file or not incoming_file.filename:
+        flash("Choisissez la convention signée au format PDF.", "error")
+        return redirect(redirect_url)
+    if _safe_ext(incoming_file.filename) != ".pdf":
+        flash("Seul un fichier PDF peut être importé comme convention signée.", "error")
+        return redirect(redirect_url)
+    pdf_bytes = incoming_file.read((30 * 1024 * 1024) + 1)
+    if len(pdf_bytes) > 30 * 1024 * 1024:
+        flash("Le PDF signé dépasse la taille maximale de 30 Mo.", "error")
+        return redirect(redirect_url)
+    try:
+        signed_path = _store_signed_convention_pdf_bytes(pdf_bytes, trainee_id)
+    except RuntimeError as exc:
+        flash(str(exc), "error")
+        return redirect(redirect_url)
+
+    now = _now_iso()
+    state = _yousign_state(t)
+    state.update({
+        "status": "done",
+        "signed_at": state.get("signed_at") or t.get("convention_aps_signed_at") or t.get("convention_legacy_signed_at") or now,
+        "signed_pdf_path": signed_path,
+        "signed_pdf_token": _store_public_file_token(signed_path),
+        "signed_pdf_source": "manual_upload",
+        "signed_pdf_original_name": secure_filename(incoming_file.filename or "convention-signee.pdf")[:180],
+        "signed_pdf_uploaded_at": now,
+        "last_error": "",
+    })
+    state.pop("signed_pdf_recovery_error", None)
+    state.pop("signed_pdf_recovery_checked_at", None)
+    t["convention_status"] = "signed"
+    t["convention_aps_status"] = "signed"
+    t["convention_aps_signed_at"] = state.get("signed_at") or now
+    t["updated_at"] = now
+    append_trainee_history_event(
+        t,
+        "Convention signée importée",
+        state.get("signed_pdf_original_name") or "PDF signé",
+        "action",
+        now,
+    )
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    flash("La convention signée a été importée. Les boutons Voir et Télécharger sont maintenant actifs.", "success")
+    return redirect(redirect_url)
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/original-pdf")
