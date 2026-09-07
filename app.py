@@ -5664,8 +5664,22 @@ def _normalize_public_student_portal_base(value: str) -> str:
     return raw
 
 
-PUBLIC_STUDENT_PORTAL_BASE = _normalize_public_student_portal_base(
-    os.environ.get("PUBLIC_STUDENT_PORTAL_BASE") or APP_BASE_URL
+def _resolve_public_student_portal_base(configured_value: str, app_base_url: str) -> str:
+    """Honor an explicit portal host while keeping the safe production fallback.
+
+    ``gestionstagiaires-test-v2`` used to be treated as a retired host.  It is
+    now also used as the isolated preproduction environment, so an explicit
+    Render setting must be allowed to keep trainee links on that service.
+    """
+    configured = (configured_value or "").strip().rstrip("/")
+    if configured:
+        return configured
+    return _normalize_public_student_portal_base(app_base_url)
+
+
+PUBLIC_STUDENT_PORTAL_BASE = _resolve_public_student_portal_base(
+    os.environ.get("PUBLIC_STUDENT_PORTAL_BASE") or "",
+    APP_BASE_URL,
 )
 
 PUBLIC_BASE_URL = os.environ.get(
