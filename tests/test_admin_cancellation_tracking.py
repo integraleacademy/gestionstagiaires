@@ -131,9 +131,14 @@ class AdminCancellationTrackingTests(unittest.TestCase):
         sidebar = Path("templates/admin_sidebar.html").read_text(encoding="utf-8")
         sessions = Path("templates/admin_sessions.html").read_text(encoding="utf-8")
         commands = Path("templates/_global_command_search.html").read_text(encoding="utf-8")
+        cancellation_styles = Path("static/css/admin-cancellations.css").read_text(encoding="utf-8")
         self.assertIn("Suivi annulations", sidebar)
         self.assertIn("Suivi annulations", sessions)
         self.assertIn("Suivi annulations", commands)
+        self.assertIn(
+            ".cancellation-drawer__loading[hidden]{display:none;}",
+            cancellation_styles,
+        )
 
     def test_excluded_case_is_clearly_identified_in_table_filters_and_export(self):
         data = self._data()
