@@ -222,6 +222,7 @@ class SignedConventionDownloadTests(unittest.TestCase):
             "status": "done",
             "completed_at": "2026-07-21T08:27:00Z",
         }
+        identity_queries = []
 
         def yousign_response(_method, path, **kwargs):
             if path.endswith("/signers"):
@@ -230,10 +231,14 @@ class SignedConventionDownloadTests(unittest.TestCase):
             if "external_id[eq]" in params:
                 self.assertEqual(params["external_id[eq]"], external_id)
                 return {"data": []}
-            self.assertEqual(params["q"], "Mikael PETRICCIOLI")
+            identity_queries.append(params["q"])
             self.assertEqual(params["status[eq]"], "done")
             self.assertEqual(params["source[in]"], "public_api,app")
-            return {"data": [legacy_request]}
+            return {
+                "data": [legacy_request]
+                if params["q"] == "Mikael PETRICCIOLI"
+                else []
+            }
 
         with patch.object(gestion_app, "_yousign_json", side_effect=yousign_response):
             result = gestion_app._find_completed_yousign_convention_request(
@@ -243,6 +248,10 @@ class SignedConventionDownloadTests(unittest.TestCase):
             )
 
         self.assertEqual(result["id"], "legacy-request")
+        self.assertEqual(
+            identity_queries,
+            ["Mikael PETRICCIOLI", "PETRICCIOLI Mikael", "PETRICCIOLI"],
+        )
 
     def test_legacy_yousign_lookup_scans_date_for_generic_request_name(self):
         trainee = {
