@@ -34173,11 +34173,25 @@ def _has_legacy_signed_convention(trainee: Dict[str, Any]) -> bool:
     return bool(trainee.get("convention_legacy_signed") or trainee.get("legacy_convention_signed"))
 
 
+def _trainee_convention_is_signed(trainee: Dict[str, Any]) -> bool:
+    """Return the persisted signature state without building request-bound UI URLs."""
+    state = _yousign_state(trainee)
+    signed_at = (
+        state.get("signed_at")
+        or trainee.get("convention_aps_signed_at")
+        or trainee.get("convention_legacy_signed_at")
+        or ""
+    )
+    return bool(
+        _is_yousign_signature_done(state)
+        or signed_at
+        or _has_legacy_signed_convention(trainee)
+    )
+
+
 def _sync_convention_status_from_yousign(trainee: Dict[str, Any]) -> bool:
     """Keep the admin trainees convention dot aligned with the Yousign automation state."""
-    state = _yousign_state(trainee)
-    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or ""
-    if not (_is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee)):
+    if not _trainee_convention_is_signed(trainee):
         return False
     if trainee.get("convention_status") == "signed":
         return False
@@ -37350,8 +37364,11 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
     if str(_automation_document_config(session_obj).get("slug") or "") == "vtc":
         # En VTC, seule la réussite à la théorie déclenche la convocation.
         return False
-    automation = _build_trainee_automation_status(session_obj, trainee, session_id, trainee_id)
-    if (automation.get("convention") or {}).get("status") != "signed":
+    # This function also runs from ``threading.Timer`` and catch-up jobs, where
+    # no HTTP request exists.  Do not call the admin status builder here: it
+    # creates relative links with ``url_for`` and therefore needs a request
+    # context even when an application context is already active.
+    if not _trainee_convention_is_signed(trainee):
         trainee["convocation_auto_last_error"] = "En attente de signature de la convention"
         return False
     if not _is_aps_session(session_obj):
@@ -37418,7 +37435,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convention_status = "refused"
     elif raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
         convention_status = "expired"
-    elif _is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee):
+    elif _trainee_convention_is_signed(trainee):
         convention_status = "signed"
     elif has_signature_request and _is_yousign_signature_pending(state):
         convention_status = "waiting_signature"
