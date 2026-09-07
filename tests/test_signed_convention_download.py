@@ -100,8 +100,7 @@ class SignedConventionDownloadTests(unittest.TestCase):
              ):
             with self.assertRaisesRegex(RuntimeError, "PDF signé valide"):
                 gestion_app._download_yousign_signed_pdf("request-1", "T-1")
-
-        self.assertEqual(os.listdir(directory) if os.path.isdir(directory) else [], [])
+            self.assertEqual(os.listdir(directory), [])
 
 
 if __name__ == "__main__":
