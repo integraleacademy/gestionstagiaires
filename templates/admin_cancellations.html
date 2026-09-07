@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-cancellations.css', v='20260907-3') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-cancellations.css', v='20260907-4') }}">
 
 {% set kpis = dashboard.kpis %}
 <div class="cancellation-breadcrumbs">
@@ -386,9 +386,38 @@
 
       <section class="cancellation-tab-panel" role="tabpanel" data-cancellation-panel="contacts" hidden>
         <div class="cancellation-section-heading">
-          <div><span>Communication</span><h3>Relances et échanges</h3></div>
-          <p>Consignez les appels, e-mails, promesses de paiement et contestations.</p>
+          <div><span>Communication</span><h3>Relances de paiement</h3></div>
+          <p>Prévisualisez chaque e-mail avant son envoi. Le niveau et le contenu envoyé seront archivés.</p>
         </div>
+        <div class="cancellation-reminder-notice" id="cancellationReminderNotice">
+          <span aria-hidden="true">✉</span>
+          <p><strong>Choisissez le niveau adapté au dossier.</strong> Les montants et l’échéance sont recalculés au moment de l’envoi.</p>
+        </div>
+        <div class="cancellation-reminder-grid" aria-label="Niveaux de relance">
+          <article class="cancellation-reminder-card cancellation-reminder-card--1" data-cancellation-reminder-card="1">
+            <div class="cancellation-reminder-card__head"><span>1</span><div><strong>Relance 1</strong><small>Rappel ferme</small></div></div>
+            <p>Rappelle l’indemnité prévue au contrat et demande le règlement sous 7 jours.</p>
+            <div class="cancellation-reminder-card__state" id="cancellationReminderState1">Jamais envoyée</div>
+            <button class="cancellation-btn cancellation-btn--secondary" type="button" data-cancellation-reminder-level="1">Prévisualiser</button>
+          </article>
+          <article class="cancellation-reminder-card cancellation-reminder-card--2" data-cancellation-reminder-card="2">
+            <div class="cancellation-reminder-card__head"><span>2</span><div><strong>Relance 2</strong><small>Relance appuyée</small></div></div>
+            <p>Constate l’absence de retour et fixe un dernier délai amiable de 5 jours.</p>
+            <div class="cancellation-reminder-card__state" id="cancellationReminderState2">Jamais envoyée</div>
+            <button class="cancellation-btn cancellation-btn--secondary" type="button" data-cancellation-reminder-level="2">Prévisualiser</button>
+          </article>
+          <article class="cancellation-reminder-card cancellation-reminder-card--3" data-cancellation-reminder-card="3">
+            <div class="cancellation-reminder-card__head"><span>3</span><div><strong>Relance 3</strong><small>Mise en demeure</small></div></div>
+            <p>Met formellement en demeure avant recouvrement ou injonction de payer, sous 8 jours.</p>
+            <div class="cancellation-reminder-card__state" id="cancellationReminderState3">Jamais envoyée</div>
+            <button class="cancellation-btn cancellation-btn--danger" type="button" data-cancellation-reminder-level="3">Prévisualiser</button>
+          </article>
+        </div>
+        <div class="cancellation-reminder-history">
+          <div class="cancellation-subsection-heading"><div><span>E-mails automatiques</span><h4>Relances envoyées</h4></div><small id="cancellationReminderHistoryCount">0 envoi</small></div>
+          <div class="cancellation-record-list" id="cancellationReminderList"></div>
+        </div>
+        <div class="cancellation-subsection-heading cancellation-subsection-heading--manual"><div><span>Suivi manuel</span><h4>Appels et échanges</h4></div></div>
         <form class="cancellation-add-form" id="cancellationContactForm">
           <div class="cancellation-add-form__title"><span aria-hidden="true">＋</span><div><strong>Consigner une relance</strong><small>L’action rejoindra immédiatement l’historique du dossier</small></div></div>
           <div class="cancellation-form-grid">
@@ -422,6 +451,37 @@
   </aside>
 </div>
 
+<div class="cancellation-reminder-preview-layer" id="cancellationReminderPreviewLayer" hidden>
+  <button class="cancellation-reminder-preview__backdrop" type="button" data-close-cancellation-reminder-preview aria-label="Fermer la prévisualisation"></button>
+  <section class="cancellation-reminder-preview" role="dialog" aria-modal="true" aria-labelledby="cancellationReminderPreviewTitle">
+    <header class="cancellation-reminder-preview__header">
+      <div><span id="cancellationReminderPreviewTone">Relance</span><h2 id="cancellationReminderPreviewTitle">Prévisualisation</h2><p>Vérifiez le destinataire, le montant et le texte avant l’envoi.</p></div>
+      <button type="button" data-close-cancellation-reminder-preview aria-label="Fermer">×</button>
+    </header>
+    <div class="cancellation-reminder-preview__loading" id="cancellationReminderPreviewLoading">
+      <span></span><span></span><span></span><strong>Préparation de l’e-mail…</strong>
+    </div>
+    <div class="cancellation-reminder-preview__error" id="cancellationReminderPreviewError" hidden><strong>Prévisualisation impossible</strong><p></p></div>
+    <div class="cancellation-reminder-preview__body" id="cancellationReminderPreviewBody" hidden>
+      <div class="cancellation-reminder-preview__meta">
+        <div><span>Destinataire</span><strong id="cancellationReminderPreviewRecipient">—</strong></div>
+        <div><span>Solde réclamé</span><strong id="cancellationReminderPreviewAmount">—</strong></div>
+        <div><span>Échéance</span><strong id="cancellationReminderPreviewDeadline">—</strong></div>
+        <div class="is-subject"><span>Objet</span><strong id="cancellationReminderPreviewSubject">—</strong></div>
+      </div>
+      <div class="cancellation-reminder-preview__warning" id="cancellationReminderPreviewWarning" hidden></div>
+      <div class="cancellation-reminder-preview__mail"><iframe id="cancellationReminderPreviewFrame" title="Aperçu de l’e-mail de relance" sandbox></iframe></div>
+    </div>
+    <footer class="cancellation-reminder-preview__footer">
+      <p id="cancellationReminderPreviewConfirmation">L’e-mail ne partira qu’après votre confirmation.</p>
+      <div>
+        <button class="cancellation-btn cancellation-btn--secondary" type="button" data-close-cancellation-reminder-preview>Retour</button>
+        <button class="cancellation-btn cancellation-btn--primary" type="button" id="cancellationReminderSend" disabled>Envoyer la relance</button>
+      </div>
+    </footer>
+  </section>
+</div>
+
 <div class="cancellation-toast" id="cancellationToast" role="status" aria-live="polite" hidden></div>
 
 <script id="cancellationPageData" type="application/json">{{ {
@@ -433,5 +493,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='js/admin-cancellations.js', v='20260907-2') }}"></script>
+<script src="{{ url_for('static', filename='js/admin-cancellations.js', v='20260907-3') }}"></script>
 {% endblock %}

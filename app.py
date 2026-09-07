@@ -42571,6 +42571,29 @@ CANCELLATION_COLLECTION_STATUS_LABELS = {
     "waived": "Abandonné",
     "calculation_required": "Calcul à finaliser",
 }
+CANCELLATION_REMINDER_LEVELS = {
+    1: {
+        "label": "Relance 1",
+        "tone": "Rappel ferme",
+        "description": "Rappel du solde contractuel et demande de règlement sous 7 jours.",
+        "deadline_days": 7,
+        "case_status": "awaiting_payment",
+    },
+    2: {
+        "label": "Relance 2",
+        "tone": "Relance appuyée",
+        "description": "Constat de l’absence de retour et dernier délai amiable de 5 jours.",
+        "deadline_days": 5,
+        "case_status": "awaiting_payment",
+    },
+    3: {
+        "label": "Relance 3",
+        "tone": "Mise en demeure",
+        "description": "Mise en demeure avant procédure de recouvrement ou injonction de payer.",
+        "deadline_days": 8,
+        "case_status": "collections",
+    },
+}
 
 
 class _CancellationTrackingConflict(ValueError):
@@ -42648,8 +42671,9 @@ def _registration_cancellation_tracking_state(
     state.setdefault("calculation_snapshot", {})
     state.setdefault("payments", [])
     state.setdefault("contacts", [])
+    state.setdefault("reminders", [])
     state.setdefault("events", [])
-    for collection_key in ("payments", "contacts", "events"):
+    for collection_key in ("payments", "contacts", "reminders", "events"):
         if not isinstance(state.get(collection_key), list):
             state[collection_key] = []
     if not isinstance(state.get("calculation_inputs"), dict):
@@ -42810,6 +42834,22 @@ def _cancellation_tracking_timeline(
             "at": contact.get("contacted_at") or contact.get("created_at") or "",
             "actor": contact.get("created_by") or "",
         })
+    for reminder in state.get("reminders", []):
+        if not isinstance(reminder, dict):
+            continue
+        level = _cancellation_reminder_level(reminder.get("level"))
+        config = CANCELLATION_REMINDER_LEVELS.get(level, {})
+        timeline.append({
+            "id": f"reminder-{reminder.get('id')}",
+            "label": f"{config.get('label') or 'Relance'} envoyée",
+            "details": (
+                f"{reminder.get('recipient') or 'Destinataire non renseigné'} · "
+                f"{_registration_cancellation_money_label(reminder.get('remaining_cents'))} réclamés"
+            ),
+            "kind": "email",
+            "at": reminder.get("sent_at") or reminder.get("created_at") or "",
+            "actor": reminder.get("sent_by") or reminder.get("created_by") or "",
+        })
     timeline.sort(key=lambda item: _history_sort_key(str(item.get("at") or "")), reverse=True)
     return timeline[:300]
 
@@ -42915,10 +42955,19 @@ def _cancellation_tracking_item(
         key=lambda item: _history_sort_key(str(item.get("contacted_at") or item.get("created_at") or "")),
         reverse=True,
     )
-    last_contact_at = (
-        str(contacts[0].get("contacted_at") or contacts[0].get("created_at") or "")
-        if contacts else ""
+    reminders = [copy.deepcopy(item) for item in state.get("reminders", []) if isinstance(item, dict)]
+    reminders.sort(
+        key=lambda item: _history_sort_key(str(item.get("sent_at") or item.get("created_at") or "")),
+        reverse=True,
     )
+    contact_dates = [
+        str(entry.get("contacted_at") or entry.get("created_at") or "")
+        for entry in contacts
+    ] + [
+        str(entry.get("sent_at") or entry.get("created_at") or "")
+        for entry in reminders
+    ]
+    last_contact_at = max(contact_dates, key=_history_sort_key, default="")
     item = {
         "key": f"{session_id}:{trainee_id}",
         "session_id": session_id,
@@ -43012,6 +43061,69 @@ def _cancellation_tracking_item(
         "updated_at": state.get("updated_at") or trainee.get("updated_at") or "",
     }
     if include_detail:
+        if excluded_from_follow_up:
+            reminder_block_reason = "Ce dossier est hors suivi financier."
+        elif not _cancellation_text(trainee.get("email"), max_length=320):
+            reminder_block_reason = "Ajoutez d’abord une adresse e-mail au stagiaire."
+        elif collection_status == "calculation_required":
+            reminder_block_reason = "Finalisez et enregistrez le calcul de l’indemnité."
+        elif decision == "pending":
+            reminder_block_reason = "Validez d’abord la décision financière du dossier."
+        elif case_status == "disputed":
+            reminder_block_reason = "Ce dossier est contesté. Traitez la contestation avant toute nouvelle relance."
+        elif case_status == "closed":
+            reminder_block_reason = "Ce dossier est clôturé. Rouvrez-le avant toute nouvelle relance."
+        elif remaining_cents <= 0:
+            reminder_block_reason = "Aucun solde n’est actuellement à réclamer."
+        else:
+            reminder_block_reason = ""
+        reminder_levels = []
+        sent_levels = {
+            _cancellation_reminder_level(entry.get("level"))
+            for entry in reminders
+            if _cancellation_reminder_level(entry.get("level"))
+        }
+        for level, config in CANCELLATION_REMINDER_LEVELS.items():
+            sent_for_level = [
+                entry
+                for entry in reminders
+                if _cancellation_reminder_level(entry.get("level")) == level
+            ]
+            missing_previous = [
+                previous_level
+                for previous_level in range(1, level)
+                if previous_level not in sent_levels
+            ]
+            if len(missing_previous) == 1:
+                sequence_warning = (
+                    f"La relance {missing_previous[0]} n’est pas enregistrée dans ce dossier."
+                )
+            elif missing_previous:
+                missing_labels = " et ".join(
+                    str(previous_level) for previous_level in missing_previous
+                )
+                sequence_warning = (
+                    f"Les relances {missing_labels} ne sont pas enregistrées dans ce dossier."
+                )
+            else:
+                sequence_warning = ""
+            reminder_levels.append({
+                "level": level,
+                "label": config["label"],
+                "tone": config["tone"],
+                "description": config["description"],
+                "sent_count": len(sent_for_level),
+                "last_sent_at": sent_for_level[0].get("sent_at") if sent_for_level else "",
+                "available": not reminder_block_reason,
+                "blocked_reason": reminder_block_reason,
+                "sequence_warning": sequence_warning,
+                "preview_url": url_for(
+                    "api_admin_cancellation_reminder_preview",
+                    session_id=session_id,
+                    trainee_id=trainee_id,
+                    level=level,
+                ),
+            })
         item.update({
             "state": state,
             "calculation": calculation,
@@ -43021,6 +43133,8 @@ def _cancellation_tracking_item(
                 reverse=True,
             ),
             "contacts": contacts,
+            "reminders": reminders,
+            "reminder_levels": reminder_levels,
             "timeline": _cancellation_tracking_timeline(trainee, state),
             "options": {
                 "case_statuses": CANCELLATION_CASE_STATUS_OPTIONS,
@@ -43126,6 +43240,391 @@ def _cancellation_tracking_context_or_error(
             "error": "Cette inscription n’est plus annulée.",
         }), 409)
     return session_obj, trainee, None
+
+
+def _cancellation_reminder_level(value: Any) -> int:
+    try:
+        level = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return level if level in CANCELLATION_REMINDER_LEVELS else 0
+
+
+def build_cancellation_payment_reminder_email(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    tracking_item: Dict[str, Any],
+    level: int,
+) -> Dict[str, Any]:
+    """Build the exact payment reminder shown in preview and sent by Brevo."""
+    level = _cancellation_reminder_level(level)
+    if not level:
+        raise ValueError("Le niveau de relance est invalide.")
+    config = CANCELLATION_REMINDER_LEVELS[level]
+    today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    deadline = today + datetime.timedelta(days=int(config["deadline_days"]))
+    deadline_label = fr_date(deadline.isoformat()) or deadline.strftime("%d/%m/%Y")
+
+    first_name_raw = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+    first_name = html.escape(first_name_raw)
+    training_raw = _registration_cancellation_training_label(session_obj)
+    training = html.escape(training_raw)
+    session_name_raw = str(_session_get(session_obj, "name", "") or training_raw).strip()
+    session_name = html.escape(session_name_raw)
+    cancellation_date_raw = str(tracking_item.get("cancellation_date") or "")
+    cancellation_date = fr_date(cancellation_date_raw) or "—"
+    remaining_raw = int(tracking_item.get("remaining_cents") or 0)
+    due_raw = int(tracking_item.get("effective_total_due_cents") or 0)
+    credited_raw = int(tracking_item.get("credited_total_cents") or 0)
+    remaining = _registration_cancellation_money_label(remaining_raw)
+    due = _registration_cancellation_money_label(due_raw)
+    credited = _registration_cancellation_money_label(credited_raw)
+    rule_raw = str(tracking_item.get("rule_label") or "Article 9 du contrat de formation").strip()
+    rule = html.escape(rule_raw)
+    if str(tracking_item.get("decision") or "") == "custom":
+        legal_basis_text = (
+            "créance issue de l’article 9 de votre contrat de formation, dont le montant "
+            "a été ajusté en votre faveur"
+        )
+    else:
+        legal_basis_text = (
+            "créance contractuelle déterminée en application de l’article 9 de votre contrat de formation"
+        )
+
+    if level == 1:
+        subject = f"Rappel – indemnité d’annulation à régulariser – {training_raw}"
+        heading = "Rappel de règlement"
+        intro_text = (
+            "Nous revenons vers vous concernant l’indemnité consécutive à l’annulation "
+            f"de votre inscription à la formation {training_raw}."
+        )
+        request_text = (
+            "Conformément aux stipulations de l’article 9 de votre contrat de formation, "
+            f"le solde de {remaining} reste à régler. Nous vous demandons de procéder à sa "
+            f"régularisation au plus tard le {deadline_label}."
+        )
+        consequence_text = (
+            "Sans règlement ou retour de votre part à cette date, nous serons contraints de "
+            "poursuivre nos relances. Si votre paiement a déjà été effectué, merci de nous "
+            "transmettre son justificatif afin que nous mettions le dossier à jour."
+        )
+        accent, accent_soft, accent_dark = "#d97706", "#fffbeb", "#92400e"
+    elif level == 2:
+        subject = f"Deuxième relance – indemnité d’annulation impayée – {training_raw}"
+        heading = "Deuxième relance de paiement"
+        intro_text = (
+            "Malgré notre précédente relance, nous n’avons à ce jour reçu ni le règlement intégral "
+            f"du solde ni retour permettant de régulariser l’indemnité liée à l’annulation de votre inscription à la formation {training_raw}."
+        )
+        request_text = (
+            "Votre obligation de paiement demeure conformément à l’article 9 du contrat de "
+            f"formation. Nous vous demandons donc de régler le solde de {remaining} au plus "
+            f"tard le {deadline_label}, ou de nous contacter sans délai si vous contestez le montant."
+        )
+        consequence_text = (
+            "À défaut de régularisation ou de réponse dans ce dernier délai amiable, le dossier "
+            "pourra passer en phase de mise en demeure préalable au recouvrement. Si votre paiement "
+            "a déjà été effectué, merci de nous adresser son justificatif par retour d’e-mail."
+        )
+        accent, accent_soft, accent_dark = "#ea580c", "#fff7ed", "#9a3412"
+    else:
+        subject = f"MISE EN DEMEURE avant recouvrement – indemnité d’annulation – {training_raw}"
+        heading = "Mise en demeure de payer"
+        intro_text = (
+            "Malgré nos précédentes relances, nous constatons l’absence de règlement intégral et de réponse "
+            f"concernant l’indemnité due à la suite de l’annulation de votre inscription à la formation {training_raw}."
+        )
+        request_text = (
+            "Par le présent courriel, nous vous mettons formellement en demeure de régler la somme "
+            f"de {remaining}, {legal_basis_text}, au plus tard le {deadline_label}. "
+            "Cette demande vaut mise en demeure "
+            "au sens de l’article 1344 du Code civil."
+        )
+        consequence_text = (
+            "À défaut de règlement intégral ou de contestation écrite et motivée avant cette échéance, "
+            "nous nous réservons la possibilité d’engager, sans nouvelle relance, toute procédure de "
+            "recouvrement appropriée, notamment une requête en injonction de payer. Cette démarche peut "
+            "encore être évitée par un règlement ou une prise de contact immédiate."
+        )
+        accent, accent_soft, accent_dark = "#dc2626", "#fef2f2", "#991b1b"
+
+    intro_html = html.escape(intro_text)
+    request_html = html.escape(request_text)
+    consequence_html = html.escape(consequence_text)
+    safe_logo_url = html.escape(
+        f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True
+    )
+    html_body = f'''<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{html.escape(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f1f5f9;padding:26px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:680px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 34px rgba(15,23,42,.10);">
+        <tr><td style="background:#0b2f5b;padding:27px 30px;color:#ffffff;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+            <td style="width:86px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="72" alt="Intégrale Academy" style="display:block;width:72px;height:auto;background:#ffffff;border-radius:14px;padding:7px;border:0;"></td>
+            <td style="vertical-align:middle;"><div style="font-size:24px;font-weight:800;line-height:1.2;">{html.escape(heading)}</div><div style="font-size:14px;opacity:.9;margin-top:7px;line-height:1.4;">Indemnité liée à l’annulation de votre inscription</div></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:30px;">
+          <div style="display:inline-block;margin-bottom:18px;padding:7px 12px;border-radius:999px;background:{accent_soft};color:{accent_dark};font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;">{html.escape(config['label'])} · {html.escape(config['tone'])}</div>
+          <p style="margin:0 0 16px;font-size:18px;line-height:1.55;">Bonjour {first_name},</p>
+          <p style="margin:0 0 14px;font-size:15px;line-height:1.65;">{intro_html}</p>
+          <p style="margin:0 0 14px;font-size:15px;line-height:1.65;">{request_html}</p>
+
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:22px 0;border:1px solid #e2e8f0;border-radius:15px;background:#f8fafc;">
+            <tr><td style="padding:17px 19px;color:#475569;font-size:14px;line-height:1.6;">
+              <strong style="color:#0f172a;">Formation :</strong> {training}<br>
+              <strong style="color:#0f172a;">Session :</strong> {session_name}<br>
+              <strong style="color:#0f172a;">Annulation enregistrée le :</strong> {html.escape(cancellation_date)}<br>
+              <strong style="color:#0f172a;">Règle appliquée :</strong> {rule}
+            </td></tr>
+          </table>
+
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 22px;border:2px solid {accent};border-radius:17px;background:{accent_soft};">
+            <tr><td style="padding:20px;text-align:center;color:{accent_dark};">
+              <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">Solde restant à régler</div>
+              <div style="font-size:32px;font-weight:900;margin-top:7px;">{html.escape(remaining)}</div>
+              <div style="font-size:13px;line-height:1.55;margin-top:8px;">Montant retenu : {html.escape(due)} · Déjà couvert : {html.escape(credited)}</div>
+              <div style="margin-top:13px;padding-top:13px;border-top:1px solid {accent};font-size:14px;font-weight:800;">Règlement attendu au plus tard le {html.escape(deadline_label)}</div>
+            </td></tr>
+          </table>
+
+          <div style="border-left:4px solid {accent};border-radius:12px;background:{accent_soft};padding:16px 18px;margin-bottom:22px;color:{accent_dark};font-size:14px;line-height:1.65;">{consequence_html}</div>
+          <p style="margin:0 0 8px;font-size:14px;line-height:1.65;color:#475569;">Le règlement peut être effectué selon le mode de paiement convenu avec Intégrale Academy. Pour obtenir à nouveau nos coordonnées bancaires ou convenir d’une modalité, répondez directement à ce courriel.</p>
+          <p style="margin:20px 0 0;font-size:15px;line-height:1.55;">Bien cordialement,</p>
+          <p style="margin:12px 0 0;font-size:15px;line-height:1.55;"><strong>Clément VAILLANT</strong><br>Directeur général Intégrale Academy - Président Intégrale Group</p>
+        </td></tr>
+        <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:21px 30px;color:#64748b;font-size:12px;line-height:1.6;">Intégrale Academy · 54 chemin du Carreou · 83480 Puget-sur-Argens · 04 22 47 07 68</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>'''
+
+    text_body = f"""Bonjour {first_name_raw},
+
+{intro_text}
+
+{request_text}
+
+Formation : {training_raw}
+Session : {session_name_raw}
+Annulation enregistrée le : {cancellation_date}
+Règle appliquée : {rule_raw}
+
+Solde restant à régler : {remaining}
+Montant retenu : {due}
+Déjà couvert : {credited}
+Règlement attendu au plus tard le {deadline_label}
+
+{consequence_text}
+
+Le règlement peut être effectué selon le mode de paiement convenu avec Intégrale Academy. Pour obtenir à nouveau nos coordonnées bancaires ou convenir d’une modalité, répondez directement à ce courriel.
+
+Bien cordialement,
+
+Clément VAILLANT
+Directeur général Intégrale Academy - Président Intégrale Group
+54 chemin du Carreou
+83480 Puget-sur-Argens
+04 22 47 07 68"""
+    return {
+        "level": level,
+        "label": config["label"],
+        "tone": config["tone"],
+        "recipient": _cancellation_text(trainee.get("email"), max_length=320),
+        "subject": subject,
+        "html": html_body,
+        "text": text_body,
+        "deadline": deadline.isoformat(),
+        "deadline_label": deadline_label,
+        "remaining_cents": remaining_raw,
+        "remaining_label": remaining,
+        "legal_warning": (
+            "Cette relance constitue une mise en demeure. Vérifiez le contrat, le montant et les pièces du dossier. Pour renforcer la preuve de réception, un courrier recommandé peut être envoyé en parallèle."
+            if level == 3
+            else ""
+        ),
+    }
+
+
+def _cancellation_reminder_preview_token(preview: Dict[str, Any]) -> str:
+    snapshot = "\0".join(
+        str(preview.get(key) or "")
+        for key in ("level", "recipient", "subject", "html", "deadline", "remaining_cents")
+    )
+    return hashlib.sha256(snapshot.encode("utf-8")).hexdigest()
+
+
+def _cancellation_reminder_preview_or_error(
+    data: Dict[str, Any], session_id: str, trainee_id: str, level: int
+) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[Tuple[Any, int]]]:
+    level = _cancellation_reminder_level(level)
+    if not level:
+        return None, None, None, (jsonify({"ok": False, "error": "Le niveau de relance est invalide."}), 404)
+    session_obj, trainee, error_response = _cancellation_tracking_context_or_error(
+        data, session_id, trainee_id
+    )
+    if error_response:
+        return session_obj, trainee, None, error_response
+    item = _cancellation_tracking_item(data, session_obj, trainee, include_detail=True)
+    level_state = next(
+        (entry for entry in item.get("reminder_levels", []) if entry.get("level") == level),
+        None,
+    )
+    if not level_state or not level_state.get("available"):
+        return session_obj, trainee, item, (jsonify({
+            "ok": False,
+            "error": (level_state or {}).get("blocked_reason") or "Cette relance n’est pas disponible.",
+        }), 409)
+    return session_obj, trainee, item, None
+
+
+@app.get("/api/admin/cancellations/<session_id>/<trainee_id>/reminders/<int:level>/preview")
+@admin_login_required
+def api_admin_cancellation_reminder_preview(
+    session_id: str, trainee_id: str, level: int
+):
+    data = load_data()
+    session_obj, trainee, item, error_response = _cancellation_reminder_preview_or_error(
+        data, session_id, trainee_id, level
+    )
+    if error_response:
+        return error_response
+    preview = build_cancellation_payment_reminder_email(session_obj, trainee, item, level)
+    level_state = next(
+        entry for entry in item["reminder_levels"] if entry["level"] == level
+    )
+    preview["sequence_warning"] = level_state.get("sequence_warning") or ""
+    preview["preview_token"] = _cancellation_reminder_preview_token(preview)
+    preview["send_url"] = url_for(
+        "api_admin_cancellation_reminder_send",
+        session_id=session_id,
+        trainee_id=trainee_id,
+        level=level,
+    )
+    return jsonify({"ok": True, "preview": preview})
+
+
+@app.post("/api/admin/cancellations/<session_id>/<trainee_id>/reminders/<int:level>/send")
+@admin_login_required
+@admin_write_required
+def api_admin_cancellation_reminder_send(
+    session_id: str, trainee_id: str, level: int
+):
+    data = load_data()
+    session_obj, trainee, item, error_response = _cancellation_reminder_preview_or_error(
+        data, session_id, trainee_id, level
+    )
+    if error_response:
+        return error_response
+    preview = build_cancellation_payment_reminder_email(session_obj, trainee, item, level)
+    payload = request.get_json(silent=True)
+    expected_token = _cancellation_reminder_preview_token(preview)
+    if not isinstance(payload, dict) or not hmac.compare_digest(
+        _cancellation_text(payload.get("preview_token"), max_length=128), expected_token
+    ):
+        return jsonify({
+            "ok": False,
+            "error": "Le dossier a changé depuis la prévisualisation. Ouvrez à nouveau la relance avant de l’envoyer.",
+        }), 409
+    result = brevo_send_email(
+        preview["recipient"],
+        preview["subject"],
+        preview["html"],
+        cc_emails=REGISTRATION_CANCELLATION_EMAIL_CC,
+        trainee=trainee,
+        text_content=preview["text"],
+        metadata={
+            "purpose": "registration_cancellation_payment_reminder",
+            "session_id": session_id,
+            "trainee_id": trainee_id,
+            "reminder_level": level,
+        },
+    )
+    if not isinstance(result, dict) or not result.get("ok"):
+        error_message = (
+            str((result or {}).get("error") or "").strip()
+            if isinstance(result, dict)
+            else ""
+        ) or "Le service d’envoi n’a pas accepté la relance."
+        return jsonify({"ok": False, "error": error_message}), 502
+
+    sent_at = _now_iso()
+    actor = _cancellation_actor()
+    state = _registration_cancellation_tracking_state(trainee, create=True)
+    if isinstance(item.get("calculation"), dict) and item["calculation"]:
+        state["calculation_snapshot"] = copy.deepcopy(item["calculation"])
+    reminder = {
+        "id": uuid.uuid4().hex,
+        "level": level,
+        "sent_at": sent_at,
+        "sent_by": actor,
+        "recipient": preview["recipient"],
+        "subject": preview["subject"],
+        "deadline": preview["deadline"],
+        "remaining_cents": int(item.get("remaining_cents") or 0),
+        "effective_total_due_cents": int(item.get("effective_total_due_cents") or 0),
+        "credited_total_cents": int(item.get("credited_total_cents") or 0),
+        "message_id": _cancellation_text(result.get("message_id"), max_length=240),
+        "body_text": _cancellation_text(preview["text"], max_length=12000),
+    }
+    state.setdefault("reminders", []).insert(0, reminder)
+    del state["reminders"][100:]
+    state["payment_due_date"] = preview["deadline"]
+    state["next_action_date"] = preview["deadline"]
+    target_status = str(CANCELLATION_REMINDER_LEVELS[level]["case_status"])
+    if level == 3:
+        state["case_status"] = target_status
+    elif state.get("case_status") in {
+        "to_process", "awaiting_confirmation", "calculation_required"
+    }:
+        state["case_status"] = target_status
+    state["updated_at"] = sent_at
+    state["updated_by"] = actor
+    _cancellation_tracking_append_event(
+        state,
+        f"{CANCELLATION_REMINDER_LEVELS[level]['label']} envoyée",
+        (
+            f"{preview['recipient']} · {preview['remaining_label']} réclamés · "
+            f"échéance {preview['deadline_label']}"
+        ),
+        kind="email",
+        at=sent_at,
+    )
+    trainee["updated_at"] = sent_at
+    append_trainee_history_event(
+        trainee,
+        f"{CANCELLATION_REMINDER_LEVELS[level]['label']} de paiement envoyée",
+        f"{preview['subject']} · Solde {preview['remaining_label']}",
+        "mail",
+        at=sent_at,
+    )
+    _append_activity_log(
+        data,
+        "registration_cancellation_payment_reminder_sent",
+        "trainee",
+        trainee_id,
+        details={
+            "session_id": session_id,
+            "reminder_id": reminder["id"],
+            "reminder_level": level,
+            "remaining_cents": reminder["remaining_cents"],
+            "recipient": reminder["recipient"],
+            "message_id": reminder["message_id"],
+        },
+    )
+    save_data(data)
+    return jsonify({
+        "ok": True,
+        "sent_at": sent_at,
+        "message": f"{CANCELLATION_REMINDER_LEVELS[level]['label']} envoyée à {preview['recipient']}.",
+        "item": _cancellation_tracking_item(
+            data, session_obj, trainee, include_detail=True
+        ),
+    })
 
 
 @app.get("/admin/cancellations")

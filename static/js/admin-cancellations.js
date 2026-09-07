@@ -202,12 +202,21 @@
   const contactForm = document.getElementById("cancellationContactForm");
   const saveButton = document.getElementById("cancellationSaveCase");
   const toast = document.getElementById("cancellationToast");
+  const reminderPreviewLayer = document.getElementById("cancellationReminderPreviewLayer");
+  const reminderPreviewLoading = document.getElementById("cancellationReminderPreviewLoading");
+  const reminderPreviewBody = document.getElementById("cancellationReminderPreviewBody");
+  const reminderPreviewError = document.getElementById("cancellationReminderPreviewError");
+  const reminderPreviewSend = document.getElementById("cancellationReminderSend");
+  const reminderPreviewFrame = document.getElementById("cancellationReminderPreviewFrame");
   let currentItem = null;
+  let currentReminderPreview = null;
+  let caseDirty = false;
   let activeTab = "case";
   let needsRefresh = false;
   let toastTimer = null;
   let draftTimer = null;
   let drawerRequest = 0;
+  let reminderPreviewRequest = 0;
 
   const todayIso = () => {
     const now = new Date();
@@ -376,7 +385,8 @@
     const list = document.getElementById("cancellationContactList");
     const count = document.getElementById("cancellationContactsCount");
     const contacts = Array.isArray(item.contacts) ? item.contacts : [];
-    if (count) count.textContent = String(contacts.length);
+    const reminders = Array.isArray(item.reminders) ? item.reminders : [];
+    if (count) count.textContent = String(contacts.length + reminders.length);
     if (!list) return;
     list.replaceChildren();
     if (!contacts.length) {
@@ -395,6 +405,74 @@
         meta: `${dateLabel(contact.contacted_at)} · ${contact.created_by || "Administrateur"}`,
         note: contact.note || "",
         className: "cancellation-record--contact",
+      }));
+    });
+  }
+
+  function renderReminders(item) {
+    const levels = Array.isArray(item.reminder_levels) ? item.reminder_levels : [];
+    const reminders = Array.isArray(item.reminders) ? item.reminders : [];
+    const notice = document.getElementById("cancellationReminderNotice");
+    const historyCount = document.getElementById("cancellationReminderHistoryCount");
+    const list = document.getElementById("cancellationReminderList");
+    if (historyCount) historyCount.textContent = `${reminders.length} envoi${reminders.length > 1 ? "s" : ""}`;
+
+    levels.forEach((level) => {
+      const card = document.querySelector(`[data-cancellation-reminder-card="${level.level}"]`);
+      const button = card?.querySelector("[data-cancellation-reminder-level]");
+      const state = document.getElementById(`cancellationReminderState${level.level}`);
+      if (button) {
+        button.dataset.previewUrl = level.preview_url || "";
+        button.dataset.serverAvailable = String(Boolean(level.available));
+        button.disabled = !level.available;
+        button.title = level.available ? `Prévisualiser ${String(level.label || "la relance").toLowerCase()}` : (level.blocked_reason || "Relance indisponible");
+      }
+      card?.classList.toggle("is-disabled", !level.available);
+      if (state) {
+        state.classList.toggle("is-sent", Boolean(level.sent_count));
+        state.classList.toggle("is-blocked", !level.available);
+        state.textContent = !level.available
+          ? (level.blocked_reason || "Relance indisponible")
+          : level.sent_count
+            ? `Envoyée ${level.sent_count} fois · dernier envoi ${dateTimeLabel(level.last_sent_at)}`
+            : "Jamais envoyée";
+      }
+    });
+
+    if (notice) {
+      const firstBlocked = levels.find((level) => !level.available);
+      notice.classList.toggle("is-blocked", Boolean(firstBlocked));
+      const copy = notice.querySelector("p");
+      if (copy) {
+        copy.replaceChildren();
+        const strong = document.createElement("strong");
+        strong.textContent = firstBlocked ? "Envoi indisponible pour ce dossier." : "Choisissez le niveau adapté au dossier.";
+        copy.appendChild(strong);
+        copy.append(document.createTextNode(firstBlocked
+          ? ` ${firstBlocked.blocked_reason || "Vérifiez les informations du dossier."}`
+          : " Les montants et l’échéance sont recalculés au moment de l’envoi."));
+      }
+    }
+
+    if (!list) return;
+    list.replaceChildren();
+    if (!reminders.length) {
+      const empty = document.createElement("div");
+      empty.className = "cancellation-record-empty";
+      empty.textContent = "Aucun e-mail de relance envoyé pour le moment.";
+      list.appendChild(empty);
+      return;
+    }
+    reminders.forEach((reminder) => {
+      const level = Number(reminder.level || 0);
+      const levelConfig = levels.find((entry) => Number(entry.level) === level) || {};
+      list.appendChild(recordNode({
+        icon: String(level || "@"),
+        title: `${levelConfig.label || `Relance ${level}`} · ${levelConfig.tone || "E-mail"}`,
+        meta: `${dateTimeLabel(reminder.sent_at)} · ${reminder.recipient || "Destinataire inconnu"} · ${reminder.sent_by || "Administrateur"}`,
+        note: `${reminder.subject || ""}${reminder.deadline ? `\nÉchéance fixée au ${dateLabel(reminder.deadline)}` : ""}`,
+        amount: money(reminder.remaining_cents),
+        className: `cancellation-record--reminder is-level-${level}`,
       }));
     });
   }
@@ -499,6 +577,9 @@
     paymentForm?.querySelectorAll("input,select,textarea,button").forEach((field) => {
       field.disabled = Boolean(pageData.is_read_only || excluded);
     });
+    document.querySelectorAll("[data-cancellation-reminder-level]").forEach((button) => {
+      button.disabled = excluded || button.dataset.serverAvailable !== "true";
+    });
     const calculationBanner = document.getElementById("cancellationCalculationBanner");
     if (calculationBanner && currentItem) {
       calculationBanner.classList.toggle("is-excluded", excluded);
@@ -599,6 +680,7 @@
 
     renderPayments(item);
     renderContacts(item);
+    renderReminders(item);
     renderTimeline(item);
     syncDecisionFields();
     caseForm.querySelectorAll("input,select,textarea").forEach((field) => {
@@ -608,6 +690,7 @@
     contactForm.querySelectorAll("input,select,textarea,button").forEach((field) => { field.disabled = Boolean(pageData.is_read_only); });
     if (saveButton) saveButton.disabled = Boolean(pageData.is_read_only);
     syncExclusionFields();
+    caseDirty = false;
   }
 
   function activateTab(tab) {
@@ -658,6 +741,7 @@
 
   function closeDrawer() {
     drawerRequest += 1;
+    closeReminderPreview();
     if (layer) layer.hidden = true;
     document.body.classList.remove("cancellation-drawer-open");
     if (needsRefresh) window.location.reload();
@@ -668,7 +752,12 @@
   });
   document.querySelectorAll("[data-close-cancellation-drawer]").forEach((button) => button.addEventListener("click", closeDrawer));
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && layer && !layer.hidden) closeDrawer();
+    if (event.key !== "Escape") return;
+    if (reminderPreviewLayer && !reminderPreviewLayer.hidden) {
+      closeReminderPreview();
+    } else if (layer && !layer.hidden) {
+      closeDrawer();
+    }
   });
 
   function setBusy(button, busy, busyText) {
@@ -682,6 +771,102 @@
       button.disabled = false;
     }
   }
+
+  function closeReminderPreview() {
+    reminderPreviewRequest += 1;
+    currentReminderPreview = null;
+    if (reminderPreviewLayer) reminderPreviewLayer.hidden = true;
+    if (reminderPreviewFrame) reminderPreviewFrame.srcdoc = "";
+    if (reminderPreviewSend) {
+      reminderPreviewSend.disabled = true;
+      reminderPreviewSend.textContent = "Envoyer la relance";
+      reminderPreviewSend.classList.add("cancellation-btn--primary");
+      reminderPreviewSend.classList.remove("cancellation-btn--danger");
+      delete reminderPreviewSend.dataset.sendUrl;
+    }
+  }
+
+  async function openReminderPreview(button) {
+    if (caseDirty) {
+      showToast("Enregistrez d’abord les modifications du dossier afin de prévisualiser le bon montant.", true);
+      return;
+    }
+    if (!currentItem || !button?.dataset.previewUrl || button.disabled) return;
+    const requestId = ++reminderPreviewRequest;
+    currentReminderPreview = null;
+    reminderPreviewLayer.hidden = false;
+    reminderPreviewLoading.hidden = false;
+    reminderPreviewBody.hidden = true;
+    reminderPreviewError.hidden = true;
+    reminderPreviewSend.disabled = true;
+    if (reminderPreviewFrame) reminderPreviewFrame.srcdoc = "";
+    try {
+      const payload = await requestJson(button.dataset.previewUrl, { method: "GET", headers: {} });
+      if (requestId !== reminderPreviewRequest) return;
+      const preview = payload.preview || {};
+      currentReminderPreview = preview;
+      document.getElementById("cancellationReminderPreviewTone").textContent = `${preview.label || "Relance"} · ${preview.tone || ""}`;
+      document.getElementById("cancellationReminderPreviewTitle").textContent = `Prévisualisation de la ${String(preview.label || "relance").toLowerCase()}`;
+      document.getElementById("cancellationReminderPreviewRecipient").textContent = preview.recipient || "—";
+      document.getElementById("cancellationReminderPreviewAmount").textContent = preview.remaining_label || "—";
+      document.getElementById("cancellationReminderPreviewDeadline").textContent = preview.deadline_label || "—";
+      document.getElementById("cancellationReminderPreviewSubject").textContent = preview.subject || "—";
+      const warning = document.getElementById("cancellationReminderPreviewWarning");
+      const warningMessages = [];
+      if (preview.sequence_warning) {
+        warningMessages.push(`Attention : ${preview.sequence_warning} Vous pouvez continuer si une relance a été effectuée par un autre canal.`);
+      }
+      if (preview.legal_warning) warningMessages.push(preview.legal_warning);
+      warning.hidden = !warningMessages.length;
+      warning.textContent = warningMessages.join(" ");
+      if (reminderPreviewFrame) reminderPreviewFrame.srcdoc = preview.html || "";
+      reminderPreviewSend.dataset.sendUrl = preview.send_url || "";
+      reminderPreviewSend.textContent = preview.level === 3 ? "Envoyer la mise en demeure" : `Envoyer la relance ${preview.level || ""}`;
+      reminderPreviewSend.classList.toggle("cancellation-btn--danger", preview.level === 3);
+      reminderPreviewSend.classList.toggle("cancellation-btn--primary", preview.level !== 3);
+      reminderPreviewSend.disabled = Boolean(pageData.is_read_only || !preview.send_url);
+      document.getElementById("cancellationReminderPreviewConfirmation").textContent = pageData.is_read_only
+        ? "Mode consultation : l’envoi est désactivé."
+        : "L’e-mail ne partira qu’après votre confirmation.";
+      reminderPreviewLoading.hidden = true;
+      reminderPreviewBody.hidden = false;
+    } catch (error) {
+      if (requestId !== reminderPreviewRequest) return;
+      reminderPreviewLoading.hidden = true;
+      reminderPreviewError.hidden = false;
+      reminderPreviewError.querySelector("p").textContent = error.message;
+    }
+  }
+
+  document.querySelectorAll("[data-cancellation-reminder-level]").forEach((button) => {
+    button.addEventListener("click", () => openReminderPreview(button));
+  });
+  document.querySelectorAll("[data-close-cancellation-reminder-preview]").forEach((button) => {
+    button.addEventListener("click", closeReminderPreview);
+  });
+  reminderPreviewSend?.addEventListener("click", async () => {
+    if (!currentReminderPreview || pageData.is_read_only || !reminderPreviewSend.dataset.sendUrl) return;
+    const sendUrl = reminderPreviewSend.dataset.sendUrl;
+    const level = Number(currentReminderPreview.level || 0);
+    setBusy(reminderPreviewSend, true, level === 3 ? "Envoi de la mise en demeure…" : `Envoi de la relance ${level}…`);
+    try {
+      const response = await requestJson(sendUrl, {
+        method: "POST",
+        body: JSON.stringify({ preview_token: currentReminderPreview.preview_token || "" }),
+      });
+      closeReminderPreview();
+      renderItem(response.item);
+      activateTab("contacts");
+      needsRefresh = true;
+      showToast(response.message || `La relance ${level} a bien été envoyée.`);
+    } catch (error) {
+      showToast(error.message, true);
+      setBusy(reminderPreviewSend, false);
+    }
+  });
+
+  caseForm?.addEventListener("input", () => { caseDirty = true; });
+  caseForm?.addEventListener("change", () => { caseDirty = true; });
 
   caseForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
