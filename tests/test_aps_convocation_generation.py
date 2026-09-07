@@ -702,6 +702,50 @@ class ApsConvocationSchedulingTests(unittest.TestCase):
         self.assertEqual(observed_contexts, [True])
         app._aps_convocation_auto_send_timers.clear()
 
+    def test_timer_callback_sends_signed_convocation_without_request_context(self):
+        from flask import has_request_context
+
+        session = {
+            "id": "session-1",
+            "training_type": "APS",
+            "date_start": "2026-09-07",
+            "date_end": "2026-10-09",
+            "trainees": [],
+        }
+        trainee = {
+            "id": "trainee-1",
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "convention_signature": {
+                "status": "done",
+                "signed_at": "2026-09-07T10:00:00Z",
+            },
+            "convocation_auto_scheduled_at": "2026-09-07T10:05:00Z",
+        }
+        session["trainees"] = [trainee]
+        data = {"sessions": [session]}
+        timer_key = "session-1:trainee-1"
+
+        self.assertFalse(has_request_context())
+        app._aps_convocation_auto_send_timers.add(timer_key)
+        with tempfile.NamedTemporaryFile(suffix=".pdf") as pdf_file, \
+             tempfile.NamedTemporaryFile(suffix=".docx") as docx_file:
+            pdf_file.write(b"PDF")
+            pdf_file.flush()
+            with mock.patch.object(app, "load_data", return_value=data), \
+                 mock.patch.object(app, "save_data") as save_data, \
+                 mock.patch.object(app, "_generate_aps_convocation_files", return_value=(docx_file.name, pdf_file.name)), \
+                 mock.patch.object(app, "brevo_send_email", return_value=True) as send_email:
+                app._send_scheduled_convocation_after_convention_signed("session-1", "trainee-1")
+
+        self.assertEqual(trainee["convocation_aps_status"], "sent")
+        self.assertTrue(trainee["convocation_aps_sent_at"])
+        self.assertEqual(trainee["convocation_auto_last_error"], "")
+        self.assertEqual(trainee["convocation_auto_scheduled_at"], "")
+        self.assertNotIn(timer_key, app._aps_convocation_auto_send_timers)
+        send_email.assert_called_once()
+        save_data.assert_called_once_with(data)
+
     def test_convention_signature_schedules_convocation_five_minutes_later(self):
         session = {"id": "session-1", "training_type": "APS", "trainees": []}
         trainee = {"id": "trainee-1", "convention_signature": {"status": "ongoing"}}
