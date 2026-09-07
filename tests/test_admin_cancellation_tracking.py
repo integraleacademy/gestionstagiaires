@@ -70,7 +70,50 @@ class AdminCancellationTrackingTests(unittest.TestCase):
         self.assertEqual(item["effective_total_due_cents"], 10000)
         self.assertEqual(item["remaining_cents"], 10000)
         self.assertEqual(dashboard["kpis"]["total"], 1)
+        self.assertEqual(dashboard["kpis"]["all_total"], 1)
+        self.assertEqual(dashboard["kpis"]["excluded"], 0)
         self.assertEqual(dashboard["kpis"]["remaining_cents"], 10000)
+
+    def test_excluded_case_stays_visible_but_is_removed_from_financial_kpis(self):
+        data = self._data()
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["cancellation_tracking"] = {
+            "case_status": "closed",
+            "origin": "training_center",
+            "excluded_from_follow_up": True,
+            "exclusion_reason": "center_initiated",
+            "exclusion_details": "Session annulée volontairement par le centre.",
+            "decision": "contractual",
+            "payments": [{
+                "id": "P-OLD",
+                "amount_cents": 2500,
+                "method": "bank_transfer",
+                "paid_at": datetime.date.today().isoformat(),
+                "voided_at": "",
+            }],
+            "contacts": [],
+            "events": [],
+        }
+
+        with gestion_app.app.test_request_context("/admin/cancellations"):
+            dashboard = gestion_app._cancellation_tracking_dashboard(data)
+
+        self.assertEqual(len(dashboard["items"]), 1)
+        item = dashboard["items"][0]
+        self.assertTrue(item["excluded_from_follow_up"])
+        self.assertEqual(item["collection_status"], "excluded")
+        self.assertEqual(item["collection_status_label"], "Hors suivi financier")
+        self.assertEqual(item["effective_total_due_cents"], 0)
+        self.assertEqual(item["credited_total_cents"], 0)
+        self.assertEqual(item["remaining_cents"], 0)
+        self.assertEqual(item["raw_financials"]["effective_total_due_cents"], 10000)
+        self.assertEqual(item["raw_financials"]["payments_received_cents"], 2500)
+        self.assertEqual(dashboard["kpis"]["all_total"], 1)
+        self.assertEqual(dashboard["kpis"]["total"], 0)
+        self.assertEqual(dashboard["kpis"]["excluded"], 1)
+        self.assertEqual(dashboard["kpis"]["attention"], 0)
+        self.assertEqual(dashboard["kpis"]["remaining_cents"], 0)
+        self.assertEqual(dashboard["kpis"]["credited_cents"], 0)
 
     def test_dashboard_page_and_navigation_expose_suivi_annulations(self):
         data = self._data()
@@ -81,6 +124,8 @@ class AdminCancellationTrackingTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("Suivi des annulations", html)
         self.assertIn("Camille ANNULEE", html)
+        self.assertIn("Ne pas prendre en compte ce dossier", html)
+        self.assertIn("Hors suivi financier", html)
         self.assertIn('value="S-CANCEL-TRACK" selected', html)
 
         sidebar = Path("templates/admin_sidebar.html").read_text(encoding="utf-8")
@@ -89,6 +134,29 @@ class AdminCancellationTrackingTests(unittest.TestCase):
         self.assertIn("Suivi annulations", sidebar)
         self.assertIn("Suivi annulations", sessions)
         self.assertIn("Suivi annulations", commands)
+
+    def test_excluded_case_is_clearly_identified_in_table_filters_and_export(self):
+        data = self._data()
+        data["sessions"][0]["trainees"][0]["cancellation_tracking"] = {
+            "case_status": "closed",
+            "origin": "training_center",
+            "excluded_from_follow_up": True,
+            "exclusion_reason": "center_initiated",
+            "decision": "contractual",
+            "payments": [],
+            "contacts": [],
+            "events": [],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get("/admin/cancellations")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('data-quick-filter="excluded"', html)
+        self.assertIn('data-collection-status="excluded"', html)
+        self.assertIn('data-export-total="Non applicable"', html)
+        self.assertIn("Annulation à l’initiative du centre", html)
+        self.assertIn("Aucune action requise", html)
 
     def test_session_tools_link_opens_tracking_preselected_on_current_session(self):
         data = self._data()
@@ -201,6 +269,116 @@ class AdminCancellationTrackingTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("Expliquez", response.get_json()["error"])
+
+    def test_center_cancelled_case_can_be_excluded_and_is_audited(self):
+        data = self._data()
+        captured = None
+
+        def capture(payload, **_kwargs):
+            nonlocal captured
+            captured = copy.deepcopy(payload)
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data", side_effect=capture
+        ):
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK",
+                json={
+                    "origin": "training_center",
+                    "excluded_from_follow_up": True,
+                    "exclusion_reason": "center_initiated",
+                    "exclusion_details": "Annulation décidée par notre centre.",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        item = response.get_json()["item"]
+        self.assertTrue(item["excluded_from_follow_up"])
+        self.assertEqual(item["case_status"], "closed")
+        self.assertEqual(item["collection_status"], "excluded")
+        self.assertEqual(item["effective_total_due_cents"], 0)
+        state = captured["sessions"][0]["trainees"][0]["cancellation_tracking"]
+        self.assertEqual(state["case_status_before_exclusion"], "to_process")
+        self.assertEqual(state["events"][0]["label"], "Dossier placé hors suivi financier")
+        self.assertEqual(
+            captured["activity_logs"][-1]["action"],
+            "registration_cancellation_tracking_excluded",
+        )
+
+    def test_excluding_a_case_requires_an_explicit_reason(self):
+        data = self._data()
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data:
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK",
+                json={
+                    "excluded_from_follow_up": True,
+                    "exclusion_reason": "",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("motif", response.get_json()["error"].lower())
+        save_data.assert_not_called()
+
+    def test_excluded_case_rejects_new_payment_without_persisting(self):
+        data = self._data()
+        data["sessions"][0]["trainees"][0]["cancellation_tracking"] = {
+            "case_status": "closed",
+            "origin": "training_center",
+            "excluded_from_follow_up": True,
+            "exclusion_reason": "center_initiated",
+            "payments": [],
+            "contacts": [],
+            "events": [],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data:
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/payments",
+                json={"amount": "50", "method": "bank_transfer"},
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("hors suivi financier", response.get_json()["error"])
+        save_data.assert_not_called()
+
+    def test_reincluding_a_case_restores_status_and_financial_tracking(self):
+        data = self._data()
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["cancellation_tracking"] = {
+            "case_status": "closed",
+            "case_status_before_exclusion": "awaiting_payment",
+            "origin": "training_center",
+            "excluded_from_follow_up": True,
+            "exclusion_reason": "center_initiated",
+            "decision": "contractual",
+            "payments": [],
+            "contacts": [],
+            "events": [],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK",
+                json={"excluded_from_follow_up": False},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        item = response.get_json()["item"]
+        self.assertFalse(item["excluded_from_follow_up"])
+        self.assertEqual(item["case_status"], "awaiting_payment")
+        self.assertEqual(item["effective_total_due_cents"], 10000)
+        self.assertEqual(item["remaining_cents"], 10000)
+        self.assertTrue(
+            any(
+                event["label"] == "Dossier réintégré au suivi financier"
+                for event in item["timeline"]
+            )
+        )
 
     def test_non_finite_payment_amount_is_rejected_without_persisting(self):
         data = self._data()

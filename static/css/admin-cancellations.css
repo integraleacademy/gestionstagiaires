@@ -112,6 +112,8 @@
 .cancellation-table td:first-child{padding-left:23px;}
 .cancellation-table tr:last-child td{border-bottom:0;}
 .cancellation-table tbody tr:hover td{background:#f8fbff;}
+.cancellation-table tbody tr[data-collection-status="excluded"] td{background:#fafafa;color:#64748b;}
+.cancellation-table tbody tr[data-collection-status="excluded"]:hover td{background:#f5f5f5;}
 .cancellation-person{display:flex;align-items:center;gap:11px;min-width:0;}
 .cancellation-avatar{display:grid;place-items:center;flex:0 0 39px;width:39px;height:39px;border:1px solid #bfdbfe;border-radius:13px;background:linear-gradient(145deg,#eff6ff,#dbeafe);color:#1d4ed8;font-size:11px;font-weight:950;letter-spacing:.02em;}
 .cancellation-person>div{display:grid;min-width:0;gap:2px;}
@@ -138,10 +140,13 @@
 .cancellation-status--money-overdue,.cancellation-status--money-refund_due{border-color:#fecaca;background:#fef2f2;color:#b91c1c;}
 .cancellation-status--money-paid,.cancellation-status--money-waived{border-color:#bbf7d0;background:#f0fdf4;color:#047857;}
 .cancellation-status--money-calculation_required{border-color:#fed7aa;background:#fff7ed;color:#c2410c;}
+.cancellation-status--money-excluded{border-color:#d4d4d8;background:#f4f4f5;color:#52525b;}
 .cancellation-assignee{display:flex;align-items:center;gap:4px;margin-top:2px;color:#64748b;font-size:9px;font-weight:800;}
 .cancellation-assignee i{color:#60a5fa;font-size:6px;}
+.cancellation-exclusion-reason{display:block;margin-top:1px;color:#71717a;font-size:9px;font-weight:800;}
 .cancellation-money{display:block;color:#0f172a;font-size:15px;letter-spacing:-.02em;}
 .cancellation-money--refund{color:#b91c1c;font-size:12px;}
+.cancellation-not-applicable{display:block;color:#52525b;font-size:12px;}
 .cancellation-payment-line{display:flex;align-items:baseline;gap:4px;}
 .cancellation-payment-line strong{color:#0f172a;font-size:12px;}
 .cancellation-payment-line span{color:#94a3b8;font-size:9px;}
@@ -217,8 +222,19 @@ body.cancellation-drawer-open{overflow:hidden;}
 .cancellation-form-grid input:focus,.cancellation-form-grid select:focus,.cancellation-form-grid textarea:focus{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
 .cancellation-form-grid input:disabled,.cancellation-form-grid select:disabled,.cancellation-form-grid textarea:disabled{background:#f1f5f9;color:#94a3b8;}
 .cancellation-field--full{grid-column:1/-1;}
+.cancellation-exclusion-card{display:grid;gap:13px;border:1px solid #d4d4d8;border-radius:15px;background:linear-gradient(135deg,#fafafa,#fff);padding:15px;}
+.cancellation-form-grid .cancellation-exclusion-toggle{display:flex;align-items:flex-start;gap:11px;cursor:pointer;}
+.cancellation-form-grid .cancellation-exclusion-toggle input{flex:0 0 20px;width:20px;height:20px;margin:1px 0 0;accent-color:#475569;}
+.cancellation-exclusion-toggle>span{display:grid;gap:3px;}
+.cancellation-exclusion-toggle strong{color:#27272a;font-size:12px;}
+.cancellation-exclusion-toggle small{color:#71717a;font-size:10px;font-weight:650;line-height:1.45;}
+.cancellation-exclusion-fields{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:12px;border-top:1px solid #e4e4e7;padding-top:13px;}
+.cancellation-exclusion-fields[hidden]{display:none;}
 .cancellation-calculation-banner{display:flex;align-items:center;gap:12px;margin-bottom:15px;border:1px solid #bfdbfe;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#fff);padding:13px 14px;}
 .cancellation-calculation-banner.is-error{border-color:#fed7aa;background:#fff7ed;}
+.cancellation-calculation-banner.is-excluded{border-color:#d4d4d8;background:linear-gradient(135deg,#f4f4f5,#fff);}
+.cancellation-calculation-banner.is-excluded .cancellation-calculation-banner__icon{background:#e4e4e7;color:#52525b;}
+.cancellation-calculation-banner.is-excluded strong{color:#3f3f46;}
 .cancellation-calculation-banner__icon{display:grid;place-items:center;flex:0 0 37px;width:37px;height:37px;border-radius:11px;background:#dbeafe;color:#1d4ed8;font-size:17px;font-weight:950;}
 .cancellation-calculation-banner>div{display:grid;gap:2px;}.cancellation-calculation-banner strong{color:#1e3a8a;font-size:11px;}.cancellation-calculation-banner span:not(.cancellation-calculation-banner__icon){color:#64748b;font-size:10px;}
 .cancellation-financial-recap{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:17px;}
@@ -230,7 +246,9 @@ body.cancellation-drawer-open{overflow:hidden;}
 .cancellation-inline-link{display:inline-flex;align-items:center;gap:8px;margin-top:15px;color:#2563eb;font-size:11px;font-weight:900;text-decoration:none;}.cancellation-inline-link:hover{text-decoration:underline;}
 .cancellation-payment-balance{margin-bottom:15px;border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;padding:14px;color:#1e3a8a;font-size:12px;font-weight:850;}
 .cancellation-payment-balance.is-alert{border-color:#fecaca;background:#fef2f2;color:#991b1b;}
+.cancellation-payment-balance.is-excluded{border-color:#d4d4d8;background:#f4f4f5;color:#52525b;}
 .cancellation-add-form{margin-bottom:18px;border:1px solid #dce5ef;border-radius:16px;background:#fff;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.045);}
+.cancellation-add-form.is-disabled{border-color:#e4e4e7;background:#fafafa;opacity:.72;}
 .cancellation-add-form__title{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .cancellation-add-form__title>span{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#eff6ff;color:#2563eb;font-size:18px;font-weight:950;}
 .cancellation-add-form__title>div{display:grid;gap:1px;}.cancellation-add-form__title strong{color:#0f172a;font-size:12px;}.cancellation-add-form__title small{color:#94a3b8;font-size:9px;}
@@ -280,7 +298,7 @@ body.cancellation-drawer-open{overflow:hidden;}
   .cancellation-workspace{border-radius:19px;}.cancellation-toolbar{padding:19px 15px 14px;}.cancellation-toolbar h2{font-size:21px;}.cancellation-filters{grid-template-columns:1fr;}.cancellation-filter--wide{grid-column:auto;}.cancellation-filter-reset{width:100%;}
   .cancellation-table tbody{padding:10px;}.cancellation-table tr{grid-template-columns:1fr;}.cancellation-table td,.cancellation-table td:first-child{padding:12px 13px;}.cancellation-table td:nth-last-child(2){border-bottom:1px solid #edf1f5;}.cancellation-table td:last-child{border-bottom:0;}
   .cancellation-drawer{width:100vw;}.cancellation-drawer__header{padding:16px;}.cancellation-drawer h2{font-size:19px;}.cancellation-drawer__summary{grid-template-columns:1fr 1fr;padding:7px 14px 13px;}.cancellation-drawer__summary article:last-child{grid-column:1/-1;}.cancellation-drawer__summary strong{font-size:18px;}
-  .cancellation-tabs{padding-left:7px;padding-right:7px;}.cancellation-tab-panel{padding:20px 14px 28px;}.cancellation-section-heading{align-items:flex-start;flex-direction:column;gap:6px;}.cancellation-section-heading p{text-align:left;}.cancellation-form-grid{grid-template-columns:1fr;}.cancellation-field--full{grid-column:auto;}.cancellation-financial-recap{grid-template-columns:1fr 1fr;}
+  .cancellation-tabs{padding-left:7px;padding-right:7px;}.cancellation-tab-panel{padding:20px 14px 28px;}.cancellation-section-heading{align-items:flex-start;flex-direction:column;gap:6px;}.cancellation-section-heading p{text-align:left;}.cancellation-form-grid{grid-template-columns:1fr;}.cancellation-field--full{grid-column:auto;}.cancellation-exclusion-fields{grid-template-columns:1fr;}.cancellation-financial-recap{grid-template-columns:1fr 1fr;}
   .cancellation-drawer__footer{align-items:stretch;flex-direction:column;padding:10px 12px;}.cancellation-drawer__footer>a{order:2}.cancellation-drawer__footer>div{display:grid;grid-template-columns:1fr 1fr;}.cancellation-drawer__footer .cancellation-btn{width:100%;}
   .cancellation-toast{right:16px;bottom:16px;left:16px;max-width:none;}
 }
