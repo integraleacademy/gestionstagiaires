@@ -469,6 +469,257 @@ class AdminCancellationTrackingTests(unittest.TestCase):
         self.assertEqual(len(item["contacts"]), 1)
         self.assertTrue(any(event["kind"] == "contact" for event in item["timeline"]))
 
+    def test_dashboard_exposes_three_preview_before_send_reminders(self):
+        data = self._data()
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get("/admin/cancellations")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('data-cancellation-reminder-level="1"', html)
+        self.assertIn('data-cancellation-reminder-level="2"', html)
+        self.assertIn('data-cancellation-reminder-level="3"', html)
+        self.assertIn('id="cancellationReminderPreviewLayer"', html)
+        self.assertIn("Envoyer la relance", html)
+        self.assertIn("injonction de payer", html)
+
+    def test_each_reminder_preview_has_progressive_wording_and_deadline(self):
+        data = self._data()
+        expected = {
+            1: (7, "Rappel – indemnité", "poursuivre nos relances"),
+            2: (5, "Deuxième relance", "ni le règlement intégral"),
+            3: (8, "MISE EN DEMEURE", "injonction de payer"),
+        }
+        with patch.object(gestion_app, "load_data", return_value=data):
+            for level, (days, subject_part, wording) in expected.items():
+                response = self.client.get(
+                    f"/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/{level}/preview"
+                )
+                self.assertEqual(response.status_code, 200)
+                preview = response.get_json()["preview"]
+                self.assertIn(subject_part, preview["subject"])
+                self.assertIn(wording, preview["text"])
+                self.assertEqual(preview["remaining_cents"], 10000)
+                self.assertEqual(
+                    preview["deadline"],
+                    (
+                        datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+                        + datetime.timedelta(days=days)
+                    ).isoformat(),
+                )
+                self.assertIn("Camille", preview["html"])
+                self.assertIn("100", preview["text"])
+                if level == 2:
+                    self.assertIn("relance 1 n’est pas enregistrée", preview["sequence_warning"])
+                if level == 3:
+                    self.assertIn("courrier recommandé", preview["legal_warning"])
+
+        with gestion_app.app.test_request_context("/"):
+            item = gestion_app._cancellation_tracking_item(
+                data, data["sessions"][0], data["sessions"][0]["trainees"][0], include_detail=True
+            )
+            legal_preview = gestion_app.build_cancellation_payment_reminder_email(
+                data["sessions"][0], data["sessions"][0]["trainees"][0], item, 3
+            )
+        self.assertIn("article 1344 du Code civil", legal_preview["text"])
+        self.assertIn("nous nous réservons la possibilité", legal_preview["text"])
+        self.assertNotIn("procédure déjà engagée", legal_preview["text"])
+
+    def test_preview_is_blocked_for_excluded_or_settled_cases(self):
+        excluded_data = self._data()
+        excluded_data["sessions"][0]["trainees"][0]["cancellation_tracking"] = {
+            "case_status": "closed",
+            "excluded_from_follow_up": True,
+            "exclusion_reason": "center_initiated",
+            "decision": "contractual",
+            "payments": [],
+            "contacts": [],
+            "reminders": [],
+            "events": [],
+        }
+        with patch.object(gestion_app, "load_data", return_value=excluded_data):
+            excluded_response = self.client.get(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/preview"
+            )
+        self.assertEqual(excluded_response.status_code, 409)
+        self.assertIn("hors suivi financier", excluded_response.get_json()["error"])
+
+        with patch.object(gestion_app, "load_data", return_value=excluded_data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data, patch.object(
+            gestion_app, "brevo_send_email"
+        ) as send_email:
+            excluded_send = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/3/send",
+                json={"preview_token": "not-relevant-for-an-excluded-case"},
+            )
+        self.assertEqual(excluded_send.status_code, 409)
+        self.assertIn("hors suivi financier", excluded_send.get_json()["error"])
+        send_email.assert_not_called()
+        save_data.assert_not_called()
+
+        settled_data = self._data()
+        settled_data["sessions"][0]["trainees"][0]["cancellation_tracking"] = {
+            "decision": "contractual",
+            "payments": [{
+                "id": "PAY-FULL",
+                "amount_cents": 10000,
+                "method": "bank_transfer",
+                "paid_at": datetime.date.today().isoformat(),
+                "created_at": gestion_app._now_iso(),
+                "voided_at": "",
+            }],
+            "contacts": [],
+            "reminders": [],
+            "events": [],
+        }
+        with patch.object(gestion_app, "load_data", return_value=settled_data):
+            settled_response = self.client.get(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/preview"
+            )
+        self.assertEqual(settled_response.status_code, 409)
+        self.assertIn("Aucun solde", settled_response.get_json()["error"])
+
+    def test_successful_reminder_is_sent_and_fully_audited(self):
+        data = self._data()
+        brevo_result = {"ok": True, "status_code": 201, "message_id": "brevo-123", "error": ""}
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data, patch.object(
+            gestion_app, "brevo_send_email", return_value=brevo_result
+        ) as send_email:
+            preview = self.client.get(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/preview"
+            ).get_json()["preview"]
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/send",
+                json={"preview_token": preview["preview_token"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        item = payload["item"]
+        self.assertEqual(item["case_status"], "awaiting_payment")
+        self.assertEqual(len(item["reminders"]), 1)
+        reminder = item["reminders"][0]
+        self.assertEqual(item["reminder_levels"][0]["sent_count"], 1)
+        self.assertEqual(reminder["level"], 1)
+        self.assertEqual(reminder["recipient"], "camille@example.com")
+        self.assertEqual(reminder["remaining_cents"], 10000)
+        self.assertEqual(reminder["message_id"], "brevo-123")
+        self.assertEqual(item["last_contact_at"], reminder["sent_at"])
+        self.assertEqual(item["payment_due_date"], reminder["deadline"])
+        self.assertEqual(item["next_action_date"], reminder["deadline"])
+        self.assertTrue(any(event["id"].startswith("reminder-") for event in item["timeline"]))
+        self.assertEqual(data["activity_logs"][-1]["action"], "registration_cancellation_payment_reminder_sent")
+        self.assertEqual(data["activity_logs"][-1]["details"]["reminder_level"], 1)
+        save_data.assert_called_once_with(data)
+        send_email.assert_called_once()
+        args, kwargs = send_email.call_args
+        self.assertEqual(args[0], "camille@example.com")
+        self.assertIn("Rappel – indemnité", args[1])
+        self.assertEqual(kwargs["cc_emails"], gestion_app.REGISTRATION_CANCELLATION_EMAIL_CC)
+        self.assertEqual(kwargs["metadata"]["reminder_level"], 1)
+
+    def test_third_reminder_moves_case_to_collections(self):
+        data = self._data()
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ), patch.object(
+            gestion_app,
+            "brevo_send_email",
+            return_value={"ok": True, "status_code": 201, "message_id": "brevo-legal", "error": ""},
+        ):
+            preview = self.client.get(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/3/preview"
+            ).get_json()["preview"]
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/3/send",
+                json={"preview_token": preview["preview_token"]},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        item = response.get_json()["item"]
+        self.assertEqual(item["case_status"], "collections")
+        self.assertEqual(item["reminders"][0]["level"], 3)
+        self.assertIn("MISE EN DEMEURE", item["reminders"][0]["subject"])
+
+    def test_failed_reminder_is_not_recorded_or_saved(self):
+        data = self._data()
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data, patch.object(
+            gestion_app,
+            "brevo_send_email",
+            return_value={"ok": False, "status_code": 500, "message_id": "", "error": "Brevo indisponible"},
+        ):
+            preview = self.client.get(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/2/preview"
+            ).get_json()["preview"]
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/2/send",
+                json={"preview_token": preview["preview_token"]},
+            )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("Brevo indisponible", response.get_json()["error"])
+        self.assertNotIn("cancellation_tracking", data["sessions"][0]["trainees"][0])
+        save_data.assert_not_called()
+
+    def test_stale_preview_cannot_send_a_changed_amount(self):
+        data = self._data()
+        trainee = data["sessions"][0]["trainees"][0]
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data, patch.object(
+            gestion_app, "brevo_send_email"
+        ) as send_email:
+            preview = self.client.get(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/preview"
+            ).get_json()["preview"]
+            trainee["cancellation_tracking"] = {
+                "decision": "contractual",
+                "payments": [{
+                    "id": "PAY-AFTER-PREVIEW",
+                    "amount_cents": 2500,
+                    "method": "bank_transfer",
+                    "paid_at": datetime.date.today().isoformat(),
+                    "created_at": gestion_app._now_iso(),
+                    "voided_at": "",
+                }],
+                "contacts": [],
+                "reminders": [],
+                "events": [],
+            }
+            response = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/send",
+                json={"preview_token": preview["preview_token"]},
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("changé depuis la prévisualisation", response.get_json()["error"])
+        send_email.assert_not_called()
+        save_data.assert_not_called()
+
+    def test_viewer_can_preview_but_cannot_send_reminder(self):
+        data = self._data()
+        with self.client.session_transaction() as session:
+            session["admin_role"] = "viewer"
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "brevo_send_email"
+        ) as send_email:
+            preview = self.client.get(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/preview"
+            )
+            sending = self.client.post(
+                "/api/admin/cancellations/S-CANCEL-TRACK/T-CANCEL-TRACK/reminders/1/send",
+                json={},
+            )
+
+        self.assertEqual(preview.status_code, 200)
+        self.assertEqual(sending.status_code, 403)
+        send_email.assert_not_called()
+
     def test_active_registration_is_rejected_by_tracking_api(self):
         data = self._data()
         with patch.object(gestion_app, "load_data", return_value=data):
