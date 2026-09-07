@@ -82,7 +82,11 @@
         filters.session.value = requestedSession;
       }
     }
-    if (!pageData.initial_session_id && saved.quickFilter) quickFilter = saved.quickFilter;
+    if (
+      !pageData.initial_session_id
+      && saved.quickFilter
+      && quickButtons.some((button) => button.dataset.quickFilter === saved.quickFilter)
+    ) quickFilter = saved.quickFilter;
   }
 
   function applyFilters() {
@@ -156,7 +160,7 @@
   document.getElementById("cancellationExportCsv")?.addEventListener("click", () => {
     const headers = [
       "Stagiaire", "Formation", "Session", "Date d'annulation", "Statut du dossier",
-      "État financier", "Indemnité retenue", "Déjà couvert", "Reste à encaisser",
+      "État financier", "Périmètre", "Motif de mise hors suivi", "Indemnité retenue", "Déjà couvert", "Reste à encaisser",
       "Échéance", "Prochaine action", "Responsable",
     ];
     const content = [headers.map(csvCell).join(";")];
@@ -168,6 +172,8 @@
         row.dataset.exportCancellation,
         row.dataset.exportCaseStatus,
         row.dataset.exportCollectionStatus,
+        row.dataset.exportScope,
+        row.dataset.exportExclusionReason,
         row.dataset.exportTotal,
         row.dataset.exportPaid,
         row.dataset.exportRemaining,
@@ -283,9 +289,18 @@
     if (field) field.value = value ?? "";
   }
 
+  function setChecked(name, value) {
+    const field = caseForm?.elements.namedItem(name);
+    if (field) field.checked = Boolean(value);
+  }
+
   function fieldValue(name) {
     const field = caseForm?.elements.namedItem(name);
     return field ? field.value.trim() : "";
+  }
+
+  function checkboxValue(name) {
+    return Boolean(caseForm?.elements.namedItem(name)?.checked);
   }
 
   function recordNode({ icon, title, meta, note, amount, className = "", voidAction = null }) {
@@ -434,7 +449,9 @@
     const prorata = Number(calculation.prorata_cents || 0);
     const contractual = Number(calculation.total_due_cents || 0);
     const deductible = Number(calculation.deductible_paid_cents || 0);
-    const payments = Number(item.payments_received_cents || 0);
+    const payments = Number(
+      item.raw_financials?.payments_received_cents ?? item.payments_received_cents ?? 0
+    );
     let effective = contractual;
     const decision = fieldValue("decision") || item.decision;
     if (decision === "waived") effective = 0;
@@ -445,21 +462,60 @@
     const credited = deductible + payments;
     const remaining = Math.max(effective - credited, 0);
     const refund = Math.max(credited - effective, 0);
+    const excluded = checkboxValue("excluded_from_follow_up");
     document.getElementById("cancellationRecapPenalty").textContent = money(penalty);
     document.getElementById("cancellationRecapProrata").textContent = money(prorata);
     document.getElementById("cancellationRecapContractual").textContent = money(contractual);
     document.getElementById("cancellationRecapDeductible").textContent = money(deductible);
-    document.getElementById("cancellationRecapEffective").textContent = money(effective);
-    document.getElementById("cancellationRecapRemaining").textContent = refund ? `${money(refund)} à rembourser` : money(remaining);
+    document.getElementById("cancellationRecapEffective").textContent = excluded ? "Non applicable" : money(effective);
+    document.getElementById("cancellationRecapRemaining").textContent = excluded ? "Non applicable" : refund ? `${money(refund)} à rembourser` : money(remaining);
   }
 
   function syncDecisionFields() {
     const decision = fieldValue("decision");
+    const excluded = checkboxValue("excluded_from_follow_up");
     const customField = caseForm?.elements.namedItem("manual_total_due_amount");
     const reasonField = caseForm?.elements.namedItem("adjustment_reason");
-    if (customField) customField.disabled = pageData.is_read_only || decision !== "custom";
-    if (reasonField) reasonField.required = ["custom", "waived"].includes(decision);
+    if (customField) customField.disabled = pageData.is_read_only || excluded || decision !== "custom";
+    if (reasonField) {
+      reasonField.disabled = pageData.is_read_only || excluded;
+      reasonField.required = !excluded && ["custom", "waived"].includes(decision);
+    }
     if (currentItem) updateFinancialDisplay(currentItem);
+  }
+
+  function syncExclusionFields() {
+    const excluded = checkboxValue("excluded_from_follow_up");
+    const exclusionFields = document.getElementById("cancellationExclusionFields");
+    const exclusionReason = caseForm?.elements.namedItem("exclusion_reason");
+    if (exclusionFields) exclusionFields.hidden = !excluded;
+    if (exclusionReason) exclusionReason.required = excluded;
+
+    const indemnityPanel = document.querySelector('[data-cancellation-panel="indemnity"]');
+    indemnityPanel?.querySelectorAll("input,select,textarea").forEach((field) => {
+      field.disabled = Boolean(pageData.is_read_only || excluded);
+    });
+    paymentForm?.classList.toggle("is-disabled", excluded);
+    paymentForm?.querySelectorAll("input,select,textarea,button").forEach((field) => {
+      field.disabled = Boolean(pageData.is_read_only || excluded);
+    });
+    const calculationBanner = document.getElementById("cancellationCalculationBanner");
+    if (calculationBanner && currentItem) {
+      calculationBanner.classList.toggle("is-excluded", excluded);
+      calculationBanner.classList.toggle(
+        "is-error",
+        Boolean(!excluded && (currentItem.calculation_error || !currentItem.calculation_complete)),
+      );
+      document.getElementById("cancellationCalculationRule").textContent = excluded
+        ? "Dossier hors suivi financier"
+        : currentItem.calculation_error || currentItem.rule_label || "Calcul à finaliser";
+      document.getElementById("cancellationCalculationBreakdown").textContent = excluded
+        ? "Le calcul éventuel est conservé pour la traçabilité, sans alimenter les indicateurs."
+        : currentItem.calculation_complete
+          ? `${currentItem.penalty_rate || 0} % du coût initial${currentItem.prorata_cents ? ` + ${money(currentItem.prorata_cents)} de formation dispensée` : ""}`
+          : "Complétez les informations manquantes avant de valider le montant.";
+    }
+    syncDecisionFields();
   }
 
   function renderItem(item) {
@@ -474,16 +530,21 @@
     setStatusChip(document.getElementById("cancellationDrawerCaseStatus"), "case", item.case_status, item.case_status_label);
     setStatusChip(document.getElementById("cancellationDrawerMoneyStatus"), "money", item.collection_status, item.collection_status_label);
     document.getElementById("cancellationDrawerUpdated").textContent = item.updated_at ? `Mis à jour ${dateTimeLabel(item.updated_at)}` : "";
-    document.getElementById("cancellationSummaryDue").textContent = money(item.effective_total_due_cents);
-    document.getElementById("cancellationSummaryRule").textContent = item.rule_label || "Calcul à finaliser";
-    document.getElementById("cancellationSummaryPaid").textContent = money(item.credited_total_cents);
-    document.getElementById("cancellationSummaryRemaining").textContent = item.refund_due_cents ? `${money(item.refund_due_cents)} à rembourser` : money(item.remaining_cents);
-    document.getElementById("cancellationSummaryDueDate").textContent = item.payment_due_date ? `Échéance ${dateLabel(item.payment_due_date)}` : "Sans échéance";
+    document.getElementById("cancellationSummaryDue").textContent = item.excluded_from_follow_up ? "Non applicable" : money(item.effective_total_due_cents);
+    document.getElementById("cancellationSummaryRule").textContent = item.excluded_from_follow_up ? (item.exclusion_reason_label || "Hors suivi financier") : (item.rule_label || "Calcul à finaliser");
+    document.getElementById("cancellationSummaryPaid").textContent = item.excluded_from_follow_up ? "Non suivi" : money(item.credited_total_cents);
+    document.getElementById("cancellationSummaryRemaining").textContent = item.excluded_from_follow_up ? "Aucun" : item.refund_due_cents ? `${money(item.refund_due_cents)} à rembourser` : money(item.remaining_cents);
+    document.getElementById("cancellationSummaryDueDate").textContent = item.excluded_from_follow_up ? "Retiré des indicateurs" : item.payment_due_date ? `Échéance ${dateLabel(item.payment_due_date)}` : "Sans échéance";
     document.getElementById("cancellationOpenTrainee").href = item.trainee_url;
     document.getElementById("cancellationOpenTraineeCalculator").href = `${item.trainee_url}#cancellationIndemnityModal`;
 
     populateSelect(caseForm.elements.namedItem("case_status"), options.case_statuses, item.case_status);
     populateSelect(caseForm.elements.namedItem("origin"), options.origins, state.origin);
+    populateSelect(
+      caseForm.elements.namedItem("exclusion_reason"),
+      [["", "Choisir un motif"], ...(options.exclusion_reasons || [])],
+      state.exclusion_reason,
+    );
     populateSelect(caseForm.elements.namedItem("reason"), options.reasons, state.reason);
     populateSelect(caseForm.elements.namedItem("decision"), options.decisions, state.decision);
     populateSelect(caseForm.elements.namedItem("payment_terms"), options.payment_terms, state.payment_terms);
@@ -491,7 +552,8 @@
     populateSelect(contactForm.elements.namedItem("channel"), options.contact_channels, "email");
     populateSelect(contactForm.elements.namedItem("outcome"), options.contact_outcomes, "sent");
 
-    ["assigned_to", "reason_details", "request_received_at", "confirmation_received_at", "next_action_date", "payment_due_date", "payment_plan_notes", "adjustment_reason", "internal_notes"].forEach((name) => setField(name, state[name] || ""));
+    setChecked("excluded_from_follow_up", item.excluded_from_follow_up);
+    ["assigned_to", "reason_details", "exclusion_details", "request_received_at", "confirmation_received_at", "next_action_date", "payment_due_date", "payment_plan_notes", "adjustment_reason", "internal_notes"].forEach((name) => setField(name, state[name] || ""));
     setField("manual_total_due_amount", moneyInput(state.manual_total_due_cents));
     const inputs = state.calculation_inputs || {};
     setField("calculation_cancellation_date", inputs.cancellation_date || calculation.cancellation_date || item.cancellation_date || "");
@@ -501,16 +563,25 @@
     setField("calculation_delivered_hours", inputs.delivered_hours ?? calculation.delivered_hours ?? "");
 
     const calculationBanner = document.getElementById("cancellationCalculationBanner");
-    calculationBanner.classList.toggle("is-error", Boolean(item.calculation_error || !item.calculation_complete));
-    document.getElementById("cancellationCalculationRule").textContent = item.calculation_error || item.rule_label || "Calcul à finaliser";
-    document.getElementById("cancellationCalculationBreakdown").textContent = item.calculation_complete
-      ? `${item.penalty_rate || 0} % du coût initial${item.prorata_cents ? ` + ${money(item.prorata_cents)} de formation dispensée` : ""}`
-      : "Complétez les informations manquantes avant de valider le montant.";
+    calculationBanner.classList.toggle("is-error", Boolean(!item.excluded_from_follow_up && (item.calculation_error || !item.calculation_complete)));
+    calculationBanner.classList.toggle("is-excluded", Boolean(item.excluded_from_follow_up));
+    document.getElementById("cancellationCalculationRule").textContent = item.excluded_from_follow_up
+      ? "Dossier hors suivi financier"
+      : item.calculation_error || item.rule_label || "Calcul à finaliser";
+    document.getElementById("cancellationCalculationBreakdown").textContent = item.excluded_from_follow_up
+      ? "Le calcul éventuel est conservé pour la traçabilité, sans alimenter les indicateurs."
+      : item.calculation_complete
+        ? `${item.penalty_rate || 0} % du coût initial${item.prorata_cents ? ` + ${money(item.prorata_cents)} de formation dispensée` : ""}`
+        : "Complétez les informations manquantes avant de valider le montant.";
     updateFinancialDisplay(item);
 
     const paymentBalance = document.getElementById("cancellationPaymentBalance");
-    paymentBalance.classList.toggle("is-alert", Boolean(item.refund_due_cents || item.overdue_days));
-    if (item.refund_due_cents) {
+    paymentBalance.classList.toggle("is-alert", Boolean(!item.excluded_from_follow_up && (item.refund_due_cents || item.overdue_days)));
+    paymentBalance.classList.toggle("is-excluded", Boolean(item.excluded_from_follow_up));
+    if (item.excluded_from_follow_up) {
+      const recorded = Number(item.raw_financials?.payments_received_cents || 0);
+      paymentBalance.textContent = `Ce dossier est hors suivi financier : aucun règlement n’est attendu ni comptabilisé${recorded ? `. ${money(recorded)} restent visibles dans l’historique et peuvent être annulés en cas d’erreur` : ""}.`;
+    } else if (item.refund_due_cents) {
       paymentBalance.textContent = `${money(item.refund_due_cents)} ont été versés en trop : remboursement à vérifier.`;
     } else if (item.remaining_cents) {
       paymentBalance.textContent = `${money(item.remaining_cents)} restent à encaisser sur ${money(item.effective_total_due_cents)}${item.overdue_days ? ` · échéance dépassée de ${item.overdue_days} jour(s)` : ""}.`;
@@ -536,7 +607,7 @@
     paymentForm.querySelectorAll("input,select,textarea,button").forEach((field) => { field.disabled = Boolean(pageData.is_read_only); });
     contactForm.querySelectorAll("input,select,textarea,button").forEach((field) => { field.disabled = Boolean(pageData.is_read_only); });
     if (saveButton) saveButton.disabled = Boolean(pageData.is_read_only);
-    syncDecisionFields();
+    syncExclusionFields();
   }
 
   function activateTab(tab) {
@@ -619,6 +690,9 @@
       case_status: fieldValue("case_status"),
       assigned_to: fieldValue("assigned_to"),
       origin: fieldValue("origin"),
+      excluded_from_follow_up: checkboxValue("excluded_from_follow_up"),
+      exclusion_reason: fieldValue("exclusion_reason"),
+      exclusion_details: fieldValue("exclusion_details"),
       reason: fieldValue("reason"),
       request_received_at: fieldValue("request_received_at"),
       confirmation_received_at: fieldValue("confirmation_received_at"),
@@ -655,7 +729,7 @@
 
   paymentForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (!currentItem || pageData.is_read_only) return;
+    if (!currentItem || pageData.is_read_only || checkboxValue("excluded_from_follow_up")) return;
     const button = paymentForm.querySelector('button[type="submit"]');
     const formData = new FormData(paymentForm);
     setBusy(button, true, "Enregistrement…");
@@ -672,6 +746,7 @@
       showToast(error.message, true);
     } finally {
       setBusy(button, false);
+      syncExclusionFields();
     }
   });
 
@@ -747,6 +822,15 @@
   }
 
   caseForm?.elements.namedItem("decision")?.addEventListener("change", syncDecisionFields);
+  caseForm?.elements.namedItem("excluded_from_follow_up")?.addEventListener("change", syncExclusionFields);
+  caseForm?.elements.namedItem("origin")?.addEventListener("change", (event) => {
+    if (event.target.value !== "training_center") return;
+    const excludedField = caseForm?.elements.namedItem("excluded_from_follow_up");
+    const reasonField = caseForm?.elements.namedItem("exclusion_reason");
+    if (excludedField && !excludedField.checked) excludedField.checked = true;
+    if (reasonField && !reasonField.value) reasonField.value = "center_initiated";
+    syncExclusionFields();
+  });
   caseForm?.elements.namedItem("manual_total_due_amount")?.addEventListener("input", () => {
     if (currentItem) updateFinancialDisplay(currentItem);
   });

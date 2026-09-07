@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-cancellations.css', v='20260907-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-cancellations.css', v='20260907-2') }}">
 
 {% set kpis = dashboard.kpis %}
 <div class="cancellation-breadcrumbs">
@@ -29,7 +29,7 @@
   <div class="cancellation-kpis" aria-label="Indicateurs des annulations">
     <article class="cancellation-kpi cancellation-kpi--total">
       <span class="cancellation-kpi__icon" aria-hidden="true">◎</span>
-      <div><span>Dossiers annulés</span><strong>{{ kpis.total }}</strong><small>Toutes sessions</small></div>
+      <div><span>Dossiers à suivre</span><strong>{{ kpis.total }}</strong><small>{{ kpis.excluded }} hors suivi financier</small></div>
     </article>
     <article class="cancellation-kpi cancellation-kpi--attention">
       <span class="cancellation-kpi__icon" aria-hidden="true">!</span>
@@ -76,10 +76,11 @@
     </div>
 
     <div class="cancellation-quick-filters" role="group" aria-label="Filtres rapides">
-      <button type="button" class="is-active" data-quick-filter="all">Tous <span>{{ kpis.total }}</span></button>
+      <button type="button" class="is-active" data-quick-filter="all">Tous <span>{{ kpis.all_total }}</span></button>
       <button type="button" data-quick-filter="attention">À suivre <span>{{ kpis.attention }}</span></button>
       <button type="button" data-quick-filter="overdue">En retard <span>{{ kpis.overdue }}</span></button>
       <button type="button" data-quick-filter="paid">Soldés <span>{{ kpis.settled }}</span></button>
+      {% if kpis.excluded %}<button type="button" data-quick-filter="excluded">Hors suivi <span>{{ kpis.excluded }}</span></button>{% endif %}
     </div>
 
     <div class="cancellation-filters">
@@ -160,9 +161,11 @@
               data-export-cancellation="{{ item.cancellation_date }}"
               data-export-case-status="{{ item.case_status_label }}"
               data-export-collection-status="{{ item.collection_status_label }}"
-              data-export-total="{{ item.effective_total_due_label }}"
-              data-export-paid="{{ item.credited_total_label }}"
-              data-export-remaining="{{ item.remaining_label }}"
+              data-export-total="{{ 'Non applicable' if item.excluded_from_follow_up else item.effective_total_due_label }}"
+              data-export-paid="{{ 'Non applicable' if item.excluded_from_follow_up else item.credited_total_label }}"
+              data-export-remaining="{{ 'Non applicable' if item.excluded_from_follow_up else item.remaining_label }}"
+              data-export-scope="{{ 'Hors suivi financier' if item.excluded_from_follow_up else 'Pris en compte' }}"
+              data-export-exclusion-reason="{{ item.exclusion_reason_label }}"
               data-export-due="{{ item.payment_due_date }}"
               data-export-next-action="{{ item.next_action_date }}"
               data-export-assignee="{{ item.assigned_to }}">
@@ -192,16 +195,26 @@
             <td data-label="Suivi du dossier">
               <span class="cancellation-status cancellation-status--case-{{ item.case_status }}">{{ item.case_status_label }}</span>
               <span class="cancellation-status cancellation-status--money-{{ item.collection_status }}">{{ item.collection_status_label }}</span>
-              {% if item.assigned_to %}<span class="cancellation-assignee"><i aria-hidden="true">●</i> {{ item.assigned_to }}</span>{% else %}<span class="cancellation-inline-muted">Non attribué</span>{% endif %}
+              {% if item.excluded_from_follow_up %}
+                <span class="cancellation-exclusion-reason">{{ item.exclusion_reason_label or "Motif à préciser" }}</span>
+              {% elif item.assigned_to %}<span class="cancellation-assignee"><i aria-hidden="true">●</i> {{ item.assigned_to }}</span>{% else %}<span class="cancellation-inline-muted">Non attribué</span>{% endif %}
             </td>
             <td data-label="Indemnité">
-              <strong class="cancellation-money">{{ item.effective_total_due_label }}</strong>
-              <span class="cancellation-subtext">{{ item.penalty_rate|int }} %{% if item.prorata_cents %} + prorata{% endif %}</span>
-              <span class="cancellation-subtext cancellation-rule" title="{{ item.rule_label }}">{{ item.rule_label }}</span>
-              {% if not item.calculation_complete %}<span class="cancellation-inline-alert">Calcul à vérifier</span>{% endif %}
+              {% if item.excluded_from_follow_up %}
+                <strong class="cancellation-not-applicable">Non applicable</strong>
+                <span class="cancellation-subtext">Exclu des indicateurs</span>
+              {% else %}
+                <strong class="cancellation-money">{{ item.effective_total_due_label }}</strong>
+                <span class="cancellation-subtext">{{ item.penalty_rate|int }} %{% if item.prorata_cents %} + prorata{% endif %}</span>
+                <span class="cancellation-subtext cancellation-rule" title="{{ item.rule_label }}">{{ item.rule_label }}</span>
+                {% if not item.calculation_complete %}<span class="cancellation-inline-alert">Calcul à vérifier</span>{% endif %}
+              {% endif %}
             </td>
             <td data-label="Règlement">
-              {% if item.refund_due_cents %}
+              {% if item.excluded_from_follow_up %}
+                <strong class="cancellation-not-applicable">Non suivi</strong>
+                <span class="cancellation-subtext">Aucun encaissement attendu</span>
+              {% elif item.refund_due_cents %}
                 <strong class="cancellation-money cancellation-money--refund">{{ item.refund_due_label }} à rembourser</strong>
               {% else %}
                 <div class="cancellation-payment-line"><strong>{{ item.credited_total_label }}</strong><span>/ {{ item.effective_total_due_label }}</span></div>
@@ -211,7 +224,9 @@
               {% endif %}
             </td>
             <td data-label="Prochaine action">
-              {% if item.next_action_date %}
+              {% if item.excluded_from_follow_up %}
+                <span class="cancellation-no-action">Aucune action requise</span>
+              {% elif item.next_action_date %}
                 <strong class="{% if item.next_action_overdue %}is-overdue{% endif %}">{{ item.next_action_date|frdate }}</strong>
                 <span class="cancellation-subtext">Planifiée</span>
               {% else %}
@@ -293,6 +308,16 @@
             <p>Planifiez la prochaine action pour ne laisser aucune annulation sans suite.</p>
           </div>
           <div class="cancellation-form-grid">
+            <div class="cancellation-exclusion-card cancellation-field--full">
+              <label class="cancellation-exclusion-toggle">
+                <input name="excluded_from_follow_up" type="checkbox">
+                <span><strong>Ne pas prendre en compte ce dossier</strong><small>Le dossier reste visible et traçable, mais il est retiré des indemnités, encaissements, retards et KPI.</small></span>
+              </label>
+              <div class="cancellation-exclusion-fields" id="cancellationExclusionFields" hidden>
+                <label><span>Motif de mise hors suivi</span><select name="exclusion_reason" data-options="exclusion_reasons"></select></label>
+                <label><span>Précisions</span><textarea name="exclusion_details" rows="2" maxlength="3000" placeholder="Ex. session annulée par le centre, dossier créé en double…"></textarea></label>
+              </div>
+            </div>
             <label><span>Statut du dossier</span><select name="case_status" data-options="case_statuses"></select></label>
             <label><span>Responsable</span><input name="assigned_to" type="text" maxlength="160" placeholder="Ex. Cassandre MENARD"></label>
             <label><span>Origine de l’annulation</span><select name="origin" data-options="origins"></select></label>
@@ -408,5 +433,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='js/admin-cancellations.js', v='20260907-1') }}"></script>
+<script src="{{ url_for('static', filename='js/admin-cancellations.js', v='20260907-2') }}"></script>
 {% endblock %}

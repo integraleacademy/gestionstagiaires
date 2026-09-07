@@ -42411,7 +42411,9 @@ def api_registration_cancellation_email_send(session_id: str, trainee_id: str):
         'total_training_hours': calculation.get('total_training_hours'),
         'delivered_hours': calculation.get('delivered_hours'),
     })
-    if int(calculation.get('balance_due_cents') or 0) > 0:
+    if cancellation_tracking.get('excluded_from_follow_up'):
+        cancellation_tracking['case_status'] = 'closed'
+    elif int(calculation.get('balance_due_cents') or 0) > 0:
         if cancellation_tracking.get('case_status') in {
             'to_process', 'awaiting_confirmation', 'calculation_required'
         }:
@@ -42493,6 +42495,14 @@ CANCELLATION_ORIGIN_OPTIONS = (
     ("other", "Autre"),
 )
 CANCELLATION_ORIGIN_LABELS = dict(CANCELLATION_ORIGIN_OPTIONS)
+CANCELLATION_EXCLUSION_REASON_OPTIONS = (
+    ("center_initiated", "Annulation à l’initiative du centre"),
+    ("duplicate_or_test", "Doublon / dossier test"),
+    ("administrative_error", "Erreur administrative"),
+    ("rescheduled", "Report vers une autre session"),
+    ("other", "Autre"),
+)
+CANCELLATION_EXCLUSION_REASON_LABELS = dict(CANCELLATION_EXCLUSION_REASON_OPTIONS)
 CANCELLATION_REASON_OPTIONS = (
     ("personal", "Motif personnel"),
     ("medical", "Motif médical"),
@@ -42552,6 +42562,7 @@ CANCELLATION_CONTACT_OUTCOME_OPTIONS = (
 )
 CANCELLATION_CONTACT_OUTCOME_LABELS = dict(CANCELLATION_CONTACT_OUTCOME_OPTIONS)
 CANCELLATION_COLLECTION_STATUS_LABELS = {
+    "excluded": "Hors suivi financier",
     "pending": "À encaisser",
     "partial": "Partiellement payé",
     "overdue": "En retard",
@@ -42560,6 +42571,10 @@ CANCELLATION_COLLECTION_STATUS_LABELS = {
     "waived": "Abandonné",
     "calculation_required": "Calcul à finaliser",
 }
+
+
+class _CancellationTrackingConflict(ValueError):
+    """Business conflict that must not persist a partial tracking mutation."""
 
 
 def _cancellation_text(value: Any, *, max_length: int = 2000) -> str:
@@ -42612,6 +42627,10 @@ def _registration_cancellation_tracking_state(
     cancelled_date = cancelled_at[:10] if _parse_iso_date(cancelled_at) else ""
     state.setdefault("case_status", "to_process")
     state.setdefault("origin", "trainee")
+    state.setdefault("excluded_from_follow_up", False)
+    state.setdefault("exclusion_reason", "")
+    state.setdefault("exclusion_details", "")
+    state.setdefault("case_status_before_exclusion", "")
     state.setdefault("reason", "other")
     state.setdefault("reason_details", "")
     state.setdefault("request_received_at", cancelled_date)
@@ -42641,6 +42660,13 @@ def _registration_cancellation_tracking_state(
         state["case_status"] = "to_process"
     if state.get("origin") not in CANCELLATION_ORIGIN_LABELS:
         state["origin"] = "other"
+    excluded_value = state.get("excluded_from_follow_up")
+    if not isinstance(excluded_value, bool):
+        state["excluded_from_follow_up"] = str(excluded_value or "").strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+    if state.get("exclusion_reason") not in CANCELLATION_EXCLUSION_REASON_LABELS:
+        state["exclusion_reason"] = "other" if state["excluded_from_follow_up"] else ""
     if state.get("reason") not in CANCELLATION_REASON_LABELS:
         state["reason"] = "other"
     if state.get("decision") not in CANCELLATION_DECISION_LABELS:
@@ -42804,6 +42830,7 @@ def _cancellation_tracking_item(
     )
     calculation_complete = bool(calculation.get("calculation_complete")) and not calculation_error
     contractual_total_due_cents = int(calculation.get("total_due_cents") or 0)
+    excluded_from_follow_up = bool(state.get("excluded_from_follow_up"))
     decision = str(state.get("decision") or "contractual")
     manual_total_due = state.get("manual_total_due_cents")
     if decision == "waived":
@@ -42819,13 +42846,32 @@ def _cancellation_tracking_item(
     credited_total_cents = deductible_paid_cents + payments_received_cents
     remaining_cents = max(effective_total_due_cents - credited_total_cents, 0)
     refund_due_cents = max(credited_total_cents - effective_total_due_cents, 0)
+    raw_financials = {
+        "effective_total_due_cents": effective_total_due_cents,
+        "deductible_paid_cents": deductible_paid_cents,
+        "payments_received_cents": payments_received_cents,
+        "credited_total_cents": credited_total_cents,
+        "remaining_cents": remaining_cents,
+        "refund_due_cents": refund_due_cents,
+    }
+    if excluded_from_follow_up:
+        effective_total_due_cents = 0
+        deductible_paid_cents = 0
+        payments_received_cents = 0
+        credited_total_cents = 0
+        remaining_cents = 0
+        refund_due_cents = 0
     today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
     due_date = _parse_iso_date(str(state.get("payment_due_date") or ""))
     overdue_days = (today - due_date).days if due_date and due_date < today and remaining_cents > 0 else 0
     next_action_date = _parse_iso_date(str(state.get("next_action_date") or ""))
-    next_action_overdue = bool(next_action_date and next_action_date < today)
+    next_action_overdue = bool(
+        not excluded_from_follow_up and next_action_date and next_action_date < today
+    )
 
-    if calculation_error or (not calculation_complete and decision not in {"custom", "waived"}):
+    if excluded_from_follow_up:
+        collection_status = "excluded"
+    elif calculation_error or (not calculation_complete and decision not in {"custom", "waived"}):
         collection_status = "calculation_required"
     elif decision == "waived":
         collection_status = "waived"
@@ -42842,7 +42888,9 @@ def _cancellation_tracking_item(
 
     stored_tracking = trainee.get("cancellation_tracking")
     case_status = str(state.get("case_status") or "to_process")
-    if not isinstance(stored_tracking, dict):
+    if excluded_from_follow_up:
+        case_status = "closed"
+    elif not isinstance(stored_tracking, dict):
         if collection_status == "paid":
             case_status = "settled"
         elif collection_status == "waived":
@@ -42894,6 +42942,12 @@ def _cancellation_tracking_item(
         "collection_status_label": CANCELLATION_COLLECTION_STATUS_LABELS.get(collection_status, "À encaisser"),
         "origin": state.get("origin") or "trainee",
         "origin_label": CANCELLATION_ORIGIN_LABELS.get(str(state.get("origin") or ""), "Autre"),
+        "excluded_from_follow_up": excluded_from_follow_up,
+        "exclusion_reason": state.get("exclusion_reason") or "",
+        "exclusion_reason_label": CANCELLATION_EXCLUSION_REASON_LABELS.get(
+            str(state.get("exclusion_reason") or ""), ""
+        ),
+        "exclusion_details": state.get("exclusion_details") or "",
         "reason": state.get("reason") or "other",
         "reason_label": CANCELLATION_REASON_LABELS.get(str(state.get("reason") or ""), "Autre"),
         "reason_details": state.get("reason_details") or "",
@@ -42923,6 +42977,7 @@ def _cancellation_tracking_item(
         "credited_total_cents": credited_total_cents,
         "remaining_cents": remaining_cents,
         "refund_due_cents": refund_due_cents,
+        "raw_financials": raw_financials,
         "overdue_days": overdue_days,
         "paid_ratio": paid_ratio,
         "effective_total_due_label": _registration_cancellation_money_label(effective_total_due_cents),
@@ -42970,6 +43025,7 @@ def _cancellation_tracking_item(
             "options": {
                 "case_statuses": CANCELLATION_CASE_STATUS_OPTIONS,
                 "origins": CANCELLATION_ORIGIN_OPTIONS,
+                "exclusion_reasons": CANCELLATION_EXCLUSION_REASON_OPTIONS,
                 "reasons": CANCELLATION_REASON_OPTIONS,
                 "decisions": CANCELLATION_DECISION_OPTIONS,
                 "payment_terms": CANCELLATION_PAYMENT_TERMS_OPTIONS,
@@ -43003,7 +43059,7 @@ def _cancellation_tracking_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
 
     priority = {
         "overdue": 0, "calculation_required": 1, "refund_due": 2,
-        "partial": 3, "pending": 4, "paid": 8, "waived": 9,
+        "partial": 3, "pending": 4, "paid": 8, "waived": 9, "excluded": 10,
     }
     items.sort(key=lambda item: (
         priority.get(str(item.get("collection_status") or ""), 5),
@@ -43011,18 +43067,21 @@ def _cancellation_tracking_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
         str(item.get("cancellation_date") or ""),
         str(item.get("last_name") or ""),
     ))
-    total_remaining_cents = sum(int(item.get("remaining_cents") or 0) for item in items)
-    total_credited_cents = sum(int(item.get("credited_total_cents") or 0) for item in items)
-    total_refund_cents = sum(int(item.get("refund_due_cents") or 0) for item in items)
+    tracked_items = [item for item in items if not item.get("excluded_from_follow_up")]
+    total_remaining_cents = sum(int(item.get("remaining_cents") or 0) for item in tracked_items)
+    total_credited_cents = sum(int(item.get("credited_total_cents") or 0) for item in tracked_items)
+    total_refund_cents = sum(int(item.get("refund_due_cents") or 0) for item in tracked_items)
     settled_statuses = {"paid", "waived"}
     attention_statuses = {"pending", "partial", "overdue", "calculation_required", "refund_due"}
     kpis = {
-        "total": len(items),
-        "attention": sum(item.get("collection_status") in attention_statuses for item in items),
-        "overdue": sum(item.get("collection_status") == "overdue" for item in items),
-        "settled": sum(item.get("collection_status") in settled_statuses for item in items),
-        "disputed": sum(item.get("case_status") in {"disputed", "collections"} for item in items),
-        "refund_count": sum(int(item.get("refund_due_cents") or 0) > 0 for item in items),
+        "all_total": len(items),
+        "total": len(tracked_items),
+        "excluded": len(items) - len(tracked_items),
+        "attention": sum(item.get("collection_status") in attention_statuses for item in tracked_items),
+        "overdue": sum(item.get("collection_status") == "overdue" for item in tracked_items),
+        "settled": sum(item.get("collection_status") in settled_statuses for item in tracked_items),
+        "disputed": sum(item.get("case_status") in {"disputed", "collections"} for item in tracked_items),
+        "refund_count": sum(int(item.get("refund_due_cents") or 0) > 0 for item in tracked_items),
         "remaining_cents": total_remaining_cents,
         "remaining_label": _registration_cancellation_money_label(total_remaining_cents),
         "credited_cents": total_credited_cents,
@@ -43118,6 +43177,7 @@ def api_admin_cancellation_tracking_update(session_id: str, trainee_id: str):
             return {"ok": False, "error": response.get_json().get("error"), "status": status}
         state = _registration_cancellation_tracking_state(trainee, create=True)
         previous_status = str(state.get("case_status") or "to_process")
+        previous_excluded = bool(state.get("excluded_from_follow_up"))
         choice_fields = {
             "case_status": CANCELLATION_CASE_STATUS_LABELS,
             "origin": CANCELLATION_ORIGIN_LABELS,
@@ -43132,8 +43192,19 @@ def api_admin_cancellation_tracking_update(session_id: str, trainee_id: str):
             if value not in options:
                 raise ValueError(f"Valeur invalide pour {field}.")
             state[field] = value
+        if "excluded_from_follow_up" in payload:
+            excluded_value = payload.get("excluded_from_follow_up")
+            if not isinstance(excluded_value, bool):
+                raise ValueError("Le choix d’exclusion du suivi est invalide.")
+            state["excluded_from_follow_up"] = excluded_value
+        if "exclusion_reason" in payload:
+            exclusion_reason = _cancellation_text(payload.get("exclusion_reason"), max_length=80)
+            if exclusion_reason and exclusion_reason not in CANCELLATION_EXCLUSION_REASON_LABELS:
+                raise ValueError("Le motif de mise hors suivi est invalide.")
+            state["exclusion_reason"] = exclusion_reason
         text_fields = {
             "reason_details": 3000,
+            "exclusion_details": 3000,
             "assigned_to": 160,
             "payment_plan_notes": 3000,
             "adjustment_reason": 3000,
@@ -43150,13 +43221,38 @@ def api_admin_cancellation_tracking_update(session_id: str, trainee_id: str):
         ):
             if field in payload:
                 state[field] = _cancellation_optional_date(payload.get(field), label)
+        excluded_from_follow_up = bool(state.get("excluded_from_follow_up"))
+        if excluded_from_follow_up and not state.get("exclusion_reason"):
+            raise ValueError("Choisissez le motif de mise hors suivi.")
+        if excluded_from_follow_up:
+            if not previous_excluded:
+                state["case_status_before_exclusion"] = (
+                    previous_status if previous_status != "closed" else "to_process"
+                )
+            state["case_status"] = "closed"
+        elif previous_excluded and state.get("case_status") == "closed":
+            previous_tracked_status = str(state.get("case_status_before_exclusion") or "")
+            state["case_status"] = (
+                previous_tracked_status
+                if previous_tracked_status in CANCELLATION_CASE_STATUS_LABELS
+                else "to_process"
+            )
+            state["case_status_before_exclusion"] = ""
         if "manual_total_due_amount" in payload:
             state["manual_total_due_cents"] = _cancellation_optional_money_cents(
                 payload.get("manual_total_due_amount"), "Le montant ajusté"
             )
-        if state.get("decision") == "custom" and state.get("manual_total_due_cents") is None:
+        if (
+            not excluded_from_follow_up
+            and state.get("decision") == "custom"
+            and state.get("manual_total_due_cents") is None
+        ):
             raise ValueError("Renseignez le montant total ajusté.")
-        if state.get("decision") in {"custom", "waived"} and not state.get("adjustment_reason"):
+        if (
+            not excluded_from_follow_up
+            and state.get("decision") in {"custom", "waived"}
+            and not state.get("adjustment_reason")
+        ):
             raise ValueError("Expliquez la décision d’ajustement ou d’abandon de l’indemnité.")
         calculation_inputs = state.setdefault("calculation_inputs", {})
         input_labels = {
@@ -43185,9 +43281,10 @@ def api_admin_cancellation_tracking_update(session_id: str, trainee_id: str):
             _billing_lines_for_trainee_session(data, trainee_id, session_id),
             state,
         )
-        if calculation_error:
+        if calculation_error and not excluded_from_follow_up:
             raise ValueError(calculation_error)
-        state["calculation_snapshot"] = copy.deepcopy(calculation)
+        if not calculation_error:
+            state["calculation_snapshot"] = copy.deepcopy(calculation)
         now = _now_iso()
         state["updated_at"] = now
         state["updated_by"] = _cancellation_actor()
@@ -43199,22 +43296,49 @@ def api_admin_cancellation_tracking_update(session_id: str, trainee_id: str):
             )
         if payload.keys() - {"case_status"}:
             changed_labels.append("Informations du dossier actualisées")
-        _cancellation_tracking_append_event(
-            state,
-            "Suivi d’annulation mis à jour",
-            " · ".join(changed_labels) or "Dossier actualisé",
-            kind="update",
-            at=now,
-        )
+        exclusion_changed = excluded_from_follow_up != previous_excluded
+        if exclusion_changed:
+            if excluded_from_follow_up:
+                event_label = "Dossier placé hors suivi financier"
+                event_details = CANCELLATION_EXCLUSION_REASON_LABELS.get(
+                    str(state.get("exclusion_reason") or ""), "Motif non précisé"
+                )
+                if state.get("exclusion_details"):
+                    event_details += f" · {state['exclusion_details']}"
+            else:
+                event_label = "Dossier réintégré au suivi financier"
+                event_details = "Le dossier contribue à nouveau aux indicateurs et aux montants à suivre."
+            _cancellation_tracking_append_event(
+                state, event_label, event_details, kind="status", at=now
+            )
+        else:
+            event_label = "Suivi d’annulation mis à jour"
+            event_details = " · ".join(changed_labels) or "Dossier actualisé"
+            _cancellation_tracking_append_event(
+                state, event_label, event_details, kind="update", at=now
+            )
         trainee["updated_at"] = now
         append_trainee_history_event(
-            trainee, "Suivi d’annulation mis à jour",
-            CANCELLATION_CASE_STATUS_LABELS.get(str(state.get("case_status")), "À traiter"),
+            trainee, event_label,
+            event_details,
             "action", at=now,
         )
         _append_activity_log(
-            data, "registration_cancellation_tracking_updated", "trainee", trainee_id,
-            details={"session_id": session_id, "case_status": state.get("case_status")},
+            data,
+            (
+                "registration_cancellation_tracking_excluded"
+                if exclusion_changed and excluded_from_follow_up
+                else "registration_cancellation_tracking_reincluded"
+                if exclusion_changed
+                else "registration_cancellation_tracking_updated"
+            ),
+            "trainee", trainee_id,
+            details={
+                "session_id": session_id,
+                "case_status": state.get("case_status"),
+                "excluded_from_follow_up": excluded_from_follow_up,
+                "exclusion_reason": state.get("exclusion_reason") or "",
+            },
         )
         return {
             "ok": True,
@@ -43244,6 +43368,11 @@ def api_admin_cancellation_tracking_payment(session_id: str, trainee_id: str):
         if error_response:
             response, status = error_response
             return {"ok": False, "error": response.get_json().get("error"), "status": status}
+        current_state = _registration_cancellation_tracking_state(trainee)
+        if current_state.get("excluded_from_follow_up"):
+            raise _CancellationTrackingConflict(
+                "Ce dossier est hors suivi financier : aucun nouveau règlement ne peut être ajouté."
+            )
         amount_cents = _cancellation_optional_money_cents(payload.get("amount"), "Le montant")
         if not amount_cents:
             raise ValueError("Le montant doit être supérieur à zéro.")
@@ -43309,6 +43438,8 @@ def api_admin_cancellation_tracking_payment(session_id: str, trainee_id: str):
 
     try:
         result = update_data(mutate)
+    except _CancellationTrackingConflict as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 409
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     status = int(result.pop("status", 200)) if isinstance(result, dict) else 200
@@ -43348,7 +43479,9 @@ def api_admin_cancellation_tracking_payment_void(
         payment["void_reason"] = reason
         state["updated_at"] = voided_at
         state["updated_by"] = payment["voided_by"]
-        if state.get("case_status") == "settled":
+        if state.get("excluded_from_follow_up"):
+            state["case_status"] = "closed"
+        elif state.get("case_status") == "settled":
             state["case_status"] = "awaiting_payment"
         _cancellation_tracking_append_event(
             state, "Paiement annulé",
@@ -43401,6 +43534,8 @@ def api_admin_cancellation_tracking_contact(session_id: str, trainee_id: str):
         if not contacted_at:
             contacted_at = datetime.datetime.now(ZoneInfo("Europe/Paris")).date().isoformat()
         state = _registration_cancellation_tracking_state(trainee, create=True)
+        if state.get("excluded_from_follow_up"):
+            state["case_status"] = "closed"
         contact = {
             "id": uuid.uuid4().hex,
             "channel": channel,
@@ -43416,15 +43551,16 @@ def api_admin_cancellation_tracking_contact(session_id: str, trainee_id: str):
             state["next_action_date"] = _cancellation_optional_date(
                 payload.get("next_action_date"), "La prochaine action"
             )
-        if outcome == "dispute":
-            state["case_status"] = "disputed"
-        elif outcome == "payment_plan_agreed":
-            state["case_status"] = "payment_plan"
-            state["payment_terms"] = "installments"
-        elif outcome in {"confirmed", "promise_to_pay"} and state.get("case_status") in {
-            "to_process", "awaiting_confirmation", "calculation_required"
-        }:
-            state["case_status"] = "awaiting_payment"
+        if not state.get("excluded_from_follow_up"):
+            if outcome == "dispute":
+                state["case_status"] = "disputed"
+            elif outcome == "payment_plan_agreed":
+                state["case_status"] = "payment_plan"
+                state["payment_terms"] = "installments"
+            elif outcome in {"confirmed", "promise_to_pay"} and state.get("case_status") in {
+                "to_process", "awaiting_confirmation", "calculation_required"
+            }:
+                state["case_status"] = "awaiting_payment"
         now = contact["created_at"]
         state["updated_at"] = now
         state["updated_by"] = contact["created_by"]
