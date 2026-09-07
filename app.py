@@ -18268,7 +18268,10 @@ def admin_sessions_conventions():
                     convention["status"] = status_key
                     convention["label"] = "Signée"
                     convention["tone"] = "complete"
-            signed_pdf = bool(state.get("signed_pdf_path"))
+            signed_pdf = status_key == "signed" and bool(
+                _existing_yousign_signed_convention_pdf(state, trainee_id)
+                or _recoverable_yousign_convention_request_id(trainee)
+            )
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
             row_needs_action = status_key in {"not_generated", "generated", "expired", "refused"}
             row_needs_printing = status_key == "signed" and not bool(trainee.get("printed"))
@@ -35114,12 +35117,91 @@ def _find_trainee_by_yousign_request_id(data: Dict[str, Any], request_id: str):
     return None, None, None
 
 
+def _yousign_signed_convention_roots() -> Tuple[str, ...]:
+    """Return every trusted directory that may contain a signed convention."""
+    return (
+        os.path.realpath(YOUSIGN_SIGNED_DIR),
+        os.path.realpath(os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_convocations")),
+    )
+
+
+def _is_pdf_file(path: str) -> bool:
+    """Reject empty files and HTML error pages accidentally saved with a PDF name."""
+    try:
+        if not os.path.isfile(path) or os.path.getsize(path) <= 0:
+            return False
+        with open(path, "rb") as pdf_file:
+            return b"%PDF-" in pdf_file.read(1024)
+    except OSError:
+        return False
+
+
+def _existing_yousign_signed_convention_pdf(
+    state: Dict[str, Any],
+    trainee_id: str = "",
+) -> str:
+    """Resolve a valid local signed PDF, including paths saved before a disk move."""
+    candidates: List[str] = []
+    stored_path = str(state.get("signed_pdf_path") or "").strip()
+    if stored_path:
+        candidates.append(stored_path)
+
+    stored_token = str(state.get("signed_pdf_token") or "").strip().replace("\\", "/").lstrip("/")
+    if stored_token:
+        candidates.append(os.path.join(PERSIST_DIR, stored_token))
+
+    roots = _yousign_signed_convention_roots()
+    if stored_path:
+        stored_name = os.path.basename(stored_path)
+        candidates.extend(os.path.join(root, stored_name) for root in roots)
+    if trainee_id:
+        expected_name = f"convention_formation_aps_{_safe_filename_part(trainee_id)}_signee.pdf"
+        candidates.extend(os.path.join(root, expected_name) for root in roots)
+
+    seen = set()
+    for candidate in candidates:
+        real_path = os.path.realpath(str(candidate or ""))
+        if not real_path or real_path in seen:
+            continue
+        seen.add(real_path)
+        try:
+            is_allowed = any(os.path.commonpath((real_path, root)) == root for root in roots)
+        except ValueError:
+            is_allowed = False
+        if is_allowed and _is_pdf_file(real_path):
+            return real_path
+    return ""
+
+
+def _recoverable_yousign_convention_request_id(trainee: Dict[str, Any]) -> str:
+    """Find a completed Yousign request that can recreate a missing local PDF."""
+    candidates = [_yousign_state(trainee)]
+    history = trainee.get("convention_signature_history")
+    if isinstance(history, list):
+        candidates.extend(item for item in reversed(history) if isinstance(item, dict))
+    for candidate in candidates:
+        request_id = str(candidate.get("signature_request_id") or "").strip()
+        if request_id and (_is_yousign_signature_done(candidate) or candidate.get("signed_at")):
+            return request_id
+    return ""
+
+
 def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> str:
     response = _yousign_request("GET", f"/signature_requests/{signature_request_id}/documents/download", params={"version": "completed", "archive": "false"}, headers={"Accept": "application/pdf"})
+    pdf_bytes = response.content or b""
+    if b"%PDF-" not in pdf_bytes[:1024]:
+        raise RuntimeError("Yousign n’a pas renvoyé un PDF signé valide.")
+    os.makedirs(YOUSIGN_SIGNED_DIR, exist_ok=True)
     path = os.path.join(YOUSIGN_SIGNED_DIR, f"convention_formation_aps_{_safe_filename_part(trainee_id)}_signee.pdf")
-    with open(path, "wb") as fh:
-        fh.write(response.content)
-    if not os.path.exists(path) or os.path.getsize(path) <= 0:
+    temporary_path = f"{path}.{uuid.uuid4().hex}.tmp"
+    try:
+        with open(temporary_path, "wb") as fh:
+            fh.write(pdf_bytes)
+        os.replace(temporary_path, path)
+    finally:
+        if os.path.exists(temporary_path):
+            os.remove(temporary_path)
+    if not _is_pdf_file(path):
         raise RuntimeError("Téléchargement du PDF signé Yousign vide.")
     return path
 
@@ -35987,7 +36069,12 @@ def run_training_convocation_reminders(data: Optional[Dict[str, Any]] = None) ->
 
 def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
     state = _yousign_state(trainee)
-    if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
+    existing_signed_path = _existing_yousign_signed_convention_pdf(
+        state,
+        str(trainee.get("id") or ""),
+    )
+    if _is_yousign_signature_done(state) and existing_signed_path:
+        state["signed_pdf_path"] = existing_signed_path
         return
     signed_path = _download_yousign_signed_pdf(request_id, str(trainee.get("id") or ""))
     now = _now_iso()
@@ -37344,6 +37431,22 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
 
     convention_signed = convention_status == "signed"
     convention_sent = convention_status in {"sent", "waiting_signature", "signed"}
+    signed_pdf_path = _existing_yousign_signed_convention_pdf(state, trainee_id)
+    recoverable_signed_request_id = _recoverable_yousign_convention_request_id(trainee)
+    if convention_signed and (signed_pdf_path or recoverable_signed_request_id):
+        convention_download_url = url_for(
+            "admin_view_signed_convention",
+            session_id=session_id,
+            trainee_id=trainee_id,
+        )
+    elif not convention_signed and has_generated_convention:
+        convention_download_url = url_for(
+            "admin_view_original_convention",
+            session_id=session_id,
+            trainee_id=trainee_id,
+        )
+    else:
+        convention_download_url = ""
     convocation_sent_at_raw = trainee.get("convocation_aps_sent_at") or ""
     convocation_error = trainee.get("convocation_aps_last_error") or ""
     if not convocation_error and not convocation_sent_at_raw:
@@ -37464,10 +37567,10 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "progress_percent": progress_percent,
         "convention": {
             "status": convention_status, "label": c_label, "icon": c_icon, "icon_class": "automation-icon--hourglass" if c_icon == "hourglass" else "", "tone": c_tone, "card_tone": c_card_tone,
-            "primary_action": c_primary_action, "can_send": True, "can_download": bool(has_generated_convention or state.get("signed_pdf_path")),
+            "primary_action": c_primary_action, "can_send": True, "can_download": bool(convention_download_url),
             "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
             "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
-            "download_url": url_for("admin_view_signed_convention" if convention_signed and state.get("signed_pdf_path") else "admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if (has_generated_convention or state.get("signed_pdf_path")) else "",
+            "download_url": convention_download_url,
             "error": convention_error,
             "timeline_steps": [
                 {"label": "Générée", "value": generated_at or "Pas encore effectué", "state": "done" if generated_at else "blocked"},
@@ -47554,17 +47657,44 @@ def cli_send_convocation_signature_reminders():
 @admin_login_required
 def admin_view_signed_convention(session_id: str, trainee_id: str):
     data = load_data()
-    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         abort(404)
     state = _yousign_state(t)
-    pdf_path = str(state.get("signed_pdf_path") or "")
-    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
-    roots = [
-        os.path.abspath(YOUSIGN_SIGNED_DIR),
-        os.path.abspath(os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_convocations")),
-    ]
-    if not abs_path or not any(abs_path.startswith(root + os.sep) for root in roots) or not os.path.exists(abs_path):
+    abs_path = _existing_yousign_signed_convention_pdf(state, trainee_id)
+    if not abs_path:
+        request_id = _recoverable_yousign_convention_request_id(t)
+        if not request_id:
+            app.logger.warning(
+                "[YOUSIGN] signed convention unavailable trainee_id=%s reason=missing_request_id",
+                trainee_id,
+            )
+            abort(404)
+        if not _yousign_is_configured():
+            app.logger.error(
+                "[YOUSIGN] signed convention recovery unavailable trainee_id=%s reason=not_configured",
+                trainee_id,
+            )
+            abort(503)
+        try:
+            _mark_yousign_convention_signed(data, s, trainees, t, request_id)
+            save_data(data)
+            state = _yousign_state(t)
+            abs_path = _existing_yousign_signed_convention_pdf(state, trainee_id)
+            app.logger.info(
+                "[YOUSIGN] signed convention recovered on download trainee_id=%s request_id=%s",
+                trainee_id,
+                request_id,
+            )
+        except Exception as exc:
+            app.logger.exception(
+                "[YOUSIGN] signed convention recovery failed trainee_id=%s request_id=%s error=%s",
+                trainee_id,
+                request_id,
+                _sanitize_yousign_error(str(exc)),
+            )
+            abort(502)
+    if not abs_path:
         abort(404)
     return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
