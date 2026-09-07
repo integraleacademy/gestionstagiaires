@@ -25,7 +25,7 @@
     "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
     "admin_sessions_billing", "admin_direct_debits", "admin_sessions_archived", "admin_cash_payments",
     "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
-    "admin_sales_tracking", "admin_exams", "admin_exam_detail"
+    "admin_sales_tracking", "admin_cancellation_tracking", "admin_exams", "admin_exam_detail"
   ] %}
   {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
   {% if show_admin_sidebar %}<script>document.body.classList.add('admin-sidebar-active');</script>{% endif %}
@@ -147,6 +147,7 @@
 
   {% if is_partner_space %}
     {% import "partner_sidebar.html" as ps %}
+    {% set cancellation_tracking_href = url_for('admin_cancellation_tracking', session_id=request.view_args.get('session_id')) if request.view_args and request.view_args.get('session_id') else url_for('admin_cancellation_tracking') %}
     {% set space_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
       {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
@@ -170,6 +171,7 @@
       {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
       {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"badge":sales_today_notification_count if (sales_today_notification_count or 0) > 0 else "","locked":not partner_has_module('sales')},
       {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
+      {"label":"Suivi annulations","icon":"wallet","href":cancellation_tracking_href,"endpoints":["admin_cancellation_tracking"],"locked":False},
       {"label":"Qonto · connexion dédiée requise","icon":"settings","href":"","endpoints":[],"locked":True},
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}

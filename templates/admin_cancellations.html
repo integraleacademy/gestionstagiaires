@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-cancellations.css', v='20260907-1') }}">
+
+{% set kpis = dashboard.kpis %}
+<div class="cancellation-breadcrumbs">
+  <a href="{{ url_for('admin_sessions') }}">← Retour aux sessions</a>
+</div>
+
+<section class="cancellation-hero" aria-labelledby="cancellationPageTitle">
+  <div class="cancellation-hero__glow cancellation-hero__glow--one" aria-hidden="true"></div>
+  <div class="cancellation-hero__glow cancellation-hero__glow--two" aria-hidden="true"></div>
+  <div class="cancellation-hero__content">
+    <div class="cancellation-hero__copy">
+      <span class="cancellation-eyebrow"><span aria-hidden="true">↘</span> Pilotage administratif & financier</span>
+      <h1 id="cancellationPageTitle">Suivi des annulations</h1>
+      <p>Centralisez chaque dossier annulé, le calcul de l’indemnité, les règlements, les relances et les prochaines actions.</p>
+    </div>
+    <div class="cancellation-hero__actions">
+      <button class="cancellation-btn cancellation-btn--ghost" type="button" id="cancellationExportCsv">
+        <span aria-hidden="true">⇩</span> Exporter la vue
+      </button>
+      <button class="cancellation-btn cancellation-btn--light" type="button" id="cancellationRefresh">
+        <span aria-hidden="true">↻</span> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <div class="cancellation-kpis" aria-label="Indicateurs des annulations">
+    <article class="cancellation-kpi cancellation-kpi--total">
+      <span class="cancellation-kpi__icon" aria-hidden="true">◎</span>
+      <div><span>Dossiers annulés</span><strong>{{ kpis.total }}</strong><small>Toutes sessions</small></div>
+    </article>
+    <article class="cancellation-kpi cancellation-kpi--attention">
+      <span class="cancellation-kpi__icon" aria-hidden="true">!</span>
+      <div><span>À suivre</span><strong>{{ kpis.attention }}</strong><small>Action encore nécessaire</small></div>
+    </article>
+    <article class="cancellation-kpi cancellation-kpi--late">
+      <span class="cancellation-kpi__icon" aria-hidden="true">◷</span>
+      <div><span>En retard</span><strong>{{ kpis.overdue }}</strong><small>Échéance dépassée</small></div>
+    </article>
+    <article class="cancellation-kpi cancellation-kpi--money">
+      <span class="cancellation-kpi__icon" aria-hidden="true">€</span>
+      <div><span>Reste à encaisser</span><strong>{{ kpis.remaining_label }}</strong><small>Sur les indemnités suivies</small></div>
+    </article>
+    <article class="cancellation-kpi cancellation-kpi--paid">
+      <span class="cancellation-kpi__icon" aria-hidden="true">✓</span>
+      <div><span>Déjà couvert</span><strong>{{ kpis.credited_label }}</strong><small>Versé ou imputé</small></div>
+    </article>
+    <article class="cancellation-kpi cancellation-kpi--settled">
+      <span class="cancellation-kpi__icon" aria-hidden="true">◆</span>
+      <div><span>Soldés</span><strong>{{ kpis.settled }}</strong><small>Dossiers payés ou abandonnés</small></div>
+    </article>
+  </div>
+</section>
+
+{% if kpis.refund_count %}
+<aside class="cancellation-refund-alert" role="status">
+  <span class="cancellation-refund-alert__icon" aria-hidden="true">↩</span>
+  <div>
+    <strong>{{ kpis.refund_count }} dossier{% if kpis.refund_count > 1 %}s{% endif %} avec un remboursement à vérifier</strong>
+    <span>{{ kpis.refund_label }} payé en trop au total. Ces dossiers sont remontés en priorité.</span>
+  </div>
+  <button type="button" data-quick-filter="refund_due">Afficher</button>
+</aside>
+{% endif %}
+
+<section class="cancellation-workspace" aria-label="Liste des dossiers annulés">
+  <div class="cancellation-toolbar">
+    <div class="cancellation-toolbar__heading">
+      <div>
+        <span class="cancellation-toolbar__eyebrow">Portefeuille d’annulations</span>
+        <h2>Les dossiers à piloter</h2>
+      </div>
+      <span class="cancellation-result-count" id="cancellationResultCount">{{ dashboard["items"]|length }} dossier{% if dashboard["items"]|length != 1 %}s{% endif %}</span>
+    </div>
+
+    <div class="cancellation-quick-filters" role="group" aria-label="Filtres rapides">
+      <button type="button" class="is-active" data-quick-filter="all">Tous <span>{{ kpis.total }}</span></button>
+      <button type="button" data-quick-filter="attention">À suivre <span>{{ kpis.attention }}</span></button>
+      <button type="button" data-quick-filter="overdue">En retard <span>{{ kpis.overdue }}</span></button>
+      <button type="button" data-quick-filter="paid">Soldés <span>{{ kpis.settled }}</span></button>
+    </div>
+
+    <div class="cancellation-filters">
+      <label class="cancellation-search cancellation-filter--wide">
+        <span class="sr-only">Rechercher</span>
+        <i aria-hidden="true">⌕</i>
+        <input type="search" id="cancellationSearch" placeholder="Nom, e-mail, téléphone ou session…" autocomplete="off">
+        <button type="button" id="cancellationSearchClear" aria-label="Effacer la recherche" hidden>×</button>
+      </label>
+      <label>
+        <span>État financier</span>
+        <select id="cancellationCollectionFilter">
+          <option value="">Tous les états</option>
+          {% for key, label in dashboard.filters.collection_statuses %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Statut du dossier</span>
+        <select id="cancellationCaseFilter">
+          <option value="">Tous les statuts</option>
+          {% for key, label in dashboard.filters.case_statuses %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Formation</span>
+        <select id="cancellationTrainingFilter">
+          <option value="">Toutes les formations</option>
+          {% for training_type in dashboard.filters.training_types %}<option value="{{ training_type }}">{{ training_type }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Session</span>
+        <select id="cancellationSessionFilter">
+          <option value="">Toutes les sessions</option>
+          {% for item in dashboard.filters.sessions %}<option value="{{ item.id }}" {% if item.id == initial_session_id %}selected{% endif %}>{{ item.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Responsable</span>
+        <select id="cancellationAssigneeFilter">
+          <option value="">Toute l’équipe</option>
+          <option value="__unassigned__">Non attribué</option>
+          {% for assignee in dashboard.filters.assignees %}<option value="{{ assignee }}">{{ assignee }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="cancellation-filter-reset" type="button" id="cancellationResetFilters">Réinitialiser</button>
+    </div>
+  </div>
+
+  <div class="cancellation-table-shell">
+    <div class="cancellation-table-scroll">
+      <table class="cancellation-table">
+        <thead>
+          <tr>
+            <th>Stagiaire</th>
+            <th>Formation & session</th>
+            <th>Annulation</th>
+            <th>Suivi du dossier</th>
+            <th>Indemnité</th>
+            <th>Règlement</th>
+            <th>Prochaine action</th>
+            <th><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody id="cancellationTableBody">
+          {% for item in dashboard["items"] %}
+          <tr class="cancellation-row"
+              data-case-key="{{ item.key }}"
+              data-search="{{ (item.full_name ~ ' ' ~ item.email ~ ' ' ~ item.phone ~ ' ' ~ item.session_name ~ ' ' ~ item.training_type)|lower }}"
+              data-case-status="{{ item.case_status }}"
+              data-collection-status="{{ item.collection_status }}"
+              data-training-type="{{ item.training_type }}"
+              data-session-id="{{ item.session_id }}"
+              data-assignee="{{ item.assigned_to or '__unassigned__' }}"
+              data-export-name="{{ item.full_name }}"
+              data-export-session="{{ item.session_name }}"
+              data-export-training="{{ item.training_type }}"
+              data-export-cancellation="{{ item.cancellation_date }}"
+              data-export-case-status="{{ item.case_status_label }}"
+              data-export-collection-status="{{ item.collection_status_label }}"
+              data-export-total="{{ item.effective_total_due_label }}"
+              data-export-paid="{{ item.credited_total_label }}"
+              data-export-remaining="{{ item.remaining_label }}"
+              data-export-due="{{ item.payment_due_date }}"
+              data-export-next-action="{{ item.next_action_date }}"
+              data-export-assignee="{{ item.assigned_to }}">
+            <td data-label="Stagiaire">
+              <div class="cancellation-person">
+                <span class="cancellation-avatar" aria-hidden="true">{{ (item.first_name[:1] ~ item.last_name[:1])|upper }}</span>
+                <div>
+                  <strong>{{ item.full_name or "Sans nom" }}</strong>
+                  {% if item.email %}<a href="mailto:{{ item.email }}">{{ item.email }}</a>{% endif %}
+                  {% if item.phone %}<span>{{ item.phone }}</span>{% endif %}
+                </div>
+              </div>
+            </td>
+            <td data-label="Formation & session">
+              <span class="cancellation-training-pill">{{ item.training_type or "Formation" }}</span>
+              <strong class="cancellation-session-name">{{ item.session_name }}</strong>
+              <span class="cancellation-subtext">
+                {{ item.session_start_date|frdate }} → {{ item.session_end_date|frdate }}
+                {% if item.session_archived %}<em>Archivée</em>{% endif %}
+              </span>
+            </td>
+            <td data-label="Annulation">
+              <strong>{{ item.cancellation_date|frdate if item.cancellation_date else "À renseigner" }}</strong>
+              <span class="cancellation-subtext">{{ item.reason_label }}</span>
+              {% if item.email_sent_at %}<span class="cancellation-inline-check">✓ Mail envoyé</span>{% else %}<span class="cancellation-inline-muted">Mail non envoyé</span>{% endif %}
+            </td>
+            <td data-label="Suivi du dossier">
+              <span class="cancellation-status cancellation-status--case-{{ item.case_status }}">{{ item.case_status_label }}</span>
+              <span class="cancellation-status cancellation-status--money-{{ item.collection_status }}">{{ item.collection_status_label }}</span>
+              {% if item.assigned_to %}<span class="cancellation-assignee"><i aria-hidden="true">●</i> {{ item.assigned_to }}</span>{% else %}<span class="cancellation-inline-muted">Non attribué</span>{% endif %}
+            </td>
+            <td data-label="Indemnité">
+              <strong class="cancellation-money">{{ item.effective_total_due_label }}</strong>
+              <span class="cancellation-subtext">{{ item.penalty_rate|int }} %{% if item.prorata_cents %} + prorata{% endif %}</span>
+              <span class="cancellation-subtext cancellation-rule" title="{{ item.rule_label }}">{{ item.rule_label }}</span>
+              {% if not item.calculation_complete %}<span class="cancellation-inline-alert">Calcul à vérifier</span>{% endif %}
+            </td>
+            <td data-label="Règlement">
+              {% if item.refund_due_cents %}
+                <strong class="cancellation-money cancellation-money--refund">{{ item.refund_due_label }} à rembourser</strong>
+              {% else %}
+                <div class="cancellation-payment-line"><strong>{{ item.credited_total_label }}</strong><span>/ {{ item.effective_total_due_label }}</span></div>
+                <div class="cancellation-progress" aria-label="{{ item.paid_ratio }} % couvert"><i style="width:{{ item.paid_ratio }}%"></i></div>
+                {% if item.remaining_cents %}<span class="cancellation-remaining">Reste {{ item.remaining_label }}</span>{% else %}<span class="cancellation-paid-label">Soldé</span>{% endif %}
+                {% if item.overdue_days %}<span class="cancellation-overdue">{{ item.overdue_days }} j de retard</span>{% endif %}
+              {% endif %}
+            </td>
+            <td data-label="Prochaine action">
+              {% if item.next_action_date %}
+                <strong class="{% if item.next_action_overdue %}is-overdue{% endif %}">{{ item.next_action_date|frdate }}</strong>
+                <span class="cancellation-subtext">Planifiée</span>
+              {% else %}
+                <span class="cancellation-no-action">À programmer</span>
+              {% endif %}
+              {% if item.last_contact_at %}<span class="cancellation-subtext">Dernier contact {{ item.last_contact_at|frdate }}</span>{% endif %}
+            </td>
+            <td data-label="Actions">
+              <div class="cancellation-row-actions">
+                <button class="cancellation-manage-btn" type="button"
+                        data-open-cancellation-case
+                        data-detail-url="{{ item.detail_url }}">Gérer <span aria-hidden="true">→</span></button>
+                <a href="{{ item.trainee_url }}" aria-label="Ouvrir la fiche de {{ item.full_name }}" title="Ouvrir la fiche stagiaire">↗</a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cancellation-empty" id="cancellationEmpty" {% if dashboard["items"] %}hidden{% endif %}>
+      <span aria-hidden="true">✓</span>
+      <h3>{% if dashboard["items"] %}Aucun dossier ne correspond à ces filtres{% else %}Aucune inscription annulée{% endif %}</h3>
+      <p>{% if dashboard["items"] %}Modifiez ou réinitialisez les filtres pour retrouver vos dossiers.{% else %}Les prochaines inscriptions marquées comme annulées apparaîtront automatiquement ici.{% endif %}</p>
+      {% if dashboard["items"] %}<button type="button" data-empty-reset>Réinitialiser les filtres</button>{% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="cancellation-drawer-layer" id="cancellationDrawerLayer" hidden>
+  <button class="cancellation-drawer-backdrop" type="button" data-close-cancellation-drawer aria-label="Fermer"></button>
+  <aside class="cancellation-drawer" role="dialog" aria-modal="true" aria-labelledby="cancellationDrawerTitle">
+    <header class="cancellation-drawer__header">
+      <div class="cancellation-drawer__identity">
+        <span class="cancellation-drawer__avatar" id="cancellationDrawerAvatar" aria-hidden="true">IA</span>
+        <div>
+          <span class="cancellation-drawer__eyebrow">Dossier d’annulation</span>
+          <h2 id="cancellationDrawerTitle">Chargement…</h2>
+          <p id="cancellationDrawerSubtitle"></p>
+        </div>
+      </div>
+      <button class="cancellation-drawer__close" type="button" data-close-cancellation-drawer aria-label="Fermer">×</button>
+    </header>
+
+    <div class="cancellation-drawer__loading" id="cancellationDrawerLoading">
+      <span></span><span></span><span></span>
+      <strong>Ouverture du dossier…</strong>
+    </div>
+    <div class="cancellation-drawer__error" id="cancellationDrawerError" hidden>
+      <strong>Impossible d’ouvrir ce dossier</strong><p></p>
+    </div>
+
+    <div class="cancellation-drawer__body" id="cancellationDrawerBody" hidden>
+      <div class="cancellation-drawer__statusbar">
+        <span id="cancellationDrawerCaseStatus" class="cancellation-status"></span>
+        <span id="cancellationDrawerMoneyStatus" class="cancellation-status"></span>
+        <span id="cancellationDrawerUpdated"></span>
+      </div>
+
+      <div class="cancellation-drawer__summary">
+        <article><span>Indemnité retenue</span><strong id="cancellationSummaryDue">—</strong><small id="cancellationSummaryRule">—</small></article>
+        <article><span>Déjà couvert</span><strong id="cancellationSummaryPaid">—</strong><small>Versements antérieurs inclus</small></article>
+        <article class="is-balance"><span>Solde du dossier</span><strong id="cancellationSummaryRemaining">—</strong><small id="cancellationSummaryDueDate">Sans échéance</small></article>
+      </div>
+
+      <nav class="cancellation-tabs" role="tablist" aria-label="Sections du dossier">
+        <button type="button" class="is-active" role="tab" aria-selected="true" data-cancellation-tab="case">Dossier</button>
+        <button type="button" role="tab" aria-selected="false" data-cancellation-tab="indemnity">Indemnité</button>
+        <button type="button" role="tab" aria-selected="false" data-cancellation-tab="payments">Paiements <span id="cancellationPaymentsCount">0</span></button>
+        <button type="button" role="tab" aria-selected="false" data-cancellation-tab="contacts">Relances <span id="cancellationContactsCount">0</span></button>
+        <button type="button" role="tab" aria-selected="false" data-cancellation-tab="timeline">Historique</button>
+      </nav>
+
+      <form id="cancellationCaseForm">
+        <section class="cancellation-tab-panel is-active" role="tabpanel" data-cancellation-panel="case">
+          <div class="cancellation-section-heading">
+            <div><span>Organisation</span><h3>État et responsabilité du dossier</h3></div>
+            <p>Planifiez la prochaine action pour ne laisser aucune annulation sans suite.</p>
+          </div>
+          <div class="cancellation-form-grid">
+            <label><span>Statut du dossier</span><select name="case_status" data-options="case_statuses"></select></label>
+            <label><span>Responsable</span><input name="assigned_to" type="text" maxlength="160" placeholder="Ex. Cassandre MENARD"></label>
+            <label><span>Origine de l’annulation</span><select name="origin" data-options="origins"></select></label>
+            <label><span>Motif principal</span><select name="reason" data-options="reasons"></select></label>
+            <label><span>Demande reçue le</span><input name="request_received_at" type="date"></label>
+            <label><span>Confirmation reçue le</span><input name="confirmation_received_at" type="date"></label>
+            <label><span>Prochaine action</span><input name="next_action_date" type="date"></label>
+            <label><span>Échéance de paiement</span><input name="payment_due_date" type="date"></label>
+            <label class="cancellation-field--full"><span>Détail du motif</span><textarea name="reason_details" rows="3" maxlength="3000" placeholder="Contexte, demande du stagiaire, justificatif annoncé…"></textarea></label>
+            <label class="cancellation-field--full"><span>Notes internes</span><textarea name="internal_notes" rows="4" maxlength="6000" placeholder="Décisions, points de vigilance, éléments utiles à l’équipe…"></textarea></label>
+          </div>
+        </section>
+
+        <section class="cancellation-tab-panel" role="tabpanel" data-cancellation-panel="indemnity" hidden>
+          <div class="cancellation-section-heading">
+            <div><span>Article 9</span><h3>Calcul et décision financière</h3></div>
+            <p>Le calcul reprend automatiquement les règles 10 / 20 / 30 % et le prorata en cours de formation.</p>
+          </div>
+          <div class="cancellation-calculation-banner" id="cancellationCalculationBanner">
+            <span class="cancellation-calculation-banner__icon" aria-hidden="true">∑</span>
+            <div><strong id="cancellationCalculationRule">—</strong><span id="cancellationCalculationBreakdown">—</span></div>
+          </div>
+          <div class="cancellation-form-grid cancellation-form-grid--financial">
+            <label><span>Date d’annulation utilisée</span><input name="calculation_cancellation_date" type="date"></label>
+            <label><span>Coût initial de la formation (€)</span><input name="calculation_training_price_amount" inputmode="decimal" placeholder="Ex. 4 200"></label>
+            <label><span>Somme déjà encaissée (€)</span><input name="calculation_deductible_paid_amount" inputmode="decimal" placeholder="Ex. 420"></label>
+            <label><span>Durée totale (heures)</span><input name="calculation_total_training_hours" inputmode="decimal" placeholder="Automatique si connue"></label>
+            <label><span>Heures dispensées</span><input name="calculation_delivered_hours" inputmode="decimal" placeholder="Obligatoire si formation commencée"></label>
+            <label><span>Décision retenue</span><select name="decision" data-options="decisions"></select></label>
+            <label><span>Montant total ajusté (€)</span><input name="manual_total_due_amount" inputmode="decimal" placeholder="Uniquement si montant ajusté"></label>
+            <label><span>Modalité de paiement</span><select name="payment_terms" data-options="payment_terms"></select></label>
+            <label class="cancellation-field--full"><span>Motif de l’ajustement / abandon</span><textarea name="adjustment_reason" rows="3" maxlength="3000" placeholder="Obligatoire si le montant contractuel n’est pas appliqué…"></textarea></label>
+            <label class="cancellation-field--full"><span>Détail de l’échéancier convenu</span><textarea name="payment_plan_notes" rows="3" maxlength="3000" placeholder="Dates et montants convenus, conditions particulières…"></textarea></label>
+          </div>
+          <div class="cancellation-financial-recap">
+            <div><span>Pénalité contractuelle</span><strong id="cancellationRecapPenalty">—</strong></div>
+            <div><span>Prorata formation suivie</span><strong id="cancellationRecapProrata">—</strong></div>
+            <div><span>Total contractuel</span><strong id="cancellationRecapContractual">—</strong></div>
+            <div><span>Somme déjà imputée</span><strong id="cancellationRecapDeductible">—</strong></div>
+            <div class="is-highlight"><span>Montant retenu</span><strong id="cancellationRecapEffective">—</strong></div>
+            <div class="is-balance"><span>Reste à régler</span><strong id="cancellationRecapRemaining">—</strong></div>
+          </div>
+          <a class="cancellation-inline-link" id="cancellationOpenTraineeCalculator" href="#">Ouvrir la fiche stagiaire et prévisualiser le mail d’annulation <span aria-hidden="true">↗</span></a>
+        </section>
+      </form>
+
+      <section class="cancellation-tab-panel" role="tabpanel" data-cancellation-panel="payments" hidden>
+        <div class="cancellation-section-heading">
+          <div><span>Encaissements</span><h3>Registre des règlements</h3></div>
+          <p>Chaque versement est horodaté. Une erreur peut être annulée sans effacer l’historique.</p>
+        </div>
+        <div class="cancellation-payment-balance" id="cancellationPaymentBalance"></div>
+        <form class="cancellation-add-form" id="cancellationPaymentForm">
+          <div class="cancellation-add-form__title"><span aria-hidden="true">＋</span><div><strong>Ajouter un règlement</strong><small>Versement reçu au titre de cette annulation</small></div></div>
+          <div class="cancellation-form-grid">
+            <label><span>Date du paiement</span><input name="paid_at" type="date" required></label>
+            <label><span>Montant reçu (€)</span><input name="amount" inputmode="decimal" required placeholder="Ex. 420"></label>
+            <label><span>Mode de paiement</span><select name="method" data-options="payment_methods" required></select></label>
+            <label><span>Référence</span><input name="reference" maxlength="240" placeholder="Virement, chèque, opération…"></label>
+            <label class="cancellation-field--full"><span>Commentaire</span><textarea name="note" rows="2" maxlength="2000" placeholder="Précision facultative"></textarea></label>
+          </div>
+          <button type="submit" class="cancellation-btn cancellation-btn--primary">Enregistrer le règlement</button>
+        </form>
+        <div class="cancellation-record-list" id="cancellationPaymentList"></div>
+      </section>
+
+      <section class="cancellation-tab-panel" role="tabpanel" data-cancellation-panel="contacts" hidden>
+        <div class="cancellation-section-heading">
+          <div><span>Communication</span><h3>Relances et échanges</h3></div>
+          <p>Consignez les appels, e-mails, promesses de paiement et contestations.</p>
+        </div>
+        <form class="cancellation-add-form" id="cancellationContactForm">
+          <div class="cancellation-add-form__title"><span aria-hidden="true">＋</span><div><strong>Consigner une relance</strong><small>L’action rejoindra immédiatement l’historique du dossier</small></div></div>
+          <div class="cancellation-form-grid">
+            <label><span>Date de l’échange</span><input name="contacted_at" type="date" required></label>
+            <label><span>Canal</span><select name="channel" data-options="contact_channels" required></select></label>
+            <label><span>Résultat</span><select name="outcome" data-options="contact_outcomes" required></select></label>
+            <label><span>Prochaine action</span><input name="next_action_date" type="date"></label>
+            <label class="cancellation-field--full"><span>Compte rendu</span><textarea name="note" rows="3" maxlength="3000" placeholder="Ce qui a été dit, engagement pris, réponse reçue…"></textarea></label>
+          </div>
+          <button type="submit" class="cancellation-btn cancellation-btn--primary">Enregistrer la relance</button>
+        </form>
+        <div class="cancellation-record-list" id="cancellationContactList"></div>
+      </section>
+
+      <section class="cancellation-tab-panel" role="tabpanel" data-cancellation-panel="timeline" hidden>
+        <div class="cancellation-section-heading">
+          <div><span>Traçabilité</span><h3>Historique complet</h3></div>
+          <p>Modifications, relances, règlements et envoi du récapitulatif d’annulation.</p>
+        </div>
+        <div class="cancellation-timeline" id="cancellationTimeline"></div>
+      </section>
+    </div>
+
+    <footer class="cancellation-drawer__footer" id="cancellationDrawerFooter" hidden>
+      <a class="cancellation-btn cancellation-btn--secondary" id="cancellationOpenTrainee" href="#">Voir la fiche stagiaire <span aria-hidden="true">↗</span></a>
+      <div>
+        <button class="cancellation-btn cancellation-btn--secondary" type="button" data-close-cancellation-drawer>Fermer</button>
+        <button class="cancellation-btn cancellation-btn--primary" type="submit" form="cancellationCaseForm" id="cancellationSaveCase">Enregistrer le dossier</button>
+      </div>
+    </footer>
+  </aside>
+</div>
+
+<div class="cancellation-toast" id="cancellationToast" role="status" aria-live="polite" hidden></div>
+
+<script id="cancellationPageData" type="application/json">{{ {
+  "initial_session_id": initial_session_id,
+  "is_read_only": is_read_only,
+  "items": dashboard["items"]
+}|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/admin-cancellations.js', v='20260907-1') }}"></script>
+{% endblock %}

@@ -1781,9 +1781,15 @@ def money_value_to_cents(value: Any) -> int:
         return 0
     try:
         decimal_value = Decimal(str(value).replace(",", ".").strip())
-    except (InvalidOperation, TypeError, ValueError) as exc:
+        if not decimal_value.is_finite():
+            raise ValueError("Montant non fini")
+        return int(
+            (decimal_value * Decimal("100")).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+        )
+    except (InvalidOperation, OverflowError, TypeError, ValueError) as exc:
         raise ValueError("Montant Qonto invalide") from exc
-    return int((decimal_value * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 def cents_to_money(cents: Any) -> float:
@@ -26779,6 +26785,18 @@ def api_update_trainee(session_id: str, trainee_id: str):
         changed_at = _now_iso()
         if registration_cancelled:
             t["registration_cancelled_at"] = changed_at
+            cancellation_tracking = _registration_cancellation_tracking_state(t, create=True)
+            cancellation_tracking["case_status"] = "to_process"
+            cancellation_tracking["request_received_at"] = changed_at[:10]
+            cancellation_tracking["updated_at"] = changed_at
+            cancellation_tracking["updated_by"] = _cancellation_actor()
+            _cancellation_tracking_append_event(
+                cancellation_tracking,
+                "Dossier d’annulation ouvert",
+                "Le suivi administratif et financier est à compléter.",
+                kind="status",
+                at=changed_at,
+            )
             _close_notifications_for_cancelled_registration(data, session_id, trainee_id)
             append_trainee_history_event(
                 t,
@@ -26788,6 +26806,19 @@ def api_update_trainee(session_id: str, trainee_id: str):
             )
         else:
             t["registration_cancelled_at"] = ""
+            if isinstance(t.get("cancellation_tracking"), dict):
+                cancellation_tracking = _registration_cancellation_tracking_state(t, create=True)
+                cancellation_tracking["case_status"] = "closed"
+                cancellation_tracking["reactivated_at"] = changed_at
+                cancellation_tracking["updated_at"] = changed_at
+                cancellation_tracking["updated_by"] = _cancellation_actor()
+                _cancellation_tracking_append_event(
+                    cancellation_tracking,
+                    "Inscription réactivée",
+                    "Le suivi d’annulation est conservé en historique.",
+                    kind="status",
+                    at=changed_at,
+                )
             append_trainee_history_event(
                 t,
                 "Inscription réactivée",
@@ -42370,6 +42401,35 @@ def api_registration_cancellation_email_send(session_id: str, trainee_id: str):
         trainee.get('cancellation_email_sent_count') or 0
     ) + 1
     trainee['cancellation_email_last_calculation'] = copy.deepcopy(calculation)
+    cancellation_tracking = _registration_cancellation_tracking_state(trainee, create=True)
+    cancellation_tracking['calculation_snapshot'] = copy.deepcopy(calculation)
+    cancellation_inputs = cancellation_tracking.setdefault('calculation_inputs', {})
+    cancellation_inputs.update({
+        'cancellation_date': calculation.get('cancellation_date') or '',
+        'training_price_amount': cents_to_money(calculation.get('training_price_cents')),
+        'deductible_paid_amount': cents_to_money(calculation.get('deductible_paid_cents')),
+        'total_training_hours': calculation.get('total_training_hours'),
+        'delivered_hours': calculation.get('delivered_hours'),
+    })
+    if int(calculation.get('balance_due_cents') or 0) > 0:
+        if cancellation_tracking.get('case_status') in {
+            'to_process', 'awaiting_confirmation', 'calculation_required'
+        }:
+            cancellation_tracking['case_status'] = 'awaiting_payment'
+    elif int(calculation.get('refund_due_cents') or 0) <= 0:
+        cancellation_tracking['case_status'] = 'settled'
+    cancellation_tracking['updated_at'] = sent_at
+    cancellation_tracking['updated_by'] = _cancellation_actor()
+    _cancellation_tracking_append_event(
+        cancellation_tracking,
+        'Récapitulatif d’annulation envoyé',
+        (
+            f"Pénalité {_registration_cancellation_money_label(calculation.get('penalty_cents'))} · "
+            f"Solde {_registration_cancellation_money_label(calculation.get('balance_due_cents'))}"
+        ),
+        kind='email',
+        at=sent_at,
+    )
     trainee['updated_at'] = sent_at
     append_trainee_history_event(
         trainee,
@@ -42405,6 +42465,1004 @@ def api_registration_cancellation_email_send(session_id: str, trainee_id: str):
         'recipient': recipient,
         'subject': subject,
     })
+
+
+# =========================
+# SUIVI CENTRALISÉ DES ANNULATIONS
+# =========================
+
+CANCELLATION_CASE_STATUS_OPTIONS = (
+    ("to_process", "À traiter"),
+    ("awaiting_confirmation", "Confirmation attendue"),
+    ("calculation_required", "Calcul à finaliser"),
+    ("awaiting_payment", "Paiement attendu"),
+    ("payment_plan", "Échéancier en cours"),
+    ("disputed", "Contesté"),
+    ("collections", "Recouvrement"),
+    ("settled", "Soldé"),
+    ("waived", "Indemnité abandonnée"),
+    ("closed", "Clôturé"),
+)
+CANCELLATION_CASE_STATUS_LABELS = dict(CANCELLATION_CASE_STATUS_OPTIONS)
+CANCELLATION_ORIGIN_OPTIONS = (
+    ("trainee", "Stagiaire"),
+    ("company", "Entreprise / employeur"),
+    ("funder", "Financeur"),
+    ("training_center", "Centre de formation"),
+    ("force_majeure", "Force majeure"),
+    ("other", "Autre"),
+)
+CANCELLATION_ORIGIN_LABELS = dict(CANCELLATION_ORIGIN_OPTIONS)
+CANCELLATION_REASON_OPTIONS = (
+    ("personal", "Motif personnel"),
+    ("medical", "Motif médical"),
+    ("professional", "Motif professionnel"),
+    ("financing_refused", "Financement refusé"),
+    ("administrative", "Dossier administratif incomplet"),
+    ("no_show", "Absence / abandon sans nouvelle"),
+    ("rescheduled", "Report vers une autre session"),
+    ("center_cancellation", "Annulation par le centre"),
+    ("force_majeure", "Force majeure"),
+    ("other", "Autre"),
+)
+CANCELLATION_REASON_LABELS = dict(CANCELLATION_REASON_OPTIONS)
+CANCELLATION_DECISION_OPTIONS = (
+    ("contractual", "Indemnité contractuelle"),
+    ("custom", "Montant ajusté commercialement"),
+    ("waived", "Indemnité abandonnée"),
+    ("pending", "Décision à prendre"),
+)
+CANCELLATION_DECISION_LABELS = dict(CANCELLATION_DECISION_OPTIONS)
+CANCELLATION_PAYMENT_TERMS_OPTIONS = (
+    ("awaiting_choice", "Modalité à convenir"),
+    ("single", "Paiement en une fois"),
+    ("installments", "Paiement échelonné"),
+)
+CANCELLATION_PAYMENT_TERMS_LABELS = dict(CANCELLATION_PAYMENT_TERMS_OPTIONS)
+CANCELLATION_PAYMENT_METHOD_OPTIONS = (
+    ("bank_transfer", "Virement"),
+    ("check", "Chèque"),
+    ("direct_debit", "Prélèvement"),
+    ("card", "Carte bancaire"),
+    ("cash", "Espèces"),
+    ("credit", "Avoir / compensation"),
+    ("other", "Autre"),
+)
+CANCELLATION_PAYMENT_METHOD_LABELS = dict(CANCELLATION_PAYMENT_METHOD_OPTIONS)
+CANCELLATION_CONTACT_CHANNEL_OPTIONS = (
+    ("email", "E-mail"),
+    ("phone", "Téléphone"),
+    ("sms", "SMS"),
+    ("registered_letter", "Courrier recommandé"),
+    ("letter", "Courrier"),
+    ("meeting", "Entretien"),
+    ("internal_note", "Note interne"),
+)
+CANCELLATION_CONTACT_CHANNEL_LABELS = dict(CANCELLATION_CONTACT_CHANNEL_OPTIONS)
+CANCELLATION_CONTACT_OUTCOME_OPTIONS = (
+    ("sent", "Message envoyé"),
+    ("no_answer", "Sans réponse"),
+    ("reached", "Personne jointe"),
+    ("confirmed", "Annulation confirmée"),
+    ("promise_to_pay", "Promesse de paiement"),
+    ("payment_plan_agreed", "Échéancier accepté"),
+    ("dispute", "Contestation"),
+    ("document_received", "Justificatif reçu"),
+    ("other", "Autre"),
+)
+CANCELLATION_CONTACT_OUTCOME_LABELS = dict(CANCELLATION_CONTACT_OUTCOME_OPTIONS)
+CANCELLATION_COLLECTION_STATUS_LABELS = {
+    "pending": "À encaisser",
+    "partial": "Partiellement payé",
+    "overdue": "En retard",
+    "paid": "Payé",
+    "refund_due": "Remboursement à faire",
+    "waived": "Abandonné",
+    "calculation_required": "Calcul à finaliser",
+}
+
+
+def _cancellation_text(value: Any, *, max_length: int = 2000) -> str:
+    return str(value or "").replace("\x00", "").strip()[:max_length]
+
+
+def _cancellation_optional_date(value: Any, label: str) -> str:
+    raw = _cancellation_text(value, max_length=32)
+    if not raw:
+        return ""
+    parsed = _parse_iso_date(raw)
+    if parsed is None:
+        raise ValueError(f"{label} est invalide.")
+    return parsed.isoformat()
+
+
+def _cancellation_optional_money_cents(value: Any, label: str) -> Optional[int]:
+    if value in (None, ""):
+        return None
+    try:
+        cents = money_value_to_cents(value)
+    except ValueError as exc:
+        raise ValueError(f"{label} est invalide.") from exc
+    if cents < 0:
+        raise ValueError(f"{label} ne peut pas être négatif.")
+    if cents > 100_000_000:
+        raise ValueError(f"{label} dépasse la limite autorisée.")
+    return cents
+
+
+def _cancellation_actor() -> str:
+    if not has_request_context():
+        return "system"
+    return _cancellation_text(
+        session.get("admin_username") or session.get("admin_email") or "Administrateur",
+        max_length=160,
+    )
+
+
+def _registration_cancellation_tracking_state(
+    trainee: Dict[str, Any], *, create: bool = False
+) -> Dict[str, Any]:
+    raw = trainee.get("cancellation_tracking")
+    state = copy.deepcopy(raw) if isinstance(raw, dict) else {}
+    cancelled_at = str(
+        trainee.get("registration_cancelled_at")
+        or trainee.get("inscription_annulee_at")
+        or ""
+    ).strip()
+    cancelled_date = cancelled_at[:10] if _parse_iso_date(cancelled_at) else ""
+    state.setdefault("case_status", "to_process")
+    state.setdefault("origin", "trainee")
+    state.setdefault("reason", "other")
+    state.setdefault("reason_details", "")
+    state.setdefault("request_received_at", cancelled_date)
+    state.setdefault("confirmation_received_at", "")
+    state.setdefault("assigned_to", "")
+    state.setdefault("next_action_date", "")
+    state.setdefault("payment_due_date", "")
+    state.setdefault("payment_terms", "awaiting_choice")
+    state.setdefault("payment_plan_notes", "")
+    state.setdefault("decision", "contractual")
+    state.setdefault("manual_total_due_cents", None)
+    state.setdefault("adjustment_reason", "")
+    state.setdefault("internal_notes", "")
+    state.setdefault("calculation_inputs", {})
+    state.setdefault("calculation_snapshot", {})
+    state.setdefault("payments", [])
+    state.setdefault("contacts", [])
+    state.setdefault("events", [])
+    for collection_key in ("payments", "contacts", "events"):
+        if not isinstance(state.get(collection_key), list):
+            state[collection_key] = []
+    if not isinstance(state.get("calculation_inputs"), dict):
+        state["calculation_inputs"] = {}
+    if not isinstance(state.get("calculation_snapshot"), dict):
+        state["calculation_snapshot"] = {}
+    if state.get("case_status") not in CANCELLATION_CASE_STATUS_LABELS:
+        state["case_status"] = "to_process"
+    if state.get("origin") not in CANCELLATION_ORIGIN_LABELS:
+        state["origin"] = "other"
+    if state.get("reason") not in CANCELLATION_REASON_LABELS:
+        state["reason"] = "other"
+    if state.get("decision") not in CANCELLATION_DECISION_LABELS:
+        state["decision"] = "contractual"
+    if state.get("payment_terms") not in CANCELLATION_PAYMENT_TERMS_LABELS:
+        state["payment_terms"] = "awaiting_choice"
+    if create:
+        trainee["cancellation_tracking"] = state
+    return state
+
+
+def _cancellation_tracking_append_event(
+    state: Dict[str, Any],
+    label: str,
+    details: str = "",
+    *,
+    kind: str = "action",
+    at: str = "",
+) -> Dict[str, Any]:
+    events = state.setdefault("events", [])
+    if not isinstance(events, list):
+        events = state["events"] = []
+    event = {
+        "id": uuid.uuid4().hex,
+        "label": _cancellation_text(label, max_length=180) or "Action",
+        "details": _cancellation_text(details, max_length=2000),
+        "kind": _cancellation_text(kind, max_length=40) or "action",
+        "at": _cancellation_text(at, max_length=40) or _now_iso(),
+        "actor": _cancellation_actor(),
+    }
+    events.insert(0, event)
+    del events[250:]
+    return event
+
+
+def _cancellation_tracking_calculation(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    lines: List[Dict[str, Any]],
+    state: Dict[str, Any],
+) -> Tuple[Dict[str, Any], str]:
+    inputs = state.get("calculation_inputs") if isinstance(state.get("calculation_inputs"), dict) else {}
+    cancelled_at = str(trainee.get("registration_cancelled_at") or "").strip()
+    cancellation_date = (
+        inputs.get("cancellation_date")
+        or state.get("request_received_at")
+        or (cancelled_at[:10] if _parse_iso_date(cancelled_at) else "")
+        or datetime.datetime.now(ZoneInfo("Europe/Paris")).date().isoformat()
+    )
+    values = {
+        "cancellation_date": cancellation_date,
+        "delivered_hours": inputs.get("delivered_hours"),
+        "total_training_hours": inputs.get("total_training_hours"),
+        "training_price_amount": inputs.get("training_price_amount"),
+        "deductible_paid_amount": inputs.get("deductible_paid_amount"),
+    }
+    try:
+        calculation = _registration_cancellation_calculation_from_values(
+            session_obj, trainee, lines, values
+        )
+        return calculation, ""
+    except ValueError as exc:
+        snapshot = state.get("calculation_snapshot")
+        return (copy.deepcopy(snapshot) if isinstance(snapshot, dict) else {}), str(exc)
+
+
+def _active_cancellation_payments(state: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        item for item in state.get("payments", [])
+        if isinstance(item, dict) and not item.get("voided_at")
+    ]
+
+
+def _cancellation_tracking_timeline(
+    trainee: Dict[str, Any], state: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    timeline: List[Dict[str, Any]] = []
+    cancelled_at = str(trainee.get("registration_cancelled_at") or "").strip()
+    if cancelled_at:
+        timeline.append({
+            "id": "registration-cancelled",
+            "label": "Inscription annulée",
+            "details": "Le dossier a été conservé hors des effectifs et des indicateurs.",
+            "kind": "status",
+            "at": cancelled_at,
+            "actor": "",
+        })
+    email_sent_at = str(trainee.get("cancellation_email_sent_at") or "").strip()
+    if email_sent_at:
+        timeline.append({
+            "id": "cancellation-email",
+            "label": "Mail d’annulation envoyé",
+            "details": f"{int(trainee.get('cancellation_email_sent_count') or 1)} envoi(s) enregistré(s)",
+            "kind": "email",
+            "at": email_sent_at,
+            "actor": "",
+        })
+    for item in state.get("events", []):
+        if isinstance(item, dict):
+            if str(item.get("kind") or "") in {"payment", "contact", "email"}:
+                continue
+            if str(item.get("label") or "") == "Paiement annulé":
+                continue
+            timeline.append(copy.deepcopy(item))
+    for payment in state.get("payments", []):
+        if not isinstance(payment, dict):
+            continue
+        method_label = CANCELLATION_PAYMENT_METHOD_LABELS.get(
+            str(payment.get("method") or ""), "Paiement"
+        )
+        amount_label = _registration_cancellation_money_label(payment.get("amount_cents"))
+        if payment.get("voided_at"):
+            label = "Paiement annulé"
+            details = f"{amount_label} · {method_label} · {payment.get('void_reason') or 'Sans motif'}"
+            at = str(payment.get("voided_at") or payment.get("created_at") or "")
+            kind = "warning"
+        else:
+            label = "Paiement enregistré"
+            details = f"{amount_label} · {method_label}"
+            at = str(payment.get("paid_at") or payment.get("created_at") or "")
+            kind = "payment"
+        timeline.append({
+            "id": f"payment-{payment.get('id')}", "label": label,
+            "details": details, "kind": kind, "at": at,
+            "actor": payment.get("voided_by") or payment.get("created_by") or "",
+        })
+    for contact in state.get("contacts", []):
+        if not isinstance(contact, dict):
+            continue
+        channel = CANCELLATION_CONTACT_CHANNEL_LABELS.get(
+            str(contact.get("channel") or ""), "Contact"
+        )
+        outcome = CANCELLATION_CONTACT_OUTCOME_LABELS.get(
+            str(contact.get("outcome") or ""), ""
+        )
+        timeline.append({
+            "id": f"contact-{contact.get('id')}",
+            "label": f"{channel} · {outcome}" if outcome else channel,
+            "details": contact.get("note") or "",
+            "kind": "contact",
+            "at": contact.get("contacted_at") or contact.get("created_at") or "",
+            "actor": contact.get("created_by") or "",
+        })
+    timeline.sort(key=lambda item: _history_sort_key(str(item.get("at") or "")), reverse=True)
+    return timeline[:300]
+
+
+def _cancellation_tracking_item(
+    data: Dict[str, Any],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    include_detail: bool = False,
+) -> Dict[str, Any]:
+    state = _registration_cancellation_tracking_state(trainee)
+    session_id = str(session_obj.get("id") or "")
+    trainee_id = str(trainee.get("id") or "")
+    lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    calculation, calculation_error = _cancellation_tracking_calculation(
+        session_obj, trainee, lines, state
+    )
+    calculation_complete = bool(calculation.get("calculation_complete")) and not calculation_error
+    contractual_total_due_cents = int(calculation.get("total_due_cents") or 0)
+    decision = str(state.get("decision") or "contractual")
+    manual_total_due = state.get("manual_total_due_cents")
+    if decision == "waived":
+        effective_total_due_cents = 0
+    elif decision == "custom" and manual_total_due is not None:
+        effective_total_due_cents = max(int(manual_total_due or 0), 0)
+    else:
+        effective_total_due_cents = contractual_total_due_cents
+
+    deductible_paid_cents = int(calculation.get("deductible_paid_cents") or 0)
+    active_payments = _active_cancellation_payments(state)
+    payments_received_cents = sum(max(int(item.get("amount_cents") or 0), 0) for item in active_payments)
+    credited_total_cents = deductible_paid_cents + payments_received_cents
+    remaining_cents = max(effective_total_due_cents - credited_total_cents, 0)
+    refund_due_cents = max(credited_total_cents - effective_total_due_cents, 0)
+    today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    due_date = _parse_iso_date(str(state.get("payment_due_date") or ""))
+    overdue_days = (today - due_date).days if due_date and due_date < today and remaining_cents > 0 else 0
+    next_action_date = _parse_iso_date(str(state.get("next_action_date") or ""))
+    next_action_overdue = bool(next_action_date and next_action_date < today)
+
+    if calculation_error or (not calculation_complete and decision not in {"custom", "waived"}):
+        collection_status = "calculation_required"
+    elif decision == "waived":
+        collection_status = "waived"
+    elif refund_due_cents > 0:
+        collection_status = "refund_due"
+    elif remaining_cents <= 0:
+        collection_status = "paid"
+    elif overdue_days > 0:
+        collection_status = "overdue"
+    elif payments_received_cents > 0:
+        collection_status = "partial"
+    else:
+        collection_status = "pending"
+
+    stored_tracking = trainee.get("cancellation_tracking")
+    case_status = str(state.get("case_status") or "to_process")
+    if not isinstance(stored_tracking, dict):
+        if collection_status == "paid":
+            case_status = "settled"
+        elif collection_status == "waived":
+            case_status = "waived"
+        elif trainee.get("cancellation_email_sent_at") and collection_status != "calculation_required":
+            case_status = "awaiting_payment"
+        elif collection_status == "calculation_required":
+            case_status = "calculation_required"
+
+    paid_ratio = (
+        min(round(credited_total_cents / effective_total_due_cents * 100), 100)
+        if effective_total_due_cents > 0 else (100 if collection_status in {"paid", "waived"} else 0)
+    )
+    cancellation_date = str(
+        calculation.get("cancellation_date")
+        or state.get("request_received_at")
+        or trainee.get("registration_cancelled_at")
+        or ""
+    )[:10]
+    contacts = [item for item in state.get("contacts", []) if isinstance(item, dict)]
+    contacts.sort(
+        key=lambda item: _history_sort_key(str(item.get("contacted_at") or item.get("created_at") or "")),
+        reverse=True,
+    )
+    last_contact_at = (
+        str(contacts[0].get("contacted_at") or contacts[0].get("created_at") or "")
+        if contacts else ""
+    )
+    item = {
+        "key": f"{session_id}:{trainee_id}",
+        "session_id": session_id,
+        "session_name": _session_get(session_obj, "name", ""),
+        "training_type": _session_get(session_obj, "training_type", ""),
+        "session_start_date": _session_get(session_obj, "date_start", ""),
+        "session_end_date": _session_get(session_obj, "date_end", ""),
+        "session_archived": bool(session_obj.get("archived")),
+        "trainee_id": trainee_id,
+        "first_name": normalize_first_name(trainee.get("first_name") or ""),
+        "last_name": normalize_last_name(trainee.get("last_name") or ""),
+        "full_name": _format_trainee_name(
+            trainee.get("first_name") or "", trainee.get("last_name") or ""
+        ),
+        "email": _cancellation_text(trainee.get("email"), max_length=320),
+        "phone": format_phone_fr_for_display(_cancellation_text(trainee.get("phone"), max_length=80)),
+        "cancellation_date": cancellation_date,
+        "case_status": case_status,
+        "case_status_label": CANCELLATION_CASE_STATUS_LABELS.get(case_status, "À traiter"),
+        "collection_status": collection_status,
+        "collection_status_label": CANCELLATION_COLLECTION_STATUS_LABELS.get(collection_status, "À encaisser"),
+        "origin": state.get("origin") or "trainee",
+        "origin_label": CANCELLATION_ORIGIN_LABELS.get(str(state.get("origin") or ""), "Autre"),
+        "reason": state.get("reason") or "other",
+        "reason_label": CANCELLATION_REASON_LABELS.get(str(state.get("reason") or ""), "Autre"),
+        "reason_details": state.get("reason_details") or "",
+        "decision": decision,
+        "decision_label": CANCELLATION_DECISION_LABELS.get(decision, "Indemnité contractuelle"),
+        "assigned_to": state.get("assigned_to") or "",
+        "next_action_date": state.get("next_action_date") or "",
+        "next_action_overdue": next_action_overdue,
+        "payment_due_date": state.get("payment_due_date") or "",
+        "payment_terms": state.get("payment_terms") or "awaiting_choice",
+        "payment_terms_label": CANCELLATION_PAYMENT_TERMS_LABELS.get(
+            str(state.get("payment_terms") or ""), "Modalité à convenir"
+        ),
+        "last_contact_at": last_contact_at,
+        "email_sent_at": trainee.get("cancellation_email_sent_at") or "",
+        "email_sent_count": int(trainee.get("cancellation_email_sent_count") or 0),
+        "calculation_complete": calculation_complete,
+        "calculation_error": calculation_error,
+        "rule_label": calculation.get("rule_label") or "Calcul à finaliser",
+        "penalty_rate": float(calculation.get("penalty_rate") or 0),
+        "penalty_cents": int(calculation.get("penalty_cents") or 0),
+        "prorata_cents": int(calculation.get("prorata_cents") or 0),
+        "contractual_total_due_cents": contractual_total_due_cents,
+        "effective_total_due_cents": effective_total_due_cents,
+        "deductible_paid_cents": deductible_paid_cents,
+        "payments_received_cents": payments_received_cents,
+        "credited_total_cents": credited_total_cents,
+        "remaining_cents": remaining_cents,
+        "refund_due_cents": refund_due_cents,
+        "overdue_days": overdue_days,
+        "paid_ratio": paid_ratio,
+        "effective_total_due_label": _registration_cancellation_money_label(effective_total_due_cents),
+        "deductible_paid_label": _registration_cancellation_money_label(deductible_paid_cents),
+        "payments_received_label": _registration_cancellation_money_label(payments_received_cents),
+        "credited_total_label": _registration_cancellation_money_label(credited_total_cents),
+        "remaining_label": _registration_cancellation_money_label(remaining_cents),
+        "refund_due_label": _registration_cancellation_money_label(refund_due_cents),
+        "trainee_url": url_for(
+            "admin_trainee_page", session_id=session_id, trainee_id=trainee_id
+        ),
+        "detail_url": url_for(
+            "api_admin_cancellation_tracking_detail",
+            session_id=session_id, trainee_id=trainee_id,
+        ),
+        "update_url": url_for(
+            "api_admin_cancellation_tracking_update",
+            session_id=session_id, trainee_id=trainee_id,
+        ),
+        "payment_url": url_for(
+            "api_admin_cancellation_tracking_payment",
+            session_id=session_id, trainee_id=trainee_id,
+        ),
+        "contact_url": url_for(
+            "api_admin_cancellation_tracking_contact",
+            session_id=session_id, trainee_id=trainee_id,
+        ),
+        "calculation_url": url_for(
+            "api_registration_cancellation_indemnity",
+            session_id=session_id, trainee_id=trainee_id,
+        ),
+        "updated_at": state.get("updated_at") or trainee.get("updated_at") or "",
+    }
+    if include_detail:
+        item.update({
+            "state": state,
+            "calculation": calculation,
+            "payments": sorted(
+                [copy.deepcopy(entry) for entry in state.get("payments", []) if isinstance(entry, dict)],
+                key=lambda entry: _history_sort_key(str(entry.get("paid_at") or entry.get("created_at") or "")),
+                reverse=True,
+            ),
+            "contacts": contacts,
+            "timeline": _cancellation_tracking_timeline(trainee, state),
+            "options": {
+                "case_statuses": CANCELLATION_CASE_STATUS_OPTIONS,
+                "origins": CANCELLATION_ORIGIN_OPTIONS,
+                "reasons": CANCELLATION_REASON_OPTIONS,
+                "decisions": CANCELLATION_DECISION_OPTIONS,
+                "payment_terms": CANCELLATION_PAYMENT_TERMS_OPTIONS,
+                "payment_methods": CANCELLATION_PAYMENT_METHOD_OPTIONS,
+                "contact_channels": CANCELLATION_CONTACT_CHANNEL_OPTIONS,
+                "contact_outcomes": CANCELLATION_CONTACT_OUTCOME_OPTIONS,
+            },
+        })
+    return item
+
+
+def _cancellation_tracking_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
+    items: List[Dict[str, Any]] = []
+    sessions_for_filter: Dict[str, str] = {}
+    training_types = set()
+    assignees = set()
+    for session_obj in data.get("sessions", []) or []:
+        if not isinstance(session_obj, dict) or _is_wedof_leads_session(session_obj):
+            continue
+        session_id = str(session_obj.get("id") or "")
+        for trainee in _session_trainees_list(session_obj):
+            if not isinstance(trainee, dict) or not _trainee_registration_is_cancelled(trainee):
+                continue
+            item = _cancellation_tracking_item(data, session_obj, trainee)
+            items.append(item)
+            sessions_for_filter[session_id] = str(item["session_name"] or session_id)
+            if item["training_type"]:
+                training_types.add(str(item["training_type"]))
+            if item["assigned_to"]:
+                assignees.add(str(item["assigned_to"]))
+
+    priority = {
+        "overdue": 0, "calculation_required": 1, "refund_due": 2,
+        "partial": 3, "pending": 4, "paid": 8, "waived": 9,
+    }
+    items.sort(key=lambda item: (
+        priority.get(str(item.get("collection_status") or ""), 5),
+        str(item.get("next_action_date") or "9999-12-31"),
+        str(item.get("cancellation_date") or ""),
+        str(item.get("last_name") or ""),
+    ))
+    total_remaining_cents = sum(int(item.get("remaining_cents") or 0) for item in items)
+    total_credited_cents = sum(int(item.get("credited_total_cents") or 0) for item in items)
+    total_refund_cents = sum(int(item.get("refund_due_cents") or 0) for item in items)
+    settled_statuses = {"paid", "waived"}
+    attention_statuses = {"pending", "partial", "overdue", "calculation_required", "refund_due"}
+    kpis = {
+        "total": len(items),
+        "attention": sum(item.get("collection_status") in attention_statuses for item in items),
+        "overdue": sum(item.get("collection_status") == "overdue" for item in items),
+        "settled": sum(item.get("collection_status") in settled_statuses for item in items),
+        "disputed": sum(item.get("case_status") in {"disputed", "collections"} for item in items),
+        "refund_count": sum(int(item.get("refund_due_cents") or 0) > 0 for item in items),
+        "remaining_cents": total_remaining_cents,
+        "remaining_label": _registration_cancellation_money_label(total_remaining_cents),
+        "credited_cents": total_credited_cents,
+        "credited_label": _registration_cancellation_money_label(total_credited_cents),
+        "refund_cents": total_refund_cents,
+        "refund_label": _registration_cancellation_money_label(total_refund_cents),
+    }
+    return {
+        "items": items,
+        "kpis": kpis,
+        "filters": {
+            "sessions": [
+                {"id": key, "label": value}
+                for key, value in sorted(sessions_for_filter.items(), key=lambda pair: pair[1].casefold())
+            ],
+            "training_types": sorted(training_types, key=str.casefold),
+            "assignees": sorted(assignees, key=str.casefold),
+            "case_statuses": CANCELLATION_CASE_STATUS_OPTIONS,
+            "collection_statuses": tuple(CANCELLATION_COLLECTION_STATUS_LABELS.items()),
+        },
+    }
+
+
+def _cancellation_tracking_context_or_error(
+    data: Dict[str, Any], session_id: str, trainee_id: str
+) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[Tuple[Any, int]]]:
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        return None, None, (jsonify({"ok": False, "error": "Session introuvable."}), 404)
+    trainee = next(
+        (
+            item for item in _session_trainees_list(session_obj)
+            if str(item.get("id") or "") == str(trainee_id)
+        ),
+        None,
+    )
+    if not trainee:
+        return session_obj, None, (jsonify({"ok": False, "error": "Stagiaire introuvable."}), 404)
+    if not _trainee_registration_is_cancelled(trainee):
+        return session_obj, trainee, (jsonify({
+            "ok": False,
+            "error": "Cette inscription n’est plus annulée.",
+        }), 409)
+    return session_obj, trainee, None
+
+
+@app.get("/admin/cancellations")
+@admin_login_required
+def admin_cancellation_tracking():
+    data = load_data()
+    dashboard = _cancellation_tracking_dashboard(data)
+    requested_session_id = _cancellation_text(request.args.get("session_id"), max_length=100)
+    valid_session_ids = {item["session_id"] for item in dashboard["items"]}
+    return render_template(
+        "admin_cancellations.html",
+        title="Suivi des annulations",
+        dashboard=dashboard,
+        initial_session_id=requested_session_id if requested_session_id in valid_session_ids else "",
+    )
+
+
+@app.get("/api/admin/cancellations/<session_id>/<trainee_id>")
+@admin_login_required
+def api_admin_cancellation_tracking_detail(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainee, error_response = _cancellation_tracking_context_or_error(
+        data, session_id, trainee_id
+    )
+    if error_response:
+        return error_response
+    return jsonify({
+        "ok": True,
+        "item": _cancellation_tracking_item(
+            data, session_obj, trainee, include_detail=True
+        ),
+    })
+
+
+@app.post("/api/admin/cancellations/<session_id>/<trainee_id>")
+@admin_login_required
+@admin_write_required
+def api_admin_cancellation_tracking_update(session_id: str, trainee_id: str):
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "Données invalides."}), 400
+
+    def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
+        session_obj, trainee, error_response = _cancellation_tracking_context_or_error(
+            data, session_id, trainee_id
+        )
+        if error_response:
+            response, status = error_response
+            return {"ok": False, "error": response.get_json().get("error"), "status": status}
+        state = _registration_cancellation_tracking_state(trainee, create=True)
+        previous_status = str(state.get("case_status") or "to_process")
+        choice_fields = {
+            "case_status": CANCELLATION_CASE_STATUS_LABELS,
+            "origin": CANCELLATION_ORIGIN_LABELS,
+            "reason": CANCELLATION_REASON_LABELS,
+            "decision": CANCELLATION_DECISION_LABELS,
+            "payment_terms": CANCELLATION_PAYMENT_TERMS_LABELS,
+        }
+        for field, options in choice_fields.items():
+            if field not in payload:
+                continue
+            value = _cancellation_text(payload.get(field), max_length=80)
+            if value not in options:
+                raise ValueError(f"Valeur invalide pour {field}.")
+            state[field] = value
+        text_fields = {
+            "reason_details": 3000,
+            "assigned_to": 160,
+            "payment_plan_notes": 3000,
+            "adjustment_reason": 3000,
+            "internal_notes": 6000,
+        }
+        for field, max_length in text_fields.items():
+            if field in payload:
+                state[field] = _cancellation_text(payload.get(field), max_length=max_length)
+        for field, label in (
+            ("request_received_at", "La date de demande"),
+            ("confirmation_received_at", "La date de confirmation"),
+            ("next_action_date", "La prochaine action"),
+            ("payment_due_date", "La date d’échéance"),
+        ):
+            if field in payload:
+                state[field] = _cancellation_optional_date(payload.get(field), label)
+        if "manual_total_due_amount" in payload:
+            state["manual_total_due_cents"] = _cancellation_optional_money_cents(
+                payload.get("manual_total_due_amount"), "Le montant ajusté"
+            )
+        if state.get("decision") == "custom" and state.get("manual_total_due_cents") is None:
+            raise ValueError("Renseignez le montant total ajusté.")
+        if state.get("decision") in {"custom", "waived"} and not state.get("adjustment_reason"):
+            raise ValueError("Expliquez la décision d’ajustement ou d’abandon de l’indemnité.")
+        calculation_inputs = state.setdefault("calculation_inputs", {})
+        input_labels = {
+            "cancellation_date": "La date d’annulation",
+            "training_price_amount": "Le coût initial",
+            "deductible_paid_amount": "La somme déjà encaissée",
+            "delivered_hours": "Les heures dispensées",
+            "total_training_hours": "La durée totale",
+        }
+        incoming_inputs = payload.get("calculation_inputs")
+        if incoming_inputs is not None:
+            if not isinstance(incoming_inputs, dict):
+                raise ValueError("Les paramètres du calcul sont invalides.")
+            for key, label in input_labels.items():
+                if key not in incoming_inputs:
+                    continue
+                value = incoming_inputs.get(key)
+                if key == "cancellation_date":
+                    calculation_inputs[key] = _cancellation_optional_date(value, label)
+                else:
+                    calculation_inputs[key] = _cancellation_text(value, max_length=40)
+
+        calculation, calculation_error = _cancellation_tracking_calculation(
+            session_obj,
+            trainee,
+            _billing_lines_for_trainee_session(data, trainee_id, session_id),
+            state,
+        )
+        if calculation_error:
+            raise ValueError(calculation_error)
+        state["calculation_snapshot"] = copy.deepcopy(calculation)
+        now = _now_iso()
+        state["updated_at"] = now
+        state["updated_by"] = _cancellation_actor()
+        changed_labels = []
+        if state.get("case_status") != previous_status:
+            changed_labels.append(
+                f"Statut : {CANCELLATION_CASE_STATUS_LABELS.get(previous_status, previous_status)} → "
+                f"{CANCELLATION_CASE_STATUS_LABELS.get(str(state.get('case_status')), state.get('case_status'))}"
+            )
+        if payload.keys() - {"case_status"}:
+            changed_labels.append("Informations du dossier actualisées")
+        _cancellation_tracking_append_event(
+            state,
+            "Suivi d’annulation mis à jour",
+            " · ".join(changed_labels) or "Dossier actualisé",
+            kind="update",
+            at=now,
+        )
+        trainee["updated_at"] = now
+        append_trainee_history_event(
+            trainee, "Suivi d’annulation mis à jour",
+            CANCELLATION_CASE_STATUS_LABELS.get(str(state.get("case_status")), "À traiter"),
+            "action", at=now,
+        )
+        _append_activity_log(
+            data, "registration_cancellation_tracking_updated", "trainee", trainee_id,
+            details={"session_id": session_id, "case_status": state.get("case_status")},
+        )
+        return {
+            "ok": True,
+            "item": _cancellation_tracking_item(data, session_obj, trainee, include_detail=True),
+        }
+
+    try:
+        result = update_data(mutate)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    status = int(result.pop("status", 200)) if isinstance(result, dict) else 200
+    return jsonify(result), status
+
+
+@app.post("/api/admin/cancellations/<session_id>/<trainee_id>/payments")
+@admin_login_required
+@admin_write_required
+def api_admin_cancellation_tracking_payment(session_id: str, trainee_id: str):
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "Données invalides."}), 400
+
+    def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
+        session_obj, trainee, error_response = _cancellation_tracking_context_or_error(
+            data, session_id, trainee_id
+        )
+        if error_response:
+            response, status = error_response
+            return {"ok": False, "error": response.get_json().get("error"), "status": status}
+        amount_cents = _cancellation_optional_money_cents(payload.get("amount"), "Le montant")
+        if not amount_cents:
+            raise ValueError("Le montant doit être supérieur à zéro.")
+        method = _cancellation_text(payload.get("method"), max_length=80)
+        if method not in CANCELLATION_PAYMENT_METHOD_LABELS:
+            raise ValueError("Le mode de paiement est invalide.")
+        paid_at = _cancellation_optional_date(payload.get("paid_at"), "La date de paiement")
+        if not paid_at:
+            paid_at = datetime.datetime.now(ZoneInfo("Europe/Paris")).date().isoformat()
+        state = _registration_cancellation_tracking_state(trainee, create=True)
+        payment = {
+            "id": uuid.uuid4().hex,
+            "amount_cents": amount_cents,
+            "method": method,
+            "paid_at": paid_at,
+            "reference": _cancellation_text(payload.get("reference"), max_length=240),
+            "note": _cancellation_text(payload.get("note"), max_length=2000),
+            "created_at": _now_iso(),
+            "created_by": _cancellation_actor(),
+            "voided_at": "",
+            "voided_by": "",
+            "void_reason": "",
+        }
+        state.setdefault("payments", []).insert(0, payment)
+        del state["payments"][200:]
+        state["updated_at"] = payment["created_at"]
+        state["updated_by"] = payment["created_by"]
+        item = _cancellation_tracking_item(data, session_obj, trainee, include_detail=True)
+        if item["remaining_cents"] <= 0 and item["refund_due_cents"] <= 0:
+            state["case_status"] = "settled"
+        elif state.get("payment_terms") == "installments":
+            state["case_status"] = "payment_plan"
+        elif state.get("case_status") in {"to_process", "awaiting_confirmation", "calculation_required"}:
+            state["case_status"] = "awaiting_payment"
+        _cancellation_tracking_append_event(
+            state,
+            "Règlement d’indemnité enregistré",
+            (
+                f"{_registration_cancellation_money_label(amount_cents)} · "
+                f"{CANCELLATION_PAYMENT_METHOD_LABELS[method]}"
+                + (f" · Réf. {payment['reference']}" if payment["reference"] else "")
+            ),
+            kind="payment",
+            at=payment["created_at"],
+        )
+        trainee["updated_at"] = payment["created_at"]
+        append_trainee_history_event(
+            trainee, "Règlement d’indemnité enregistré",
+            _registration_cancellation_money_label(amount_cents), "payment",
+            at=payment["created_at"],
+        )
+        _append_activity_log(
+            data, "registration_cancellation_payment_recorded", "trainee", trainee_id,
+            details={
+                "session_id": session_id, "payment_id": payment["id"],
+                "amount_cents": amount_cents, "method": method,
+            },
+        )
+        return {
+            "ok": True,
+            "item": _cancellation_tracking_item(data, session_obj, trainee, include_detail=True),
+        }
+
+    try:
+        result = update_data(mutate)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    status = int(result.pop("status", 200)) if isinstance(result, dict) else 200
+    return jsonify(result), status
+
+
+@app.post("/api/admin/cancellations/<session_id>/<trainee_id>/payments/<payment_id>/void")
+@admin_login_required
+@admin_write_required
+def api_admin_cancellation_tracking_payment_void(
+    session_id: str, trainee_id: str, payment_id: str
+):
+    payload = request.get_json(silent=True) or {}
+    reason = _cancellation_text(payload.get("reason"), max_length=1000)
+    if len(reason) < 3:
+        return jsonify({"ok": False, "error": "Précisez le motif de l’annulation du paiement."}), 400
+
+    def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
+        session_obj, trainee, error_response = _cancellation_tracking_context_or_error(
+            data, session_id, trainee_id
+        )
+        if error_response:
+            response, status = error_response
+            return {"ok": False, "error": response.get_json().get("error"), "status": status}
+        state = _registration_cancellation_tracking_state(trainee, create=True)
+        payment = next(
+            (item for item in state.get("payments", []) if str(item.get("id") or "") == payment_id),
+            None,
+        )
+        if not payment:
+            return {"ok": False, "error": "Paiement introuvable.", "status": 404}
+        if payment.get("voided_at"):
+            return {"ok": False, "error": "Ce paiement est déjà annulé.", "status": 409}
+        voided_at = _now_iso()
+        payment["voided_at"] = voided_at
+        payment["voided_by"] = _cancellation_actor()
+        payment["void_reason"] = reason
+        state["updated_at"] = voided_at
+        state["updated_by"] = payment["voided_by"]
+        if state.get("case_status") == "settled":
+            state["case_status"] = "awaiting_payment"
+        _cancellation_tracking_append_event(
+            state, "Paiement annulé",
+            f"{_registration_cancellation_money_label(payment.get('amount_cents'))} · {reason}",
+            kind="warning", at=voided_at,
+        )
+        trainee["updated_at"] = voided_at
+        _append_activity_log(
+            data, "registration_cancellation_payment_voided", "trainee", trainee_id,
+            details={
+                "session_id": session_id, "payment_id": payment_id,
+                "amount_cents": int(payment.get("amount_cents") or 0), "reason": reason,
+            },
+        )
+        return {
+            "ok": True,
+            "item": _cancellation_tracking_item(data, session_obj, trainee, include_detail=True),
+        }
+
+    result = update_data(mutate)
+    status = int(result.pop("status", 200)) if isinstance(result, dict) else 200
+    return jsonify(result), status
+
+
+@app.post("/api/admin/cancellations/<session_id>/<trainee_id>/contacts")
+@admin_login_required
+@admin_write_required
+def api_admin_cancellation_tracking_contact(session_id: str, trainee_id: str):
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "Données invalides."}), 400
+
+    def mutate(data: Dict[str, Any]) -> Dict[str, Any]:
+        session_obj, trainee, error_response = _cancellation_tracking_context_or_error(
+            data, session_id, trainee_id
+        )
+        if error_response:
+            response, status = error_response
+            return {"ok": False, "error": response.get_json().get("error"), "status": status}
+        channel = _cancellation_text(payload.get("channel"), max_length=80)
+        outcome = _cancellation_text(payload.get("outcome"), max_length=80)
+        if channel not in CANCELLATION_CONTACT_CHANNEL_LABELS:
+            raise ValueError("Le canal de relance est invalide.")
+        if outcome not in CANCELLATION_CONTACT_OUTCOME_LABELS:
+            raise ValueError("Le résultat de la relance est invalide.")
+        note = _cancellation_text(payload.get("note"), max_length=3000)
+        if not note and outcome == "other":
+            raise ValueError("Ajoutez une note pour préciser cette relance.")
+        contacted_at = _cancellation_optional_date(payload.get("contacted_at"), "La date de relance")
+        if not contacted_at:
+            contacted_at = datetime.datetime.now(ZoneInfo("Europe/Paris")).date().isoformat()
+        state = _registration_cancellation_tracking_state(trainee, create=True)
+        contact = {
+            "id": uuid.uuid4().hex,
+            "channel": channel,
+            "outcome": outcome,
+            "contacted_at": contacted_at,
+            "note": note,
+            "created_at": _now_iso(),
+            "created_by": _cancellation_actor(),
+        }
+        state.setdefault("contacts", []).insert(0, contact)
+        del state["contacts"][200:]
+        if "next_action_date" in payload:
+            state["next_action_date"] = _cancellation_optional_date(
+                payload.get("next_action_date"), "La prochaine action"
+            )
+        if outcome == "dispute":
+            state["case_status"] = "disputed"
+        elif outcome == "payment_plan_agreed":
+            state["case_status"] = "payment_plan"
+            state["payment_terms"] = "installments"
+        elif outcome in {"confirmed", "promise_to_pay"} and state.get("case_status") in {
+            "to_process", "awaiting_confirmation", "calculation_required"
+        }:
+            state["case_status"] = "awaiting_payment"
+        now = contact["created_at"]
+        state["updated_at"] = now
+        state["updated_by"] = contact["created_by"]
+        _cancellation_tracking_append_event(
+            state,
+            "Relance enregistrée",
+            (
+                f"{CANCELLATION_CONTACT_CHANNEL_LABELS[channel]} · "
+                f"{CANCELLATION_CONTACT_OUTCOME_LABELS[outcome]}"
+                + (f" · {note}" if note else "")
+            ),
+            kind="contact",
+            at=now,
+        )
+        trainee["updated_at"] = now
+        append_trainee_history_event(
+            trainee, "Relance annulation",
+            f"{CANCELLATION_CONTACT_CHANNEL_LABELS[channel]} · {CANCELLATION_CONTACT_OUTCOME_LABELS[outcome]}",
+            "relance", at=now,
+        )
+        _append_activity_log(
+            data, "registration_cancellation_contact_recorded", "trainee", trainee_id,
+            details={
+                "session_id": session_id, "contact_id": contact["id"],
+                "channel": channel, "outcome": outcome,
+            },
+        )
+        return {
+            "ok": True,
+            "item": _cancellation_tracking_item(data, session_obj, trainee, include_detail=True),
+        }
+
+    try:
+        result = update_data(mutate)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    status = int(result.pop("status", 200)) if isinstance(result, dict) else 200
+    return jsonify(result), status
 
 
 def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:

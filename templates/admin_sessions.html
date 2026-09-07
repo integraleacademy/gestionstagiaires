@@ -708,6 +708,7 @@
         {% if partner_has_module('automations') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>{% else %}<span class="btn btn-outline module-locked">🔒 Conventions</span>{% endif %}
         {% if partner_has_module('automations') %}<a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>{% else %}<span class="btn btn-primary module-locked">🔒 Automatisations</span>{% endif %}
         {% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>{% else %}<span class="btn btn-outline module-locked">🔒 Facturation</span>{% endif %}
+        <a class="btn btn-outline" href="{{ url_for('admin_cancellation_tracking') }}">↘ Suivi annulations</a>
         <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
         {% if not is_partner_space %}
           <a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>

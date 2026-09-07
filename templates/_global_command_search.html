@@ -20,7 +20,10 @@
   {% if partner_has_module('billing') %}
     {% set command_items = command_items + [{"label":"Facturation", "description":"Factures et règlements locaux", "icon":"€", "href":url_for('admin_sessions_billing'), "keywords":"fact facture facturation paiement règlement"}] %}
   {% endif %}
-  {% set command_items = command_items + [{"label":"Sessions archivées", "description":"Retrouver les anciennes sessions", "icon":"□", "href":url_for('admin_sessions_archived'), "keywords":"archive anciennes sessions historique"}] %}
+  {% set command_items = command_items + [
+    {"label":"Suivi annulations", "description":"Indemnités, paiements et relances", "icon":"↘", "href":url_for('admin_cancellation_tracking'), "keywords":"annulation indemnité pénalité paiement relance abandon"},
+    {"label":"Sessions archivées", "description":"Retrouver les anciennes sessions", "icon":"□", "href":url_for('admin_sessions_archived'), "keywords":"archive anciennes sessions historique"}
+  ] %}
 {% else %}
 {% set command_items = command_items + [
   {"label":"Tests de positionnement", "description":"Consulter les tests", "icon":"✓", "href":url_for('admin_positioning_tests'), "keywords":"test évaluation positionnement"},
@@ -31,6 +34,7 @@
   {"label":"Automatisations", "description":"Configurer les envois", "icon":"⚡", "href":url_for('admin_sessions_automations'), "keywords":"automatisation email sms convocation"},
   {"label":"Suivi des ventes", "description":"Piloter l’activité commerciale", "icon":"↗", "href":url_for('admin_sales_tracking'), "keywords":"vente commercial chiffre affaires statistiques"},
   {"label":"Facturation", "description":"Factures et règlements", "icon":"€", "href":url_for('admin_sessions_billing'), "keywords":"fact facture facturation paiement règlement qonto"},
+  {"label":"Suivi annulations", "description":"Indemnités, paiements et relances", "icon":"↘", "href":url_for('admin_cancellation_tracking'), "keywords":"annulation indemnité pénalité paiement relance abandon"},
   {"label":"Prélèvements", "description":"Gérer les prélèvements directs", "icon":"↻", "href":url_for('admin_direct_debits'), "keywords":"prélèvement direct débit banque paiement"},
   {"label":"Réglages Qonto", "description":"Paramètres de facturation", "icon":"⚙", "href":url_for('admin_qonto_settings'), "keywords":"qonto banque facturation réglages paramètres"},
   {"label":"Sessions archivées", "description":"Retrouver les anciennes sessions", "icon":"□", "href":url_for('admin_sessions_archived'), "keywords":"archive anciennes sessions historique"}
