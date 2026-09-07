@@ -979,12 +979,17 @@
         </div>
         <div class="aps-elearning-content">
           <h2 id="apsElearningTitle">Espace e-learning APS</h2>
-          <p class="aps-elearning-subtitle">Votre lien personnel vers la plateforme de formation à distance sera activé au démarrage de la formation.</p>
+          <p class="aps-elearning-subtitle">Votre parcours de formation à distance sera activé au démarrage de la formation.</p>
           <div class="aps-elearning-badge">Accès disponible le {{ session.date_start|frdate }}</div>
           <p class="aps-elearning-note">Votre progression restera suivie pendant toute la formation, sans identifiant ni mot de passe à saisir.</p>
         {% if not aps_elearning_available %}
           <div class="aps-elearning-pending">
             Votre lien d’accès sera affiché ici le premier jour de formation.
+          </div>
+        {% elif session.aps_native_course_id %}
+          <div class="aps-elearning-actions">
+            <a class="btn" href="{{ url_for('native_elearning.course_player', token=token_safe, course_id=session.aps_native_course_id) }}">🚀 Accéder à mon cours APS</a>
+            <span class="aps-elearning-copy-status">Progression et temps actif enregistrés</span>
           </div>
         {% elif aps_link_is_valid %}
           <div class="aps-elearning-actions">

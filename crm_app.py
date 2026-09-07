@@ -4,10 +4,12 @@ import app as legacy_app
 
 from admin_trainee_wedof_refresh import register_admin_trainee_wedof_refresh
 from crm_cnaps_tracking_api import register_crm_cnaps_tracking_api
+from elearning_native.integration import register_native_elearning
 from wedof_invoice_reconciliation import register_wedof_invoice_reconciliation
 
 
 app = legacy_app.app
+register_native_elearning(legacy_app)
 register_admin_trainee_wedof_refresh(legacy_app)
 register_wedof_invoice_reconciliation(legacy_app)
 register_crm_cnaps_tracking_api(

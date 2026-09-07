@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#172033">
+  <title>{{ activity.title }} · {{ course.title }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260907-1') }}">
+</head>
+<body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
+  {% macro render_block(block) %}
+    <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
+      {% if block.video and block.video.src %}
+        <div class="native-video-shell">
+          <video class="native-course-video" controls preload="metadata" playsinline{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
+            <source src="{{ block.video.src }}">
+            Votre navigateur ne permet pas de lire cette vidéo.
+          </video>
+        </div>
+      {% endif %}
+      {% if block.html %}<div class="native-imported-content">{{ block.html }}</div>{% endif %}
+      {% if block.children %}
+        <div class="native-block-children">
+          {% for child in block.children %}{{ render_block(child) }}{% endfor %}
+        </div>
+      {% endif %}
+    </section>
+  {% endmacro %}
+
+  <header class="native-topbar">
+    <div class="native-topbar__brand">
+      <button class="native-menu-button" id="nativeMenuButton" type="button" aria-label="Afficher le sommaire" aria-controls="nativeSidebar" aria-expanded="false">☰</button>
+      <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+      <div>
+        <span>Formation APS</span>
+        <strong>{{ course.title }}</strong>
+      </div>
+    </div>
+    <div class="native-live-metrics" aria-label="Suivi de la session">
+      <div class="native-tracking-state" id="nativeTrackingState" data-state="connecting">
+        <i aria-hidden="true"></i><span>Connexion…</span>
+      </div>
+      <div class="native-time-card">
+        <span>Temps actif validé</span>
+        <strong id="nativeActiveTimer">00:00:00</strong>
+      </div>
+    </div>
+  </header>
+
+  <div class="native-layout">
+    <aside class="native-sidebar" id="nativeSidebar" aria-label="Sommaire du cours">
+      <div class="native-sidebar__learner">
+        <span>Votre parcours</span>
+        <strong>{{ learner_name or 'Stagiaire' }}</strong>
+      </div>
+      <div class="native-progress-summary">
+        <div><span>Progression</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
+        <div class="native-progress-track" aria-hidden="true"><i id="nativeProgressBar" style="width:{{ progress.progress_percent }}%"></i></div>
+        {% if progress.scored_activities %}<small>Score actuel : <b id="nativeScoreLabel">{{ progress.score_percent|round|int }} %</b></small>{% endif %}
+      </div>
+      <nav class="native-course-nav">
+        {% for nav_section in navigation %}
+          <section>
+            <h2>{{ nav_section.title }}</h2>
+            <ol>
+              {% for item in nav_section.activities %}
+                <li class="{% if item.current %}is-current{% endif %} {% if item.completed %}is-complete{% endif %} {% if item.locked %}is-locked{% endif %}">
+                  {% if item.locked %}
+                    <span><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}</b><em>Verrouillé</em></span>
+                  {% else %}
+                    <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}</b></a>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ol>
+          </section>
+        {% endfor %}
+      </nav>
+      <a class="native-back-link" href="{{ portal_url }}">← Retour à mon espace</a>
+    </aside>
+    <button class="native-sidebar-overlay" id="nativeSidebarOverlay" type="button" aria-label="Fermer le sommaire"></button>
+
+    <main class="native-main">
+      <div class="native-main__inner">
+        <div class="native-breadcrumb"><span>{{ section_title }}</span><b>Activité {{ activity_position }} sur {{ activity_count }}</b></div>
+
+        {% if introduction %}
+          <section class="native-introduction">
+            <span class="native-kicker">Bienvenue</span>
+            <h1>Avant de commencer</h1>
+            {% for block in introduction %}{{ render_block(block) }}{% endfor %}
+          </section>
+        {% endif %}
+
+        <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
+          <header class="native-activity__header">
+            <span class="native-kicker">{{ 'Question évaluée' if activity.scored else 'Cours' }}</span>
+            <h1>{{ activity.title }}</h1>
+          </header>
+
+          {% if activity.type == 'content' %}
+            <div class="native-content-flow">
+              {% for block in activity.blocks %}{{ render_block(block) }}{% endfor %}
+            </div>
+          {% else %}
+            {% set saved_answer = progress.answers.get(activity.id, {}) %}
+            <form class="native-question" id="nativeQuestionForm" data-question-type="{{ activity.question_type }}">
+              {% if activity.question_type == 'single_choice' %}
+                <p class="native-question__instruction">Sélectionnez une réponse.</p>
+                <div class="native-option-list">
+                  {% for option in activity.options %}
+                    <label class="native-option"><input type="radio" name="answer" value="{{ option.id }}"{% if option.id in (saved_answer.get('selected') or []) %} checked{% endif %}{% if activity_completed %} disabled{% endif %}><span>{{ option.text }}</span></label>
+                  {% endfor %}
+                </div>
+              {% elif activity.question_type in ['multiple_choice', 'statement'] %}
+                <p class="native-question__instruction">Sélectionnez toutes les réponses exactes.</p>
+                <div class="native-option-list">
+                  {% for option in activity.options %}
+                    <label class="native-option"><input type="checkbox" name="answer" value="{{ option.id }}"{% if option.id in (saved_answer.get('selected') or []) %} checked{% endif %}{% if activity_completed %} disabled{% endif %}><span>{{ option.text }}</span></label>
+                  {% endfor %}
+                </div>
+              {% elif activity.question_type == 'matching' %}
+                <p class="native-question__instruction">Associez chaque élément à la bonne proposition.</p>
+                <div class="native-matching-list">
+                  {% for left in activity.matching_lefts %}
+                    <label class="native-matching-row"><span>{{ left }}</span><select data-match-index="{{ loop.index0 }}"{% if activity_completed %} disabled{% endif %}><option value="">Choisir…</option>{% for choice in activity.matching_choices %}<option value="{{ choice.id }}">{{ choice.text }}</option>{% endfor %}</select></label>
+                  {% endfor %}
+                </div>
+              {% elif activity.question_type == 'fill_blank' %}
+                <p class="native-question__instruction">Complétez la phrase avec les propositions adaptées.</p>
+                <div class="native-fill-blank">{{ activity.prompt_html }}</div>
+              {% else %}
+                <div class="native-alert native-alert--warning">Ce format de question doit être vérifié par l’équipe pédagogique.</div>
+              {% endif %}
+            </form>
+            <div class="native-answer-feedback{% if activity_completed %} is-visible {{ 'is-correct' if saved_answer.get('correct') else 'is-incorrect' }}{% endif %}" id="nativeAnswerFeedback" role="status" aria-live="polite">
+              {% if activity_completed %}{{ 'Bonne réponse enregistrée.' if saved_answer.get('correct') else 'Réponse enregistrée. La correction sera reprise avec votre formateur.' }}{% endif %}
+            </div>
+          {% endif %}
+        </article>
+
+        <div class="native-course-result{% if progress.status in ['passed', 'failed'] %} is-visible{% endif %}" id="nativeCourseResult" role="status">
+          <strong>{{ 'Cours terminé' if progress.status in ['passed', 'failed'] else '' }}</strong>
+          <span>{% if progress.status == 'passed' %}Objectif atteint avec un score de {{ progress.score_percent|round|int }} %.{% elif progress.status == 'failed' %}Parcours terminé avec un score de {{ progress.score_percent|round|int }} %. L’équipe pédagogique pourra vous accompagner.{% endif %}</span>
+        </div>
+
+        <div class="native-navigation-actions">
+          {% if previous_url %}<a class="native-button native-button--secondary" href="{{ previous_url }}">← Précédent</a>{% else %}<span></span>{% endif %}
+          <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}">
+            {% if activity_completed %}{{ 'Retour à mon espace' if is_last_activity else 'Continuer' }}{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}Terminer le cours{% else %}Terminer et continuer{% endif %} →
+          </button>
+        </div>
+        <p class="native-tracking-explainer">Le compteur valide uniquement le temps actif sur ce cours. Il se met automatiquement en pause si vous quittez la page ou restez inactif.</p>
+      </div>
+    </main>
+  </div>
+
+  <div class="native-duplicate-notice" id="nativeDuplicateNotice" role="alert" aria-live="assertive">
+    <strong>Chrono en pause sur cet onglet</strong>
+    <span>Le cours est déjà actif dans un autre onglet. Fermez l’autre page ou attendez sa déconnexion.</span>
+  </div>
+  <div class="native-toast" id="nativeToast" role="status" aria-live="polite"></div>
+
+  <script id="nativeElearningConfig" type="application/json">{{ {
+    'accessToken': access_token,
+    'csrfToken': csrf_token,
+    'activityId': activity.id,
+    'activityType': activity.type,
+    'questionType': activity.question_type,
+    'activityCompleted': activity_completed,
+    'isLastActivity': is_last_activity,
+    'nextUrl': next_url,
+    'portalUrl': portal_url,
+    'startUrl': url_for('native_elearning.tracking_start'),
+    'heartbeatUrl': url_for('native_elearning.tracking_heartbeat'),
+    'finishUrl': url_for('native_elearning.tracking_finish'),
+    'completeUrl': url_for('native_elearning.activity_complete', activity_id=activity.id),
+    'answerUrl': url_for('native_elearning.activity_answer', activity_id=activity.id),
+    'heartbeatSeconds': heartbeat_seconds,
+    'idleSeconds': idle_seconds,
+    'initialActiveSeconds': progress.active_seconds,
+    'initialProgressPercent': progress.progress_percent,
+    'initialScorePercent': progress.score_percent,
+    'initialStatus': progress.status,
+    'savedAnswer': progress.answers.get(activity.id, {})
+  }|tojson }}</script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260907-1') }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .nellive{max-width:1240px;margin:0 auto;padding:8px 0 44px;color:#172033}.nellive-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:19px}.nellive-head__copy span{color:#4f46e5;font-size:11px;font-weight:950;letter-spacing:.14em;text-transform:uppercase}.nellive-head h1{margin:5px 0;font-size:31px;letter-spacing:-.035em}.nellive-head p{margin:0;color:#64748b;font-size:13px}.nellive-actions{display:flex;align-items:center;gap:9px}.nellive-connection{display:inline-flex;align-items:center;gap:7px;border-radius:999px;background:#ecfdf5;padding:7px 10px;color:#047857;font-size:11px;font-weight:900}.nellive-connection i{width:8px;height:8px;border-radius:50%;background:#10b981}.nellive-connection.is-offline{background:#fff1f2;color:#be123c}.nellive-connection.is-offline i{background:#f43f5e}.nellive-button{display:inline-flex;min-height:40px;align-items:center;justify-content:center;border:1px solid #dbe3ee;border-radius:11px;background:#fff;padding:8px 12px;color:#334155;font-size:12px;font-weight:900;text-decoration:none}.nellive-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.nellive-stat{border:1px solid #e2e8f0;border-radius:17px;background:#fff;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}.nellive-stat span{display:block;color:#64748b;font-size:11px;font-weight:800}.nellive-stat strong{display:block;margin-top:4px;color:#172033;font-size:25px;font-variant-numeric:tabular-nums}.nellive-stat--live{border-color:#a7f3d0;background:#f0fdf4}.nellive-stat--live strong{color:#047857}.nellive-panel{overflow:hidden;border:1px solid #e2e8f0;border-radius:19px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.05)}.nellive-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 17px;border-bottom:1px solid #e2e8f0}.nellive-toolbar label{position:relative;width:min(100%,370px)}.nellive-toolbar input{width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:11px;padding:9px 12px;color:#172033;font-size:13px;outline:none}.nellive-toolbar input:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}.nellive-updated{color:#94a3b8;font-size:11px;font-weight:750}.nellive-table-wrap{overflow-x:auto}.nellive-table{width:100%;min-width:940px;border-collapse:collapse}.nellive-table th{padding:11px 14px;background:#f8fafc;color:#64748b;font-size:10px;font-weight:950;letter-spacing:.06em;text-align:left;text-transform:uppercase}.nellive-table td{padding:14px;border-top:1px solid #edf2f7;color:#334155;font-size:12px;vertical-align:middle}.nellive-person{display:flex;align-items:center;gap:10px}.nellive-person__dot{flex:0 0 auto;width:10px;height:10px;border:2px solid #cbd5e1;border-radius:50%;background:#fff}.nellive-person__dot.is-live{border-color:#10b981;background:#10b981;box-shadow:0 0 0 4px rgba(16,185,129,.12)}.nellive-person strong{display:block;color:#172033;font-size:13px}.nellive-person span{display:block;margin-top:2px;color:#94a3b8;font-size:10px}.nellive-progress{width:130px}.nellive-progress div{height:7px;overflow:hidden;border-radius:999px;background:#e2e8f0}.nellive-progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#4f46e5,#22c55e)}.nellive-progress span{display:block;margin-top:4px;color:#64748b;font-size:10px;font-weight:850}.nellive-time{color:#172033;font-size:13px;font-weight:950;font-variant-numeric:tabular-nums}.nellive-status{display:inline-flex;border-radius:999px;padding:5px 8px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:900}.nellive-status--passed{background:#ecfdf5;color:#047857}.nellive-status--failed{background:#fff1f2;color:#be123c}.nellive-status--in_progress{background:#eff6ff;color:#1d4ed8}.nellive-empty{padding:50px 20px;color:#64748b;text-align:center}.nellive-empty strong{display:block;margin-bottom:5px;color:#334155;font-size:16px}
+  @media(max-width:850px){.nellive-stats{grid-template-columns:repeat(2,1fr)}.nellive-head{align-items:flex-start;flex-direction:column}.nellive-actions{width:100%;justify-content:space-between}}
+  @media(max-width:520px){.nellive-stats{grid-template-columns:1fr 1fr;gap:8px}.nellive-stat{padding:12px}.nellive-stat strong{font-size:21px}.nellive-toolbar{align-items:stretch;flex-direction:column}.nellive-toolbar label{width:100%}}
+</style>
+
+<div class="nellive">
+  <header class="nellive-head">
+    <div class="nellive-head__copy"><span>Suivi pédagogique en direct</span><h1>{{ initial.course.title }}</h1><p>Version {{ initial.course.version }} · actualisation automatique toutes les 10 secondes</p></div>
+    <div class="nellive-actions"><span class="nellive-connection" id="nativeLiveConnection"><i></i><b>Connecté</b></span><a class="nellive-button" href="{{ url_for('native_elearning.admin_course_export', course_id=initial.course.id) }}">Exporter CSV</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_catalog') }}">← Cours et affectations</a></div>
+  </header>
+
+  <section class="nellive-stats" aria-label="Synthèse">
+    <div class="nellive-stat"><span>Stagiaires démarrés</span><strong id="nativeLiveLearners">0</strong></div>
+    <div class="nellive-stat nellive-stat--live"><span>En ligne maintenant</span><strong id="nativeLiveNow">0</strong></div>
+    <div class="nellive-stat"><span>Progression moyenne</span><strong id="nativeLiveAverage">0 %</strong></div>
+    <div class="nellive-stat"><span>Temps actif cumulé</span><strong id="nativeLiveTotalTime">00:00</strong></div>
+  </section>
+
+  <section class="nellive-panel">
+    <div class="nellive-toolbar"><label><span class="sr-only">Rechercher un stagiaire ou une session</span><input id="nativeLiveSearch" type="search" placeholder="Rechercher un stagiaire ou une session…" autocomplete="off"></label><span class="nellive-updated" id="nativeLiveUpdated">Initialisation…</span></div>
+    <div class="nellive-table-wrap" id="nativeLiveTableWrap">
+      <table class="nellive-table">
+        <thead><tr><th>Stagiaire</th><th>Statut</th><th>Activité actuelle</th><th>Progression</th><th>Score</th><th>Temps actif</th><th>Dernière activité</th></tr></thead>
+        <tbody id="nativeLiveBody"></tbody>
+      </table>
+    </div>
+    <div class="nellive-empty" id="nativeLiveEmpty" hidden><strong>Aucun parcours démarré</strong><span>Les stagiaires apparaîtront ici dès l’ouverture de leur cours.</span></div>
+  </section>
+</div>
+
+<script id="nativeLiveConfig" type="application/json">{{ {'initial': initial, 'liveUrl': live_url}|tojson }}</script>
+<script src="{{ url_for('static', filename='js/native-elearning-live.js', v='20260907-1') }}" defer></script>
+{% endblock %}
