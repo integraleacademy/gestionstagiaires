@@ -25480,25 +25480,52 @@ def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
         for key in ("aps_remote_start", "aps_remote_end", "aps_in_person_start", "aps_in_person_end", "aps_in_person_hours", "aps_in_person_days", "aps_computed_exam_date"):
             session_obj.pop(key, None)
         return
-    periods = _compute_aps_period_dates(
-        _session_get(session_obj, "date_start", ""),
-        _session_get(session_obj, "aps_in_person_start", ""),
+
+    # The four APS period fields can be entered manually.  Computation is kept
+    # only as a backwards-compatible fallback for older sessions (which only
+    # stored the global start/end dates and, sometimes, the in-person start).
+    manual_remote_start = _parse_iso_date(_session_get(session_obj, "aps_remote_start", ""))
+    legacy_session_start = _parse_iso_date(_session_get(session_obj, "date_start", ""))
+    remote_start = manual_remote_start or (
+        _next_aps_working_day(legacy_session_start) if legacy_session_start else None
     )
-    if periods:
-        manual_date_end = _parse_iso_date(_session_get(session_obj, "date_end", ""))
-        session_obj.update(periods)
-        session_obj["date_start"] = periods["aps_remote_start"]
-        if manual_date_end:
-            session_obj["date_end"] = manual_date_end.isoformat()
-            session_obj["aps_in_person_end"] = manual_date_end.isoformat()
-        else:
-            session_obj["date_end"] = periods["aps_in_person_end"]
-        exam = _parse_iso_date(_session_get(session_obj, "exam_date", ""))
-        presentiel_end = _parse_iso_date(_session_get(session_obj, "aps_in_person_end", ""))
-        computed_exam_date = _next_aps_working_day(presentiel_end + datetime.timedelta(days=1)).isoformat() if presentiel_end else periods["aps_computed_exam_date"]
-        session_obj["aps_computed_exam_date"] = computed_exam_date
-        if not exam or (presentiel_end and presentiel_end >= exam):
-            session_obj["exam_date"] = computed_exam_date
+    if not remote_start:
+        return
+
+    remote_end = _parse_iso_date(_session_get(session_obj, "aps_remote_end", ""))
+    if not remote_end:
+        remote_end, _ = _add_aps_training_hours(remote_start, 62)
+
+    presentiel_start = _parse_iso_date(_session_get(session_obj, "aps_in_person_start", ""))
+    if not presentiel_start:
+        presentiel_start = _next_aps_working_day(remote_end + datetime.timedelta(days=1))
+
+    presentiel_end = (
+        _parse_iso_date(_session_get(session_obj, "aps_in_person_end", ""))
+        or _parse_iso_date(_session_get(session_obj, "date_end", ""))
+    )
+    if not presentiel_end:
+        presentiel_end, _ = _add_aps_training_hours(presentiel_start, 113)
+
+    _, presentiel_days = _add_aps_training_hours(presentiel_start, 113)
+    session_obj.update({
+        "aps_remote_start": remote_start.isoformat(),
+        "aps_remote_end": remote_end.isoformat(),
+        "aps_in_person_start": presentiel_start.isoformat(),
+        "aps_in_person_end": presentiel_end.isoformat(),
+        "aps_in_person_hours": 113,
+        "aps_in_person_days": presentiel_days,
+        "date_start": remote_start.isoformat(),
+        "date_end": presentiel_end.isoformat(),
+    })
+
+    computed_exam_date = _next_aps_working_day(
+        presentiel_end + datetime.timedelta(days=1)
+    ).isoformat()
+    session_obj["aps_computed_exam_date"] = computed_exam_date
+    exam = _parse_iso_date(_session_get(session_obj, "exam_date", ""))
+    if not exam or presentiel_end >= exam:
+        session_obj["exam_date"] = computed_exam_date
 
 def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
     """Stable natural key used to avoid showing/creating exact duplicate sessions."""
@@ -26020,7 +26047,10 @@ def api_create_session():
     practice_training_date = (payload.get("practice_training_date") or "").strip()
     ssiap_exam_date = (payload.get("ssiap_exam_date") or "").strip()
     exclude_from_sales_tracking = bool(payload.get("exclude_from_sales_tracking"))
+    aps_remote_start = (payload.get("aps_remote_start") or "").strip()
+    aps_remote_end = (payload.get("aps_remote_end") or "").strip()
     aps_in_person_start = (payload.get("aps_in_person_start") or "").strip()
+    aps_in_person_end = (payload.get("aps_in_person_end") or "").strip()
     dirigeant_remote_start = (payload.get("dirigeant_remote_start") or "").strip()
     dirigeant_remote_end = (payload.get("dirigeant_remote_end") or "").strip()
     dirigeant_in_person_start = (payload.get("dirigeant_in_person_start") or "").strip()
@@ -26046,7 +26076,10 @@ def api_create_session():
         "exam_practice_date": exam_practice_date,
         "practice_training_date": practice_training_date,
         "ssiap_exam_date": ssiap_exam_date,
+        "aps_remote_start": aps_remote_start,
+        "aps_remote_end": aps_remote_end,
         "aps_in_person_start": aps_in_person_start,
+        "aps_in_person_end": aps_in_person_end,
         "dirigeant_remote_start": dirigeant_remote_start,
         "dirigeant_remote_end": dirigeant_remote_end,
         "dirigeant_in_person_start": dirigeant_in_person_start,
@@ -26107,7 +26140,10 @@ def api_update_session(session_id: str):
         "exam_practice_date",
         "practice_training_date",
         "ssiap_exam_date",
+        "aps_remote_start",
+        "aps_remote_end",
         "aps_in_person_start",
+        "aps_in_person_end",
         "dirigeant_remote_start",
         "dirigeant_remote_end",
         "dirigeant_in_person_start",

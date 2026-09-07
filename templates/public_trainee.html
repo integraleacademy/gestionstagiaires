@@ -722,6 +722,7 @@
   .formation-subtitle{margin-top:4px;color:#475569;font-weight:800;line-height:1.35;}
   .formation-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:auto;}
   .info-chip{display:flex;gap:10px;align-items:flex-start;min-width:0;padding:12px;border:1px solid #edf2f7;border-radius:16px;background:#f8fafc;}
+  .info-chip--wide{grid-column:1/-1;}
   .info-icon{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:#fff;color:#2563eb;border:1px solid #e2e8f0;}
   .info-label{color:#64748b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;}.info-value{margin-top:3px;color:#0f172a;font-weight:900;line-height:1.25;overflow-wrap:anywhere;}
   .progress-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}.progress-percent{font-size:13px;font-weight:900;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:7px 10px;white-space:nowrap;}
@@ -809,6 +810,21 @@
 {% set is_dirigeant_training = ('DIRIGEANT' in tt) or ('DESP' in tt) %}
 {% set is_security_training = ('APS' in tt) or ('A3P' in tt) or ('SSIAP' in tt) or ('DIRIGEANT' in tt) %}
 {% set is_aps_or_a3p_training = ('APS' in tt) or ('A3P' in tt) %}
+{% set session_descriptor = tt ~ ' ' ~ ((session.name or '')|string|upper) %}
+{% set is_aps_period_training = tt.startswith('APS') %}
+{% set is_desp_initial_training = (('DIRIGEANT' in session_descriptor) or ('DESP' in session_descriptor)) and ('VAE' not in session_descriptor) %}
+{% set show_split_training_dates = is_aps_period_training or is_desp_initial_training %}
+{% if is_aps_period_training %}
+  {% set remote_start = session.aps_remote_start or session.date_start %}
+  {% set remote_end = session.aps_remote_end %}
+  {% set in_person_start = session.aps_in_person_start %}
+  {% set in_person_end = session.aps_in_person_end or session.date_end %}
+{% elif is_desp_initial_training %}
+  {% set remote_start = session.dirigeant_remote_start or session.date_start %}
+  {% set remote_end = session.dirigeant_remote_end %}
+  {% set in_person_start = session.dirigeant_in_person_start %}
+  {% set in_person_end = session.dirigeant_in_person_end or session.date_end %}
+{% endif %}
 
 {% if 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
@@ -822,6 +838,17 @@
   {# fallback : nom de session si tu l’as, sinon training_type #}
   {% set formation_label = (session.name or session.training_type or "—") %}
 {% endif %}
+{% macro date_range(start_date, end_date) -%}
+  {%- if start_date and end_date -%}
+    Du {{ start_date|frdate }} au {{ end_date|frdate }}
+  {%- elif start_date -%}
+    À partir du {{ start_date|frdate }}
+  {%- elif end_date -%}
+    Jusqu’au {{ end_date|frdate }}
+  {%- else -%}
+    Dates à venir
+  {%- endif -%}
+{%- endmacro %}
 {# helpers de couleur pour statuts #}
 {% macro pill_for(kind, value) %}
   {% set v = (value or '') %}
@@ -1049,7 +1076,18 @@
       <div class="formation-hero"><div class="icon-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></div><div><p class="card-kicker">Votre formation</p><h2 id="formationTitle" class="card-title">{{ (trainee.first_name or '')|capitalize }} {{ (trainee.last_name or '')|upper }}</h2><div class="formation-subtitle">{{ formation_label }}{% if training_type_label %} — {{ training_type_label }}{% endif %}</div></div></div>
       <div class="formation-info-grid">
         <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><div><div class="info-label">Parcours</div><div class="info-value">{{ 'Formation initiale' if 'initial' in (training_type_label or '')|lower else training_type_label }}</div></div></div>
-        {% if not is_dirigeant_vae %}<div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Début</div><div class="info-value">{{ session.date_start|frdate }}</div></div></div><div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Fin</div><div class="info-value">{{ session.date_end|frdate }}</div></div></div><div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Examen</div><div class="info-value">{{ session.exam_date|frdate if session.exam_date else 'Date à venir' }}</div></div></div>{% endif %}
+        {% if not is_dirigeant_vae %}
+          {% if show_split_training_dates %}
+            <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Examen</div><div class="info-value">{{ session.exam_date|frdate if session.exam_date else 'Date à venir' }}</div></div></div>
+            <div class="info-chip info-chip--wide"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Dates de formation</div><div class="info-value">{{ date_range(session.date_start, session.date_end) }}</div></div></div>
+            <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><div><div class="info-label">Distanciel</div><div class="info-value">{{ date_range(remote_start, remote_end) }}</div></div></div>
+            <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 21h18M6 21V7l6-4 6 4v14M9 10h1M14 10h1M9 14h1M14 14h1"/></svg></span><div><div class="info-label">Présentiel</div><div class="info-value">{{ date_range(in_person_start, in_person_end) }}</div></div></div>
+          {% else %}
+            <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Début</div><div class="info-value">{{ session.date_start|frdate }}</div></div></div>
+            <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Fin</div><div class="info-value">{{ session.date_end|frdate }}</div></div></div>
+            <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Examen</div><div class="info-value">{{ session.exam_date|frdate if session.exam_date else 'Date à venir' }}</div></div></div>
+          {% endif %}
+        {% endif %}
       </div>
     </section>
 
