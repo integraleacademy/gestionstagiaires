@@ -5709,6 +5709,9 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     openModal("cancellationIndemnityModal");
     refreshCancellationCalculation();
   });
+  if(window.location.hash === "#cancellationIndemnityModal" && cancellationCalculatorButton && !cancellationCalculatorButton.hidden){
+    window.setTimeout(() => cancellationCalculatorButton.click(), 0);
+  }
   [cancellationCalculatorDate, cancellationCalculatorPrice, cancellationCalculatorPaid, cancellationCalculatorTotalHours, cancellationCalculatorDeliveredHours].forEach((input)=>{
     input?.addEventListener("input", scheduleCancellationCalculation);
     input?.addEventListener("change", scheduleCancellationCalculation);

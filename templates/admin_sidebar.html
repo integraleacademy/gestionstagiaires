@@ -1,4 +1,5 @@
 {% import "partner_sidebar.html" as ps %}
+{% set cancellation_tracking_href = url_for('admin_cancellation_tracking', session_id=request.view_args.get('session_id')) if request.view_args and request.view_args.get('session_id') else url_for('admin_cancellation_tracking') %}
 {% set admin_sidebar_items = [
   {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
   {"label":"Espace BTS","icon":"graduation","href":url_for('admin_bts'),"endpoints":["admin_bts"],"badge":"","locked":False},
@@ -23,6 +24,7 @@
   {"label":"Mails","icon":"mail","href":url_for('admin_mails'),"endpoints":["admin_mails"],"locked":False},
   {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"badge":sales_today_notification_count if (sales_today_notification_count or 0) > 0 else "","locked":not partner_has_module('sales')},
   {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
+  {"label":"Suivi annulations","icon":"wallet","href":cancellation_tracking_href,"endpoints":["admin_cancellation_tracking"],"locked":False},
   {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False},
   {"label":"Paiement espèces","icon":"wallet","href":url_for('admin_cash_payments'),"endpoints":["admin_cash_payments"],"locked":False},
   {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False},
