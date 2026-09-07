@@ -185,9 +185,16 @@ class NativeElearningWebTests(unittest.TestCase):
 
     def test_admin_catalog_assigns_course_and_accepts_chunked_zip(self) -> None:
         self._admin_login()
+        self.data["sessions"].append(dict(self.data["sessions"][0]))
         catalog_page = self.client.get("/admin/elearning")
         self.assertEqual(catalog_page.status_code, 200)
         self.assertIn("E-learning natif", catalog_page.get_data(as_text=True))
+        self.assertEqual(
+            catalog_page.get_data(as_text=True).count(
+                'action="/admin/sessions/session-aps/elearning/assign"'
+            ),
+            1,
+        )
         with self.client.session_transaction() as browser_session:
             csrf = browser_session["native_elearning_csrf"]
 

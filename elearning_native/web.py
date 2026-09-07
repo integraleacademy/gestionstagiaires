@@ -572,12 +572,14 @@ def create_native_elearning_blueprint(
     def admin_catalog() -> Any:
         _cleanup_expired_uploads()
         data = load_data()
-        aps_sessions = [
-            session_obj
-            for session_obj in data.get("sessions", []) or []
-            if isinstance(session_obj, dict)
-            and _is_aps_training(session_obj)
-        ]
+        aps_sessions_by_id: Dict[str, Dict[str, Any]] = {}
+        for session_obj in data.get("sessions", []) or []:
+            if not isinstance(session_obj, dict) or not _is_aps_training(session_obj):
+                continue
+            session_id = str(session_obj.get("id") or "").strip()
+            if session_id:
+                aps_sessions_by_id.setdefault(session_id, session_obj)
+        aps_sessions = list(aps_sessions_by_id.values())
         return render_template(
             "admin_native_elearning.html",
             courses=catalog().list_courses(),
