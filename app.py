@@ -35977,6 +35977,7 @@ def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], t
 def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bool:
     """Rattrape les envois de convocation planifiés si le timer en mémoire a été perdu."""
     now = datetime.datetime.utcnow()
+    today_paris = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
     changed = False
     for sess in data.get("sessions", []):
         if not _is_aps_session(sess):
@@ -35990,6 +35991,29 @@ def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bo
                 continue
             scheduled_at = _parse_iso_datetime(trainee.get("convocation_auto_scheduled_at"))
             if not scheduled_at or scheduled_at > now:
+                continue
+            session_end_date = _parse_iso_date(str(_session_get(sess, "date_end", "") or ""))
+            if session_end_date and session_end_date < today_paris:
+                # A catch-up can survive for months when a historical session is
+                # missing a document prerequisite.  Never send a convocation after
+                # the training has ended: expire the schedule once and keep an
+                # explicit audit message on the trainee instead of retrying on every
+                # request that loads the shared data file.
+                trainee["convocation_auto_scheduled_at"] = ""
+                trainee["convocation_auto_last_error"] = (
+                    "Envoi automatique expiré : session terminée le "
+                    f"{session_end_date.strftime('%d/%m/%Y')}."
+                )
+                trainee["updated_at"] = _now_iso()
+                app.logger.warning(
+                    "[CONVOCATION] expired scheduled send for finished session "
+                    "session_id=%s trainee_id=%s session_end=%s",
+                    sess.get("id"),
+                    trainee.get("id"),
+                    session_end_date.isoformat(),
+                )
+                session_changed = True
+                changed = True
                 continue
             try:
                 sent = _send_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))

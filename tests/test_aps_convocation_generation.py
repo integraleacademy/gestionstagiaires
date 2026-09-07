@@ -746,6 +746,33 @@ class ApsConvocationSchedulingTests(unittest.TestCase):
         send_email.assert_called_once()
         save_data.assert_called_once_with(data)
 
+    def test_due_convocation_for_finished_session_is_expired_without_sending(self):
+        trainee = {
+            "id": "trainee-old",
+            "email": "stagiaire@example.com",
+            "convention_signature": {"status": "done"},
+            "convocation_auto_scheduled_at": "2000-01-01T10:05:00Z",
+        }
+        session = {
+            "id": "session-old",
+            "training_type": "APS",
+            "date_end": "2000-01-01",
+            "trainees": [trainee],
+        }
+        data = {"sessions": [session]}
+
+        with mock.patch.object(app, "_send_convocation_after_convention_signed") as send_convocation:
+            changed = app._process_due_convocation_after_convention_signed(data)
+
+        self.assertTrue(changed)
+        self.assertEqual(trainee["convocation_auto_scheduled_at"], "")
+        self.assertEqual(
+            trainee["convocation_auto_last_error"],
+            "Envoi automatique expiré : session terminée le 01/01/2000.",
+        )
+        self.assertTrue(trainee["updated_at"])
+        send_convocation.assert_not_called()
+
     def test_convention_signature_schedules_convocation_five_minutes_later(self):
         session = {"id": "session-1", "training_type": "APS", "trainees": []}
         trainee = {"id": "trainee-1", "convention_signature": {"status": "ongoing"}}
