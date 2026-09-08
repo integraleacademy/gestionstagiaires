@@ -128,7 +128,7 @@
                   {% endfor %}
                 </div>
               {% elif activity.question_type == 'fill_blank' %}
-                <p class="native-question__instruction">Complétez la phrase avec les propositions adaptées.</p>
+                <p class="native-question__instruction">Complétez la phrase.</p>
                 <div class="native-fill-blank">{{ activity.prompt_html }}</div>
               {% else %}
                 <div class="native-alert native-alert--warning">Ce format de question doit être vérifié par l’équipe pédagogique.</div>

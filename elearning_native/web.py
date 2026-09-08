@@ -13,6 +13,7 @@ import re
 import secrets
 import tempfile
 import time
+import unicodedata
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -207,6 +208,11 @@ def _format_seconds(value: Any) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+def _normalize_fill_blank_text(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKC", str(value or ""))
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
 def _safe_theme(course: Mapping[str, Any]) -> Dict[str, str]:
     raw = course.get("theme") if isinstance(course.get("theme"), Mapping) else {}
 
@@ -255,18 +261,53 @@ def _evaluate_answer(activity: Mapping[str, Any], payload: Mapping[str, Any]) ->
         groups = payload.get("groups")
         if not isinstance(groups, Mapping):
             raise TrackingError("Réponse à compléter invalide.")
-        normalized = {str(key): str(value) for key, value in groups.items()}
-        expected: Dict[str, str] = {}
-        valid: Dict[str, set[str]] = {}
-        for group in activity.get("answer_groups") or []:
+        normalized = {
+            str(key): _normalize_fill_blank_text(value)
+            for key, value in groups.items()
+        }
+        answer_groups = [
+            group
+            for group in (activity.get("answer_groups") or [])
+            if isinstance(group, Mapping)
+        ]
+        expected_group_ids = {str(group.get("id") or "") for group in answer_groups}
+        if (
+            set(normalized) != expected_group_ids
+            or not expected_group_ids
+            or any(not value for value in normalized.values())
+        ):
+            raise TrackingError("Toutes les réponses à compléter sont obligatoires.")
+
+        is_correct = True
+        for group in answer_groups:
             group_id = str(group.get("id") or "")
             answers = [answer for answer in group.get("answers") or [] if isinstance(answer, Mapping)]
-            valid[group_id] = {str(answer.get("id")) for answer in answers}
-            correct = next((str(answer.get("id")) for answer in answers if answer.get("is_correct")), "")
-            expected[group_id] = correct
-        if set(normalized) != set(expected) or any(normalized[key] not in valid[key] for key in normalized):
-            raise TrackingError("Toutes les réponses à compléter sont obligatoires.")
-        return normalized == expected, {"groups": normalized}
+            mode = str(group.get("mode") or "choice")
+            submitted = normalized[group_id]
+            if mode == "text":
+                correct_answers = [answer for answer in answers if answer.get("is_correct")]
+                group_is_correct = any(
+                    (
+                        submitted == _normalize_fill_blank_text(answer.get("text"))
+                        if answer.get("match_case")
+                        else submitted.casefold()
+                        == _normalize_fill_blank_text(answer.get("text")).casefold()
+                    )
+                    for answer in correct_answers
+                )
+            elif mode == "choice":
+                valid_ids = {str(answer.get("id") or "") for answer in answers}
+                if submitted not in valid_ids:
+                    raise TrackingError("Toutes les réponses à compléter sont obligatoires.")
+                expected = next(
+                    (str(answer.get("id") or "") for answer in answers if answer.get("is_correct")),
+                    "",
+                )
+                group_is_correct = submitted == expected
+            else:
+                raise TrackingError("Format de réponse à compléter invalide.")
+            is_correct = is_correct and group_is_correct
+        return is_correct, {"groups": normalized}
 
     raise TrackingError("Ce type de question n’est pas encore pris en charge.")
 

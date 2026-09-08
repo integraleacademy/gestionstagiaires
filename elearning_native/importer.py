@@ -39,6 +39,10 @@ _FILL_SELECT_RE = re.compile(
     r'<select\b[^>]*\bdata-group-id=["\']([^"\']+)["\'][^>]*>.*?</select>',
     re.IGNORECASE | re.DOTALL,
 )
+_FILL_INPUT_RE = re.compile(
+    r'<input\b[^>]*\bdata-group-id=["\']([^"\']+)["\'][^>]*>',
+    re.IGNORECASE | re.DOTALL,
+)
 
 _ALLOWED_ASSET_EXTENSIONS = {
     ".png",
@@ -253,6 +257,7 @@ class _HTMLSanitizer(HTMLParser):
         "em",
         "i",
         "img",
+        "input",
         "li",
         "ol",
         "option",
@@ -269,7 +274,7 @@ class _HTMLSanitizer(HTMLParser):
         "u",
         "ul",
     }
-    _void_tags = {"br", "img"}
+    _void_tags = {"br", "img", "input"}
     _drop_content_tags = {"script", "style", "object", "embed", "template"}
     _generic_attributes = {"class", "title", "role"}
     _tag_attributes = {
@@ -279,6 +284,7 @@ class _HTMLSanitizer(HTMLParser):
         "th": {"colspan", "rowspan", "scope"},
         "option": {"value"},
         "select": {"data-group-id"},
+        "input": {"type", "autocomplete", "spellcheck", "data-group-id"},
     }
 
     def __init__(self) -> None:
@@ -320,6 +326,13 @@ class _HTMLSanitizer(HTMLParser):
         if self._drop_depth or tag not in self._allowed_tags:
             return
 
+        if tag == "input":
+            source_classes = " ".join(
+                str(value or "") for name, value in attrs if str(name or "").lower() == "class"
+            )
+            if "native-elearning-blank" not in self._clean_class(source_classes).split():
+                return
+
         cleaned: List[Tuple[str, str]] = []
         allowed = self._generic_attributes | self._tag_attributes.get(tag, set())
         for raw_name, raw_value in attrs:
@@ -348,6 +361,14 @@ class _HTMLSanitizer(HTMLParser):
             elif name in {"width", "height", "colspan", "rowspan"}:
                 if not re.fullmatch(r"\d{1,4}", value):
                     continue
+            elif tag == "input" and name == "type":
+                value = value.lower()
+                if value != "text":
+                    continue
+            elif tag == "input" and name == "autocomplete":
+                value = "off"
+            elif tag == "input" and name == "spellcheck":
+                value = "false"
             cleaned.append((name, value))
 
         rendered_attrs = "".join(
@@ -492,7 +513,7 @@ class _EasygeneratorConverter:
             converted["contains_external_link"] = True
         return converted
 
-    def _fill_blank_prompt(self, activity: Mapping[str, Any]) -> str:
+    def _fill_blank_prompt(self, activity: Mapping[str, Any]) -> Tuple[str, Dict[str, str]]:
         activity_id = str(activity.get("id") or "")
         raw = self._html_member(activity_id, suffix="_content")
         groups = {
@@ -500,9 +521,15 @@ class _EasygeneratorConverter:
             for group in (activity.get("answerGroups") or [])
             if isinstance(group, Mapping)
         }
+        control_modes: Dict[str, str] = {}
 
-        def replacement(match: re.Match[str]) -> str:
+        def register_control(group_id: str, mode: str) -> None:
+            existing = control_modes.get(group_id)
+            control_modes[group_id] = mode if existing in {None, mode} else "mixed"
+
+        def select_replacement(match: re.Match[str]) -> str:
             group_id = match.group(1)
+            register_control(group_id, "choice")
             group = groups.get(group_id, {})
             options = ['<option value="">Choisir une réponse…</option>']
             for answer in group.get("answers") or []:
@@ -514,8 +541,19 @@ class _EasygeneratorConverter:
             safe_group = html.escape(group_id, quote=True)
             return f'<select class="native-elearning-blank" data-group-id="{safe_group}">' + "".join(options) + "</select>"
 
-        rebuilt = _FILL_SELECT_RE.sub(replacement, raw)
-        return sanitize_course_html(rebuilt)
+        def input_replacement(match: re.Match[str]) -> str:
+            group_id = match.group(1)
+            register_control(group_id, "text")
+            safe_group = html.escape(group_id, quote=True)
+            return (
+                '<input type="text" class="native-elearning-blank native-elearning-blank--text" '
+                f'data-group-id="{safe_group}" autocomplete="off" spellcheck="false" '
+                'aria-label="Réponse à compléter">'
+            )
+
+        rebuilt = _FILL_SELECT_RE.sub(select_replacement, raw)
+        rebuilt = _FILL_INPUT_RE.sub(input_replacement, rebuilt)
+        return sanitize_course_html(rebuilt), control_modes
 
     def activity(self, raw_activity: Mapping[str, Any], sequence: int) -> Dict[str, Any]:
         source_type = str(raw_activity.get("type") or "unknown")
@@ -573,15 +611,17 @@ class _EasygeneratorConverter:
             if not pair_ids or any(not value for value in pair_ids) or len(set(pair_ids)) != len(pair_ids):
                 raise CourseImportError(f"Associations invalides pour la question {activity_id}.")
         elif question_type == "fill_blank":
-            base["prompt_html"] = self._fill_blank_prompt(raw_activity)
+            base["prompt_html"], control_modes = self._fill_blank_prompt(raw_activity)
             base["answer_groups"] = [
                 {
                     "id": str(group.get("id") or ""),
+                    "mode": control_modes.get(str(group.get("id") or ""), ""),
                     "answers": [
                         {
                             "id": str(answer.get("id") or ""),
                             "text": _localized(answer.get("text"), self.locale),
                             "is_correct": bool(answer.get("isCorrect")),
+                            "match_case": bool(answer.get("matchCase")),
                         }
                         for answer in (group.get("answers") or [])
                         if isinstance(answer, Mapping)
@@ -594,7 +634,7 @@ class _EasygeneratorConverter:
             if not group_ids or any(not value for value in group_ids) or len(set(group_ids)) != len(group_ids):
                 raise CourseImportError(f"Groupes de réponses invalides pour la question {activity_id}.")
             prompt_group_ids = set(re.findall(r'data-group-id="([^"]+)"', base["prompt_html"]))
-            if prompt_group_ids != set(group_ids):
+            if prompt_group_ids != set(group_ids) or set(control_modes) != set(group_ids):
                 raise CourseImportError(f"Texte à trous incomplet pour la question {activity_id}.")
             for group in base["answer_groups"]:
                 answers = group.get("answers") or []
@@ -604,9 +644,17 @@ class _EasygeneratorConverter:
                     not answer_ids
                     or any(not value for value in answer_ids)
                     or len(set(answer_ids)) != len(answer_ids)
-                    or correct_count != 1
                 ):
                     raise CourseImportError(f"Réponses de texte à trous invalides pour la question {activity_id}.")
+                if group.get("mode") == "choice" and correct_count != 1:
+                    raise CourseImportError(f"Réponses de texte à trous invalides pour la question {activity_id}.")
+                if group.get("mode") == "text" and not any(
+                    answer.get("is_correct") and str(answer.get("text") or "").strip()
+                    for answer in answers
+                ):
+                    raise CourseImportError(f"Réponses de texte à trous invalides pour la question {activity_id}.")
+                if group.get("mode") not in {"choice", "text"}:
+                    raise CourseImportError(f"Format de texte à trous invalide pour la question {activity_id}.")
         return base
 
     def course(self, *, source_sha256: str) -> Dict[str, Any]:
