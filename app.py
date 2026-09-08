@@ -39385,6 +39385,7 @@ def _installment_rejection_is_treated(installment: Dict[str, Any]) -> bool:
 def _installment_counts_toward_schedule(installment: Dict[str, Any]) -> bool:
     return not bool(
         installment.get('excluded_from_schedule_totals')
+        or installment.get('tracking_removed_at')
         or _installment_rejection_is_treated(installment)
     )
 
@@ -39479,6 +39480,9 @@ def _effective_sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _sepa_schedule_total(line: Dict[str, Any], installments: Optional[List[Dict[str, Any]]] = None) -> int:
     """Resolve the contractual count, independently from retry-history rows."""
+    override = line.get('financial_tracking_override') or {}
+    if override.get('enabled') and override.get('source') == 'inline_schedule':
+        return len(_effective_sepa_installments(line))
     installments = installments if installments is not None else _sepa_installments(line)
     payment_plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
     stored_plan = line.get('sepa_payment_plan') if isinstance(line.get('sepa_payment_plan'), dict) else {}
@@ -39667,8 +39671,7 @@ def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
     for installment in installments:
         is_current = id(installment) in current_ids
         installment['is_current_schedule_attempt'] = is_current
-        if schedule_total:
-            installment['schedule_total'] = schedule_total
+        installment['schedule_total'] = schedule_total
         if installment.get('is_rejection_retry'):
             installment['retry_superseded'] = not is_current
     total_due = round(sum(_money(item.get('amount')) for item in effective_installments), 2)
@@ -40280,6 +40283,8 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
     )
     all_installments = _sepa_installments(line)
     installments = _effective_sepa_installments(line)
+    if not installments and (line.get('financial_tracking_override') or {}).get('source') == 'inline_schedule':
+        return 'Aucun échéancier actif'
     statuses = [str(i.get('status') or '').lower() for i in installments]
     if not line.get('qonto_direct_debit_mandate_id') or mandate not in {'active', 'signed'}:
         return 'Mandat à signer'
@@ -44854,7 +44859,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
         if not collections:
             continue
         collections.sort(key=lambda collection: (_qonto_collection_date(collection), str(collection.get('id') or '')))
-        due_date = str(item.get('due_date') or item.get('date') or '')[:10]
+        due_date = str(item.get('qonto_original_due_date') or item.get('due_date') or item.get('date') or '')[:10]
         # Recurring subscriptions share an id across all monthly rows. Match
         # the collection to its planned date so one paid/rejected collection
         # cannot incorrectly change every installment in the schedule.
@@ -44871,9 +44876,13 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
         item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
         item['qonto_collection_status_raw'] = raw_collection_status
         item['status'] = _map_collection_status(raw_collection_status)
-        if _qonto_collection_date(collection):
+        if _qonto_collection_date(collection) and (not item.get('tracking_pending_qonto') or item['status'] == 'completed'):
             item['date'] = _qonto_collection_date(collection)
             item['due_date'] = _qonto_collection_date(collection)
+        if _qonto_collection_date(collection) == str(item.get('date') or '')[:10]:
+            item.pop('tracking_pending_qonto', None)
+            item.pop('qonto_original_due_date', None)
+        _restore_removed_installment_if_paid(line, item)
         if item['status'] == 'completed':
             item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
             # A stale subscription-level rejection must not survive once the
@@ -44948,6 +44957,9 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
             item['status'] = _map_collection_status(raw_collection_status)
             item['date'] = due_date
             item['due_date'] = due_date
+            item.pop('tracking_pending_qonto', None)
+            item.pop('qonto_original_due_date', None)
+            _restore_removed_installment_if_paid(line, item)
             if item['status'] == 'completed':
                 item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
                 for key in (
@@ -45513,7 +45525,8 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
         installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
         matching = [
             inst for inst in installments
-            if not subscription_id or str(inst.get('qonto_direct_debit_subscription_id') or '') == subscription_id
+            if (subscription_id and str(inst.get('qonto_direct_debit_subscription_id') or '') == subscription_id)
+            or (collection_id and str(inst.get('qonto_direct_debit_collection_id') or '') == collection_id)
         ]
         event_date = str(
             item.get('collection_date') or item.get('scheduled_at') or item.get('due_date')
@@ -45522,7 +45535,7 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
         if len(matching) > 1:
             dated = [
                 inst for inst in matching
-                if str(inst.get('due_date') or inst.get('date') or '')[:10] == event_date
+                if str(inst.get('qonto_original_due_date') or inst.get('due_date') or inst.get('date') or '')[:10] == event_date
             ]
             # Never propagate one recurring collection's rejection to every
             # future installment when Qonto has not supplied a usable date.
@@ -45536,6 +45549,7 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
             inst['status'] = _map_collection_status(item.get('status') or item.get('event'))
             if inst['status'] == 'completed':
                 inst['paidAt'] = item.get('paid_at') or item.get('completed_at') or _now_iso()
+                _restore_removed_installment_if_paid(line, inst)
             if item.get('status_reason'):
                 inst['failureReason'] = item.get('status_reason')
                 inst['status_reason'] = item.get('status_reason')
@@ -45549,6 +45563,7 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
             elif line['qontoPaymentGlobalStatus'] in {'Rejet traité', 'Prélèvements programmés'}: line['paymentStatus'] = 'unpaid'
             if inst['status'] in {'failed', 'returned', 'refunded'} and previous_status not in {'failed', 'returned', 'refunded'}:
                 _notify_rejected_qonto_debit(data, line, inst, collection_id)
+            _sync_sepa_aliases(line)
             _save_billing_line(data, line)
             updated = True
     return updated
@@ -45649,6 +45664,140 @@ def api_billing_create_mandate():
         _billing_log(line, 'Erreur création mandat SEPA', 'error', _sanitize_qonto_error(str(exc)))
         _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': False, 'error': format_qonto_error_for_front(exc)}), 400
+
+
+def _installment_edit_snapshot(line: Dict[str, Any]) -> List[List[Any]]:
+    """Compare the exact displayed schedule, including webhook/status changes."""
+    return [
+        [str(row.get('due_date') or row.get('date') or '')[:10],
+         money_value_to_cents(row.get('amount') or 0), str(row.get('status') or ''),
+         str(row.get('qonto_direct_debit_subscription_id') or ''),
+         str(row.get('qonto_direct_debit_collection_id') or ''),
+         _installment_schedule_position(row, index + 1),
+         bool(row.get('excluded_from_schedule_totals')),
+         _installment_rejection_is_treated(row), str(row.get('tracking_removed_at') or '')]
+        for index, row in enumerate(_sepa_installments(line))
+    ]
+
+
+def _refresh_edited_installment_plan(line: Dict[str, Any]) -> None:
+    rows = _sepa_installments(line)
+    effective = sorted(_effective_sepa_installments(line), key=lambda row: str(row.get('date') or ''))
+    positions = {_installment_schedule_position(row, rows.index(row) + 1): index
+                 for index, row in enumerate(effective, start=1)}
+    for order, row in enumerate(rows, start=1):
+        old_position = _installment_schedule_position(row, order)
+        # Deleted slots remain distinct from all live positions. A later real
+        # bank payment must not collapse into another installment's slot.
+        position = positions.get(old_position, len(effective) + old_position)
+        row['index'] = row['schedule_index'] = position
+        row['schedule_total'] = len(effective)
+    line['paymentPlan'] = {
+        **(line.get('paymentPlan') or {}), 'mode': 'sepa_direct_debit',
+        'installments': len(effective), 'label': f'Échéancier {len(effective)} échéance(s)',
+        'firstDebitDate': effective[0].get('date') if effective else '',
+        'schedule': [{'date': row.get('date'), 'amount': row.get('amount')} for row in effective],
+    }
+    _sync_sepa_aliases(line)
+
+
+def _restore_removed_installment_if_paid(line: Dict[str, Any], row: Dict[str, Any]) -> None:
+    """A local removal never erases a payment subsequently confirmed by Qonto."""
+    if row.get('tracking_removed_at') and str(row.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES:
+        row['tracking_restored_after_payment_at'] = _now_iso()
+        row.pop('tracking_removed_at', None)
+        row.pop('excluded_from_schedule_totals', None)
+        row['schedule_index'] = row['index'] = 1 + max(
+            (_installment_schedule_position(item, index + 1)
+             for index, item in enumerate(_sepa_installments(line)) if item is not row), default=0,
+        )
+
+
+@app.post('/api/billing/installments')
+@admin_login_required
+@admin_write_required
+def api_billing_edit_installment():
+    """Edit local tracking only; this endpoint never writes to Qonto."""
+    if not _financing_partner_module_enabled():
+        return jsonify({'ok': False, 'error': 'Le module financement est verrouillé.'}), 403
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict) or payload.get('scope') != 'tracking':
+        return jsonify({'ok': False, 'error': 'Précisez que la modification concerne le suivi uniquement.'}), 400
+    action = payload.get('action')
+    if action not in {'add', 'update', 'delete'}:
+        return jsonify({'ok': False, 'error': 'Action inconnue.'}), 400
+    def mutate(data):
+        lines = _billing_lines_for_trainee_session(data, str(payload.get('traineeId') or ''), str(payload.get('sessionId') or ''))
+        line = next((item for item in lines if str(item.get('id')) == str(payload.get('lineId') or '')), None)
+        if not line:
+            return jsonify({'ok': False, 'error': 'Échéancier introuvable sur cette fiche.'}), 404
+        if line.get('registrationCancelled') or is_cpf_billing_context(line):
+            return jsonify({'ok': False, 'error': 'Cet échéancier ne peut pas être modifié.'}), 409
+        if line.get('paymentMode') != 'sepa_direct_debit':
+            return jsonify({'ok': False, 'error': 'Cette ligne ne possède pas d’échéancier de prélèvement.'}), 409
+        if payload.get('expectedSchedule') != _installment_edit_snapshot(line):
+            return jsonify({'ok': False, 'error': 'L’échéancier a changé. Actualisez la fiche avant de réessayer.'}), 409
+        rows = _sepa_installments(line)
+        row = None
+        if action != 'add':
+            index = payload.get('installmentIndex')
+            if type(index) is not int or not 0 <= index < len(rows):
+                return jsonify({'ok': False, 'error': 'Échéance introuvable.'}), 400
+            row = rows[index]
+            if not any(item is row for item in _effective_sepa_installments(line)):
+                return jsonify({'ok': False, 'error': 'Cette ligne appartient à l’historique.'}), 409
+            if str(row.get('status') or '').lower() in QONTO_PAID_COLLECTION_STATUSES | {'processing', 'in_progress', 'submitted'}:
+                return jsonify({'ok': False, 'error': 'Une échéance encaissée ou en cours de traitement ne peut pas être modifiée.'}), 409
+            if action == 'update' and _installment_is_rejected(row):
+                return jsonify({'ok': False, 'error': 'Utilisez « Reprogrammer un prélèvement » pour un rejet ; sa date reste dans l’historique.'}), 409
+        if action in {'add', 'update'}:
+            date_value = str(payload.get('date') or '').strip()
+            parsed_date = _parse_date_safe(date_value)
+            if len(date_value) != 10 or not parsed_date or parsed_date.isoformat() != date_value:
+                return jsonify({'ok': False, 'error': 'Indiquez une date valide.'}), 400
+        if action == 'add':
+            raw_amount = payload.get('amount')
+            try:
+                amount = float(str(raw_amount).replace(',', '.'))
+            except (TypeError, ValueError):
+                amount = 0
+            if not math.isfinite(amount) or amount <= 0 or amount > 1000000 or round(amount, 2) != amount:
+                return jsonify({'ok': False, 'error': 'Indiquez un montant positif avec deux décimales maximum.'}), 400
+            if len(_effective_sepa_installments(line)) >= 60:
+                return jsonify({'ok': False, 'error': 'L’échéancier ne peut pas dépasser 60 échéances.'}), 400
+            if any(str(item.get('date') or item.get('due_date') or '')[:10] == date_value
+                   and money_value_to_cents(item.get('amount') or 0) == money_value_to_cents(amount)
+                   for item in _effective_sepa_installments(line)):
+                return jsonify({'ok': False, 'error': 'Une échéance de ce montant existe déjà à cette date.'}), 409
+        before = copy.deepcopy(rows)
+        now = _now_iso()
+        if action == 'add':
+            position = 1 + max((_installment_schedule_position(item, i + 1) for i, item in enumerate(rows)), default=0)
+            row = {'index': position, 'schedule_index': position, 'date': date_value,
+                   'due_date': date_value, 'amount': amount, 'status': 'scheduled',
+                   'manual_tracking_entry': True, 'tracking_pending_qonto': True,
+                   'created_at': now, 'updated_at': now}
+            rows.append(row)
+        elif action == 'delete':
+            row.update({'tracking_removed_at': now, 'excluded_from_schedule_totals': True, 'updated_at': now})
+        else:
+            if date_value == str(row.get('due_date') or row.get('date') or '')[:10]:
+                return jsonify({'ok': True, 'message': 'La date est inchangée.'})
+            row.setdefault('qonto_original_due_date', str(row.get('due_date') or row.get('date') or '')[:10])
+            row.update({'date': date_value, 'due_date': date_value, 'tracking_pending_qonto': True, 'updated_at': now})
+        line['directDebitInstallments'] = rows
+        line.setdefault('sepa_payment_plan', {})['installments'] = rows
+        audit = list((line.get('financial_tracking_override') or {}).get('edit_history') or [])
+        audit.append({'action': action, 'at': now, 'by': session.get('admin_username') or 'admin',
+                      'before': before, 'after': copy.deepcopy(rows)})
+        line['financial_tracking_override'] = {'enabled': True, 'source': 'inline_schedule',
+                                              'updated_at': now, 'edit_history': audit[-30:]}
+        _refresh_edited_installment_plan(line)
+        labels = {'add': 'Échéance ajoutée au suivi', 'update': 'Date modifiée dans le suivi', 'delete': 'Échéance supprimée du suivi'}
+        _billing_log(line, labels[action], 'success', 'Suivi local uniquement : aucune modification bancaire Qonto.')
+        _save_billing_line(data, line)
+        return jsonify({'ok': True, 'message': labels[action] + '. Qonto n’a pas été modifié.'})
+    return _atomic_update_data(mutate)
 
 
 @app.post('/api/billing/reschedule-rejected-debit')
