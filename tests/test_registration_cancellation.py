@@ -75,6 +75,90 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertEqual(cancelled_finance["paid_total_cents"], 0)
         self.assertEqual(cancelled_finance["remaining_total_cents"], 0)
 
+    def test_cancelled_trainee_card_preserves_collections_without_affecting_kpis(self):
+        for status, paid_cents in (("completed", 95000), ("returned", 0)):
+            with self.subTest(status=status):
+                session = self._session()
+                trainee = session["trainees"][1]
+                trainee.update({"training_price": 950, "personal_amount": 950})
+                generated_line = next(
+                    row for row in gestion_app._billing_lines({"sessions": [session]})
+                    if row["traineeId"] == trainee["id"]
+                )
+                line = {
+                    "id": generated_line["id"], "sessionId": session["id"],
+                    "traineeId": trainee["id"], "financingType": "PERSONNEL",
+                    "amount": 950, "amountTTC": 950,
+                    "paymentMode": "sepa_direct_debit",
+                    "qontoInvoiceId": "inv-cancelled", "invoiceStatus": "finalized",
+                    "qonto_total_amount_cents": 95000, "qonto_amount_paid_cents": 0,
+                    "directDebitInstallments": [
+                        {"index": 1, "amount": 950, "status": status, "date": "2026-09-07"},
+                    ],
+                }
+                data = {"sessions": [session], "billing_lines": [line]}
+                with patch.object(gestion_app, "load_data", return_value=data), \
+                     patch.object(gestion_app, "save_data"), \
+                     patch.object(gestion_app, "_qonto_is_configured", return_value=False):
+                    response = self.client.get(
+                        "/api/billing/trainee/T-CANCELLED/session/S-CANCEL"
+                    )
+
+                self.assertEqual(response.status_code, 200)
+                payload = response.get_json()
+                invoice = gestion_app.serialize_qonto_invoice_for_frontend(payload["lines"][0])
+                summary = payload["financial_summary"]
+                self.assertEqual(invoice["paid_amount_cents"], paid_cents)
+                self.assertEqual(summary["planned_total_cents"], 95000)
+                self.assertEqual(summary["invoiced_total_cents"], 95000)
+                self.assertEqual(summary["paid_total_cents"], paid_cents)
+                self.assertEqual(summary["remaining_total_cents"], 95000 - paid_cents)
+                self.assertEqual(summary["payment_percentage"], 100 if paid_cents else 0)
+                personal = summary["by_financer"]["PERSONNEL"]
+                self.assertEqual(personal["paid_amount_cents"], paid_cents)
+                self.assertEqual(personal["remaining_amount_cents"], 95000 - paid_cents)
+                self.assertEqual(len(summary["qonto_payment_entries"]), 1 if paid_cents else 0)
+                self.assertTrue(summary["registration_cancelled"])
+                self.assertTrue(trainee["registration_cancelled"])
+
+                # Keeping history on the card must not restore cancelled sales.
+                kpis = gestion_app.calculate_trainee_financial_summary(trainee, [line])
+                for field in ("planned_total_cents", "invoiced_total_cents", "paid_total_cents", "remaining_total_cents"):
+                    self.assertEqual(kpis[field], 0)
+                stats = gestion_app.compute_stats(session)
+                finance = gestion_app._admin_trainees_finance_summary(session, session["trainees"])
+                self.assertEqual(stats["total"], 1)
+                self.assertEqual(finance["revenue"], 1000)
+
+    def test_cancelled_trainee_sync_keeps_actual_paid_amount_in_response(self):
+        session = self._session()
+        trainee = session["trainees"][1]
+        trainee.update({"training_price": 950, "personal_amount": 950})
+        generated_line = next(
+            row for row in gestion_app._billing_lines({"sessions": [session]})
+            if row["traineeId"] == trainee["id"]
+        )
+        line = {
+            "id": generated_line["id"], "sessionId": session["id"],
+            "traineeId": trainee["id"], "financingType": "PERSONNEL",
+            "amount": 950, "qontoInvoiceId": "inv-cancelled", "invoiceStatus": "finalized",
+            "qonto_total_amount_cents": 95000, "qonto_amount_paid_cents": 95000,
+        }
+        data = {"sessions": [session], "billing_lines": [line]}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_sync_billing_line_with_qonto", return_value=(False, {})):
+            response = self.client.post(
+                "/api/billing/sync-qonto", json={"lineId": line["id"]}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        summary = response.get_json()["financial_summary"]
+        self.assertEqual(summary["paid_total_cents"], 95000)
+        self.assertEqual(summary["remaining_total_cents"], 0)
+        self.assertEqual(summary["payment_status"], "paid")
+        self.assertTrue(trainee["registration_cancelled"])
+
     def test_update_endpoint_keeps_record_and_closes_open_notifications(self):
         session = self._session()
         session["trainees"][1]["registration_cancelled"] = False
