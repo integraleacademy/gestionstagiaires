@@ -97,6 +97,28 @@ def test_delete_add_and_delete_last_row_keep_history_but_recompute_counts(editor
     assert line['sepa_payment_plan']['total_due'] == 3440
 
 
+def test_amount_only_edit_recomputes_totals_and_preserves_original_bank_amount(editor):
+    assert send(editor, 'update', installmentIndex=2, amount='900,25').status_code == 200
+    _, line, data, saved, _ = editor
+    row = line['directDebitInstallments'][2]
+    assert row['date'] == row['due_date'] == '2026-09-29'
+    assert row['amount'] == 900.25
+    assert row['qonto_original_amount'] == 1146.66
+    assert row['tracking_pending_qonto'] is True
+    assert line['sepa_payment_plan']['total_due'] == 3193.59
+    assert line['sepa_payment_plan']['total_installments'] == 3
+    assert line['paymentPlan']['schedule'][1]['amount'] == 900.25
+    assert data['billing_lines'][0]['directDebitInstallments'][2]['amount'] == 900.25
+    audit = line['financial_tracking_override']['edit_history'][0]
+    assert audit['before'][2]['amount'] == 1146.66
+    assert audit['after'][2]['amount'] == 900.25
+    saved.reset_mock()
+    assert send(editor, 'update', installmentIndex=2, amount=900.25).status_code == 200
+    saved.assert_not_called()
+    assert send(editor, 'update', installmentIndex=2, amount=800).status_code == 200
+    assert row['qonto_original_amount'] == 1146.66
+
+
 def test_stale_schedule_wrong_trainee_and_duplicate_add_do_not_save(editor):
     assert send(editor, 'update', installmentIndex=2, date='2026-10-03', expectedSchedule=[]).status_code == 409
     assert send(editor, 'delete', installmentIndex=2, traineeId='T2').status_code == 404
@@ -111,6 +133,8 @@ def test_stale_schedule_wrong_trainee_and_duplicate_add_do_not_save(editor):
     ('add', {'date': '2026-12-01', 'amount': -5}),
     ('add', {'date': '2026-12-01', 'amount': 'NaN'}),
     ('add', {'date': '2026-12-01', 'amount': 1.234}),
+    *[('update', {'installmentIndex': 2, 'amount': value})
+      for value in (-5, 0, '', None, 'NaN', 'Infinity', 1.234, 1000000.01)],
 ])
 def test_invalid_or_historical_changes_are_rejected(editor, action, details):
     before = copy.deepcopy(editor[1])
@@ -123,9 +147,11 @@ def test_paid_row_and_readonly_admin_are_protected(editor):
     line = editor[1]
     gestion_app._sepa_installments(line)[2]['status'] = 'completed'
     assert send(editor, 'delete', installmentIndex=2).status_code == 409
+    assert send(editor, 'update', installmentIndex=2, amount=100).status_code == 409
     with editor[0].session_transaction() as session:
         session['admin_role'] = 'viewer'
     assert send(editor, 'add', date='2026-12-01', amount=100).status_code == 403
+    assert send(editor, 'update', installmentIndex=3, amount=100).status_code == 403
     editor[3].assert_not_called()
 
 
@@ -161,6 +187,55 @@ def test_qonto_sync_keeps_changed_tracking_date_for_pending_collection(editor):
     assert row['tracking_pending_qonto'] is True
 
 
+@pytest.mark.parametrize('channel', ['sync', 'webhook'])
+@pytest.mark.parametrize('status,bank_amount,expected_amount,pending', [
+    ('pending', 1146.66, 900.25, True),
+    ('pending', None, 900.25, True),
+    ('pending', 900.25, 900.25, False),
+    ('completed', 1146.66, 1146.66, False),
+    ('completed', None, 1146.66, False),
+    ('completed', 900.25, 900.25, False),
+])
+def test_bank_sync_preserves_pending_edits_and_uses_actual_paid_amount(
+        editor, channel, status, bank_amount, expected_amount, pending):
+    assert send(editor, 'update', installmentIndex=2, amount=900.25).status_code == 200
+    _, line, data, *_ = editor
+    collection = {'id': 'COLL', 'direct_debit_subscription_id': 'FUTURE', 'status': status,
+                  'collection_date': '2026-09-29'}
+    if bank_amount is not None:
+        collection['amount'] = {'value': str(bank_amount), 'currency': 'EUR'}
+    if channel == 'sync':
+        with patch.object(gestion_app, '_resolve_qonto_direct_debit_mandate_for_line', return_value={}), \
+             patch.object(gestion_app, 'list_qonto_direct_debit_collections',
+                          side_effect=lambda sid: {'direct_debit_collections': [collection] if sid == 'FUTURE' else []}):
+            gestion_app._sync_qonto_direct_debit_line(line)
+    else:
+        assert gestion_app._apply_qonto_collection_webhook(data, collection)
+    row = line['directDebitInstallments'][2]
+    assert row['amount'] == expected_amount
+    assert bool(row.get('tracking_pending_qonto')) is pending
+    assert ('qonto_original_amount' in row) is pending
+    assert line['sepa_payment_plan']['total_due'] == round(2293.34 + expected_amount, 2)
+    if status == 'completed':
+        assert line['sepa_payment_plan']['total_paid'] == expected_amount
+
+
+def test_payment_without_amount_uses_latest_bank_confirmation(editor):
+    assert send(editor, 'update', installmentIndex=2, amount=900.25).status_code == 200
+    _, line, data, *_ = editor
+    collection = {'id': 'COLL', 'direct_debit_subscription_id': 'FUTURE', 'status': 'pending',
+                  'collection_date': '2026-09-29', 'amount': {'value': '950.00'}}
+    assert gestion_app._apply_qonto_collection_webhook(data, collection)
+    row = line['directDebitInstallments'][2]
+    assert row['amount'] == 900.25
+    assert row['qonto_original_amount'] == 950
+    collection.update(status='completed')
+    collection.pop('amount')
+    assert gestion_app._apply_qonto_collection_webhook(data, collection)
+    assert row['amount'] == line['sepa_payment_plan']['total_paid'] == 950
+    assert not row.get('tracking_pending_qonto')
+
+
 def test_persisted_changes_survive_real_billing_line_reconstruction(editor):
     _, template_line, data, *_ = editor
     data['sessions'] = [{'id': 'S1', 'training_type': 'APS', 'date_start': '2026-09-01', 'date_end': '2026-10-01', 'trainees': [
@@ -172,7 +247,7 @@ def test_persisted_changes_survive_real_billing_line_reconstruction(editor):
     data['billing_lines'] = [generated]
     with patch.object(gestion_app, '_billing_lines', side_effect=REAL_BILLING_LINES), \
          patch.object(gestion_app, '_billing_lines_for_trainee_session', side_effect=lambda d, tid, sid: REAL_BILLING_LINES(d)):
-        for action, details in [('update', {'installmentIndex': 2, 'date': '2026-10-03'}),
+        for action, details in [('update', {'installmentIndex': 2, 'date': '2026-10-03', 'amount': 900}),
                                 ('delete', {'installmentIndex': 3}),
                                 ('add', {'date': '2026-12-01', 'amount': 500})]:
             line = next(item for item in REAL_BILLING_LINES(data) if item['id'] == generated['id'])
@@ -183,7 +258,8 @@ def test_persisted_changes_survive_real_billing_line_reconstruction(editor):
             assert response.status_code == 200, response.get_json()
         rebuilt = next(item for item in REAL_BILLING_LINES(data) if item['id'] == generated['id'])
     assert rebuilt['directDebitInstallments'][2]['date'] == '2026-10-03'
+    assert rebuilt['directDebitInstallments'][2]['amount'] == 900
     assert rebuilt['directDebitInstallments'][3]['tracking_removed_at']
     assert rebuilt['directDebitInstallments'][-1]['amount'] == 500
-    assert rebuilt['sepa_payment_plan']['total_due'] == 2793.32
+    assert rebuilt['sepa_payment_plan']['total_due'] == 2546.66
     assert rebuilt['sepa_payment_plan']['total_installments'] == 3
