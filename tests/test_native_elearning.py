@@ -10,7 +10,24 @@ from elearning_native.importer import CourseCatalog, CourseImportError, import_e
 from elearning_native.store import NativeElearningStore
 
 
-def _write_synthetic_course(path: Path, *, dangerous_member: str = "") -> None:
+def _write_synthetic_course(
+    path: Path,
+    *,
+    dangerous_member: str = "",
+    fill_blank_input: bool = False,
+) -> None:
+    fill_blank_answers = [
+        {
+            "id": "blank-a",
+            "text": {"fr": "l'agent"},
+            "isCorrect": True,
+            "matchCase": False,
+        }
+    ]
+    if not fill_blank_input:
+        fill_blank_answers.append(
+            {"id": "blank-b", "text": {"fr": "la police"}, "isCorrect": False}
+        )
     course = {
         "id": "course-test",
         "version": "version-1",
@@ -45,10 +62,7 @@ def _write_synthetic_course(path: Path, *, dangerous_member: str = "") -> None:
                         "answerGroups": [
                             {
                                 "id": "group-1",
-                                "answers": [
-                                    {"id": "blank-a", "text": {"fr": "l'agent"}, "isCorrect": True},
-                                    {"id": "blank-b", "text": {"fr": "la police"}, "isCorrect": False},
-                                ],
+                                "answers": fill_blank_answers,
                             }
                         ],
                     },
@@ -75,7 +89,10 @@ def _write_synthetic_course(path: Path, *, dangerous_member: str = "") -> None:
       <img src="https://tracker.invalid/pixel.png">
       <a href="javascript:alert(3)">lien dangereux</a>
     </div>"""
-    blank_html = """<div data-type="fillInTheBlank"><p>Le rôle de <select data-group-id="group-1"><option>cassé par l'apostrophe</option></select> est encadré.</p></div>"""
+    if fill_blank_input:
+        blank_html = """<div data-type="fillInTheBlank"><p>Le rôle de <input contenteditable="false" class="blankInput" data-group-id="group-1" data-match-case="False" value="" size="15"><span class="removed-flag" data-blank-id="group-1" style="display:none"></span> est encadré.</p></div>"""
+    else:
+        blank_html = """<div data-type="fillInTheBlank"><p>Le rôle de <select data-group-id="group-1"><option>cassé par l'apostrophe</option></select> est encadré.</p></div>"""
 
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("content/data.js", json.dumps(course, ensure_ascii=False))
@@ -135,6 +152,24 @@ class EasygeneratorImporterTests(unittest.TestCase):
             self.assertEqual(first["version"], second["version"])
             versions = [path for path in (root / "catalog" / "courses" / first["id"]).iterdir() if path.is_dir()]
             self.assertEqual(len(versions), 1)
+
+    def test_converts_easygenerator_free_text_fill_blank(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = root / "course.zip"
+            _write_synthetic_course(archive, fill_blank_input=True)
+
+            imported = import_easygenerator_course(archive, root / "catalog", archive_source=False)
+
+            activity = imported["sections"][0]["activities"][2]
+            prompt = activity["prompt_html"]
+            self.assertIn('type="text"', prompt)
+            self.assertIn('class="native-elearning-blank native-elearning-blank--text"', prompt)
+            self.assertIn('data-group-id="group-1"', prompt)
+            self.assertNotIn("contenteditable", prompt)
+            self.assertNotIn("l'agent", prompt)
+            self.assertEqual(activity["answer_groups"][0]["mode"], "text")
+            self.assertFalse(activity["answer_groups"][0]["answers"][0]["match_case"])
 
     def test_rejects_path_traversal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

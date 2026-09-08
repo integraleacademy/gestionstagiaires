@@ -12,6 +12,7 @@ import app as gestion_app
 
 from elearning_native.integration import register_native_elearning
 from elearning_native.importer import CourseCatalog
+from elearning_native.web import TrackingError, _evaluate_answer
 from tests.test_native_elearning import _write_synthetic_course
 
 
@@ -230,6 +231,41 @@ class NativeElearningWebTests(unittest.TestCase):
         )
         self.assertEqual(finished.status_code, 200)
         self.assertEqual(finished.get_json()["course"]["id"], self.course["id"])
+
+    def test_free_text_fill_blank_is_scored_without_exposing_the_answer(self) -> None:
+        activity = {
+            "question_type": "fill_blank",
+            "answer_groups": [
+                {
+                    "id": "group-1",
+                    "mode": "text",
+                    "answers": [
+                        {
+                            "id": "answer-1",
+                            "text": "proportionnée",
+                            "is_correct": True,
+                            "match_case": False,
+                        }
+                    ],
+                }
+            ],
+        }
+
+        correct, stored = _evaluate_answer(
+            activity,
+            {"groups": {"group-1": "  Proportionnée  "}},
+        )
+        self.assertTrue(correct)
+        self.assertEqual(stored, {"groups": {"group-1": "Proportionnée"}})
+
+        incorrect, _ = _evaluate_answer(
+            activity,
+            {"groups": {"group-1": "disproportionnée"}},
+        )
+        self.assertFalse(incorrect)
+
+        with self.assertRaises(TrackingError):
+            _evaluate_answer(activity, {"groups": {"group-1": ""}})
 
 
 if __name__ == "__main__":
