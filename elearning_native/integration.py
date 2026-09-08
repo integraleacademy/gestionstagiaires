@@ -16,6 +16,7 @@ def register_native_elearning(legacy_app: ModuleType) -> None:
             get_persist_dir=lambda: legacy_app.PERSIST_DIR,
             load_data=lambda: legacy_app.load_data(run_background_tasks=False),
             save_data=lambda data: legacy_app.save_data(data),
+            mutate_data=lambda mutator: legacy_app._atomic_update_data(mutator),
             find_session=legacy_app.find_session,
             find_session_and_trainee_by_token=legacy_app.find_session_and_trainee_by_token,
             session_trainees=legacy_app._session_trainees_list,

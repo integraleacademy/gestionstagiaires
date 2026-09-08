@@ -392,6 +392,17 @@ class NativeElearningStore:
             owner_is_stale = not owner_id or epoch - owner_seen > ACTIVE_SESSION_STALE_SECONDS
             owns_slot = owner_id == tracking_session_id
             duplicate = bool(requested_active and not owns_slot and not owner_is_stale)
+            # One learner must not earn time on two modules at once (e.g. two
+            # playing videos). This check shares the same SQLite transaction.
+            other_module = connection.execute(
+                """SELECT 1 FROM learner_course_progress
+                   WHERE session_id = ? AND trainee_id = ?
+                     AND NOT (course_id = ? AND course_version = ?)
+                     AND active_tracking_session_id IS NOT NULL
+                     AND active_tracking_seen_epoch >= ? LIMIT 1""",
+                (*key, epoch - ACTIVE_SESSION_STALE_SECONDS),
+            ).fetchone()
+            duplicate = duplicate or bool(requested_active and other_module)
 
             previous_active = bool(tracking["was_active"])
             previous_duplicate = bool(tracking["was_duplicate"])
@@ -406,6 +417,15 @@ class NativeElearningStore:
             if accepted_active:
                 next_owner_id = tracking_session_id
                 next_owner_seen = epoch
+                # Taking over from a stale *different* module also revokes its
+                # old slot, so a delayed heartbeat cannot credit overlapping time.
+                connection.execute(
+                    """UPDATE learner_course_progress
+                       SET active_tracking_session_id = NULL, active_tracking_seen_epoch = NULL
+                       WHERE session_id = ? AND trainee_id = ?
+                         AND NOT (course_id = ? AND course_version = ?)""",
+                    key,
+                )
             elif owns_slot:
                 next_owner_id = None
                 next_owner_seen = None
@@ -618,7 +638,9 @@ class NativeElearningStore:
                 """,
                 (
                     completion["next_activity"],
-                    json.dumps(completion["completed"], separators=(",", ":")),
+                    # Deselected sequences can later be re-added. Never erase
+                    # their completion records when saving another activity.
+                    json.dumps(list(dict.fromkeys(completed)), separators=(",", ":")),
                     json.dumps(answers, ensure_ascii=False, separators=(",", ":")),
                     completion["score"],
                     completion["status"],
@@ -653,6 +675,15 @@ class NativeElearningStore:
             )
             result["already_completed"] = already_completed
             return result
+
+    def learner_progress(self, session_id: str, trainee_id: str) -> List[Dict[str, Any]]:
+        """Read the whole path in one query, without starting any new module."""
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM learner_course_progress WHERE session_id = ? AND trainee_id = ?",
+                (session_id, trainee_id),
+            ).fetchall()
+        return [self._serialize_progress(row) for row in rows]
 
     def live_progress(
         self,

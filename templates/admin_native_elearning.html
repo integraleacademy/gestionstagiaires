@@ -32,7 +32,7 @@
     </section>
 
     <section class="nel-card">
-      <h2>Cours disponibles</h2>
+      <h2>Modules disponibles</h2>
       <p class="nel-muted">Chaque import est versionné. Une session affectée conserve sa version pour ne pas modifier un parcours déjà commencé.</p>
       {% if courses %}
         <div class="nel-course-list">
@@ -53,17 +53,17 @@
   </div>
 
   <section class="nel-card nel-assignments">
-    <h2>Affectation aux sessions APS</h2>
-    <p class="nel-muted">Le bouton d’accès apparaîtra dans l’espace stagiaire lorsque l’option e-learning de la session sera activée et que sa date de début sera atteinte.</p>
+    <h2>Parcours des sessions APS</h2>
+    <p class="nel-muted">Composez chaque parcours avec plusieurs modules, puis choisissez et ordonnez leurs séquences. L’accès stagiaire s’ouvre lorsque le e-learning est activé et que la date de début est atteinte.</p>
     {% if aps_sessions %}
       <div class="nel-assignment-list">
         {% for aps_session in aps_sessions %}
-          <form class="nel-assignment" method="post" action="{{ url_for('native_elearning.admin_assign_course', session_id=aps_session.id) }}">
-            <input type="hidden" name="native_elearning_csrf" value="{{ csrf_token }}">
+          {% set summary = path_summaries[aps_session.id] %}
+          <article class="nel-assignment">
             <div class="nel-assignment__name"><strong>{{ aps_session.name or aps_session.training_type or aps_session.id }}</strong><span>{{ aps_session.date_start or 'Date non renseignée' }} · {{ 'E-learning activé' if aps_session.aps_elearning_enabled else 'E-learning à activer' }}</span></div>
-            <select name="course_id" aria-label="Cours affecté à {{ aps_session.name or aps_session.id }}"{% if is_read_only %} disabled{% endif %}><option value="">Aucun cours natif</option>{% for course in courses %}<option value="{{ course.id }}"{% if aps_session.aps_native_course_id == course.id %} selected{% endif %}>{{ course.title }} · {{ course.version }}</option>{% endfor %}</select>
-            <button class="nel-button" type="submit"{% if is_read_only %} disabled{% endif %}>Enregistrer</button>
-          </form>
+            <div><div class="nel-course__meta"><span class="nel-pill">{{ summary.modules }} modules</span><span class="nel-pill">{{ summary.sections }} séquences</span><span class="nel-pill">{{ summary.activities }} activités</span></div>{% if summary.unavailable %}<div class="nel-warning">Un module est indisponible : vérifiez le parcours.</div>{% endif %}</div>
+            <a class="nel-button nel-button--primary" href="{{ url_for('native_elearning.admin_path', session_id=aps_session.id) }}">{{ 'Voir le parcours' if is_read_only else 'Composer le parcours' }}</a>
+          </article>
         {% endfor %}
       </div>
     {% else %}<div class="nel-empty">Aucune session APS disponible.</div>{% endif %}

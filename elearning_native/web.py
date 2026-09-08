@@ -13,7 +13,9 @@ import re
 import secrets
 import tempfile
 import time
+import threading
 import unicodedata
+from collections import OrderedDict
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -33,6 +35,7 @@ from flask import (
     url_for,
 )
 from markupsafe import Markup
+from werkzeug.exceptions import Conflict
 
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
@@ -41,6 +44,10 @@ from .importer import (
     sanitize_course_html,
 )
 from .store import NativeElearningStore, TrackingError
+from .paths import (
+    assigned_modules, course_outline, path_revision, project_course,
+    project_progress, validate_modules,
+)
 
 try:
     import fcntl
@@ -193,6 +200,9 @@ def _course_access_payload(
         "nonce": nonce,
         "issued_at": now,
         "expires_at": now + ACCESS_TOKEN_TTL_SECONDS,
+        "path_revision": path_revision(session_obj),
+        "section_ids": [str(section["id"]) for section in course.get("sections") or []],
+        "module_title": str(course.get("title") or ""),
     }
 
 
@@ -317,6 +327,7 @@ def create_native_elearning_blueprint(
     get_persist_dir: Callable[[], str],
     load_data: Callable[[], Dict[str, Any]],
     save_data: Callable[[Dict[str, Any]], None],
+    mutate_data: Callable[[Callable[[Dict[str, Any]], Dict[str, Any]]], Dict[str, Any]],
     find_session: Callable[[Dict[str, Any], str], Optional[Dict[str, Any]]],
     find_session_and_trainee_by_token: Callable[[Dict[str, Any], str], Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]],
     session_trainees: Callable[[Dict[str, Any]], List[Dict[str, Any]]],
@@ -325,6 +336,10 @@ def create_native_elearning_blueprint(
     session_start_date: Callable[[Dict[str, Any]], Optional[dt.date]],
 ) -> Blueprint:
     blueprint = Blueprint("native_elearning", __name__)
+    # Cache only successful authorization timestamps, never administrative data
+    # or course bodies. Heartbeats must not parse the large data.json every 15s.
+    access_checks: OrderedDict[tuple, float] = OrderedDict()
+    access_checks_lock = threading.Lock()
 
     def root() -> Path:
         return Path(get_persist_dir()).resolve() / "native_elearning"
@@ -367,7 +382,7 @@ def create_native_elearning_blueprint(
 
         return wrapped
 
-    def learner_context(token: str, course_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    def learner_session(token: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         data = load_data()
         session_obj, trainee = find_session_and_trainee_by_token(data, token)
         if not session_obj or not trainee:
@@ -376,30 +391,70 @@ def create_native_elearning_blueprint(
             abort(401)
         if not is_aps_elearning_session(session_obj):
             abort(403)
-        assigned_course = str(session_obj.get("aps_native_course_id") or "")
-        if not assigned_course or not hmac.compare_digest(assigned_course, str(course_id)):
-            abort(403)
         if not session.get("admin_logged_in"):
             start_date = session_start_date(session_obj)
             if start_date is None:
                 abort(403)
             if dt.date.today() < start_date:
                 abort(403)
-        assigned_version = str(session_obj.get("aps_native_course_version") or "") or None
+        return session_obj, trainee
+
+    def learner_context(token: str, course_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+        session_obj, trainee = learner_session(token)
+        module = next((item for item in assigned_modules(session_obj) if item.get("course_id") == course_id), None)
+        if module is None:
+            abort(403)
         try:
-            course = catalog().load_course(course_id, assigned_version)
+            course = project_course(catalog().load_course(course_id, module.get("course_version") or None), module)
         except CourseImportError:
             abort(404)
         return session_obj, trainee, course
 
     def course_for_access(access: Mapping[str, Any]) -> Dict[str, Any]:
-        try:
-            return catalog().load_course(
-                str(access.get("course_id") or ""),
-                str(access.get("course_version") or ""),
-            )
-        except CourseImportError:
-            abort(404)
+        cache_key = (str(root()), *(str(access.get(field) or "") for field in (
+            "session_id", "trainee_id", "course_id", "course_version", "path_revision", "nonce", "issued_at",
+        )), bool(session.get("admin_logged_in")))
+        with access_checks_lock:
+            recently_checked = time.monotonic() - access_checks.get(cache_key, float("-inf")) < 60
+        if request.endpoint == "native_elearning.tracking_heartbeat" and recently_checked and access.get("section_ids"):
+            try:
+                return project_course(catalog().load_course(str(access["course_id"]), str(access["course_version"])),
+                                      {"section_ids": access["section_ids"], "title": access.get("module_title")})
+            except CourseImportError:
+                abort(404)
+        session_obj, trainee, course = learner_context(str(access.get("public_token") or ""), str(access.get("course_id") or ""))
+        if (str(session_obj.get("id")) != str(access.get("session_id"))
+                or str(trainee.get("id") or trainee.get("trainee_id")) != str(access.get("trainee_id"))
+                or course["version"] != access.get("course_version")):
+            abort(403)
+        if access.get("path_revision") and access["path_revision"] != path_revision(session_obj):
+            abort(409, "Le parcours a été modifié. Rechargez la page.")
+        with access_checks_lock:
+            access_checks[cache_key] = time.monotonic()
+            access_checks.move_to_end(cache_key)
+            while len(access_checks) > 512:
+                access_checks.popitem(last=False)
+        return course
+
+    def current_progress(access: Mapping[str, Any], course: Mapping[str, Any]) -> Dict[str, Any]:
+        raw = store().get_progress(access, activity_order=course.get("activity_order") or [],
+                                   scored_activity_ids=_scored_activity_ids(course))
+        return project_progress(raw, course)
+
+    def load_path(session_obj: Mapping[str, Any], cache: Optional[Dict[Any, Any]] = None) -> List[Dict[str, Any]]:
+        cache = cache if cache is not None else {}
+        modules = []
+        for item in assigned_modules(session_obj):
+            key = (str(item.get("course_id") or ""), str(item.get("course_version") or ""))
+            try:
+                if key not in cache:
+                    cache[key] = catalog().load_course(key[0], key[1] or None)
+                source = cache[key]
+                course = project_course(source, item)
+                modules.append({"assignment": item, "course": course, "outline": course_outline(source), "error": ""})
+            except CourseImportError as exc:
+                modules.append({"assignment": item, "error": str(exc), "course": None, "outline": None})
+        return modules
 
     def asset_url(asset_token: str, course_id: str, asset_name: str) -> str:
         return url_for(
@@ -621,15 +676,96 @@ def create_native_elearning_blueprint(
             if session_id:
                 aps_sessions_by_id.setdefault(session_id, session_obj)
         aps_sessions = list(aps_sessions_by_id.values())
+        courses = catalog().list_courses()
+        cache = {(course["id"], course["version"]): course for course in courses}
+        path_summaries = {}
+        for session_obj in aps_sessions:
+            modules = load_path(session_obj, cache)
+            path_summaries[session_obj["id"]] = {
+                "modules": len(modules),
+                "sections": sum(item["course"]["counts"]["sections"] for item in modules if item["course"]),
+                "activities": sum(item["course"]["counts"]["activities"] for item in modules if item["course"]),
+                "unavailable": any(item["error"] for item in modules),
+            }
         return render_template(
             "admin_native_elearning.html",
-            courses=catalog().list_courses(),
+            courses=courses,
             aps_sessions=aps_sessions,
+            path_summaries=path_summaries,
             upload_limit_mb=max_archive_bytes() // (1024 * 1024),
             upload_limit_bytes=max_archive_bytes(),
             upload_chunk_mb=UPLOAD_CHUNK_BYTES // (1024 * 1024),
             csrf_token=_csrf_token(),
         )
+
+    @blueprint.get("/admin/sessions/<session_id>/elearning")
+    @admin_required
+    def admin_path(session_id: str) -> Any:
+        session_obj = find_session(load_data(), session_id)
+        if not session_obj or not _is_aps_training(session_obj):
+            abort(404)
+        modules = load_path(session_obj)
+        outlines = {(course["id"], course["version"]): course_outline(course) for course in catalog().list_courses()}
+        for item in modules:
+            if item["outline"]:
+                outline = item["outline"]
+                outlines[(outline["course_id"], outline["course_version"])] = outline
+        return render_template(
+            "admin_native_elearning_path.html", training_session=session_obj,
+            path_config={
+                "catalog": list(outlines.values()), "modules": assigned_modules(session_obj),
+                "revision": path_revision(session_obj), "csrfToken": _csrf_token(),
+                "saveUrl": url_for("native_elearning.admin_save_path", session_id=session_id),
+                "readOnly": session.get("admin_role") == "viewer",
+            },
+        )
+
+    @blueprint.post("/api/admin/sessions/<session_id>/elearning/path")
+    @admin_required
+    @admin_write_required
+    def admin_save_path(session_id: str) -> Any:
+        _require_csrf()
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"ok": False, "error": "Parcours invalide."}), 400
+        data = load_data()
+        session_obj = find_session(data, session_id)
+        if not session_obj or not _is_aps_training(session_obj):
+            abort(404)
+        if payload.get("revision") != path_revision(session_obj):
+            return jsonify({"ok": False, "error": "Ce parcours a été modifié dans une autre fenêtre. Rechargez la page avant de l’enregistrer."}), 409
+        title = payload.get("title", "")
+        if not isinstance(title, str) or len(title) > 180:
+            return jsonify({"ok": False, "error": "Le titre du parcours est limité à 180 caractères."}), 400
+        try:
+            modules = validate_modules(payload.get("modules"), catalog())
+        except CourseImportError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        def persist_path(canonical: Dict[str, Any]) -> Dict[str, Any]:
+            target = find_session(canonical, session_id)
+            if not target or not _is_aps_training(target):
+                abort(404)
+            # Recheck under the application's canonical storage lock, not just
+            # against the earlier request snapshot. Only this session changes.
+            if payload.get("revision") != path_revision(target):
+                raise Conflict("Ce parcours a été modifié. Rechargez la page avant de l’enregistrer.")
+            target["aps_native_modules"] = modules
+            target["aps_native_path_title"] = title.strip()
+            if modules:
+                target["aps_native_course_id"] = modules[0]["course_id"]
+                target["aps_native_course_version"] = modules[0]["course_version"]
+            else:
+                target.pop("aps_native_course_id", None)
+                target.pop("aps_native_course_version", None)
+            return {"ok": True, "revision": path_revision(target), "modules": modules}
+
+        try:
+            result = mutate_data(persist_path)
+        except Conflict as exc:
+            return jsonify({"ok": False, "error": exc.description}), 409
+        with access_checks_lock:
+            access_checks.clear()
+        return jsonify(result)
 
     @blueprint.post("/api/admin/elearning/imports")
     @admin_required
@@ -806,6 +942,8 @@ def create_native_elearning_blueprint(
         session_obj = find_session(data, session_id)
         if not session_obj or not _is_aps_training(session_obj):
             abort(404)
+        if "aps_native_modules" in session_obj:
+            abort(409, "Utilisez le compositeur de parcours pour modifier cette session.")
         course_id = str(request.form.get("course_id") or "").strip()
         if not course_id:
             session_obj.pop("aps_native_course_id", None)
@@ -829,10 +967,14 @@ def create_native_elearning_blueprint(
             abort(404)
         rows = store().live_progress(course_id)
         identities: Dict[Tuple[str, str], Dict[str, str]] = {}
+        session_paths: Dict[str, Dict[str, Any]] = {}
         data = load_data()
         for session_obj in data.get("sessions", []) or []:
             if not isinstance(session_obj, dict):
                 continue
+            module = next((item for item in assigned_modules(session_obj) if item.get("course_id") == course_id), None)
+            if module:
+                session_paths[str(session_obj.get("id"))] = module
             for trainee in session_trainees(session_obj):
                 trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
                 identities[(str(session_obj.get("id") or ""), trainee_id)] = {
@@ -848,6 +990,13 @@ def create_native_elearning_blueprint(
                 except CourseImportError:
                     versions[row_version] = course
             row_course = versions[row_version]
+            module = session_paths.get(row["session_id"])
+            if module and (not module.get("course_version") or module["course_version"] == row_version):
+                try:
+                    row_course = project_course(row_course, module)
+                except CourseImportError:
+                    pass
+            row.update(project_progress(row, row_course))
             activity_titles = {
                 str(activity.get("id")): str(activity.get("title") or "")
                 for _, activity in _activity_pairs(row_course)
@@ -857,7 +1006,7 @@ def create_native_elearning_blueprint(
             row["trainee_name"] = row.get("trainee_name") or row["trainee_id"]
             row["session_name"] = row.get("session_name") or row["session_id"]
             row["activity_title"] = activity_titles.get(row.get("current_activity_id"), "")
-            completed_count = len(set(row.get("completed_activity_ids") or []))
+            completed_count = len(set(row.get("completed_activity_ids") or []) & set(row_course.get("activity_order") or []))
             row["progress_percent"] = round((completed_count / total) * 100, 1) if total else 0
             row["active_time_label"] = _format_seconds(row.get("active_seconds"))
             row.pop("answers", None)
@@ -927,6 +1076,42 @@ def create_native_elearning_blueprint(
         response.headers["Content-Disposition"] = f'attachment; filename="suivi-{course_id}.csv"'
         return response
 
+    @blueprint.get("/espace/<token>/elearning")
+    def learner_path(token: str) -> Any:
+        if not public_is_authed(token):
+            return redirect(url_for("public_trainee_login", token=token))
+        session_obj, trainee = learner_session(token)
+        raw_progress = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
+        progress_by_key = {(item["course_id"], item["course_version"]): item for item in raw_progress}
+        modules = load_path(session_obj)
+        total = completed = seconds = finished = 0
+        resume_url = ""
+        for item in modules:
+            course = item["course"]
+            if not course:
+                continue
+            progress = project_progress(progress_by_key.get((course["id"], course["version"]), {}), course)
+            item["progress"] = progress
+            item["url"] = url_for("native_elearning.course_player", token=token, course_id=course["id"])
+            item["time_label"] = _format_seconds(progress["active_seconds"])
+            item["complete"] = progress["status"] in {"passed", "failed"}
+            total += len(course["activity_order"])
+            completed += len(progress["completed_activity_ids"])
+            seconds += progress["active_seconds"]
+            finished += int(item["complete"])
+            if not resume_url and not item["complete"]:
+                resume_url = item["url"]
+        return render_template(
+            "native_elearning_path.html", modules=modules,
+            path_title=session_obj.get("aps_native_path_title") or "Mon parcours APS",
+            session_name=session_obj.get("name") or "Formation APS",
+            learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
+            total_activities=total, completed_activities=completed, completed_modules=finished,
+            progress_percent=round(completed / total * 100) if total else 0,
+            active_time_label=_format_seconds(seconds), resume_url=resume_url,
+            portal_url=url_for("public_trainee_space", token=token),
+        )
+
     @blueprint.get("/espace/<token>/elearning/<course_id>")
     def course_player(token: str, course_id: str) -> Any:
         if not public_is_authed(token):
@@ -938,11 +1123,7 @@ def create_native_elearning_blueprint(
         csrf = _csrf_token()
         order = [str(value) for value in course.get("activity_order") or []]
         scored_ids = _scored_activity_ids(course)
-        progress = store().get_progress(
-            access,
-            activity_order=order,
-            scored_activity_ids=scored_ids,
-        )
+        progress = current_progress(access, course)
         if not order:
             abort(404)
         requested_id = str(request.args.get("activity") or progress.get("current_activity_id") or "")
@@ -974,6 +1155,11 @@ def create_native_elearning_blueprint(
             if index + 1 < len(order)
             else url_for("native_elearning.course_player", token=token, course_id=course_id, activity=requested_id)
         )
+        modules = assigned_modules(session_obj)
+        module_index = next(index for index, item in enumerate(modules) if item.get("course_id") == course_id)
+        path_url = url_for("native_elearning.learner_path", token=token)
+        next_module = modules[module_index + 1] if module_index + 1 < len(modules) else None
+        end_url = url_for("native_elearning.course_player", token=token, course_id=next_module["course_id"]) if next_module else path_url
         return render_template(
             "native_elearning_player.html",
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course)},
@@ -989,6 +1175,9 @@ def create_native_elearning_blueprint(
             previous_url=previous_url,
             next_url=next_url,
             portal_url=url_for("public_trainee_space", token=token),
+            path_url=path_url, end_url=end_url,
+            end_label="Module suivant" if next_module else "Retour au parcours",
+            module_position=module_index + 1, module_count=len(modules),
             csrf_token=csrf,
             access_token=access_token,
             heartbeat_seconds=CLIENT_HEARTBEAT_SECONDS,
@@ -1034,7 +1223,7 @@ def create_native_elearning_blueprint(
                 tab_id=str(payload.get("tab_id") or ""),
                 activity_id=activity_id,
             )
-            progress = store().get_progress(access, activity_order=order, scored_activity_ids=scored_ids)
+            progress = current_progress(access, _course)
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
         return jsonify({"ok": True, **started, "progress": progress})
@@ -1056,11 +1245,7 @@ def create_native_elearning_blueprint(
                 recent_activity=payload.get("recent_activity") is True,
                 media_playing=payload.get("media_playing") is True,
             )
-            result["progress"] = store().get_progress(
-                access,
-                activity_order=order,
-                scored_activity_ids=scored_ids,
-            )
+            result["progress"] = current_progress(access, _course)
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 409
         return jsonify({"ok": True, **result})
@@ -1075,11 +1260,7 @@ def create_native_elearning_blueprint(
                 str(payload.get("tracking_session_id") or ""),
                 activity_id=str(payload.get("activity_id") or ""),
             )
-            result["progress"] = store().get_progress(
-                access,
-                activity_order=order,
-                scored_activity_ids=scored_ids,
-            )
+            result["progress"] = current_progress(access, _course)
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 409
         return jsonify({"ok": True, **result})
@@ -1099,7 +1280,7 @@ def create_native_elearning_blueprint(
         activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
         if activity is None or activity.get("scored"):
             return jsonify({"ok": False, "error": "Activité invalide."}), 400
-        current = store().get_progress(access, activity_order=order, scored_activity_ids=scored_ids)
+        current = current_progress(access, course)
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
         result = store().complete_activity(
@@ -1109,7 +1290,7 @@ def create_native_elearning_blueprint(
             scored_activity_ids=scored_ids,
             mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
         )
-        return jsonify({"ok": True, "progress": result, "next_activity_id": result.get("current_activity_id")})
+        return jsonify({"ok": True, "progress": project_progress(result, course), "next_activity_id": result.get("current_activity_id")})
 
     @blueprint.post("/api/elearning/v1/activities/<activity_id>/answer")
     def activity_answer(activity_id: str) -> Any:
@@ -1117,7 +1298,7 @@ def create_native_elearning_blueprint(
         activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
         if activity is None or not activity.get("scored"):
             return jsonify({"ok": False, "error": "Question invalide."}), 400
-        current = store().get_progress(access, activity_order=order, scored_activity_ids=scored_ids)
+        current = current_progress(access, course)
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
         existing = current.get("answers", {}).get(activity_id)
@@ -1149,7 +1330,7 @@ def create_native_elearning_blueprint(
                 "ok": True,
                 "already_answered": False,
                 "correct": correct,
-                "progress": result,
+                "progress": project_progress(result, course),
                 "next_activity_id": result.get("current_activity_id"),
             }
         )
