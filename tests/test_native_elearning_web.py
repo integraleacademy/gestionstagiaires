@@ -4,6 +4,7 @@ import html
 import json
 import re
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -112,6 +113,8 @@ class NativeElearningWebTests(unittest.TestCase):
         return json.loads(html.unescape(match.group(1)))
 
     def _api_post(self, url: str, config: dict, **payload):
+        if url == config.get("heartbeatUrl"):
+            payload.setdefault("interaction_age_seconds", 0)
         return self.client.post(
             url,
             json={"access_token": config["accessToken"], **payload},
@@ -290,6 +293,8 @@ class NativeElearningWebTests(unittest.TestCase):
                          [{**self._module(self.course), "section_ids": ["section-1", "section-1"]}],
                          [{**self._module(self.course), "course_version": "missing"}],
                          [{**self._module(self.course), "title": "a" * 181}]]
+        invalid_cases.extend([[{**self._module(self.course), "required_minutes": value}]
+                              for value in (-1, 60001, True, "240", 1.5, None)])
         for modules in invalid_cases:
             with self.subTest(modules=modules):
                 before = json.dumps(self.data, sort_keys=True)
@@ -299,6 +304,96 @@ class NativeElearningWebTests(unittest.TestCase):
         response = self._save_path([self._module(self.course)], revision="stale")
         self.assertEqual(response.status_code, 409)
         self.assertIsNone(self.saved_data)
+
+    def test_minimum_duration_unlocks_next_module_only_at_four_hours(self):
+        second = self._second_course()
+        modules = [{**self._module(self.course), "required_minutes": 240}, self._module(second)]
+        saved = self._save_path(modules)
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.get_json()["modules"][0]["required_minutes"], 240)
+        with self.client.session_transaction() as browser_session:
+            browser_session.pop("admin_logged_in", None)
+        self._public_login()
+        next_url = f"/espace/public-token/elearning/{second['id']}"
+        self.assertEqual(self.client.get(next_url).status_code, 403)
+        page = self.client.get("/espace/public-token/elearning").get_data(as_text=True)
+        self.assertIn("04:00:00", page)
+        self.assertIn("Module verrouillé", page)
+        self.assertNotIn(f'href="{next_url}"', page)
+        config = self._player_config(self.client.get(f"/espace/public-token/elearning/{self.course['id']}"))
+        self.assertEqual(config["idleSeconds"], 300)
+        self.assertEqual(config["initialRemainingSeconds"], 14400)
+        self._api_post(config["completeUrl"], config)
+        self._api_post("/api/elearning/v1/activities/question-1/answer", config, answer={"selected": ["answer-a"]})
+        result = self._api_post("/api/elearning/v1/activities/question-2/answer", config,
+                                answer={"groups": {"group-1": "blank-a"}}, active_seconds=14400)
+        progress = result.get_json()["progress"]
+        self.assertEqual(progress["progress_percent"], 100)
+        self.assertEqual(progress["status"], "awaiting_time")
+        self.assertFalse(progress["module_complete"])
+        self.assertIsNone(progress["completed_at"])
+
+        tracking = NativeElearningStore(self.persist_dir / "native_elearning" / "tracking.sqlite3")
+        # Existing study history: 3:59:59, followed by one real server interval.
+        with tracking._connect() as connection:
+            connection.execute("UPDATE learner_course_progress SET active_seconds = 14399")
+        self.assertEqual(self.client.get(next_url).status_code, 403)
+        baseline = time.time()
+        with patch("elearning_native.store.time.time", return_value=baseline):
+            started = self._api_post(config["startUrl"], config, tab_id="duration", activity_id="question-2").get_json()
+            signals = dict(tracking_session_id=started["tracking_session_id"], activity_id="question-2",
+                           visible=True, focused=True, recent_activity=True, media_playing=False)
+            heartbeat = self._api_post(config["heartbeatUrl"], config, **signals).get_json()
+        self.assertEqual(heartbeat["progress"]["required_seconds"], 14400)  # cached access keeps the requirement
+        self.assertEqual(heartbeat["progress"]["remaining_seconds"], 1)
+        self.assertFalse(heartbeat["progress"]["module_complete"])
+        with patch("elearning_native.store.time.time", return_value=baseline + 1):
+            progress = self._api_post(config["heartbeatUrl"], config, **signals).get_json()["progress"]
+        self.assertEqual(progress["active_seconds"], 14400)
+        self.assertTrue(progress["module_complete"])
+        self.assertEqual(progress["status"], "passed")
+        self.assertIsNotNone(progress["completed_at"])
+        second_config = self._player_config(self.client.get(next_url))
+        self.assertEqual(second_config["initialActiveSeconds"], 0)  # first module's time is not transferred
+        self._admin_login()
+        live = self.client.get(f"/api/admin/elearning/courses/{self.course['id']}/live").get_json()["learners"][0]
+        self.assertEqual(live["required_time_label"], "04:00:00")
+        self.assertTrue(live["duration_met"])
+        # A stricter requirement re-locks even a previously issued signed access.
+        modules[0]["required_minutes"] = 241
+        self.assertEqual(self._save_path(modules).status_code, 200)
+        self.assertEqual(self.client.get(next_url).status_code, 403)
+        self.assertEqual(self._api_post(second_config["startUrl"], second_config, tab_id="stale", activity_id="content-1").status_code, 403)
+        live = self.client.get(f"/api/admin/elearning/courses/{self.course['id']}/live").get_json()["learners"][0]
+        self.assertEqual(live["remaining_seconds"], 60)
+        self.assertEqual(live["status"], "awaiting_time")
+        self.assertIsNone(live["completed_at"])
+
+    def test_duration_alone_is_insufficient_and_missing_predecessor_fails_closed(self):
+        second = self._second_course()
+        self._save_path([{**self._module(self.course), "required_minutes": 240}, self._module(second)])
+        self._public_login()
+        self.client.get(f"/espace/public-token/elearning/{self.course['id']}")
+        tracking = NativeElearningStore(self.persist_dir / "native_elearning" / "tracking.sqlite3")
+        with tracking._connect() as connection:
+            connection.execute("UPDATE learner_course_progress SET active_seconds = 14400")
+        self.assertEqual(self.client.get(f"/espace/public-token/elearning/{second['id']}").status_code, 403)
+        self.data["sessions"][0]["aps_native_modules"][0]["course_version"] = "missing"
+        self.assertEqual(self.client.get(f"/espace/public-token/elearning/{second['id']}").status_code, 403)
+
+    def test_heartbeat_requires_inactivity_age_and_video_does_not_bypass_timeout(self):
+        self._public_login()
+        config = self._player_config(self.client.get(f"/espace/public-token/elearning/{self.course['id']}"))
+        started = self._api_post(config["startUrl"], config, tab_id="idle", activity_id="content-1").get_json()
+        signals = dict(tracking_session_id=started["tracking_session_id"], activity_id="content-1",
+                       visible=True, focused=True, recent_activity=True, media_playing=True)
+        for value in (None, -1, "0", True, float("inf"), float("nan")):
+            with self.subTest(value=value):
+                response = self._api_post(config["heartbeatUrl"], config, **signals, interaction_age_seconds=value)
+                self.assertEqual(response.status_code, 409)
+        response = self._api_post(config["heartbeatUrl"], config, **signals, interaction_age_seconds=300)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.get_json()["active"])
 
     def test_excluded_sequences_and_removed_modules_cannot_be_used(self):
         second = self._second_course()

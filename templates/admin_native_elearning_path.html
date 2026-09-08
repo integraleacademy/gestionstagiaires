@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-2') }}">
 <div class="np-shell" id="nativePathBuilder">
   <a class="np-back" href="{{ url_for('native_elearning.admin_catalog') }}">← Bibliothèque et sessions</a>
   <header class="np-header">
@@ -19,7 +19,7 @@
       <section class="np-panel">
         <span class="np-eyebrow">2 · Organiser</span>
         <label class="np-field np-title-field">Nom du parcours<input id="nativePathTitle" maxlength="180" value="{{ training_session.aps_native_path_title or 'Parcours APS' }}"{% if path_config.readOnly %} disabled{% endif %}></label>
-        <p>Les modules se suivent dans l’ordre affiché. Dépliez un module pour choisir et ordonner ses séquences ; les activités d’une séquence conservent leur ordre pédagogique.</p>
+        <p>Les modules se débloquent dans l’ordre affiché. Dépliez chaque module pour fixer sa durée obligatoire, choisir et ordonner ses séquences. Le temps déjà suivi reste acquis.</p>
         <div class="np-totals" id="nativePathTotals" aria-live="polite"></div>
       </section>
       <div id="nativePathModules" class="np-modules"></div>
@@ -33,5 +33,5 @@
   </div>
 </div>
 <script id="nativePathConfig" type="application/json">{{ path_config|tojson }}</script>
-<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20260908-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20260908-2') }}" defer></script>
 {% endblock %}

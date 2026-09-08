@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260907-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260908-2') }}">
 </head>
 <body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
@@ -56,9 +56,14 @@
         <strong>{{ learner_name or 'Stagiaire' }}</strong>
       </div>
       <div class="native-progress-summary">
-        <div><span>Progression du module</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
+        <div><span>Activités terminées</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
         <div class="native-progress-track" aria-hidden="true"><i id="nativeProgressBar" style="width:{{ progress.progress_percent }}%"></i></div>
         {% if progress.scored_activities %}<small>Score actuel : <b id="nativeScoreLabel">{{ progress.score_percent|round|int }} %</b></small>{% endif %}
+        {% if progress.required_seconds %}<section class="native-duration-summary">
+          <span>Durée obligatoire : <b>{{ required_time_label }}</b></span>
+          <span id="nativeDurationStatus">{{ 'Durée obligatoire atteinte' if progress.duration_met else 'Temps actif restant' }}</span>
+          <strong id="nativeRemainingTime">{{ remaining_time_label }}</strong>
+        </section>{% endif %}
       </div>
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
@@ -141,18 +146,18 @@
           {% endif %}
         </article>
 
-        <div class="native-course-result{% if progress.status in ['passed', 'failed'] %} is-visible{% endif %}" id="nativeCourseResult" role="status">
-          <strong>{{ 'Cours terminé' if progress.status in ['passed', 'failed'] else '' }}</strong>
-          <span>{% if progress.status == 'passed' %}Objectif atteint avec un score de {{ progress.score_percent|round|int }} %.{% elif progress.status == 'failed' %}Parcours terminé avec un score de {{ progress.score_percent|round|int }} %. L’équipe pédagogique pourra vous accompagner.{% endif %}</span>
+        <div class="native-course-result{% if progress.status in ['passed', 'failed', 'awaiting_time'] %} is-visible{% endif %}" id="nativeCourseResult" data-status="{{ progress.status }}" role="status">
+          <strong>{{ 'Activités terminées · temps à compléter' if progress.status == 'awaiting_time' else ('Module terminé' if progress.module_complete else '') }}</strong>
+          <span>{% if progress.status == 'awaiting_time' %}Il reste {{ remaining_time_label }} de temps actif à suivre. Reprenez les séquences depuis le sommaire pour poursuivre votre formation.{% elif progress.status == 'passed' %}Objectif atteint avec un score de {{ progress.score_percent|round|int }} %.{% elif progress.status == 'failed' %}Parcours terminé avec un score de {{ progress.score_percent|round|int }} %. L’équipe pédagogique pourra vous accompagner.{% endif %}</span>
         </div>
 
         <div class="native-navigation-actions">
           {% if previous_url %}<a class="native-button native-button--secondary" href="{{ previous_url }}">← Précédent</a>{% else %}<span></span>{% endif %}
-          <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}">
+          <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}"{% if activity_completed and is_last_activity and has_next_module and not progress.module_complete %} disabled{% endif %}>
             {% if activity_completed %}{{ end_label if is_last_activity else 'Continuer' }}{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}Terminer le module{% else %}Terminer et continuer{% endif %} →
           </button>
         </div>
-        <p class="native-tracking-explainer">Le compteur valide uniquement le temps actif sur ce cours. Il se met automatiquement en pause si vous quittez la page ou restez inactif.</p>
+        <p class="native-tracking-explainer">Le compteur valide uniquement le temps actif sur ce module. Il se met en pause quand vous quittez la page ou après 5 minutes sans interaction, même si une vidéo continue. Bougez la souris, cliquez ou utilisez le clavier pour reprendre. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.</p>
       </div>
     </main>
   </div>
@@ -162,6 +167,10 @@
     <span>Le cours est déjà actif dans un autre onglet. Fermez l’autre page ou attendez sa déconnexion.</span>
   </div>
   <div class="native-toast" id="nativeToast" role="status" aria-live="polite"></div>
+  <div class="native-idle-notice" id="nativeIdleNotice" role="status" hidden>
+    <strong>Chrono en pause</strong><span>5 minutes sans interaction. Votre temps déjà suivi est conservé.</span>
+    <button class="native-button native-button--primary" id="nativeResumeTimer" type="button">Reprendre le chrono</button>
+  </div>
 
   <script id="nativeElearningConfig" type="application/json">{{ {
     'accessToken': access_token,
@@ -175,6 +184,9 @@
     'portalUrl': portal_url,
     'endUrl': end_url,
     'endLabel': end_label,
+    'hasNextModule': has_next_module,
+    'initialModuleComplete': progress.module_complete,
+    'initialRemainingSeconds': progress.remaining_seconds,
     'startUrl': url_for('native_elearning.tracking_start'),
     'heartbeatUrl': url_for('native_elearning.tracking_heartbeat'),
     'finishUrl': url_for('native_elearning.tracking_finish'),
@@ -188,6 +200,6 @@
     'initialStatus': progress.status,
     'savedAnswer': progress.answers.get(activity.id, {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260908-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260908-2') }}" defer></script>
 </body>
 </html>

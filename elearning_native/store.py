@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import datetime as dt
 import json
+import math
 import os
 import sqlite3
 import threading
@@ -14,6 +15,7 @@ from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Seque
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
 ACTIVE_SESSION_STALE_SECONDS = 45.0
+IDLE_TIMEOUT_SECONDS = 300.0
 
 _INITIALIZE_LOCK = threading.Lock()
 _INITIALIZED_DATABASES: set[str] = set()
@@ -132,6 +134,11 @@ class NativeElearningStore:
                     ON tracking_events (session_id, trainee_id, course_id, course_version, event_at);
                     """
                 )
+                # Serialize the additive migration across separate Gunicorn workers.
+                connection.execute("BEGIN IMMEDIATE")
+                columns = {row["name"] for row in connection.execute("PRAGMA table_info(tracking_sessions)")}
+                if "active_until_epoch" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN active_until_epoch REAL NOT NULL DEFAULT 0")
             _INITIALIZED_DATABASES.add(key)
 
     @contextlib.contextmanager
@@ -223,7 +230,7 @@ class NativeElearningStore:
             "current_activity_id": row["current_activity_id"],
             "completed_activity_ids": completed,
             "answers": answers,
-            "active_seconds": round(float(row["active_seconds"] or 0), 2),
+            "active_seconds": math.floor(float(row["active_seconds"] or 0) * 100) / 100,
             "score_percent": round(float(row["score_percent"] or 0), 2),
             "correct_answers": correct_count,
             "scored_activities": len(scored_activity_ids),
@@ -274,6 +281,8 @@ class NativeElearningStore:
         *,
         activity_order: Sequence[str] = (),
         scored_activity_ids: Sequence[str] = (),
+        mastery_score: float = 80,
+        required_seconds: int = 0,
     ) -> Dict[str, Any]:
         now_iso = _utc_iso()
         with self._transaction() as connection:
@@ -284,6 +293,24 @@ class NativeElearningStore:
                 current_activity_id=activity_order[0] if activity_order else "",
             )
             row = self._progress_row(connection, access)
+            if activity_order:
+                completion = self._completion_values(
+                    _json_list(row["completed_json"]), _json_dict(row["answers_json"]),
+                    activity_order=activity_order, scored_activity_ids=scored_activity_ids,
+                    mastery_score=mastery_score, active_seconds=float(row["active_seconds"] or 0),
+                    required_seconds=required_seconds,
+                )
+                completed_at = (row["completed_at"] or now_iso) if completion["all_complete"] else None
+                if row["status"] != completion["status"] or row["completed_at"] != completed_at or row["score_percent"] != completion["score"]:
+                    connection.execute(
+                        """UPDATE learner_course_progress SET status = ?, score_percent = ?, completed_at = ?
+                           WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?""",
+                        (completion["status"], completion["score"], completed_at, *self._key_values(access)),
+                    )
+                    if completion["all_complete"] and not row["completed_at"]:
+                        self._event(connection, access, "course_completed", at=now_iso,
+                                    details={"status": completion["status"], "required_seconds": required_seconds})
+                    row = self._progress_row(connection, access)
             return self._serialize_progress(
                 row,
                 activity_order=activity_order,
@@ -362,11 +389,15 @@ class NativeElearningStore:
         focused: bool,
         recent_activity: bool,
         media_playing: bool,
+        interaction_age_seconds: Optional[float] = None,
         now_epoch: Optional[float] = None,
     ) -> Dict[str, Any]:
         epoch = float(now_epoch if now_epoch is not None else time.time())
         now_iso = _utc_iso(epoch)
-        requested_active = bool(visible and (media_playing or (focused and recent_activity)))
+        age = 0.0 if interaction_age_seconds is None else interaction_age_seconds
+        if isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0:
+            raise TrackingError("Durée d’inactivité invalide. Rechargez la page.")
+        requested_active = bool(visible and recent_activity and age < IDLE_TIMEOUT_SECONDS and (focused or media_playing))
         key = self._key_values(access)
         with self._transaction() as connection:
             tracking = connection.execute(
@@ -409,7 +440,10 @@ class NativeElearningStore:
             delta = max(0.0, epoch - float(tracking["last_seen_epoch"] or epoch))
             credited = 0.0
             if previous_active and owns_slot:
-                credited = min(delta, HEARTBEAT_MAX_CREDIT_SECONDS)
+                # A delayed heartbeat or a return after inactivity cannot earn
+                # time beyond the deadline recorded on the previous heartbeat.
+                until_idle = max(0.0, float(tracking["active_until_epoch"]) - float(tracking["last_seen_epoch"]))
+                credited = min(delta, HEARTBEAT_MAX_CREDIT_SECONDS, until_idle)
 
             accepted_active = bool(requested_active and not duplicate)
             next_owner_id: Optional[str] = owner_id or None
@@ -434,7 +468,7 @@ class NativeElearningStore:
                 """
                 UPDATE tracking_sessions
                 SET current_activity_id = ?, last_seen_at = ?, last_seen_epoch = ?,
-                    was_active = ?, was_duplicate = ?, credited_seconds = credited_seconds + ?
+                    was_active = ?, was_duplicate = ?, credited_seconds = credited_seconds + ?, active_until_epoch = ?
                 WHERE id = ?
                 """,
                 (
@@ -444,6 +478,7 @@ class NativeElearningStore:
                     int(accepted_active),
                     int(duplicate),
                     credited,
+                    epoch + max(0.0, IDLE_TIMEOUT_SECONDS - age) if accepted_active else 0,
                     tracking_session_id,
                 ),
             )
@@ -565,6 +600,8 @@ class NativeElearningStore:
         activity_order: Sequence[str],
         scored_activity_ids: Sequence[str],
         mastery_score: float,
+        active_seconds: float = 0,
+        required_seconds: int = 0,
     ) -> Dict[str, Any]:
         completed_set = {str(value) for value in completed}
         ordered_completed = [activity_id for activity_id in activity_order if activity_id in completed_set]
@@ -574,9 +611,12 @@ class NativeElearningStore:
             if isinstance(answers.get(activity_id), Mapping) and answers[activity_id].get("correct") is True
         )
         score = round((correct / len(scored_activity_ids)) * 100, 2) if scored_activity_ids else 100.0
-        all_complete = bool(activity_order) and len(ordered_completed) == len(activity_order)
+        activities_complete = bool(activity_order) and len(ordered_completed) == len(activity_order)
+        all_complete = activities_complete and active_seconds >= required_seconds
         if all_complete:
             status = "passed" if score >= float(mastery_score) else "failed"
+        elif activities_complete:
+            status = "awaiting_time"
         else:
             status = "in_progress"
         next_activity = next(
@@ -599,6 +639,7 @@ class NativeElearningStore:
         activity_order: Sequence[str],
         scored_activity_ids: Sequence[str],
         mastery_score: float,
+        required_seconds: int = 0,
         answer: Optional[Mapping[str, Any]] = None,
     ) -> Dict[str, Any]:
         if activity_id not in activity_order:
@@ -627,8 +668,9 @@ class NativeElearningStore:
                 activity_order=activity_order,
                 scored_activity_ids=scored_activity_ids,
                 mastery_score=mastery_score,
+                active_seconds=float(row["active_seconds"] or 0), required_seconds=required_seconds,
             )
-            completed_at = now_iso if completion["all_complete"] else row["completed_at"]
+            completed_at = (row["completed_at"] or now_iso) if completion["all_complete"] else None
             connection.execute(
                 """
                 UPDATE learner_course_progress

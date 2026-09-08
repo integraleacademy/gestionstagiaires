@@ -43,6 +43,8 @@ const input = (selector, value) => { const node = document.querySelector(selecto
   assert.equal(moduleCards().length, 2);
   click('[aria-label="Monter le module 2"]');
   assert.equal(moduleCards()[0].querySelector("h3").textContent, "Cadre pénal");
+  input('[data-duration="hours"]', "4");
+  assert.equal(moduleCards()[0].querySelector(".np-duration-summary").textContent, "Durée obligatoire : 4 h 00 min");
   moduleCards()[0].open = true;
   await tick();
   click('[aria-label="Descendre la séquence Séquence 1"]');
@@ -51,7 +53,13 @@ const input = (selector, value) => { const node = document.querySelector(selecto
   const check = moduleCards()[0].querySelector(".np-check input");
   check.checked = false;
   check.dispatchEvent(new window.Event("change"));
-  assert.equal(document.querySelector("#nativePathTotals").textContent, "2 modules3 séquences3 activités");
+  assert.equal(document.querySelector("#nativePathTotals").textContent, "2 modules3 séquences3 activités4 h 00 min obligatoires");
+  assert.equal(document.querySelector('[data-duration="hours"]').value, "4");
+  input('[data-duration="minutes"]', "60");
+  click("#nativePathSave"); await tick();
+  assert.equal(saved, undefined);
+  assert.match(document.querySelector("#nativePathSaveState").textContent, /Corrigez les durées/);
+  input('[data-duration="minutes"]', "0");
   input("#nativePathTitle", "Formation complète");
   click("#nativePathSave");
   assert.equal(document.querySelector("#nativePathSave").disabled, true);
@@ -60,6 +68,8 @@ const input = (selector, value) => { const node = document.querySelector(selecto
   assert.deepEqual(saved.modules.map((item) => item.course_id), ["second", "first"]);
   assert.deepEqual(saved.modules[0].section_ids, ["s1"]);
   assert.equal(saved.modules[0].course_version, "pinned-v1");
+  assert.equal(saved.modules[0].required_minutes, 240);
+  assert.equal(saved.modules[1].required_minutes, 0);
   assert.equal(document.querySelector("#nativePathSaveState").textContent, "Parcours enregistré pour cette session");
   // Subsequent saves carry the new revision, and errors never discard changes.
   conflict = true;
@@ -72,7 +82,7 @@ const input = (selector, value) => { const node = document.querySelector(selecto
   // Module removal is only local until explicitly saved.
   moduleCards()[0].querySelector(".np-module-controls button:last-child").click();
   assert.equal(moduleCards().length, 1);
-  assert.equal(document.querySelector("#nativePathTotals").textContent, "1 modules2 séquences2 activités");
+  assert.equal(document.querySelector("#nativePathTotals").textContent, "1 modules2 séquences2 activités0 h 00 min obligatoires");
   dom.window.close();
-  console.log("PASS: search, add, duplicate prevention, module/sequence order, selection, save, pinned version, stale revision, removal.");
+  console.log("PASS: search, composition, duration validation/persistence, save, pinned version, stale revision, removal.");
 })().catch((error) => { console.error(error); process.exitCode = 1; dom.window.close(); });

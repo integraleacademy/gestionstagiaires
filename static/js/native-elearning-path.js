@@ -20,8 +20,12 @@
   const modules = config.modules.map((item) => {
     const outline = outlineFor(item);
     return { ...item, course_version: item.course_version || outline?.course_version || "",
+      required_minutes: item.required_minutes ?? 0,
       title: item.title || "", section_ids: item.section_ids || outline?.sections.map((section) => section.id) || [] };
   });
+  const validDuration = (value) => Number.isInteger(value) && value >= 0 && value <= 60000;
+  const formatMinutes = (value) => validDuration(value)
+    ? `${Math.floor(value / 60)} h ${String(value % 60).padStart(2, "0")} min` : "Durée à corriger";
   const readonly = () => config.readOnly || busy;
   const textNode = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -58,7 +62,9 @@
         }
       });
     });
-    totals.replaceChildren(...[`${modules.length} modules`, `${sequenceCount} séquences`, `${activityCount} activités`]
+    const duration = modules.reduce((sum, item) => sum + (validDuration(item.required_minutes) ? item.required_minutes : 0), 0);
+    totals.replaceChildren(...[`${modules.length} modules`, `${sequenceCount} séquences`, `${activityCount} activités`,
+      `${Math.floor(duration / 60)} h ${String(duration % 60).padStart(2, "0")} min obligatoires`]
       .map((value) => textNode("span", "", value)));
   }
   function renderLibrary() {
@@ -75,6 +81,7 @@
       card.append(button(present ? "Déjà dans le parcours" : "+ Ajouter au parcours", () => {
         if (readonly() || modules.length >= 100) return;
         modules.push({ course_id: course.course_id, course_version: course.course_version,
+          required_minutes: 0,
           title: "", section_ids: course.sections.map((section) => section.id) });
         changed();
         renderModules();
@@ -98,6 +105,8 @@
       const identity = textNode("div", "np-module-identity");
       const headingTitle = textNode("h3", "", item.title || outline?.title || "Module indisponible");
       identity.append(headingTitle, textNode("p", "", `${item.section_ids.length} séquences sélectionnées · Déplier pour composer`));
+      const durationSummary = textNode("small", "np-duration-summary", `Durée obligatoire : ${formatMinutes(item.required_minutes)}`);
+      identity.append(durationSummary);
       heading.append(identity);
       const controls = textNode("div", "np-module-controls");
       const up = button("↑", () => move(modules, index, -1), index === 0);
@@ -125,6 +134,27 @@
       input.addEventListener("input", () => { item.title = input.value; headingTitle.textContent = input.value || outline.title; changed(); });
       label.append(input);
       body.append(label, textNode("small", "np-version", `Source : ${outline.title} · Version ${item.course_version}`));
+      const duration = textNode("fieldset", "np-duration");
+      duration.append(textNode("legend", "", "Durée obligatoire de temps actif"));
+      const hoursLabel = textNode("label", "np-field", "Heures");
+      const minutesLabel = textNode("label", "np-field", "Minutes");
+      const hours = document.createElement("input"), minutes = document.createElement("input");
+      [hours, minutes].forEach((field) => {
+        field.type = "number"; field.min = "0"; field.step = "1"; field.required = true; field.disabled = readonly();
+      });
+      hours.max = "1000"; minutes.max = "59";
+      hours.dataset.duration = "hours"; minutes.dataset.duration = "minutes";
+      hours.value = Math.floor((item.required_minutes || 0) / 60);
+      minutes.value = (item.required_minutes || 0) % 60;
+      [hours, minutes].forEach((field) => field.addEventListener("input", () => {
+        const total = hours.valueAsNumber * 60 + minutes.valueAsNumber;
+        item.required_minutes = hours.checkValidity() && minutes.checkValidity() && validDuration(total) ? total : null;
+        durationSummary.textContent = `Durée obligatoire : ${formatMinutes(item.required_minutes)}`;
+        changed();
+      }));
+      hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel);
+      duration.append(textNode("p", "np-hint", "Exemple : 4 h 00 min. Le stagiaire doit terminer les activités et atteindre ce temps actif pour débloquer le module suivant. 0 h 00 min signifie aucun minimum de temps."));
+      body.append(duration);
       const bulk = textNode("div", "np-sequence-tools");
       bulk.append(textNode("strong", "", "Séquences du module"), button("Tout inclure", () => {
         item.section_ids.push(...outline.sections.map((section) => section.id).filter((id) => !item.section_ids.includes(id)));
@@ -174,6 +204,10 @@
   }
   save.addEventListener("click", async () => {
     if (readonly()) return;
+    if (modules.some((item) => !validDuration(item.required_minutes))) {
+      status.textContent = "Corrigez les durées : heures entières de 0 à 1 000 et minutes de 0 à 59 (1 000 h maximum).";
+      status.classList.add("np-error"); return;
+    }
     if (modules.some((item) => !item.section_ids.length)) {
       status.textContent = "Choisissez au moins une séquence dans chaque module.";
       status.classList.add("np-error"); return;
