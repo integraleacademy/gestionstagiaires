@@ -51,11 +51,12 @@
   <div class="native-layout">
     <aside class="native-sidebar" id="nativeSidebar" aria-label="Sommaire du cours">
       <div class="native-sidebar__learner">
-        <span>Votre parcours</span>
+        <a class="native-back-link" href="{{ path_url }}">← Tous mes modules</a>
+        <span>Module {{ module_position }} sur {{ module_count }}</span>
         <strong>{{ learner_name or 'Stagiaire' }}</strong>
       </div>
       <div class="native-progress-summary">
-        <div><span>Progression</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
+        <div><span>Progression du module</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
         <div class="native-progress-track" aria-hidden="true"><i id="nativeProgressBar" style="width:{{ progress.progress_percent }}%"></i></div>
         {% if progress.scored_activities %}<small>Score actuel : <b id="nativeScoreLabel">{{ progress.score_percent|round|int }} %</b></small>{% endif %}
       </div>
@@ -148,7 +149,7 @@
         <div class="native-navigation-actions">
           {% if previous_url %}<a class="native-button native-button--secondary" href="{{ previous_url }}">← Précédent</a>{% else %}<span></span>{% endif %}
           <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}">
-            {% if activity_completed %}{{ 'Retour à mon espace' if is_last_activity else 'Continuer' }}{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}Terminer le cours{% else %}Terminer et continuer{% endif %} →
+            {% if activity_completed %}{{ end_label if is_last_activity else 'Continuer' }}{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}Terminer le module{% else %}Terminer et continuer{% endif %} →
           </button>
         </div>
         <p class="native-tracking-explainer">Le compteur valide uniquement le temps actif sur ce cours. Il se met automatiquement en pause si vous quittez la page ou restez inactif.</p>
@@ -172,6 +173,8 @@
     'isLastActivity': is_last_activity,
     'nextUrl': next_url,
     'portalUrl': portal_url,
+    'endUrl': end_url,
+    'endLabel': end_label,
     'startUrl': url_for('native_elearning.tracking_start'),
     'heartbeatUrl': url_for('native_elearning.tracking_heartbeat'),
     'finishUrl': url_for('native_elearning.tracking_finish'),
@@ -185,6 +188,6 @@
     'initialStatus': progress.status,
     'savedAnswer': progress.answers.get(activity.id, {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260907-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260908-1') }}" defer></script>
 </body>
 </html>

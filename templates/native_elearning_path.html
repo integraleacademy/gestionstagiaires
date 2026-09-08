@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ path_title }} · Intégrale Academy</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-1') }}">
+</head>
+<body class="np-learner-body">
+  <main class="np-shell np-learner-shell">
+    <a class="np-back" href="{{ portal_url }}">← Retour à mon espace</a>
+    <header class="np-header"><div><span class="np-eyebrow">{{ session_name }}</span><h1>{{ path_title }}</h1><p>{{ learner_name }}, retrouvez ici tous vos modules de formation.</p></div>{% if resume_url %}<a class="np-button np-button--primary" href="{{ resume_url }}">{{ 'Reprendre mon parcours' if completed_activities else 'Commencer mon parcours' }} →</a>{% endif %}</header>
+    <section class="np-panel np-overview" aria-label="Progression du parcours">
+      <div><span>Modules terminés</span><strong>{{ completed_modules }} / {{ modules|length }}</strong></div>
+      <div><span>Progression globale</span><strong>{{ progress_percent }} %</strong><div class="np-progress"><i style="width:{{ progress_percent }}%"></i></div></div>
+      <div><span>Temps actif cumulé</span><strong>{{ active_time_label }}</strong></div>
+      <div><span>Activités terminées</span><strong>{{ completed_activities }} / {{ total_activities }}</strong></div>
+    </section>
+    <div class="np-modules np-learner-modules">
+      {% for module in modules %}
+        <article class="np-panel np-learner-module">
+          <div class="np-module-heading"><span class="np-number">{{ '%02d'|format(loop.index) }}</span><div>
+            <span class="np-eyebrow">Module {{ loop.index }}</span>
+            <h2>{{ module.course.title if module.course else (module.assignment.title or 'Module indisponible') }}</h2>
+          </div></div>
+          {% if module.course %}
+            <div class="np-totals"><span>{{ module.course.counts.sections }} séquences</span><span>{{ module.course.counts.activities }} activités</span><span>{{ module.time_label }} de temps actif</span><span>{{ module.progress.progress_percent|round|int }} % terminé</span></div>
+            <div class="np-progress"><i style="width:{{ module.progress.progress_percent }}%"></i></div>
+            <div class="np-learner-actions"><span class="np-badge">{{ {'not_started': 'À commencer', 'in_progress': 'En cours', 'passed': 'Terminé · objectif atteint', 'failed': 'Terminé · à revoir avec le formateur'}[module.progress.status] }}</span><a class="np-button np-button--primary" href="{{ module.url }}">{{ 'Revoir le module' if module.complete else ('Continuer' if module.progress.status == 'in_progress' else 'Commencer') }} →</a></div>
+            <details class="np-learner-sequences"><summary>Voir les séquences et activités</summary><ol>{% for section in module.course.sections %}<li><strong>{{ section.title }}</strong><ul>{% for activity in section.activities %}<li>{{ '✓ ' if activity.id in module.progress.completed_activity_ids else '' }}{{ activity.title }}{% if activity.scored %} <small>· Question</small>{% endif %}</li>{% endfor %}</ul></li>{% endfor %}</ol></details>
+          {% else %}<p class="np-error">Ce module est momentanément indisponible. Contactez l’équipe pédagogique.</p>{% endif %}
+        </article>
+      {% else %}<section class="np-panel np-empty"><h2>Votre parcours est en préparation</h2><p>Les modules apparaîtront ici dès leur affectation par l’équipe pédagogique.</p></section>{% endfor %}
+    </div>
+    <p class="np-hint">Le temps cumulé additionne le temps actif des modules de ce parcours. Le compteur fonctionne dans le lecteur, pas sur cette page. Une seule activité peut être chronométrée à la fois.</p>
+  </main>
+</body>
+</html>

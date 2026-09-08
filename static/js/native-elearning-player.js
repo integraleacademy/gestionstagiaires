@@ -156,7 +156,7 @@
       state.serverActive = false;
       state.displayAnchor = Date.now();
       setTrackingState("offline", "Suivi déconnecté");
-      if (Number(error.status) === 401) showToast("Votre session a expiré. Rechargez la page.", true);
+      if ([401, 403, 409].includes(Number(error.status))) showToast("Votre accès ou le parcours a changé. Rechargez la page.", true);
     } finally {
       state.heartbeatRunning = false;
       renderTimer();
@@ -285,7 +285,7 @@
     if (!actionButton || actionButton.disabled) return;
     const mode = actionButton.dataset.mode;
     if (mode === "navigate") {
-      window.location.assign(config.isLastActivity ? config.portalUrl : config.nextUrl);
+      window.location.assign(config.isLastActivity ? (config.endUrl || config.portalUrl) : config.nextUrl);
       return;
     }
     actionButton.disabled = true;
@@ -298,7 +298,7 @@
         showAnswerFeedback(Boolean(result.correct));
         showCourseResult(result.progress);
         actionButton.dataset.mode = "navigate";
-        actionButton.textContent = config.isLastActivity ? "Retour à mon espace →" : "Continuer →";
+        actionButton.textContent = config.isLastActivity ? `${config.endLabel || 'Retour au parcours'} →` : "Continuer →";
         questionForm?.querySelectorAll("input,select").forEach((field) => { field.disabled = true; });
       } else {
         const result = await postJson(config.completeUrl, {});
@@ -306,7 +306,7 @@
         if (config.isLastActivity) {
           showCourseResult(result.progress);
           actionButton.dataset.mode = "navigate";
-          actionButton.textContent = "Retour à mon espace →";
+          actionButton.textContent = `${config.endLabel || 'Retour au parcours'} →`;
         } else {
           window.location.assign(config.nextUrl);
           return;

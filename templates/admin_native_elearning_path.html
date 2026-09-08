@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-1') }}">
+<div class="np-shell" id="nativePathBuilder">
+  <a class="np-back" href="{{ url_for('native_elearning.admin_catalog') }}">← Bibliothèque et sessions</a>
+  <header class="np-header">
+    <div><span class="np-eyebrow">Ingénierie pédagogique · APS</span><h1>Composer le parcours</h1><p>{{ training_session.name or training_session.id }} · {{ training_session.date_start or 'Date à renseigner' }}</p></div>
+    <span class="np-badge">{{ 'E-learning activé' if training_session.aps_elearning_enabled else 'E-learning à activer dans la session' }}</span>
+  </header>
+  <div class="np-layout">
+    <aside class="np-library np-panel">
+      <span class="np-eyebrow">1 · Ajouter</span><h2>Vos modules importés</h2>
+      <p>Un ZIP importé devient un module. Ajoutez-en autant que nécessaire, jusqu’à 100 par parcours.</p>
+      <label class="np-field">Rechercher un module<input type="search" id="nativeModuleSearch" placeholder="Ex. cadre légal, intervention…"></label>
+      <div id="nativeModuleLibrary" class="np-library-list"></div>
+      <a class="np-back" href="{{ url_for('native_elearning.admin_catalog') }}">Importer un autre ZIP →</a>
+    </aside>
+    <main class="np-editor">
+      <section class="np-panel">
+        <span class="np-eyebrow">2 · Organiser</span>
+        <label class="np-field np-title-field">Nom du parcours<input id="nativePathTitle" maxlength="180" value="{{ training_session.aps_native_path_title or 'Parcours APS' }}"{% if path_config.readOnly %} disabled{% endif %}></label>
+        <p>Les modules se suivent dans l’ordre affiché. Dépliez un module pour choisir et ordonner ses séquences ; les activités d’une séquence conservent leur ordre pédagogique.</p>
+        <div class="np-totals" id="nativePathTotals" aria-live="polite"></div>
+      </section>
+      <div id="nativePathModules" class="np-modules"></div>
+      <div class="np-savebar">
+        <div><strong id="nativePathSaveState" role="status" aria-live="polite">Parcours enregistré</strong><p>Versions conservées · Progressions existantes préservées</p></div>
+        <button class="np-button np-button--primary" id="nativePathSave" type="button"{% if path_config.readOnly %} disabled{% endif %}>Enregistrer le parcours</button>
+      </div>
+      <p class="np-hint">Les changements s’appliquent à cette session après enregistrement. Retirer un module ou une séquence ne supprime ni les réponses ni le temps déjà enregistré. Les stagiaires ayant une page ouverte devront la recharger.</p>
+      <noscript><p class="np-error">Activez JavaScript pour composer et enregistrer ce parcours.</p></noscript>
+    </main>
+  </div>
+</div>
+<script id="nativePathConfig" type="application/json">{{ path_config|tojson }}</script>
+<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20260908-1') }}" defer></script>
+{% endblock %}

@@ -15,6 +15,8 @@ def _write_synthetic_course(
     *,
     dangerous_member: str = "",
     fill_blank_input: bool = False,
+    course_id: str = "course-test",
+    extra_section: bool = False,
 ) -> None:
     fill_blank_answers = [
         {
@@ -29,7 +31,7 @@ def _write_synthetic_course(
             {"id": "blank-b", "text": {"fr": "la police"}, "isCorrect": False}
         )
     course = {
-        "id": "course-test",
+        "id": course_id,
         "version": "version-1",
         "title": {"fr": "Cours de test"},
         "authorFullName": "Intégrale Academy",
@@ -70,6 +72,12 @@ def _write_synthetic_course(
             }
         ],
     }
+    if extra_section:
+        course["sections"].append({
+            "id": "section-2", "title": {"fr": "Séquence complémentaire"},
+            "questions": [{"id": "content-2", "type": "informationContent", "title": {"fr": "Leçon complémentaire"},
+                           "learningContents": [{"id": "block-1", "children": []}]}],
+        })
     settings = {
         "masteryScore": {"score": 80, "isOverall": True},
         "forceNavigation": {"enabled": True},
@@ -305,6 +313,37 @@ class NativeTrackingTests(unittest.TestCase):
             now_epoch=2_120,
         )
         self.assertEqual(delayed["credited_seconds"], 20)
+
+    def test_other_module_cannot_double_count_time_but_other_learner_can(self):
+        signals = dict(activity_id="lesson-1", visible=True, focused=True, recent_activity=True, media_playing=False)
+        first = self.store.start_tracking(self.access, tab_id="first", activity_id="lesson-1", now_epoch=1000)["tracking_session_id"]
+        self.store.heartbeat(self.access, first, now_epoch=1000, **signals)
+        other_module = {**self.access, "course_id": "second-course"}
+        second = self.store.start_tracking(other_module, tab_id="second", activity_id="lesson-1", now_epoch=1001)["tracking_session_id"]
+        blocked = self.store.heartbeat(other_module, second, now_epoch=1001, **signals)
+        self.assertTrue(blocked["duplicate"])
+        self.assertEqual(blocked["credited_seconds"], 0)
+        other_learner = {**self.access, "trainee_id": "another-learner"}
+        third = self.store.start_tracking(other_learner, tab_id="third", activity_id="lesson-1", now_epoch=1001)["tracking_session_id"]
+        self.assertTrue(self.store.heartbeat(other_learner, third, now_epoch=1001, **signals)["active"])
+        self.store.finish_tracking(self.access, first, activity_id="lesson-1", now_epoch=1015)
+        self.assertTrue(self.store.heartbeat(other_module, second, now_epoch=1016, **signals)["active"])
+        credited = self.store.heartbeat(other_module, second, now_epoch=1031, **signals)
+        self.assertEqual(credited["credited_seconds"], 15)
+        rows = self.store.learner_progress(self.access["session_id"], self.access["trainee_id"])
+        self.assertEqual(sum(row["active_seconds"] for row in rows), 30)
+
+    def test_stale_module_cannot_credit_overlapping_time_after_handover(self):
+        signals = dict(activity_id="lesson-1", visible=True, focused=True, recent_activity=True, media_playing=False)
+        first = self.store.start_tracking(self.access, tab_id="first", activity_id="lesson-1", now_epoch=1000)["tracking_session_id"]
+        self.store.heartbeat(self.access, first, now_epoch=1000, **signals)
+        other = {**self.access, "course_id": "second-course"}
+        second = self.store.start_tracking(other, tab_id="second", activity_id="lesson-1", now_epoch=1060)["tracking_session_id"]
+        self.assertTrue(self.store.heartbeat(other, second, now_epoch=1060, **signals)["active"])
+        self.assertEqual(self.store.heartbeat(other, second, now_epoch=1075, **signals)["credited_seconds"], 15)
+        delayed = self.store.heartbeat(self.access, first, now_epoch=1076, **signals)
+        self.assertTrue(delayed["duplicate"])
+        self.assertEqual(delayed["credited_seconds"], 0)
 
     def test_completion_and_score_are_calculated_server_side(self) -> None:
         first = self.store.complete_activity(
