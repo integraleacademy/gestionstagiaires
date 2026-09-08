@@ -23,6 +23,10 @@
   const toast = document.getElementById("nativeToast");
   const questionForm = document.getElementById("nativeQuestionForm");
   const videos = Array.from(document.querySelectorAll(".native-course-video"));
+  const remainingTime = document.getElementById("nativeRemainingTime");
+  const durationStatus = document.getElementById("nativeDurationStatus");
+  const idleNotice = document.getElementById("nativeIdleNotice");
+  const idleMilliseconds = Number(config.idleSeconds || 300) * 1000;
 
   const state = {
     trackingSessionId: "",
@@ -33,6 +37,11 @@
     displayAnchor: Date.now(),
     lastInteraction: Date.now(),
     toastTimeout: 0,
+    saving: false,
+    progress: {
+      remaining_seconds: Number(config.initialRemainingSeconds || 0),
+      module_complete: Boolean(config.initialModuleComplete),
+    },
   };
 
   function makeId() {
@@ -58,9 +67,35 @@
     return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
   }
 
+  function displayedSeconds() {
+    const extra = state.serverActive ? Math.max(0, Math.min(
+      Date.now() - state.displayAnchor, 20000,
+      state.lastInteraction + idleMilliseconds - state.displayAnchor
+    ) / 1000) : 0;
+    return state.baseSeconds + extra;
+  }
+
   function renderTimer() {
-    const extra = state.serverActive ? Math.max(0, (Date.now() - state.displayAnchor) / 1000) : 0;
-    if (timer) timer.textContent = formatSeconds(state.baseSeconds + extra);
+    if (timer) timer.textContent = formatSeconds(displayedSeconds());
+  }
+
+  function pauseDisplay() {
+    state.baseSeconds = displayedSeconds();
+    state.serverActive = false;
+    state.displayAnchor = Date.now();
+    renderTimer();
+  }
+
+  function updateAction() {
+    if (!actionButton) return;
+    const blocked = actionButton.dataset.mode === "navigate" && config.isLastActivity
+      && config.hasNextModule && !state.progress.module_complete;
+    actionButton.disabled = state.saving || blocked;
+    if (actionButton.dataset.mode === "navigate" && config.isLastActivity && !state.saving) {
+      actionButton.textContent = blocked
+        ? (state.progress.remaining_seconds > 0 ? `Encore ${formatSeconds(state.progress.remaining_seconds)} de temps actif` : "Terminez les activités du module")
+        : `${config.endLabel || 'Retour au parcours'} →`;
+    }
   }
 
   function setTrackingState(nextState, label) {
@@ -106,18 +141,21 @@
   }
 
   function activitySignals() {
-    const recent = (Date.now() - state.lastInteraction) / 1000 <= Number(config.idleSeconds || 120);
+    const age = Math.max(0, (Date.now() - state.lastInteraction) / 1000);
+    const recent = age < idleMilliseconds / 1000;
     const mediaPlaying = videos.some((video) => !video.paused && !video.ended && video.readyState >= 2);
     return {
       visible: document.visibilityState === "visible",
       focused: document.hasFocus(),
       recent_activity: recent,
       media_playing: mediaPlaying,
+      interaction_age_seconds: age,
     };
   }
 
   function applyProgress(progress) {
     if (!progress) return;
+    state.progress = progress;
     const activeSeconds = Number(progress.active_seconds);
     if (Number.isFinite(activeSeconds)) {
       state.baseSeconds = activeSeconds;
@@ -128,6 +166,10 @@
     if (progressBar) progressBar.style.width = `${percent}%`;
     if (progressLabel) progressLabel.textContent = `${Math.round(percent)} %`;
     if (scoreLabel) scoreLabel.textContent = `${Math.round(Number(progress.score_percent) || 0)} %`;
+    if (remainingTime) remainingTime.textContent = formatSeconds(progress.remaining_seconds);
+    if (durationStatus) durationStatus.textContent = progress.duration_met ? "Durée obligatoire atteinte" : "Temps actif restant";
+    updateAction();
+    showCourseResult(progress);
   }
 
   async function sendHeartbeat() {
@@ -140,7 +182,7 @@
         ...activitySignals(),
       });
       applyProgress(result.progress);
-      state.serverActive = Boolean(result.active);
+      state.serverActive = Boolean(result.active) && activitySignals().recent_activity && document.visibilityState === "visible";
       state.displayAnchor = Date.now();
       if (result.duplicate) {
         setTrackingState("duplicate", "Autre onglet actif");
@@ -148,8 +190,8 @@
       } else {
         if (duplicateNotice) duplicateNotice.classList.remove("is-visible");
         setTrackingState(
-          result.active ? "active" : "paused",
-          result.active ? "Chrono actif" : "Chrono en pause"
+          state.serverActive ? "active" : "paused",
+          state.serverActive ? "Chrono actif" : (activitySignals().recent_activity ? "Chrono en pause" : "Pause · inactif depuis 5 min")
         );
       }
     } catch (error) {
@@ -192,24 +234,42 @@
   }
 
   let activityHeartbeatTimeout = 0;
+  let idleTimeout = 0;
+  function scheduleIdlePause() {
+    window.clearTimeout(idleTimeout);
+    idleTimeout = window.setTimeout(() => {
+      pauseDisplay();
+      setTrackingState("paused", "Pause · inactif depuis 5 min");
+      if (idleNotice) idleNotice.hidden = false;
+      sendHeartbeat();
+    }, Math.max(0, state.lastInteraction + idleMilliseconds - Date.now()));
+  }
   function markActivity() {
-    const wasIdle = (Date.now() - state.lastInteraction) / 1000 > Number(config.idleSeconds || 120);
+    const wasIdle = Date.now() - state.lastInteraction >= idleMilliseconds;
+    if (wasIdle) pauseDisplay();
     state.lastInteraction = Date.now();
+    if (idleNotice) idleNotice.hidden = true;
+    scheduleIdlePause();
     if (wasIdle) {
       window.clearTimeout(activityHeartbeatTimeout);
       activityHeartbeatTimeout = window.setTimeout(sendHeartbeat, 150);
     }
   }
 
-  ["pointerdown", "keydown", "touchstart", "scroll"].forEach((eventName) => {
+  ["pointerdown", "pointermove", "keydown", "touchstart", "scroll"].forEach((eventName) => {
     window.addEventListener(eventName, markActivity, { passive: true });
   });
   window.addEventListener("focus", () => { markActivity(); sendHeartbeat(); });
-  window.addEventListener("blur", sendHeartbeat);
-  document.addEventListener("visibilitychange", sendHeartbeat);
+  window.addEventListener("blur", () => { pauseDisplay(); sendHeartbeat(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") pauseDisplay();
+    sendHeartbeat();
+  });
+  document.getElementById("nativeResumeTimer")?.addEventListener("click", () => { markActivity(); sendHeartbeat(); });
   videos.forEach((video) => {
     ["play", "pause", "ended", "seeking"].forEach((eventName) => {
-      video.addEventListener(eventName, () => { markActivity(); sendHeartbeat(); });
+      // Playback events (including autoplay/ended) are not learner interactions.
+      video.addEventListener(eventName, sendHeartbeat);
     });
   });
 
@@ -266,19 +326,25 @@
     feedback.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
-  function showCourseResult(progress) {
-    if (!courseResult || !progress || !["passed", "failed"].includes(progress.status)) return;
+  function showCourseResult(progress, scroll = false) {
+    if (!courseResult || !progress) return;
+    if (!["passed", "failed", "awaiting_time"].includes(progress.status)) {
+      courseResult.classList.remove("is-visible"); return;
+    }
     const score = Math.round(Number(progress.score_percent) || 0);
+    courseResult.dataset.status = progress.status;
     courseResult.classList.add("is-visible");
     const title = courseResult.querySelector("strong");
     const detail = courseResult.querySelector("span");
-    if (title) title.textContent = "Cours terminé";
+    if (title) title.textContent = progress.status === "awaiting_time" ? "Activités terminées · temps à compléter" : "Module terminé";
     if (detail) {
-      detail.textContent = progress.status === "passed"
+      detail.textContent = progress.status === "awaiting_time"
+        ? `Il reste ${formatSeconds(progress.remaining_seconds)} de temps actif à suivre. Reprenez les séquences depuis le sommaire pour poursuivre votre formation.`
+        : progress.status === "passed"
         ? `Objectif atteint avec un score de ${score} %.`
         : `Parcours terminé avec un score de ${score} %. L’équipe pédagogique pourra vous accompagner.`;
     }
-    courseResult.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (scroll) courseResult.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   async function handleAction() {
@@ -289,6 +355,7 @@
       return;
     }
     actionButton.disabled = true;
+    state.saving = true;
     const originalLabel = actionButton.textContent;
     actionButton.textContent = "Enregistrement…";
     try {
@@ -296,7 +363,7 @@
         const result = await postJson(config.answerUrl, { answer: collectAnswer() });
         applyProgress(result.progress);
         showAnswerFeedback(Boolean(result.correct));
-        showCourseResult(result.progress);
+        showCourseResult(result.progress, true);
         actionButton.dataset.mode = "navigate";
         actionButton.textContent = config.isLastActivity ? `${config.endLabel || 'Retour au parcours'} →` : "Continuer →";
         questionForm?.querySelectorAll("input,select").forEach((field) => { field.disabled = true; });
@@ -304,7 +371,7 @@
         const result = await postJson(config.completeUrl, {});
         applyProgress(result.progress);
         if (config.isLastActivity) {
-          showCourseResult(result.progress);
+          showCourseResult(result.progress, true);
           actionButton.dataset.mode = "navigate";
           actionButton.textContent = `${config.endLabel || 'Retour au parcours'} →`;
         } else {
@@ -316,7 +383,8 @@
       showToast(error.message || "Impossible d’enregistrer cette activité.", true);
       actionButton.textContent = originalLabel;
     } finally {
-      actionButton.disabled = false;
+      state.saving = false;
+      updateAction();
     }
   }
 
@@ -367,10 +435,12 @@
   window.addEventListener("keydown", (event) => { if (event.key === "Escape") setMenu(false); });
 
   restoreSavedAnswer();
+  updateAction();
   renderTimer();
+  scheduleIdlePause();
   startTracking();
   window.setInterval(renderTimer, 1000);
   window.setInterval(sendHeartbeat, Math.max(5, Number(config.heartbeatSeconds || 15)) * 1000);
-  window.addEventListener("pagehide", (event) => { if (!event.persisted) finishTracking(); });
+  window.addEventListener("pagehide", finishTracking);
   window.addEventListener("pageshow", (event) => { if (event.persisted && state.stopped) startTracking(); });
 })();

@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 
 from elearning_native.importer import CourseCatalog, CourseImportError, import_easygenerator_course
-from elearning_native.store import NativeElearningStore
+from elearning_native.store import NativeElearningStore, _INITIALIZED_DATABASES
 
 
 def _write_synthetic_course(
@@ -313,6 +313,47 @@ class NativeTrackingTests(unittest.TestCase):
             now_epoch=2_120,
         )
         self.assertEqual(delayed["credited_seconds"], 20)
+
+    def test_idle_deadline_stops_at_five_minutes_even_with_video_and_delayed_ping(self):
+        signals = dict(activity_id="lesson-1", visible=True, focused=True, recent_activity=True, media_playing=True)
+        tracking_id = self.store.start_tracking(self.access, tab_id="idle", activity_id="lesson-1", now_epoch=1000)["tracking_session_id"]
+        for elapsed in range(0, 300, 15):
+            result = self.store.heartbeat(self.access, tracking_id, now_epoch=1000 + elapsed,
+                                          interaction_age_seconds=elapsed, **signals)
+            self.assertTrue(result["active"])
+        late = self.store.heartbeat(self.access, tracking_id, now_epoch=1320, interaction_age_seconds=320, **signals)
+        self.assertFalse(late["active"])
+        self.assertEqual(late["credited_seconds"], 15)
+        self.assertEqual(late["progress"]["active_seconds"], 300)
+        resumed = self.store.heartbeat(self.access, tracking_id, now_epoch=1600, interaction_age_seconds=0, **signals)
+        self.assertTrue(resumed["active"])
+        self.assertEqual(resumed["credited_seconds"], 0)
+        following = self.store.heartbeat(self.access, tracking_id, now_epoch=1615, interaction_age_seconds=15, **signals)
+        self.assertEqual(following["progress"]["active_seconds"], 315)
+
+    def test_resume_without_idle_ping_and_finish_cannot_credit_absence(self):
+        signals = dict(activity_id="lesson-1", visible=True, focused=True, recent_activity=True, media_playing=False)
+        for finish in (False, True):
+            access = {**self.access, "trainee_id": str(finish)}
+            tracking_id = self.store.start_tracking(access, tab_id="idle", activity_id="lesson-1", now_epoch=1000)["tracking_session_id"]
+            self.store.heartbeat(access, tracking_id, now_epoch=1000, interaction_age_seconds=299, **signals)
+            if finish:
+                result = self.store.finish_tracking(access, tracking_id, now_epoch=1600)
+            else:
+                result = self.store.heartbeat(access, tracking_id, now_epoch=1600, interaction_age_seconds=0, **signals)
+            self.assertEqual(result["progress"]["active_seconds"], 1)
+
+    def test_idle_schema_upgrade_preserves_existing_progress_and_tracking(self):
+        tracking_id = self.store.start_tracking(self.access, tab_id="old", activity_id="lesson-1", now_epoch=1000)["tracking_session_id"]
+        self.store.complete_activity(self.access, "lesson-1", activity_order=self.order, scored_activity_ids=[], mastery_score=80)
+        with self.store._connect() as connection:
+            connection.execute("ALTER TABLE tracking_sessions DROP COLUMN active_until_epoch")
+        _INITIALIZED_DATABASES.discard(str(self.store.database_path))
+        upgraded = NativeElearningStore(self.store.database_path)
+        result = upgraded.heartbeat(self.access, tracking_id, activity_id="lesson-1", visible=True, focused=True,
+                                    recent_activity=True, media_playing=False, interaction_age_seconds=0, now_epoch=1015)
+        self.assertTrue(result["active"])
+        self.assertEqual(result["progress"]["completed_activity_ids"], ["lesson-1"])
 
     def test_other_module_cannot_double_count_time_but_other_learner_can(self):
         signals = dict(activity_id="lesson-1", visible=True, focused=True, recent_activity=True, media_playing=False)

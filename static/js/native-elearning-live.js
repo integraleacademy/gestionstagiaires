@@ -42,7 +42,7 @@
   }
 
   function statusLabel(status) {
-    return ({ passed: "Réussi", failed: "À revoir", in_progress: "En cours", not_started: "Non démarré" })[status] || "En cours";
+    return ({ passed: "Réussi", failed: "À revoir", awaiting_time: "Durée à compléter", in_progress: "En cours", not_started: "Non démarré" })[status] || "En cours";
   }
 
   function makeRow(item) {
@@ -74,7 +74,12 @@
     progressCell.append(progress);
     row.append(progressCell);
     row.append(element("td", "", `${Math.round(Number(item.score_percent) || 0)} %`));
-    row.append(element("td", "nellive-time", item.active_time_label || "00:00:00"));
+    const timeCell = element("td", "nellive-time", item.active_time_label || "00:00:00");
+    if (item.required_seconds) {
+      timeCell.append(element("small", "nellive-duration", `Obligatoire : ${item.required_time_label}`));
+      timeCell.append(element("small", "nellive-duration", item.duration_met ? "Durée atteinte" : `Reste ${item.remaining_time_label}`));
+    }
+    row.append(timeCell);
     row.append(element("td", "", item.live ? "Maintenant" : formatDate(item.updated_at)));
     return row;
   }

@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from typing import Any, Dict, List, Mapping
 
 from .importer import CourseCatalog, CourseImportError
 
 
 MAX_PATH_MODULES = 100
+MAX_REQUIRED_MINUTES = 60_000
 
 
 def assigned_modules(session_obj: Mapping[str, Any]) -> List[Dict[str, Any]]:
@@ -30,6 +32,9 @@ def path_revision(session_obj: Mapping[str, Any]) -> str:
 
 def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict[str, Any]:
     """Select/order sequences without changing activity IDs, content or answers."""
+    required_minutes = module.get("required_minutes", 0)
+    if type(required_minutes) is not int or not 0 <= required_minutes <= MAX_REQUIRED_MINUTES:
+        raise CourseImportError("La durée obligatoire doit être un nombre entier de minutes, entre 0 et 1 000 heures.")
     by_id = {str(section["id"]): section for section in course.get("sections") or []}
     section_ids = module.get("section_ids")
     if section_ids is None:
@@ -46,6 +51,7 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
     return {
         **course,
         "title": str(module.get("title") or course.get("title") or "Module"),
+        "required_minutes": required_minutes,
         "sections": sections,
         "activity_order": [str(activity["id"]) for activity in activities],
         "counts": {**course.get("counts", {}), "sections": len(sections),
@@ -77,6 +83,7 @@ def validate_modules(raw: Any, catalog: CourseCatalog) -> List[Dict[str, Any]]:
         validated.append({
             "course_id": course["id"], "course_version": course["version"],
             "title": title.strip(),
+            "required_minutes": projected["required_minutes"],
             "section_ids": [str(section["id"]) for section in projected["sections"]],
         })
     return validated
@@ -105,13 +112,21 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
     correct = sum(bool(answers.get(key, {}).get("correct")) for key in scored)
     score = round(correct / len(scored) * 100, 2) if scored else 100.0
     finished = bool(order) and len(completed) == len(order)
-    status = ("passed" if score >= float(course.get("settings", {}).get("mastery_score", 80)) else "failed") if finished else (
+    active_seconds = float(progress.get("active_seconds") or 0)
+    required_seconds = int(course.get("required_minutes") or 0) * 60
+    remaining_seconds = max(0, math.ceil(required_seconds - active_seconds))
+    duration_met = remaining_seconds == 0
+    status = ("passed" if score >= float(course.get("settings", {}).get("mastery_score", 80)) else "failed") if finished and duration_met else (
+        "awaiting_time" if finished else
         "in_progress" if progress.get("started_at") else "not_started"
     )
     return {
         **progress, "answers": answers, "completed_activity_ids": [key for key in order if key in completed],
         "progress_percent": round(len(completed) / len(order) * 100, 2) if order else 0,
         "score_percent": score, "correct_answers": correct, "scored_activities": len(scored),
-        "status": status, "active_seconds": float(progress.get("active_seconds") or 0),
-        "completed_at": progress.get("completed_at") if finished else None,
+        "status": status, "active_seconds": active_seconds,
+        "required_seconds": required_seconds, "remaining_seconds": remaining_seconds,
+        "duration_met": duration_met, "activities_completed": finished,
+        "module_complete": finished and duration_met,
+        "completed_at": progress.get("completed_at") if finished and duration_met else None,
     }
