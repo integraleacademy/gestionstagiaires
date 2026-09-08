@@ -41477,16 +41477,24 @@ def _find_billing_line(data: Dict[str, Any], line_id: str) -> Optional[Dict[str,
     return next((l for l in _billing_lines(data) if l.get('id') == line_id), None)
 
 
-def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+def calculate_trainee_financial_summary(
+    trainee: Dict[str, Any],
+    lines: Optional[List[Dict[str, Any]]] = None,
+    *,
+    include_cancelled: bool = False,
+) -> Dict[str, Any]:
     """Centralized trainee finance rollup.
 
     Qonto client invoices are the source of truth for Qonto-collected amounts.
     Manual payments are added only when they are not linked to a Qonto invoice,
     which prevents double counting local legacy rows mirroring the same invoice.
+    Dashboards exclude cancelled registrations by default. Individual records
+    and cancellation calculations include their actual invoices and payments
+    without restoring the registration to the active enrolment scope.
     """
     trainee_id = str(trainee.get('id') or '')
     registration_cancelled = _trainee_registration_is_cancelled(trainee)
-    if registration_cancelled:
+    if registration_cancelled and not include_cancelled:
         # Preserve existing invoice rows as history while making every amount
         # and percentage returned to dashboards neutral for this registration.
         trainee = {'id': trainee_id}
@@ -41848,13 +41856,9 @@ def calculate_registration_cancellation_indemnity(
     if training_price_cents <= 0:
         raise ValueError("Le coût total initial de la formation n’est pas renseigné.")
 
-    # Cancelled registrations are deliberately neutral in the normal finance
-    # KPIs. Use a copy marked active so historical collections remain available
-    # to this calculator without changing the persisted registration state.
-    finance_trainee = copy.deepcopy(trainee)
-    finance_trainee["registration_cancelled"] = False
-    finance_trainee["registration_canceled"] = False
-    financial_summary = calculate_trainee_financial_summary(finance_trainee, lines or [])
+    financial_summary = calculate_trainee_financial_summary(
+        trainee, lines or [], include_cancelled=True,
+    )
     by_financer = financial_summary.get("by_financer") or {}
     personal_paid_cents = int((by_financer.get("PERSONNEL") or {}).get("paid_amount_cents") or 0)
     other_paid_cents = int((by_financer.get("AUTRE") or {}).get("paid_amount_cents") or 0)
@@ -42679,7 +42683,9 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
         if cpf_sync_attempted or data_changed
         else lines
     )
-    summary = calculate_trainee_financial_summary(trainee or {'id': trainee_id}, fresh_lines)
+    summary = calculate_trainee_financial_summary(
+        trainee or {'id': trainee_id}, fresh_lines, include_cancelled=True,
+    )
     cpf_link = _cpf_active_link(data, session_id=str(session_id), trainee_id=str(trainee_id))
     return jsonify({
         'ok': True,
@@ -46078,7 +46084,9 @@ def api_billing_sync_qonto():
                 if str(t.get('id')) == str(last_line.get('traineeId')):
                     trainee = t; break
             if trainee: break
-    summary = calculate_trainee_financial_summary(trainee or {}, all_lines) if trainee else {}
+    summary = calculate_trainee_financial_summary(
+        trainee, all_lines, include_cancelled=True,
+    ) if trainee else {}
     invoice = None
     if last_line:
         invoice = serialize_qonto_invoice_for_frontend(last_line)
@@ -46223,7 +46231,9 @@ def api_billing_reset_financial_tracking():
     save_data(data)
 
     fresh_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
-    summary = calculate_trainee_financial_summary(trainee, fresh_lines)
+    summary = calculate_trainee_financial_summary(
+        trainee, fresh_lines, include_cancelled=True,
+    )
     return jsonify({
         'ok': True,
         'message': (
