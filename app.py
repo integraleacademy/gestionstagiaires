@@ -42661,24 +42661,41 @@ def run_qonto_background_sync() -> Dict[str, Any]:
             line = copy.deepcopy(source)
             line['qontoAutoSyncAttemptedAt'] = _now_iso()
             failed = False
+            issues = []
             if invoice_due:
                 try:
                     missing, _ = _sync_billing_line_with_qonto(data, line)
                     failed = bool(missing)
+                    if missing:
+                        issues.append('invoice: ' + str(line.get('syncWarning') or 'Facture introuvable'))
                     if not missing:
                         line['syncWarning'] = ''
                 except Exception as exc:
                     failed = True
+                    detail = _sanitize_qonto_error(str(exc))
+                    issues.append('invoice: ' + detail)
                     line['syncWarning'] = 'Synchronisation Qonto temporairement indisponible ; nouvelle tentative automatique.'
-                    _billing_log(line, 'Synchronisation Qonto en arrière-plan indisponible', 'error', _sanitize_qonto_error(str(exc)))
+                    _billing_log(line, 'Synchronisation Qonto en arrière-plan indisponible', 'error', detail)
             if debit_due:
                 try:
                     result = _sync_qonto_direct_debit_line(line, create_missing_subscriptions=False)
                     failed = failed or bool(result.get('errors') or result.get('warning'))
+                    issues.extend('direct_debit: ' + str(message) for message in
+                                  [*(result.get('errors') or []), result.get('warning')] if message)
                 except Exception as exc:
                     failed = True
+                    detail = _sanitize_qonto_error(str(exc))
+                    issues.append('direct_debit: ' + detail)
                     line['qontoDirectDebitSyncWarning'] = 'Synchronisation des prélèvements temporairement indisponible ; nouvelle tentative automatique.'
-                    _billing_log(line, 'Synchronisation prélèvements en arrière-plan indisponible', 'error', _sanitize_qonto_error(str(exc)))
+                    _billing_log(line, 'Synchronisation prélèvements en arrière-plan indisponible', 'error', detail)
+            if issues:
+                # The helpers already sanitize API errors. Keep that result
+                # without reloading the data store just to format diagnostics.
+                app.logger.warning('QONTO_BACKGROUND_SYNC_ISSUE %s', json.dumps({
+                    'line_id': line_id, 'session_id': line.get('sessionId'),
+                    'trainee_id': line.get('traineeId'), 'invoice_number': line.get('qontoInvoiceNumber'),
+                    'reasons': [message[:500] for message in dict.fromkeys(issues)],
+                }, ensure_ascii=False))
             updates.append((line_id, before, line, failed))
 
         def persist(current: Dict[str, Any]) -> Dict[str, Any]:
