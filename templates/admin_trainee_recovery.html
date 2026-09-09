@@ -12,6 +12,10 @@
   {% if error %}<p role="alert" style="color:#b91c1c">{{ error }}</p>{% endif %}
   {% if existing_url %}<p>Le dossier est présent : <a href="{{ existing_url }}">ouvrir la fiche</a>.</p>{% endif %}
   {% if searched and not bundle and not error and not existing_url %}<p>Aucune copie de ce dossier n’a été retrouvée dans les sauvegardes disponibles.</p>{% endif %}
+  <details>
+    <summary>Sauvegardes disponibles : {{ inventory.count }}</summary>
+    <p style="overflow-wrap:anywhere">Plus ancienne : {{ inventory.oldest or 'Aucune' }}<br>Plus récente : {{ inventory.newest or 'Aucune' }}</p>
+  </details>
   {% if bundle %}
     <h2>{{ bundle.trainee.first_name }} {{ bundle.trainee.last_name }}</h2>
     <dl>
@@ -29,5 +33,20 @@
       <button class="btn btn-primary" type="submit">Rétablir ce dossier</button>
     </form>
   {% endif %}
+  <h2>Rechercher une convention originale</h2>
+  <p>Une convention déjà générée peut conserver les informations du stagiaire. Cette recherche consulte uniquement les documents existants.</p>
+  <form method="get">
+    <input type="hidden" name="trainee_id" value="{{ trainee_id }}">
+    <label for="original-name">Nom du stagiaire</label>
+    <input id="original-name" name="name_query" value="{{ name_query }}" minlength="3" maxlength="80" required>
+    <button class="btn btn-primary" type="submit">Rechercher la convention</button>
+  </form>
+  {% if name_query and not originals %}<p>Aucune convention originale correspondante n’a été retrouvée.</p>{% endif %}
+  {% for original in originals %}
+    <details open>
+      <summary>{{ original.name }}</summary>
+      <pre style="white-space:pre-wrap;font:inherit">{{ original.text }}</pre>
+    </details>
+  {% endfor %}
 </section>
 {% endblock %}

@@ -27975,7 +27975,7 @@ def _storage_file_health(path: str, required_list_key: Optional[str] = None) -> 
 @admin_write_required
 def admin_trainee_recovery():
     """Review and selectively restore a missing Intégrale trainee from backup."""
-    from trainee_recovery import find_backup, restore_missing
+    from trainee_recovery import backup_inventory, find_backup, find_original_conventions, restore_missing
 
     if (session.get("admin_role") not in {"admin", "super_admin"}
             or _current_partner_id() not in {"", INTEGRALE_PARTNER_ID}):
@@ -27986,6 +27986,7 @@ def admin_trainee_recovery():
             abort(403)
     csrf = session.setdefault("trainee_recovery_csrf", uuid.uuid4().hex)
     trainee_id = str(request.values.get("trainee_id") or "").strip().upper()
+    name_query = str(request.args.get("name_query") or "").strip()[:80]
     bundle = None
     error = ""
     existing_url = ""
@@ -28027,7 +28028,9 @@ def admin_trainee_recovery():
             status = 409 if request.method == "POST" else 400
     return render_template("admin_trainee_recovery.html", trainee_id=trainee_id,
                            bundle=bundle, error=error, existing_url=existing_url,
-                           searched=bool(trainee_id), csrf=csrf), status
+                           searched=bool(trainee_id), csrf=csrf,
+                           inventory=backup_inventory(BACKUP_DIR), name_query=name_query,
+                           originals=find_original_conventions(PERSIST_DIR, name_query)), status
 
 
 @app.get("/healthz")
