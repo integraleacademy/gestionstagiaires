@@ -8,10 +8,12 @@ import unicodedata
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
+from backup_chronology import backup_chronology_key
 
 
 def backup_inventory(backup_dir):
-    paths = sorted(p.name for p in Path(backup_dir).glob("data_json.*.json") if p.is_file() and not p.is_symlink())
+    paths = [p.name for p in sorted((p for p in Path(backup_dir).glob("data_json.*.json")
+                                   if p.is_file() and not p.is_symlink()), key=backup_chronology_key)]
     return {"count": len(paths), "oldest": paths[0] if paths else "", "newest": paths[-1] if paths else ""}
 
 
@@ -60,8 +62,8 @@ def find_backup(backup_dir, trainee_id, partner_id, source=None):
         else:
             raise ValueError("Sauvegarde invalide.")
     else:
-        paths = sorted(root.glob("data_json.*.json"), reverse=True)
-        paths += sorted(root.parent.glob("data.json.corrupt.*"), reverse=True)
+        paths = sorted(list(root.glob("data_json.*.json")) + list(root.parent.glob("data.json.corrupt.*")),
+                       key=backup_chronology_key, reverse=True)
     needle = ('"' + trainee_id + '"').encode()
     for path in paths:
         if path.is_symlink():
