@@ -4441,7 +4441,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible');
     return j;
   }
-  async function load({allowAutoSync=true}={}){
+  async function load(){
     const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}`,{headers:{'Accept':'application/json'}});
     const j = await parseJsonResponse(r,'Chargement impossible');
     if(!r.ok||!j.ok) throw new Error(j.error||'Chargement impossible');
@@ -4454,38 +4454,17 @@ function updateDocsRelanceState(status, plannedDateIso){
     });
     render(currentLines);
     updateQuickInvoiceAction();
-    if(allowAutoSync) maybeAutoSyncQonto();
   }
   let localTraineePollTimer;
   function scheduleLocalTraineePoll(immediate=false){
     clearTimeout(localTraineePollTimer);
-    if(immediate) load({allowAutoSync:false}).catch(()=>{});
-    localTraineePollTimer=setTimeout(async()=>{try{await load({allowAutoSync:false});}catch(e){/* retain current finance display */}scheduleLocalTraineePoll();},document.hidden?120000:30000);
+    if(immediate) load().catch(()=>{});
+    localTraineePollTimer=setTimeout(async()=>{try{await load();}catch(e){/* retain current finance display */}scheduleLocalTraineePoll();},document.hidden?120000:30000);
   }
   document.addEventListener('visibilitychange',()=>scheduleLocalTraineePoll(!document.hidden));
   window.refreshQontoInvoiceHistory = () => load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
   window.addEventListener('qonto-billing-refresh', window.refreshQontoInvoiceHistory);
   function paymentStatusLabel(status){return ({partially_paid:'Partiellement payé',paid:'Payé',partial:'Paiement partiel',failed:'Rejeté',unpaid:'Non payé',draft:'Brouillon',canceled:'Annulée',cancelled:'Annulée',unknown:'Inconnu',pending:'En attente'}[String(status||'').toLowerCase()]||status||'Inconnu');}
-
-  function qontoLineIsStale(line){
-    if(!(line.qontoInvoiceId||line.qontoDraftId))return false;
-    const synced=line.qontoLastSyncedAt||line.qonto_last_synced_at||'';
-    if(!synced)return true;
-    const ts=Date.parse(synced);
-    return !Number.isFinite(ts)||((Date.now()-ts)>5*60*1000);
-  }
-  async function maybeAutoSyncQonto(){
-    const stale=currentLines.some(qontoLineIsStale);
-    const key=`qonto-autosync:${sessionId}:${traineeId}`;
-    if(!stale||sessionStorage.getItem(key)==='running'||sessionStorage.getItem(key)==='done')return;
-    sessionStorage.setItem(key,'running');
-    showQontoFeedback('Mise à jour Qonto…','success');
-    try{
-      await billingApi('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee_auto'});
-      sessionStorage.setItem(key,'done');
-      await load();
-    }catch(e){sessionStorage.removeItem(key);showQontoFeedback('Mise à jour Qonto indisponible, utilisez le bouton Synchroniser.','error');}
-  }
 
   function mandateState(lines){
     const signedStatuses = new Set(['accepted','approved','signed','validated','active','completed','success','succeeded']);
@@ -4881,7 +4860,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     installmentDraftActive=false;
     installmentDraftContainer=null;
     installmentEditBusy=false;
-    try{await load({allowAutoSync:false});installmentEditFeedback(result.message);}
+    try{await load();installmentEditFeedback(result.message);}
     catch(error){
       // The save already succeeded: prevent a second addition if the refresh
       // fails, and explain how to recover without submitting it again.
@@ -5149,7 +5128,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     if(apply){apply.disabled=true;apply.textContent='Application…';}
     try{
       const result=await billingApi('/api/billing/reset-financial-tracking',{traineeId,sessionId,confirm:true,manualInstallments:financialResetDraftRows,previewFingerprint:preview.fingerprint,source:'admin_trainee'});
-      await load({allowAutoSync:false});
+      await load();
       const updatedPreview=result.preview||preview;
       const modal=document.querySelector('.billing-modal');
       if(!modal)return;

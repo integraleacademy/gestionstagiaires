@@ -41055,6 +41055,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'paymentMode': persisted.get('paymentMode') or 'cash',
                     'directDebitInstallments': persisted.get('directDebitInstallments') if isinstance(persisted.get('directDebitInstallments'), list) else [],
                     'qontoPaymentGlobalStatus': persisted.get('qontoPaymentGlobalStatus') or '',
+                    'qontoAutoSyncAttemptedAt': persisted.get('qontoAutoSyncAttemptedAt') or '',
                     'qonto_direct_debit_mandate_id': (
                         persisted.get('qonto_direct_debit_mandate_id')
                         or trainee.get('qonto_direct_debit_mandate_id') or ''
@@ -41444,7 +41445,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','companyName','clientEmail','clientAddress','clientZipCode','clientCity','siret','invoiceNotes','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qontoDirectDebitSyncWarning','qontoDirectDebitLastSyncedAt','qontoAutoSyncAttemptedAt','qonto_rejected_collection_ids','sepa_payment_plan','financial_tracking_override','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -42576,16 +42577,23 @@ def _billing_lines_for_trainee_session(data: Dict[str, Any], trainee_id: str, se
     return [l for l in _billing_lines_for_session(data, session_id) if str(l.get('traineeId')) == str(trainee_id)]
 
 
-def _billing_line_qonto_sync_due(line: Dict[str, Any], now: Optional[datetime.datetime] = None) -> bool:
-    last_synced_at = _parse_iso_datetime(
-        line.get('qontoLastSyncedAt') or line.get('qonto_last_synced_at') or ''
+def _billing_line_qonto_sync_due(
+    line: Dict[str, Any], now: Optional[datetime.datetime] = None, *, direct_debit: bool = False,
+) -> bool:
+    synced_at = (
+        line.get('qontoDirectDebitLastSyncedAt')
+        if direct_debit else line.get('qontoLastSyncedAt') or line.get('qonto_last_synced_at')
     )
-    if last_synced_at is None:
+    timestamps = [
+        parsed for value in (synced_at, line.get('qontoAutoSyncAttemptedAt'))
+        if (parsed := _parse_iso_datetime(value or '')) is not None
+    ]
+    if not timestamps:
         return True
     current = now or datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     if current.tzinfo is not None:
         current = current.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-    return (current - last_synced_at).total_seconds() >= QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS
+    return (current - max(timestamps)).total_seconds() >= QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS
 
 
 @app.get('/api/billing/session/<session_id>')
@@ -42626,7 +42634,7 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
     )
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
     _repair_logged_qonto_rejection_retries(data, lines)
-    cpf_sync_attempted = False
+    sync_attempted = False
     data_changed = False
     if _qonto_is_configured():
         has_cpf_invoice = any(
@@ -42640,24 +42648,44 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
             if discovery_changed:
                 lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
         for line in lines:
-            if not is_cpf_billing_context(line) or not (line.get('qontoInvoiceId') or line.get('qontoDraftId')):
+            invoice_due = bool(
+                (line.get('qontoInvoiceId') or line.get('qontoDraftId'))
+                and _billing_line_qonto_sync_due(line)
+            )
+            debit_due = bool(
+                line.get('paymentMode') == 'sepa_direct_debit'
+                and (line.get('qonto_direct_debit_mandate_id') or line.get('qonto_mandate_rum'))
+                and _billing_line_qonto_sync_due(line, direct_debit=True)
+            )
+            if not (invoice_due or debit_due):
                 continue
-            if not _billing_line_qonto_sync_due(line):
-                continue
-            cpf_sync_attempted = True
-            try:
-                _sync_billing_line_with_qonto(data, line)
-            except Exception as exc:
-                line['syncWarning'] = 'Synchronisation de la facture CPF impossible pour le moment'
-                _billing_log(line, 'Synchronisation automatique facture CPF indisponible', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or '')
-                _save_billing_line(data, line)
-        if cpf_sync_attempted or data_changed:
-            # Persist the Qonto payment state recovered while the trainee card
-            # loads, including a non-blocking warning when Qonto is unavailable.
+            sync_attempted = True
+            # Throttle failures too: polling must not retry Qonto every 30 seconds.
+            line['qontoAutoSyncAttemptedAt'] = _now_iso()
+            if invoice_due:
+                try:
+                    missing, _ = _sync_billing_line_with_qonto(data, line)
+                    if not missing:
+                        line['syncWarning'] = ''
+                except Exception as exc:
+                    line['syncWarning'] = 'Synchronisation de la facture Qonto indisponible ; nouvelle tentative automatique dans quelques minutes.'
+                    _billing_log(line, 'Synchronisation automatique facture indisponible', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or '')
+            if debit_due:
+                try:
+                    # Refresh existing Qonto records without scheduling a bank debit.
+                    _sync_qonto_direct_debit_line(line, create_missing_subscriptions=False)
+                    _mark_line_qonto_rejection_notifications_treated(data, line)
+                except Exception as exc:
+                    line['qontoDirectDebitSyncWarning'] = 'Synchronisation des prélèvements indisponible ; nouvelle tentative automatique dans quelques minutes.'
+                    _billing_log(line, 'Synchronisation automatique prélèvements indisponible', 'error', _sanitize_qonto_error(str(exc)), line.get('qonto_direct_debit_mandate_id') or '')
+            _save_billing_line(data, line)
+        if sync_attempted or data_changed:
+            # The same scoped refresh handles opening, polling and returning
+            # to a tab. Webhooks remain the immediate update path.
             save_data(data)
     fresh_lines = (
         _billing_lines_for_trainee_session(data, trainee_id, session_id)
-        if cpf_sync_attempted or data_changed
+        if sync_attempted or data_changed
         else lines
     )
     summary = calculate_trainee_financial_summary(
@@ -44743,12 +44771,14 @@ def api_billing_cancel_or_reset():
 
 
 
-def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
-    """Refresh the mandate before collections, then create missing subscriptions.
+def _sync_qonto_direct_debit_line(
+    line: Dict[str, Any], *, create_missing_subscriptions: bool = True,
+) -> Dict[str, Any]:
+    """Refresh the mandate and collections, optionally scheduling missing debits.
 
     Mandate signature does not change the invoice.  Refreshing it here makes the
     manual “Synchroniser Qonto” action a reliable recovery path when a SEPA
-    webhook was not delivered.
+    webhook was not delivered. Automatic reads disable subscription creation.
     """
     recovery_errors: List[str] = []
     recovered = 0
@@ -44806,7 +44836,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> Dict[str, Any]:
                     'L’échéancier local ne correspond plus au montant facturé ; '
                     'aucun nouveau prélèvement n’a été créé automatiquement.'
                 )
-            elif not manual_tracking:
+            elif not manual_tracking and create_missing_subscriptions:
                 result = ensure_qonto_sepa_installments_for_line(line)
                 if result.get('created'):
                     _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)

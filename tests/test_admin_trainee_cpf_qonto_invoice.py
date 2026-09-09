@@ -529,8 +529,6 @@ class AdminTraineeCpfQontoInvoiceTests(unittest.TestCase):
         self.assertIn("qonto_tracked", template)
         self.assertIn("!isCpfQontoLine(line)&&!lineHasGeneratedInvoice(line)", template)
         self.assertIn("const cpfTrackingOnly = isCpfQontoLine(l);", template)
-        self.assertIn("source:'admin_trainee_auto'", template)
-        self.assertNotIn("source:'admin_trainee_auto',refreshWedof:true", template)
         self.assertIn("source:'admin_trainee',refreshWedof:true", template)
 
 
