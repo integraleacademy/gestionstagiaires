@@ -9783,6 +9783,9 @@ def update_data(
         _invalidate_request_data_cache()
         return _filter_data_for_partner(updated, partner_id) if mutation_result is None else mutation_result
     with _data_lock:
+        # A long-running request can already have cached the JSON before a
+        # trainee was created in another request. Transactions must read disk.
+        _invalidate_request_data_cache()
         data = load_data(run_background_tasks=run_background_tasks)
         result = mutator(data)
         save_data(data, preserve_qonto_oauth=preserve_qonto_oauth)
@@ -27965,6 +27968,66 @@ def _storage_file_health(path: str, required_list_key: Optional[str] = None) -> 
         "backups_count": len(backups),
         "recoverable_from_backup": recoverable,
     }
+
+
+@app.route("/admin/tools/trainee-recovery", methods=["GET", "POST"])
+@admin_login_required
+@admin_write_required
+def admin_trainee_recovery():
+    """Review and selectively restore a missing Intégrale trainee from backup."""
+    from trainee_recovery import find_backup, restore_missing
+
+    if (session.get("admin_role") not in {"admin", "super_admin"}
+            or _current_partner_id() not in {"", INTEGRALE_PARTNER_ID}):
+        abort(403)
+    if request.method == "POST":
+        expected_csrf = str(session.get("trainee_recovery_csrf") or "")
+        if not expected_csrf or not hmac.compare_digest(str(request.form.get("csrf") or ""), expected_csrf):
+            abort(403)
+    csrf = session.setdefault("trainee_recovery_csrf", uuid.uuid4().hex)
+    trainee_id = str(request.values.get("trainee_id") or "").strip().upper()
+    bundle = None
+    error = ""
+    existing_url = ""
+    status = 200
+    if trainee_id:
+        try:
+            canonical = _load_valid_json_payload(DATA_FILE)
+            if not isinstance(canonical, dict):
+                raise ValueError("Le fichier de données actuel est illisible. Récupération interrompue.")
+            for session_obj in canonical.get("sessions", []):
+                if not isinstance(session_obj, dict) or (session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != INTEGRALE_PARTNER_ID:
+                    continue
+                if any(t.get("id") == trainee_id for t in _session_trainees_list(session_obj) if isinstance(t, dict)):
+                    existing_url = url_for("admin_trainee_page", session_id=session_obj["id"], trainee_id=trainee_id)
+                    break
+            if not existing_url:
+                bundle = find_backup(BACKUP_DIR, trainee_id, INTEGRALE_PARTNER_ID,
+                                     source=request.form.get("source") if request.method == "POST" else None)
+            if request.method == "POST":
+                if existing_url:
+                    raise ValueError("Ce dossier existe déjà. Aucune donnée n’a été remplacée.")
+                if not bundle or not hmac.compare_digest(bundle["fingerprint"], request.form.get("fingerprint") or ""):
+                    raise ValueError("La copie proposée n’est plus disponible. Relancez la recherche.")
+                if not _force_backup_snapshot(DATA_FILE, reason="pre-trainee-recovery"):
+                    raise ValueError("Impossible de sécuriser les données actuelles. Récupération interrompue.")
+
+                def restore(latest):
+                    restored = restore_missing(latest, bundle)
+                    _append_activity_log(latest, "trainee_recovered", "trainee", trainee_id,
+                                         details={"source": bundle["source"], "session_id": bundle["session_id"]})
+                    return restored
+
+                restored = _atomic_update_data(restore)
+                app.logger.warning("[TRAINEE_RECOVERY] restored trainee_id=%s session_id=%s source=%s",
+                                   trainee_id, restored["session_id"], bundle["source"])
+                return redirect(url_for("admin_trainee_page", **restored))
+        except ValueError as exc:
+            error = str(exc)
+            status = 409 if request.method == "POST" else 400
+    return render_template("admin_trainee_recovery.html", trainee_id=trainee_id,
+                           bundle=bundle, error=error, existing_url=existing_url,
+                           searched=bool(trainee_id), csrf=csrf), status
 
 
 @app.get("/healthz")
