@@ -136,32 +136,23 @@ services:
       - key: WEDOF_MAINTENANCE_END_TIME
         value: "07:00"
   - type: cron
-    name: gestionstagiaires-qonto-sync
-    runtime: python
-    region: frankfurt
-    plan: starter
-    buildCommand: python -m py_compile scripts/run_qonto_sync.py
-    startCommand: python scripts/run_qonto_sync.py
-    schedule: "*/5 * * * *"
-    envVars:
-      - fromGroup: gestionstagiaires-cron-secrets
-      - fromGroup: gestionstagiaires-qonto-sync-secrets
-      - key: QONTO_SYNC_URL
-        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/qonto-sync
-  - type: cron
     name: gestionstagiaires-wedof-automation
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
     # Le moteur relit les actions réellement dues. Il porte aussi le contrôle
     # facturation, dont l'application limite elle-même la cadence à une heure.
-    # Les passages rapprochés permettent de reprendre une panne transitoire.
-    schedule: "5,15,25,35,45,55 * * * *"
+    # Ce cron existant lance également la lecture Qonto, indépendamment de
+    # WEDOF, sans nécessiter un service Render supplémentaire.
+    schedule: "*/5 * * * *"
     dockerCommand: python scripts/run_wedof_automation.py
     envVars:
       - fromGroup: gestionstagiaires-cron-secrets
+      - fromGroup: gestionstagiaires-qonto-sync-secrets
       - key: WEDOF_AUTOMATION_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/wedof-automation
+      - key: QONTO_SYNC_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/qonto-sync
   - type: cron
     name: gestionstagiaires-wedof-reconciliation
     runtime: docker

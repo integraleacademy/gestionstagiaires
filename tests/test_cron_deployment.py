@@ -20,7 +20,7 @@ class CronDeploymentTests(unittest.TestCase):
         self.assertIn("key: CRON_SECRET", secret_group)
         self.assertIn("generateValue: true", secret_group)
         self.assertIn("fromGroup: gestionstagiaires-cron-secrets", web)
-        self.assertEqual(len(cron_blocks), 8)
+        self.assertEqual(len(cron_blocks), 7)
         for cron in cron_blocks:
             self.assertIn("fromGroup: gestionstagiaires-cron-secrets", cron)
             self.assertNotIn("key: CRON_SECRET\n        sync: false", cron)
@@ -43,13 +43,15 @@ class CronDeploymentTests(unittest.TestCase):
         self.assertIn('key: WEDOF_INVOICE_RECONCILIATION_INTERVAL_MINUTES\n        value: "60"', web)
         self.assertIn('key: WEDOF_INVOICE_RECONCILIATION_MAX_CANDIDATES\n        value: "10"', web)
 
-    def test_wedof_live_retries_transient_failures_every_ten_minutes(self):
+    def test_shared_cron_runs_every_five_minutes_with_qonto_configured(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
         block = blueprint.split(
             "name: gestionstagiaires-wedof-automation", 1,
         )[1].split("  - type:", 1)[0]
-        self.assertIn('schedule: "5,15,25,35,45,55 * * * *"', block)
+        self.assertIn('schedule: "*/5 * * * *"', block)
         self.assertIn("scripts/run_wedof_automation.py", block)
+        self.assertIn("fromGroup: gestionstagiaires-qonto-sync-secrets", block)
+        self.assertIn("key: QONTO_SYNC_URL", block)
 
     def test_global_reconciliation_runs_at_most_four_times_a_day(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
