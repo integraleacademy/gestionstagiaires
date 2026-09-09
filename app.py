@@ -88,6 +88,7 @@ from wedof_automation import (automation_dashboard_state, build_automation_dashb
                               record_maintenance_skip, run_dry_run, run_live_automation,
                               sync_folder_automation_status)
 from cpf_tracking import build_cpf_view, has_cpf_financing, has_generated_cpf_invoice
+from vtc_cpf_guidance import build_confirmation_content
 from partner_postgres import (
     PartnerPostgresDuplicateEmail,
     PartnerPostgresError,
@@ -10043,34 +10044,10 @@ def _vtc_cpf_prior_workflow_state(
 
 def _vtc_cpf_confirmation_message(folder: Dict[str, Any]) -> Dict[str, str]:
     fields = _extract_wedof_payload_fields(folder)
-    first_name = fields.get("first_name", "").strip()
-    greeting_text = f"Bonjour {first_name}," if first_name else "Bonjour,"
-    greeting_html = html.escape(greeting_text)
-    account_url = html.escape(VTC_CPF_ACCOUNT_URL, quote=True)
-    subject = "Action requise – confirmez votre inscription VTC"
-    text_content = (
-        f"{greeting_text}\n\n"
-        "Intégrale Academy a validé votre demande d'inscription à la formation "
-        "Chauffeur VTC.\n\n"
-        "Dernière étape : connectez-vous à Mon Compte Formation, ouvrez votre "
-        "dossier et acceptez l'inscription pour la rendre définitive.\n\n"
-        f"{VTC_CPF_ACCOUNT_URL}\n\n"
-        "Besoin d'aide ? Contactez-nous au 04 22 47 07 68."
-    )
-    email_html = mail_layout(f"""
-      <h2 style="margin:0 0 16px;color:#17152f;text-align:center;">Votre inscription VTC attend votre confirmation</h2>
-      <p>{greeting_html}</p>
-      <p>Intégrale Academy a validé votre demande d'inscription à la formation <strong>Chauffeur VTC</strong>.</p>
-      <div style="background:#f3edff;border:1px solid #ddd1fb;border-radius:14px;padding:16px;margin:18px 0;">
-        <strong>Dernière étape obligatoire</strong>
-        <p style="margin:8px 0 0;">Connectez-vous à Mon Compte Formation, ouvrez votre dossier puis acceptez l'inscription. Votre inscription deviendra alors définitive.</p>
-      </div>
-      <p style="text-align:center;margin:24px 0;">
-        <a href="{account_url}" style="display:inline-block;background:#6d28d9;color:#fff;text-decoration:none;font-weight:700;padding:13px 20px;border-radius:10px;">Terminer mon inscription CPF</a>
-      </p>
-      <p style="color:#5f5b72;font-size:14px;">Tant que cette confirmation n'est pas effectuée dans votre compte CPF, votre place n'est pas définitivement réservée.</p>
-      <p style="color:#5f5b72;font-size:14px;">Besoin d'aide ? Appelez-nous au <strong>04 22 47 07 68</strong>.</p>
-    """)
+    content = build_confirmation_content(fields, VTC_CPF_ACCOUNT_URL)
+    subject = content["subject"]
+    text_content = content["text"]
+    email_html = mail_layout(content["html"], footer_text="")
     sms = (
         "Intégrale Academy : votre demande VTC est validée. Dernière étape : "
         "connectez-vous à Mon Compte Formation et acceptez l'inscription pour "
