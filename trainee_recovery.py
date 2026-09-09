@@ -4,7 +4,41 @@ import hashlib
 import json
 import mmap
 import re
+import unicodedata
+import zipfile
 from pathlib import Path
+from xml.etree import ElementTree
+
+
+def backup_inventory(backup_dir):
+    paths = sorted(p.name for p in Path(backup_dir).glob("data_json.*.json") if p.is_file() and not p.is_symlink())
+    return {"count": len(paths), "oldest": paths[0] if paths else "", "newest": paths[-1] if paths else ""}
+
+
+def find_original_conventions(persist_dir, query):
+    """Read existing originals only; never generate or send a new convention."""
+    def normalize(value):
+        return "".join(c for c in unicodedata.normalize("NFKD", value.casefold()) if not unicodedata.combining(c))
+
+    terms = re.findall(r"[a-z0-9]{3,}", normalize(str(query or "")[:80]))
+    if not terms:
+        return []
+    root = Path(persist_dir) / "generated_documents" / "conventions_aps"
+    matches = [p for p in root.glob("convention_formation_aps_*.docx")
+               if p.is_file() and not p.is_symlink() and all(term in normalize(p.stem) for term in terms)]
+    originals = []
+    for path in sorted(matches, key=lambda p: p.stat().st_mtime, reverse=True)[:5]:
+        try:
+            with zipfile.ZipFile(path) as archive:
+                if archive.getinfo("word/document.xml").file_size > 2_000_000:
+                    continue
+                document = ElementTree.fromstring(archive.read("word/document.xml"))
+            ns = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+            paragraphs = ["".join(p.itertext()) for p in document.iter(ns + "p")]
+            originals.append({"name": path.name, "text": "\n".join(paragraphs)[:20000]})
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile, ElementTree.ParseError):
+            continue
+    return originals
 
 
 def _trainees(session):
@@ -17,11 +51,17 @@ def find_backup(backup_dir, trainee_id, partner_id, source=None):
         raise ValueError("Identifiant stagiaire invalide.")
     root = Path(backup_dir)
     if source:
-        if Path(source).name != source or not source.startswith("data_json.") or not source.endswith(".json"):
+        if Path(source).name != source:
             raise ValueError("Sauvegarde invalide.")
-        paths = [root / source]
+        if source.startswith("data_json.") and source.endswith(".json"):
+            paths = [root / source]
+        elif source.startswith("data.json.corrupt."):
+            paths = [root.parent / source]
+        else:
+            raise ValueError("Sauvegarde invalide.")
     else:
         paths = sorted(root.glob("data_json.*.json"), reverse=True)
+        paths += sorted(root.parent.glob("data.json.corrupt.*"), reverse=True)
     needle = ('"' + trainee_id + '"').encode()
     for path in paths:
         if path.is_symlink():

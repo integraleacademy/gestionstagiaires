@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from trainee_recovery import find_backup, restore_missing
+from trainee_recovery import backup_inventory, find_backup, find_original_conventions, restore_missing
 
 
 PARTNER = "integrale"
@@ -61,6 +61,37 @@ def test_search_rejects_path_traversal_and_invalid_identifier(tmp_path):
         find_backup(tmp_path, "../data.json", PARTNER)
     with pytest.raises(ValueError):
         find_backup(tmp_path, TRAINEE["id"], PARTNER, source="../data_json.file.json")
+
+
+def test_recovery_checks_valid_retained_corruption_copy_and_reports_inventory(tmp_path):
+    root = tmp_path / "backups"
+    root.mkdir()
+    payload = backup(root)
+    inventory = backup_inventory(root)
+    assert inventory["count"] == 1
+    assert inventory["oldest"] == inventory["newest"]
+    (root / inventory["oldest"]).unlink()
+    source = "data.json.corrupt.20260909T132000"
+    (tmp_path / source).write_text(json.dumps(payload))
+    found = find_backup(root, TRAINEE["id"], PARTNER)
+    assert found["source"] == source
+    assert find_backup(root, TRAINEE["id"], PARTNER, source=source) == found
+
+
+def test_original_conventions_read_existing_matching_documents_only(tmp_path):
+    from docx import Document
+    root = tmp_path / "generated_documents" / "conventions_aps"
+    root.mkdir(parents=True)
+    path = root / "convention_formation_aps_EXAMPLE_Test.docx"
+    document = Document()
+    document.add_paragraph("Test EXAMPLE : original retained information")
+    document.save(path)
+    result = find_original_conventions(tmp_path, "Example")
+    assert len(result) == 1
+    assert result[0]["name"] == path.name
+    assert "original retained information" in result[0]["text"]
+    assert find_original_conventions(tmp_path, "Someone else") == []
+    assert find_original_conventions(tmp_path, "") == []
 
 
 def test_recovery_route_denies_anonymous_viewers_and_partner_admins(monkeypatch, tmp_path):
