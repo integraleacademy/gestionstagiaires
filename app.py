@@ -3698,6 +3698,9 @@ def _int_env(name: str, default: int) -> int:
 
 MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS = max(30, _int_env("QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS", 300))
+QONTO_BACKGROUND_SYNC_MAX_LINES = max(1, min(200, _int_env("QONTO_BACKGROUND_SYNC_MAX_LINES", 40)))
+QONTO_BACKGROUND_SYNC_MAX_SECONDS = max(10, min(180, _int_env("QONTO_BACKGROUND_SYNC_MAX_SECONDS", 120)))
+_qonto_background_sync_lock = threading.Lock()
 
 _data_lock = threading.RLock()
 _partner_login_rate_limit_lock = threading.Lock()
@@ -42579,6 +42582,7 @@ def _billing_lines_for_trainee_session(data: Dict[str, Any], trainee_id: str, se
 
 def _billing_line_qonto_sync_due(
     line: Dict[str, Any], now: Optional[datetime.datetime] = None, *, direct_debit: bool = False,
+    interval_seconds: Optional[int] = None,
 ) -> bool:
     synced_at = (
         line.get('qontoDirectDebitLastSyncedAt')
@@ -42593,7 +42597,132 @@ def _billing_line_qonto_sync_due(
     current = now or datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     if current.tzinfo is not None:
         current = current.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-    return (current - max(timestamps)).total_seconds() >= QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS
+    interval = QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS if interval_seconds is None else interval_seconds
+    return (current - max(timestamps)).total_seconds() >= interval
+
+
+def _qonto_background_lines(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    # Keep historical linked invoices even when their session no longer appears
+    # in the generated billing view.
+    lines = dict(_billing_existing_map(data))
+    lines.update({str(line['id']): line for line in _billing_lines(data)})
+    return lines
+
+
+def _qonto_background_snapshot(data: Dict[str, Any], line: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        'stored': copy.deepcopy(_billing_existing_map(data).get(str(line['id']))),
+        'context': {key: copy.deepcopy(line.get(key)) for key in (
+            'sessionId', 'traineeId', 'amount', 'amountTTC', 'paymentMode',
+            'qontoInvoiceId', 'qontoDraftId', 'qonto_direct_debit_mandate_id',
+            'qonto_mandate_rum', 'directDebitInstallments', 'financial_tracking_override',
+        )},
+    }
+
+
+def run_qonto_background_sync() -> Dict[str, Any]:
+    """Reconcile existing Qonto records independently of any open browser."""
+    if not _qonto_background_sync_lock.acquire(blocking=False):
+        return {'ok': True, 'status': 'already_running'}
+    try:
+        if not _qonto_is_configured():
+            return {'ok': False, 'status': 'qonto_not_configured'}
+        started_at = _now_iso()
+        started = time.monotonic()
+        data = copy.deepcopy(load_data(run_background_tasks=False))
+        candidates = []
+        for line in _qonto_background_lines(data).values():
+            has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
+            has_debit = bool(
+                line.get('paymentMode') == 'sepa_direct_debit'
+                and (line.get('qonto_direct_debit_mandate_id') or line.get('qonto_mandate_rum'))
+            )
+            if not (has_invoice or has_debit):
+                continue
+            settled = str(line.get('paymentStatus') or '').lower() in {'paid', 'canceled', 'cancelled'}
+            if has_debit and any(
+                str(item.get('status') or '').lower() not in {'completed', 'paid', 'canceled', 'cancelled'}
+                for item in _effective_sepa_installments(line)
+            ):
+                settled = False
+            interval = 86400 if settled else QONTO_TRAINEE_AUTO_SYNC_TTL_SECONDS
+            invoice_due = has_invoice and _billing_line_qonto_sync_due(line, interval_seconds=interval)
+            debit_due = has_debit and _billing_line_qonto_sync_due(line, direct_debit=True, interval_seconds=interval)
+            if invoice_due or debit_due:
+                candidates.append((settled, str(line.get('qontoAutoSyncAttemptedAt') or ''), str(line['id']), line, invoice_due, debit_due))
+        # Oldest pending records first, so a bounded batch cannot repeatedly
+        # select the same records and starve the remaining invoices.
+        candidates.sort(key=lambda item: item[:3])
+        updates = []
+        for _, _, line_id, source, invoice_due, debit_due in candidates[:QONTO_BACKGROUND_SYNC_MAX_LINES]:
+            if time.monotonic() - started >= QONTO_BACKGROUND_SYNC_MAX_SECONDS:
+                break
+            before = _qonto_background_snapshot(data, source)
+            line = copy.deepcopy(source)
+            line['qontoAutoSyncAttemptedAt'] = _now_iso()
+            failed = False
+            if invoice_due:
+                try:
+                    missing, _ = _sync_billing_line_with_qonto(data, line)
+                    failed = bool(missing)
+                    if not missing:
+                        line['syncWarning'] = ''
+                except Exception as exc:
+                    failed = True
+                    line['syncWarning'] = 'Synchronisation Qonto temporairement indisponible ; nouvelle tentative automatique.'
+                    _billing_log(line, 'Synchronisation Qonto en arrière-plan indisponible', 'error', _sanitize_qonto_error(str(exc)))
+            if debit_due:
+                try:
+                    result = _sync_qonto_direct_debit_line(line, create_missing_subscriptions=False)
+                    failed = failed or bool(result.get('errors') or result.get('warning'))
+                except Exception as exc:
+                    failed = True
+                    line['qontoDirectDebitSyncWarning'] = 'Synchronisation des prélèvements temporairement indisponible ; nouvelle tentative automatique.'
+                    _billing_log(line, 'Synchronisation prélèvements en arrière-plan indisponible', 'error', _sanitize_qonto_error(str(exc)))
+            updates.append((line_id, before, line, failed))
+
+        def persist(current: Dict[str, Any]) -> Dict[str, Any]:
+            current_lines = _qonto_background_lines(current)
+            synced = failed_count = conflicts = 0
+            for line_id, before, line, failed in updates:
+                latest = current_lines.get(line_id)
+                if latest is None or _qonto_background_snapshot(current, latest) != before:
+                    # A user edit or webhook received during remote I/O wins.
+                    conflicts += 1
+                    continue
+                _save_billing_line(current, line)
+                failed_count += int(failed)
+                synced += int(not failed)
+            summary = {
+                'ok': not failed_count or bool(synced),
+                'status': 'partial' if failed_count else 'completed',
+                'started_at': started_at, 'finished_at': _now_iso(),
+                'attempted_count': len(updates), 'synced_count': synced,
+                'failed_count': failed_count, 'conflict_count': conflicts,
+                'remaining_count': len(candidates) - len(updates) + conflicts,
+            }
+            current['qonto_background_sync_status'] = summary
+            return summary
+
+        summary = _atomic_update_data(persist)
+        app.logger.info('QONTO_BACKGROUND_SYNC %s', json.dumps(summary, ensure_ascii=False))
+        return summary
+    finally:
+        _qonto_background_sync_lock.release()
+
+
+@app.post('/internal/cron/qonto-sync')
+def internal_cron_qonto_sync():
+    expected = (os.environ.get('QONTO_SYNC_CRON_SECRET') or os.environ.get('CRON_SECRET') or '').strip()
+    provided = (request.headers.get('X-Cron-Secret') or '').strip()
+    if not expected or not provided or not hmac.compare_digest(expected, provided):
+        return jsonify({'ok': False, 'error': 'forbidden'}), 403
+    try:
+        result = run_qonto_background_sync()
+    except Exception:
+        app.logger.exception('QONTO_BACKGROUND_SYNC failed')
+        return jsonify({'ok': False, 'error': 'qonto_sync_unavailable'}), 503
+    return jsonify(result), 200 if result.get('ok') else 503
 
 
 @app.get('/api/billing/session/<session_id>')

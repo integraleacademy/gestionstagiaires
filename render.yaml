@@ -10,6 +10,10 @@ envVarGroups:
       # One shared value authenticates the worker against the web service.
       - key: CNAPS_MONITOR_TOKEN
         sync: false
+  - name: gestionstagiaires-qonto-sync-secrets
+    envVars:
+      - key: QONTO_SYNC_CRON_SECRET
+        generateValue: true
 
 services:
   - type: web
@@ -21,6 +25,7 @@ services:
     envVars:
       - fromGroup: gestionstagiaires-cron-secrets
       - fromGroup: gestionstagiaires-cnaps-monitor-secrets
+      - fromGroup: gestionstagiaires-qonto-sync-secrets
       - key: QONTO_LOGIN
         sync: false
       - key: QONTO_SECRET_KEY
@@ -130,6 +135,19 @@ services:
         value: "05:00"
       - key: WEDOF_MAINTENANCE_END_TIME
         value: "07:00"
+  - type: cron
+    name: gestionstagiaires-qonto-sync
+    runtime: python
+    region: frankfurt
+    plan: starter
+    buildCommand: python -m py_compile scripts/run_qonto_sync.py
+    startCommand: python scripts/run_qonto_sync.py
+    schedule: "*/5 * * * *"
+    envVars:
+      - fromGroup: gestionstagiaires-cron-secrets
+      - fromGroup: gestionstagiaires-qonto-sync-secrets
+      - key: QONTO_SYNC_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/qonto-sync
   - type: cron
     name: gestionstagiaires-wedof-automation
     runtime: docker
