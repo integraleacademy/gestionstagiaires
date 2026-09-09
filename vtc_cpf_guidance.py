@@ -7,11 +7,11 @@ def build_confirmation_content(fields, account_url):
     first_name = (fields.get("first_name") or "").strip()
     greeting = f"Bonjour {first_name}," if first_name else "Bonjour,"
     folder_id = (fields.get("wedof_case_id") or "").strip()
-    subject = "Votre inscription VTC : les étapes pour confirmer votre devis CPF"
+    subject = "Chauffeur VTC : confirmez votre inscription CPF"
     steps = [
         ("Connectez-vous à Mon Compte Formation",
          "Cliquez sur le bouton « Accéder à Mon Compte Formation », puis connectez-vous à votre espace personnel. "
-         "Utilisez FranceConnect+ si la plateforme vous le demande et gardez votre téléphone à portée de main pour la vérification d’identité."),
+         "Utilisez FranceConnect+ (Identité Numérique la Poste) si la plateforme vous le demande et gardez votre téléphone à portée de main pour la vérification d’identité."),
         ("Ouvrez « Vos dossiers de formation »",
          "Une fois connecté, accédez à la rubrique « Vos dossiers de formation » depuis le menu de votre espace personnel."),
         ("Cliquez sur « Devis à valider »",
@@ -26,8 +26,8 @@ def build_confirmation_content(fields, account_url):
          "Si un reste à payer est affiché, consultez son détail : un règlement peut être nécessaire pour terminer. "
          "Appelez-nous si vous ne comprenez pas le montant."),
     ]
-    intro = ("Nous avons accepté votre demande pour la formation Chauffeur VTC. "
-             "Pour finaliser votre inscription, il vous reste à accepter notre devis dans votre espace Mon Compte Formation. "
+    intro = ("Nous vous informons que nous avons accepté votre demande d’inscription en formation Chauffeur VTC. "
+             "Pour finaliser votre inscription, il vous reste à confirmer votre inscription dans votre espace Mon Compte Formation. "
              "Voici comment faire, étape par étape.")
     final_step = ("Votre inscription est confirmée lorsque vous avez terminé le parcours de validation "
                   "et que la confirmation apparaît dans votre dossier. Ouvrir le devis ou lire ce mail ne suffit pas.")
@@ -58,7 +58,7 @@ def build_confirmation_content(fields, account_url):
     body = f"""
       <div style="color:#292536;font-size:16px;line-height:1.65;">
         <p style="margin:0 0 8px;color:#6d28d9;font-size:12px;font-weight:700;letter-spacing:1px;text-align:center;">VOTRE INSCRIPTION VTC</p>
-        <h2 style="margin:0 0 24px;color:#17152f;font-size:25px;line-height:1.3;text-align:center;">Confirmez votre devis CPF,<br>nous vous guidons pas à pas</h2>
+        <h2 style="margin:0 0 24px;color:#17152f;font-size:25px;line-height:1.3;text-align:center;">Confirmez votre inscription CPF,<br>nous vous guidons pas à pas</h2>
         <p>{html.escape(greeting)}</p>
         <p>{html.escape(intro)}</p>
         <p style="text-align:center;margin:24px 0 30px;">
