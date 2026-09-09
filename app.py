@@ -23,6 +23,7 @@ import logging
 import signal
 import atexit
 import sys
+from backup_chronology import backup_chronology_key
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 try:
     import resource
@@ -5348,6 +5349,7 @@ def _cleanup_backups_for(prefix: str) -> None:
     try:
         names = sorted(
             [name for name in os.listdir(BACKUP_DIR) if name.startswith(prefix + ".")],
+            key=lambda name: backup_chronology_key(os.path.join(BACKUP_DIR, name)),
             reverse=True,
         )
         for old_name in names[BACKUP_RETENTION:]:
@@ -5397,6 +5399,9 @@ def _force_backup_snapshot(path: str, reason: str = "manual") -> Optional[str]:
     try:
         _snapshot_file_durable(path, backup_path)
         _cleanup_backups_for(prefix)
+        if not os.path.isfile(backup_path):
+            app.logger.warning("New backup was not retained for %s", path)
+            return None
         return backup_path
     except ValueError:
         app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES and hard-link snapshot unavailable", path)
@@ -5540,6 +5545,7 @@ def _recover_data_file(path: str) -> Optional[str]:
                 for name in os.listdir(BACKUP_DIR)
                 if name.startswith(backup_prefix) and name.endswith(".json")
             ],
+            key=lambda name: backup_chronology_key(os.path.join(BACKUP_DIR, name)),
             reverse=True,
         )
         recovery_sources.extend(os.path.join(BACKUP_DIR, name) for name in backup_names)
@@ -5605,6 +5611,7 @@ def _restore_latest_backup(path: str) -> bool:
                 for name in os.listdir(BACKUP_DIR)
                 if name.startswith(prefix + ".") and name.endswith(".json")
             ],
+            key=lambda name: backup_chronology_key(os.path.join(BACKUP_DIR, name)),
             reverse=True,
         )
     except Exception:
