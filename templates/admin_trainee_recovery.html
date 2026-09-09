@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" style="max-width:850px;margin:24px auto;padding:28px">
+  <a href="{{ url_for('admin_sessions') }}">← Retour aux sessions</a>
+  <h1>Retrouver un dossier</h1>
+  <p>Recherchez la dernière copie sauvegardée d’un dossier manquant à partir de son identifiant.</p>
+  <form method="get">
+    <label for="recovery-id">Identifiant du stagiaire</label>
+    <input id="recovery-id" name="trainee_id" value="{{ trainee_id }}" placeholder="TRN-12345678" required pattern="TRN-[A-Fa-f0-9]{8}">
+    <button class="btn btn-primary" type="submit">Chercher dans les sauvegardes</button>
+  </form>
+  {% if error %}<p role="alert" style="color:#b91c1c">{{ error }}</p>{% endif %}
+  {% if existing_url %}<p>Le dossier est présent : <a href="{{ existing_url }}">ouvrir la fiche</a>.</p>{% endif %}
+  {% if searched and not bundle and not error and not existing_url %}<p>Aucune copie de ce dossier n’a été retrouvée dans les sauvegardes disponibles.</p>{% endif %}
+  {% if bundle %}
+    <h2>{{ bundle.trainee.first_name }} {{ bundle.trainee.last_name }}</h2>
+    <dl>
+      <dt>Session d’origine</dt><dd>{{ bundle.session_name }}</dd>
+      <dt>Identifiant</dt><dd>{{ bundle.trainee.id }}</dd>
+      <dt>Création du dossier</dt><dd>{{ bundle.trainee.created_at or 'Non renseignée' }}</dd>
+      <dt>Dernière copie retrouvée</dt><dd style="overflow-wrap:anywhere">{{ bundle.source }}</dd>
+    </dl>
+    <p>La récupération rétablit cette fiche et ses données liées. Aucun mail, SMS, contrat ou prélèvement ne sera envoyé par cette action.</p>
+    <form method="post">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="trainee_id" value="{{ trainee_id }}">
+      <input type="hidden" name="source" value="{{ bundle.source }}">
+      <input type="hidden" name="fingerprint" value="{{ bundle.fingerprint }}">
+      <button class="btn btn-primary" type="submit">Rétablir ce dossier</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
