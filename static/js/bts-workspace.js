@@ -63,7 +63,8 @@
       try {
         // Only this explicit submit starts the loop. GET/page loads never contact WEDOF.
         for (let step = 0; step < 150; step++) {
-          const response = await fetch(form.action, {method: 'POST', body, credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+          // The hidden field named "action" masks form.action in the DOM.
+          const response = await fetch(form.getAttribute('action'), {method: 'POST', body, credentials: 'same-origin', headers: {'Accept': 'application/json'}});
           if (response.redirected || !response.headers.get('content-type')?.includes('application/json')) {
             throw new Error('La session a expiré. Rechargez la page pour reprendre.');
           }
