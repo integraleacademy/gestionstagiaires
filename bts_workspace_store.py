@@ -15,6 +15,7 @@ import sqlite3
 import uuid
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Mapping
+from zoneinfo import ZoneInfo
 
 from akto_bts import AktoBtsStore, normalize_contract, redact_sensitive_payload
 
@@ -148,7 +149,8 @@ def validate_fields(data: Mapping[str, Any], existing: Mapping[str, Any] | None 
             amount = money_cents(value, strict=True)
             if amount < 0:
                 raise WorkspaceError(f"Le champ « {label} » ne peut pas être négatif.")
-            if name in {"training_hours", "remote_hours"} and Decimal(value.replace(",", ".")) % 1:
+            raw = value.replace("\u202f", "").replace("\xa0", "").replace(" ", "").replace(",", ".")
+            if name in {"training_hours", "remote_hours"} and Decimal(raw) % 1:
                 raise WorkspaceError("Les durées doivent être saisies en heures entières.")
             value = str(Decimal(amount) / 100)
         result[name] = value
@@ -170,7 +172,7 @@ def validate_fields(data: Mapping[str, Any], existing: Mapping[str, Any] | None 
 
 def billing_view(record: dict, today: dt.date | None = None) -> dict:
     """Partition AKTO schedule amounts, not invoice amounts, without double counting."""
-    today = today or dt.datetime.now(dt.timezone.utc).date()
+    today = today or dt.datetime.now(ZoneInfo("Europe/Paris")).date()
     buckets = {"paid": 0, "pending": 0, "due": 0, "future": 0, "unknown": 0}
     cards = []
     keys = []
@@ -348,7 +350,7 @@ class WorkspaceStore(AktoBtsStore):
         if nature not in FEE_LABELS or cents <= 0 or len(description) > 500:
             raise WorkspaceError("Vérifiez la nature, le montant et le libellé du frais.")
         with self._connect() as connection:
-            connection.execute("INSERT INTO bts_fees VALUES (?,?,?,?,?,?,?)",
+            connection.execute("INSERT INTO bts_fees(id,dossier_id,nature,amount_cents,description,created_at) VALUES (?,?,?,?,?,?)",
                                (uuid.uuid4().hex, record_id, nature, cents, description.strip(), now()))
             self._event(connection, record_id, "Frais annexe local ajouté — non transmis à l’OPCO", actor)
 
@@ -401,10 +403,13 @@ class WorkspaceStore(AktoBtsStore):
             clauses.append("source=?")
             params.append(source)
         if query:
-            clauses.append("(" + " OR ".join(f"LOWER({field}) LIKE ?" for field in (*fields, "id")) + ")")
-            params.extend(["%" + query.lower() + "%"] * (len(fields) + 1))
+            expressions = [f"bts_fold({field}) LIKE ?" for field in (*fields, "id")]
+            expressions.append("bts_fold(apprentice_first_name || ' ' || apprentice_last_name) LIKE ?")
+            clauses.append("(" + " OR ".join(expressions) + ")")
+            params.extend(["%" + query.casefold() + "%"] * len(expressions))
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
         with self._connect() as connection:
+            connection.create_function("bts_fold", 1, lambda value: str(value or "").casefold(), deterministic=True)
             count = connection.execute(f"SELECT COUNT(*) FROM ({union}){where}", params).fetchone()[0]
             pages = max(1, math.ceil(count / per_page))
             page = min(max(1, page), pages)
@@ -424,7 +429,6 @@ class WorkspaceStore(AktoBtsStore):
                 "query": query, "source": source}
 
     def save_diagnostic(self, payload: dict):
-        # Only status, stage, timestamp and safe messages, never credentials/payloads.
         allowed = {key: payload[key] for key in ("ok", "stage", "message", "checked_at", "configuration_id") if key in payload}
         with self._connect() as connection:
             connection.execute("INSERT INTO bts_diagnostics VALUES ('connection',?,?) ON CONFLICT(name) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",
@@ -436,11 +440,7 @@ class WorkspaceStore(AktoBtsStore):
         return json.loads(row[0]) if row else None
 
     def update_remote_detail(self, number: str, detail: dict, actor: str):
-        """Update ONE existing cache record without replacing other rows/local drafts.
-
-        Cached invoices deliberately remain unchanged and keep their own sync date.
-        The source CERFA must identify the requested dossier; never cross-associate.
-        """
+        """Update one cache record; keep other records and local work untouched."""
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute("SELECT * FROM contracts WHERE internal_number=?", (number,)).fetchone()
@@ -464,7 +464,6 @@ class WorkspaceStore(AktoBtsStore):
             self._event(connection, remote_id(number), "Dossier et échéances actualisés depuis AKTO (factures non réinterrogées)", actor)
 
     def export_workspace(self) -> dict:
-        # Includes local work as well as the already-redacted AKTO snapshot.
         result = {"version": 1, "exported_at": now(), "akto": self.export_snapshot()}
         with self._connect() as connection:
             for table in ("bts_local_dossiers", "bts_annotations", "bts_fees", "bts_invoice_drafts", "bts_events"):
