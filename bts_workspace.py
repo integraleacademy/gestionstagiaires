@@ -17,16 +17,19 @@ from contextlib import contextmanager
 from functools import wraps
 from urllib.parse import urlparse
 
-from flask import abort, flash, make_response, redirect, request, session, url_for
+from flask import abort, flash, jsonify, make_response, redirect, request, session, url_for
 
 from akto_bts import AktoApiError, AktoClient, AktoConfig, AktoConfigurationError
+from wedof_service import WedofApiError, WedofConfigurationError
+from wedof_bts import WedofBtsClient
+from wedof_bts_sync import public_state, sync_step
 from bts_workspace_store import (
     ALL_FIELDS, CHECKLIST, FEE_LABELS, FIELD_GROUPS, TABS, EditConflict,
     WorkspaceError, WorkspaceStore, billing_view, date_fr, euros, euros_cents,
     now, remote_number,
 )
 
-VERSION = "20260910-bts-workspace-1"
+VERSION = "20260910-bts-wedof-2"
 
 
 def configuration_id(config: AktoConfig) -> str:
@@ -88,10 +91,20 @@ def register_bts_workspace(legacy):
             checklist=CHECKLIST, fee_labels=FEE_LABELS, csrf_token=csrf_token(),
             euros=euros, cents=euros_cents, date_fr=date_fr,
             config=config.diagnostics(), diagnostic=diagnostic,
+            wedof_ready=bool(os.environ.get("WEDOF_API_KEY", "").strip()),
+            wedof_sync=public_state(store().wedof_state()),
+            wedof_diagnostic=wedof_diagnostic(),
             running=legacy._akto_bts_sync_is_running(),
             **context,
         )
         return make_response(html)
+
+    def wedof_config_id():
+        return hashlib.sha256(os.environ.get("WEDOF_API_KEY", "").strip().encode()).hexdigest()
+
+    def wedof_diagnostic():
+        result = store().wedof_state("connection")
+        return result if result.get("configuration_id") == wedof_config_id() else {}
 
     def get_record(record_id):
         try:
@@ -150,7 +163,7 @@ def register_bts_workspace(legacy):
 
     def dossier(record_id):
         record = get_record(record_id)
-        tab = request.args.get("tab", "comptabilite" if record["source"] == "akto" else "suivi")
+        tab = request.args.get("tab", "comptabilite" if record["source"] in {"akto", "wedof"} else "suivi")
         if tab not in {key for key, _ in TABS}:
             tab = "suivi"
         return render("dossier", title=record["name"], tab=tab, **detail_context(record))
@@ -222,6 +235,84 @@ def register_bts_workspace(legacy):
     def settings():
         return render("settings", title="Connexion AKTO")
 
+    def wedof_test():
+        result = {"ok": False, "checked_at": now(), "configuration_id": wedof_config_id()}
+        client = None
+        try:
+            with api_lock():
+                client = WedofBtsClient()
+                items, more, total = client.contracts_page(limit=1)
+                result.update(ok=True, total=total, sample_count=len(items),
+                              message=(f"Lecture AKTO via WEDOF vérifiée : {total} contrat(s) annoncé(s)." if total is not None
+                                       else "Lecture des contrats AKTO via WEDOF vérifiée."))
+        except (WedofApiError, WedofConfigurationError, WorkspaceError) as exc:
+            result["message"] = str(exc)
+        except Exception:
+            app.logger.error("[BTS_WEDOF] connection_test_failed")
+            result["message"] = "La lecture WEDOF n’a pas pu être vérifiée. Réessayez plus tard."
+        finally:
+            if client:
+                client.close()
+        store().save_wedof_state(result, "connection")
+        flash(result["message"], "success" if result["ok"] else "error")
+        return redirect(url_for("bts_settings"))
+
+    def wedof_sync_step():
+        client = None
+        action = request.form.get("action", "start")
+        if action not in {"start", "resume", "continue"}:
+            abort(400)
+        try:
+            with api_lock():
+                client = WedofBtsClient()
+                result = sync_step(store(), client, actor(), config_id=wedof_config_id(), action=action,
+                                   run_id=request.form.get("run_id", ""), revision=int(request.form.get("revision", "-1")))
+            if request.headers.get("Accept") == "application/json":
+                return jsonify(result)
+            flash(result.get("message", "Synchronisation préparée."), "info")
+        except (WedofApiError, WedofConfigurationError, WorkspaceError, ValueError) as exc:
+            message = str(exc) if not isinstance(exc, ValueError) or isinstance(exc, WorkspaceError) else "Paramètres de synchronisation invalides."
+            if request.headers.get("Accept") == "application/json":
+                return jsonify(status="paused", message=message), 409
+            flash(message, "error")
+        except Exception:
+            app.logger.error("[BTS_WEDOF] sync_step_failed")
+            if request.headers.get("Accept") == "application/json":
+                return jsonify(status="paused", message="Import interrompu. Les contrats déjà enregistrés sont conservés ; vous pouvez reprendre."), 500
+            flash("Import interrompu. Les contrats déjà enregistrés sont conservés.", "error")
+        finally:
+            if client:
+                client.close()
+        return redirect(url_for("admin_bts"))
+
+    def refresh_wedof_record(record):
+        client = None
+        try:
+            with api_lock():
+                client = WedofBtsClient()
+                key = record["working_contract_id"]
+                summary = client.contract(key)
+                store().upsert_wedof_summary(summary, actor())
+                if summary.get("registration_id"):
+                    fields = client.folder(summary["registration_id"])
+                    store().update_wedof_details(key, {**fields, "needs_detail": False})
+                try:
+                    fields = client.raw(key, summary)
+                    store().update_wedof_details(key, fields)
+                    flash("Contrat et données OPCO disponibles actualisés via WEDOF.", "success")
+                except WedofApiError as exc:
+                    store().update_wedof_details(key, {"raw_error": exc.user_message})
+                    flash("Contrat actualisé. Données OPCO détaillées non récupérées : " + exc.user_message, "info")
+        except (WedofApiError, WedofConfigurationError, WorkspaceError) as exc:
+            flash(str(exc), "error")
+        except Exception:
+            app.logger.error("[BTS_WEDOF] refresh_failed")
+            flash("Actualisation interrompue. Les données enregistrées sont conservées.", "error")
+        finally:
+            if client:
+                client.close()
+        return redirect(url_for("bts_dossier", record_id=record["id"], tab="comptabilite"))
+
     def test_connection():
         initial = AktoConfig.from_env()
         result = {"ok": False, "stage": "configuration", "checked_at": now(), "configuration_id": configuration_id(initial)}
@@ -255,6 +346,8 @@ def register_bts_workspace(legacy):
 
     def refresh_record(record_id):
         record = get_record(record_id)
+        if record["source"] == "wedof":
+            return refresh_wedof_record(record)
         if record["source"] != "akto":
             flash("Ce dossier local n’a pas encore de référence AKTO. Aucun envoi n’a été effectué.", "info")
             return redirect(url_for("bts_dossier", record_id=record_id))
@@ -312,6 +405,8 @@ def register_bts_workspace(legacy):
         ("/admin/BTS/dossiers/<record_id>/brouillons/<draft_id>.json", "bts_draft_export", export_draft, ["GET"], False),
         ("/admin/BTS/connexion", "bts_settings", settings, ["GET"], False),
         ("/admin/BTS/connexion/tester", "bts_test_connection", test_connection, ["POST"], True),
+        ("/admin/BTS/wedof/tester", "bts_wedof_test", wedof_test, ["POST"], True),
+        ("/admin/BTS/wedof/synchroniser", "bts_wedof_sync", wedof_sync_step, ["POST"], True),
         ("/admin/BTS/synchroniser", "bts_sync", full_sync, ["POST"], True),
         ("/admin/BTS/export.json", "bts_export", export, ["GET"], False),
         ("/admin/bts", "bts_lowercase", lambda: redirect(url_for("admin_bts")), ["GET"], False),

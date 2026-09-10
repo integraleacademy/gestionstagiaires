@@ -1,0 +1,19 @@
+<section class="ws-card ws-pad ws-wedof-sync" aria-label="Synchronisation AKTO via WEDOF">
+  <div class="ws-section-head">
+    <div><span class="ws-eyebrow">AKTO → WEDOF → votre espace BTS</span><h2>Vos contrats d’apprentissage</h2>
+      <p class="ws-muted">Récupérez les contrats et les fiches apprentis avec votre connexion WEDOF.</p></div>
+    <span class="ws-pill {{ 'ws-pill--green' if wedof_ready else 'ws-pill--warning' }}">{{ 'Clé WEDOF configurée' if wedof_ready else 'Connexion WEDOF à configurer' }}</span>
+  </div>
+  <form method="post" action="{{ url_for('bts_wedof_sync') }}" data-wedof-sync>
+    {{ token() }}
+    <input type="hidden" name="action" value="{{ 'resume' if wedof_sync and wedof_sync.phase != 'complete' else 'start' }}">
+    <div class="ws-actions">
+      <button class="ws-button ws-button--primary" {% if not wedof_ready or running %}disabled{% endif %}>{{ icon('sync',18) }} {{ 'Poursuivre la synchronisation' if wedof_sync and wedof_sync.phase != 'complete' else 'Synchroniser AKTO via WEDOF' }}</button>
+      {% if screen != 'settings' %}<a class="ws-text-button" href="{{ url_for('bts_settings') }}">Vérifier la connexion</a>{% endif %}
+    </div>
+    <p data-sync-message role="status" aria-live="polite">{{ wedof_sync.message if wedof_sync else 'Prêt pour la première récupération des contrats AKTO.' }}</p>
+    <progress data-sync-progress max="100" value="0" hidden aria-label="Progression de la synchronisation"></progress>
+  </form>
+  {% if wedof_sync.updated_at %}<p class="ws-note">Dernière opération : {{ date_fr(wedof_sync.updated_at) }} à {{ wedof_sync.updated_at[11:19] }} UTC · {{ wedof_sync.requests }} lecture(s) WEDOF.</p>{% endif %}
+  <p class="ws-note">Les notes, frais et brouillons saisis restent conservés. Une interruption peut être reprise. Les contrats d’un même apprenti restent distincts par référence.</p>
+</section>

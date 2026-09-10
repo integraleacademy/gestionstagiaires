@@ -1,5 +1,51 @@
 # Espace BTS — gestion des dossiers d’apprentissage
 
+## Connexion AKTO via WEDOF (10 septembre 2026)
+
+La connexion principale réutilise `WEDOF_API_KEY`. Aucun identifiant OAuth AKTO
+supplémentaire ni nouveau service Render n’est nécessaire. Le connecteur direct
+AKTO reste disponible dans les paramètres avancés.
+
+- `GET /api/workingContracts?financer=opcoCfaAkto&state=all&limit=100&page=…`
+  récupère le catalogue paginé ; seuls les contrats portant ce financeur sont acceptés.
+- Le dossier lié `/api/registrationFolders/{externalId}` complète l’identité de
+  l’apprenti et la formation. Son identifiant et sa nature OPCO sont contrôlés.
+- « Mettre à jour le dossier » relit un contrat puis tente la lecture bêta
+  `/api/workingContracts/{id}/raw`. Seules les données CFA Dock dont l’identité est
+  vérifiée sont exploitées. Les échéances ne sont affichées que si elles existent
+  dans ce retour ; les montants absents restent inconnus. Les factures et paiements
+  WEDOF génériques ne sont pas assimilés aux factures et règlements AKTO.
+
+La synchronisation est lancée explicitement et continue tant que la page reste
+ouverte. Chaque POST traite une page de catalogue ou au plus trois fiches liées.
+Le curseur est enregistré dans la base BTS et chaque étape porte une révision.
+Après interruption ou plafond atteint, « Poursuivre » reprend le travail conservé.
+Une série est limitée à 80 tentatives avant reprise explicite ; tous les appels
+respectent aussi le compteur partagé WEDOF, sans dérogation ni retry HTTP.
+Les GET de navigation n’effectuent aucun appel WEDOF et aucun cron n’est ajouté.
+
+`bts_wedof_contracts` conserve le cache par ID WEDOF (`w-…`) de manière additive.
+La réimportation ne modifie jamais les notes, frais, brouillons ou dossiers locaux.
+Deux contrats du même apprenti restent distincts ; aucune fusion par nom n’est
+faite. Un contrat absent d’une liste complète est signalé et conservé. Une erreur
+de pagination ne supprime aucun contrat. Les informations importées sont en
+lecture seule et limitées aux champs utiles ; le payload brut, le NIR et les
+coordonnées bancaires ne sont pas conservés.
+
+Les événements explicitement liés à l’apprentissage ne passent plus par les
+relais commerciaux CPF vers le CRM/Salesforce. Ils ne déclenchent pas de mise à
+jour BTS automatique dans ce lot. Les protections de connexion, droits d’écriture,
+super-administration, CSRF, verrou interprocessus et non-cache sont réutilisées.
+
+Le bouton de test vérifie réellement l’accès à la liste AKTO. La présence de la
+clé ne suffit pas à annoncer une connexion validée. Une liste vide peut indiquer
+que les contrats ne sont pas encore synchronisés chez WEDOF ou pas accessibles à
+cette clé ; le logiciel l’indique sans fabriquer de dossiers.
+
+Sources vérifiées : [API WEDOF](https://www.wedof.fr/api/doc/),
+[connexion OPCO CFA](https://doc.wedof.fr/article/21-connexion-opco-cfa).
+Tests : `python -m unittest tests.test_wedof_bts tests.test_bts_workspace tests.test_akto_bts tests.test_wedof_isolation`.
+
 ## Accès et périmètre
 
 Le point d’entrée de production `crm_app:app` enregistre `register_bts_workspace(legacy_app)`. L’URL reste `/admin/BTS` et `/admin/bts` redirige vers cette URL. Le lien de navigation historique ne change pas.

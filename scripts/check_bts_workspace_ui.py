@@ -4,7 +4,7 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -35,6 +35,8 @@ def browser_check():
     from tests.test_bts_workspace import make_legacy, seed_remote
     from bts_workspace import register_bts_workspace
     from bts_workspace_store import WorkspaceStore
+    from tests.test_wedof_bts import contract, folder
+    from wedof_bts import folder_fields, normalize_summary
     output = ROOT / 'test-artifacts' / 'bts'
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as directory:
@@ -47,17 +49,28 @@ def browser_check():
         register_bts_workspace(legacy)
         store = WorkspaceStore(legacy.AKTO_BTS_DB_FILE)
         record_id, _ = seed_remote(store)
+        api = Mock()
+        api.contracts_page.return_value = ([normalize_summary(contract())], False, 1)
+        api.folder.return_value = folder_fields(folder(), 'OPCO-1')
         server = make_server('127.0.0.1', 0, legacy.app)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         url = f'http://127.0.0.1:{server.server_port}'
         try:
-            with sync_playwright() as playwright:
+            with patch.dict(os.environ, {'WEDOF_API_KEY': 'test-key'}), \
+                 patch('bts_workspace.WedofBtsClient', return_value=api) as factory, \
+                 sync_playwright() as playwright:
                 browser = playwright.chromium.launch()
                 page = browser.new_page(viewport={'width': 1440, 'height': 1100})
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 page.goto(url + '/__test_login')
+                factory.assert_not_called()
+                page.get_by_role('button', name='Synchroniser AKTO via WEDOF').click()
+                page.get_by_role('link', name='Ouvrir le dossier Camille Exemple', exact=True).wait_for()
+                assert store.wedof_state()['status'] == 'complete'
+                api.contracts_page.assert_called_once()
+                api.folder.assert_called_once()
                 page.screenshot(path=str(output / 'dossiers-desktop.png'), full_page=True)
                 page.goto(url + f'/admin/BTS/dossiers/{record_id}?tab=comptabilite')
                 page.get_by_role('heading', name='Échéancier de facturation').wait_for()
@@ -80,6 +93,9 @@ def browser_check():
                 page.screenshot(path=str(output / 'etudiant-desktop.png'), full_page=True)
                 for width in (1024, 768, 390):
                     page.set_viewport_size({'width': width, 'height': 1000})
+                    page.goto(url + '/admin/BTS')
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), f'Dossier list overflow at {width}px'
+                    page.screenshot(path=str(output / f'dossiers-{width}.png'), full_page=True)
                     page.goto(url + f'/admin/BTS/dossiers/{record_id}?tab=comptabilite')
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), f'Page overflow at {width}px'
                     page.screenshot(path=str(output / f'comptabilite-{width}.png'), full_page=True)
@@ -87,7 +103,7 @@ def browser_check():
                 browser.close()
         finally:
             server.shutdown()
-    print('Browser flows: dossier creation, fee dialog, invoice draft, responsive layouts and JavaScript OK')
+    print('Browser flows: WEDOF import, dossier creation, fee dialog, invoice draft, responsive layouts and JavaScript OK')
 
 
 if __name__ == '__main__':

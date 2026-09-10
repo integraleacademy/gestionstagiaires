@@ -216,6 +216,8 @@ def billing_view(record: dict, today: dt.date | None = None) -> dict:
     for card in cards:
         if card["key"] and keys.count(card["key"]) > 1:
             card["can_draft"] = False
+        if record.get("source") == "wedof" and (record.get("raw_stale") or record.get("raw_error")):
+            card["can_draft"] = False
     total = sum(buckets.values())
     colors = {"paid": "#69dca5", "pending": "#83d7fb", "due": "#ffb282", "future": "#ffe074", "unknown": "#c8ccdb"}
     labels = {"paid": "Payé", "pending": "En instruction OPCO", "due": "À facturer", "future": "À venir", "unknown": "À vérifier"}
@@ -269,6 +271,10 @@ class WorkspaceStore(AktoBtsStore):
                 CREATE TABLE IF NOT EXISTS bts_diagnostics (
                     name TEXT PRIMARY KEY, payload_json TEXT NOT NULL, updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS bts_wedof_contracts (
+                    id TEXT PRIMARY KEY, payload_json TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
             """)
 
     @staticmethod
@@ -295,6 +301,17 @@ class WorkspaceStore(AktoBtsStore):
                 item.update(source="local", state="BROUILLON", state_label="Brouillon local",
                             revision=row["revision"], created_at=row["created_at"], updated_at=row["updated_at"],
                             schedules=[], extra_costs=[], invoices=[], billing_details={})
+            elif record_id.startswith("w-"):
+                from wedof_bts import identifier
+                try:
+                    key = identifier(record_id[2:])
+                except Exception:
+                    raise WorkspaceError("Identifiant de contrat invalide.") from None
+                row = connection.execute("SELECT * FROM bts_wedof_contracts WHERE id=?", (key,)).fetchone()
+                if row is None:
+                    return None
+                item = json.loads(row["payload_json"])
+                item.update(source="wedof", revision=0, updated_at=row["updated_at"])
             else:
                 number = remote_number(record_id)
                 row = connection.execute("SELECT * FROM contracts WHERE internal_number=?", (number,)).fetchone()
@@ -398,8 +415,10 @@ class WorkspaceStore(AktoBtsStore):
         local = ",".join(f"COALESCE(json_extract(payload_json,'$.{field}'),'') AS {field}" for field in fields)
         remote = ",".join(fields)
         union = f"SELECT id,'local' AS source,'BROUILLON' AS state,updated_at,{local},0 AS engagement FROM bts_local_dossiers UNION ALL SELECT internal_number AS id,'akto' AS source,state,synced_at AS updated_at,{remote},engagement FROM contracts"
+        wedof = f"SELECT id,'wedof' AS source,json_extract(payload_json,'$.state') AS state,updated_at,{local},json_extract(payload_json,'$.engagement') AS engagement FROM bts_wedof_contracts"
+        union += " UNION ALL " + wedof
         clauses, params = [], []
-        if source in {"local", "akto"}:
+        if source in {"local", "akto", "wedof"}:
             clauses.append("source=?")
             params.append(source)
         if query:
@@ -416,6 +435,10 @@ class WorkspaceStore(AktoBtsStore):
             rows = connection.execute(f"SELECT * FROM ({union}){where} ORDER BY updated_at DESC,id LIMIT ? OFFSET ?",
                                       [*params, per_page, (page - 1) * per_page]).fetchall()
             stats = dict(connection.execute("SELECT COUNT(*) AS remote_count,COALESCE(SUM(engagement),0) AS engagement,COALESCE(SUM(total_paid),0) AS paid FROM contracts").fetchone())
+            ws = connection.execute("SELECT COUNT(*),COALESCE(SUM(json_extract(payload_json,'$.engagement')),0),SUM(json_extract(payload_json,'$.engagement') IS NULL) FROM bts_wedof_contracts").fetchone()
+            stats.update(wedof_count=ws[0], unknown_engagements=ws[2] or 0)
+            stats["remote_count"] += ws[0]
+            stats["engagement"] += ws[1]
             stats["local_count"] = connection.execute("SELECT COUNT(*) FROM bts_local_dossiers").fetchone()[0]
             stats["draft_count"] = connection.execute("SELECT COUNT(*) FROM bts_invoice_drafts").fetchone()[0]
         records = []
@@ -423,7 +446,12 @@ class WorkspaceStore(AktoBtsStore):
             item = dict(row)
             if item["source"] == "akto":
                 item["id"] = remote_id(item["id"])
-            item["name"] = (item["apprentice_first_name"] + " " + item["apprentice_last_name"]).strip() or "Identité non restituée"
+            elif item["source"] == "wedof":
+                item["id"] = "w-" + item["id"]
+            item["name"] = (item["apprentice_first_name"] + " " + item["apprentice_last_name"]).strip() or ("Contrat AKTO · " + item["id"][2:] if item["source"] == "wedof" else "Identité non restituée")
+            if item["source"] == "wedof":
+                from wedof_bts import STATES
+                item["state_label"] = STATES.get(item["state"], "État non communiqué")
             records.append(item)
         return {"records": records, "stats": stats, "total": count, "page": page, "pages": pages,
                 "query": query, "source": source}
@@ -466,7 +494,68 @@ class WorkspaceStore(AktoBtsStore):
     def export_workspace(self) -> dict:
         result = {"version": 1, "exported_at": now(), "akto": self.export_snapshot()}
         with self._connect() as connection:
-            for table in ("bts_local_dossiers", "bts_annotations", "bts_fees", "bts_invoice_drafts", "bts_events"):
+            for table in ("bts_local_dossiers", "bts_annotations", "bts_fees", "bts_invoice_drafts", "bts_events", "bts_wedof_contracts"):
                 result[table] = [dict(row) for row in connection.execute(f"SELECT * FROM {table}")]
         result["notice"] = "Les brouillons ne sont ni des contrats transmis ni des factures émises. Export confidentiel réservé à l’école."
         return redact_sensitive_payload(result)
+
+    def wedof_state(self, name="sync"):
+        with self._connect() as connection:
+            row = connection.execute("SELECT payload_json FROM bts_diagnostics WHERE name=?", ("wedof_" + name,)).fetchone()
+        return json.loads(row[0]) if row else {}
+
+    def save_wedof_state(self, value, name="sync"):
+        with self._connect() as connection:
+            connection.execute("INSERT INTO bts_diagnostics VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",
+                               ("wedof_" + name, as_json(value), now()))
+
+    def upsert_wedof_summary(self, summary, actor):
+        key, stamp = summary["working_contract_id"], now()
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT payload_json FROM bts_wedof_contracts WHERE id=?", (key,)).fetchone()
+            previous = json.loads(row[0]) if row else {}
+            changed = previous.get("summary_hash") != summary["summary_hash"]
+            item = {**{field: "" for field in ALL_FIELDS}, "schedules": [], "extra_costs": [],
+                    "invoices": [], "billing_details": {}, **previous, **summary, "synced_at": stamp,
+                    "missing_from_latest": False}
+            item["needs_detail"] = bool(changed or previous.get("needs_detail") or str(previous.get("details_checked_at", ""))[:10] != stamp[:10])
+            if changed and previous.get("schedules"):
+                item["raw_stale"] = True
+            # Changing the linked registration folder invalidates its old identity.
+            if previous and previous.get("registration_id") != summary.get("registration_id"):
+                for field in ALL_FIELDS:
+                    if field not in summary:
+                        item[field] = ""
+                item.update(schedules=[], raw_checked_at="", details_checked_at="")
+            connection.execute("INSERT INTO bts_wedof_contracts VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",
+                               (key, as_json(item), stamp))
+            if not row or changed:
+                self._event(connection, "w-" + key, "Contrat importé depuis AKTO via WEDOF" if not row else "Contrat actualisé depuis AKTO via WEDOF", actor)
+        return "added" if not row else "updated" if changed else "unchanged"
+
+    def update_wedof_details(self, key, fields):
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT payload_json FROM bts_wedof_contracts WHERE id=?", (key,)).fetchone()
+            if not row:
+                raise WorkspaceError("Contrat absent de l’espace BTS.")
+            item = json.loads(row[0])
+            item.update(fields)
+            connection.execute("UPDATE bts_wedof_contracts SET payload_json=?,updated_at=? WHERE id=?", (as_json(item), now(), key))
+
+    def wedof_details_pending(self, ids):
+        with self._connect() as connection:
+            rows = connection.execute("SELECT id,payload_json FROM bts_wedof_contracts").fetchall()
+        seen = set(ids)
+        return [row["id"] for row in rows if row["id"] in seen and json.loads(row["payload_json"]).get("needs_detail")]
+
+    def mark_wedof_listing(self, ids):
+        # Never delete a missing/cancelled contract or its local notes and drafts.
+        seen = set(ids)
+        with self._connect() as connection:
+            rows = connection.execute("SELECT id,payload_json FROM bts_wedof_contracts").fetchall()
+            for row in rows:
+                item = json.loads(row["payload_json"])
+                item["missing_from_latest"] = row["id"] not in seen
+                connection.execute("UPDATE bts_wedof_contracts SET payload_json=? WHERE id=?", (as_json(item), row["id"]))

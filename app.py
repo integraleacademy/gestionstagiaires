@@ -19445,6 +19445,9 @@ def admin_delete_wedof_entry(entry_id: str):
     return redirect(url_for("admin_wedof_requests", section="requests"))
 
 def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
+    from wedof_bts import is_apprenticeship_event
+    if is_apprenticeship_event(entry):
+        return {"success": True, "skipped": True, "reason": "apprenticeship_bts_only"}, 200
     entry_id = str(entry.get("id") or "")
     payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
@@ -19646,6 +19649,9 @@ def _wedof_crm_relay_body(entry: Dict[str, Any], *, use_original: bool) -> str:
 def _send_wedof_entry_to_crm(
         entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     """Relay one authenticated WEDOF folder to the CRM without another list scan."""
+    from wedof_bts import is_apprenticeship_event
+    if is_apprenticeship_event(entry):
+        return {"success": True, "skipped": True, "reason": "apprenticeship_bts_only"}, 200
     entry_id = str(entry.get("id") or "")
     target_url = (
         os.environ.get("CRM_WEDOF_WEBHOOK_URL")
@@ -19797,6 +19803,7 @@ def send_wedof_to_crm(entry_id: str):
 
 @app.route("/api/webhooks/wedof", methods=["POST"])
 def wedof_webhook():
+    from wedof_bts import is_apprenticeship_event
     event = (request.headers.get("X-Wedof-Event") or "").strip()
     signature = (request.headers.get("X-Wedof-Signature") or "").strip()
     delivery_id = (request.headers.get("X-Wedof-Delivery") or "").strip()
@@ -19864,6 +19871,10 @@ def wedof_webhook():
 
 
     try:
+        # OPCO apprenticeship events are not CPF prospects. The BTS importer reads
+        # workingContracts explicitly; no commercial relay or CPF action runs here.
+        if is_apprenticeship_event({"event": event, "payload": payload}):
+            return jsonify({"ok": True, "ignored": True, "reason": "apprenticeship_bts_only"}), 200
         resolved_delivery_id = delivery_id or hashlib.sha256(raw_body).hexdigest()
         entries = _load_wedof_webhooks()
         duplicate_entry = next((
@@ -19893,6 +19904,9 @@ def wedof_webhook():
         wedof_folder_details = _embedded_wedof_folder(payload)
         if not wedof_folder_details and folder_id and trusted_for_wedof:
             wedof_folder_details = _fetch_wedof_folder_details(folder_id)
+
+        if is_apprenticeship_event(wedof_folder_details):
+            return jsonify({"ok": True, "ignored": True, "reason": "apprenticeship_bts_only"}), 200
 
         entry = {
             "id": f"WEDOF-{uuid.uuid4().hex[:10].upper()}",
