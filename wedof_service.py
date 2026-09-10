@@ -92,6 +92,7 @@ class WedofClient:
         allow_over_limit: bool = False,
     ) -> None:
         safe_path = re.sub(r"(/registrationFolders/)[^/]+", r"\1:id", path)
+        safe_path = re.sub(r"(/workingContracts/)[^/]+", r"\1:id", safe_path)
         resolved_operation = str(operation or "").strip()[:80]
         if not resolved_operation:
             if safe_path.rstrip("/").endswith("/registrationFolders"):
