@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      PERSIST_DIR: ${{ runner.temp }}/bts-persist
+      PERSIST_DIR: /tmp/gestionstagiaires-bts-ci
       SECRET_KEY: ephemeral-bts-ci-only-not-production
     steps:
       - uses: actions/checkout@v5
