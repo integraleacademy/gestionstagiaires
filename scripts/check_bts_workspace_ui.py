@@ -67,7 +67,7 @@ def browser_check():
                 page.goto(url + '/__test_login')
                 factory.assert_not_called()
                 page.get_by_role('button', name='Synchroniser AKTO via WEDOF').click()
-                page.get_by_role('link', name='Camille Exemple', exact=True).wait_for()
+                page.get_by_role('link', name='Ouvrir le dossier Camille Exemple', exact=True).wait_for()
                 assert store.wedof_state()['status'] == 'complete'
                 api.contracts_page.assert_called_once()
                 api.folder.assert_called_once()

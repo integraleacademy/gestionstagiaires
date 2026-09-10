@@ -72,7 +72,7 @@
 {% if record.source == 'wedof' %}
 {% if record.missing_from_latest %}<p class="ws-alert ws-alert--info">Ce contrat n’est plus présent dans la dernière liste WEDOF. Il reste conservé ici avec votre suivi.</p>{% endif %}
 {% if record.details_error %}<p class="ws-alert ws-alert--info">{{ record.details_error }}</p>{% endif %}
-{% if record.raw_stale %}<p class="ws-alert ws-alert--info">Le contrat a changé depuis la dernière lecture de l’échéancier. Actualisez ses données OPCO avant de préparer une facture.</p>{% endif %}
+{% if record.raw_stale %}<p class="ws-alert ws-alert--info">L’échéancier reste à vérifier pour ce contrat. Actualisez ses données OPCO avant de préparer une facture.</p>{% endif %}
 {% if record.raw_error %}<p class="ws-alert ws-alert--info">{{ record.raw_error }}{% if record.raw_checked_at %} Les dernières données détaillées conservées datent du {{ date_fr(record.raw_checked_at) }}.{% endif %}</p>{% endif %}
 {% endif %}
 <nav class="ws-tabs" aria-label="Rubriques du dossier">{% for key,label in tabs %}<a href="{{ url_for('bts_dossier',record_id=record.id,tab=key) }}" {% if tab == key %}class="is-active" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>

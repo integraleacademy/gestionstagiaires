@@ -116,8 +116,10 @@ def raw_fields(raw, contract):
         allowed = {"numero", "codification", "montantTotal", "montantRegle", "montantEnCoursInstruction", "dateOuverture", "dateDebut", "dateFin"}
         fields["schedules"] = [{k: v for k, v in x.items() if k in allowed and isinstance(v, (str, int, float, type(None))) and not isinstance(v, bool)} for x in schedules]
     verified_schedules = "schedules" in fields
-    fields.update(raw_checked_at=stamp(), raw_stale=not verified_schedules,
+    fields.update(raw_attempted_at=stamp(), raw_stale=not verified_schedules,
                   raw_error="" if verified_schedules else "WEDOF ne restitue pas d’échéancier exploitable. Les éventuelles échéances précédentes restent à vérifier.")
+    if verified_schedules:
+        fields["raw_checked_at"] = stamp()
     return fields
 
 
