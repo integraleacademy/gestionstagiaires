@@ -1,6 +1,6 @@
 """Read-only WEDOF apprenticeship API (official /api/doc.json, 2026-09-10).
 
-Only the AKTO financer is accepted. No URL returned by WEDOF is followed;
+Only the four supported apprenticeship financers are accepted. No URL returned by WEDOF is followed;
 identifiers are validated and calls reuse the existing shared quota governor.
 """
 from __future__ import annotations
@@ -13,7 +13,8 @@ from urllib.parse import quote
 
 from wedof_service import WedofApiError, WedofClient
 
-FINANCER = "opcoCfaAkto"
+FINANCERS = {"opcoCfaAkto": "AKTO", "opcoCfaEp": "OPCO EP",
+             "opcoCfaOpcommerce": "L’Opcommerce", "opcoCfaMobilites": "OPCO Mobilités"}
 STATES = {"draft": "Brouillon", "sent": "Transmis", "pendingAcceptation": "En instruction",
           "accepted": "Engagé", "cancelled": "Annulé", "refused": "Refusé",
           "broken": "Rompu", "completed": "Soldé"}
@@ -49,15 +50,25 @@ def fingerprint(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
+def financer_label(value):
+    return FINANCERS.get(value, "OPCO non communiqué")
+
+
+def financer_filter(value=""):
+    if not isinstance(value, str) or (value and value not in FINANCERS):
+        raise WedofApiError("Choisissez AKTO, OPCO EP, L’Opcommerce ou OPCO Mobilités.", "invalid_financer")
+    return value or ",".join(FINANCERS)
+
+
 def normalize_summary(item):
-    if not isinstance(item, dict) or item.get("financer") != FINANCER:
-        raise WedofApiError("La réponse ne correspond pas à un contrat AKTO.", "invalid_working_contract")
+    if not isinstance(item, dict) or not isinstance(item.get("financer"), str) or item["financer"] not in FINANCERS:
+        raise WedofApiError("La réponse ne correspond pas à un contrat d’un OPCO pris en charge.", "invalid_working_contract")
     key = identifier(item.get("id"))
     links = obj(item.get("_links"))
     employer, folder = obj(links.get("employer")), obj(links.get("registrationFolder"))
     # Only allowlisted useful data are persisted; never NIR, IBAN, tokens or URLs.
     result = {"working_contract_id": key, "internal_number": "", "external_number": text(item.get("externalIdTrainingOrganism")),
-              "deca_number": text(item.get("externalIdDeca")), "financer": FINANCER,
+              "deca_number": text(item.get("externalIdDeca")), "financer": item["financer"],
               "registration_id": text(folder.get("externalId")), "state": text(item.get("state")),
               "state_label": STATES.get(item.get("state"), "État non communiqué"),
               "contract_type": text(item.get("type")), "contract_start": date(item.get("startDate")),
@@ -132,14 +143,16 @@ class WedofBtsClient(WedofClient):
         return self._get_json_response(path, params=params, timeout=(3, 8), max_attempts=1,
                                        backoff=0, operation=operation)
 
-    def contracts_page(self, page=1, limit=100):
+    def contracts_page(self, page=1, limit=100, *, financer=""):
         page, limit = int(page), int(limit)
         if not 1 <= page <= 100 or not 1 <= limit <= 100:
             raise WedofApiError("Pagination WEDOF invalide.", "invalid_pagination")
-        payload, response = self.read("/workingContracts", params={"financer": FINANCER, "state": "all", "page": page, "limit": limit}, operation="bts_list_contracts")
+        payload, response = self.read("/workingContracts", params={"financer": financer_filter(financer), "state": "all", "page": page, "limit": limit}, operation="bts_list_contracts")
         if not isinstance(payload, list) or len(payload) > limit:
             raise WedofApiError("La liste de contrats reçue est inattendue.", "invalid_working_contract_list")
         items = [normalize_summary(item) for item in payload]
+        if financer and any(item["financer"] != financer for item in items):
+            raise WedofApiError("WEDOF a renvoyé un contrat d’un autre OPCO que celui choisi.", "invalid_financer")
         ids = [item["working_contract_id"] for item in items]
         if len(ids) != len(set(ids)):
             raise WedofApiError("WEDOF a renvoyé des contrats en double dans une page.", "duplicate_working_contracts")

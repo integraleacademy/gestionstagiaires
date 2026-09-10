@@ -338,7 +338,7 @@ class WorkspaceStore(AktoBtsStore):
     def save_fields(self, record_id: str, data: Mapping[str, Any], revision: int, actor: str):
         record = self.record(record_id)
         if not record or record["source"] != "local":
-            raise WorkspaceError("Les données AKTO sont en lecture seule. Les compléments se saisissent dans Gestion.")
+            raise WorkspaceError("Les données OPCO sont en lecture seule. Les compléments se saisissent dans Gestion.")
         existing = {name: record.get(name, "") for name in ALL_FIELDS}
         payload = validate_fields(data, existing)
         with self._connect() as connection:
@@ -418,8 +418,8 @@ class WorkspaceStore(AktoBtsStore):
         fields = ("apprentice_first_name", "apprentice_last_name", "employer_name", "training_title", "employer_siret", "rncp")
         local = ",".join(f"COALESCE(json_extract(payload_json,'$.{field}'),'') AS {field}" for field in fields)
         remote = ",".join(fields)
-        union = f"SELECT id,'local' AS source,'BROUILLON' AS state,updated_at,{local},0 AS engagement FROM bts_local_dossiers UNION ALL SELECT internal_number AS id,'akto' AS source,state,synced_at AS updated_at,{remote},engagement FROM contracts"
-        wedof = f"SELECT id,'wedof' AS source,json_extract(payload_json,'$.state') AS state,updated_at,{local},json_extract(payload_json,'$.engagement') AS engagement FROM bts_wedof_contracts"
+        union = f"SELECT id,'local' AS source,'BROUILLON' AS state,updated_at,{local},0 AS engagement,'' AS financer FROM bts_local_dossiers UNION ALL SELECT internal_number AS id,'akto' AS source,state,synced_at AS updated_at,{remote},engagement,'opcoCfaAkto' AS financer FROM contracts"
+        wedof = f"SELECT id,'wedof' AS source,json_extract(payload_json,'$.state') AS state,updated_at,{local},json_extract(payload_json,'$.engagement') AS engagement,json_extract(payload_json,'$.financer') AS financer FROM bts_wedof_contracts"
         union += " UNION ALL " + wedof
         clauses, params = [], []
         if source in {"local", "akto", "wedof"}:
@@ -452,7 +452,7 @@ class WorkspaceStore(AktoBtsStore):
                 item["id"] = remote_id(item["id"])
             elif item["source"] == "wedof":
                 item["id"] = "w-" + item["id"]
-            item["name"] = (item["apprentice_first_name"] + " " + item["apprentice_last_name"]).strip() or ("Contrat AKTO · " + item["id"][2:] if item["source"] == "wedof" else "Identité non restituée")
+            item["name"] = (item["apprentice_first_name"] + " " + item["apprentice_last_name"]).strip() or ("Contrat OPCO · " + item["id"][2:] if item["source"] == "wedof" else "Identité non restituée")
             if item["source"] == "wedof":
                 from wedof_bts import STATES
                 item["state_label"] = STATES.get(item["state"], "État non communiqué")
@@ -553,7 +553,9 @@ class WorkspaceStore(AktoBtsStore):
             connection.execute("INSERT INTO bts_wedof_contracts VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",
                                (key, as_json(item), stamp))
             if not row or changed:
-                self._event(connection, "w-" + key, "Contrat importé depuis AKTO via WEDOF" if not row else "Contrat actualisé depuis AKTO via WEDOF", actor)
+                from wedof_bts import financer_label
+                label = financer_label(summary["financer"])
+                self._event(connection, "w-" + key, f"Contrat {'importé' if not row else 'actualisé'} depuis {label} via WEDOF", actor)
         return "added" if not row else "updated" if changed else "unchanged"
 
     def update_wedof_details(self, key, fields):

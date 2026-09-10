@@ -1,18 +1,20 @@
 <section class="ws-card ws-pad ws-wedof-sync" aria-label="Ajout individuel depuis WEDOF">
   <div class="ws-section-head">
-    <div><span class="ws-eyebrow">AKTO → WEDOF → votre espace BTS</span><h2>Ajouter un contrat d’apprentissage</h2>
-      <p class="ws-muted">Saisissez son numéro AKTO ou DECA, puis vérifiez le dossier avant de l’ajouter.</p></div>
+    <div><span class="ws-eyebrow">Vos OPCO → WEDOF → votre espace BTS</span><h2>Ajouter un contrat d’apprentissage</h2>
+      <p class="ws-muted">AKTO, OPCO EP, L’Opcommerce et OPCO Mobilités. Saisissez le numéro de contrat ou DECA, puis vérifiez le dossier avant de l’ajouter.</p></div>
     <span class="ws-pill {{ 'ws-pill--green' if wedof_ready else 'ws-pill--warning' }}">{{ 'Ajout individuel' if wedof_ready else 'Connexion WEDOF à configurer' }}</span>
   </div>
   <form method="post" action="{{ url_for('bts_wedof_search') }}" data-wedof-search>
     {{ token() }}<input type="hidden" name="action" value="start">
     <div class="ws-contract-search">
-      <label for="wedof-contract-number"><span>Numéro de contrat AKTO ou numéro DECA</span>
+      <label for="wedof-financer" class="ws-opco-choice"><span>OPCO à rechercher</span>
+        <select id="wedof-financer" name="financer"><option value="">Les quatre OPCO</option>{% for value,label in financers.items() %}<option value="{{ value }}" {% if lookup and lookup.financer == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+      <label for="wedof-contract-number"><span>Numéro de contrat OPCO ou numéro DECA</span>
         <input id="wedof-contract-number" name="number" type="text" maxlength="120" minlength="3" required autocomplete="off" value="{{ lookup.number if lookup else '' }}" placeholder="Saisissez le numéro complet"></label>
       <button class="ws-button ws-button--primary" {% if not wedof_ready or running %}disabled{% endif %}>{{ icon('search',18) }} Rechercher le contrat</button>
     </div>
     <p data-search-message role="status" aria-live="polite"></p>
   </form>
-  <p class="ws-note">Seuls les dossiers que vous choisissez sont ajoutés. La synchronisation entre AKTO et WEDOF n’ajoute aucun dossier automatiquement ici.</p>
+  <p class="ws-note">Seuls les dossiers que vous choisissez sont ajoutés. La synchronisation entre vos OPCO et WEDOF n’ajoute aucun dossier automatiquement ici.</p>
   {% if screen != 'settings' %}<a class="ws-text-button" href="{{ url_for('bts_settings') }}">Vérifier la connexion WEDOF</a>{% endif %}
 </section>
