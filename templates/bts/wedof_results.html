@@ -1,8 +1,8 @@
-<header class="ws-page-head"><div><span class="ws-eyebrow">Ajout à la demande</span><h1>Ajouter un contrat AKTO<span class="ws-title-dot">.</span></h1><p>Recherchez par numéro de contrat ou DECA. L’ajout se fait dossier par dossier.</p></div><a class="ws-button" href="{{ url_for('admin_bts') }}">Retour aux dossiers</a></header>
+<header class="ws-page-head"><div><span class="ws-eyebrow">Ajout à la demande</span><h1>Ajouter un contrat OPCO<span class="ws-title-dot">.</span></h1><p>Recherchez par numéro de contrat ou DECA. L’ajout se fait dossier par dossier.</p></div><a class="ws-button" href="{{ url_for('admin_bts') }}">Retour aux dossiers</a></header>
 {% include 'bts/wedof_lookup.html' %}
 {% if lookup.message %}<p class="ws-alert ws-alert--info" role="status">{{ lookup.message }}</p>{% endif %}
 {% if lookup.status in ['running','paused'] %}
-<section class="ws-card ws-pad"><h2>Poursuivre cette recherche</h2><p class="ws-muted">La recherche du numéro {{ lookup.number }} peut être reprise. Aucun dossier n’a été ajouté.</p>
+<section class="ws-card ws-pad"><h2>Poursuivre cette recherche</h2><p class="ws-muted">La recherche du numéro {{ lookup.number }} auprès de {{ financer_label(lookup.financer) if lookup.financer else 'ces quatre OPCO' }} peut être reprise. Aucun dossier n’a été ajouté.</p>
   <form method="post" action="{{ url_for('bts_wedof_search') }}" data-wedof-search>
     {{ token() }}<input type="hidden" name="action" value="resume"><input type="hidden" name="run_id" value="{{ lookup.id }}"><input type="hidden" name="revision" value="{{ lookup.revision }}">
     <button class="ws-button ws-button--primary" {% if not wedof_ready or running %}disabled{% endif %}>Poursuivre la recherche</button><p data-search-message role="status" aria-live="polite"></p>
@@ -13,15 +13,15 @@
 <section class="ws-reference-results" aria-label="Contrats correspondant au numéro">
 {% for candidate in lookup.candidates %}
   <article class="ws-card ws-pad ws-contract-result">
-    <span class="ws-pill ws-pill--blue">AKTO · {{ candidate.state_label }}</span>
+    <span class="ws-pill ws-pill--blue">{{ financer_label(candidate.financer) }} · {{ candidate.state_label }}</span>
     <h2>{{ ((candidate.apprentice_first_name|default('')) ~ ' ' ~ (candidate.apprentice_last_name|default('')))|trim or 'Identité de l’apprenti non communiquée' }}</h2>
     <p class="ws-muted">{{ candidate.training_title or 'Formation non communiquée' }}</p>
     <dl class="ws-contract-facts">
-      <div><dt>Numéro de contrat AKTO</dt><dd>{{ candidate.external_number or 'Non communiqué' }}</dd></div>
+      <div><dt>Numéro de contrat OPCO</dt><dd>{{ candidate.external_number or 'Non communiqué' }}</dd></div>
       <div><dt>Numéro DECA</dt><dd>{{ candidate.deca_number or 'Non communiqué' }}</dd></div>
       <div><dt>Entreprise</dt><dd>{{ candidate.employer_name or 'Non communiquée' }}{% if candidate.employer_siret %}<small>SIRET {{ candidate.employer_siret }}</small>{% endif %}</dd></div>
       <div><dt>Période du contrat</dt><dd>{{ date_fr(candidate.contract_start) }} → {{ date_fr(candidate.contract_end) }}</dd></div>
-      <div><dt>Engagement AKTO</dt><dd>{{ euros(candidate.engagement) }}</dd></div>
+      <div><dt>Engagement {{ financer_label(candidate.financer) }}</dt><dd>{{ euros(candidate.engagement) }}</dd></div>
     </dl>
     {% if candidate.details_error %}<p class="ws-alert ws-alert--info">{{ candidate.details_error }}</p>{% endif %}
     {% if candidate.existing %}<p>Ce contrat est déjà présent dans votre espace BTS.</p><a class="ws-button" href="{{ url_for('bts_dossier',record_id='w-' ~ candidate.working_contract_id) }}">Ouvrir le dossier existant</a>

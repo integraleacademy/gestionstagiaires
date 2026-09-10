@@ -7,13 +7,13 @@ from unittest.mock import Mock, patch
 from bts_workspace import register_bts_workspace
 from bts_workspace_store import WorkspaceStore, billing_view
 from tests.test_bts_workspace import make_legacy
-from wedof_bts import FINANCER, WedofBtsClient, folder_fields, is_apprenticeship_event, normalize_summary, raw_fields
+from wedof_bts import FINANCERS, WedofBtsClient, folder_fields, is_apprenticeship_event, normalize_summary, raw_fields
 from wedof_bts_lookup import add_selection, matches, reference, search_step
 from wedof_service import WedofApiError
 
 
 def contract(key=1, **changes):
-    return {"id": key, "financer": FINANCER, "state": "accepted", "amount": 6000,
+    return {"id": key, "financer": "opcoCfaAkto", "state": "accepted", "amount": 6000,
             "externalIdTrainingOrganism": f"AK-{key}", "externalIdDeca": f"DECA-{key}",
             "startDate": "2026-09-01T00:00:00Z", "endDate": "2028-08-31T00:00:00Z",
             "updatedOn": "2026-09-10T12:00:00Z", "_links": {
@@ -41,13 +41,14 @@ class ClientTests(unittest.TestCase):
         self.assertTrue(more)
         self.assertEqual(total, 3)
         self.assertEqual(items[0]['employer_name'], 'Entreprise exemple')
-        self.assertEqual(http.get.call_args.kwargs['params'], {'financer': FINANCER, 'state': 'all', 'page': 1, 'limit': 1})
+        self.assertEqual(http.get.call_args.kwargs['params'], {'financer': ','.join(FINANCERS), 'state': 'all', 'page': 1, 'limit': 1})
         self.assertEqual(reserve.call_args.kwargs['origin'], 'gestionstagiaires-bts')
         self.assertNotIn('allow_over_limit', reserve.call_args.kwargs)
         self.assertEqual(http.get.call_args.args[0], 'https://www.wedof.fr/api/workingContracts')
 
     def test_invalid_financer_or_identity_fails_closed(self):
-        for item in (contract(financer='cpf'), contract(id='../organisms'), {'type': 'cpf'}, contract(id=True)):
+        for item in (contract(financer='cpf'), contract(financer='opcoCfaAtlas'), contract(financer=[]),
+                     contract(id='../organisms'), {'type': 'cpf'}, contract(id=True)):
             with self.assertRaises(WedofApiError):
                 normalize_summary(item)
         http = Mock()
@@ -55,6 +56,27 @@ class ClientTests(unittest.TestCase):
         with patch('wedof_service.reserve_request'):
             with self.assertRaises(WedofApiError):
                 WedofBtsClient(api_key='x', session=http).contract('1')
+
+    def test_four_financers_and_explicit_filter_are_checked_against_the_response(self):
+        http = Mock()
+        payload = [contract(key, financer=financer) for key, financer in enumerate(FINANCERS, 1)]
+        with patch('wedof_service.reserve_request'):
+            client = WedofBtsClient(api_key='x', session=http)
+            http.get.return_value = self.response(payload)
+            items, _, _ = client.contracts_page()
+            self.assertEqual({item['financer'] for item in items}, set(FINANCERS))
+            for financer in FINANCERS:
+                with self.subTest(financer=financer):
+                    http.get.return_value = self.response([contract(financer=financer)])
+                    self.assertEqual(client.contracts_page(financer=financer)[0][0]['financer'], financer)
+                    self.assertEqual(http.get.call_args.kwargs['params']['financer'], financer)
+            http.reset_mock()
+            with self.assertRaises(WedofApiError):
+                client.contracts_page(financer='cpf')
+            http.get.assert_not_called()
+            http.get.return_value = self.response([contract()])
+            with self.assertRaises(WedofApiError):
+                client.contracts_page(financer='opcoCfaEp')
 
     def test_rate_limit_has_no_retry_and_governor_redacts_contract_ids(self):
         http = Mock()
@@ -160,6 +182,43 @@ class LookupTests(unittest.TestCase):
         self.assertEqual(self.add('2'), ('w-2', True))
         self.assertIsNone(self.store.record('w-1'))
 
+    def test_same_deca_across_four_opcos_keeps_each_contract_and_financer_distinct(self):
+        summaries = [normalize_summary(contract(key, financer=financer, externalIdDeca='DECA-1'))
+                     for key, financer in enumerate(FINANCERS, 1)]
+        self.api.contracts_page.return_value = (summaries, False, 4)
+        self.api.contract.side_effect = lambda key: summaries[int(key) - 1]
+        result = self.search()
+        self.assertEqual({c['financer'] for c in result['candidates']}, set(FINANCERS))
+        self.assertEqual(self.store.listing()['total'], 0)
+        for key, financer in enumerate(FINANCERS, 1):
+            with self.subTest(financer=financer):
+                self.assertEqual(self.add(str(key)), ('w-' + str(key), True))
+                self.assertEqual(self.store.listing()['total'], key)
+                record = self.store.record('w-' + str(key))
+                self.assertEqual(record['financer'], financer)
+                self.assertIn(FINANCERS[financer], record['events'][0]['label'])
+                self.assertEqual(self.add(str(key)), ('w-' + str(key), False))
+        self.assertEqual({row['financer'] for row in self.store.listing()['records']}, set(FINANCERS))
+
+    def test_selected_opco_is_retained_on_resume_and_cannot_change_during_add(self):
+        summary = normalize_summary(contract(financer='opcoCfaEp'))
+        self.api.contracts_page.return_value = ([summary], False, 1)
+        first = self.step(number='DECA-1', financer='opcoCfaEp')
+        done = self.step(action='continue', run_id=first['id'], revision=first['revision'], financer='opcoCfaAkto')
+        self.assertEqual(done['status'], 'ready')
+        self.assertEqual(done['financer'], 'opcoCfaEp')
+        self.api.contracts_page.assert_called_once_with(1, financer='opcoCfaEp')
+        # The same WEDOF ID and DECA from another supported OPCO cannot replace the preview.
+        self.api.contract.return_value = normalize_summary(contract(financer='opcoCfaMobilites'))
+        self.api.contract.side_effect = None
+        with self.assertRaises(ValueError):
+            self.add()
+        self.assertEqual(self.store.listing()['total'], 0)
+        self.api.reset_mock()
+        with self.assertRaises(WedofApiError):
+            self.step(number='DECA-1', financer='opcoCfaAtlas')
+        self.api.contracts_page.assert_not_called()
+
     def test_partial_reference_does_not_match_and_invalid_input_is_rejected(self):
         self.assertFalse(matches(normalize_summary(contract(123)), reference('DECA-12')))
         self.assertEqual(self.search('AK-123')['candidates'], [])
@@ -248,6 +307,27 @@ class LookupTests(unittest.TestCase):
         self.assertFalse(billing_view(self.store.record('w-1'))['cards'][0]['can_draft'])
         self.assertEqual(len(self.store.record('w-1')['schedules']), 1)
 
+    def test_record_refresh_cannot_replace_the_financer_and_the_ui_keeps_its_name(self):
+        summary = normalize_summary(contract(financer='opcoCfaEp'))
+        self.store.upsert_wedof_summary(summary, 'Test', details=folder_fields(folder(), 'OPCO-1'))
+        register_bts_workspace(self.legacy)
+        client = self.legacy.app.test_client()
+        with client.session_transaction() as state:
+            state.update(admin_logged_in=True, admin_role='admin')
+        with patch.dict(os.environ, {'WEDOF_API_KEY': 'test-key'}), patch('bts_workspace.WedofBtsClient', return_value=self.api):
+            page = client.get('/admin/BTS/dossiers/w-1')
+            self.assertIn('<strong>OPCO EP</strong>', page.text)
+            self.assertIn('OPCO EP via WEDOF', page.text)
+            self.assertNotIn('<strong>AKTO</strong>', page.text)
+            self.assertIn('OPCO EP via WEDOF', client.get('/admin/BTS').text)
+            with client.session_transaction() as state:
+                token = state['bts_csrf_token']
+            response = client.post('/admin/BTS/dossiers/w-1/actualiser', data={'bts_csrf_token': token})
+            self.assertEqual(response.status_code, 302)
+            self.api.folder.assert_not_called()
+            self.api.raw.assert_not_called()
+            self.assertEqual(self.store.record('w-1')['financer'], 'opcoCfaEp')
+
     def test_routes_are_manual_protected_and_old_bulk_routes_are_disabled(self):
         legacy_bulk = Mock(return_value='Unexpected bulk import')
         self.legacy.app.add_url_rule('/admin/BTS/akto/sync', 'admin_bts_akto_sync', lambda: legacy_bulk(), methods=['POST'])
@@ -257,10 +337,11 @@ class LookupTests(unittest.TestCase):
             self.assertEqual(client.post('/admin/BTS/wedof/rechercher').status_code, 302)
             with client.session_transaction() as session:
                 session.update(admin_logged_in=True, admin_role='admin')
-            for path in ('/admin/BTS', '/admin/BTS/connexion', '/admin/BTS/ajouter-akto', '/admin/BTS/nouveau'):
+            for path in ('/admin/BTS', '/admin/BTS/connexion', '/admin/BTS/ajouter-opco', '/admin/BTS/nouveau'):
                 response = client.get(path)
                 self.assertEqual(response.status_code, 200)
                 self.assertNotIn('Synchroniser AKTO via WEDOF', response.text)
+            self.assertEqual(client.get('/admin/BTS/ajouter-akto').location, '/admin/BTS/ajouter-opco')
             factory.assert_not_called()
             self.assertEqual(client.post('/admin/BTS/wedof/rechercher').status_code, 400)
             with client.session_transaction() as session:
@@ -274,11 +355,11 @@ class LookupTests(unittest.TestCase):
             result = response.json
             self.assertEqual(response.status_code, 200)
             client.post('/admin/BTS/wedof/rechercher', data={**data, 'action': 'continue', 'run_id': result['id'], 'revision': result['revision']})
-            preview = client.get('/admin/BTS/ajouter-akto')
+            preview = client.get('/admin/BTS/ajouter-opco')
             self.assertIn('Ajouter ce dossier', preview.text)
             self.assertEqual(self.store.listing()['total'], 0)
             calls = self.api.contracts_page.call_count
-            client.get('/admin/BTS/ajouter-akto')
+            client.get('/admin/BTS/ajouter-opco')
             client.get('/admin/BTS')
             self.assertEqual(self.api.contracts_page.call_count, calls)
             self.assertEqual(self.store.listing()['total'], 0)
@@ -291,7 +372,7 @@ class LookupTests(unittest.TestCase):
 
 class RelayTests(unittest.TestCase):
     def test_known_opco_events_are_recognised_without_affecting_cpf(self):
-        for payload in (folder(), {'financer': FINANCER}, {'event': 'workingContract.updated'},
+        for payload in (folder(), {'financer': 'opcoCfaAkto'}, {'event': 'workingContract.updated'},
                         {'payload': {'type': 'opco', 'accessModality': 'apprentissage'}}):
             self.assertTrue(is_apprenticeship_event(payload))
         self.assertFalse(is_apprenticeship_event({'type': 'cpf'}))

@@ -21,10 +21,11 @@ def production_entrypoint_check():
         with patch.object(legacy, 'AKTO_BTS_DB_FILE', str(Path(directory) / 'akto.sqlite3')), \
              patch.object(legacy, 'AKTO_BTS_SYNC_LOCK_FILE', str(Path(directory) / 'akto.lock')), \
              patch.object(legacy, 'load_data', side_effect=AssertionError('BTS must not read data.json')):
-            for path in ('/admin/BTS', '/admin/BTS/nouveau', '/admin/BTS/connexion', '/admin/BTS/ajouter-akto'):
+            for path in ('/admin/BTS', '/admin/BTS/nouveau', '/admin/BTS/connexion', '/admin/BTS/ajouter-opco'):
                 response = client.get(path)
                 assert response.status_code == 200, (path, response.status_code, response.get_data(as_text=True)[:1000])
             assert client.post('/admin/BTS/nouveau', data={}).status_code == 400
+            assert client.get('/admin/BTS/ajouter-akto').location == '/admin/BTS/ajouter-opco'
             with client.session_transaction() as state:
                 csrf = state['bts_csrf_token']
             for path in ('/admin/BTS/wedof/synchroniser', '/admin/BTS/synchroniser', '/admin/BTS/akto/sync'):
@@ -54,8 +55,10 @@ def browser_check():
         store = WorkspaceStore(legacy.AKTO_BTS_DB_FILE)
         record_id, _ = seed_remote(store)
         api = Mock()
-        api.contracts_page.return_value = ([normalize_summary(contract()), normalize_summary(contract(2))], False, 2)
-        api.contract.return_value = normalize_summary(contract())
+        available = [normalize_summary(contract(key, financer=financer)) for key, financer in enumerate(
+            ['opcoCfaEp', 'opcoCfaAkto', 'opcoCfaOpcommerce', 'opcoCfaMobilites'], 1)]
+        api.contracts_page.return_value = (available, False, 4)
+        api.contract.return_value = available[0]
         api.folder.return_value = folder_fields(folder(), 'OPCO-1')
         server = make_server('127.0.0.1', 0, legacy.app)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -71,12 +74,15 @@ def browser_check():
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 page.goto(url + '/__test_login')
                 factory.assert_not_called()
-                page.get_by_label('Numéro de contrat AKTO ou numéro DECA').fill('DECA-1')
+                assert page.get_by_label('OPCO à rechercher').input_value() == ''
+                assert page.get_by_label('OPCO à rechercher').locator('option').count() == 5
+                page.get_by_label('Numéro de contrat OPCO ou numéro DECA').fill('DECA-1')
                 page.get_by_role('button', name='Rechercher le contrat', exact=True).click()
                 page.get_by_role('button', name='Ajouter ce dossier', exact=True).wait_for()
                 assert store.record('w-1') is None
                 assert store.record('w-2') is None
-                api.contracts_page.assert_called_once()
+                api.contracts_page.assert_called_once_with(1, financer='')
+                assert 'OPCO EP · Engagé' in page.inner_text('body')
                 api.folder.assert_called_once()
                 page.screenshot(path=str(output / 'recherche-contrat-desktop.png'), full_page=True)
                 page.set_viewport_size({'width': 390, 'height': 1000})
@@ -85,7 +91,9 @@ def browser_check():
                 page.get_by_role('button', name='Ajouter ce dossier', exact=True).click()
                 page.get_by_role('heading', name='Camille Exemple', exact=True).wait_for()
                 assert store.record('w-1') is not None
-                assert store.record('w-2') is None
+                assert all(store.record('w-' + str(key)) is None for key in (2, 3, 4))
+                assert store.record('w-1')['financer'] == 'opcoCfaEp'
+                assert 'OPCO EP' in page.inner_text('body')
                 page.set_viewport_size({'width': 1440, 'height': 1100})
                 page.goto(url + '/admin/BTS')
                 page.screenshot(path=str(output / 'dossiers-desktop.png'), full_page=True)
@@ -120,7 +128,7 @@ def browser_check():
                 browser.close()
         finally:
             server.shutdown()
-    print('Browser flows: WEDOF exact lookup and individual add, dossier creation, fee dialog, invoice draft, responsive layouts and JavaScript OK')
+    print('Browser flows: four-OPCO lookup and individual OPCO EP add, dossier creation, fee dialog, invoice draft, responsive layouts and JavaScript OK')
 
 
 if __name__ == '__main__':

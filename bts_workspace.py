@@ -21,7 +21,7 @@ from flask import abort, flash, jsonify, make_response, redirect, request, sessi
 
 from akto_bts import AktoApiError, AktoClient, AktoConfig, AktoConfigurationError
 from wedof_service import WedofApiError, WedofConfigurationError
-from wedof_bts import WedofBtsClient
+from wedof_bts import FINANCERS, WedofBtsClient, financer_filter, financer_label
 from wedof_bts_lookup import add_selection, public_lookup, reference, search_step
 from bts_workspace_store import (
     ALL_FIELDS, CHECKLIST, FEE_LABELS, FIELD_GROUPS, TABS, EditConflict,
@@ -29,7 +29,7 @@ from bts_workspace_store import (
     now, remote_number,
 )
 
-VERSION = "20260910-bts-individuel-1"
+VERSION = "20260910-bts-multi-opco-1"
 
 
 def configuration_id(config: AktoConfig) -> str:
@@ -93,13 +93,15 @@ def register_bts_workspace(legacy):
             config=config.diagnostics(), diagnostic=diagnostic,
             wedof_ready=bool(os.environ.get("WEDOF_API_KEY", "").strip()),
             wedof_diagnostic=wedof_diagnostic(),
+            financers=FINANCERS, financer_label=financer_label,
             running=legacy._akto_bts_sync_is_running(),
             **context,
         )
         return make_response(html)
 
     def wedof_config_id():
-        return hashlib.sha256(os.environ.get("WEDOF_API_KEY", "").strip().encode()).hexdigest()
+        value = os.environ.get("WEDOF_API_KEY", "").strip() + "\0" + ",".join(FINANCERS)
+        return hashlib.sha256(value.encode()).hexdigest()
 
     def wedof_diagnostic():
         result = store().wedof_state("connection")
@@ -134,7 +136,7 @@ def register_bts_workspace(legacy):
             try:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
-                raise WorkspaceError("Une opération AKTO est déjà en cours. Réessayez à sa fin.") from None
+                raise WorkspaceError("Une opération OPCO est déjà en cours. Réessayez à sa fin.") from None
             yield
         finally:
             handle.close()
@@ -151,7 +153,7 @@ def register_bts_workspace(legacy):
         if request.method == "POST":
             try:
                 record_id = store().create_local(request.form, actor())
-                flash("Dossier créé. Vous pouvez compléter l’étudiant, l’entreprise et le contrat sans attendre AKTO.", "success")
+                flash("Dossier créé. Vous pouvez compléter l’étudiant, l’entreprise et le contrat sans attendre l’OPCO.", "success")
                 return redirect(url_for("bts_dossier", record_id=record_id, tab="etudiant"))
             except WorkspaceError as exc:
                 flash(str(exc), "error")
@@ -207,7 +209,7 @@ def register_bts_workspace(legacy):
         get_record(record_id)
         try:
             store().add_fee(record_id, request.form.get("nature", ""), request.form.get("amount"), request.form.get("description", ""), actor())
-            flash("Frais annexe enregistré localement. Il n’est pas encore transmis ni accepté par AKTO.", "success")
+            flash("Frais annexe enregistré localement. Il n’est pas encore transmis ni accepté par l’OPCO.", "success")
         except WorkspaceError as exc:
             flash(str(exc), "error")
         return redirect(url_for("bts_dossier", record_id=record_id, tab="comptabilite"))
@@ -226,13 +228,13 @@ def register_bts_workspace(legacy):
         get_record(record_id)
         try:
             store().remove_local_item(record_id, request.form.get("item_id", ""), request.form.get("kind", ""), actor())
-            flash("Élément local supprimé. Les données AKTO restent inchangées.", "success")
+            flash("Élément local supprimé. Les données OPCO restent inchangées.", "success")
         except WorkspaceError as exc:
             flash(str(exc), "error")
         return redirect(url_for("bts_dossier", record_id=record_id, tab="comptabilite", payer=request.form.get("payer", "opco")))
 
     def settings():
-        return render("settings", title="Connexion AKTO")
+        return render("settings", title="Connexions OPCO")
 
     def wedof_test():
         result = {"ok": False, "checked_at": now(), "configuration_id": wedof_config_id()}
@@ -242,8 +244,8 @@ def register_bts_workspace(legacy):
                 client = WedofBtsClient()
                 items, more, total = client.contracts_page(limit=1)
                 result.update(ok=True, total=total, sample_count=len(items),
-                              message=(f"Lecture AKTO via WEDOF vérifiée : {total} contrat(s) annoncé(s)." if total is not None
-                                       else "Lecture des contrats AKTO via WEDOF vérifiée."))
+                              message=(f"Lecture OPCO via WEDOF vérifiée : {total} contrat(s) annoncé(s) au total pour les quatre OPCO pris en charge." if total is not None
+                                       else "Lecture des contrats OPCO via WEDOF vérifiée."))
         except (WedofApiError, WedofConfigurationError, WorkspaceError) as exc:
             result["message"] = str(exc)
         except Exception:
@@ -268,7 +270,7 @@ def register_bts_workspace(legacy):
         result = public_lookup(state)
         for candidate in result["candidates"]:
             candidate["existing"] = store().record("w-" + candidate["working_contract_id"]) is not None
-        return render("lookup", title="Ajouter un contrat AKTO", lookup=result)
+        return render("lookup", title="Ajouter un contrat OPCO", lookup=result)
 
     def wedof_search():
         client = None
@@ -277,10 +279,12 @@ def register_bts_workspace(legacy):
             abort(400)
         try:
             number = reference(request.form.get("number", "")) if action == "start" else ""
+            financer = request.form.get("financer", "") if action == "start" else ""
+            financer_filter(financer)
             with api_lock():
                 client = WedofBtsClient()
                 result = search_step(store(), client, lookup_owner(), config_id=wedof_config_id(), action=action,
-                                     number=number, run_id=request.form.get("run_id", ""), revision=int(request.form.get("revision", "-1")))
+                                     number=number, financer=financer, run_id=request.form.get("run_id", ""), revision=int(request.form.get("revision", "-1")))
             if request.headers.get("Accept") == "application/json":
                 return jsonify(**result, redirect_url=url_for("bts_lookup"))
         except (WedofApiError, WedofConfigurationError, WorkspaceError, ValueError) as exc:
@@ -325,6 +329,8 @@ def register_bts_workspace(legacy):
                 client = WedofBtsClient()
                 key = record["working_contract_id"]
                 summary = client.contract(key)
+                if summary["financer"] != record.get("financer"):
+                    raise WorkspaceError("WEDOF a renvoyé un contrat d’un autre OPCO. Le dossier existant a été conservé.")
                 store().upsert_wedof_summary(summary, actor())
                 if summary.get("registration_id"):
                     fields = client.folder(summary["registration_id"])
@@ -382,7 +388,7 @@ def register_bts_workspace(legacy):
         if record["source"] == "wedof":
             return refresh_wedof_record(record)
         if record["source"] != "akto":
-            flash("Ce dossier local n’a pas encore de référence AKTO. Aucun envoi n’a été effectué.", "info")
+            flash("Ce dossier local n’a pas encore de référence OPCO. Aucun envoi n’a été effectué.", "info")
             return redirect(url_for("bts_dossier", record_id=record_id))
         client = None
         try:
@@ -423,7 +429,7 @@ def register_bts_workspace(legacy):
         return response
 
     def full_sync():
-        message = "L’import global est désactivé. Ajoutez un dossier par son numéro de contrat AKTO ou DECA."
+        message = "L’import global est désactivé. Ajoutez un dossier par son numéro de contrat OPCO ou DECA."
         if request.headers.get("Accept") == "application/json":
             return jsonify(status="disabled", message=message), 410
         return message, 410
@@ -442,7 +448,8 @@ def register_bts_workspace(legacy):
         ("/admin/BTS/connexion", "bts_settings", settings, ["GET"], False),
         ("/admin/BTS/connexion/tester", "bts_test_connection", test_connection, ["POST"], True),
         ("/admin/BTS/wedof/tester", "bts_wedof_test", wedof_test, ["POST"], True),
-        ("/admin/BTS/ajouter-akto", "bts_lookup", lookup_page, ["GET"], False),
+        ("/admin/BTS/ajouter-opco", "bts_lookup", lookup_page, ["GET"], False),
+        ("/admin/BTS/ajouter-akto", "bts_lookup_akto", lambda: redirect(url_for("bts_lookup")), ["GET"], False),
         ("/admin/BTS/wedof/rechercher", "bts_wedof_search", wedof_search, ["POST"], True),
         ("/admin/BTS/wedof/ajouter", "bts_wedof_add", wedof_add, ["POST"], True),
         ("/admin/BTS/wedof/synchroniser", "bts_wedof_sync", full_sync, ["POST"], True),

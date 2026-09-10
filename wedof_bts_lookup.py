@@ -1,6 +1,6 @@
 """Explicit reference lookup. Only exact matches enter a short-lived preview.
 
-WEDOF has no documented AKTO/DECA number filter on workingContracts. Catalogue
+WEDOF has no documented contract/DECA number filter on workingContracts. Catalogue
 pages are read on demand; unrelated contracts never enter the BTS dossier store.
 The route must hold the API lock. A separate, protected POST adds one selection.
 """
@@ -8,17 +8,17 @@ import re
 import unicodedata
 import uuid
 
-from wedof_bts import stamp
+from wedof_bts import financer_filter, stamp
 from wedof_service import WedofApiError
 
 
 def reference(value):
     value = unicodedata.normalize("NFKC", str(value or ""))
     if len(value) > 120 or not re.fullmatch(r"[\w\s./-]+", value, flags=re.UNICODE):
-        raise ValueError("Saisissez un numéro de contrat AKTO ou un numéro DECA valide.")
+        raise ValueError("Saisissez un numéro de contrat OPCO ou un numéro DECA valide.")
     normalized = "".join(value.split()).casefold()
     if len(normalized) < 3 or not any(c.isdigit() for c in normalized):
-        raise ValueError("Saisissez le numéro complet du contrat AKTO ou du contrat DECA.")
+        raise ValueError("Saisissez le numéro complet du contrat OPCO ou le numéro DECA.")
     return normalized
 
 
@@ -34,20 +34,22 @@ def matches(summary, number):
 
 def public_lookup(state):
     result = {key: state[key] for key in (
-        "id", "revision", "status", "phase", "number", "message", "requests", "updated_at"
+        "id", "revision", "status", "phase", "number", "financer", "message", "requests", "updated_at"
     ) if key in state}
-    fields = ("working_contract_id", "external_number", "deca_number", "apprentice_first_name",
+    fields = ("working_contract_id", "external_number", "deca_number", "financer", "apprentice_first_name",
               "apprentice_last_name", "employer_name", "employer_siret", "training_title",
               "contract_start", "contract_end", "state_label", "engagement", "details_error")
     result["candidates"] = [{key: item[key] for key in fields if key in item} for item in state.get("candidates", [])] if state.get("status") == "ready" else []
     return result
 
 
-def search_step(store, client, owner, *, config_id, action="start", number="", run_id="", revision=-1):
+def search_step(store, client, owner, *, config_id, action="start", number="", financer="", run_id="", revision=-1):
     state = store.wedof_lookup(owner)
     if action == "start":
         number = reference(number)
+        financer_filter(financer)
         state = {"id": uuid.uuid4().hex, "revision": 0, "number": number, "config_id": config_id,
+                 "financer": financer,
                  "phase": "list", "status": "running", "page": 1, "seen": [], "candidates": [],
                  "index": 0, "requests": 0, "budget_start": 0, "total": None}
     elif not state or state.get("id") != run_id or state.get("config_id") != config_id:
@@ -62,7 +64,7 @@ def search_step(store, client, owner, *, config_id, action="start", number="", r
             raise WedofApiError("La recherche est en pause après 20 lectures. Vous pouvez la poursuivre ; aucun dossier n’a été ajouté.", "lookup_batch_limit")
         if state["phase"] == "list":
             state["requests"] += 1
-            items, more, total = client.contracts_page(state["page"])
+            items, more, total = client.contracts_page(state["page"], financer=state.get("financer", ""))
             keys = [item["working_contract_id"] for item in items]
             if set(keys) & set(state["seen"]) or (state["total"] is not None and total != state["total"]):
                 raise WedofApiError("La liste WEDOF a changé pendant la recherche. Relancez la recherche avec le même numéro.", "lookup_catalog_changed")
@@ -70,7 +72,7 @@ def search_step(store, client, owner, *, config_id, action="start", number="", r
             state["total"] = total
             state["candidates"].extend(item for item in items if matches(item, state["number"]))
             if len(state["candidates"]) > 20:
-                raise WedofApiError("Plus de 20 contrats correspondent. Utilisez le numéro de dossier AKTO pour préciser la recherche.", "lookup_ambiguous")
+                raise WedofApiError("Plus de 20 contrats correspondent. Choisissez l’OPCO et utilisez son numéro de contrat pour préciser la recherche.", "lookup_ambiguous")
             if more:
                 if state["page"] >= 100:
                     raise WedofApiError("La recherche atteint la limite de 100 pages. Précisez le numéro auprès de WEDOF.", "lookup_page_limit")
@@ -95,7 +97,7 @@ def search_step(store, client, owner, *, config_id, action="start", number="", r
         if state["phase"] == "preview" and state["index"] >= len(state["candidates"]):
             state.update(status="ready", phase="complete")
             state["message"] = (f"{len(state['candidates'])} contrat(s) trouvé(s). Vérifiez les informations puis ajoutez le dossier choisi."
-                                if state["candidates"] else "Aucun contrat ne correspond à ce numéro dans WEDOF. Vérifiez le numéro ; si la connexion AKTO vient d’être activée, réessayez après la synchronisation WEDOF.")
+                                if state["candidates"] else "Aucun contrat ne correspond à ce numéro dans WEDOF. Vérifiez le numéro et la connexion de l’OPCO ; si elle vient d’être activée, réessayez après la synchronisation WEDOF.")
         else:
             state["message"] = "Recherche en cours. Aucun dossier n’est ajouté à cette étape."
     except WedofApiError as exc:
@@ -118,7 +120,9 @@ def add_selection(store, client, state, key, actor, *, config_id, run_id):
     if store.record(record_id):
         return record_id, False
     summary = client.contract(key)
-    if not matches(summary, state["number"]) or summary["summary_hash"] != candidate["summary_hash"]:
+    if (not matches(summary, state["number"]) or summary["summary_hash"] != candidate["summary_hash"]
+            or summary["financer"] != candidate["financer"]
+            or (state.get("financer") and summary["financer"] != state["financer"])):
         raise ValueError("Le contrat a changé depuis la recherche. Recherchez-le de nouveau avant de l’ajouter.")
     fields = {"needs_detail": True, "details_error": "WEDOF ne fournit pas encore de fiche apprenti pour ce contrat."}
     if summary.get("registration_id"):
