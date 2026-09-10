@@ -1,0 +1,57 @@
+name: Espace BTS
+
+on:
+  push:
+    branches: [codex/bts-workspace-filiz-20260910]
+  pull_request:
+    paths:
+      - 'bts_workspace*.py'
+      - 'akto_bts.py'
+      - 'crm_app.py'
+      - 'templates/bts/**'
+      - 'static/css/bts-workspace.css'
+      - 'static/js/bts-workspace.js'
+      - 'tests/test_bts_workspace.py'
+      - 'scripts/check_bts_workspace_ui.py'
+      - '.github/workflows/bts-workspace.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bts-workspace-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PERSIST_DIR: /tmp/gestionstagiaires-bts-ci
+      SECRET_KEY: ephemeral-bts-ci-only-not-production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Installer les dépendances de test
+        run: python -m pip install --disable-pip-version-check -r requirements.txt playwright
+      - name: Vérifier la syntaxe et les tests BTS
+        run: |
+          python -m py_compile bts_workspace.py bts_workspace_store.py crm_app.py scripts/check_bts_workspace_ui.py
+          python -m unittest tests.test_bts_workspace -v
+          python -m unittest tests.test_akto_bts -v
+      - name: Installer Chromium pour les tests visuels
+        run: python -m playwright install --with-deps chromium
+      - name: Tester le point d’entrée et les parcours dans le navigateur
+        run: python scripts/check_bts_workspace_ui.py --browser
+      - name: Conserver les captures de test sans données réelles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bts-workspace-verification
+          path: test-artifacts/bts/
+          if-no-files-found: ignore
+          retention-days: 7
