@@ -22,14 +22,14 @@ from flask import abort, flash, jsonify, make_response, redirect, request, sessi
 from akto_bts import AktoApiError, AktoClient, AktoConfig, AktoConfigurationError
 from wedof_service import WedofApiError, WedofConfigurationError
 from wedof_bts import WedofBtsClient
-from wedof_bts_sync import public_state, sync_step
+from wedof_bts_lookup import add_selection, public_lookup, reference, search_step
 from bts_workspace_store import (
     ALL_FIELDS, CHECKLIST, FEE_LABELS, FIELD_GROUPS, TABS, EditConflict,
     WorkspaceError, WorkspaceStore, billing_view, date_fr, euros, euros_cents,
     now, remote_number,
 )
 
-VERSION = "20260910-bts-wedof-2"
+VERSION = "20260910-bts-individuel-1"
 
 
 def configuration_id(config: AktoConfig) -> str:
@@ -92,7 +92,6 @@ def register_bts_workspace(legacy):
             euros=euros, cents=euros_cents, date_fr=date_fr,
             config=config.diagnostics(), diagnostic=diagnostic,
             wedof_ready=bool(os.environ.get("WEDOF_API_KEY", "").strip()),
-            wedof_sync=public_state(store().wedof_state()),
             wedof_diagnostic=wedof_diagnostic(),
             running=legacy._akto_bts_sync_is_running(),
             **context,
@@ -257,33 +256,67 @@ def register_bts_workspace(legacy):
         flash(result["message"], "success" if result["ok"] else "error")
         return redirect(url_for("bts_settings"))
 
-    def wedof_sync_step():
+    def lookup_owner():
+        if not session.get("bts_lookup_owner"):
+            session["bts_lookup_owner"] = secrets.token_urlsafe(32)
+        return session["bts_lookup_owner"]
+
+    def lookup_page():
+        state = store().wedof_lookup(session.get("bts_lookup_owner"))
+        if state.get("config_id") != wedof_config_id():
+            state = {}
+        result = public_lookup(state)
+        for candidate in result["candidates"]:
+            candidate["existing"] = store().record("w-" + candidate["working_contract_id"]) is not None
+        return render("lookup", title="Ajouter un contrat AKTO", lookup=result)
+
+    def wedof_search():
         client = None
         action = request.form.get("action", "start")
         if action not in {"start", "resume", "continue"}:
             abort(400)
         try:
+            number = reference(request.form.get("number", "")) if action == "start" else ""
             with api_lock():
                 client = WedofBtsClient()
-                result = sync_step(store(), client, actor(), config_id=wedof_config_id(), action=action,
-                                   run_id=request.form.get("run_id", ""), revision=int(request.form.get("revision", "-1")))
+                result = search_step(store(), client, lookup_owner(), config_id=wedof_config_id(), action=action,
+                                     number=number, run_id=request.form.get("run_id", ""), revision=int(request.form.get("revision", "-1")))
             if request.headers.get("Accept") == "application/json":
-                return jsonify(result)
-            flash(result.get("message", "Synchronisation préparée."), "info")
+                return jsonify(**result, redirect_url=url_for("bts_lookup"))
         except (WedofApiError, WedofConfigurationError, WorkspaceError, ValueError) as exc:
-            message = str(exc) if not isinstance(exc, ValueError) or isinstance(exc, WorkspaceError) else "Paramètres de synchronisation invalides."
+            message = str(exc)
             if request.headers.get("Accept") == "application/json":
-                return jsonify(status="paused", message=message), 409
+                return jsonify(status="error", message=message), 409
             flash(message, "error")
         except Exception:
-            app.logger.error("[BTS_WEDOF] sync_step_failed")
+            app.logger.error("[BTS_WEDOF] lookup_failed")
             if request.headers.get("Accept") == "application/json":
-                return jsonify(status="paused", message="Import interrompu. Les contrats déjà enregistrés sont conservés ; vous pouvez reprendre."), 500
-            flash("Import interrompu. Les contrats déjà enregistrés sont conservés.", "error")
+                return jsonify(status="error", message="Recherche interrompue. Aucun dossier n’a été ajouté."), 500
+            flash("Recherche interrompue. Aucun dossier n’a été ajouté.", "error")
         finally:
             if client:
                 client.close()
-        return redirect(url_for("admin_bts"))
+        return redirect(url_for("bts_lookup"))
+
+    def wedof_add():
+        client = None
+        try:
+            with api_lock():
+                state = store().wedof_lookup(session.get("bts_lookup_owner"))
+                client = WedofBtsClient()
+                record_id, added = add_selection(store(), client, state, request.form.get("working_contract_id", ""), actor(),
+                                                 config_id=wedof_config_id(), run_id=request.form.get("run_id", ""))
+            flash("Le dossier choisi a été ajouté à votre espace BTS." if added else "Ce contrat est déjà présent dans votre espace BTS.", "success")
+            return redirect(url_for("bts_dossier", record_id=record_id))
+        except (WedofApiError, WedofConfigurationError, WorkspaceError, ValueError) as exc:
+            flash(str(exc), "error")
+        except Exception:
+            app.logger.error("[BTS_WEDOF] individual_import_failed")
+            flash("L’ajout n’a pas pu être confirmé. Réessayez avec ce contrat ; il ne sera pas ajouté en double.", "error")
+        finally:
+            if client:
+                client.close()
+        return redirect(url_for("bts_lookup"))
 
     def refresh_wedof_record(record):
         client = None
@@ -390,7 +423,10 @@ def register_bts_workspace(legacy):
         return response
 
     def full_sync():
-        return legacy.admin_bts_akto_sync()
+        message = "L’import global est désactivé. Ajoutez un dossier par son numéro de contrat AKTO ou DECA."
+        if request.headers.get("Accept") == "application/json":
+            return jsonify(status="disabled", message=message), 410
+        return message, 410
 
     routes = [
         ("/admin/BTS/nouveau", "bts_new", new_dossier, ["GET"], False),
@@ -406,12 +442,18 @@ def register_bts_workspace(legacy):
         ("/admin/BTS/connexion", "bts_settings", settings, ["GET"], False),
         ("/admin/BTS/connexion/tester", "bts_test_connection", test_connection, ["POST"], True),
         ("/admin/BTS/wedof/tester", "bts_wedof_test", wedof_test, ["POST"], True),
-        ("/admin/BTS/wedof/synchroniser", "bts_wedof_sync", wedof_sync_step, ["POST"], True),
+        ("/admin/BTS/ajouter-akto", "bts_lookup", lookup_page, ["GET"], False),
+        ("/admin/BTS/wedof/rechercher", "bts_wedof_search", wedof_search, ["POST"], True),
+        ("/admin/BTS/wedof/ajouter", "bts_wedof_add", wedof_add, ["POST"], True),
+        ("/admin/BTS/wedof/synchroniser", "bts_wedof_sync", full_sync, ["POST"], True),
         ("/admin/BTS/synchroniser", "bts_sync", full_sync, ["POST"], True),
         ("/admin/BTS/export.json", "bts_export", export, ["GET"], False),
         ("/admin/bts", "bts_lowercase", lambda: redirect(url_for("admin_bts")), ["GET"], False),
     ]
     app.view_functions["admin_bts"] = protected(home)
+    if "admin_bts_akto_sync" in app.view_functions:
+        app.view_functions["admin_bts_akto_sync"] = protected(full_sync, write=True)
+        endpoints.add("admin_bts_akto_sync")
     for path, endpoint, function, methods, write in routes:
         endpoints.add(endpoint)
         app.add_url_rule(path, endpoint, protected(function, write=write), methods=methods)

@@ -16,19 +16,37 @@ AKTO reste disponible dans les paramètres avancés.
   dans ce retour ; les montants absents restent inconnus. Les factures et paiements
   WEDOF génériques ne sont pas assimilés aux factures et règlements AKTO.
 
-La synchronisation est lancée explicitement et continue tant que la page reste
-ouverte. Chaque POST traite une page de catalogue ou au plus trois fiches liées.
-Le curseur est enregistré dans la base BTS et chaque étape porte une révision.
-Après interruption ou plafond atteint, « Poursuivre » reprend le travail conservé.
-Une série est limitée à 80 tentatives avant reprise explicite ; tous les appels
-respectent aussi le compteur partagé WEDOF, sans dérogation ni retry HTTP.
+L’ajout est individuel : saisir le numéro complet de contrat AKTO ou le numéro
+DECA, vérifier l’aperçu, puis cliquer sur « Ajouter ce dossier ». Une recherche
+n’ajoute aucun dossier à la liste BTS. Les numéros sont comparés exactement,
+après normalisation de la casse et des espaces ; une référence partielle ne
+sélectionne pas les contrats dont le numéro commence de la même façon.
+
+L’API WEDOF ne documente pas de filtre par ces numéros. La recherche explicite lit
+donc les pages du catalogue, puis les fiches liées aux seuls contrats correspondant
+au numéro. Les autres contrats ne sont pas enregistrés comme dossiers. L’aperçu
+est lié à la session, expire après 20 minutes d’inactivité et n’entre pas dans les
+exports. Chaque POST traite une page ou une fiche liée, avec un curseur et une
+révision pour éviter les lectures répétées. Une série est limitée à 20 tentatives
+avant reprise explicite ; tous les appels respectent aussi le compteur partagé
+WEDOF, sans dérogation ni retry HTTP.
+
+L’ajout relit uniquement le contrat choisi et sa fiche liée, vérifie leur identité
+et l’absence de changement du contrat depuis l’aperçu, puis crée ce seul dossier
+dans une transaction. Un double clic ne crée pas de doublon. Si plusieurs contrats
+portent le numéro DECA saisi, chacun doit être ajouté séparément.
+
 Les GET de navigation n’effectuent aucun appel WEDOF et aucun cron n’est ajouté.
+La synchronisation périodique AKTO vers WEDOF n’ajoute rien dans Gestion Stagiaires.
+Les anciens imports globaux `/admin/BTS/synchroniser`,
+`/admin/BTS/wedof/synchroniser` et `/admin/BTS/akto/sync` sont désactivés côté serveur
+(HTTP 410 après contrôle des droits et du CSRF).
 
 `bts_wedof_contracts` conserve le cache par ID WEDOF (`w-…`) de manière additive.
-La réimportation ne modifie jamais les notes, frais, brouillons ou dossiers locaux.
+Un nouvel ajout d’un contrat déjà présent ouvre le dossier existant sans le modifier.
+L’actualisation ciblée ne modifie jamais les notes, frais, brouillons ou dossiers locaux.
 Deux contrats du même apprenti restent distincts ; aucune fusion par nom n’est
-faite. Un contrat absent d’une liste complète est signalé et conservé. Une erreur
-de pagination ne supprime aucun contrat. Les informations importées sont en
+faite. Une recherche ne remplace ni ne supprime aucun dossier existant. Les informations importées sont en
 lecture seule et limitées aux champs utiles ; le payload brut, le NIR et les
 coordonnées bancaires ne sont pas conservés.
 
@@ -72,7 +90,7 @@ L’interface reprend la structure demandée : navigation dédiée, liste de dos
 
 - Test de connexion : authentification OAuth, puis lecture de la première page `/v2/dossiers/etats`. Paramètres renseignés et connexion vérifiée sont deux états différents. Le résultat est invalidé si la configuration change.
 - Actualisation ciblée : lecture du dossier `/v2/dossiers?numeroInterne=…`, vérification de son identité et mise à jour de ses données/échéances seulement. Les factures gardent leur propre date de vérification.
-- La synchronisation complète existante reste disponible et conserve son verrou interprocessus.
+- L’ancien import global direct AKTO est désactivé, comme l’import global WEDOF.
 
 ## Limites à ne pas confondre avec des fonctionnalités actives
 
@@ -80,11 +98,11 @@ Ce lot n’émet pas de contrat ni de facture et ne transmet aucun document à u
 
 Les frais locaux ne sont pas des montants acceptés par AKTO. Les brouillons ne font pas évoluer artificiellement les montants facturés, les règlements ou les états du financeur. Le reste à charge entreprise n’est pas calculé automatiquement.
 
-La récupération effective des vrais dossiers nécessite les adresses et identifiants techniques AKTO. Le test n’infère pas la validité de la connexion à partir de la seule présence des variables.
+La récupération via WEDOF nécessite la clé WEDOF existante, une connexion AKTO active chez WEDOF et des contrats accessibles à cette clé. Le test n’infère pas la validité de la connexion à partir de la seule présence des variables. Les identifiants OAuth AKTO concernent uniquement le connecteur direct avancé.
 
 ## Stockage et sécurité
 
-Les nouvelles tables `bts_local_dossiers`, `bts_annotations`, `bts_fees`, `bts_invoice_drafts`, `bts_events` et `bts_diagnostics` sont créées de manière additive dans la base BTS dédiée. Aucun accès à `data.json` n’est nécessaire pour rendre les pages BTS. Le remplacement du cache AKTO ne supprime pas ces tables locales.
+Les tables `bts_local_dossiers`, `bts_annotations`, `bts_fees`, `bts_invoice_drafts`, `bts_events`, `bts_diagnostics`, `bts_wedof_contracts` et `bts_wedof_lookups` sont créées de manière additive dans la base BTS dédiée. Aucun accès à `data.json` n’est nécessaire pour rendre les pages BTS. Le remplacement du cache AKTO ne supprime pas ces tables locales. Les recherches expirées sont exclues des lectures et purgées lors de l’enregistrement d’une nouvelle étape de recherche.
 
 Les routes reprennent les contrôles de connexion, de super-administration et de droit d’écriture du projet. Les partenaires sont exclus. Les nouveaux formulaires POST ont un jeton CSRF propre à la session. Les modifications simultanées sont protégées par un numéro de révision. Les exports sont confidentiels et non mis en cache. Les clés et secrets restent dans Render, ne figurent ni dans les pages ni dans les diagnostics enregistrés.
 
@@ -99,13 +117,14 @@ Commandes :
 ```sh
 python -m unittest tests.test_bts_workspace -v
 python -m unittest tests.test_akto_bts -v
+python -m unittest tests.test_wedof_bts tests.test_wedof_isolation -v
 python scripts/check_bts_workspace_ui.py --browser
 ```
 
-Le script de navigateur vérifie les dialogues, la création d’un dossier, les frais, les brouillons, l’absence d’erreurs JavaScript et le débordement horizontal aux largeurs 1440, 1024, 768 et 390 pixels. Le faux accès de test n’est enregistré que dans l’application Flask temporaire du script et n’existe pas en production.
+Le script de navigateur vérifie la recherche par DECA, l’aperçu sans import, l’ajout du seul contrat choisi parmi deux contrats disponibles, les dialogues, la création d’un dossier local, les frais, les brouillons, l’absence d’erreurs JavaScript et le débordement horizontal aux largeurs 1440, 1024, 768 et 390 pixels. Le contrôle de l’entrée réelle vérifie aussi la désactivation des trois anciens imports globaux. Le faux accès de test n’est enregistré que dans l’application Flask temporaire du script et n’existe pas en production.
 
 ## Déploiement et retour arrière
 
 La fusion sur `main` déclenche le déploiement automatique Render déjà configuré. Aucun nouveau service ni nouvelle variable obligatoire n’est ajouté. Contrôler le statut du déploiement, `/healthz` et les journaux avant d’annoncer la mise en ligne.
 
-Pour revenir à l’écran précédent, retirer l’import et l’appel `register_bts_workspace` dans `crm_app.py`, puis redéployer le code. Ne pas supprimer les tables `bts_*` : elles contiennent le travail local et doivent être conservées/exportées. Une sauvegarde/restauration doit utiliser les mécanismes SQLite appropriés et tenir compte du journal WAL.
+Toute restauration doit conserver l’enregistrement de l’espace BTS et la désactivation des imports globaux. Ne pas supprimer les tables `bts_*` : elles contiennent le travail local et doivent être conservées/exportées. Une sauvegarde/restauration doit utiliser les mécanismes SQLite appropriés et tenir compte du journal WAL.
