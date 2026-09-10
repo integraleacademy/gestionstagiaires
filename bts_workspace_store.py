@@ -12,6 +12,7 @@ import json
 import math
 import re
 import sqlite3
+import time
 import uuid
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Mapping
@@ -275,6 +276,9 @@ class WorkspaceStore(AktoBtsStore):
                     id TEXT PRIMARY KEY, payload_json TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS bts_wedof_lookups (
+                    owner TEXT PRIMARY KEY, payload_json TEXT NOT NULL, expires_at INTEGER NOT NULL
+                );
             """)
 
     @staticmethod
@@ -473,7 +477,7 @@ class WorkspaceStore(AktoBtsStore):
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute("SELECT * FROM contracts WHERE internal_number=?", (number,)).fetchone()
             if not row:
-                raise WorkspaceError("Dossier absent du cache. Lancez une synchronisation complète.")
+                raise WorkspaceError("Dossier absent du cache. Recherchez-le par son numéro de contrat AKTO ou DECA.")
             cerfa = detail.get("cerfa")
             if not isinstance(cerfa, dict) or str(cerfa.get("numeroInterne") or "") != number:
                 raise WorkspaceError("AKTO a renvoyé un dossier non identifiable. Le cache a été conservé.")
@@ -509,11 +513,27 @@ class WorkspaceStore(AktoBtsStore):
             connection.execute("INSERT INTO bts_diagnostics VALUES (?,?,?) ON CONFLICT(name) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",
                                ("wedof_" + name, as_json(value), now()))
 
-    def upsert_wedof_summary(self, summary, actor):
+    def wedof_lookup(self, owner):
+        if not owner:
+            return {}
+        with self._connect() as connection:
+            row = connection.execute("SELECT payload_json FROM bts_wedof_lookups WHERE owner=? AND expires_at>?",
+                                     (owner, int(time.time()))).fetchone()
+        return json.loads(row[0]) if row else {}
+
+    def save_wedof_lookup(self, owner, payload):
+        with self._connect() as connection:
+            connection.execute("DELETE FROM bts_wedof_lookups WHERE expires_at<=?", (int(time.time()),))
+            connection.execute("INSERT INTO bts_wedof_lookups VALUES (?,?,?) ON CONFLICT(owner) DO UPDATE SET payload_json=excluded.payload_json,expires_at=excluded.expires_at",
+                               (owner, as_json(payload), int(time.time()) + 1200))
+
+    def upsert_wedof_summary(self, summary, actor, *, details=None, only_new=False):
         key, stamp = summary["working_contract_id"], now()
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute("SELECT payload_json FROM bts_wedof_contracts WHERE id=?", (key,)).fetchone()
+            if row and only_new:
+                return "unchanged"
             previous = json.loads(row[0]) if row else {}
             changed = previous.get("summary_hash") != summary["summary_hash"]
             item = {**{field: "" for field in ALL_FIELDS}, "schedules": [], "extra_costs": [],
@@ -528,6 +548,8 @@ class WorkspaceStore(AktoBtsStore):
                     if field not in summary:
                         item[field] = ""
                 item.update(schedules=[], raw_checked_at="", details_checked_at="")
+            if details:
+                item.update(details)
             connection.execute("INSERT INTO bts_wedof_contracts VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",
                                (key, as_json(item), stamp))
             if not row or changed:

@@ -43,7 +43,7 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements.txt playwright
       - name: Vérifier la syntaxe et les tests BTS
         run: |
-          python -m py_compile bts_workspace.py bts_workspace_store.py crm_app.py scripts/check_bts_workspace_ui.py
+          python -m py_compile bts_workspace.py bts_workspace_store.py wedof_bts_lookup.py crm_app.py scripts/check_bts_workspace_ui.py
           python -m unittest tests.test_bts_workspace -v
           python -m unittest tests.test_akto_bts -v
           python -m unittest tests.test_wedof_bts tests.test_wedof_isolation -v

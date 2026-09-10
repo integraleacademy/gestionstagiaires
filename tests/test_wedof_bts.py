@@ -8,7 +8,7 @@ from bts_workspace import register_bts_workspace
 from bts_workspace_store import WorkspaceStore, billing_view
 from tests.test_bts_workspace import make_legacy
 from wedof_bts import FINANCER, WedofBtsClient, folder_fields, is_apprenticeship_event, normalize_summary, raw_fields
-from wedof_bts_sync import sync_step
+from wedof_bts_lookup import add_selection, matches, reference, search_step
 from wedof_service import WedofApiError
 
 
@@ -95,54 +95,144 @@ class ClientTests(unittest.TestCase):
         self.assertIsNone(normalize_summary(contract(amount=float('nan')))['engagement'])
 
 
-class ImportTests(unittest.TestCase):
+class LookupTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.legacy = make_legacy(self.temp.name)
         self.store = WorkspaceStore(self.legacy.AKTO_BTS_DB_FILE)
         self.api = Mock()
-        self.api.contracts_page.return_value = ([normalize_summary(contract())], False, 1)
-        self.api.folder.return_value = folder_fields(folder(), 'OPCO-1')
+        self.api.contracts_page.return_value = ([normalize_summary(contract()), normalize_summary(contract(2))], False, 2)
+        self.api.folder.side_effect = lambda key: folder_fields(folder(int(key.split('-')[-1])), key)
+        self.api.contract.side_effect = lambda key: normalize_summary(contract(int(key)))
 
     def step(self, **kwargs):
-        return sync_step(self.store, self.api, 'Test', config_id='config', **kwargs)
+        return search_step(self.store, self.api, 'browser-one', config_id='config', **kwargs)
 
     def finish(self, state):
-        return self.step(run_id=state['id'], revision=state['revision'])
+        while state['status'] == 'running':
+            state = self.step(action='continue', run_id=state['id'], revision=state['revision'])
+        return state
 
-    def test_import_reimport_preserves_local_work_and_no_duplicates(self):
+    def search(self, number='DECA-1'):
+        return self.finish(self.step(number=number))
+
+    def add(self, key='1', run_id=None):
+        state = self.store.wedof_lookup('browser-one')
+        return add_selection(self.store, self.api, state, key, 'Test', config_id='config', run_id=run_id or state['id'])
+
+    def test_lookup_only_previews_exact_matches_and_never_creates_dossiers(self):
+        result = self.search(' dEcA- 1 ')
+        self.assertEqual(result['status'], 'ready')
+        self.assertEqual([c['working_contract_id'] for c in result['candidates']], ['1'])
+        self.assertNotIn('config_id', result)
+        self.assertNotIn('summary_hash', result['candidates'][0])
+        self.assertEqual(self.store.listing()['total'], 0)
+        self.api.folder.assert_called_once_with('OPCO-1')
+        self.assertNotIn('AK-2', json.dumps(self.store.wedof_lookup('browser-one')))
+        self.assertNotIn('bts_wedof_lookups', self.store.export_workspace())
+        self.assertNotIn('PRIVATE', json.dumps(self.store.wedof_lookup('browser-one')))
+
+    def test_manual_add_only_selected_contract_and_retries_preserve_local_work(self):
         local = self.store.create_local({'apprentice_first_name': 'Local', 'apprentice_last_name': 'Exemple'})
-        state = self.step(action='start')
-        self.assertEqual(state['added'], 1)
-        self.assertEqual(state['phase'], 'details')
-        state = self.finish(state)
-        self.assertEqual(state['status'], 'complete')
+        self.search('AK-1')
+        record_id, added = self.add()
+        self.assertEqual((record_id, added), ('w-1', True))
+        self.assertEqual(self.store.record('w-1')['name'], 'Camille Exemple')
+        self.assertIsNone(self.store.record('w-2'))
         self.store.annotate('w-1', 'Suivi à conserver', ['cerfa_prepared'], 0, 'Test')
         self.store.add_fee('w-1', 'PREMIER_EQUIPEMENT', '150', 'Frais', 'Test')
-        state = self.step(action='start')
-        self.assertEqual(state['status'], 'complete')
-        self.assertEqual(state['unchanged'], 1)
-        self.api.folder.assert_called_once()
+        self.api.reset_mock()
+        self.assertEqual(self.add(), ('w-1', False))
+        self.api.contract.assert_not_called()
+        self.api.folder.assert_not_called()
         self.assertEqual(self.store.listing()['total'], 2)
-        item = self.store.record('w-1')
-        self.assertEqual(item['name'], 'Camille Exemple')
-        self.assertEqual(item['annotation']['notes'], 'Suivi à conserver')
-        self.assertEqual(item['fees'][0]['amount_cents'], 15000)
         self.assertIsNotNone(self.store.record(local))
-        self.assertNotIn('PRIVATE', json.dumps(self.store.export_workspace()))
+        self.assertEqual(self.store.record('w-1')['annotation']['notes'], 'Suivi à conserver')
+        self.assertEqual(self.store.record('w-1')['fees'][0]['amount_cents'], 15000)
 
-    def test_quota_pause_keeps_cursor_and_resume_retrieves_remaining(self):
-        state = self.step(action='start')
-        self.api.folder.side_effect = WedofApiError('Plafond atteint', 'wedof_quota_exceeded', False, 429)
-        paused = self.finish(state)
+    def test_same_deca_requires_selection_and_only_adds_one(self):
+        self.api.contracts_page.return_value = ([normalize_summary(contract()), normalize_summary(contract(2, externalIdDeca='DECA-1'))], False, 2)
+        result = self.search()
+        self.assertEqual(len(result['candidates']), 2)
+        self.assertEqual(self.store.listing()['total'], 0)
+        self.api.contract.side_effect = lambda key: normalize_summary(contract(2, externalIdDeca='DECA-1'))
+        self.assertEqual(self.add('2'), ('w-2', True))
+        self.assertIsNone(self.store.record('w-1'))
+
+    def test_partial_reference_does_not_match_and_invalid_input_is_rejected(self):
+        self.assertFalse(matches(normalize_summary(contract(123)), reference('DECA-12')))
+        self.assertEqual(self.search('AK-123')['candidates'], [])
+        for number in ('', 'x', 'DECA', '<script>123', '1' * 121):
+            with self.assertRaises(ValueError):
+                self.step(number=number)
+        self.assertEqual(self.store.listing()['total'], 0)
+
+    def test_forged_or_replaced_search_cannot_add_a_contract(self):
+        first = self.search()
+        with self.assertRaises(ValueError):
+            self.add('2')
+        with self.assertRaises(ValueError):
+            self.add('../organisms')
+        self.search('DECA-2')
+        with self.assertRaises(ValueError):
+            self.add('1', run_id=first['id'])
+        self.api.contract.assert_not_called()
+        self.assertEqual(self.store.listing()['total'], 0)
+
+    def test_changed_contract_or_failed_detail_read_does_not_create_a_dossier(self):
+        self.search()
+        self.api.contract.side_effect = None
+        self.api.contract.return_value = normalize_summary(contract(amount=5000))
+        with self.assertRaises(ValueError):
+            self.add()
+        self.api.contract.return_value = normalize_summary(contract())
+        self.api.folder.side_effect = WedofApiError('Indisponible', 'wedof_server_error', True, 503)
+        with self.assertRaises(WedofApiError):
+            self.add()
+        self.assertEqual(self.store.listing()['total'], 0)
+
+    def test_quota_pause_retains_search_cursor_without_importing_catalogue(self):
+        self.api.contracts_page.side_effect = [
+            ([normalize_summary(contract())], True, 2),
+            WedofApiError('Plafond atteint', 'wedof_quota_exceeded', False, 429),
+            ([normalize_summary(contract(2))], False, 2)]
+        first = self.step(number='DECA-2')
+        paused = self.step(action='continue', run_id=first['id'], revision=first['revision'])
         self.assertEqual(paused['status'], 'paused')
-        self.assertEqual(self.store.wedof_state()['index'], 0)
-        self.api.folder.side_effect = None
-        done = self.step(action='resume')
-        self.assertEqual(done['status'], 'complete')
-        self.assertEqual(done['details_done'], 1)
-        self.api.contracts_page.assert_called_once()
+        self.assertEqual(self.store.wedof_lookup('browser-one')['page'], 2)
+        resumed = self.step(action='resume', run_id=paused['id'], revision=paused['revision'])
+        result = self.finish(resumed)
+        self.assertEqual(result['candidates'][0]['working_contract_id'], '2')
+        self.assertEqual([c.args[0] for c in self.api.contracts_page.call_args_list], [1, 2, 2])
+        self.assertEqual(self.store.listing()['total'], 0)
+
+    def test_stale_request_repeated_pages_and_budget_cannot_trigger_extra_imports(self):
+        first = self.step(number='DECA-1')
+        done = self.finish(first)
+        self.assertEqual(self.step(action='continue', run_id=first['id'], revision=first['revision']), done)
+        self.api.folder.assert_called_once()
+        state = self.store.wedof_lookup('browser-one')
+        state.update(status='running', phase='list', requests=20, page=2)
+        self.store.save_wedof_lookup('browser-one', state)
+        self.api.reset_mock()
+        paused = self.step(action='continue', run_id=state['id'], revision=state['revision'])
+        self.assertEqual(paused['status'], 'paused')
+        self.api.contracts_page.assert_not_called()
+        self.api.contracts_page.return_value = ([normalize_summary(contract())], True, 2)
+        paused = self.step(action='resume', run_id=paused['id'], revision=paused['revision'])
+        self.assertEqual(paused['status'], 'paused')
+        self.assertEqual(self.store.wedof_lookup('browser-one')['page'], 1)
+        self.assertEqual(self.store.listing()['total'], 0)
+
+    def test_previews_expire_and_are_bound_to_the_browser(self):
+        result = self.search()
+        self.assertEqual(self.store.wedof_lookup('browser-two'), {})
+        with patch('bts_workspace_store.time.time', return_value=9999999999):
+            self.assertEqual(self.store.wedof_lookup('browser-one'), {})
+            with self.assertRaises(ValueError):
+                add_selection(self.store, self.api, {}, '1', 'Test', config_id='config', run_id=result['id'])
+        self.api.contract.assert_not_called()
 
     def test_old_schedules_cannot_be_billed_after_a_change_or_incomplete_refresh(self):
         summary = normalize_summary(contract())
@@ -158,56 +248,45 @@ class ImportTests(unittest.TestCase):
         self.assertFalse(billing_view(self.store.record('w-1'))['cards'][0]['can_draft'])
         self.assertEqual(len(self.store.record('w-1')['schedules']), 1)
 
-    def test_retry_with_old_revision_does_not_issue_more_requests(self):
-        state = self.step(action='start')
-        done = self.finish(state)
-        again = self.finish(state)
-        self.assertEqual(again, done)
-        self.api.folder.assert_called_once()
-
-    def test_missing_folder_keeps_contract_and_flags_incomplete(self):
-        state = self.step(action='start')
-        self.api.folder.side_effect = WedofApiError('Introuvable', 'wedof_not_found', False, 404)
-        done = self.finish(state)
-        self.assertEqual(done['errors'], 1)
-        self.assertEqual(done['status'], 'complete')
-        self.assertTrue(self.store.record('w-1')['needs_detail'])
-        self.assertEqual(self.store.record('w-1')['details_error'], 'Introuvable')
-
-    def test_repeated_pages_stop_and_missing_contracts_are_not_deleted(self):
-        self.api.contracts_page.return_value = ([normalize_summary(contract())], True, None)
-        state = self.step(action='start')
-        paused = self.finish(state)
-        self.assertEqual(paused['status'], 'paused')
-        self.assertEqual(self.store.listing()['total'], 1)
-        self.api.contracts_page.return_value = ([], False, 0)
-        done = self.step(action='resume')
-        self.assertEqual(done['status'], 'complete')
-        self.assertTrue(self.store.record('w-1')['missing_from_latest'])
-
-    def test_routes_read_cache_only_and_write_permissions_csrf(self):
+    def test_routes_are_manual_protected_and_old_bulk_routes_are_disabled(self):
+        legacy_bulk = Mock(return_value='Unexpected bulk import')
+        self.legacy.app.add_url_rule('/admin/BTS/akto/sync', 'admin_bts_akto_sync', lambda: legacy_bulk(), methods=['POST'])
         register_bts_workspace(self.legacy)
         client = self.legacy.app.test_client()
         with patch.dict(os.environ, {'WEDOF_API_KEY': 'test-key'}), patch('bts_workspace.WedofBtsClient', return_value=self.api) as factory:
-            self.assertEqual(client.post('/admin/BTS/wedof/synchroniser').status_code, 302)
+            self.assertEqual(client.post('/admin/BTS/wedof/rechercher').status_code, 302)
             with client.session_transaction() as session:
                 session.update(admin_logged_in=True, admin_role='admin')
-            for path in ('/admin/BTS', '/admin/BTS/connexion'):
-                self.assertEqual(client.get(path).status_code, 200)
+            for path in ('/admin/BTS', '/admin/BTS/connexion', '/admin/BTS/ajouter-akto', '/admin/BTS/nouveau'):
+                response = client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertNotIn('Synchroniser AKTO via WEDOF', response.text)
             factory.assert_not_called()
-            self.assertEqual(client.post('/admin/BTS/wedof/synchroniser').status_code, 400)
+            self.assertEqual(client.post('/admin/BTS/wedof/rechercher').status_code, 400)
             with client.session_transaction() as session:
                 token = session['bts_csrf_token']
-            data = {'bts_csrf_token': token, 'action': 'start'}
-            self.assertEqual(client.post('/admin/BTS/wedof/synchroniser', data={**data, 'action': 'invalid'}).status_code, 400)
-            response = client.post('/admin/BTS/wedof/synchroniser', data=data, headers={'Accept': 'application/json'})
+            data = {'bts_csrf_token': token, 'action': 'start', 'number': 'DECA-1'}
+            for path in ('/admin/BTS/wedof/synchroniser', '/admin/BTS/synchroniser', '/admin/BTS/akto/sync'):
+                self.assertEqual(client.post(path, data=data).status_code, 410)
+            legacy_bulk.assert_not_called()
+            factory.assert_not_called()
+            response = client.post('/admin/BTS/wedof/rechercher', data=data, headers={'Accept': 'application/json'})
+            result = response.json
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json['added'], 1)
-            self.assertNotIn('config_id', response.json)
+            client.post('/admin/BTS/wedof/rechercher', data={**data, 'action': 'continue', 'run_id': result['id'], 'revision': result['revision']})
+            preview = client.get('/admin/BTS/ajouter-akto')
+            self.assertIn('Ajouter ce dossier', preview.text)
+            self.assertEqual(self.store.listing()['total'], 0)
+            calls = self.api.contracts_page.call_count
+            client.get('/admin/BTS/ajouter-akto')
+            client.get('/admin/BTS')
+            self.assertEqual(self.api.contracts_page.call_count, calls)
+            self.assertEqual(self.store.listing()['total'], 0)
             for role in ('viewer', 'partner_admin'):
                 with client.session_transaction() as session:
                     session['admin_role'] = role
-                self.assertEqual(client.post('/admin/BTS/wedof/synchroniser', data=data).status_code, 403)
+                for path in ('/admin/BTS/wedof/rechercher', '/admin/BTS/wedof/ajouter'):
+                    self.assertEqual(client.post(path, data=data).status_code, 403)
 
 
 class RelayTests(unittest.TestCase):
