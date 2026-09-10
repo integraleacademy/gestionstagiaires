@@ -34,8 +34,6 @@
       }
       form.dataset.submitting = 'true';
       form.setAttribute('aria-busy', 'true');
-      // All persisted values live in inputs; disable the submit action only
-      // after the browser has captured the submission, preventing double clicks.
       window.setTimeout(() => {
         form.querySelectorAll('button:not([type="button"])').forEach(button => {
           button.disabled = true;
@@ -45,7 +43,21 @@
       }, 0);
     });
   });
-  // Restore forms after a Back navigation through the browser's page cache.
+  // The dashboard's running label comes from the server-side sync lock.
+  // Reloading this cache-only GET never launches another AKTO request.
+  // Dossier forms are never auto-reloaded, and an active search is preserved.
+  const syncButton = root.querySelector('.ws-list-card form[action$="/synchroniser"] button');
+  if (syncButton && syncButton.textContent.includes('Synchronisation en cours')) {
+    const checkRefresh = () => {
+      const editing = document.activeElement && document.activeElement.matches('input, textarea, select');
+      if (document.visibilityState !== 'visible' || editing) {
+        window.setTimeout(checkRefresh, 15000);
+        return;
+      }
+      window.location.reload();
+    };
+    window.setTimeout(checkRefresh, 15000);
+  }
   window.addEventListener('pageshow', () => {
     root.querySelectorAll('form[data-submitting="true"]').forEach(form => {
       delete form.dataset.submitting;
