@@ -1,0 +1,473 @@
+"""BTS workspace data, separate from data.json and from the AKTO snapshot.
+
+Local drafts are NOT contracts transmitted to an OPCO. Invoice drafts are NOT
+issued invoices. Synchronising AKTO never deletes or overwrites these tables.
+All locally entered monetary amounts are stored as integer euro cents.
+"""
+from __future__ import annotations
+
+import base64
+import datetime as dt
+import json
+import math
+import re
+import sqlite3
+import uuid
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Any, Mapping
+
+from akto_bts import AktoBtsStore, normalize_contract, redact_sensitive_payload
+
+TABS = (("suivi", "Suivi dossier"), ("etudiant", "Étudiant"),
+        ("contrat", "Contrat"), ("entreprise", "Entreprise"),
+        ("gestion", "Gestion"), ("comptabilite", "Comptabilité"))
+FEE_LABELS = {"HEBERGEMENT": "Hébergement", "RESTAURATION": "Restauration",
+              "PREMIER_EQUIPEMENT": "Premier équipement", "MOBILITE": "Mobilité internationale"}
+FIELD_GROUPS = {
+    "etudiant": (
+        ("apprentice_first_name", "Prénom", "text"),
+        ("apprentice_last_name", "Nom", "text"),
+        ("apprentice_birth_date", "Date de naissance", "date"),
+        ("apprentice_email", "Adresse e-mail", "email"),
+        ("apprentice_phone", "Téléphone", "tel"),
+        ("apprentice_address", "Adresse", "text"),
+        ("apprentice_postcode", "Code postal", "text"),
+        ("apprentice_city", "Ville", "text"),
+    ),
+    "entreprise": (
+        ("employer_name", "Raison sociale", "text"),
+        ("employer_siret", "SIRET", "text"),
+        ("employer_email", "Adresse e-mail", "email"),
+        ("employer_phone", "Téléphone", "tel"),
+        ("employer_address", "Adresse", "text"),
+        ("employer_postcode", "Code postal", "text"),
+        ("employer_city", "Ville", "text"),
+        ("tutor_name", "Maître d’apprentissage", "text"),
+        ("tutor_email", "E-mail du maître d’apprentissage", "email"),
+    ),
+    "contrat": (
+        ("training_title", "Intitulé du BTS", "text"),
+        ("rncp", "Code RNCP", "text"),
+        ("diploma_code", "Code diplôme", "text"),
+        ("training_start", "Début de formation", "date"),
+        ("training_end", "Fin de formation", "date"),
+        ("training_hours", "Durée de formation (heures)", "number"),
+        ("remote_hours", "Dont distanciel (heures)", "number"),
+        ("contract_conclusion", "Date de conclusion", "date"),
+        ("contract_start", "Début du contrat", "date"),
+        ("contract_end", "Fin du contrat", "date"),
+        ("gross_salary", "Salaire brut à l’embauche (€)", "number"),
+    ),
+}
+ALL_FIELDS = {field[0]: field for fields in FIELD_GROUPS.values() for field in fields}
+CHECKLIST = (("cerfa_prepared", "CERFA préparé"),
+             ("convention_prepared", "Convention préparée"),
+             ("signatures_collected", "Signatures recueillies"),
+             ("supporting_documents", "Pièces justificatives réunies"))
+
+
+class WorkspaceError(ValueError):
+    pass
+
+
+class EditConflict(WorkspaceError):
+    pass
+
+
+def now() -> str:
+    return dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+
+
+def as_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def money_cents(value: Any, *, strict: bool = False) -> int | None:
+    """None means unknown, never a silently invented zero."""
+    try:
+        raw = str(value).strip().replace("\u202f", "").replace("\xa0", "").replace(" ", "").replace(",", ".")
+        number = Decimal(raw)
+        if not number.is_finite() or abs(number) > Decimal("100000000"):
+            raise InvalidOperation
+        return int((number * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    except (InvalidOperation, ValueError, TypeError):
+        if strict:
+            raise WorkspaceError("Indiquez un montant valide, en euros.") from None
+        return None
+
+
+def euros(value: Any) -> str:
+    cents = money_cents(value)
+    return "Non communiqué" if cents is None else euros_cents(cents)
+
+
+def euros_cents(cents: int) -> str:
+    return f"{Decimal(cents) / 100:,.2f}".replace(",", " ").replace(".", ",") + " €"
+
+
+def date_fr(value: Any) -> str:
+    try:
+        return dt.date.fromisoformat(str(value)[:10]).strftime("%d/%m/%Y")
+    except (ValueError, TypeError):
+        return "Non communiquée"
+
+
+def remote_id(number: str) -> str:
+    return "a-" + base64.urlsafe_b64encode(number.encode()).decode().rstrip("=")
+
+
+def remote_number(record_id: str) -> str:
+    if not re.fullmatch(r"a-[A-Za-z0-9_-]{1,400}", record_id):
+        raise WorkspaceError("Identifiant de dossier invalide.")
+    try:
+        part = record_id[2:]
+        value = base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)).decode()
+        if not value or remote_id(value) != record_id:
+            raise ValueError
+        return value
+    except (ValueError, UnicodeError):
+        raise WorkspaceError("Identifiant de dossier invalide.") from None
+
+
+def validate_fields(data: Mapping[str, Any], existing: Mapping[str, Any] | None = None) -> dict:
+    result = dict(existing or {})
+    for name, (_, label, kind) in ALL_FIELDS.items():
+        if name not in data:
+            continue
+        value = str(data.get(name) or "").strip()
+        if len(value) > 500:
+            raise WorkspaceError(f"Le champ « {label} » est trop long.")
+        if value and kind == "date":
+            try:
+                dt.date.fromisoformat(value)
+            except ValueError:
+                raise WorkspaceError(f"La date « {label} » est invalide.") from None
+        if value and kind == "email" and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", value):
+            raise WorkspaceError(f"L’adresse « {label} » est invalide.")
+        if value and kind == "number":
+            amount = money_cents(value, strict=True)
+            if amount < 0:
+                raise WorkspaceError(f"Le champ « {label} » ne peut pas être négatif.")
+            if name in {"training_hours", "remote_hours"} and Decimal(value.replace(",", ".")) % 1:
+                raise WorkspaceError("Les durées doivent être saisies en heures entières.")
+            value = str(Decimal(amount) / 100)
+        result[name] = value
+    for key in ("apprentice_first_name", "apprentice_last_name"):
+        if not result.get(key):
+            raise WorkspaceError("Le prénom et le nom de l’apprenti sont obligatoires.")
+    siret = result.get("employer_siret", "").replace(" ", "")
+    if siret and not re.fullmatch(r"\d{14}", siret):
+        raise WorkspaceError("Le SIRET doit comporter 14 chiffres.")
+    result["employer_siret"] = siret
+    for prefix in ("contract", "training"):
+        if result.get(prefix + "_start") and result.get(prefix + "_end") and result[prefix + "_start"] > result[prefix + "_end"]:
+            raise WorkspaceError("Une date de fin ne peut pas précéder la date de début.")
+    if result.get("training_hours") and result.get("remote_hours"):
+        if Decimal(result["remote_hours"]) > Decimal(result["training_hours"]):
+            raise WorkspaceError("Le distanciel ne peut pas dépasser la durée totale de formation.")
+    return result
+
+
+def billing_view(record: dict, today: dt.date | None = None) -> dict:
+    """Partition AKTO schedule amounts, not invoice amounts, without double counting."""
+    today = today or dt.datetime.now(dt.timezone.utc).date()
+    buckets = {"paid": 0, "pending": 0, "due": 0, "future": 0, "unknown": 0}
+    cards = []
+    keys = []
+    for index, schedule in enumerate(record.get("schedules", [])):
+        code = str(schedule.get("codification") or "").strip()
+        number = str(schedule.get("numero") or "").strip()
+        key = "code:" + code if code else ("numero:" + number if number else "")
+        keys.append(key)
+        total = money_cents(schedule.get("montantTotal"))
+        paid = money_cents(schedule.get("montantRegle"))
+        pending = money_cents(schedule.get("montantEnCoursInstruction"))
+        try:
+            opening = dt.date.fromisoformat(str(schedule.get("dateOuverture"))[:10])
+        except ValueError:
+            opening = None
+        valid = all(value is not None and value >= 0 for value in (total, paid, pending))
+        valid = valid and paid + pending <= total
+        remaining = total - paid - pending if valid else 0
+        status, label = "unknown", "À vérifier"
+        if valid:
+            buckets["paid"] += paid
+            buckets["pending"] += pending
+            balance_bucket = "future" if opening and opening > today else "due" if opening else "unknown"
+            buckets[balance_bucket] += remaining
+            if total > 0 and paid == total:
+                status, label = "paid", "Payée"
+            elif pending:
+                status, label = "pending", "En instruction OPCO"
+            elif paid:
+                status, label = "partial", "Partiellement payée"
+            elif opening and opening > today:
+                status, label = "future", "À venir"
+            elif opening:
+                status, label = "due", "À facturer"
+        elif total is not None and total > 0:
+            buckets["unknown"] += total
+        cards.append({"number": number or str(index + 1), "key": key, "raw": schedule,
+                      "amount": total, "paid": paid, "pending": pending,
+                      "remaining": remaining, "status": status, "label": label,
+                      "valid": valid, "can_draft": bool(valid and key and remaining > 0 and opening and opening <= today)})
+    for card in cards:
+        if card["key"] and keys.count(card["key"]) > 1:
+            card["can_draft"] = False
+    total = sum(buckets.values())
+    colors = {"paid": "#69dca5", "pending": "#83d7fb", "due": "#ffb282", "future": "#ffe074", "unknown": "#c8ccdb"}
+    labels = {"paid": "Payé", "pending": "En instruction OPCO", "due": "À facturer", "future": "À venir", "unknown": "À vérifier"}
+    cursor = 0.0
+    stops = []
+    legend = []
+    for key, amount in buckets.items():
+        end = cursor + (100 * amount / total if total else 0)
+        if amount:
+            stops.append(f"{colors[key]} {cursor:.5f}% {end:.5f}%")
+        legend.append({"key": key, "label": labels[key], "amount": amount, "color": colors[key]})
+        cursor = end
+    return {"cards": cards, "legend": legend, "total": total,
+            "gradient": "conic-gradient(" + ",".join(stops) + ")" if stops else "#eceef7",
+            "has_data": bool(cards)}
+
+
+class WorkspaceStore(AktoBtsStore):
+    def __init__(self, db_path: str):
+        super().__init__(db_path)
+        with self._connect() as connection:
+            connection.executescript("""
+                CREATE TABLE IF NOT EXISTS bts_local_dossiers (
+                    id TEXT PRIMARY KEY, payload_json TEXT NOT NULL,
+                    revision INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS bts_annotations (
+                    dossier_id TEXT PRIMARY KEY, notes TEXT NOT NULL DEFAULT '',
+                    checklist_json TEXT NOT NULL DEFAULT '[]', revision INTEGER NOT NULL DEFAULT 1,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS bts_fees (
+                    id TEXT PRIMARY KEY, dossier_id TEXT NOT NULL, nature TEXT NOT NULL,
+                    amount_cents INTEGER NOT NULL CHECK(amount_cents > 0), description TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS bts_fees_dossier ON bts_fees(dossier_id);
+                CREATE TABLE IF NOT EXISTS bts_invoice_drafts (
+                    id TEXT PRIMARY KEY, dossier_id TEXT NOT NULL, payer TEXT NOT NULL,
+                    schedule_key TEXT NOT NULL DEFAULT '', amount_cents INTEGER NOT NULL CHECK(amount_cents > 0),
+                    description TEXT NOT NULL, created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS bts_drafts_dossier ON bts_invoice_drafts(dossier_id);
+                CREATE UNIQUE INDEX IF NOT EXISTS bts_draft_unique_schedule
+                    ON bts_invoice_drafts(dossier_id, payer, schedule_key) WHERE schedule_key != '';
+                CREATE TABLE IF NOT EXISTS bts_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, dossier_id TEXT NOT NULL,
+                    label TEXT NOT NULL, actor TEXT NOT NULL, created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS bts_events_dossier ON bts_events(dossier_id, id);
+                CREATE TABLE IF NOT EXISTS bts_diagnostics (
+                    name TEXT PRIMARY KEY, payload_json TEXT NOT NULL, updated_at TEXT NOT NULL
+                );
+            """)
+
+    @staticmethod
+    def _event(connection, record_id: str, label: str, actor: str):
+        connection.execute("INSERT INTO bts_events(dossier_id,label,actor,created_at) VALUES (?,?,?,?)",
+                           (record_id, label, actor[:120], now()))
+
+    def create_local(self, data: Mapping[str, Any], actor: str = "Équipe") -> str:
+        payload = validate_fields(data)
+        record_id, stamp = "l-" + uuid.uuid4().hex, now()
+        with self._connect() as connection:
+            connection.execute("INSERT INTO bts_local_dossiers(id,payload_json,created_at,updated_at) VALUES (?,?,?,?)",
+                               (record_id, as_json(payload), stamp, stamp))
+            self._event(connection, record_id, "Dossier local créé — aucun envoi à l’OPCO", actor)
+        return record_id
+
+    def record(self, record_id: str) -> dict | None:
+        with self._connect() as connection:
+            if record_id.startswith("l-"):
+                row = connection.execute("SELECT * FROM bts_local_dossiers WHERE id=?", (record_id,)).fetchone()
+                if row is None:
+                    return None
+                item = json.loads(row["payload_json"])
+                item.update(source="local", state="BROUILLON", state_label="Brouillon local",
+                            revision=row["revision"], created_at=row["created_at"], updated_at=row["updated_at"],
+                            schedules=[], extra_costs=[], invoices=[], billing_details={})
+            else:
+                number = remote_number(record_id)
+                row = connection.execute("SELECT * FROM contracts WHERE internal_number=?", (number,)).fetchone()
+                if row is None:
+                    return None
+                item = self._decode_contract_row(row)
+                item.update(source="akto", revision=0, updated_at=item.get("synced_at", ""))
+                payload = json.loads(row["payload_json"] or "{}")
+                item["source_payload"] = redact_sensitive_payload(payload)
+            item["id"] = record_id
+            item["name"] = " ".join(str(item.get(k) or "") for k in ("apprentice_first_name", "apprentice_last_name")).strip() or "Identité non restituée"
+            annotation = connection.execute("SELECT * FROM bts_annotations WHERE dossier_id=?", (record_id,)).fetchone()
+            item["annotation"] = dict(annotation) if annotation else {"notes": "", "checklist_json": "[]", "revision": 0}
+            item["checked"] = json.loads(item["annotation"]["checklist_json"])
+            item["fees"] = [dict(row) for row in connection.execute("SELECT * FROM bts_fees WHERE dossier_id=? ORDER BY created_at,id", (record_id,))]
+            item["drafts"] = [dict(row) for row in connection.execute("SELECT * FROM bts_invoice_drafts WHERE dossier_id=? ORDER BY created_at DESC,id", (record_id,))]
+            item["events"] = [dict(row) for row in connection.execute("SELECT * FROM bts_events WHERE dossier_id=? ORDER BY id DESC LIMIT 50", (record_id,))]
+        return item
+
+    def save_fields(self, record_id: str, data: Mapping[str, Any], revision: int, actor: str):
+        record = self.record(record_id)
+        if not record or record["source"] != "local":
+            raise WorkspaceError("Les données AKTO sont en lecture seule. Les compléments se saisissent dans Gestion.")
+        existing = {name: record.get(name, "") for name in ALL_FIELDS}
+        payload = validate_fields(data, existing)
+        with self._connect() as connection:
+            changed = connection.execute("UPDATE bts_local_dossiers SET payload_json=?,updated_at=?,revision=revision+1 WHERE id=? AND revision=?",
+                                         (as_json(payload), now(), record_id, revision)).rowcount
+            if not changed:
+                raise EditConflict("Ce dossier a été modifié par un autre utilisateur. Rechargez-le avant d’enregistrer.")
+            self._event(connection, record_id, "Informations du dossier local mises à jour", actor)
+
+    def annotate(self, record_id: str, notes: str, checked: list[str], revision: int, actor: str):
+        if not self.record(record_id):
+            raise WorkspaceError("Dossier introuvable.")
+        if len(notes) > 8000:
+            raise WorkspaceError("La note est limitée à 8 000 caractères.")
+        allowed = {key for key, _ in CHECKLIST}
+        checked = sorted(set(checked) & allowed)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT revision FROM bts_annotations WHERE dossier_id=?", (record_id,)).fetchone()
+            if (row["revision"] if row else 0) != revision:
+                raise EditConflict("Le suivi a été modifié par un autre utilisateur. Rechargez le dossier.")
+            connection.execute("INSERT INTO bts_annotations(dossier_id,notes,checklist_json,revision,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(dossier_id) DO UPDATE SET notes=excluded.notes,checklist_json=excluded.checklist_json,revision=excluded.revision,updated_at=excluded.updated_at",
+                               (record_id, notes.strip(), as_json(checked), revision + 1, now()))
+            self._event(connection, record_id, "Suivi interne mis à jour (déclaration de l’équipe)", actor)
+
+    def add_fee(self, record_id: str, nature: str, amount: Any, description: str, actor: str):
+        if not self.record(record_id):
+            raise WorkspaceError("Dossier introuvable.")
+        cents = money_cents(amount, strict=True)
+        if nature not in FEE_LABELS or cents <= 0 or len(description) > 500:
+            raise WorkspaceError("Vérifiez la nature, le montant et le libellé du frais.")
+        with self._connect() as connection:
+            connection.execute("INSERT INTO bts_fees VALUES (?,?,?,?,?,?,?)",
+                               (uuid.uuid4().hex, record_id, nature, cents, description.strip(), now()))
+            self._event(connection, record_id, "Frais annexe local ajouté — non transmis à l’OPCO", actor)
+
+    def create_invoice_draft(self, record_id: str, payer: str, schedule_key: str, amount: Any, description: str, actor: str) -> str:
+        record = self.record(record_id)
+        if not record:
+            raise WorkspaceError("Dossier introuvable.")
+        if payer not in {"opco", "entreprise"}:
+            raise WorkspaceError("Destinataire invalide.")
+        if payer == "opco":
+            card = next((card for card in billing_view(record)["cards"] if card["key"] == schedule_key and card["can_draft"]), None)
+            if card is None:
+                raise WorkspaceError("Cette échéance n’est pas disponible pour préparer une facture. Actualisez le dossier.")
+            cents = card["remaining"]
+            description = "Échéance n° " + card["number"]
+        else:
+            schedule_key = ""
+            cents = money_cents(amount, strict=True)
+            if cents <= 0 or not description.strip() or len(description) > 500:
+                raise WorkspaceError("Saisissez un montant positif et un libellé (500 caractères maximum).")
+        draft_id = "BR-" + uuid.uuid4().hex[:16].upper()
+        try:
+            with self._connect() as connection:
+                connection.execute("INSERT INTO bts_invoice_drafts VALUES (?,?,?,?,?,?,?)",
+                                   (draft_id, record_id, payer, schedule_key, cents, description.strip(), now()))
+                self._event(connection, record_id, "Brouillon de facture préparé — ni émis ni transmis", actor)
+        except sqlite3.IntegrityError:
+            raise WorkspaceError("Un brouillon existe déjà pour cette échéance. Aucun doublon n’a été créé.") from None
+        return draft_id
+
+    def remove_local_item(self, record_id: str, item_id: str, kind: str, actor: str):
+        table = {"fee": "bts_fees", "draft": "bts_invoice_drafts"}.get(kind)
+        if not table or not self.record(record_id):
+            raise WorkspaceError("Élément introuvable.")
+        with self._connect() as connection:
+            changed = connection.execute(f"DELETE FROM {table} WHERE id=? AND dossier_id=?", (item_id, record_id)).rowcount
+            if not changed:
+                raise WorkspaceError("Élément introuvable ou déjà supprimé.")
+            self._event(connection, record_id, "Brouillon local supprimé" if kind == "draft" else "Frais local supprimé", actor)
+
+    def listing(self, query: str = "", source: str = "", page: int = 1, per_page: int = 30) -> dict:
+        # SQL pagination: no per-record payload/invoice history is read for the list.
+        query = query.strip()[:120]
+        fields = ("apprentice_first_name", "apprentice_last_name", "employer_name", "training_title", "employer_siret", "rncp")
+        local = ",".join(f"COALESCE(json_extract(payload_json,'$.{field}'),'') AS {field}" for field in fields)
+        remote = ",".join(fields)
+        union = f"SELECT id,'local' AS source,'BROUILLON' AS state,updated_at,{local},0 AS engagement FROM bts_local_dossiers UNION ALL SELECT internal_number AS id,'akto' AS source,state,synced_at AS updated_at,{remote},engagement FROM contracts"
+        clauses, params = [], []
+        if source in {"local", "akto"}:
+            clauses.append("source=?")
+            params.append(source)
+        if query:
+            clauses.append("(" + " OR ".join(f"LOWER({field}) LIKE ?" for field in (*fields, "id")) + ")")
+            params.extend(["%" + query.lower() + "%"] * (len(fields) + 1))
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        with self._connect() as connection:
+            count = connection.execute(f"SELECT COUNT(*) FROM ({union}){where}", params).fetchone()[0]
+            pages = max(1, math.ceil(count / per_page))
+            page = min(max(1, page), pages)
+            rows = connection.execute(f"SELECT * FROM ({union}){where} ORDER BY updated_at DESC,id LIMIT ? OFFSET ?",
+                                      [*params, per_page, (page - 1) * per_page]).fetchall()
+            stats = dict(connection.execute("SELECT COUNT(*) AS remote_count,COALESCE(SUM(engagement),0) AS engagement,COALESCE(SUM(total_paid),0) AS paid FROM contracts").fetchone())
+            stats["local_count"] = connection.execute("SELECT COUNT(*) FROM bts_local_dossiers").fetchone()[0]
+            stats["draft_count"] = connection.execute("SELECT COUNT(*) FROM bts_invoice_drafts").fetchone()[0]
+        records = []
+        for row in rows:
+            item = dict(row)
+            if item["source"] == "akto":
+                item["id"] = remote_id(item["id"])
+            item["name"] = (item["apprentice_first_name"] + " " + item["apprentice_last_name"]).strip() or "Identité non restituée"
+            records.append(item)
+        return {"records": records, "stats": stats, "total": count, "page": page, "pages": pages,
+                "query": query, "source": source}
+
+    def save_diagnostic(self, payload: dict):
+        # Only status, stage, timestamp and safe messages, never credentials/payloads.
+        allowed = {key: payload[key] for key in ("ok", "stage", "message", "checked_at", "configuration_id") if key in payload}
+        with self._connect() as connection:
+            connection.execute("INSERT INTO bts_diagnostics VALUES ('connection',?,?) ON CONFLICT(name) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",
+                               (as_json(allowed), now()))
+
+    def diagnostic(self) -> dict | None:
+        with self._connect() as connection:
+            row = connection.execute("SELECT payload_json FROM bts_diagnostics WHERE name='connection'").fetchone()
+        return json.loads(row[0]) if row else None
+
+    def update_remote_detail(self, number: str, detail: dict, actor: str):
+        """Update ONE existing cache record without replacing other rows/local drafts.
+
+        Cached invoices deliberately remain unchanged and keep their own sync date.
+        The source CERFA must identify the requested dossier; never cross-associate.
+        """
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM contracts WHERE internal_number=?", (number,)).fetchone()
+            if not row:
+                raise WorkspaceError("Dossier absent du cache. Lancez une synchronisation complète.")
+            cerfa = detail.get("cerfa")
+            if not isinstance(cerfa, dict) or str(cerfa.get("numeroInterne") or "") != number:
+                raise WorkspaceError("AKTO a renvoyé un dossier non identifiable. Le cache a été conservé.")
+            invoices = []
+            for invoice_row in connection.execute("SELECT * FROM invoices"):
+                invoice = dict(invoice_row)
+                invoice["dossier_links"] = json.loads(invoice.pop("dossier_links_json"))
+                invoices.append(invoice)
+            normalized = normalize_contract({"numeroInterne": number, "numeroExterne": row["external_number"], "etat": row["state"]},
+                                            detail, invoices, synced_at=now(), detail_loaded=True)
+            for source in ("schedules", "extra_costs", "billing_details", "invoices", "payload"):
+                normalized[source + "_json"] = as_json(normalized.pop(source, {} if source in {"payload", "billing_details"} else []))
+            columns = {item[1] for item in connection.execute("PRAGMA table_info(contracts)")}
+            values = {key: value for key, value in normalized.items() if key in columns and key != "internal_number"}
+            connection.execute("UPDATE contracts SET " + ",".join(f"{key}=?" for key in values) + " WHERE internal_number=?", [*values.values(), number])
+            self._event(connection, remote_id(number), "Dossier et échéances actualisés depuis AKTO (factures non réinterrogées)", actor)
+
+    def export_workspace(self) -> dict:
+        # Includes local work as well as the already-redacted AKTO snapshot.
+        result = {"version": 1, "exported_at": now(), "akto": self.export_snapshot()}
+        with self._connect() as connection:
+            for table in ("bts_local_dossiers", "bts_annotations", "bts_fees", "bts_invoice_drafts", "bts_events"):
+                result[table] = [dict(row) for row in connection.execute(f"SELECT * FROM {table}")]
+        result["notice"] = "Les brouillons ne sont ni des contrats transmis ni des factures émises. Export confidentiel réservé à l’école."
+        return redact_sensitive_payload(result)
