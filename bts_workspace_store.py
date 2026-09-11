@@ -114,6 +114,43 @@ def date_fr(value: Any) -> str:
         return "Non communiquée"
 
 
+def iso_day(value: Any) -> str:
+    try:
+        return dt.date.fromisoformat(str(value)[:10]).isoformat()
+    except (ValueError, TypeError):
+        return ""
+
+
+def schedule_periods(cards: list[dict]) -> None:
+    """Display-only periods: explicit OPCO dates, otherwise consecutive openings.
+
+    The requested opening-to-opening convention never changes billing eligibility
+    or source data. An unknown next opening is not skipped and no final date is invented.
+    """
+    numbers = [str(card["raw"].get("numero") or "") for card in cards]
+    if all(number.isdecimal() for number in numbers) and len(set(map(int, numbers))) == len(numbers):
+        cards.sort(key=lambda card: int(card["raw"]["numero"]))
+    openings = [card["opening_date"] for card in cards]
+    for index, card in enumerate(cards):
+        raw = card["raw"]
+        start, end = iso_day(raw.get("dateDebut")), iso_day(raw.get("dateFin"))
+        origin, issue = "opco", ""
+        if raw.get("dateDebut") or raw.get("dateFin"):
+            if (raw.get("dateDebut") and not start) or (raw.get("dateFin") and not end) or (start and end and end < start):
+                start, end, issue = "", "", "Période OPCO à vérifier"
+        else:
+            origin, start = "calculated", card["opening_date"]
+            following = openings[index + 1] if index + 1 < len(cards) else ""
+            if start and following and following > start and openings.count(start) == openings.count(following) == 1:
+                end = following
+            elif following and start and following <= start:
+                issue = "Dates d’ouverture à vérifier"
+            elif start and openings.count(start) > 1:
+                issue = "Plusieurs échéances ont la même ouverture"
+        card.update(period_start=start, period_end=end, period_origin=origin, period_issue=issue,
+                    last_opening=index == len(cards) - 1 and origin == "calculated")
+
+
 def remote_id(number: str) -> str:
     return "a-" + base64.urlsafe_b64encode(number.encode()).decode().rstrip("=")
 
@@ -220,6 +257,7 @@ def billing_view(record: dict, today: dt.date | None = None) -> dict:
             card["can_draft"] = False
         if record.get("source") == "wedof" and (record.get("raw_stale") or record.get("raw_error")):
             card["can_draft"] = False
+    schedule_periods(cards)
     total = sum(buckets.values())
     colors = {"paid": "#69dca5", "pending": "#83d7fb", "due": "#ffb282", "future": "#ffe074", "unknown": "#c8ccdb"}
     labels = {"paid": "Payé", "pending": "En instruction OPCO", "due": "À facturer", "future": "À venir", "unknown": "À vérifier"}
@@ -238,32 +276,38 @@ def billing_view(record: dict, today: dt.date | None = None) -> dict:
 
 
 def opco_costs_view(record: dict) -> dict:
-    """Granted amounts, billing ceilings and local fees are different figures."""
-    labels = {**FEE_LABELS, "PREMIEREQUIPEMENT": FEE_LABELS["PREMIER_EQUIPEMENT"]}
-    items = []
+    """Payment flags describe settlement, not amounts of possible partial payments."""
+    groups = {}
     for cost in record.get("extra_costs", []):
         if not isinstance(cost, dict):
             continue
-        # Some OPCOs serialize the documented uppercase enum in title case.
-        items.append({"label": labels.get(str(cost.get("natureFrais") or "").upper(), "Autres frais OPCO"),
-                      "amount": money_cents(cost.get("montantTotal")),
-                      "unit_price": money_cents(cost.get("prixUnitaire")),
-                      "quantity": cost.get("quantite")})
+        nature = str(cost.get("natureFrais") or "").upper()
+        if nature == "PREMIEREQUIPEMENT":
+            nature = "PREMIER_EQUIPEMENT"
+        group = groups.setdefault(nature, {"nature": nature, "label": FEE_LABELS.get(nature, "Autres frais OPCO"),
+                                           "lines": [], "amounts": []})
+        amount = money_cents(cost.get("montantTotal"))
+        group["amounts"].append(amount if amount is not None and amount >= 0 else None)
+        group["lines"].append({"quantity": cost.get("quantite"), "unit_price": money_cents(cost.get("prixUnitaire"))})
     details = record.get("billing_details") or {}
-    ceilings = []
-    for label, amount_key, paid_key in (
-        ("Premier équipement", "plafondFraisPremierEquipement", "fraisPremierEquipementRegles"),
-        ("Mobilité internationale", "plafondFraisMobilite", "fraisMobiliteRegles"),
-    ):
-        amount = money_cents(details.get(amount_key))
-        paid = details.get(paid_key)
-        if amount is not None or isinstance(paid, bool):
-            ceilings.append({"label": label, "amount": amount, "paid": paid if isinstance(paid, bool) else None})
-    return {"items": items, "ceilings": ceilings,
-            "available": record.get("extra_costs_available", bool(items)),
-            "stale": record.get("source") == "wedof" and bool(record.get("raw_stale") or record.get("raw_error")
-                      or (items and not record.get("extra_costs_available"))
-                      or (ceilings and not record.get("billing_details_available")))}
+    stale = record.get("source") == "wedof" and bool(record.get("raw_stale") or record.get("raw_error")
+            or (groups and not record.get("extra_costs_available"))
+            or (details and not record.get("billing_details_available")))
+    flags = {"PREMIER_EQUIPEMENT": "fraisPremierEquipementRegles", "MOBILITE": "fraisMobiliteRegles"}
+    items = []
+    for group in groups.values():
+        amount = sum(group["amounts"]) if all(value is not None for value in group["amounts"]) else None
+        settled = details.get(flags.get(group["nature"])) if not stale else None
+        # False can also mean partly paid. Do not invent zero paid / full amount outstanding.
+        paid = amount if settled is True else None
+        outstanding = 0 if settled is True and amount is not None else None
+        status, label = ("paid", "Soldé") if settled is True else ("unsettled", "Non soldé") if settled is False else ("unknown", "Règlement non communiqué")
+        if stale:
+            status, label = "unknown", "À actualiser"
+        items.append({**group, "amount": amount, "paid": paid, "outstanding": outstanding,
+                      "status": status, "status_label": label})
+    return {"items": items, "available": record.get("extra_costs_available", bool(items)), "stale": stale,
+            "incomplete_payments": any(item["paid"] is None or item["outstanding"] is None for item in items)}
 
 
 class WorkspaceStore(AktoBtsStore):

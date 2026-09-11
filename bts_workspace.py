@@ -29,7 +29,7 @@ from bts_workspace_store import (
     now, remote_number,
 )
 
-VERSION = "20260911-bts-details-1"
+VERSION = "20260911-bts-fees-periods-1"
 
 
 def configuration_id(config: AktoConfig) -> str:
@@ -121,11 +121,10 @@ def register_bts_workspace(legacy):
         draft_keys = {draft["schedule_key"] for draft in record["drafts"] if draft["payer"] == "opco"}
         for card in billing["cards"]:
             card["draft_exists"] = card["key"] in draft_keys
-        fee_totals = {key: sum(fee["amount_cents"] for fee in record["fees"] if fee["nature"] == key) for key in FEE_LABELS}
         for draft in record["drafts"]:
             card = next((card for card in billing["cards"] if card["key"] == draft["schedule_key"]), None)
             draft["needs_review"] = draft["payer"] == "opco" and (card is None or not card["can_draft"] or card["remaining"] != draft["amount_cents"])
-        return {"record": record, "billing": billing, "fee_totals": fee_totals, "opco_costs": opco_costs_view(record)}
+        return {"record": record, "billing": billing, "opco_costs": opco_costs_view(record)}
 
     @contextmanager
     def api_lock():

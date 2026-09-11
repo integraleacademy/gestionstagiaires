@@ -1,30 +1,28 @@
 {% if record.source in ['akto', 'wedof'] %}
-<section class="ws-opco-costs" aria-label="Frais annexes communiqués par l’OPCO">
-  <h3>Frais annexes accordés par l’OPCO</h3>
-  {% if opco_costs.stale %}<p class="ws-note">Dernières données conservées : actualisez le dossier pour vérifier les engagements et plafonds OPCO.</p>{% endif %}
+<section class="ws-fees-bar ws-opco-fees" aria-label="Frais annexes communiqués par l’OPCO">
+  <div class="ws-section-head"><h3>Frais annexes accordés par l’OPCO</h3></div>
+  {% if opco_costs.stale %}<p class="ws-note">Données précédentes conservées : actualisez le dossier pour vérifier les règlements.</p>{% endif %}
   {% if opco_costs['items'] %}
-  <div class="ws-opco-cost-grid">
+  <div class="ws-opco-fee-grid">
     {% for cost in opco_costs['items'] %}
-    <div class="ws-opco-cost">
-      <span>{{ cost.label }}</span>
-      <strong>{{ cents(cost.amount) if cost.amount is not none else 'Montant non communiqué' }}</strong>
-      {% if cost.quantity is not none or cost.unit_price is not none %}<small>Quantité : {{ cost.quantity if cost.quantity is not none else 'non communiquée' }} · Prix unitaire : {{ cents(cost.unit_price) if cost.unit_price is not none else 'non communiqué' }}</small>{% endif %}
-    </div>
+    <article class="ws-opco-fee" aria-label="{{ cost.label }}">
+      <div class="ws-opco-fee-title">
+        {{ icon('home' if cost.nature == 'HEBERGEMENT' else 'food' if cost.nature == 'RESTAURATION' else 'laptop' if cost.nature == 'PREMIER_EQUIPEMENT' else 'plane' if cost.nature == 'MOBILITE' else 'file',22) }}
+        <strong>{{ cost.label }}</strong>
+        <span class="ws-pill ws-fee-status--{{ cost.status }}">{{ cost.status_label }}</span>
+      </div>
+      <dl class="ws-fee-balances">
+        <div class="ws-fee-granted"><dt>Accordé</dt><dd>{{ cents(cost.amount) if cost.amount is not none else '—' }}</dd></div>
+        <div class="ws-fee-paid"><dt>Réglé</dt><dd{% if cost.paid is none %} title="Montant réglé non communiqué"{% endif %}>{{ cents(cost.paid) if cost.paid is not none else '—' }}</dd></div>
+        <div class="ws-fee-outstanding"><dt>Non réglé</dt><dd{% if cost.outstanding is none %} title="Montant non réglé non communiqué"{% endif %}>{{ cents(cost.outstanding) if cost.outstanding is not none else '—' }}</dd></div>
+      </dl>
+      {% for line in cost.lines %}{% if line.quantity is not none or line.unit_price is not none %}<small>Quantité : {{ line.quantity if line.quantity is not none else 'non communiquée' }} · Prix unitaire : {{ cents(line.unit_price) if line.unit_price is not none else 'non communiqué' }}</small>{% endif %}{% endfor %}
+    </article>
     {% endfor %}
   </div>
+  {% if opco_costs.incomplete_payments %}<p class="ws-note ws-payment-availability">« — » : montant non communiqué. L’état « Non soldé » ne précise pas si une partie a déjà été réglée. WEDOF ne fournit pas le détail chiffré de ces règlements.</p>{% endif %}
   {% else %}
-  <p class="ws-muted">{{ 'Aucun engagement de frais annexes dans les données renvoyées par WEDOF.' if opco_costs.available else 'Les engagements de frais annexes ne sont pas disponibles dans les données récupérées.' }} Cela ne permet pas de conclure à une absence de prise en charge.</p>
-  {% endif %}
-  {% if opco_costs.ceilings %}
-  <details class="ws-source-details" open>
-    <summary>Plafonds et règlements communiqués par l’OPCO</summary>
-    <dl class="ws-reference-list">
-      {% for ceiling in opco_costs.ceilings %}
-      <div><dt>{{ ceiling.label }} · plafond</dt><dd>{{ cents(ceiling.amount) if ceiling.amount is not none else 'Non communiqué' }}{% if ceiling.paid is not none %}<small>{{ 'Frais réglés' if ceiling.paid else 'Frais non réglés' }}</small>{% endif %}</dd></div>
-      {% endfor %}
-    </dl>
-    <p class="ws-note">Un plafond de prise en charge n’est pas un montant accordé ou restant à facturer. Les frais annexes ne sont pas ajoutés au total des échéances pédagogiques.</p>
-  </details>
+  <p class="ws-muted">{{ 'Aucun engagement de frais annexes dans les données renvoyées par l’OPCO.' if opco_costs.available else 'Les engagements de frais annexes ne sont pas disponibles dans les données récupérées.' }}</p>
   {% endif %}
 </section>
 {% endif %}

@@ -149,7 +149,8 @@ class ClientTests(unittest.TestCase):
                 self.assertEqual(opco_costs_view(fields)['items'][1]['label'], 'Premier équipement')
                 self.assertEqual(opco_costs_view(fields)['items'][0]['label'], 'Restauration')
                 self.assertEqual(opco_costs_view(fields)['items'][0]['amount'], 30000)
-                self.assertFalse(opco_costs_view(fields)['ceilings'][0]['paid'])
+                self.assertIsNone(opco_costs_view(fields)['items'][1]['paid'])
+                self.assertEqual(opco_costs_view(fields)['items'][1]['status_label'], 'Non soldé')
                 card = billing_view(fields)['cards'][0]
                 self.assertEqual(card['opening_date'], '2027-03-01')
                 self.assertFalse(card['raw']['dateDebut'])
@@ -256,9 +257,14 @@ class LookupTests(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn('Ouverture à la facturation', page.text)
         self.assertIn('01/03/2027', page.text)
-        self.assertIn('Période de prestation non transmise', page.text)
+        self.assertIn('À partir du 01/03/2027', page.text)
         self.assertIn('300,00 €', page.text)
-        self.assertIn('12,00 €', page.text)
+        self.assertNotIn('12,00 €', page.text)
+        self.assertNotIn('Frais annexes saisis localement', page.text)
+        self.assertNotIn('Plafonds et règlements', page.text)
+        self.assertNotIn('fee-dialog', page.text)
+        self.assertIn('Non soldé', page.text)
+        self.assertEqual(self.store.record('w-1')['fees'][0]['amount_cents'], 1200)
         with client.session_transaction() as state:
             token = state['bts_csrf_token']
         self.api.folder.side_effect = WedofApiError('Fiche temporairement indisponible.', 'folder_unavailable')

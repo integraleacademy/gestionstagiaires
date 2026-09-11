@@ -1,0 +1,16 @@
+<div class="ws-schedule-timing">
+  <div class="ws-period">
+    <span>{{ icon('calendar',17) }} {{ 'Période calculée' if card.period_origin == 'calculated' else 'Période OPCO' }}</span>
+    {% if card.period_issue %}<strong>{{ card.period_issue }}</strong>
+    {% elif card.period_start and card.period_end %}<strong>Du {{ date_fr(card.period_start) }} au {{ date_fr(card.period_end) }}</strong>
+    {% elif card.period_start %}<strong>À partir du {{ date_fr(card.period_start) }}</strong>
+    {% elif card.period_end %}<strong>Jusqu’au {{ date_fr(card.period_end) }}</strong>
+    {% else %}<strong>Période non disponible</strong>{% endif %}
+    {% if not card.period_issue %}
+      {% if card.period_origin == 'calculated' and card.period_end %}<small>Entre cette ouverture et la suivante.</small>
+      {% elif card.last_opening %}<small>Dernière échéance : aucune ouverture suivante.</small>
+      {% elif not card.period_start or not card.period_end %}<small>Une date manque pour déterminer la période complète.</small>{% endif %}
+    {% endif %}
+  </div>
+  <div class="ws-opening"><span>Ouverture à la facturation</span><strong>{{ date_fr(card.opening_date) }}</strong><small>Date communiquée par l’OPCO{% if record.raw_stale or record.raw_error %} · à revérifier{% endif %}</small></div>
+</div>
