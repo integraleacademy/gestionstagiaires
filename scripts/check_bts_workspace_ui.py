@@ -98,7 +98,7 @@ def browser_check():
                 api.raw.assert_called_once()
                 page.goto(url + '/admin/BTS/dossiers/w-1?tab=contrat')
                 assert '20/08/2026' in page.inner_text('body')
-                assert 'Informations OPCO EP' in page.inner_text('body')
+                assert 'INFORMATIONS OPCO EP' in page.inner_text('body').upper()
                 page.goto(url + '/admin/BTS/dossiers/w-1?tab=comptabilite')
                 assert 'Ouverture à la facturation' in page.inner_text('body')
                 assert '01/03/2027' in page.inner_text('body')
