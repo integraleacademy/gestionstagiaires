@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from bts_workspace import register_bts_workspace
-from bts_workspace_store import WorkspaceStore, billing_view
+from bts_workspace_store import WorkspaceStore, billing_view, opco_costs_view
 from tests.test_bts_workspace import make_legacy
 from wedof_bts import FINANCERS, WedofBtsClient, folder_fields, is_apprenticeship_event, normalize_summary, raw_fields
 from wedof_bts_lookup import add_selection, matches, reference, search_step
@@ -26,6 +26,24 @@ def folder(key=1, **changes):
             "attendee": {"firstName": "Camille", "lastName": "Exemple", "email": "camille@example.test", "nir": "PRIVATE-NIR"},
             "trainingActionInfo": {"title": "BTS MOS", "sessionStartDate": "2026-09-01", "sessionEndDate": "2028-08-31", "hoursInCenter": 1350},
             "_links": {"certification": {"externalId": "RNCP38362"}}, **changes}
+
+
+def detailed_dossier(key=1):
+    """Synthetic CFA Dock v1 response (official schema, 2026-02-11)."""
+    return {"cerfa": {"numeroInterne": f"AK-{key}",
+                     "contrat": {"noContrat": f"DECA-{key}", "dateDebutContrat": "2026-08-20T00:00:00+0000",
+                                 "dateConclusion": "2026-08-03", "dateFinContrat": "2028-08-31", "salaireEmbauche": 1081.23},
+                     "formation": {"dureeFormation": 1350, "nombreHeuresEnDistanciel": 0},
+                     "apprenti": {"nir": "PRIVATE-NIR", "adresse": {"adresse1": "1 rue Exemple", "codePostal": "75001", "commune": "Paris"}},
+                     "maitre1": {"prenom": "Alex", "nom": "Exemple", "courriel": "alex@example.test", "nir": "PRIVATE-TUTOR"}},
+            "echeances": [{"numero": 2, "codification": "E2", "montantTotal": 2648.40, "montantRegle": 0,
+                           "montantEnCoursInstruction": 0, "dateOuverture": "2027-03-01T00:00:00+0000",
+                           "dateDebut": None, "dateFin": None, "iban": "PRIVATE-BANK"}],
+            "engagementsFraisAnnexe": [{"natureFrais": "RESTAURATION", "quantite": 100, "prixUnitaire": 3, "montantTotal": 300},
+                                       {"natureFrais": "PREMIEREQUIPEMENT", "quantite": 1, "prixUnitaire": 500, "montantTotal": 500}],
+            "detailsFacturation": {"plafondFraisPremierEquipement": 500, "fraisPremierEquipementRegles": False,
+                                   "periodesFraisAnnexes": [{"numeroEcheance": 1, "nature": "RESTAURATION", "iban": "PRIVATE"}],
+                                   "iban": "PRIVATE"}}
 
 
 class ClientTests(unittest.TestCase):
@@ -116,6 +134,41 @@ class ClientTests(unittest.TestCase):
         self.assertIsNone(normalize_summary(contract(amount=None))['engagement'])
         self.assertIsNone(normalize_summary(contract(amount=float('nan')))['engagement'])
 
+    def test_complete_cerfa_and_granted_costs_for_all_supported_opcos(self):
+        for financer in FINANCERS:
+            with self.subTest(financer=financer):
+                fields = raw_fields(detailed_dossier(), normalize_summary(contract(financer=financer)))
+                self.assertEqual(fields['contract_start'], '2026-08-20')
+                self.assertEqual(fields['contract_conclusion'], '2026-08-03')
+                self.assertEqual(fields['training_hours'], 1350)
+                self.assertEqual(fields['remote_hours'], 0)
+                self.assertEqual(fields['gross_salary'], 1081.23)
+                self.assertEqual(fields['apprentice_address'], '1 rue Exemple')
+                self.assertEqual(fields['tutor_name'], 'Alex Exemple')
+                self.assertNotIn('PRIVATE', json.dumps(fields))
+                self.assertEqual(opco_costs_view(fields)['items'][1]['label'], 'Premier équipement')
+                self.assertEqual(opco_costs_view(fields)['items'][0]['amount'], 30000)
+                self.assertFalse(opco_costs_view(fields)['ceilings'][0]['paid'])
+                card = billing_view(fields)['cards'][0]
+                self.assertEqual(card['opening_date'], '2027-03-01')
+                self.assertFalse(card['raw']['dateDebut'])
+                self.assertFalse(card['can_draft'])
+                self.assertEqual(billing_view(fields)['total'], 264840)  # Fees must not inflate tuition schedules.
+
+    def test_absent_numbers_stay_unknown_and_real_periods_are_kept(self):
+        raw = detailed_dossier()
+        raw['cerfa']['formation'] = {'dureeFormation': None, 'nombreHeuresEnDistanciel': float('nan')}
+        raw['cerfa']['contrat']['salaireEmbauche'] = -1
+        raw['echeances'][0].update(dateDebut='2026-09-01', dateFin='2027-02-28')
+        raw['engagementsFraisAnnexe'][0]['montantTotal'] = None
+        fields = raw_fields(raw, normalize_summary(contract()))
+        self.assertNotIn('training_hours', fields)
+        self.assertNotIn('remote_hours', fields)
+        self.assertNotIn('gross_salary', fields)
+        self.assertIsNone(opco_costs_view(fields)['items'][0]['amount'])
+        self.assertEqual(fields['schedules'][0]['dateFin'], '2027-02-28')
+        self.assertEqual(fields['schedules'][0]['dateOuverture'], '2027-03-01')
+
 
 class LookupTests(unittest.TestCase):
     def setUp(self):
@@ -127,6 +180,7 @@ class LookupTests(unittest.TestCase):
         self.api.contracts_page.return_value = ([normalize_summary(contract()), normalize_summary(contract(2))], False, 2)
         self.api.folder.side_effect = lambda key: folder_fields(folder(int(key.split('-')[-1])), key)
         self.api.contract.side_effect = lambda key: normalize_summary(contract(int(key)))
+        self.api.raw.side_effect = lambda key, summary: raw_fields(detailed_dossier(int(key)), summary)
 
     def step(self, **kwargs):
         return search_step(self.store, self.api, 'browser-one', config_id='config', **kwargs)
@@ -150,6 +204,7 @@ class LookupTests(unittest.TestCase):
         self.assertNotIn('config_id', result)
         self.assertNotIn('summary_hash', result['candidates'][0])
         self.assertEqual(self.store.listing()['total'], 0)
+        self.api.raw.assert_not_called()
         self.api.folder.assert_called_once_with('OPCO-1')
         self.assertNotIn('AK-2', json.dumps(self.store.wedof_lookup('browser-one')))
         self.assertNotIn('bts_wedof_lookups', self.store.export_workspace())
@@ -162,16 +217,65 @@ class LookupTests(unittest.TestCase):
         self.assertEqual((record_id, added), ('w-1', True))
         self.assertEqual(self.store.record('w-1')['name'], 'Camille Exemple')
         self.assertIsNone(self.store.record('w-2'))
+        self.api.raw.assert_called_once()
+        self.assertEqual(self.api.raw.call_args.args[0], '1')
+        self.assertEqual(self.store.record('w-1')['contract_start'], '2026-08-20')
+        self.assertEqual(len(self.store.record('w-1')['extra_costs']), 2)
         self.store.annotate('w-1', 'Suivi à conserver', ['cerfa_prepared'], 0, 'Test')
         self.store.add_fee('w-1', 'PREMIER_EQUIPEMENT', '150', 'Frais', 'Test')
         self.api.reset_mock()
         self.assertEqual(self.add(), ('w-1', False))
         self.api.contract.assert_not_called()
         self.api.folder.assert_not_called()
+        self.api.raw.assert_not_called()
         self.assertEqual(self.store.listing()['total'], 2)
         self.assertIsNotNone(self.store.record(local))
         self.assertEqual(self.store.record('w-1')['annotation']['notes'], 'Suivi à conserver')
         self.assertEqual(self.store.record('w-1')['fees'][0]['amount_cents'], 15000)
+
+    def test_optional_raw_failure_keeps_selected_dossier_and_explains_partial_import(self):
+        self.search()
+        self.api.raw.side_effect = WedofApiError('Données temporairement indisponibles.', 'raw_unavailable')
+        self.assertEqual(self.add(), ('w-1', True))
+        record = self.store.record('w-1')
+        self.assertEqual(record['name'], 'Camille Exemple')
+        self.assertTrue(record['raw_stale'])
+        self.assertIn('indisponibles', record['raw_error'])
+        self.assertIsNone(self.store.record('w-2'))
+
+    def test_refresh_and_ui_show_opening_and_grants_preserve_local_fees(self):
+        self.search()
+        self.add()
+        self.store.add_fee('w-1', 'RESTAURATION', '12', 'Local', 'Test')
+        register_bts_workspace(self.legacy)
+        client = self.legacy.app.test_client()
+        with client.session_transaction() as state:
+            state.update(admin_logged_in=True, admin_role='admin')
+        page = client.get('/admin/BTS/dossiers/w-1?tab=comptabilite')
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('Ouverture à la facturation', page.text)
+        self.assertIn('01/03/2027', page.text)
+        self.assertIn('Période de prestation non transmise', page.text)
+        self.assertIn('300,00 €', page.text)
+        self.assertIn('12,00 €', page.text)
+        with client.session_transaction() as state:
+            token = state['bts_csrf_token']
+        self.api.folder.side_effect = WedofApiError('Fiche temporairement indisponible.', 'folder_unavailable')
+        self.api.raw.reset_mock()
+        with patch.dict(os.environ, {'WEDOF_API_KEY': 'test-key'}), patch('bts_workspace.WedofBtsClient', return_value=self.api):
+            client.post('/admin/BTS/dossiers/w-1/actualiser', data={'bts_csrf_token': token})
+        self.api.raw.assert_called_once()
+        self.assertEqual(self.store.record('w-1')['contract_start'], '2026-08-20')
+        self.assertEqual(self.store.record('w-1')['fees'][0]['amount_cents'], 1200)
+        self.store.upsert_wedof_summary(normalize_summary(contract(startDate=None)), 'Test')
+        self.assertEqual(self.store.record('w-1')['contract_start'], '2026-08-20')
+        self.assertTrue(opco_costs_view(self.store.record('w-1'))['stale'])
+        empty = detailed_dossier()
+        empty.update(echeances=[], engagementsFraisAnnexe=[], detailsFacturation={})
+        self.store.update_wedof_details('1', raw_fields(empty, normalize_summary(contract())))
+        page = client.get('/admin/BTS/dossiers/w-1?tab=comptabilite')
+        self.assertIn('WEDOF a renvoyé un échéancier vide', page.text)
+        self.assertNotIn('0,00 €', page.text.split('<dl class="ws-legend">')[1].split('</dl>')[0])
 
     def test_same_deca_requires_selection_and_only_adds_one(self):
         self.api.contracts_page.return_value = ([normalize_summary(contract()), normalize_summary(contract(2, externalIdDeca='DECA-1'))], False, 2)

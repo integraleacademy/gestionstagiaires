@@ -25,11 +25,11 @@ from wedof_bts import FINANCERS, WedofBtsClient, financer_filter, financer_label
 from wedof_bts_lookup import add_selection, public_lookup, reference, search_step
 from bts_workspace_store import (
     ALL_FIELDS, CHECKLIST, FEE_LABELS, FIELD_GROUPS, TABS, EditConflict,
-    WorkspaceError, WorkspaceStore, billing_view, date_fr, euros, euros_cents,
+    WorkspaceError, WorkspaceStore, billing_view, opco_costs_view, date_fr, euros, euros_cents,
     now, remote_number,
 )
 
-VERSION = "20260910-bts-multi-opco-1"
+VERSION = "20260911-bts-details-1"
 
 
 def configuration_id(config: AktoConfig) -> str:
@@ -125,7 +125,7 @@ def register_bts_workspace(legacy):
         for draft in record["drafts"]:
             card = next((card for card in billing["cards"] if card["key"] == draft["schedule_key"]), None)
             draft["needs_review"] = draft["payer"] == "opco" and (card is None or not card["can_draft"] or card["remaining"] != draft["amount_cents"])
-        return {"record": record, "billing": billing, "fee_totals": fee_totals}
+        return {"record": record, "billing": billing, "fee_totals": fee_totals, "opco_costs": opco_costs_view(record)}
 
     @contextmanager
     def api_lock():
@@ -333,8 +333,12 @@ def register_bts_workspace(legacy):
                     raise WorkspaceError("WEDOF a renvoyé un contrat d’un autre OPCO. Le dossier existant a été conservé.")
                 store().upsert_wedof_summary(summary, actor())
                 if summary.get("registration_id"):
-                    fields = client.folder(summary["registration_id"])
-                    store().update_wedof_details(key, {**fields, "needs_detail": False})
+                    try:
+                        fields = client.folder(summary["registration_id"])
+                        store().update_wedof_details(key, {**fields, "needs_detail": False})
+                    except WedofApiError as exc:
+                        # A missing training folder must not prevent reading the matching CERFA.
+                        store().update_wedof_details(key, {"details_error": exc.user_message})
                 try:
                     fields = client.raw(key, summary)
                     store().update_wedof_details(key, fields)

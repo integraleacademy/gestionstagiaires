@@ -211,6 +211,7 @@ def billing_view(record: dict, today: dt.date | None = None) -> dict:
         elif total is not None and total > 0:
             buckets["unknown"] += total
         cards.append({"number": number or str(index + 1), "key": key, "raw": schedule,
+                      "opening_date": opening.isoformat() if opening else "",
                       "amount": total, "paid": paid, "pending": pending,
                       "remaining": remaining, "status": status, "label": label,
                       "valid": valid, "can_draft": bool(valid and key and remaining > 0 and opening and opening <= today)})
@@ -234,6 +235,34 @@ def billing_view(record: dict, today: dt.date | None = None) -> dict:
     return {"cards": cards, "legend": legend, "total": total,
             "gradient": "conic-gradient(" + ",".join(stops) + ")" if stops else "#eceef7",
             "has_data": bool(cards)}
+
+
+def opco_costs_view(record: dict) -> dict:
+    """Granted amounts, billing ceilings and local fees are different figures."""
+    labels = {**FEE_LABELS, "PREMIEREQUIPEMENT": FEE_LABELS["PREMIER_EQUIPEMENT"]}
+    items = []
+    for cost in record.get("extra_costs", []):
+        if not isinstance(cost, dict):
+            continue
+        items.append({"label": labels.get(cost.get("natureFrais"), "Autres frais OPCO"),
+                      "amount": money_cents(cost.get("montantTotal")),
+                      "unit_price": money_cents(cost.get("prixUnitaire")),
+                      "quantity": cost.get("quantite")})
+    details = record.get("billing_details") or {}
+    ceilings = []
+    for label, amount_key, paid_key in (
+        ("Premier équipement", "plafondFraisPremierEquipement", "fraisPremierEquipementRegles"),
+        ("Mobilité internationale", "plafondFraisMobilite", "fraisMobiliteRegles"),
+    ):
+        amount = money_cents(details.get(amount_key))
+        paid = details.get(paid_key)
+        if amount is not None or isinstance(paid, bool):
+            ceilings.append({"label": label, "amount": amount, "paid": paid if isinstance(paid, bool) else None})
+    return {"items": items, "ceilings": ceilings,
+            "available": record.get("extra_costs_available", bool(items)),
+            "stale": record.get("source") == "wedof" and bool(record.get("raw_stale") or record.get("raw_error")
+                      or (items and not record.get("extra_costs_available"))
+                      or (ceilings and not record.get("billing_details_available")))}
 
 
 class WorkspaceStore(AktoBtsStore):
@@ -539,15 +568,22 @@ class WorkspaceStore(AktoBtsStore):
             item = {**{field: "" for field in ALL_FIELDS}, "schedules": [], "extra_costs": [],
                     "invoices": [], "billing_details": {}, **previous, **summary, "synced_at": stamp,
                     "missing_from_latest": False}
+            if previous.get("registration_id") == summary.get("registration_id"):
+                # The summary is less complete than the CERFA. Keep known details if
+                # the following optional detailed read fails; its error is shown in the UI.
+                for field in ALL_FIELDS:
+                    if field in summary and summary[field] in (None, "") and previous.get(field) not in (None, ""):
+                        item[field] = previous[field]
             item["needs_detail"] = bool(changed or previous.get("needs_detail") or str(previous.get("details_checked_at", ""))[:10] != stamp[:10])
-            if changed and previous.get("schedules"):
+            if changed and previous.get("raw_checked_at"):
                 item["raw_stale"] = True
             # Changing the linked registration folder invalidates its old identity.
             if previous and previous.get("registration_id") != summary.get("registration_id"):
                 for field in ALL_FIELDS:
                     if field not in summary:
                         item[field] = ""
-                item.update(schedules=[], raw_checked_at="", details_checked_at="")
+                item.update(schedules=[], extra_costs=[], billing_details={}, raw_checked_at="", details_checked_at="",
+                            extra_costs_available=False, billing_details_available=False)
             if details:
                 item.update(details)
             connection.execute("INSERT INTO bts_wedof_contracts VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload_json=excluded.payload_json,updated_at=excluded.updated_at",

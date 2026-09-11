@@ -40,8 +40,8 @@ def browser_check():
     from tests.test_bts_workspace import make_legacy, seed_remote
     from bts_workspace import register_bts_workspace
     from bts_workspace_store import WorkspaceStore
-    from tests.test_wedof_bts import contract, folder
-    from wedof_bts import folder_fields, normalize_summary
+    from tests.test_wedof_bts import contract, folder, detailed_dossier
+    from wedof_bts import folder_fields, normalize_summary, raw_fields
     output = ROOT / 'test-artifacts' / 'bts'
     output.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as directory:
@@ -60,6 +60,7 @@ def browser_check():
         api.contracts_page.return_value = (available, False, 4)
         api.contract.return_value = available[0]
         api.folder.return_value = folder_fields(folder(), 'OPCO-1')
+        api.raw.return_value = raw_fields(detailed_dossier(), available[0])
         server = make_server('127.0.0.1', 0, legacy.app)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -94,7 +95,20 @@ def browser_check():
                 assert all(store.record('w-' + str(key)) is None for key in (2, 3, 4))
                 assert store.record('w-1')['financer'] == 'opcoCfaEp'
                 assert 'OPCO EP' in page.inner_text('body')
+                api.raw.assert_called_once()
+                page.goto(url + '/admin/BTS/dossiers/w-1?tab=contrat')
+                assert '20/08/2026' in page.inner_text('body')
+                assert 'Informations OPCO EP' in page.inner_text('body')
+                page.goto(url + '/admin/BTS/dossiers/w-1?tab=comptabilite')
+                assert 'Ouverture à la facturation' in page.inner_text('body')
+                assert '01/03/2027' in page.inner_text('body')
+                assert 'Période de prestation non transmise' in page.inner_text('body')
+                assert 'Frais annexes accordés par l’OPCO' in page.inner_text('body')
+                assert '300,00 €' in page.inner_text('body')
+                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                page.screenshot(path=str(output / 'opco-details-mobile.png'), full_page=True)
                 page.set_viewport_size({'width': 1440, 'height': 1100})
+                page.screenshot(path=str(output / 'opco-details-desktop.png'), full_page=True)
                 page.goto(url + '/admin/BTS')
                 page.screenshot(path=str(output / 'dossiers-desktop.png'), full_page=True)
                 page.goto(url + f'/admin/BTS/dossiers/{record_id}?tab=comptabilite')

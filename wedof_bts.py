@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import math
 import re
 from urllib.parse import quote
 
@@ -44,6 +45,27 @@ def date(value):
         return dt.date.fromisoformat(text(value)[:10]).isoformat()
     except ValueError:
         return ""
+
+
+def nonnegative(value):
+    """Keep a source zero, but never turn absent or invalid numbers into zero."""
+    if not isinstance(value, (str, int, float)) or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+        if math.isfinite(number) and 0 <= number <= 100000000:
+            return int(number) if number.is_integer() else number
+        return None
+    except ValueError:
+        return None
+
+
+def address_fields(value, prefix):
+    address = obj(value)
+    line = text(address.get("adresse1")) or " ".join(filter(None, (
+        text(address.get("numero")), text(address.get("voie")))))
+    return {prefix + "_address": " ".join(filter(None, (line, text(address.get("adresse2") or address.get("complement"))))),
+            prefix + "_postcode": text(address.get("codePostal")), prefix + "_city": text(address.get("commune"))}
 
 
 def fingerprint(value):
@@ -115,17 +137,50 @@ def raw_fields(raw, contract):
     deca = text(cerfa.get("numeroDeca") or obj(cerfa.get("contrat")).get("noContrat"))
     if not ((number and number in numbers) or (deca and deca == contract.get("deca_number"))):
         raise WedofApiError("L’identité du dossier OPCO n’a pas pu être vérifiée.", "raw_identity_mismatch")
-    from akto_bts import normalize_contract
-    normalized = normalize_contract({}, raw, [], synced_at=stamp(), detail_loaded=True)
-    # Do not persist the unrestricted raw payload, disability or invented numeric defaults.
-    fields = {key: normalized[key] for key in (
-        "internal_number", "apprentice_first_name", "apprentice_last_name", "apprentice_email",
-        "apprentice_phone", "apprentice_birth_date", "employer_name", "employer_siret", "employer_email",
-        "employer_phone", "training_title", "rncp", "diploma_code", "training_start", "training_end") if normalized.get(key)}
+    apprentice, employer = obj(cerfa.get("apprenti")), obj(cerfa.get("employeur") or cerfa.get("employeurV2"))
+    training, agreement, tutor = obj(cerfa.get("formation")), obj(cerfa.get("contrat")), obj(cerfa.get("maitre1"))
+    # CFA Dock v1/v2 allowlist. Never persist the unrestricted CERFA (NIR, bank or health data).
+    fields = {"internal_number": text(cerfa.get("numeroInterne")), "deca_number": deca,
+              "contract_number": text(agreement.get("noContrat")),
+              "apprentice_first_name": text(apprentice.get("prenom")), "apprentice_last_name": text(apprentice.get("nom")),
+              "apprentice_email": text(apprentice.get("courriel")), "apprentice_phone": text(apprentice.get("telephone")),
+              "apprentice_birth_date": date(apprentice.get("dateNaissance")),
+              "employer_name": text(employer.get("denomination")) or " ".join(filter(None, (text(employer.get("prenom")), text(employer.get("nom"))))),
+              "employer_siret": text(employer.get("siret")), "employer_email": text(employer.get("courriel")),
+              "employer_phone": text(employer.get("telephone")),
+              "tutor_name": " ".join(filter(None, (text(tutor.get("prenom")), text(tutor.get("nom"))))),
+              "tutor_email": text(tutor.get("courriel")),
+              "training_title": text(training.get("intituleQualification")), "rncp": text(training.get("rncp")),
+              "diploma_code": text(training.get("codeDiplome")), "training_start": date(training.get("dateDebutFormation")),
+              "training_end": date(training.get("dateFinFormation")), "training_hours": nonnegative(training.get("dureeFormation")),
+              "remote_hours": nonnegative(training.get("nombreHeuresEnDistanciel")),
+              "contract_start": date(agreement.get("dateDebutContrat")), "contract_end": date(agreement.get("dateFinContrat")),
+              "contract_conclusion": date(agreement.get("dateConclusion")), "contract_break_date": date(agreement.get("dateRupture")),
+              "gross_salary": nonnegative(agreement.get("salaireEmbauche")),
+              **address_fields(apprentice.get("adresse"), "apprentice"), **address_fields(employer.get("adresse"), "employer")}
+    fields = {key: value for key, value in fields.items() if value is not None and value != ""}
     schedules = raw.get("echeances")
     if isinstance(schedules, list) and all(isinstance(x, dict) for x in schedules):
         allowed = {"numero", "codification", "montantTotal", "montantRegle", "montantEnCoursInstruction", "dateOuverture", "dateDebut", "dateFin"}
-        fields["schedules"] = [{k: v for k, v in x.items() if k in allowed and isinstance(v, (str, int, float, type(None))) and not isinstance(v, bool)} for x in schedules]
+        fields["schedules"] = [{k: (date(v) if k.startswith("date") else nonnegative(v) if k.startswith("montant") else text(v))
+                                for k, v in x.items() if k in allowed} for x in schedules]
+    costs = raw.get("engagementsFraisAnnexe")
+    fields["extra_costs_available"] = isinstance(costs, list) and all(isinstance(x, dict) for x in costs)
+    if fields["extra_costs_available"]:
+        fields["extra_costs"] = [{"natureFrais": text(x.get("natureFrais")),
+                                  **{key: nonnegative(x.get(key)) for key in ("quantite", "prixUnitaire", "montantTotal")}} for x in costs]
+        fields["extra_costs_checked_at"] = stamp()
+    details = raw.get("detailsFacturation")
+    fields["billing_details_available"] = isinstance(details, dict)
+    if fields["billing_details_available"]:
+        fields["billing_details"] = {key: nonnegative(details.get(key)) for key in (
+            "plafondFraisPremierEquipement", "plafondFraisMobilite")}
+        fields["billing_details"].update({key: details[key] for key in (
+            "fraisPremierEquipementRegles", "fraisMobiliteRegles") if isinstance(details.get(key), bool)})
+        periods = details.get("periodesFraisAnnexes")
+        if isinstance(periods, list) and all(isinstance(x, dict) for x in periods):
+            fields["billing_details"]["periodesFraisAnnexes"] = [
+                {"numeroEcheance": text(x.get("numeroEcheance")), "nature": text(x.get("nature"))} for x in periods]
     verified_schedules = "schedules" in fields
     fields.update(raw_attempted_at=stamp(), raw_stale=not verified_schedules,
                   raw_error="" if verified_schedules else "WEDOF ne restitue pas d’échéancier exploitable. Les éventuelles échéances précédentes restent à vérifier.")
