@@ -34,6 +34,7 @@ def production_entrypoint_check():
 
 
 def browser_check():
+    from pypdf import PdfReader
     from playwright.sync_api import sync_playwright
     from werkzeug.serving import make_server
     from flask import redirect, session
@@ -101,8 +102,35 @@ def browser_check():
                 assert 'OPCO EP' in page.inner_text('body')
                 api.raw.assert_called_once()
                 page.goto(url + '/admin/BTS/dossiers/w-1?tab=contrat')
-                assert '20/08/2026' in page.inner_text('body')
-                assert 'INFORMATIONS OPCO EP' in page.inner_text('body').upper()
+                page.get_by_role('heading', name='Générer le contrat d’apprentissage').wait_for()
+                assert page.locator('[name="contract_start"]').input_value() == '2026-08-20'
+                assert page.locator('[name="training_hours"]').input_value() == '1350'
+                assert page.locator('[name="exam_end"]').input_value() == ''
+                assert 'OPCO EP' in page.inner_text('body')
+                page.locator('[data-cerfa-section="agreement"] summary').click()
+                page.locator('[name="weekly_hours"]').fill('35')
+                page.locator('[name="weekly_minutes"]').fill('0')
+                assert page.get_by_role('link', name='Télécharger le CERFA').get_attribute('aria-disabled') == 'true'
+                assert page.locator('[data-cerfa-unsaved]').is_visible()
+                page.get_by_role('button', name='Enregistrer les informations').click()
+                page.wait_for_load_state()
+                assert store.cerfa_complements('w-1')['values']['weekly_hours'] == '35'
+                assert store.record('w-1')['contract_start'] == '2026-08-20'
+                assert page.get_by_role('link', name='Télécharger le CERFA').get_attribute('aria-disabled') is None
+                api.raw.assert_called_once()
+                with page.expect_download() as download_info:
+                    page.get_by_role('link', name='Télécharger le CERFA').click()
+                downloaded = Path(directory) / 'cerfa-test.pdf'
+                download_info.value.save_as(str(downloaded))
+                filled_pdf = PdfReader(downloaded)
+                assert len(filled_pdf.pages) == 2
+                assert filled_pdf.get_fields()['Zone de texte 8_68']['/V'] == '35'
+                assert filled_pdf.get_fields()['Zone de texte 21_19']['/V'] == '20'
+                assert filled_pdf.get_fields()['Zone de texte 8_17']['/V'] == 'Camille'
+                page.screenshot(path=str(output / 'cerfa-mobile.png'), full_page=True)
+                page.set_viewport_size({'width': 1440, 'height': 1100})
+                page.screenshot(path=str(output / 'cerfa-desktop.png'), full_page=True)
+                page.set_viewport_size({'width': 390, 'height': 1000})
                 page.goto(url + '/admin/BTS/dossiers/w-1?tab=comptabilite')
                 assert 'Ouverture à la facturation' in page.inner_text('body')
                 assert '01/03/2027' in page.inner_text('body')
@@ -149,11 +177,15 @@ def browser_check():
                     page.goto(url + '/admin/BTS/dossiers/w-1?tab=comptabilite')
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), f'OPCO fee grid overflow at {width}px'
                     page.screenshot(path=str(output / f'frais-opco-{width}.png'), full_page=True)
+                    for tab in ('contrat', 'etudiant', 'entreprise'):
+                        page.goto(url + f'/admin/BTS/dossiers/w-1?tab={tab}')
+                        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), f'CERFA {tab} overflow at {width}px'
+                    page.screenshot(path=str(output / f'cerfa-entreprise-{width}.png'), full_page=True)
                 assert not errors, errors
                 browser.close()
         finally:
             server.shutdown()
-    print('Browser flows: manual OPCO import, granted fees and payment availability, opening-to-opening periods, invoice draft, responsive layouts and JavaScript OK')
+    print('Browser flows: manual OPCO import, CERFA prefill/save/download, granted fees and payment availability, opening-to-opening periods, invoice draft, responsive layouts and JavaScript OK')
 
 
 if __name__ == '__main__':

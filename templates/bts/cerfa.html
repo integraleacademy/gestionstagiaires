@@ -1,0 +1,73 @@
+{% set values = cerfa['values'] %}
+<section class="ws-card ws-pad ws-cerfa-summary" aria-label="Préparation du contrat d’apprentissage">
+  <div class="ws-section-head">
+    <div><span class="ws-eyebrow">Contrat d’apprentissage · CERFA 10103*14</span>
+      <h2>{{ 'Générer le contrat d’apprentissage' if tab == 'contrat' else 'Compléter le contrat d’apprentissage' }}</h2>
+      <p class="ws-muted">Les informations des trois onglets remplissent directement votre CERFA.</p>
+    </div><span class="ws-icon-tile">{{ icon('file',26) }}</span>
+  </div>
+  <div class="ws-cerfa-progress">
+    {% for group in cerfa.groups %}
+    <a href="{{ url_for('bts_dossier',record_id=record.id,tab=group.tab) }}#cerfa-form" class="ws-cerfa-stage {{ 'is-complete' if not group.missing else '' }}">
+      <span class="ws-icon-tile">{{ icon('user' if group.tab == 'etudiant' else 'company' if group.tab == 'entreprise' else 'folder') }}</span>
+      <span><strong>{{ group.label }}</strong><small>{{ (group.missing|length|string ~ ' informations à compléter ou vérifier') if group.missing else 'Informations complétées' }}</small></span>{{ icon('arrow',16) }}
+    </a>
+    {% endfor %}
+  </div>
+  {% if tab == 'contrat' %}
+  <div class="ws-cerfa-download">
+    <div><strong>{{ 'Vos informations sont complétées' if cerfa.ready else 'Un CERFA déjà prérempli, à compléter' }}</strong>
+      <p class="ws-note">{{ 'Relisez le document avant de recueillir le visa du CFA et les signatures.' if cerfa.ready else 'Vous pouvez consulter et télécharger le document avec les données enregistrées. Les informations manquantes restent vides.' }}</p>
+      <span class="ws-note" data-cerfa-unsaved hidden>Enregistrez vos modifications avant d’ouvrir le PDF.</span>
+    </div>
+    <div class="ws-actions"><a class="ws-button" data-cerfa-pdf href="{{ url_for('bts_cerfa_pdf',record_id=record.id) }}" target="_blank" rel="noopener">Voir l’aperçu</a>
+      <a class="ws-button ws-button--primary" data-cerfa-pdf href="{{ url_for('bts_cerfa_pdf',record_id=record.id,download=1) }}">{{ icon('download',18) }} Télécharger le CERFA</a></div>
+  </div>
+  <p class="ws-note">PDF modifiable · Signatures à recueillir · Aucun envoi automatique à l’OPCO</p>
+  {% endif %}
+  {% if cerfa.missing %}
+  <details class="ws-cerfa-missing"><summary>{{ cerfa.missing|length }} informations à compléter ou vérifier pour finaliser le contrat</summary>
+    <div class="ws-cerfa-missing-grid">{% for group in cerfa.groups %}{% if group.missing %}<div><h3>{{ group.label }}</h3><ul>
+    {% for item in group.missing %}<li><a href="{{ url_for('bts_dossier',record_id=record.id,tab=group.tab) }}#cerfa-{{ item.key }}">{{ item.label }}</a>{% if item.message != 'À compléter' %}<small>{{ item.message }}</small>{% endif %}</li>{% endfor %}
+    </ul></div>{% endif %}{% endfor %}</div>
+  </details>
+  {% endif %}
+</section>
+
+<form id="cerfa-form" class="ws-cerfa-form" method="post" action="{{ url_for('bts_cerfa_save',record_id=record.id) }}" data-cerfa-form>
+  {{ token() }}<input type="hidden" name="tab" value="{{ tab }}"><input type="hidden" name="revision" value="{{ cerfa.revision }}">
+  <input type="hidden" name="source_version" value="{{ cerfa.source_version }}">
+  <div class="ws-cerfa-form-head"><div><h2>{{ 'Informations de l’étudiant' if tab == 'etudiant' else 'Entreprise et maîtres d’apprentissage' if tab == 'entreprise' else 'Formation et contrat' }}</h2>
+    <p class="ws-muted">{% if record.source in ['wedof','akto'] %}Les données OPCO préremplissent les champs. Vos compléments sont enregistrés pour préparer le CERFA et sont conservés lors des actualisations.{% else %}Vous pouvez enregistrer à tout moment et reprendre plus tard.{% endif %}</p>
+  </div><a class="ws-text-button" href="{{ cerfa.notice_url }}" target="_blank" rel="noopener">Notice officielle {{ icon('arrow',15) }}</a></div>
+  {% if tab == 'entreprise' and record.tutor_name and not values.get('tutor_last_name') %}<p class="ws-alert ws-alert--info">Maître d’apprentissage renseigné dans le dossier : <strong>{{ record.tutor_name }}</strong>. Précisez son nom et son prénom dans les champs dédiés du CERFA.</p>{% endif %}
+  {% for section in cerfa.sections[tab] %}
+  {% set filled = namespace(count=0,errors=false) %}{% for f in section.fields %}{% if values.get(f.key) %}{% set filled.count = filled.count + 1 %}{% endif %}{% if cerfa.errors.get(f.key) %}{% set filled.errors = true %}{% endif %}{% endfor %}
+  <details class="ws-card ws-cerfa-section" data-cerfa-section="{{ section.key }}" {% if loop.first or filled.errors %}open{% endif %}>
+    <summary><span class="ws-cerfa-section-number">{{ '%02d'|format(loop.index) }}</span><span><strong>{{ section.label }}</strong><small>{{ filled.count }} / {{ section.fields|length }} champs renseignés{{ ' · selon votre situation' if section.condition or section.optional else '' }}</small></span><span class="ws-cerfa-chevron">⌄</span></summary>
+    <div class="ws-cerfa-section-body">
+      {% if section.help %}<p class="ws-muted">{{ section.help }}</p>{% endif %}
+      <div class="ws-form-grid">
+      {% for f in section.fields %}{% set value = values.get(f.key,'') %}
+      <div class="ws-cerfa-field {{ 'has-error' if cerfa.errors.get(f.key) else '' }}" id="cerfa-{{ f.key }}">
+        {% if f.kind == 'attestation' %}
+        <label class="ws-cerfa-attestation"><input type="checkbox" name="{{ f.key }}" value="yes" {% if value == 'yes' %}checked{% endif %}><span>{{ f.label }}</span></label>
+        {% else %}
+        <label for="field-{{ f.key }}"><span>{{ f.label }}{% if f.required %}<span class="ws-cerfa-required" title="À renseigner lorsque cette rubrique vous concerne"> *</span>{% endif %}</span>
+          {% if cerfa.source.get(f.key) and value == cerfa.source.get(f.key) %}<small class="ws-cerfa-prefill">Prérempli</small>{% endif %}
+        </label>
+        {% if f.kind == 'select' %}<select id="field-{{ f.key }}" name="{{ f.key }}" {% if cerfa.errors.get(f.key) %}aria-invalid="true" aria-describedby="error-{{ f.key }}"{% endif %}>
+          <option value="">À renseigner</option>{% for code,label in f.options %}<option value="{{ code }}" {% if value == code %}selected{% endif %}>{{ code ~ ' · ' if code.isdigit() else '' }}{{ label }}</option>{% endfor %}
+        </select>
+        {% else %}<input id="field-{{ f.key }}" name="{{ f.key }}" type="{{ f.kind if f.kind in ['date','email','tel'] else 'text' }}" value="{{ value }}" maxlength="{{ f.limit }}" {% if f.kind in ['integer','decimal'] %}inputmode="{{ 'numeric' if f.kind == 'integer' else 'decimal' }}"{% endif %} {% if f.key == 'apprentice_nir' %}autocomplete="off" spellcheck="false"{% endif %} {% if cerfa.errors.get(f.key) %}aria-invalid="true" aria-describedby="error-{{ f.key }}"{% endif %}>{% endif %}
+        {% endif %}
+        {% if f.help %}<small class="ws-note">{{ f.help }}</small>{% endif %}
+        {% if cerfa.errors.get(f.key) %}<small class="ws-cerfa-error" id="error-{{ f.key }}">{{ cerfa.errors[f.key] }}</small>{% endif %}
+      </div>
+      {% endfor %}
+      </div>
+    </div>
+  </details>
+  {% endfor %}
+  <div class="ws-card ws-cerfa-save"><span class="ws-note">* À compléter pour finaliser le contrat, selon votre situation.</span><button class="ws-button ws-button--primary">{{ icon('check',18) }} Enregistrer les informations</button></div>
+</form>
