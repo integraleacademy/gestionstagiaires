@@ -60,7 +60,11 @@ def browser_check():
         api.contracts_page.return_value = (available, False, 4)
         api.contract.return_value = available[0]
         api.folder.return_value = folder_fields(folder(), 'OPCO-1')
-        api.raw.return_value = raw_fields(detailed_dossier(), available[0])
+        details = detailed_dossier()
+        details['echeances'] = [{**details['echeances'][0], 'numero': n, 'codification': f'E{n}', 'dateOuverture': opening}
+                               for n, opening in enumerate(('2026-09-01', '2027-03-01', '2027-06-01'), 1)]
+        api.raw.return_value = raw_fields(details, available[0])
+        store.add_fee(record_id, 'RESTAURATION', '60.55', 'Ancienne saisie conservée', 'Test')
         server = make_server('127.0.0.1', 0, legacy.app)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -102,9 +106,16 @@ def browser_check():
                 page.goto(url + '/admin/BTS/dossiers/w-1?tab=comptabilite')
                 assert 'Ouverture à la facturation' in page.inner_text('body')
                 assert '01/03/2027' in page.inner_text('body')
-                assert 'Période de prestation non transmise' in page.inner_text('body')
+                assert 'Du 01/09/2026 au 01/03/2027' in page.inner_text('body')
+                assert 'Du 01/03/2027 au 01/06/2027' in page.inner_text('body')
+                assert 'Dernière échéance : aucune ouverture suivante.' in page.inner_text('body')
                 assert 'Frais annexes accordés par l’OPCO' in page.inner_text('body')
                 assert '300,00 €' in page.inner_text('body')
+                assert 'Non soldé' in page.inner_text('body')
+                assert 'Règlement non communiqué' in page.inner_text('body')
+                assert page.get_by_role('button', name='Ajouter des frais annexes').count() == 0
+                assert 'Frais annexes saisis localement' not in page.inner_text('body')
+                assert 'plafond' not in page.inner_text('body').lower()
                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 page.screenshot(path=str(output / 'opco-details-mobile.png'), full_page=True)
                 page.set_viewport_size({'width': 1440, 'height': 1100})
@@ -114,11 +125,8 @@ def browser_check():
                 page.goto(url + f'/admin/BTS/dossiers/{record_id}?tab=comptabilite')
                 page.get_by_role('heading', name='Échéancier de facturation').wait_for()
                 page.screenshot(path=str(output / 'comptabilite-desktop.png'), full_page=True)
-                page.get_by_role('button', name='Ajouter des frais annexes').click()
-                page.locator('#fee-dialog input[name="amount"]').fill('60,55')
-                page.locator('#fee-dialog input[name="description"]').fill('Frais de test')
-                page.get_by_role('button', name='Enregistrer le frais').click()
-                page.wait_for_load_state()
+                assert page.get_by_role('button', name='Ajouter des frais annexes').count() == 0
+                assert '60,55 €' not in page.inner_text('body')
                 assert store.record(record_id)['fees'][0]['amount_cents'] == 6055
                 page.get_by_role('button', name='Préparer', exact=True).click()
                 page.wait_for_load_state()
@@ -138,11 +146,14 @@ def browser_check():
                     page.goto(url + f'/admin/BTS/dossiers/{record_id}?tab=comptabilite')
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), f'Page overflow at {width}px'
                     page.screenshot(path=str(output / f'comptabilite-{width}.png'), full_page=True)
+                    page.goto(url + '/admin/BTS/dossiers/w-1?tab=comptabilite')
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), f'OPCO fee grid overflow at {width}px'
+                    page.screenshot(path=str(output / f'frais-opco-{width}.png'), full_page=True)
                 assert not errors, errors
                 browser.close()
         finally:
             server.shutdown()
-    print('Browser flows: four-OPCO lookup and individual OPCO EP add, dossier creation, fee dialog, invoice draft, responsive layouts and JavaScript OK')
+    print('Browser flows: manual OPCO import, granted fees and payment availability, opening-to-opening periods, invoice draft, responsive layouts and JavaScript OK')
 
 
 if __name__ == '__main__':

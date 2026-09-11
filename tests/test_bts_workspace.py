@@ -13,7 +13,7 @@ from flask import Flask, abort, redirect, session
 from akto_bts import normalize_contract
 from bts_workspace import register_bts_workspace
 from bts_workspace_store import (
-    EditConflict, WorkspaceError, WorkspaceStore, billing_view, money_cents,
+    EditConflict, WorkspaceError, WorkspaceStore, billing_view, money_cents, opco_costs_view,
     remote_id, remote_number, validate_fields,
 )
 
@@ -74,6 +74,58 @@ def seed_remote(store, number='D-1'):
 
 
 class FinanceTests(unittest.TestCase):
+    def test_periods_follow_consecutive_openings_without_inventing_a_final_end(self):
+        record = {'contract_end': '2028-08-31', 'schedules': [
+            {'numero': 3, 'dateOuverture': '2027-06-01'},
+            {'numero': 1, 'dateOuverture': '2026-09-01'},
+            {'numero': 2, 'dateOuverture': '2027-03-01'},
+            {'numero': 4, 'dateOuverture': '2028-09-01'}]}
+        original = json.dumps(record)
+        cards = billing_view(record)['cards']
+        self.assertEqual([(c['period_start'], c['period_end']) for c in cards[:2]],
+                         [('2026-09-01', '2027-03-01'), ('2027-03-01', '2027-06-01')])
+        self.assertTrue(cards[-1]['last_opening'])
+        self.assertEqual(cards[-1]['period_start'], '2028-09-01')
+        self.assertEqual(cards[-1]['period_end'], '')
+        self.assertEqual(json.dumps(record), original)
+
+    def test_periods_preserve_opco_dates_and_do_not_bridge_missing_or_invalid_openings(self):
+        cards = billing_view({'schedules': [
+            {'numero': 1, 'dateOuverture': '2026-09-01', 'dateDebut': '2026-08-20', 'dateFin': '2027-02-28'},
+            {'numero': 2, 'dateOuverture': '2027-03-01'},
+            {'numero': 3, 'dateOuverture': None},
+            {'numero': 4, 'dateOuverture': '2027-06-01'},
+            {'numero': 5, 'dateOuverture': '2026-06-01'}]})['cards']
+        self.assertEqual(cards[0]['period_origin'], 'opco')
+        self.assertEqual(cards[0]['period_end'], '2027-02-28')
+        self.assertEqual(cards[1]['period_end'], '')
+        self.assertEqual(cards[3]['period_end'], '')
+        self.assertTrue(cards[3]['period_issue'])
+        duplicate = billing_view({'schedules': [{'numero': n, 'dateOuverture': '2027-03-01'} for n in (1, 2)]})['cards']
+        self.assertTrue(all(c['period_issue'] and not c['period_end'] for c in duplicate))
+
+    def test_fee_payments_use_grants_and_settlement_flags_never_ceilings_or_tuition(self):
+        record = {'source': 'wedof', 'extra_costs_available': True, 'billing_details_available': True,
+                  'extra_costs': [{'natureFrais': 'Premierequipement', 'montantTotal': 500},
+                                  {'natureFrais': 'Restauration', 'montantTotal': 600}],
+                  'billing_details': {'plafondFraisPremierEquipement': 3500, 'fraisPremierEquipementRegles': False},
+                  'schedules': [{'numero': 1, 'montantRegle': 100}]}
+        items = opco_costs_view(record)['items']
+        self.assertEqual(items[0]['amount'], 50000)
+        self.assertEqual(items[0]['status_label'], 'Non soldé')
+        self.assertIsNone(items[0]['paid'])  # False does not rule out a partial payment.
+        self.assertIsNone(items[0]['outstanding'])
+        self.assertEqual(items[1]['status_label'], 'Règlement non communiqué')
+        record['billing_details']['fraisPremierEquipementRegles'] = True
+        record['extra_costs'].append({'natureFrais': 'PREMIER_EQUIPEMENT', 'montantTotal': 50})
+        items = opco_costs_view(record)['items']
+        self.assertEqual(len(items), 2)
+        self.assertEqual((items[0]['paid'], items[0]['outstanding']), (55000, 0))
+        self.assertIsNone(items[1]['paid'])
+        record['raw_stale'] = True
+        self.assertIsNone(opco_costs_view(record)['items'][0]['paid'])
+        self.assertEqual(opco_costs_view(record)['items'][0]['status_label'], 'À actualiser')
+
     def test_decimal_rounding_and_bad_values(self):
         self.assertEqual(money_cents('1 250,55'), 125055)
         self.assertEqual(money_cents('1.005'), 101)

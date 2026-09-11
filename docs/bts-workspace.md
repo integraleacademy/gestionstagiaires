@@ -98,7 +98,6 @@ L’interface reprend la structure demandée : navigation dédiée, liste de dos
 - Création de dossiers locaux ; modification des données étudiant, entreprise, maître d’apprentissage, formation et contrat.
 - Contrôles de format et de cohérence : champs obligatoires, e-mails, longueur du SIRET, dates, heures et montants.
 - Notes, checklist de préparation déclarative et historique interne.
-- Frais annexes saisis localement avec montants en centimes entiers.
 - Brouillons de factures entreprise, export JSON et suppression explicite de ces brouillons.
 - Recherche, filtres, pagination et export des données de l’espace.
 
@@ -106,6 +105,8 @@ L’interface reprend la structure demandée : navigation dédiée, liste de dos
 
 - Consultation des données remontées par le connecteur existant, sans modification de leur source.
 - Échéancier, répartition des montants payés/en instruction/à facturer/à venir/à vérifier.
+- Périodes OPCO lorsqu’elles sont fournies ; sinon périodes calculées entre l’ouverture d’une échéance et celle de la suivante. Cette convention d’affichage ne modifie pas l’ouverture à la facturation. Une ouverture suivante absente, dupliquée ou incohérente ne permet pas de calculer une fin. Aucune fin n’est inventée pour la dernière échéance.
+- Frais annexes accordés regroupés par nature, avec colonnes Accordé / Réglé / Non réglé. Les plafonds ne sont plus affichés ni utilisés dans les montants. L’état explicite « réglé » permet d’afficher le montant accordé soldé ; « non réglé » est présenté comme « Non soldé », sans déduire les montants d’éventuels paiements partiels. Les règlements non détaillés restent inconnus, jamais assimilés à zéro ou aux règlements des échéances pédagogiques. Les données périmées ne confirment pas un règlement.
 - Préparation d’un brouillon OPCO pour une échéance ouverte et exploitable. Le montant est calculé côté serveur et les doublons de brouillons par échéance sont bloqués.
 - Présentation séparée des factures déjà connues d’AKTO, avec leur date de synchronisation.
 
@@ -119,7 +120,7 @@ L’interface reprend la structure demandée : navigation dédiée, liste de dos
 
 Ce lot n’émet pas de contrat ni de facture et ne transmet aucun document à un OPCO. Les CERFA PDF, conventions, signatures électroniques, certificats de réalisation, factures définitives, envois et retours d’instruction restent des lots distincts à développer/valider. La checklist interne ne prouve pas la présence d’une signature ou la conformité réglementaire d’un dossier.
 
-Les frais locaux ne sont pas des montants acceptés par l’OPCO. Les brouillons ne font pas évoluer artificiellement les montants facturés, les règlements ou les états du financeur. Le reste à charge entreprise n’est pas calculé automatiquement.
+La saisie et l’affichage des frais locaux ont été retirés de l’interface à la demande de l’utilisateur. Les anciennes données sont conservées en base et dans l’export ; elles ne sont pas des montants acceptés par l’OPCO. Les brouillons ne font pas évoluer artificiellement les montants facturés, les règlements ou les états du financeur. Le reste à charge entreprise n’est pas calculé automatiquement.
 
 La récupération via WEDOF nécessite la clé WEDOF existante, une connexion active chez WEDOF pour chacun des OPCO concernés et des contrats accessibles à cette clé. Aucun nouveau secret OPCO n’est saisi dans Gestion Stagiaires. Le test n’infère pas la validité de chaque connexion à partir de la seule présence des variables. Les identifiants OAuth AKTO concernent uniquement le connecteur direct avancé.
 
@@ -144,7 +145,7 @@ python -m unittest tests.test_wedof_bts tests.test_wedof_isolation -v
 python scripts/check_bts_workspace_ui.py --browser
 ```
 
-Le script de navigateur vérifie le sélecteur des quatre OPCO, la recherche par DECA, l’aperçu sans import, l’ajout du seul contrat OPCO EP choisi parmi quatre contrats disponibles, les dialogues, la création d’un dossier local, les frais, les brouillons, l’absence d’erreurs JavaScript et le débordement horizontal aux largeurs 1440, 1024, 768 et 390 pixels. Les tests unitaires couvrent les quatre financeurs, les références identiques, le filtre conservé lors d’une reprise et le rejet d’un OPCO inattendu. Le contrôle de l’entrée réelle vérifie aussi la désactivation des trois anciens imports globaux. Le faux accès de test n’est enregistré que dans l’application Flask temporaire du script et n’existe pas en production.
+Le script de navigateur vérifie le sélecteur des quatre OPCO, la recherche par DECA, l’aperçu sans import, l’ajout du seul contrat OPCO EP choisi parmi quatre contrats disponibles, les dialogues, la création d’un dossier local, les frais accordés et leurs états de règlement, le retrait de la saisie locale, les périodes entre ouvertures, les brouillons, l’absence d’erreurs JavaScript et le débordement horizontal aux largeurs 1440, 1024, 768 et 390 pixels. Les tests unitaires couvrent aussi les quatre financeurs, les références identiques, le filtre conservé lors d’une reprise et le rejet d’un OPCO inattendu. Le contrôle de l’entrée réelle vérifie la désactivation des trois anciens imports globaux. Le faux accès de test n’est enregistré que dans l’application Flask temporaire du script et n’existe pas en production.
 
 ## Déploiement et retour arrière
 
