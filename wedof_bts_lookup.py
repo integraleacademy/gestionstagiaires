@@ -127,5 +127,10 @@ def add_selection(store, client, state, key, actor, *, config_id, run_id):
     fields = {"needs_detail": True, "details_error": "WEDOF ne fournit pas encore de fiche apprenti pour ce contrat."}
     if summary.get("registration_id"):
         fields = {**client.folder(summary["registration_id"]), "needs_detail": False}
+    # One optional detailed read, only after the user selects this exact contract.
+    try:
+        fields.update(client.raw(key, summary))
+    except WedofApiError as exc:
+        fields.update(raw_error=exc.user_message, raw_stale=True, raw_attempted_at=stamp())
     outcome = store.upsert_wedof_summary(summary, actor, details=fields, only_new=True)
     return record_id, outcome == "added"

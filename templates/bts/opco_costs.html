@@ -1,0 +1,30 @@
+{% if record.source in ['akto', 'wedof'] %}
+<section class="ws-opco-costs" aria-label="Frais annexes communiqués par l’OPCO">
+  <h3>Frais annexes accordés par l’OPCO</h3>
+  {% if opco_costs.stale %}<p class="ws-note">Dernières données conservées : actualisez le dossier pour vérifier les engagements et plafonds OPCO.</p>{% endif %}
+  {% if opco_costs['items'] %}
+  <div class="ws-opco-cost-grid">
+    {% for cost in opco_costs['items'] %}
+    <div class="ws-opco-cost">
+      <span>{{ cost.label }}</span>
+      <strong>{{ cents(cost.amount) if cost.amount is not none else 'Montant non communiqué' }}</strong>
+      {% if cost.quantity is not none or cost.unit_price is not none %}<small>Quantité : {{ cost.quantity if cost.quantity is not none else 'non communiquée' }} · Prix unitaire : {{ cents(cost.unit_price) if cost.unit_price is not none else 'non communiqué' }}</small>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="ws-muted">{{ 'Aucun engagement de frais annexes dans les données renvoyées par WEDOF.' if opco_costs.available else 'Les engagements de frais annexes ne sont pas disponibles dans les données récupérées.' }} Cela ne permet pas de conclure à une absence de prise en charge.</p>
+  {% endif %}
+  {% if opco_costs.ceilings %}
+  <details class="ws-source-details" open>
+    <summary>Plafonds et règlements communiqués par l’OPCO</summary>
+    <dl class="ws-reference-list">
+      {% for ceiling in opco_costs.ceilings %}
+      <div><dt>{{ ceiling.label }} · plafond</dt><dd>{{ cents(ceiling.amount) if ceiling.amount is not none else 'Non communiqué' }}{% if ceiling.paid is not none %}<small>{{ 'Frais réglés' if ceiling.paid else 'Frais non réglés' }}</small>{% endif %}</dd></div>
+      {% endfor %}
+    </dl>
+    <p class="ws-note">Un plafond de prise en charge n’est pas un montant accordé ou restant à facturer. Les frais annexes ne sont pas ajoutés au total des échéances pédagogiques.</p>
+  </details>
+  {% endif %}
+</section>
+{% endif %}
