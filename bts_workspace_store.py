@@ -244,7 +244,8 @@ def opco_costs_view(record: dict) -> dict:
     for cost in record.get("extra_costs", []):
         if not isinstance(cost, dict):
             continue
-        items.append({"label": labels.get(cost.get("natureFrais"), "Autres frais OPCO"),
+        # Some OPCOs serialize the documented uppercase enum in title case.
+        items.append({"label": labels.get(str(cost.get("natureFrais") or "").upper(), "Autres frais OPCO"),
                       "amount": money_cents(cost.get("montantTotal")),
                       "unit_price": money_cents(cost.get("prixUnitaire")),
                       "quantity": cost.get("quantite")})

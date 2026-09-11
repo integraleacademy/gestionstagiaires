@@ -39,8 +39,8 @@ def detailed_dossier(key=1):
             "echeances": [{"numero": 2, "codification": "E2", "montantTotal": 2648.40, "montantRegle": 0,
                            "montantEnCoursInstruction": 0, "dateOuverture": "2027-03-01T00:00:00+0000",
                            "dateDebut": None, "dateFin": None, "iban": "PRIVATE-BANK"}],
-            "engagementsFraisAnnexe": [{"natureFrais": "RESTAURATION", "quantite": 100, "prixUnitaire": 3, "montantTotal": 300},
-                                       {"natureFrais": "PREMIEREQUIPEMENT", "quantite": 1, "prixUnitaire": 500, "montantTotal": 500}],
+            "engagementsFraisAnnexe": [{"natureFrais": "Restauration", "quantite": 100, "prixUnitaire": 3, "montantTotal": 300},
+                                       {"natureFrais": "Premierequipement", "quantite": 1, "prixUnitaire": 500, "montantTotal": 500}],
             "detailsFacturation": {"plafondFraisPremierEquipement": 500, "fraisPremierEquipementRegles": False,
                                    "periodesFraisAnnexes": [{"numeroEcheance": 1, "nature": "RESTAURATION", "iban": "PRIVATE"}],
                                    "iban": "PRIVATE"}}
@@ -147,6 +147,7 @@ class ClientTests(unittest.TestCase):
                 self.assertEqual(fields['tutor_name'], 'Alex Exemple')
                 self.assertNotIn('PRIVATE', json.dumps(fields))
                 self.assertEqual(opco_costs_view(fields)['items'][1]['label'], 'Premier équipement')
+                self.assertEqual(opco_costs_view(fields)['items'][0]['label'], 'Restauration')
                 self.assertEqual(opco_costs_view(fields)['items'][0]['amount'], 30000)
                 self.assertFalse(opco_costs_view(fields)['ceilings'][0]['paid'])
                 card = billing_view(fields)['cards'][0]
