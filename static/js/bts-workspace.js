@@ -2,6 +2,35 @@
   'use strict';
   const root = document.querySelector('.bts-workspace');
   if (!root) return;
+  const cerfaForm = root.querySelector('[data-cerfa-form]');
+  if (cerfaForm) {
+    let dirty = false;
+    const setDirty = () => {
+      dirty = true;
+      root.querySelector('[data-cerfa-unsaved]')?.removeAttribute('hidden');
+      root.querySelectorAll('[data-cerfa-pdf]').forEach(link => link.setAttribute('aria-disabled', 'true'));
+    };
+    cerfaForm.addEventListener('input', setDirty);
+    cerfaForm.addEventListener('change', setDirty);
+    root.querySelectorAll('[data-cerfa-pdf]').forEach(link => link.addEventListener('click', event => {
+      if (dirty) {
+        event.preventDefault();
+        cerfaForm.querySelector('button')?.focus();
+      }
+    }));
+    const revealField = () => {
+      let fieldId;
+      try { fieldId = decodeURIComponent(window.location.hash.slice(1)); } catch { return; }
+      const field = document.getElementById(fieldId);
+      if (!field || !cerfaForm.contains(field)) return;
+      const section = field.closest('details');
+      if (section) section.open = true;
+      field.scrollIntoView({block: 'center'});
+      field.querySelector('input, select')?.focus({preventScroll: true});
+    };
+    revealField();
+    window.addEventListener('hashchange', revealField);
+  }
   let opener = null;
   root.querySelectorAll('[data-open-dialog]').forEach(button => {
     button.addEventListener('click', () => {

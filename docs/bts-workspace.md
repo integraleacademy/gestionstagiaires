@@ -68,9 +68,9 @@ Les anciens imports globaux `/admin/BTS/synchroniser`,
 Un nouvel ajout d’un contrat déjà présent ouvre le dossier existant sans le modifier.
 L’actualisation ciblée ne modifie jamais les notes, frais, brouillons ou dossiers locaux.
 Deux contrats du même apprenti restent distincts ; aucune fusion par nom n’est
-faite. Une recherche ne remplace ni ne supprime aucun dossier existant. Les informations importées sont en
-lecture seule et limitées aux champs utiles ; le payload brut, le NIR et les
-coordonnées bancaires ne sont pas conservés.
+faite. Une recherche ne remplace ni ne supprime aucun dossier existant. Les informations importées sont limitées aux champs utiles et leur source reste
+inchangée ; les corrections pour le CERFA sont conservées séparément. Le payload
+brut WEDOF, le NIR OPCO et les coordonnées bancaires ne sont pas conservés.
 
 Les événements explicitement liés à l’apprentissage ne passent plus par les
 relais commerciaux CPF vers le CRM/Salesforce. Ils ne déclenchent pas de mise à
@@ -116,9 +116,50 @@ L’interface reprend la structure demandée : navigation dédiée, liste de dos
 - Actualisation ciblée : lecture du dossier `/v2/dossiers?numeroInterne=…`, vérification de son identité et mise à jour de ses données/échéances seulement. Les factures gardent leur propre date de vérification.
 - L’ancien import global direct AKTO est désactivé, comme l’import global WEDOF.
 
+## Préparation du CERFA 10103*14 (11 septembre 2026)
+
+Les onglets Étudiant, Entreprise et Contrat regroupent les informations du CERFA
+dans des rubriques repliables. Les données déjà disponibles préremplissent les
+champs ; les informations manquantes ou incohérentes sont listées avec un lien
+vers le champ concerné. L’utilisateur peut enregistrer et reprendre un dossier
+incomplet. Les dates de fin de formation et de fin des examens restent distinctes.
+
+Les compléments couvrent notamment le représentant légal d’un mineur, les deux
+maîtres d’apprentissage, le CFA et un éventuel lieu de formation distinct, les
+codes administratifs, les avantages et jusqu’à quatre années de rémunération.
+Les taux et montants sont saisis explicitement : aucun calcul réglementaire de
+salaire n’est effectué. Les réponses Oui/Non et les attestations ne sont jamais
+supposées. Les contrôles de complétude et de cohérence ne constituent pas une
+validation juridique du contrat.
+
+Dans Contrat, « Voir l’aperçu » et « Télécharger le CERFA » utilisent les données
+enregistrées des trois onglets. Les boutons demandent d’enregistrer les saisies
+en cours avant de générer. Un document partiel est autorisé : les données absentes
+restent vides. Le fichier téléchargé conserve les deux pages et les 216 champs
+interactifs du modèle fourni `templates_word/cerfa_10103-14.pdf`. Le remplissage
+contrôle l’empreinte du modèle, ajuste les apparences et refuse un texte qui ne
+tiendrait pas lisiblement dans sa zone. Les cadres réservés à l’organisme de dépôt,
+le visa et les signatures restent vierges.
+
+Les compléments des dossiers importés restent séparés de la source OPCO et
+survivent aux actualisations ciblées. Les champs importés laissés inchangés
+continuent à suivre leur source. Le NIR et les réponses relatives au handicap
+sont renseignés explicitement pour le CERFA, exclus des listes, événements et de
+l’export général. Les nouveaux préremplissages WEDOF supplémentaires sont acquis
+lors du prochain ajout ou de la prochaine actualisation ciblée ; la génération
+ne fait aucun appel OPCO et n’ajoute aucun dossier.
+
+Routes protégées : `POST /admin/BTS/dossiers/<id>/cerfa/enregistrer` et
+`GET /admin/BTS/dossiers/<id>/cerfa.pdf` (`?download=1` pour télécharger).
+Les PDF sont générés en mémoire, avec des réponses non mises en cache. Aucun
+fichier personnel n’est conservé sur disque par cette génération. Les révisions
+et l’empreinte des préremplissages protègent les enregistrements simultanés.
+
+Référence : [notice officielle du CERFA](https://www.formulaires.service-public.gouv.fr/gf/getNotice.do?cerfaNotice=51649&cerfaFormulaire=10103).
+
 ## Limites à ne pas confondre avec des fonctionnalités actives
 
-Ce lot n’émet pas de contrat ni de facture et ne transmet aucun document à un OPCO. Les CERFA PDF, conventions, signatures électroniques, certificats de réalisation, factures définitives, envois et retours d’instruction restent des lots distincts à développer/valider. La checklist interne ne prouve pas la présence d’une signature ou la conformité réglementaire d’un dossier.
+Le CERFA PDF peut être préparé et téléchargé, puis doit être relu et signé. Les conventions, signatures électroniques, certificats de réalisation, factures définitives, envois et retours d’instruction restent des lots distincts à développer/valider. Aucun document n’est transmis à un OPCO. La checklist interne ne prouve pas la présence d’une signature ou la conformité réglementaire d’un dossier.
 
 La saisie et l’affichage des frais locaux ont été retirés de l’interface à la demande de l’utilisateur. Les anciennes données sont conservées en base et dans l’export ; elles ne sont pas des montants acceptés par l’OPCO. Les brouillons ne font pas évoluer artificiellement les montants facturés, les règlements ou les états du financeur. Le reste à charge entreprise n’est pas calculé automatiquement.
 
@@ -126,7 +167,7 @@ La récupération via WEDOF nécessite la clé WEDOF existante, une connexion ac
 
 ## Stockage et sécurité
 
-Les tables `bts_local_dossiers`, `bts_annotations`, `bts_fees`, `bts_invoice_drafts`, `bts_events`, `bts_diagnostics`, `bts_wedof_contracts` et `bts_wedof_lookups` sont créées de manière additive dans la base BTS dédiée. Aucun accès à `data.json` n’est nécessaire pour rendre les pages BTS. Le remplacement du cache AKTO ne supprime pas ces tables locales. Les recherches expirées sont exclues des lectures et purgées lors de l’enregistrement d’une nouvelle étape de recherche.
+Les tables `bts_local_dossiers`, `bts_annotations`, `bts_fees`, `bts_invoice_drafts`, `bts_events`, `bts_diagnostics`, `bts_wedof_contracts`, `bts_wedof_lookups` et `bts_cerfa_complements` sont créées de manière additive dans la base BTS dédiée. Aucun accès à `data.json` n’est nécessaire pour rendre les pages BTS. Le remplacement du cache AKTO ne supprime pas ces tables locales. Les recherches expirées sont exclues des lectures et purgées lors de l’enregistrement d’une nouvelle étape de recherche.
 
 Les routes reprennent les contrôles de connexion, de super-administration et de droit d’écriture du projet. Les partenaires sont exclus. Les nouveaux formulaires POST ont un jeton CSRF propre à la session. Les modifications simultanées sont protégées par un numéro de révision. Les exports sont confidentiels et non mis en cache. Les clés et secrets restent dans Render, ne figurent ni dans les pages ni dans les diagnostics enregistrés.
 
@@ -139,13 +180,13 @@ Le workflow `Espace BTS` exécute les tests unitaires de l’espace, les tests d
 Commandes :
 
 ```sh
-python -m unittest tests.test_bts_workspace -v
+python -m unittest tests.test_bts_workspace tests.test_bts_cerfa -v
 python -m unittest tests.test_akto_bts -v
 python -m unittest tests.test_wedof_bts tests.test_wedof_isolation -v
 python scripts/check_bts_workspace_ui.py --browser
 ```
 
-Le script de navigateur vérifie le sélecteur des quatre OPCO, la recherche par DECA, l’aperçu sans import, l’ajout du seul contrat OPCO EP choisi parmi quatre contrats disponibles, les dialogues, la création d’un dossier local, les frais accordés et leurs états de règlement, le retrait de la saisie locale, les périodes entre ouvertures, les brouillons, l’absence d’erreurs JavaScript et le débordement horizontal aux largeurs 1440, 1024, 768 et 390 pixels. Les tests unitaires couvrent aussi les quatre financeurs, les références identiques, le filtre conservé lors d’une reprise et le rejet d’un OPCO inattendu. Le contrôle de l’entrée réelle vérifie la désactivation des trois anciens imports globaux. Le faux accès de test n’est enregistré que dans l’application Flask temporaire du script et n’existe pas en production.
+Le script de navigateur vérifie le sélecteur des quatre OPCO, la recherche par DECA, l’aperçu sans import, l’ajout du seul contrat OPCO EP choisi parmi quatre contrats disponibles, les dialogues, la création d’un dossier local, le préremplissage CERFA, la sauvegarde des compléments, le téléchargement et la lecture du PDF, les frais accordés et leurs états de règlement, le retrait de la saisie locale, les périodes entre ouvertures, les brouillons, l’absence d’erreurs JavaScript et le débordement horizontal aux largeurs 1440, 1024, 768 et 390 pixels. Les tests CERFA vérifient les 216 champs canoniques et leurs apparences, les dates et montants, les cases conditionnelles, les compléments après actualisation, les conflits de saisie et l’exclusion des données sensibles des exports. Les tests unitaires couvrent aussi les quatre financeurs, les références identiques, le filtre conservé lors d’une reprise et le rejet d’un OPCO inattendu. Le contrôle de l’entrée réelle vérifie la désactivation des trois anciens imports globaux. Le faux accès de test n’est enregistré que dans l’application Flask temporaire du script et n’existe pas en production.
 
 ## Déploiement et retour arrière
 

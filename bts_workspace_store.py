@@ -353,6 +353,10 @@ class WorkspaceStore(AktoBtsStore):
                 CREATE TABLE IF NOT EXISTS bts_wedof_lookups (
                     owner TEXT PRIMARY KEY, payload_json TEXT NOT NULL, expires_at INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS bts_cerfa_complements (
+                    dossier_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL DEFAULT '{}',
+                    revision INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL
+                );
             """)
 
     @staticmethod
@@ -421,6 +425,47 @@ class WorkspaceStore(AktoBtsStore):
             if not changed:
                 raise EditConflict("Ce dossier a été modifié par un autre utilisateur. Rechargez-le avant d’enregistrer.")
             self._event(connection, record_id, "Informations du dossier local mises à jour", actor)
+
+    def cerfa_complements(self, record_id: str) -> dict:
+        """Sensitive CERFA fields are read explicitly, never by general listings/exports."""
+        with self._connect() as connection:
+            row = connection.execute("SELECT * FROM bts_cerfa_complements WHERE dossier_id=?", (record_id,)).fetchone()
+        return {"values": json.loads(row["payload_json"]), "revision": row["revision"], "updated_at": row["updated_at"]} if row else {"values": {}, "revision": 0}
+
+    def save_cerfa_complements(self, record_id: str, data: Mapping[str, Any], revision: int, source_hash: str, actor: str):
+        from bts_cerfa import source_values, source_version, validate_values
+        submitted = validate_values(data)
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            record = self.record(record_id)
+            if not record:
+                raise WorkspaceError("Dossier introuvable.")
+            row = connection.execute("SELECT * FROM bts_cerfa_complements WHERE dossier_id=?", (record_id,)).fetchone()
+            if (row["revision"] if row else 0) != revision or source_version(record) != source_hash:
+                raise EditConflict("Les informations ont changé depuis l’ouverture du formulaire. Rechargez le dossier avant d’enregistrer.")
+            payload = json.loads(row["payload_json"]) if row else {}
+            original = source_values(record)
+            # Store only actual complements/overrides. Unchanged imported values
+            # continue to follow future targeted OPCO refreshes.
+            for key, value in submitted.items():
+                if value == original.get(key, ""):
+                    payload.pop(key, None)
+                else:
+                    payload[key] = value
+            if record["source"] == "local":
+                local_row = connection.execute("SELECT payload_json FROM bts_local_dossiers WHERE id=?", (record_id,)).fetchone()
+                local_payload = json.loads(local_row[0])
+                for key, value in submitted.items():
+                    if key in ALL_FIELDS:
+                        local_payload[key] = value
+                        payload.pop(key, None)
+                if not local_payload.get("apprentice_first_name") or not local_payload.get("apprentice_last_name"):
+                    raise WorkspaceError("Le prénom et le nom de l’apprenti sont obligatoires.")
+                connection.execute("UPDATE bts_local_dossiers SET payload_json=?,revision=revision+1,updated_at=? WHERE id=?",
+                                   (as_json(local_payload), now(), record_id))
+            connection.execute("INSERT INTO bts_cerfa_complements(dossier_id,payload_json,revision,updated_at) VALUES (?,?,?,?) ON CONFLICT(dossier_id) DO UPDATE SET payload_json=excluded.payload_json,revision=excluded.revision,updated_at=excluded.updated_at",
+                               (record_id, as_json(payload), revision + 1, now()))
+            self._event(connection, record_id, "Informations de préparation du CERFA enregistrées", actor)
 
     def annotate(self, record_id: str, notes: str, checked: list[str], revision: int, actor: str):
         if not self.record(record_id):

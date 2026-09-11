@@ -159,6 +159,8 @@ def raw_fields(raw, contract):
               "gross_salary": nonnegative(agreement.get("salaireEmbauche")),
               **address_fields(apprentice.get("adresse"), "apprentice"), **address_fields(employer.get("adresse"), "employer")}
     fields = {key: value for key, value in fields.items() if value is not None and value != ""}
+    from bts_cerfa import prefill_opco
+    fields["cerfa_prefill"] = prefill_opco(cerfa)
     schedules = raw.get("echeances")
     if isinstance(schedules, list) and all(isinstance(x, dict) for x in schedules):
         allowed = {"numero", "codification", "montantTotal", "montantRegle", "montantEnCoursInstruction", "dateOuverture", "dateDebut", "dateFin"}

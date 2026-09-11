@@ -28,8 +28,10 @@ from bts_workspace_store import (
     WorkspaceError, WorkspaceStore, billing_view, opco_costs_view, date_fr, euros, euros_cents,
     now, remote_number,
 )
+from bts_cerfa import FIELDS as CERFA_FIELDS, CerfaValidationError, cerfa_view, effective_values
+from bts_cerfa_pdf import CerfaPdfError, generate_pdf
 
-VERSION = "20260911-bts-fees-periods-1"
+VERSION = "20260911-bts-cerfa-1"
 
 
 def configuration_id(config: AktoConfig) -> str:
@@ -166,7 +168,46 @@ def register_bts_workspace(legacy):
         tab = request.args.get("tab", "comptabilite" if record["source"] in {"akto", "wedof"} else "suivi")
         if tab not in {key for key, _ in TABS}:
             tab = "suivi"
-        return render("dossier", title=record["name"], tab=tab, **detail_context(record))
+        context = detail_context(record)
+        if tab in {"etudiant", "entreprise", "contrat"}:
+            context["cerfa"] = cerfa_view(record, store().cerfa_complements(record_id))
+        return render("dossier", title=record["name"], tab=tab, **context)
+
+    def save_cerfa(record_id):
+        record = get_record(record_id)
+        tab = request.form.get("tab", "")
+        if tab not in {"etudiant", "entreprise", "contrat"}:
+            abort(400)
+        data = {key: request.form.get(key, "") for key, f in CERFA_FIELDS.items() if f["tab"] == tab}
+        try:
+            store().save_cerfa_complements(record_id, data, int(request.form.get("revision", "-1")),
+                                           request.form.get("source_version", ""), actor())
+            flash("Informations enregistrées. Le CERFA reprend maintenant vos compléments.", "success")
+        except (CerfaValidationError, WorkspaceError, ValueError) as exc:
+            flash(str(exc) if isinstance(exc, (CerfaValidationError, WorkspaceError)) else "Version du formulaire invalide.", "error")
+            saved = store().cerfa_complements(record_id)
+            saved["revision"] = request.form.get("revision", "-1")
+            cerfa = cerfa_view(record, saved, form_values=data, errors=getattr(exc, "errors", {}))
+            cerfa["source_version"] = request.form.get("source_version", "")
+            response = render("dossier", title=record["name"], tab=tab, cerfa=cerfa, **detail_context(record))
+            response.status_code = 409 if isinstance(exc, EditConflict) else 422
+            return response
+        return redirect(url_for("bts_dossier", record_id=record_id, tab=tab))
+
+    def cerfa_pdf(record_id):
+        record = get_record(record_id)
+        saved = store().cerfa_complements(record_id)
+        try:
+            content = generate_pdf(effective_values(record, saved["values"]))
+        except (CerfaPdfError, ValueError) as exc:
+            flash(str(exc), "error")
+            return redirect(url_for("bts_dossier", record_id=record_id, tab="contrat"))
+        response = make_response(content)
+        response.mimetype = "application/pdf"
+        disposition = "attachment" if request.args.get("download") == "1" else "inline"
+        response.headers["Content-Disposition"] = f'{disposition}; filename="cerfa-apprentissage-{record_id}.pdf"'
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
 
     def save_dossier(record_id):
         record = get_record(record_id)
@@ -182,7 +223,8 @@ def register_bts_workspace(legacy):
             flash(str(exc) if isinstance(exc, WorkspaceError) else "Version du formulaire invalide.", "error")
             # Keep the submitted values visible, but do not overwrite a concurrent edit.
             record["form_values"] = dict(request.form)
-            response = render("dossier", title=record["name"], tab=tab, **detail_context(record))
+            response = render("dossier", title=record["name"], tab=tab,
+                              cerfa=cerfa_view(record, store().cerfa_complements(record_id), form_values=request.form), **detail_context(record))
             response.status_code = 409 if isinstance(exc, EditConflict) else 422
             return response
         return redirect(url_for("bts_dossier", record_id=record_id, tab=tab))
@@ -442,6 +484,8 @@ def register_bts_workspace(legacy):
         ("/admin/BTS/nouveau", "bts_create", new_dossier, ["POST"], True),
         ("/admin/BTS/dossiers/<record_id>", "bts_dossier", dossier, ["GET"], False),
         ("/admin/BTS/dossiers/<record_id>/enregistrer", "bts_save", save_dossier, ["POST"], True),
+        ("/admin/BTS/dossiers/<record_id>/cerfa/enregistrer", "bts_cerfa_save", save_cerfa, ["POST"], True),
+        ("/admin/BTS/dossiers/<record_id>/cerfa.pdf", "bts_cerfa_pdf", cerfa_pdf, ["GET"], False),
         ("/admin/BTS/dossiers/<record_id>/suivi", "bts_notes", save_notes, ["POST"], True),
         ("/admin/BTS/dossiers/<record_id>/frais", "bts_fee", add_fee, ["POST"], True),
         ("/admin/BTS/dossiers/<record_id>/brouillons", "bts_draft", add_draft, ["POST"], True),
