@@ -55,6 +55,43 @@ def course_pdf(*, result_last=False, continuation=False, full_last_page=False):
     return output.getvalue()
 
 
+def compact_course_pdf(*, merged_total=False):
+    """Original 7pt text fits rows too short for insert_textbox's metrics."""
+    output = io.BytesIO()
+    pdf = canvas.Canvas(output, pagesize=(595, 842))
+    style = ParagraphStyle("compact", fontName="Helvetica", fontSize=7, leading=8)
+    rows = [
+        [Paragraph(label, style) for label in (
+            "Module", "Avancée pédagogique", "Résultats", "Première connexion", "Dernière connexion",
+        )],
+        ["DENSE-01 : prévention des risques", "100 %", "SCORE-DENSE", "07/09/2026 08:30", "08/09/2026 17:15"],
+        [Paragraph("MULTILINE-02 : accueil<br/>SUITE-02 : consignes de sécurité", style),
+         "100 %", "SCORE-MULTI", "07/09/2026 08:30", "08/09/2026 17:15"],
+    ]
+    heights = [26, 10, 18]
+    commands = [
+        ("GRID", (0, 0), (-1, -1), .5, (.5, .5, .5)),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 1),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+    ]
+    if merged_total:
+        rows.append(["TOTAL-FUSIONNE : 62 heures de formation suivies, tous les modules et toutes les connexions inclus.", "", "", "", ""])
+        heights.append(14)
+        commands.extend([
+            ("SPAN", (0, 3), (-1, 3)),
+            ("FONTSIZE", (0, 3), (-1, 3), 8),
+        ])
+    table = Table(rows, colWidths=[165, 90, 58, 105, 105], rowHeights=heights)
+    table.setStyle(TableStyle(commands))
+    table.wrapOn(pdf, 523, 500)
+    table.drawOn(pdf, 36, 730 - sum(heights))
+    pdf.save()
+    return output.getvalue()
+
+
 class DigiformaAttendanceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -115,6 +152,35 @@ class DigiformaAttendanceTests(unittest.TestCase):
                 self.assertFalse(page.search_for("Résultats"))
                 self.assertNotIn("SCORE-", page.get_text())
                 self.assertFalse(list(page.annots() or []))
+
+    def test_compact_and_multiline_rows_keep_original_text_and_font_size(self):
+        source = compact_course_pdf()
+        result, metadata = prepare_digiforma_attendance(source, self.signature)
+        self.assertEqual(metadata["results_tables_removed"], 1)
+        with pymupdf.open(stream=result, filetype="pdf") as document:
+            page = document[0]
+            text = page.get_text()
+            for label in ("DENSE-01", "MULTILINE-02", "SUITE-02"):
+                self.assertEqual(text.count(label), 1)
+            self.assertEqual(text.count("07/09/2026 08:30"), 2)
+            self.assertEqual(text.count("08/09/2026 17:15"), 2)
+            self.assertNotIn("SCORE-", text)
+            self.assertNotIn("Résultats", text)
+            spans = [span for block in page.get_text("dict")["blocks"] if "lines" in block
+                     for line in block["lines"] for span in line["spans"]]
+            self.assertEqual(next(span["size"] for span in spans if "DENSE-01" in span["text"]), 7)
+            self.assertIn("Clément VAILLANT", text)
+
+    def test_merged_total_crossing_removed_column_remains_complete(self):
+        result, _ = prepare_digiforma_attendance(compact_course_pdf(merged_total=True), self.signature)
+        text = PdfReader(io.BytesIO(result)).pages[0].extract_text()
+        self.assertIn("TOTAL-FUSIONNE : 62 heures de formation suivies, tous les modules et toutes les connexions inclus.", text)
+        for label in ("DENSE-01", "MULTILINE-02", "SUITE-02", "TOTAL-FUSIONNE"):
+            self.assertEqual(text.count(label), 1)
+        self.assertEqual(text.count("07/09/2026 08:30"), 2)
+        self.assertEqual(text.count("08/09/2026 17:15"), 2)
+        self.assertNotIn("SCORE-", text)
+        self.assertNotIn("Résultats", text)
 
 
 if __name__ == "__main__":
