@@ -97,7 +97,7 @@ jobs:
           git diff --check origin/main...HEAD
           changed_py="$(git diff --name-only origin/main...HEAD -- '*.py')"
           if [ -n "$changed_py" ]; then while IFS= read -r file; do python -m py_compile "$file"; done <<< "$changed_py"; fi
-          pytest -q
+          python -m pytest -q
 
   publish:
     name: Fusionner uniquement la version relue et testée
