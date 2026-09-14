@@ -57,6 +57,10 @@ class VtcCreateCarteProTests(unittest.TestCase):
         self.assertIn('carteProField.style.display = isVtc ? "none" : "flex";', html)
         self.assertIn("if(isVtc) carteProInput.checked = false;", html)
         self.assertIn("carteProInput.disabled = isVtc;", html)
+        self.assertIn(
+            'selectedTrainingForCreate = normalizeTrainingChoice(crmPrefillTransfer.training_type || "");',
+            html,
+        )
 
     def test_api_ignores_carte_pro_for_vtc_but_keeps_it_for_aps(self):
         vtc_response = self.client.post(
