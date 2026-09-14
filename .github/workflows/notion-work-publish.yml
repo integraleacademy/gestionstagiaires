@@ -70,8 +70,6 @@ jobs:
     if: needs.inspect.outputs.head_sha != ''
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist
     permissions:
       contents: read
     steps:
@@ -89,6 +87,8 @@ jobs:
           python -m pip install --disable-pip-version-check -r requirements.txt
           python -m pip install --disable-pip-version-check pytest
       - name: Vérifier la base, le diff, la syntaxe et toute la suite
+        env:
+          PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist
         run: |
           set -euo pipefail
           git fetch --no-tags origin main
