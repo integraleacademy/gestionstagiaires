@@ -36,12 +36,13 @@ class ApsElearningTests(unittest.TestCase):
         effective_duration="62 heures",
         completed_paths=8,
         completed_evaluations=8,
+        connection_total="62 heures et 1 seconde",
     ):
         from digiforma_fixtures import attendance_pdf
         return attendance_pdf(
             trainee_name=trainee_name, complete=complete, completion_rate=completion_rate,
             effective_duration=effective_duration, completed_paths=completed_paths,
-            completed_evaluations=completed_evaluations,
+            completed_evaluations=completed_evaluations, connection_total=connection_total,
         )
 
     @staticmethod
@@ -56,7 +57,7 @@ class ApsElearningTests(unittest.TestCase):
             "effective_duration": "62 heures",
             "completion_rate": 100,
             "connection_duration": "62h",
-            "connection_log_total": "62 heures",
+            "connection_log_total": "62 heures et 1 seconde",
             "access_days": 8,
             "paths_total": 8,
             "paths_completed": 8,
@@ -222,7 +223,7 @@ class ApsElearningTests(unittest.TestCase):
             for key in ("source_file", "source_sha256", "uploaded_at", "completion_rate", "evaluations_completed"):
                 self.assertEqual(after[key], before[key])
             self.assertNotEqual(after["file"], before["file"])
-            self.assertEqual(after["processing_version"], 3)
+            self.assertEqual(after["processing_version"], 4)
             self.assertTrue(after["rebuilt_at"])
             prepared_path = gestion_app._require_aps_elearning_report_file(after)
             with open(prepared_path, "rb") as prepared:
@@ -297,7 +298,7 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(tracking["effective_duration"], "62 heures")
             self.assertEqual(tracking["completion_rate"], 100)
             self.assertEqual(tracking["connection_duration"], "62h")
-            self.assertEqual(tracking["connection_log_total"], "62 heures")
+            self.assertEqual(tracking["connection_log_total"], "62 heures et 1 seconde")
             self.assertEqual(tracking["access_days"], 8)
             self.assertEqual(tracking["paths_completed"], 8)
             self.assertEqual(tracking["paths_total"], 8)
@@ -588,7 +589,7 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(metadata["paths_completed"], 1)
         self.assertEqual(metadata["evaluations_completed"], 1)
         self.assertTrue(any("progression Digiforma incomplète" in issue for issue in issues))
-        self.assertTrue(any("durée effectivement suivie inférieure" in issue for issue in issues))
+        self.assertTrue(any("durée pédagogique inférieure" in issue for issue in issues))
         self.assertTrue(any("parcours Digiforma non terminés" in issue for issue in issues))
         self.assertTrue(any("questionnaires non validés" in issue for issue in issues))
 
@@ -619,7 +620,7 @@ class ApsElearningTests(unittest.TestCase):
             blocked_page = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
             blocked_html = blocked_page.get_data(as_text=True)
             self.assertIn(">⚠ Forcer</button>", blocked_html)
-            self.assertIn("Signature et téléchargement du dossier CNAPS bloqués", blocked_html)
+            self.assertIn("Signature du dossier CNAPS bloquée", blocked_html)
 
             force = self.client.post(
                 "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/force",
@@ -859,13 +860,63 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(context["birth_date"], "12/03/1994")
         self.assertEqual(context["cnaps_number"], "PRE-083-2026-09-01-12345678901")
         self.assertEqual(context["digiforma_identifier"], "alice.martin@example.test")
-        self.assertEqual(context["report_page_range"], "pages 3 à 9 du dossier signé")
+        self.assertEqual(context["report_page_range"], "pages 3 à 9 du dossier")
         self.assertEqual(context["report_page_count_label"], "7 pages")
-        self.assertEqual(context["effective_duration"], "62 heures")
+        self.assertEqual(context["effective_duration"], "62 h 00 min 01 s")
         self.assertEqual(context["completion_rate"], "100 %")
         self.assertEqual(context["paths_status"], "8 / 8 terminés")
         self.assertEqual(context["evaluations_status"], "8 / 8 validées")
         self.assertNotIn("{{", " ".join(context.values()))
+
+    def test_journal_is_the_shared_attendance_measure_for_admin_cover_and_signature(self):
+        session_obj = self._data("2026-07-23")["sessions"][0]
+        trainee = session_obj["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            effective_duration="67 heures et 19 minutes", connection_duration="80 heures",
+            connection_log_total="50 heures, 13 minutes et 31 secondes",
+        )
+        tracking = gestion_app._aps_elearning_tracking(trainee)
+        self.assertEqual(tracking["attendance_rate"], 81)
+        self.assertEqual(tracking["completion_rate"], 100)  # Source pedagogy is preserved.
+        context = gestion_app._aps_elearning_tracking_context(session_obj, trainee)
+        self.assertEqual(context["effective_duration"], context["connection_log_total"])
+        self.assertEqual(context["completion_rate"], "81 %")
+        self.assertEqual(context["pedagogical_duration"], "67 heures et 19 minutes")
+        self.assertIn("RELEVÉ INCOMPLET", context["dossier_status"])
+        self.assertTrue(any("journal insuffisante" in v for v in gestion_app._aps_elearning_signature_issues(trainee)))
+        with self.assertRaises(ValueError):
+            gestion_app._require_aps_elearning_signature_ready(trainee)
+
+    def test_signature_gate_never_uses_summary_time_or_rounds_at_62_hours(self):
+        for journal, blocked in [("", True), ("61h59m59s", True), ("62h", True), ("62h00m01s", False)]:
+            with self.subTest(journal=journal):
+                tracking = self._complete_tracking(connection_log_total=journal, connection_duration="80 heures")
+                issues = gestion_app._aps_elearning_report_completion_issues(tracking)
+                self.assertEqual(any("journal" in issue for issue in issues), blocked)
+
+    def test_incomplete_pdf_is_readable_without_enabling_a_signature_override(self):
+        session_obj = self._data("2026-07-23")["sessions"][0]
+        trainee = session_obj["trainees"][0]
+        with tempfile.TemporaryDirectory() as directory, patch.object(gestion_app, "PERSIST_DIR", directory):
+            annex = os.path.join(directory, "annex.pdf")
+            cover = os.path.join(directory, "cover.pdf")
+            for path, count in [(annex, 1), (cover, 2)]:
+                pdf = canvas.Canvas(path)
+                for _ in range(count):
+                    pdf.drawString(40, 750, "RELEVE INCOMPLET")
+                    pdf.showPage()
+                pdf.save()
+            with open(annex, "rb") as source:
+                digest = hashlib.sha256(source.read()).hexdigest()
+            trainee["aps_elearning_tracking"] = self._complete_tracking(
+                file=gestion_app._tokenize_path(annex), file_sha256=digest, connection_log_total="50 heures",
+            )
+            with patch.object(gestion_app, "_generate_aps_elearning_tracking_table_files", return_value=("", cover)):
+                pdf = gestion_app._build_aps_elearning_tracking_table_pdf(session_obj, trainee)
+            self.assertEqual(len(PdfReader(pdf).pages), 3)
+            self.assertFalse(gestion_app._aps_elearning_force_is_active(trainee))
+            with self.assertRaises(ValueError):
+                gestion_app._require_aps_elearning_signature_ready(trainee)
 
     def test_tracking_table_pdf_download_uses_generated_file(self):
         self._admin_login()

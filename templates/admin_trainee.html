@@ -94,6 +94,9 @@
   }
   .aps-elearning-tracking__evidence-item span{display:block;color:#64748b;font-size:11px;font-weight:800;}
   .aps-elearning-tracking__evidence-item strong{display:block;margin-top:3px;color:#172033;font-size:13px;font-weight:950;overflow-wrap:anywhere;}
+  .aps-elearning-tracking__journal{margin:14px 0;padding:18px;border:1px solid #e9bb57;border-radius:12px;background:#fff4d9;color:#172d3b;}
+  .aps-elearning-tracking__journal strong{display:block;margin:6px 0;font-size:25px;line-height:1.3;overflow-wrap:anywhere;}
+  .aps-elearning-tracking__journal progress{display:block;width:100%;height:12px;margin:10px 0;accent-color:#b77915;}
   .aps-elearning-tracking__control{
     margin-top:11px;
     padding:12px 14px;
@@ -1495,7 +1498,7 @@
         <h3 class="aps-elearning-tracking__title" id="apsElearningTrackingTitle">📊 Suivi du e-learning</h3>
         <p class="aps-elearning-tracking__subtitle">
           Importez l’attestation d’assiduité Digiforma complète. Une nouvelle attestation sera créée avec une mise en page lisible,
-          le détail des parcours, le journal de connexions et la signature de Clément Vaillant. Les résultats ne seront pas affichés.
+          le détail des parcours, le journal de connexions, le tampon du centre et la signature de Clément Vaillant. Les résultats ne seront pas affichés.
         </p>
       </div>
       {% if aps_signature_ready %}
@@ -1551,10 +1554,17 @@
           {% endif %}
         </div>
       </div>
-      <div class="aps-elearning-tracking__evidence" aria-label="Synthèse du relevé Digiforma">
-        <div class="aps-elearning-tracking__evidence-item"><span>Réalisation</span><strong>{{ '%g'|format(aps_tracking.completion_rate or 0) }} %</strong></div>
-        <div class="aps-elearning-tracking__evidence-item"><span>Durée suivie / prévue</span><strong>{{ aps_tracking.effective_duration or '—' }} / {{ aps_tracking.planned_duration or '—' }}</strong></div>
-        <div class="aps-elearning-tracking__evidence-item"><span>Connexions (journal)</span><strong>{{ aps_tracking.connection_log_total or aps_tracking.connection_duration or '—' }}</strong></div>
+      <div class="aps-elearning-tracking__journal" aria-label="Durée totale du journal de connexions">
+        <span>Durée totale de connexion · journal Digiforma</span>
+        <strong>{{ aps_tracking.connection_duration_label }}</strong>
+        <div>Suivi : <b>{{ aps_tracking.attendance_rate_label }}</b> · {{ 'Seuil dépassé' if aps_tracking.connection_requirement_met else 'Seuil non atteint' }}</div>
+        <progress max="100" value="{{ aps_tracking.attendance_rate }}" aria-label="Suivi selon la durée de connexion"></progress>
+        <span>100 % de suivi uniquement au-delà de 62 heures de connexion.</span>
+      </div>
+      <div class="aps-elearning-tracking__evidence" aria-label="Détail pédagogique du relevé Digiforma">
+        <div class="aps-elearning-tracking__evidence-item"><span>Avancée pédagogique Digiforma</span><strong>{{ '%g'|format(aps_tracking.completion_rate or 0) }} %</strong></div>
+        <div class="aps-elearning-tracking__evidence-item"><span>Durée pédagogique Digiforma</span><strong>{{ aps_tracking.effective_duration or '—' }}</strong><span>Durée théorique des activités réalisées, distincte du temps de connexion.</span></div>
+        <div class="aps-elearning-tracking__evidence-item"><span>Durée de formation prévue</span><strong>{{ aps_tracking.planned_duration or '—' }}</strong></div>
         <div class="aps-elearning-tracking__evidence-item"><span>Parcours terminés</span><strong>{{ aps_tracking.paths_completed or 0 }} / {{ aps_tracking.paths_total or 0 }}</strong></div>
         <div class="aps-elearning-tracking__evidence-item"><span>Évaluations validées</span><strong>{{ aps_tracking.evaluations_completed or 0 }} / {{ aps_tracking.evaluations_total or 0 }}</strong></div>
         <div class="aps-elearning-tracking__evidence-item"><span>Jours d'accès · modules/fractions</span><strong>{{ aps_tracking.access_days or 0 }} · {{ aps_tracking.module_fraction_count or 0 }}</strong></div>
@@ -1572,7 +1582,7 @@
               <form class="aps-elearning-tracking__force-form"
                     method="post"
                     action="{{ url_for('admin_force_aps_elearning_tracking', session_id=session.id, trainee_id=trainee.id) }}"
-                    onsubmit="return confirm('Annuler le forçage ? Le téléchargement et toute nouvelle signature seront de nouveau bloqués tant que les contrôles ne seront pas validés.');">
+                    onsubmit="return confirm('Annuler le forçage ? Toute nouvelle signature sera de nouveau bloquée tant que les contrôles ne seront pas validés.');">
                 <input type="hidden" name="action" value="disable">
                 <button class="btn btn-outline" type="submit">Annuler le forçage</button>
               </form>
@@ -1580,9 +1590,9 @@
           </div>
         {% else %}
           <div class="aps-elearning-tracking__control" role="alert">
-            <strong>Signature et téléchargement du dossier CNAPS bloqués</strong>
+            <strong>Signature du dossier CNAPS bloquée</strong>
             <ul>{% for issue in aps_signature_issues %}<li>{{ issue }}</li>{% endfor %}</ul>
-            <div style="margin-top:7px;">Corrigez les données du stagiaire si nécessaire, puis importez le relevé Digiforma final à 100 %.</div>
+            <div style="margin-top:7px;">Le dossier incomplet reste consultable. Pour la signature, terminez les activités et dépassez 62 heures dans le journal, puis importez le nouveau relevé Digiforma.</div>
             {% if not is_read_only %}
               <form class="aps-elearning-tracking__force-form"
                     method="post"
@@ -1610,7 +1620,7 @@
     {% if not is_read_only %}
       <form class="aps-elearning-tracking__upload"
             id="apsDigiformaUploadForm"
-            data-processing-version="3"
+            data-processing-version="4"
             method="post"
             enctype="multipart/form-data"
             action="{{ url_for('admin_upload_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">
@@ -1661,10 +1671,10 @@
         {% endif %}
       </div>
       <div class="aps-elearning-tracking__signature-actions">
-      {% if aps_tracking.file and aps_signature_allowed %}
+      {% if aps_tracking.file %}
         <a class="btn btn-outline"
            href="{{ url_for('admin_download_aps_elearning_tracking_table', session_id=session.id, trainee_id=trainee.id) }}">
-          {{ '⚠ Télécharger le dossier forcé' if aps_force_active else '⬇️ Télécharger le dossier CNAPS complet' }}
+          {{ '⚠ Télécharger le dossier forcé' if aps_force_active else ('⬇️ Télécharger le dossier CNAPS complet' if aps_signature_ready else '⬇️ Consulter le dossier incomplet') }}
         </a>
       {% else %}
         <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">⬇️ Dossier CNAPS non disponible</button>

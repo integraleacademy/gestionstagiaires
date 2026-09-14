@@ -24,6 +24,7 @@ import signal
 import atexit
 import sys
 from backup_chronology import backup_chronology_key
+from digiforma_duration import journal_attendance
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 try:
     import resource
@@ -28488,6 +28489,7 @@ def _aps_elearning_tracking(trainee: Dict[str, Any]) -> Dict[str, Any]:
         "source_sha256": str(raw.get("source_sha256") or "").strip().lower(),
         "results_tables_removed": _safe_count("results_tables_removed"),
         "provider_signed": raw.get("provider_signed") is True,
+        "provider_stamped": raw.get("provider_stamped") is True,
         "processing_version": _safe_count("processing_version"),
         "rebuilt_at": str(raw.get("rebuilt_at") or "").strip(),
         "original_name": str(raw.get("original_name") or "").strip(),
@@ -28513,6 +28515,7 @@ def _aps_elearning_tracking(trainee: Dict[str, Any]) -> Dict[str, Any]:
         "file_sha256": str(raw.get("file_sha256") or "").strip().lower(),
         "attested_name": str(raw.get("attested_name") or "").strip(),
     }
+    cleaned.update(journal_attendance(cleaned["connection_log_total"]))
     trainee["aps_elearning_tracking"] = cleaned
     return cleaned
 
@@ -28599,10 +28602,10 @@ def _aps_elearning_report_completion_issues(tracking: Dict[str, Any]) -> List[st
     if not planned_minutes:
         issues.append("durée théorique prévue absente du relevé Digiforma")
     if not effective_minutes:
-        issues.append("durée effectivement suivie absente du relevé Digiforma")
+        issues.append("durée pédagogique absente du relevé Digiforma")
     elif planned_minutes and effective_minutes < planned_minutes:
         issues.append(
-            "durée effectivement suivie inférieure à la durée prévue "
+            "durée pédagogique inférieure à la durée prévue "
             f"({tracking.get('effective_duration')} sur {tracking.get('planned_duration')})"
         )
 
@@ -28624,8 +28627,14 @@ def _aps_elearning_report_completion_issues(tracking: Dict[str, Any]) -> List[st
         issues.append("détail des modules ou fractions de module introuvable")
     if not int(tracking.get("access_days") or 0):
         issues.append("nombre de jours d’accès absent du relevé Digiforma")
-    if not str(tracking.get("connection_log_total") or tracking.get("connection_duration") or "").strip():
-        issues.append("temps de connexion absent du relevé Digiforma")
+    attendance = journal_attendance(tracking.get("connection_log_total"))
+    if attendance["connection_seconds"] is None:
+        issues.append("durée totale du journal de connexions absente ou illisible")
+    elif not attendance["connection_requirement_met"]:
+        issues.append(
+            "durée totale du journal insuffisante "
+            f"({attendance['connection_duration_label']} ; plus de 62 heures requises pour un suivi à 100 %)"
+        )
     if not re.fullmatch(r"[0-9a-f]{64}", str(tracking.get("file_sha256") or "").strip().lower()):
         issues.append("empreinte du relevé Digiforma absente")
     return issues
@@ -28894,7 +28903,8 @@ def _aps_elearning_tracking_context(
         imported_at = _aps_elearning_datetime_label(tracking.get("uploaded_at"))
         report_generated_at = f"{imported_at} (date d’import)" if imported_at else "Non renseigné"
 
-    completion_rate = float(tracking.get("completion_rate") or 0)
+    attendance = journal_attendance(tracking.get("connection_log_total"))
+    completion_issues = _aps_elearning_signature_issues(trainee, tracking)
     paths_total = int(tracking.get("paths_total") or 0)
     paths_completed = int(tracking.get("paths_completed") or 0)
     evaluations_total = int(tracking.get("evaluations_total") or 0)
@@ -28914,13 +28924,17 @@ def _aps_elearning_tracking_context(
         "digiforma_identifier": str(tracking.get("digiforma_identifier") or trainee.get("aps_elearning_login") or "Non renseigné").strip(),
         "report_filename": str(tracking.get("original_name") or "attestation-assiduite-digiforma.pdf").strip(),
         "report_generated_at": report_generated_at or "Non renseigné",
-        "report_page_range": f"pages 3 à {page_count + 2} du dossier signé",
+        "report_page_range": f"pages 3 à {page_count + 2} du dossier",
         "report_page_count_label": f"{page_count} page{'s' if page_count > 1 else ''}",
         "report_sha256": file_sha256_display or "Non renseignée",
-        "effective_duration": str(tracking.get("effective_duration") or "Non renseignée").strip(),
-        "completion_rate": f"{completion_rate:g} %",
-        "connection_duration": str(tracking.get("connection_duration") or "Non renseignée").strip(),
-        "connection_log_total": str(tracking.get("connection_log_total") or "Non renseigné").strip(),
+        "effective_duration": attendance["connection_duration_label"],
+        "pedagogical_duration": str(tracking.get("effective_duration") or "Non renseignée").strip(),
+        "completion_rate": attendance["attendance_rate_label"],
+        "connection_log_total": attendance["connection_duration_label"],
+        "dossier_status": (
+            "RELEVÉ INCOMPLET - contrôles non validés" if completion_issues
+            else "Bordereau probatoire APS - formation asynchrone"
+        ),
         "access_days": str(int(tracking.get("access_days") or 0)),
         "paths_status": f"{paths_completed} / {paths_total} terminés" if paths_total else "Non renseigné",
         "evaluations_status": (
@@ -29063,7 +29077,9 @@ def _build_aps_elearning_tracking_table_pdf(
     session_obj: Dict[str, Any],
     trainee: Dict[str, Any],
 ) -> BytesIO:
-    tracking = _require_aps_elearning_signature_ready(trainee)
+    # Read-only previews remain available; sending to Yousign has its own
+    # completion/explicit-override gate. Incomplete covers are labelled as such.
+    tracking = _aps_elearning_tracking(trainee)
     digiforma_pdf_path = _require_aps_elearning_report_file(tracking)
     with tempfile.TemporaryDirectory(prefix="aps-foad-") as temporary_dir:
         _, cover_pdf = _generate_aps_elearning_tracking_table_files(
@@ -29213,6 +29229,7 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
 
         prepared_bytes, preparation = prepare_digiforma_attendance(
             pdf_bytes, _training_center_signature_assets()["signature"],
+            _training_center_signature_assets()["stamp"],
         )
     except ValueError as exc:
         flash(str(exc), "error")
@@ -29319,6 +29336,7 @@ def admin_rebuild_aps_elearning_digiforma(session_id: str, trainee_id: str):
 
         prepared_bytes, preparation = prepare_digiforma_attendance(
             pdf_bytes, _training_center_signature_assets()["signature"],
+            _training_center_signature_assets()["stamp"],
         )
         prepared_file = FileStorage(stream=BytesIO(prepared_bytes),
                                     filename=tracking.get("original_name") or "attestation-assiduite.pdf",
