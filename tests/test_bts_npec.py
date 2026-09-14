@@ -245,6 +245,21 @@ class RouteTests(unittest.TestCase):
         self.assertIn('data-npec-precontract', page.text)
         self.assertIn('62 jours', page.text)
 
+    def test_ajax_validation_failure_reports_cause_without_erasing_saved_settings(self):
+        payload = dict(self.csrf, revision='0', precontract_training='yes',
+                       mobility_start='2027-11-08', mobility_end='2027-12-12')
+        headers = {'Accept': 'application/json'}
+        rejected = self.client.post(self.url + '/conventions/parametres', data=payload, headers=headers)
+        self.assertEqual(rejected.status_code, 400)
+        self.assertFalse(rejected.json['ok'])
+        self.assertIn('28 jours', rejected.json['message'])
+        self.assertEqual(self.store.settings(self.rid)['revision'], 0)
+        payload['mobility_end'] = '2027-11-12'
+        saved = self.client.post(self.url + '/conventions/parametres', data=payload, headers=headers)
+        self.assertEqual(saved.status_code, 200)
+        self.assertTrue(saved.json['ok'])
+        self.assertEqual(self.store.settings(self.rid)['values']['precontract_training'], 'yes')
+
     def test_old_document_snapshot_is_retained_after_an_explicit_recalculation(self):
         old = defaults(values(), {'npec_1': '8000', 'npec_2': '8000', 'funding_years': '2', 'rac_1': '0', 'rac_2': '0'})
         self.store.save_settings(self.rid, old, 0, 'Test')

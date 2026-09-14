@@ -225,8 +225,8 @@ def browser_check():
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                     page.locator('[data-npec-financing]').screenshot(path=str(output / f'financement-npec-{width}.png'))
                 page.locator('[name="rac_1"]').fill('125.50')
-                page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
-                page.wait_for_load_state()
+                with page.expect_navigation():
+                    page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
                 assert contract_store.settings(npec_id)['values']['rac_1'] == '125.50'
                 assert contract_store.settings(npec_id)['values']['npec_1'] == '8765.00'
                 assert contract_store.settings(npec_id)['values']['_npec']['reference'] == '2026-09'
@@ -235,8 +235,16 @@ def browser_check():
                     1, source_version(contract_store.record(npec_id)), 'Test')
                 page.goto(npec_url)
                 page.locator('[name="precontract_training"]').select_option('yes')
+                page.locator('[name="mobility_start"]').fill('2027-11-08')
+                page.locator('[name="mobility_end"]').fill('2027-12-12')
                 page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
-                page.wait_for_load_state()
+                page.locator('[data-contract-save-message]').wait_for(state='visible')
+                assert '28 jours' in page.locator('[data-contract-save-message]').inner_text()
+                assert page.locator('[name="precontract_training"]').input_value() == 'yes'
+                assert contract_store.settings(npec_id)['values'].get('precontract_training') != 'yes'
+                page.locator('[name="mobility_end"]').fill('2027-11-12')
+                with page.expect_navigation():
+                    page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
                 assert contract_store.settings(npec_id)['values']['npec_1'] == '10253.85'
                 assert contract_store.settings(npec_id)['values']['rac_1'] == '125.50'
                 for width in (1440, 390):
