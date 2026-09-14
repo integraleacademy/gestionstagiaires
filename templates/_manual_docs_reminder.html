@@ -1,0 +1,26 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='manual-docs-reminder.css', v='20260914-feedback') }}">
+<dialog id="manualDocsReminderModal" class="manual-reminder" aria-labelledby="manualReminderTitle" aria-describedby="manualReminderDescription">
+  <div class="manual-reminder__head">
+    <span class="manual-reminder__eyebrow">SUIVI DES DOSSIERS</span>
+    <h2 id="manualReminderTitle">Relance manuelle</h2>
+    <p id="manualReminderDescription" role="status" aria-live="polite"></p>
+  </div>
+  <div class="manual-reminder__body">
+    <div id="manualReminderProgressWrap" class="manual-reminder__progress" hidden>
+      <div id="manualReminderProgressLabel" aria-live="polite"></div>
+      <progress id="manualReminderProgress" max="1" aria-labelledby="manualReminderProgressLabel"></progress>
+    </div>
+    <div id="manualReminderSummary" class="manual-reminder__summary" role="status" hidden></div>
+    <div id="manualReminderRecipients" class="manual-reminder__recipients"></div>
+    <section id="manualReminderSkipped" class="manual-reminder__skipped" hidden>
+      <h3 id="manualReminderSkippedTitle">Dossiers non relancés</h3>
+      <ul id="manualReminderSkippedList"></ul>
+    </section>
+    <p id="manualReminderNote" class="manual-reminder__note"></p>
+  </div>
+  <div class="manual-reminder__foot">
+    <button id="manualReminderClose" class="manual-reminder__button" type="button">Annuler</button>
+    <button id="manualReminderSend" class="manual-reminder__button manual-reminder__button--primary" type="button" hidden>Envoyer le mail et le SMS</button>
+  </div>
+</dialog>
+<script src="{{ url_for('static', filename='manual-docs-reminder.js', v='20260914-feedback') }}" defer></script>

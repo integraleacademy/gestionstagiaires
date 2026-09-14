@@ -4387,5 +4387,5 @@ applyRowFilters();
 })();
 </script>
 {% endif %}
-<script src="{{ url_for('static', filename='manual-docs-reminder.js') }}" defer></script>
+{% include '_manual_docs_reminder.html' %}
 {% endblock %}
