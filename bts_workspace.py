@@ -31,7 +31,7 @@ from bts_workspace_store import (
 from bts_cerfa import FIELDS as CERFA_FIELDS, CerfaValidationError, cerfa_view, effective_values
 from bts_cerfa_pdf import CerfaPdfError, generate_pdf
 
-VERSION = "20260914-bts-save-feedback-1"
+VERSION = "20260914-bts-save-complete-contract-1"
 
 
 def configuration_id(config: AktoConfig) -> str:

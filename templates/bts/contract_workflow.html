@@ -5,7 +5,7 @@
   <details class="ws-card ws-pad ws-contract-settings" {% if not package %}open{% endif %}>
     <summary><strong>1. Paramètres des conventions et destinataires</strong></summary>
     <p class="ws-muted">Les conventions reprennent les informations des onglets Étudiant, Entreprise et Contrat. Vérifiez les montants, les dates et les signataires ci-dessous.</p>
-    <form method="post" action="{{ url_for('bts_contract_settings',record_id=record.id) }}" data-contract-settings>
+    <form id="contract-settings-form" method="post" action="{{ url_for('bts_contract_settings',record_id=record.id) }}" data-contract-settings>
       <button type="submit" hidden tabindex="-1" aria-hidden="true">Enregistrer les paramètres</button>
       {{ token() }}<input type="hidden" name="revision" value="{{ flow.revision }}">
       {% for heading,keys in [
@@ -35,7 +35,7 @@
         {% endif %}{% endfor %}</div>{% endif %}
       </fieldset>{% endfor %}
       <p class="ws-alert ws-alert--error" role="alert" data-contract-save-message hidden></p>
-      <div class="ws-form-footer"><button class="ws-button ws-button--primary">Enregistrer les paramètres</button></div>
+      <div class="ws-form-footer"><span class="ws-note">Enregistre aussi les informations de formation et de contrat ci-dessous.</span><button class="ws-button ws-button--primary">Enregistrer les paramètres</button></div>
     </form>
   </details>
   <section class="ws-card ws-pad">

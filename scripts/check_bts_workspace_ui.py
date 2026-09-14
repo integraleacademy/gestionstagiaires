@@ -119,8 +119,8 @@ def browser_check():
                 page.locator('[name="weekly_minutes"]').fill('0')
                 assert page.get_by_role('link', name='Télécharger le CERFA').get_attribute('aria-disabled') == 'true'
                 assert page.locator('[data-cerfa-unsaved]').is_visible()
-                page.get_by_role('button', name='Enregistrer les informations').click()
-                page.wait_for_load_state()
+                with page.expect_navigation():
+                    page.get_by_role('button', name='Enregistrer les informations').click()
                 assert store.cerfa_complements('w-1')['values']['weekly_hours'] == '35'
                 assert store.record('w-1')['contract_start'] == '2026-08-20'
                 assert page.get_by_role('link', name='Télécharger le CERFA').get_attribute('aria-disabled') is None
@@ -232,24 +232,29 @@ def browser_check():
                 assert contract_store.settings(npec_id)['values']['_npec']['reference'] == '2026-09'
                 contract_store.save_cerfa_complements(npec_id,
                     npec_values(training_start='2026-07-01', contract_conclusion='2026-09-01'),
-                    1, source_version(contract_store.record(npec_id)), 'Test')
+                    contract_store.cerfa_complements(npec_id)['revision'], source_version(contract_store.record(npec_id)), 'Test')
                 page.goto(npec_url)
                 page.locator('[name="precontract_training"]').select_option('yes')
                 page.locator('[name="mobility_start"]').fill('2027-11-08')
                 page.locator('[name="mobility_end"]').fill('2027-12-12')
-                page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
+                page.get_by_role('button', name='Enregistrer les informations', exact=True).click()
                 page.locator('[data-contract-save-message]').wait_for(state='visible')
                 assert '28 jours' in page.locator('[data-contract-save-message]').inner_text()
                 assert page.locator('[name="precontract_training"]').input_value() == 'yes'
                 assert contract_store.settings(npec_id)['values'].get('precontract_training') != 'yes'
                 page.locator('[name="mobility_end"]').fill('2027-11-12')
+                # The exact button reported by the user must save financing too.
+                assert page.get_by_role('button', name='Enregistrer les informations', exact=True).evaluate('(button) => button.form.id') == 'contract-settings-form'
                 with page.expect_navigation():
-                    page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
+                    page.get_by_role('button', name='Enregistrer les informations', exact=True).click()
+                assert page.locator('[name="precontract_training"]').input_value() == 'yes'
+                assert contract_store.settings(npec_id)['values']['precontract_training'] == 'yes'
                 assert contract_store.settings(npec_id)['values']['npec_1'] == '10253.85'
                 assert contract_store.settings(npec_id)['values']['rac_1'] == '125.50'
                 for width in (1440, 390):
                     page.set_viewport_size({'width': width, 'height': 1100})
                     page.goto(npec_url)
+                    assert page.locator('[name="precontract_training"]').input_value() == 'yes'
                     assert '62 jours' in page.locator('[data-npec-precontract]').inner_text()
                     assert page.locator('[name="npec_1"]').input_value() == '10253.85'
                     assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')

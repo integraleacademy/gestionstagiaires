@@ -8,7 +8,7 @@ import re
 
 from flask import abort, flash, jsonify, redirect, request, send_file, url_for
 
-from bts_cerfa import effective_values, readiness
+from bts_cerfa import effective_values, readiness, FIELDS as CERFA_FIELDS, CerfaValidationError
 from bts_contract_store import ContractStore
 from bts_contract_documents import (DOC_LABELS, SETTINGS_FIELDS, MODES, defaults, validate_settings,
     fingerprint, generate_documents, document_errors, signature_errors)
@@ -117,14 +117,23 @@ def register_contract_routes(legacy, protected, actor, get_record, endpoints):
                 if automatic_financing(db.settings(record_id)["values"]):
                     raw["funding_mode"] = "npec"
                 submitted = validate_settings(raw)
-                cerfa_values = effective_values(record, db.cerfa_complements(record_id)["values"])
-                values = defaults(cerfa_values, submitted)
-                db.save_settings(record_id, values, int(request.form.get("revision", "-1")), actor())
-            flash("Paramètres des conventions enregistrés.", "success")
+                if request.form.get("save_contract_information") == "yes":
+                    data = {key: request.form.get(key, "") for key, field in CERFA_FIELDS.items() if field["tab"] == "contrat"}
+                    db.save_contract_information(record_id, data, submitted,
+                        int(request.form.get("revision", "-1")), int(request.form.get("cerfa_revision", "-1")),
+                        request.form.get("cerfa_source_version", ""), actor())
+                else:
+                    cerfa_values = effective_values(record, db.cerfa_complements(record_id)["values"])
+                    values = defaults(cerfa_values, submitted)
+                    db.save_settings(record_id, values, int(request.form.get("revision", "-1")), actor())
+            flash("Informations du contrat, financement et paramètres des conventions enregistrés."
+                  if request.form.get("save_contract_information") == "yes" else "Paramètres des conventions enregistrés.", "success")
             if request.headers.get("Accept") == "application/json":
                 return jsonify(ok=True, redirect_url=destination(record_id))
         except (WorkspaceError, ValueError) as exc:
             message = str(exc) if isinstance(exc, WorkspaceError) else "Version du formulaire invalide."
+            if isinstance(exc, CerfaValidationError):
+                message = " ; ".join(CERFA_FIELDS[key]["label"] + " : " + error for key, error in exc.errors.items())
             if request.headers.get("Accept") == "application/json":
                 return jsonify(ok=False, message=message), 400
             flash(message, "error")

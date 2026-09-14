@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from docx import Document
-from bts_cerfa import source_version, effective_values
+from bts_cerfa import source_version, effective_values, FIELDS as CERFA_FIELDS
 from bts_contract_documents import defaults, validate_settings, fingerprint, fill_convention, document_errors
 from bts_contract_routes import contract_context
 from bts_contract_store import ContractStore
@@ -259,6 +259,56 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(saved.status_code, 200)
         self.assertTrue(saved.json['ok'])
         self.assertEqual(self.store.settings(self.rid)['values']['precontract_training'], 'yes')
+
+    def combined_payload(self, **changes):
+        v = values(training_start='2026-07-01', contract_conclusion='2026-09-01')
+        payload = {key: v.get(key, '') for key, field in CERFA_FIELDS.items() if field['tab'] == 'contrat'}
+        payload.update(self.csrf, save_contract_information='yes', revision='0', cerfa_revision='1',
+                       cerfa_source_version=source_version(self.store.record(self.rid)),
+                       precontract_training='yes', rac_1='125.50')
+        payload.update(changes)
+        return payload
+
+    def test_both_sections_save_together_and_financing_uses_submitted_dates(self):
+        response = self.client.post(self.url + '/conventions/parametres', data=self.combined_payload(),
+                                    headers={'Accept': 'application/json'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json['ok'])
+        saved = self.store.settings(self.rid)
+        self.assertEqual(saved['revision'], 1)
+        self.assertEqual(saved['values']['precontract_training'], 'yes')
+        self.assertEqual(saved['values']['npec_1'], '10253.85')
+        self.assertEqual(saved['values']['rac_1'], '125.50')
+        self.assertEqual(self.store.cerfa_complements(self.rid)['revision'], 2)
+        current = effective_values(self.store.record(self.rid), self.store.cerfa_complements(self.rid)['values'])
+        self.assertEqual(current['training_start'], '2026-07-01')
+        self.assertEqual(current['contract_conclusion'], '2026-09-01')
+        self.assertIn('data-npec-precontract', self.client.get(self.url + '?tab=contrat').text)
+
+    def test_combined_save_rolls_back_both_sections_on_conflict_or_invalid_input(self):
+        before_cerfa = self.store.cerfa_complements(self.rid)
+        before_source = source_version(self.store.record(self.rid))
+        before_settings = self.store.settings(self.rid)
+        for changes in ({'revision': '99'}, {'cerfa_revision': '99'}, {'cerfa_source_version': 'stale'},
+                        {'weekly_hours': '999'}, {'mobility_start': '2027-11-08', 'mobility_end': '2027-12-12'}):
+            with self.subTest(changes=changes):
+                response = self.client.post(self.url + '/conventions/parametres',
+                    data=self.combined_payload(**changes), headers={'Accept': 'application/json'})
+                self.assertEqual(response.status_code, 400)
+                self.assertFalse(response.json['ok'])
+                self.assertEqual(self.store.cerfa_complements(self.rid), before_cerfa)
+                self.assertEqual(source_version(self.store.record(self.rid)), before_source)
+                self.assertEqual(self.store.settings(self.rid), before_settings)
+
+    def test_student_form_keeps_the_saved_financing_choice(self):
+        self.client.post(self.url + '/conventions/parametres', data=self.combined_payload())
+        old = self.store.settings(self.rid)
+        payload = {key: values().get(key, '') for key, field in CERFA_FIELDS.items() if field['tab'] == 'etudiant'}
+        payload.update(self.csrf, tab='etudiant', revision='2',
+                       source_version=source_version(self.store.record(self.rid)))
+        response = self.client.post(self.url + '/cerfa/enregistrer', data=payload)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.store.settings(self.rid), old)
 
     def test_old_document_snapshot_is_retained_after_an_explicit_recalculation(self):
         old = defaults(values(), {'npec_1': '8000', 'npec_2': '8000', 'funding_years': '2', 'rac_1': '0', 'rac_2': '0'})
