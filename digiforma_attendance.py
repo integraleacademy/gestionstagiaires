@@ -11,7 +11,7 @@ from digiforma_layout import render_attendance
 from digiforma_duration import journal_attendance
 
 _PDF_LOCK = threading.Lock()
-PROCESSING_VERSION = 4
+PROCESSING_VERSION = 5
 
 
 def _normalized(value):

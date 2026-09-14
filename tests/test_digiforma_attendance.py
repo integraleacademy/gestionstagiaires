@@ -24,7 +24,7 @@ class DigiformaAttendanceTests(unittest.TestCase):
         result, metadata = prepare_digiforma_attendance(attendance_pdf(), self.signature, self.stamp)
         reader = PdfReader(io.BytesIO(result))
         text = '\n'.join(page.extract_text() for page in reader.pages)
-        self.assertEqual(metadata['processing_version'], 4)
+        self.assertEqual(metadata['processing_version'], 5)
         self.assertEqual(metadata['results_tables_removed'], 8)
         self.assertEqual(len(reader.pages), metadata['page_count'])
         for n in range(1, 9):
