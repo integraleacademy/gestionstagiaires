@@ -205,6 +205,31 @@ def browser_check():
                 page.screenshot(path=str(output / 'parcours-contrat-mobile.png'), full_page=True)
                 page.set_viewport_size({'width': 1440, 'height': 1100})
                 page.screenshot(path=str(output / 'parcours-contrat-desktop.png'), full_page=True)
+                # A complete, synthetic local dossier exercises the actual funding
+                # form and keeps these checks independent of any real OPCO account.
+                from tests.test_bts_npec import values as npec_values
+                from bts_cerfa import source_version
+                from bts_contract_store import ContractStore
+                contract_store = ContractStore(legacy.AKTO_BTS_DB_FILE)
+                npec_id = contract_store.create_local({'apprentice_first_name': 'Test', 'apprentice_last_name': 'NPEC'})
+                contract_store.save_cerfa_complements(npec_id, npec_values(), 0,
+                    source_version(contract_store.record(npec_id)), 'Test')
+                npec_url = url + '/admin/BTS/dossiers/' + npec_id + '?tab=contrat'
+                for width in (1440, 390):
+                    page.set_viewport_size({'width': width, 'height': 1100})
+                    page.goto(npec_url)
+                    assert page.locator('[name="npec_1"]').input_value() == '8765.00'
+                    assert page.locator('[name="npec_1"]').get_attribute('readonly') is not None
+                    assert page.locator('[name="rac_2"]').input_value() == '0.00'
+                    assert page.locator('[name="npec_3"]').count() == 0
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                    page.locator('[data-npec-financing]').screenshot(path=str(output / f'financement-npec-{width}.png'))
+                page.locator('[name="rac_1"]').fill('125.50')
+                page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
+                page.wait_for_load_state()
+                assert contract_store.settings(npec_id)['values']['rac_1'] == '125.50'
+                assert contract_store.settings(npec_id)['values']['npec_1'] == '8765.00'
+                assert contract_store.settings(npec_id)['values']['_npec']['reference'] == '2026-09'
                 assert not errors, errors
                 browser.close()
         finally:

@@ -1,0 +1,43 @@
+{% set funding = flow.financing %}
+<div class="ws-npec" data-npec-financing>
+  <input type="hidden" name="funding_mode" value="{{ 'npec' if funding.automatic else 'legacy' }}">
+  {% if funding.automatic %}
+    <p class="ws-note">Calcul automatique selon le code RNCP du BTS, l’IDCC de l’entreprise et la date de conclusion du contrat. Les montants sont repris dans la convention de formation.</p>
+    {% if funding.error %}
+      <p class="ws-alert ws-alert--info" role="status">{{ funding.error }}</p>
+      {% for year in range(1,4) %}<input type="hidden" name="rac_{{ year }}" value="{{ opts.get('rac_' ~ year,'') }}">{% endfor %}
+    {% else %}
+      <div class="ws-npec-summary">
+        <div><span>NPEC annuel de référence</span><strong>{{ cents(funding.annual_cents) }}</strong><small>RNCP{{ funding.rncp }} · IDCC {{ funding.idcc }}</small></div>
+        <div><span>Prise en charge OPCO calculée</span><strong>{{ cents(funding.total_opco_cents) }}</strong><small>{{ funding.days }} jours · {{ funding.periods|length }} année(s) de contrat</small></div>
+      </div>
+      <p class="ws-note"><strong>{{ funding.branch }}</strong><br>Barème applicable au {{ date_fr(funding.effective_from) }} · Contrat conclu le {{ date_fr(funding.conclusion) }} · <a href="{{ funding.source_url }}" target="_blank" rel="noopener noreferrer">Référentiel France compétences du {{ date_fr(funding.published_at) }}</a></p>
+      {% if funding.remote_reduction %}<p class="ws-alert ws-alert--info">{{ funding.remote_percent|replace('.',',') }} % de formation à distance : minoration de 20 %, avec un plancher annuel de 4 000 € dans la limite du NPEC initial. NPEC annuel retenu : <strong>{{ cents(funding.adjusted_annual_cents) }}</strong>.</p>{% endif %}
+      <input type="hidden" name="funding_years" value="{{ opts.funding_years }}">
+      {% for period in funding.periods %}
+      <div class="ws-npec-period">
+        <div class="ws-npec-period-title"><strong>Année {{ period.year }}</strong><span>{{ date_fr(period.start) }} → {{ date_fr(period.end) }} · {{ period.days }} / {{ period.year_days }} jours</span></div>
+        <div class="ws-form-grid">
+          <label><span>Prise en charge OPCO calculée (€)</span><input name="npec_{{ period.year }}" value="{{ opts.get('npec_' ~ period.year,'') }}" readonly aria-label="Année {{ period.year }} · Prise en charge OPCO calculée"></label>
+          <label><span>Reste à charge entreprise convenu (€)</span><input name="rac_{{ period.year }}" value="{{ opts.get('rac_' ~ period.year,'0.00') }}" inputmode="decimal" maxlength="250" aria-label="Année {{ period.year }} · Reste à charge entreprise convenu"></label>
+        </div>
+      </div>
+      {% endfor %}
+      <p class="ws-note">Le tarif de formation correspond à la prise en charge calculée, augmentée du reste à charge convenu avec l’entreprise. Le forfait obligatoire de 750 € ne concerne pas les BTS (niveau 5). Hors frais annexes et majorations individuelles, sous réserve de l’accord de l’OPCO.</p>
+    {% endif %}
+    {% if funding.cpne_choices %}
+      <label><span>Branche professionnelle de l’entreprise</span><select name="npec_cpne"><option value="">Sélectionner la branche</option>{% for choice in funding.cpne_choices %}<option value="{{ choice.code }}" {% if opts.get('npec_cpne') == choice.code %}selected{% endif %}>{{ choice.label }}</option>{% endfor %}</select></label>
+      <p class="ws-note">Enregistrez les paramètres pour appliquer la branche sélectionnée.</p>
+    {% else %}<input type="hidden" name="npec_cpne" value="{{ opts.get('npec_cpne','') }}">{% endif %}
+  {% else %}
+    <p class="ws-note">Ce dossier contient des montants saisis précédemment. Vous pouvez les conserver ou appliquer le NPEC correspondant aux informations actuelles du contrat.</p>
+    <button class="ws-button" name="funding_action" value="npec">Calculer et enregistrer selon le NPEC</button>
+    {% if package %}<p class="ws-note">Après recalcul, les documents déjà générés restent archivés. Une nouvelle version devra être générée et signée avant transmission.</p>{% endif %}
+    <div class="ws-form-grid">
+      <label><span>Nombre d’années de financement</span><select name="funding_years">{% for year in ['1','2','3'] %}<option value="{{ year }}" {% if opts.get('funding_years') == year %}selected{% endif %}>{{ year }} année(s)</option>{% endfor %}</select></label>
+      {% for year in range(1,4) %}{% for prefix,label in [('npec','Prise en charge OPCO'),('rac','Reste à charge entreprise')] %}
+      <label><span>Année {{ year }} · {{ label }} (€)</span><input name="{{ prefix }}_{{ year }}" value="{{ opts.get(prefix ~ '_' ~ year,'') }}" inputmode="decimal" maxlength="250"></label>
+      {% endfor %}{% endfor %}
+    </div>
+  {% endif %}
+</div>

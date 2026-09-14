@@ -6,6 +6,7 @@
     <summary><strong>1. Paramètres des conventions et destinataires</strong></summary>
     <p class="ws-muted">Les conventions reprennent les informations des onglets Étudiant, Entreprise et Contrat. Vérifiez les montants, les dates et les signataires ci-dessous.</p>
     <form method="post" action="{{ url_for('bts_contract_settings',record_id=record.id) }}" data-contract-settings>
+      <button type="submit" hidden tabindex="-1" aria-hidden="true">Enregistrer les paramètres</button>
       {{ token() }}<input type="hidden" name="revision" value="{{ flow.revision }}">
       {% for heading,keys in [
         ('Formation et conventions',['teaching_mode','convention_date','training_rhythm','financer']),
@@ -16,8 +17,8 @@
         ('Mobilité à Londres pour le présentiel',['mobility_start','mobility_end']),
         ('Objectifs et programme du BTS',['training_goals','training_content'])] %}
       <fieldset class="ws-contract-fieldset"><legend>{{ heading }}</legend>
+        {% if 'Financement' in heading %}{% include 'bts/financing.html' %}{% else %}
         {% if 'Représentant' in heading %}<p class="ws-note">Son e-mail et son adresse sont à renseigner dans l’onglet Étudiant. Pour un apprenti majeur, aucune invitation au représentant légal n’est créée.</p>{% endif %}
-        {% if 'Financement' in heading %}<p class="ws-note">Saisissez les montants vérifiés pour chaque année concernée, y compris 0 € si aucun reste à charge n’est prévu.</p>{% endif %}
         {% if 'Frais annexes' in heading %}<p class="ws-note">Les valeurs initiales viennent de votre modèle. Adaptez-les au dossier et au mode de formation.</p>{% endif %}
         {% if 'Mobilité' in heading %}<p class="ws-note">Le modèle prévoit Londres du 8 au 12 novembre 2027. Ces dates sont modifiables. La convention et les frais de mobilité sont exclus pour le distanciel et l’hybride.</p>{% endif %}
         {% if 'Objectifs' in heading %}<p class="ws-note">Le modèle fourni contient le programme du BTS MOS. Pour un autre BTS, renseignez ses objectifs et son programme.</p>{% endif %}
@@ -31,7 +32,7 @@
           {% elif kind == 'textarea' %}<textarea name="{{ key }}" rows="5" maxlength="6000">{{ opts.get(key,'') }}</textarea>
           {% else %}<input name="{{ key }}" type="{{ kind if kind in ['date','email','tel'] else 'text' }}" value="{{ opts.get(key,'') }}" maxlength="250" {% if kind in ['money','integer'] %}inputmode="decimal"{% endif %}>{% endif %}
           </label>
-        {% endif %}{% endfor %}</div>
+        {% endif %}{% endfor %}</div>{% endif %}
       </fieldset>{% endfor %}
       <div class="ws-form-footer"><button class="ws-button ws-button--primary">Enregistrer les paramètres</button></div>
     </form>

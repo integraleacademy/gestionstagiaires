@@ -26,6 +26,7 @@ from reportlab.lib.utils import ImageReader
 from bts_cerfa import readiness
 from bts_cerfa_pdf import generate_pdf
 from bts_workspace_store import WorkspaceError, now, money_cents, date_fr
+from bts_npec import resolve as resolve_financing
 
 ROOT = Path(__file__).resolve().parent
 TEMPLATES = ROOT / "templates_word" / "bts"
@@ -53,6 +54,8 @@ SETTINGS_FIELDS = (
     ("guardian_first_name", "Prénom du représentant légal", "text"),
     ("guardian_last_name", "Nom du représentant légal", "text"),
     ("guardian_phone", "Téléphone du représentant légal", "tel"),
+    ("funding_mode", "Calcul du financement", "funding"),
+    ("npec_cpne", "Branche professionnelle", "text"),
     ("funding_years", "Nombre d’années de financement", "years"),
     *((f"{prefix}_{year}", f"Année {year} · {label} (€)", "money") for year in range(1, 4)
       for prefix, label in (("npec", "Prise en charge OPCO"), ("rac", "Reste à charge entreprise"))),
@@ -84,10 +87,17 @@ def defaults(values, saved):
         result.update(training_goals=MOS_GOALS, training_content=MOS_CONTENT,
                       training_rhythm="2 semaines à l’école – 2 semaines en entreprise")
     result.update(saved)
-    return result
+    return resolve_financing(values, result)
 
 
 def validate_settings(raw):
+    raw = dict(raw)
+    if raw.get("funding_action") == "npec":
+        raw["funding_mode"] = "npec"
+    if raw.get("funding_mode") == "npec":
+        # The browser cannot supply or override any computed OPCO amount.
+        for key in ("funding_years", "npec_1", "npec_2", "npec_3"):
+            raw[key] = ""
     result = {}
     for key, label, kind in SETTINGS_FIELDS:
         value = str(raw.get(key) or "").strip()
@@ -109,6 +119,10 @@ def validate_settings(raw):
             raise WorkspaceError("Choisissez le mode de formation.")
         if kind == "years" and value not in {"", "1", "2", "3"}:
             raise WorkspaceError("Choisissez entre une et trois années de financement.")
+        if kind == "funding" and value not in {"", "npec", "legacy"}:
+            raise WorkspaceError("Mode de calcul du financement invalide.")
+        if key == "npec_cpne" and value and not re.fullmatch(r"\d{1,5}", value):
+            raise WorkspaceError("Branche professionnelle invalide.")
         if kind == "financer":
             from wedof_bts import FINANCERS
             if value and value not in FINANCERS:
@@ -143,6 +157,8 @@ def document_errors(kind, values, settings):
     required = list(labels) if kind == "formation" else list(labels)[:7]
     missing = [labels[k] for k in required if not values.get(k)]
     if kind == "formation":
+        if settings.get("_npec", {}).get("error"):
+            missing.append(settings["_npec"]["error"])
         if values.get("cfa_siret") != "84089988400026" or values.get("cfa_uai") != "0831774C":
             missing.append("Le CFA doit correspondre au modèle Intégrale Academy (SIRET 84089988400026, UAI 0831774C)")
     setting_keys = ["teaching_mode", "convention_date"]
