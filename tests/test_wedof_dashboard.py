@@ -16,6 +16,41 @@ def folder(external_id, state="accepted", **changes):
 
 
 class WedofDashboardUnitTests(unittest.TestCase):
+    def test_non_operational_states_do_not_appear_in_dashboard_or_counters(self):
+        states = (
+            "validated", "waitingAcceptation", "notProcessed", "refusedByAttendee",
+            "canceledByAttendee", "canceledByAttendeeNotRealized",
+            "rejectedWithoutOfSuite", "rejectedWithoutTitulaireSuite",
+            "aborted", "toRegister", "registered", "terminated", "unknown", "", None,
+        )
+        for source in ("folders", "statuses", "both"):
+            for state in states:
+                with self.subTest(source=source, state=state):
+                    # Webhooks retain these states in the synchronization history.
+                    status = {"external_id": "OUTSIDE", "wedof_state": state,
+                              "wedof_type": "cpf",
+                              "entry_training": {"status": "not_applicable"},
+                              "service_done": {"status": "not_applicable"}}
+                    dashboard = build_automation_dashboard(
+                        [folder("OUTSIDE", state)] if source != "statuses" else [],
+                        statuses=[status] if source != "folders" else [],
+                    )
+                    self.assertEqual(dashboard["rows"], [])
+                    self.assertTrue(all(count == 0 for count in dashboard["stats"].values()))
+
+    def test_current_cancellation_does_not_restore_a_historical_service_done(self):
+        dashboard = build_automation_dashboard(
+            [folder("CANCELLED", "canceledByAttendee")],
+            statuses=[{"external_id": "CANCELLED", "wedof_state": "serviceDoneDeclared",
+                       "service_done": {"status": "success"}}],
+            actions=[{"external_id": "CANCELLED", "action": "service_done", "status": "success"}],
+            invoiced_external_ids={"CANCELLED"},
+        )
+
+        self.assertEqual(dashboard["rows"], [])
+        self.assertEqual(dashboard["stats"]["service"], 0)
+        self.assertEqual(dashboard["stats"]["invoiced"], 0)
+
     def test_quota_blocked_action_stays_scheduled_and_sorted(self):
         dashboard = build_automation_dashboard([], statuses=[{
             "external_id": "QUOTA", "wedof_state": "accepted", "wedof_type": "cpf",
@@ -281,6 +316,37 @@ class WedofDashboardViewTests(unittest.TestCase):
         self.client = gestion_app.app.test_client()
         with self.client.session_transaction() as session:
             session["admin_logged_in"] = True
+
+    def test_state_page_only_renders_confirmed_services_from_webhook_history(self):
+        data = {
+            "sessions": [], "wedof_links": [],
+            "wedof_automation_runs": [{"status": "success"}],
+            "wedof_automation_status": [
+                {"external_id": "CANCELLED", "wedof_state": "canceledByAttendee",
+                 "service_done": {"status": "not_applicable"}},
+                {"external_id": "WAITING", "wedof_state": "waitingAcceptation"},
+                {"external_id": "REMOTE-DONE", "wedof_state": "serviceDoneValidated",
+                 "service_done": {"status": "completed_in_wedof"}},
+                {"external_id": "LOCAL-DONE", "wedof_state": "serviceDoneDeclared",
+                 "service_done": {"status": "completed_in_wedof"}},
+            ],
+            "wedof_automation_actions": [
+                {"external_id": "LOCAL-DONE", "action": "service_done", "status": "success"},
+            ],
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "WedofClient") as remote:
+            response = self.client.get("/admin/wedof?section=state&tab=service")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertEqual(html.count('data-wedof-panel="service"'), 1)
+        self.assertIn('data-wedof-row="LOCAL-DONE"', html)
+        for excluded in ("CANCELLED", "WAITING", "REMOTE-DONE"):
+            self.assertNotIn(f'data-wedof-row="{excluded}"', html)
+        self.assertEqual(html.count("Service fait déclaré ✅"), 1)
+        remote.assert_not_called()
 
     def test_admin_displays_central_quota_origins_alerts_locks_and_recent_requests(self):
         data = {

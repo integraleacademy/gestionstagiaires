@@ -968,6 +968,11 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         if not isinstance(item, dict): continue
         remote = extract_folder(item); external_id = str(remote.get("external_id") or ""); seen.add(external_id)
         state, history = remote.get("state", ""), status_by_id.get(external_id, {})
+        # Les webhooks conservent aussi les annulations et les demandes en
+        # attente. Seuls les états suivis par ce tableau sont opérationnels.
+        # Garder l'identifiant dans seen évite de réafficher un ancien statut.
+        if state not in ALL_STATES:
+            continue
         action = (history.get("entry_training", {}) if state == "accepted"
                   else history.get("service_done", {}) if state in {"inTraining", *SERVICE_DONE_STATES}
                   else {})
@@ -994,7 +999,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         tab = ("invoiced" if state in SERVICE_DONE_STATES and invoiced else
                "service" if state in SERVICE_DONE_STATES else
                "anomaly" if anomaly else
-               {"accepted": "accepted", "inTraining": "training"}.get(state, "service"))
+               {"accepted": "accepted", "inTraining": "training"}.get(state, "anomaly"))
         date_start = (history.get("wedof_date_start") or normalize_date(remote.get("start_date")) or
                       (link or {}).get("wedof_date_start"))
         date_end = (history.get("wedof_date_end") or normalize_date(remote.get("end_date")) or
@@ -1031,6 +1036,10 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         if not isinstance(status, dict): continue
         if str(status.get("external_id") or "") in seen: continue
         state = status.get("wedof_state")
+        # La page principale s'appuie sur cet historique, même lorsqu'aucun
+        # dossier distant n'est fourni. Appliquer le même périmètre ici.
+        if state not in ALL_STATES:
+            continue
         action = (status.get("entry_training", {}) if state == "accepted"
                   else status.get("service_done", {}) if state in {"inTraining", *SERVICE_DONE_STATES}
                   else {})
@@ -1050,7 +1059,7 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
         tab = ("invoiced" if state in SERVICE_DONE_STATES and invoiced else
                "service" if state in SERVICE_DONE_STATES else
                "anomaly" if value in {"anomaly", "blocked", "dry_run_due_late"}
-               else {"accepted":"accepted", "inTraining":"training"}.get(state, "service"))
+               else {"accepted":"accepted", "inTraining":"training"}.get(state, "anomaly"))
         link, association = links_by_id.get(external_id), associations_by_id.get(external_id, {})
         date_start = status.get("wedof_date_start") or (link or {}).get("wedof_date_start")
         date_end = status.get("wedof_date_end") or (link or {}).get("wedof_date_end")
