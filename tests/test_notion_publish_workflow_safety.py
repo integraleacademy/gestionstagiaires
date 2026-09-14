@@ -11,7 +11,8 @@ class NotionPublishWorkflowSafetyTests(unittest.TestCase):
             / "workflows"
             / "notion-work-publish.yml"
         )
-        cls.publish = workflow_path.read_text(encoding="utf-8").split(
+        cls.workflow = workflow_path.read_text(encoding="utf-8")
+        cls.publish = cls.workflow.split(
             "\n  publish:", 1
         )[1]
 
@@ -34,6 +35,10 @@ class NotionPublishWorkflowSafetyTests(unittest.TestCase):
     def test_merge_is_bound_to_reviewed_head(self):
         self.assertIn('--match-head-commit "$EXPECTED_HEAD"', self.publish)
         self.assertIn('La tête a changé pendant la sortie du brouillon.', self.publish)
+
+    def test_full_suite_uses_module_invocation(self):
+        self.assertIn("python -m pytest -q", self.workflow)
+        self.assertNotIn("\n          pytest -q", self.workflow)
 
 
 if __name__ == "__main__":
