@@ -575,13 +575,21 @@ class CrmIntegrationTests(unittest.TestCase):
         self.assertIn('"training_type": "APS"', html)
         self.assertIn("select.value = targetId", html)
 
-    def test_prefill_waits_for_dom_and_open_modal_then_runs_once(self):
+    def test_prefill_waits_for_dom_normalizes_vtc_and_open_modal_then_runs_once(self):
         template = Path("templates/admin_sessions.html").read_text(encoding="utf-8")
+        normalize_start = template.index("  function normalizeTrainingChoice(value){")
+        normalize_end = template.index("\n\n  function closeQuickCreateMenu", normalize_start)
         apply_start = template.index("  function applyCrmPrefillFromSessions(){")
         apply_end = template.index("\n\n  document.querySelectorAll", apply_start)
         start = template.index("  function startCrmPrefillWhenReady(){")
         end = template.index("\n\n  const importFromSessionsBtn", start)
-        javascript = template[apply_start:apply_end] + "\n" + template[start:end]
+        javascript = (
+            template[normalize_start:normalize_end]
+            + "\n"
+            + template[apply_start:apply_end]
+            + "\n"
+            + template[start:end]
+        )
 
         script = r'''
 const vm = require("vm");
@@ -599,12 +607,12 @@ const context = {
   crmPrefillRequested: true,
   crmPrefillTransfer: {
     payload: {nom: "Martin", prenom: "Lina", email: "lina@example.com", telephone: "0600000000"},
-    training_type: "APS", matched_session_id: "session-1"
+    training_type: "Chauffeur VTC", matched_session_id: "session-1"
   },
-  availableSessionsForCreate: [{id: "session-1", name: "Septembre", training_type: "APS"}],
+  availableSessionsForCreate: [{id: "session-1", name: "Septembre", training_type: "VTC"}],
   selectedTrainingForCreate: "",
   initializeTraineeCreateFromSessions(){}, refreshTrainingButtons(){},
-  refreshVtcRealTrainingDatesVisibility(){}, refreshSessionChoices(){},
+  refreshTrainingSpecificFields(){}, refreshSessionChoices(){},
   sessionDisplayName(session){ return session.name; },
   Option: function(text, value){ this.text = text; this.value = value; },
   document: {
@@ -634,7 +642,7 @@ if (timers.length) throw new Error("a retry remained after successful prefill");
 if (elements.sessionTLastName.value !== "Martin" || elements.sessionTFirstName.value !== "Lina" ||
     elements.sessionTEmail.value !== "lina@example.com" || elements.sessionTPhone.value !== "0600000000")
   throw new Error("CRM fields were not prefilled");
-if (context.selectedTrainingForCreate !== "APS") throw new Error("training was not selected");
+if (context.selectedTrainingForCreate !== "VTC") throw new Error("CRM VTC training was not normalized");
 if (elements.traineeTargetSession.value !== "session-1" || elements.traineeTargetSession.disabled)
   throw new Error("session was not selected");
 '''
