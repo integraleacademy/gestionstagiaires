@@ -21689,7 +21689,6 @@ def _send_afc_documents_reminder(
 ) -> Dict[str, Any]:
     templates = bucket.get("mail_templates") or {}
     email = str(candidate.get("email") or "").strip()
-    phone = str(candidate.get("telephone") or "").strip()
     attempt_at = sent_at or _now_iso()
 
     subject = (
@@ -21701,12 +21700,6 @@ def _send_afc_documents_reminder(
         or AFC_DEFAULT_DOCUMENTS_REMINDER_EMAIL_TEMPLATE,
         candidate,
     )
-    raw_sms = _afc_render_mail_template(
-        str(templates.get("documents_reminder_sms") or "").strip()
-        or AFC_DEFAULT_DOCUMENTS_REMINDER_SMS_TEMPLATE,
-        candidate,
-    )
-
     email_status = "ABSENT"
     email_error = ""
     if email:
@@ -21733,22 +21726,10 @@ def _send_afc_documents_reminder(
                 else "Échec envoi e-mail"
             ) or "Échec envoi e-mail"
 
-    sms_status = "ABSENT"
-    sms_error = ""
-    if phone:
-        sms_ok = bool(brevo_send_sms(phone, raw_sms))
-        sms_status = "ACCEPTE" if sms_ok else "ECHEC"
-        if not sms_ok:
-            sms_error = "Échec envoi SMS"
-
-    email_accepted = email_status == "ACCEPTE"
-    sms_accepted = sms_status == "ACCEPTE"
-    accepted = email_accepted or sms_accepted
-    attempted_failures = [
-        message
-        for message in (email_error, sms_error)
-        if message
-    ]
+    # AFC document reminders are email-only, for both manual and automatic runs.
+    # Convocation SMS use their own sender and remain enabled.
+    sms_status = "DESACTIVE"
+    accepted = email_status == "ACCEPTE"
 
     candidate["documents_reminder_last_attempt_at"] = attempt_at
     candidate["documents_reminder_email_status"] = email_status
@@ -21764,20 +21745,18 @@ def _send_afc_documents_reminder(
         candidate["documents_reminder_history"] = history[-100:]
         candidate["documents_reminder_last_sent_at"] = attempt_at
 
-    if not email and not phone:
-        error = "Email et téléphone manquants"
+    if not email:
+        error = "Adresse e-mail manquante : les SMS de relance AFC sont désactivés."
     else:
-        error = " ; ".join(attempted_failures)
+        error = email_error
     if error:
         candidate["documents_reminder_last_error"] = error
     else:
         candidate.pop("documents_reminder_last_error", None)
 
-    intended_channels = int(bool(email)) + int(bool(phone))
-    accepted_channels = int(email_accepted) + int(sms_accepted)
     return {
         "ok": accepted,
-        "partial": bool(accepted and accepted_channels < intended_channels),
+        "partial": False,
         "error": error,
         "sent_at": attempt_at if accepted else "",
         "email_status": email_status,

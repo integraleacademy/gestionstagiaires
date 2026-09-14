@@ -292,12 +292,13 @@
     <textarea id="tmplConvocationSms" rows="8" style="width:100%;">{{ afc.mail_templates.convocation_sms }}</textarea>
     <hr style="margin:18px 0;border:0;border-top:1px solid #e2e8f0;">
     <h3 style="margin:0 0 10px;">Relance documents</h3>
+    <p style="margin:0 0 10px;color:#475569;">Les relances AFC sont envoyées par e-mail uniquement. Les SMS de relance sont désactivés.</p>
     <label>Objet du mail de relance documents</label>
     <input id="tmplDocumentsReminderSubject" type="text" style="width:100%;" value="{{ afc.mail_templates.documents_reminder_subject }}">
     <label style="margin-top:10px;display:block;">Mail relance documents</label>
     <textarea id="tmplDocumentsReminderEmail" rows="10" style="width:100%;">{{ afc.mail_templates.documents_reminder_email }}</textarea>
-    <label style="margin-top:10px;display:block;">SMS relance documents</label>
-    <textarea id="tmplDocumentsReminderSms" rows="6" style="width:100%;">{{ afc.mail_templates.documents_reminder_sms }}</textarea>
+    <label style="margin-top:10px;display:block;">Ancien modèle SMS de relance (envoi désactivé)</label>
+    <textarea id="tmplDocumentsReminderSms" rows="6" style="width:100%;" readonly>{{ afc.mail_templates.documents_reminder_sms }}</textarea>
     <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
   </div>
 </div>
@@ -396,7 +397,7 @@
               {% for reminder in reminder_history|reverse %}
               <span
                 class="afc-reminder-date"
-                title="{{ 'Envoi manuel' if reminder.source == 'manual' else 'Envoi automatique' }} · E-mail {{ reminder.email_status or 'non renseigné' }} · SMS {{ reminder.sms_status or 'non renseigné' }}"
+                title="{{ 'Envoi manuel' if reminder.source == 'manual' else 'Envoi automatique' }} · E-mail {{ reminder.email_status or 'non renseigné' }} · SMS {{ 'désactivé' if reminder.sms_status == 'DESACTIVE' else reminder.sms_status or 'non renseigné' }}"
               >{{ reminder.sent_at|format_date_fr }}</span>
               {% endfor %}
             </div>
@@ -412,8 +413,8 @@
             <div class="afc-reminder-next none">Aucune relance automatique prévue</div>
             {% endif %}
             {% if not show_archived %}
-            <button type="button" class="btn btn-outline afc-reminder-send" data-send-documents-reminder>Envoyer maintenant</button>
-            <small class="afc-reminder-help">Automatique après 2 jours, puis tous les 3 jours tant que le dossier reste incomplet.</small>
+            <button type="button" class="btn btn-outline afc-reminder-send" data-send-documents-reminder>Envoyer l’e-mail maintenant</button>
+            <small class="afc-reminder-help">E-mail uniquement · Automatique après 2 jours, puis tous les 3 jours tant que le dossier reste incomplet. SMS désactivés.</small>
             {% endif %}
           </div>
         </td>
@@ -925,7 +926,7 @@ document.querySelectorAll('[data-send-documents-reminder]').forEach((btn)=>{
     const target = e.currentTarget;
     const tr = target.closest('tr');
     const fullName = `${getCandidateFieldValue(tr, 'prenom')} ${getCandidateFieldValue(tr, 'nom')}`.trim();
-    if(!confirm(`Envoyer maintenant le mail et le SMS « Relance documents » à ${fullName || 'ce candidat'} ?`)) return;
+    if(!confirm(`Envoyer maintenant l’e-mail « Relance documents » à ${fullName || 'ce candidat'} ? Les SMS de relance AFC sont désactivés.`)) return;
     const originalLabel = target.textContent;
     target.disabled = true;
     target.textContent = 'Envoi en cours…';
@@ -941,6 +942,7 @@ document.querySelectorAll('[data-send-documents-reminder]').forEach((btn)=>{
       else if(body.email_status === 'ECHEC') channelLabels.push('e-mail en échec');
       if(body.sms_status === 'ACCEPTE') channelLabels.push('SMS accepté');
       else if(body.sms_status === 'ECHEC') channelLabels.push('SMS en échec');
+      else if(body.sms_status === 'DESACTIVE') channelLabels.push('SMS désactivé');
       alert(`Relance enregistrée${channelLabels.length ? ` : ${channelLabels.join(', ')}` : ''}.`);
       location.reload();
     }catch(_err){

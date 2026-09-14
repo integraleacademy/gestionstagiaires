@@ -59,7 +59,7 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
             lambda *args, **kwargs: self.sms_calls.append((args, kwargs)) or True
         )
 
-    def test_automatic_reminder_waits_two_full_days_then_sends_both_channels(self):
+    def test_automatic_reminder_waits_two_full_days_then_sends_email_only(self):
         candidate = self.candidate()
         self.data["afc"]["candidates"] = [candidate]
         self.configure_successful_delivery()
@@ -76,10 +76,11 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         self.assertEqual(early["sent"], 0)
         self.assertEqual(due, {"checked": 1, "eligible": 1, "sent": 1, "failed": 0})
         self.assertEqual(len(self.email_calls), 1)
-        self.assertEqual(len(self.sms_calls), 1)
+        self.assertEqual(self.sms_calls, [])
         self.assertEqual(self.email_calls[0][1]["metadata"]["purpose"], "afc_documents_reminder")
         self.assertEqual(candidate["documents_reminder_history"][0]["source"], "automatic")
         self.assertEqual(candidate["documents_reminder_history"][0]["sent_at"], "2026-08-12T08:00:00Z")
+        self.assertEqual(candidate["documents_reminder_history"][0]["sms_status"], "DESACTIVE")
 
     def test_successful_reminder_repeats_only_after_three_full_days(self):
         candidate = self.candidate(
@@ -207,14 +208,33 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         body = response.get_json()
         self.assertTrue(body["ok"])
         self.assertEqual(body["email_status"], "ACCEPTE")
-        self.assertEqual(body["sms_status"], "ACCEPTE")
+        self.assertEqual(body["sms_status"], "DESACTIVE")
+        self.assertFalse(body["partial"])
+        self.assertEqual(len(self.email_calls), 1)
+        self.assertEqual(self.sms_calls, [])
         self.assertEqual(candidate["documents_reminder_history"][0]["source"], "manual")
+
+    def test_missing_email_does_not_fall_back_to_sms_or_record_success(self):
+        candidate = self.candidate(email="")
+        self.data["afc"]["candidates"] = [candidate]
+        self.configure_successful_delivery()
+
+        response = self.client.post("/api/admin/afc/candidates/AFC-REMINDER-1/documents-reminder")
+
+        body = response.get_json()
+        self.assertFalse(body["ok"])
+        self.assertEqual(body["sms_status"], "DESACTIVE")
+        self.assertIn("Adresse e-mail manquante", body["error"])
+        self.assertEqual(self.email_calls, [])
+        self.assertEqual(self.sms_calls, [])
+        self.assertEqual(candidate.get("documents_reminder_history", []), [])
+        self.assertFalse(candidate.get("documents_reminder_last_sent_at"))
 
     def test_failed_delivery_does_not_add_a_successful_reminder_date(self):
         candidate = self.candidate()
         self.data["afc"]["candidates"] = [candidate]
         gestion_app.brevo_send_email = lambda *_args, **_kwargs: {"ok": False, "error": "Brevo indisponible"}
-        gestion_app.brevo_send_sms = lambda *_args, **_kwargs: False
+        gestion_app.brevo_send_sms = lambda *_args, **_kwargs: self.fail("AFC reminder SMS are disabled")
 
         result = gestion_app.run_afc_documents_reminders(
             datetime.datetime(2026, 8, 12, 8, 0, 0),
@@ -273,6 +293,8 @@ class AfcDocumentsRemindersTests(unittest.TestCase):
         self.assertIn("17/08/2026", page)
         self.assertIn("data-send-documents-reminder", page)
         self.assertIn("Automatique après 2 jours, puis tous les 3 jours", page)
+        self.assertIn("E-mail uniquement", page)
+        self.assertNotIn("Envoyer maintenant le mail et le SMS", page)
 
     def test_cnaps_status_change_resets_the_waiting_since_timestamp(self):
         candidate = self.candidate()
