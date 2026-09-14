@@ -189,7 +189,14 @@
         const response = await fetch(form.action, {method: 'POST', body, credentials: 'same-origin', headers: {Accept: 'application/json'}});
         const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
         if (!response.ok || !data?.ok) throw new Error(data?.message || 'Enregistrement non confirmé. Votre saisie reste affichée ; vérifiez votre connexion avant de réessayer.');
-        window.location.assign(data.redirect_url);
+        const destination = new URL(data.redirect_url, window.location.href);
+        if (destination.pathname === window.location.pathname && destination.search === window.location.search) {
+          // A hash-only navigation does not reload the saved quote/form values.
+          window.history.replaceState(null, '', destination.href);
+          window.location.reload();
+        } else {
+          window.location.assign(destination.href);
+        }
       } catch (error) {
         message.textContent = `Les paramètres n’ont pas été enregistrés : ${error.message} Votre saisie est conservée à l’écran.`;
         message.hidden = false;
