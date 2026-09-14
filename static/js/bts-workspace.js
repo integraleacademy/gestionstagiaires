@@ -52,7 +52,7 @@
     });
   });
   root.querySelectorAll('form[method="post"]').forEach(form => {
-    if (form.hasAttribute('data-wedof-search')) return;
+    if (form.matches('[data-wedof-search], [data-candidate-search], [data-opco-submit]')) return;
     form.addEventListener('submit', event => {
       if (form.dataset.submitting === 'true') {
         event.preventDefault();
@@ -113,6 +113,91 @@
         button.disabled = false;
         button.textContent = originalLabel;
         form.removeAttribute('aria-busy');
+      }
+    });
+  });
+  const candidateForm = root.querySelector('[data-candidate-search]');
+  if (candidateForm) {
+    const field = candidateForm.querySelector('[name="q"]');
+    const results = root.querySelector('#candidate-results');
+    const template = root.querySelector('[data-candidate-template]');
+    const message = candidateForm.querySelector('[data-candidate-message]');
+    let timer, controller, sequence = 0;
+    const search = async () => {
+      const current = ++sequence;
+      controller?.abort();
+      controller = new AbortController();
+      results.replaceChildren();
+      if (field.value.trim().length < 2) {
+        message.textContent = 'Saisissez au moins deux caractères.';
+        return;
+      }
+      message.textContent = 'Recherche dans les inscriptions BTS…';
+      try {
+        const response = await fetch(candidateForm.action, {method: 'POST', body: new FormData(candidateForm),
+          credentials: 'same-origin', headers: {Accept: 'application/json'}, signal: controller.signal});
+        if (response.redirected || !response.headers.get('content-type')?.includes('application/json')) throw new Error('Rechargez la page pour rétablir votre session.');
+        const data = await response.json();
+        if (current !== sequence) return;
+        if (!response.ok) throw new Error(data.error || 'La recherche est indisponible.');
+        for (const person of data.items) {
+          const fragment = template.content.cloneNode(true);
+          fragment.querySelector('[name="candidate_id"]').value = person.id;
+          fragment.querySelector('[data-candidate-name]').textContent = `${person.prenom} ${person.nom}`;
+          fragment.querySelector('[data-candidate-detail]').textContent = [person.numero_dossier, person.email, person.bts, person.mode, person.statut].filter(Boolean).join(' · ');
+          const form = fragment.querySelector('form');
+          form.addEventListener('submit', event => {
+            if (form.dataset.submitting) return event.preventDefault();
+            form.dataset.submitting = 'true';
+            form.querySelector('button').disabled = true;
+            form.querySelector('button').textContent = 'Ajout du dossier…';
+          });
+          results.append(fragment);
+        }
+        message.textContent = data.items.length ? `${data.items.length} résultat(s). Sélectionnez la bonne préinscription.${data.more ? ' Précisez la recherche pour voir les autres résultats.' : ''}` : 'Aucune préinscription trouvée. Vous pouvez créer le dossier manuellement ci-dessous.';
+      } catch (error) {
+        if (error.name !== 'AbortError' && current === sequence) message.textContent = error.message;
+      }
+    };
+    field.addEventListener('input', () => { clearTimeout(timer); timer = window.setTimeout(search, 350); });
+    candidateForm.addEventListener('submit', event => { event.preventDefault(); clearTimeout(timer); search(); });
+  }
+  const disableContractActions = () => {
+    root.querySelector('[data-contract-unsaved]')?.removeAttribute('hidden');
+    root.querySelectorAll('[data-contract-generate] button, [data-contract-send] button, [data-opco-submit] button').forEach(button => { button.disabled = true; });
+  };
+  root.querySelectorAll('[data-contract-settings], [data-cerfa-form]').forEach(form => {
+    form.addEventListener('input', disableContractActions);
+    form.addEventListener('change', disableContractActions);
+  });
+  root.querySelectorAll('[data-opco-submit]').forEach(form => {
+    let active = false;
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (active || !form.reportValidity()) return;
+      active = true;
+      const button = form.querySelector('button');
+      const message = form.querySelector('[data-opco-message]');
+      button.disabled = true;
+      form.setAttribute('aria-busy', 'true');
+      message.textContent = 'Préparation de la télétransmission…';
+      try {
+        for (let step = 0; step < 12; step++) {
+          const response = await fetch(form.action, {method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: {Accept: 'application/json'}});
+          if (response.redirected || !response.headers.get('content-type')?.includes('application/json')) throw new Error('La session a expiré. Rechargez le dossier pour vérifier le résultat.');
+          const data = await response.json();
+          message.textContent = data.message;
+          if (!response.ok) throw new Error(data.error || data.message);
+          if (data.done) { window.location.assign(data.redirect_url); return; }
+        }
+        throw new Error('La préparation est enregistrée. Rechargez le dossier pour poursuivre.');
+      } catch (error) {
+        message.textContent = `${error.message} Rechargez le dossier pour consulter le suivi.`;
+      } finally {
+        active = false;
+        form.removeAttribute('aria-busy');
+        // A request may have reached WEDOF despite a disconnected browser.
+        // Reloading lets the server's recorded result decide whether retry is safe.
       }
     });
   });

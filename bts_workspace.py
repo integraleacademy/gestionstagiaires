@@ -31,7 +31,7 @@ from bts_workspace_store import (
 from bts_cerfa import FIELDS as CERFA_FIELDS, CerfaValidationError, cerfa_view, effective_values
 from bts_cerfa_pdf import CerfaPdfError, generate_pdf
 
-VERSION = "20260911-bts-cerfa-1"
+VERSION = "20260914-bts-contracts-1"
 
 
 def configuration_id(config: AktoConfig) -> str:
@@ -126,7 +126,8 @@ def register_bts_workspace(legacy):
         for draft in record["drafts"]:
             card = next((card for card in billing["cards"] if card["key"] == draft["schedule_key"]), None)
             draft["needs_review"] = draft["payer"] == "opco" and (card is None or not card["can_draft"] or card["remaining"] != draft["amount_cents"])
-        return {"record": record, "billing": billing, "opco_costs": opco_costs_view(record)}
+        from bts_contract_routes import contract_context
+        return {"record": record, "billing": billing, "opco_costs": opco_costs_view(record), **contract_context(legacy, record)}
 
     @contextmanager
     def api_lock():
@@ -180,8 +181,11 @@ def register_bts_workspace(legacy):
             abort(400)
         data = {key: request.form.get(key, "") for key, f in CERFA_FIELDS.items() if f["tab"] == tab}
         try:
-            store().save_cerfa_complements(record_id, data, int(request.form.get("revision", "-1")),
-                                           request.form.get("source_version", ""), actor())
+            from bts_contract_store import ContractStore
+            db = ContractStore(legacy.AKTO_BTS_DB_FILE)
+            with db.lock(record_id):
+                db.save_cerfa_complements(record_id, data, int(request.form.get("revision", "-1")),
+                                          request.form.get("source_version", ""), actor())
             flash("Informations enregistrées. Le CERFA reprend maintenant vos compléments.", "success")
         except (CerfaValidationError, WorkspaceError, ValueError) as exc:
             flash(str(exc) if isinstance(exc, (CerfaValidationError, WorkspaceError)) else "Version du formulaire invalide.", "error")
@@ -217,7 +221,10 @@ def register_bts_workspace(legacy):
         try:
             revision = int(request.form.get("revision", "-1"))
             fields = {name: request.form.get(name, "") for name, _, _ in FIELD_GROUPS[tab]}
-            store().save_fields(record_id, fields, revision, actor())
+            from bts_contract_store import ContractStore
+            db = ContractStore(legacy.AKTO_BTS_DB_FILE)
+            with db.lock(record_id):
+                db.save_fields(record_id, fields, revision, actor())
             flash("Informations enregistrées dans votre espace BTS.", "success")
         except (WorkspaceError, ValueError) as exc:
             flash(str(exc) if isinstance(exc, WorkspaceError) else "Version du formulaire invalide.", "error")
@@ -511,6 +518,8 @@ def register_bts_workspace(legacy):
     for path, endpoint, function, methods, write in routes:
         endpoints.add(endpoint)
         app.add_url_rule(path, endpoint, protected(function, write=write), methods=methods)
+    from bts_contract_routes import register_contract_routes
+    register_contract_routes(legacy, protected, actor, get_record, endpoints)
     forbidden = getattr(legacy, "PARTNER_SPACE_FORBIDDEN_ENDPOINTS", None)
     if isinstance(forbidden, set):
         forbidden.update(endpoints)

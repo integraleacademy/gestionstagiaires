@@ -1,0 +1,104 @@
+{% set flow = contract_flow %}{% set opts = flow.settings %}{% set package = flow.package %}
+{% set sig = package.signature if package else {} %}{% set opco = package.opco if package else {} %}
+<section id="contract-workflow" class="ws-contract-workflow" aria-label="Conventions, signatures et télétransmission">
+  <header class="ws-page-head"><div><span class="ws-eyebrow">Finaliser le dossier d’apprentissage</span><h2>Documents, signatures et OPCO</h2><p>Préparez les documents, faites-les signer ensemble, puis transmettez le contrat.</p></div></header>
+  <details class="ws-card ws-pad ws-contract-settings" {% if not package %}open{% endif %}>
+    <summary><strong>1. Paramètres des conventions et destinataires</strong></summary>
+    <p class="ws-muted">Les conventions reprennent les informations des onglets Étudiant, Entreprise et Contrat. Vérifiez les montants, les dates et les signataires ci-dessous.</p>
+    <form method="post" action="{{ url_for('bts_contract_settings',record_id=record.id) }}" data-contract-settings>
+      {{ token() }}<input type="hidden" name="revision" value="{{ flow.revision }}">
+      {% for heading,keys in [
+        ('Formation et conventions',['teaching_mode','convention_date','training_rhythm','financer']),
+        ('Signataire de l’entreprise',['employer_first_name','employer_last_name','employer_signer_email']),
+        ('Représentant légal si l’apprenti est mineur',['guardian_first_name','guardian_last_name','guardian_phone']),
+        ('Financement de la formation',['funding_years','npec_1','rac_1','npec_2','rac_2','npec_3','rac_3']),
+        ('Frais annexes prévus par la convention',['meal_price','meals_1','meals_2','equipment_cost','mobility_cost']),
+        ('Mobilité à Londres pour le présentiel',['mobility_start','mobility_end']),
+        ('Objectifs et programme du BTS',['training_goals','training_content'])] %}
+      <fieldset class="ws-contract-fieldset"><legend>{{ heading }}</legend>
+        {% if 'Représentant' in heading %}<p class="ws-note">Son e-mail et son adresse sont à renseigner dans l’onglet Étudiant. Pour un apprenti majeur, aucune invitation au représentant légal n’est créée.</p>{% endif %}
+        {% if 'Financement' in heading %}<p class="ws-note">Saisissez les montants vérifiés pour chaque année concernée, y compris 0 € si aucun reste à charge n’est prévu.</p>{% endif %}
+        {% if 'Frais annexes' in heading %}<p class="ws-note">Les valeurs initiales viennent de votre modèle. Adaptez-les au dossier et au mode de formation.</p>{% endif %}
+        {% if 'Mobilité' in heading %}<p class="ws-note">Le modèle prévoit Londres du 8 au 12 novembre 2027. Ces dates sont modifiables. La convention et les frais de mobilité sont exclus pour le distanciel et l’hybride.</p>{% endif %}
+        {% if 'Objectifs' in heading %}<p class="ws-note">Le modèle fourni contient le programme du BTS MOS. Pour un autre BTS, renseignez ses objectifs et son programme.</p>{% endif %}
+        <div class="ws-form-grid">
+        {% for key,label,kind in flow.settings_fields %}{% if key in keys %}
+          <label class="{{ 'ws-field-full' if kind == 'textarea' else '' }}"><span>{{ label }}</span>
+          {% if kind in ['mode','financer','years'] %}<select name="{{ key }}"><option value="">À renseigner</option>
+            {% set choices = flow.modes if kind == 'mode' else (financers.items() if kind == 'financer' else [('1','1 année'),('2','2 années'),('3','3 années')]) %}
+            {% for code,title in choices %}<option value="{{ code }}" {% if opts.get(key) == code %}selected{% endif %}>{{ title }}</option>{% endfor %}
+          </select>
+          {% elif kind == 'textarea' %}<textarea name="{{ key }}" rows="5" maxlength="6000">{{ opts.get(key,'') }}</textarea>
+          {% else %}<input name="{{ key }}" type="{{ kind if kind in ['date','email','tel'] else 'text' }}" value="{{ opts.get(key,'') }}" maxlength="250" {% if kind in ['money','integer'] %}inputmode="decimal"{% endif %}>{% endif %}
+          </label>
+        {% endif %}{% endfor %}</div>
+      </fieldset>{% endfor %}
+      <div class="ws-form-footer"><button class="ws-button ws-button--primary">Enregistrer les paramètres</button></div>
+    </form>
+  </details>
+  <section class="ws-card ws-pad">
+    <div class="ws-section-head"><div><span class="ws-eyebrow">2. Documents à relire</span><h3>Contrat et conventions</h3><p class="ws-muted">Chaque document reste un PDF séparé. Le tampon et la signature du CFA sont apposés automatiquement.</p></div>
+      <form method="post" action="{{ url_for('bts_documents_generate',record_id=record.id) }}" data-contract-generate>
+        {{ token() }}<input type="hidden" name="fingerprint" value="{{ flow.fingerprint }}">
+        <button class="ws-button ws-button--primary" {% if flow.signature_active or opco.get('sent') or opco.get('pending') %}disabled{% endif %}>{{ icon('file',17) }} {{ 'Générer une nouvelle version' if package else 'Générer les documents' }}</button>
+      </form>
+    </div>
+    {% if flow.stale %}<p class="ws-alert ws-alert--error">Le dossier a changé depuis la génération. Les documents ci-dessous restent archivés ; une nouvelle version doit être générée et signée avant transmission.</p>{% endif %}
+    <p class="ws-note" data-contract-unsaved hidden>Enregistrez les modifications avant de générer ou envoyer les documents.</p>
+    <div class="ws-document-grid">
+    {% for kind,label in flow.doc_labels.items() %}{% if kind != 'mobilite' or opts.get('teaching_mode') == 'presentiel' or (package and 'mobilite' in package.documents) %}
+      {% set doc = package.documents.get(kind) if package else none %}
+      <article class="ws-document-item"><span class="ws-icon-tile">{{ icon('file',21) }}</span><strong>{{ label }}</strong>
+        <p class="ws-note">{{ 'Entreprise uniquement, mandat de gestion inclus' if kind == 'formation' else 'Apprenti, entreprise et représentant légal si mineur' }}</p>
+        {% if doc %}<span class="ws-pill {{ 'ws-pill--green' if doc.get('signed_pdf') else '' }}">{{ 'Signé' if doc.get('signed_pdf') else 'Généré' }}</span>
+          <div class="ws-actions"><a class="ws-text-button" target="_blank" rel="noopener" href="{{ url_for('bts_contract_document',record_id=record.id,package_id=package.id,kind=kind) }}">Relire le PDF</a>
+          {% if doc.get('signed_pdf') %}<a class="ws-button ws-button--small" href="{{ url_for('bts_contract_document',record_id=record.id,package_id=package.id,kind=kind,signed=1,download=1) }}">{{ icon('download',15) }} PDF signé</a>{% endif %}</div>
+        {% else %}<span class="ws-pill">À générer</span>{% endif %}
+      </article>
+    {% endif %}{% endfor %}</div>
+    {% if opts.get('teaching_mode') != 'presentiel' %}<p class="ws-note">La convention de mobilité est disponible uniquement pour les élèves en présentiel.</p>{% endif %}
+  </section>
+  <section class="ws-card ws-pad">
+    <div class="ws-section-head"><div><span class="ws-eyebrow">3. Signature électronique Yousign</span><h3>Une seule démarche par personne</h3><p class="ws-muted">L’entreprise signe tous ses documents en une fois. L’apprenti et son représentant légal signent uniquement le contrat et, en présentiel, la mobilité.</p></div>
+      {% if sig.get('status') %}<span class="ws-pill {{ 'ws-pill--green' if flow.signed else '' }}">{{ {'draft':'Préparation Yousign','ongoing':'Signatures en cours','done':'Signatures confirmées','uncertain':'Résultat à vérifier','canceled':'Demande annulée','paused':'Demande en pause','approval':'Approbation en cours','rejected':'Demande rejetée','deleted':'Demande supprimée','expired':'Demande expirée','declined':'Signature refusée'}.get(sig.status,'À vérifier') }}</span>{% endif %}
+    </div>
+    {% if sig.get('error') %}<p class="ws-alert ws-alert--error">{{ sig.error }}</p>{% endif %}
+    {% if sig.get('pending') %}<p class="ws-alert ws-alert--info">Une opération n’a pas encore été confirmée par Yousign. Actualisez le suivi avant de poursuivre.</p>{% endif %}
+    {% if sig.get('signers') %}<div class="ws-signers-list">{% for role,person in sig.signers.items() %}<div><strong>{{ {'employer':'Entreprise','apprentice':'Apprenti','guardian':'Représentant légal'}[role] }}</strong><span>{{ person.first_name }} {{ person.last_name }} · {{ person.email }}</span><span class="ws-pill {{ 'ws-pill--green' if person.status == 'signed' else '' }}">{{ 'Signé' if person.status == 'signed' else 'En attente' }}</span></div>{% endfor %}</div>{% endif %}
+    {% if not flow.yousign_ready %}<p class="ws-alert ws-alert--info">La connexion Yousign doit être configurée pour envoyer les documents.</p>{% endif %}
+    {% if flow.errors and not sig.get('sent_at') %}<details><summary>Informations à compléter avant l’envoi</summary><ul>{% for error in flow.errors %}<li>{{ error }}</li>{% endfor %}</ul></details>{% endif %}
+    {% if package %}<div class="ws-contract-actions">
+      {% if sig.get('status') in [none,'','draft'] and not sig.get('pending') %}
+      <form method="post" action="{{ url_for('bts_signature_action',record_id=record.id,action='envoyer') }}" data-contract-send>
+        {{ token() }}<input type="hidden" name="package_id" value="{{ package.id }}">
+        <label class="ws-cerfa-attestation"><input type="checkbox" name="reviewed" value="yes" required><span>J’ai relu les documents et vérifié les destinataires.</span></label>
+        <button class="ws-button ws-button--primary" {% if flow.stale or flow.errors or not flow.yousign_ready %}disabled{% endif %}>Envoyer les documents ensemble en signature</button>
+      </form>{% endif %}
+      {% if sig.get('request_id') or sig.get('external_id') %}<form method="post" action="{{ url_for('bts_signature_action',record_id=record.id,action='actualiser') }}">{{ token() }}<input type="hidden" name="package_id" value="{{ package.id }}"><button class="ws-button">{{ icon('sync',17) }} Actualiser les signatures</button></form>{% endif %}
+      {% if sig.get('request_id') and sig.get('status') in ['draft','ongoing','uncertain','approval','paused'] %}<form method="post" action="{{ url_for('bts_signature_action',record_id=record.id,action='annuler') }}" data-confirm="Annuler cette demande de signature pour préparer une nouvelle version ?">{{ token() }}<input type="hidden" name="package_id" value="{{ package.id }}"><button class="ws-text-button">Annuler la demande</button></form>{% endif %}
+    </div>{% endif %}
+    <p class="ws-note">Yousign doit autoriser la visibilité par document pour réserver la convention de formation à l’entreprise.</p>
+  </section>
+  <section class="ws-card ws-pad">
+    <span class="ws-eyebrow">4. Transmission du contrat à l’OPCO</span><h3>{{ financer_label(opts.get('financer')) }}</h3>
+    {% if opco.get('sent') %}<div class="ws-alert ws-alert--success"><strong>Contrat télétransmis via WEDOF le {{ date_fr(opco.sent_at) }}.</strong>{% if opco.get('opco_reference') %} Référence OPCO : {{ opco.opco_reference }}.{% endif %} L’accord de prise en charge reste soumis à l’instruction de l’OPCO.</div>
+      {% if opco.get('manual_deposit') %}<p class="ws-alert ws-alert--success">Dépôt manuel de la convention confirmé le {{ date_fr(opco.manual_deposit_at) }} par {{ opco.manual_deposit_by }}.{% if opco.get('manual_deposit_reference') %} Référence : {{ opco.manual_deposit_reference }}{% endif %}</p>
+      {% else %}<div class="ws-alert ws-alert--info"><strong>Il reste à déposer la convention de formation signée sur le site de l’OPCO.</strong> WEDOF ne transmet pas encore ce document.</div>
+        <div class="ws-actions"><a class="ws-button ws-button--primary" href="{{ url_for('bts_contract_document',record_id=record.id,package_id=package.id,kind='formation',signed=1,download=1) }}">Télécharger la convention signée</a>{% if flow.portal %}<a class="ws-button" href="{{ flow.portal }}" target="_blank" rel="noopener">Ouvrir le site de l’OPCO {{ icon('arrow',16) }}</a>{% endif %}</div>
+        <form method="post" action="{{ url_for('bts_opco_action',record_id=record.id,action='depot-manuel') }}" class="ws-manual-deposit">{{ token() }}<input type="hidden" name="package_id" value="{{ package.id }}"><label><span>Référence du dépôt (facultatif)</span><input name="reference" maxlength="200"></label><button class="ws-button">Confirmer que j’ai déposé la convention</button></form>
+      {% endif %}
+    {% else %}
+      <p class="ws-muted">Après toutes les signatures, WEDOF vérifie les données du CERFA puis transmet le contrat. Vous déposerez ensuite la convention de formation signée sur le site de l’OPCO.</p>
+      {% if opco.get('error') %}<p class="ws-alert ws-alert--error">{{ opco.error }}</p>{% endif %}
+      {% if opco.get('pending') %}<p class="ws-alert ws-alert--info">Une opération WEDOF reste à vérifier. Aucun nouvel envoi automatique n’est autorisé.</p>{% endif %}
+      {% if package %}<form method="post" action="{{ url_for('bts_opco_action',record_id=record.id,action='transmettre') }}" data-opco-submit>
+        {{ token() }}<input type="hidden" name="package_id" value="{{ package.id }}">
+        <label class="ws-cerfa-attestation"><input type="checkbox" name="reviewed" value="yes" required><span>Je confirme l’OPCO destinataire et déposerai ensuite la convention signée sur son portail.</span></label>
+        <button class="ws-button ws-button--primary" {% if not flow.signed or flow.stale or opco.get('pending') or not opts.get('financer') or record.source != 'local' %}disabled{% endif %}>Vérifier et télétransmettre le contrat</button>
+        <p class="ws-note" role="status" data-opco-message>{{ 'Toutes les signatures doivent être terminées.' if not flow.signed else '' }}</p>
+      </form>{% endif %}
+    {% endif %}
+    {% if package and opco %}<form method="post" action="{{ url_for('bts_opco_action',record_id=record.id,action='verifier') }}">{{ token() }}<input type="hidden" name="package_id" value="{{ package.id }}"><button class="ws-text-button">{{ icon('sync',16) }} Vérifier le résultat WEDOF</button></form>{% endif %}
+  </section>
+  {% if flow.history %}<details class="ws-card ws-pad"><summary>Versions précédentes conservées</summary>{% for previous in flow.history %}<p>Version du {{ date_fr(previous.created_at) }}{% for kind,document in previous.documents.items() %} · <a href="{{ url_for('bts_contract_document',record_id=record.id,package_id=previous.id,kind=kind,signed=1 if document.get('signed_pdf') else 0) }}" target="_blank" rel="noopener">{{ flow.doc_labels[kind] }}{{ ' signé' if document.get('signed_pdf') else '' }}</a>{% endfor %}</p>{% endfor %}</details>{% endif %}
+</section>

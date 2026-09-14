@@ -56,6 +56,12 @@ def browser_check():
         store = WorkspaceStore(legacy.AKTO_BTS_DB_FILE)
         record_id, _ = seed_remote(store)
         api = Mock()
+        candidate_api = Mock()
+        candidate = dict(id='candidate-browser', nom='EXEMPLE', prenom='Élodie',
+                         email='elodie@example.test', bts='MOS', mode='Présentiel',
+                         date_naissance='2009-06-12', sexe='F', numero_dossier='DEMO-1')
+        candidate_api.search.return_value = {'items': [candidate], 'more': False}
+        candidate_api.candidate.return_value = candidate
         available = [normalize_summary(contract(key, financer=financer)) for key, financer in enumerate(
             ['opcoCfaEp', 'opcoCfaAkto', 'opcoCfaOpcommerce', 'opcoCfaMobilites'], 1)]
         api.contracts_page.return_value = (available, False, 4)
@@ -73,6 +79,7 @@ def browser_check():
         try:
             with patch.dict(os.environ, {'WEDOF_API_KEY': 'test-key'}), \
                  patch('bts_workspace.WedofBtsClient', return_value=api) as factory, \
+                 patch('bts_contract_routes.InscriptionsClient', return_value=candidate_api), \
                  sync_playwright() as playwright:
                 browser = playwright.chromium.launch()
                 page = browser.new_page(viewport={'width': 1440, 'height': 1100})
@@ -181,6 +188,23 @@ def browser_check():
                         page.goto(url + f'/admin/BTS/dossiers/w-1?tab={tab}')
                         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1'), f'CERFA {tab} overflow at {width}px'
                     page.screenshot(path=str(output / f'cerfa-entreprise-{width}.png'), full_page=True)
+                assert not errors, errors
+                page.goto(url + '/admin/BTS/nouveau')
+                page.get_by_label('Nom de l’apprenti à importer').fill('Elodie')
+                page.get_by_role('button', name='Ajouter ce dossier', exact=True).wait_for()
+                page.screenshot(path=str(output / 'import-inscriptions-mobile.png'), full_page=True)
+                page.get_by_role('button', name='Ajouter ce dossier', exact=True).click()
+                page.wait_for_load_state()
+                assert page.locator('[name="apprentice_first_name"]').input_value() == 'Élodie'
+                imported_url = page.url.split('?')[0]
+                page.goto(imported_url + '?tab=contrat')
+                assert page.locator('[name="teaching_mode"]').input_value() == 'presentiel'
+                assert page.locator('[name="rncp"]').input_value() == '41000'  # Canonical CERFA code excludes the RNCP prefix.
+                assert page.get_by_role('button', name='Vérifier et télétransmettre le contrat').count() == 0
+                assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                page.screenshot(path=str(output / 'parcours-contrat-mobile.png'), full_page=True)
+                page.set_viewport_size({'width': 1440, 'height': 1100})
+                page.screenshot(path=str(output / 'parcours-contrat-desktop.png'), full_page=True)
                 assert not errors, errors
                 browser.close()
         finally:
