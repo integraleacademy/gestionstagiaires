@@ -37,40 +37,12 @@ class ApsElearningTests(unittest.TestCase):
         completed_paths=8,
         completed_evaluations=8,
     ):
-        output = io.BytesIO()
-        pdf = canvas.Canvas(output)
-        pdf.drawString(72, 790, "Attestation d'assiduité")
-        pdf.drawString(72, 765, f"atteste que : {trainee_name}")
-        pdf.drawString(72, 740, "a suivi la formation : TFP APS SEPTEMBRE 2026")
-        pdf.drawString(72, 715, "Dates de la formation : du 23 juillet 2026 au 3 septembre 2026.")
-        pdf.drawString(72, 690, "Durée de la formation : 62 heures")
-        if complete:
-            pdf.drawString(72, 665, "Suivi détaillé de l'assiduité e-learning")
-            pdf.drawString(72, 640, f"Durée effectivement suivie sur la plateforme : {effective_duration}")
-            pdf.drawString(72, 615, f"taux de réalisation de {completion_rate} %")
-            pdf.drawString(72, 590, "Durée totale de connexion à l'extranet : 62h")
-            pdf.drawString(72, 565, "Nombre de jour(s) d'accès à l'extranet : 8")
-            y = 535
-            for index in range(1, 9):
-                status = "Statut Terminé Progression 100 %" if index <= completed_paths else "Statut En cours Progression 0 %"
-                pdf.drawString(72, y, f"Parcours {index} — Bloc {index} {status}")
-                y -= 22
-        pdf.showPage()
-        pdf.drawString(72, 790, "Adresse email utilisée : alice.martin@example.test")
-        if complete:
-            pdf.drawString(72, 765, "Relevé de connexions à l'extranet")
-            y = 735
-            for index in range(1, 9):
-                result = "100% 1 passage" if index <= completed_evaluations else "0% 0 passage"
-                pdf.drawString(72, y, f"Evaluation Parcours {index}")
-                pdf.drawString(90, y - 14, result)
-                pdf.drawString(72, y - 28, "Total 7 heures 45 minutes")
-                y -= 50
-            pdf.drawString(72, 315, "P1M1 P2M1 P3M1 P4M1 P5M1 P6M1 P7M1 P8M1")
-            pdf.drawString(72, 290, "Total 62 heures")
-        pdf.drawString(72, 255, "Fait à Puget-sur-Argens, le 31 août 2026")
-        pdf.save()
-        return output.getvalue()
+        from digiforma_fixtures import attendance_pdf
+        return attendance_pdf(
+            trainee_name=trainee_name, complete=complete, completion_rate=completion_rate,
+            effective_duration=effective_duration, completed_paths=completed_paths,
+            completed_evaluations=completed_evaluations,
+        )
 
     @staticmethod
     def _complete_tracking(**overrides):
@@ -228,6 +200,72 @@ class ApsElearningTests(unittest.TestCase):
         self.assertNotIn("Lien e-learning APS", response.get_data(as_text=True))
         self.assertNotIn("Suivi du e-learning", response.get_data(as_text=True))
 
+    def test_rebuild_uses_the_preserved_original_and_updates_the_annex(self):
+        from digiforma_attendance import prepare_digiforma_attendance
+        self._admin_login()
+        data = self._data("2026-07-23")
+        pdf_bytes = self._digiforma_pdf_bytes()
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            gestion_app, "PERSIST_DIR", directory
+        ), patch.object(gestion_app, "UPLOADS_DIR", os.path.join(directory, "uploads")), patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data"):
+            self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/upload",
+                             data={"digiforma_pdf": (io.BytesIO(pdf_bytes), "original.pdf")})
+            trainee = data["sessions"][0]["trainees"][0]
+            before = dict(trainee["aps_elearning_tracking"])
+            with patch("digiforma_attendance.prepare_digiforma_attendance", wraps=prepare_digiforma_attendance) as prepare:
+                response = self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/rebuild")
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(prepare.call_args.args[0], pdf_bytes)
+            after = trainee["aps_elearning_tracking"]
+            for key in ("source_file", "source_sha256", "uploaded_at", "completion_rate", "evaluations_completed"):
+                self.assertEqual(after[key], before[key])
+            self.assertNotEqual(after["file"], before["file"])
+            self.assertEqual(after["processing_version"], 3)
+            self.assertTrue(after["rebuilt_at"])
+            prepared_path = gestion_app._require_aps_elearning_report_file(after)
+            with open(prepared_path, "rb") as prepared:
+                self.assertEqual(hashlib.sha256(prepared.read()).hexdigest(), after["file_sha256"])
+
+    def test_rebuild_rejects_changed_source_without_replacing_the_previous_document(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = os.path.join(directory, "original.pdf")
+            with open(source_path, "wb") as source:
+                source.write(self._digiforma_pdf_bytes())
+            tracking = self._complete_tracking(source_file=source_path, source_sha256="0" * 64)
+            trainee["aps_elearning_tracking"] = tracking
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "_detokenize_path", side_effect=lambda value: value
+            ), patch.object(gestion_app, "save_data") as save, patch(
+                "digiforma_attendance.prepare_digiforma_attendance"
+            ) as prepare:
+                response = self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/rebuild")
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(trainee["aps_elearning_tracking"]["file"], tracking["file"])
+                save.assert_not_called()
+                prepare.assert_not_called()
+
+    def test_rebuild_does_not_change_a_signed_or_pending_dossier(self):
+        self._admin_login()
+        for status in ("ongoing", "done"):
+            with self.subTest(status=status):
+                data = self._data("2026-07-23")
+                trainee = data["sessions"][0]["trainees"][0]
+                trainee["aps_elearning_tracking"] = self._complete_tracking()
+                trainee["aps_elearning_signature"] = {"status": status, "signature_request_id": "REQUEST"}
+                with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                    gestion_app, "save_data"
+                ) as save, patch.object(gestion_app, "_invalidate_aps_elearning_signature_for_new_report") as invalidate:
+                    response = self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/rebuild")
+                    self.assertEqual(response.status_code, 302)
+                    self.assertEqual(trainee["aps_elearning_signature"]["status"], status)
+                    save.assert_not_called()
+                    invalidate.assert_not_called()
+
     def test_complete_digiforma_pdf_is_imported_and_downloadable(self):
         self._admin_login()
         data = self._data("2026-07-23")
@@ -252,7 +290,7 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response.location.endswith("#apsElearningTrackingSection"))
             tracking = data["sessions"][0]["trainees"][0]["aps_elearning_tracking"]
-            self.assertEqual(tracking["page_count"], 2)
+            self.assertGreaterEqual(tracking["page_count"], 10)
             self.assertEqual(tracking["report_issued_date"], "2026-08-31")
             self.assertEqual(tracking["digiforma_identifier"], "alice.martin@example.test")
             self.assertEqual(tracking["planned_duration"], "62 heures")
@@ -282,7 +320,7 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(page.status_code, 200)
             html = page.get_data(as_text=True)
             self.assertIn("Dossier contrôlé et signable", html)
-            self.assertIn("Télécharger l’attestation Digiforma", html)
+            self.assertIn("Télécharger l’attestation remise en page", html)
             self.assertIn("Tout remettre à zéro", html)
             self.assertIn(
                 "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/reset",
