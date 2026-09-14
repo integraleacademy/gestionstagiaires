@@ -37,6 +37,12 @@
   }
   .aps-elearning-tracking__title{margin:0;color:#172033;font-size:18px;font-weight:950;}
   .aps-elearning-tracking__subtitle{margin:6px 0 0;max-width:780px;color:#64748b;font-size:13px;line-height:1.5;}
+  .aps-elearning-tracking__feedback{margin:14px 0;padding:14px 16px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1e40af;line-height:1.5;}
+  .aps-elearning-tracking__feedback--error{border-color:#fca5a5;background:#fef2f2;color:#991b1b;}
+  .aps-elearning-tracking__feedback--warning{border-color:#fcd34d;background:#fffbeb;color:#92400e;}
+  .aps-elearning-tracking__feedback--success{border-color:#86efac;background:#f0fdf4;color:#166534;}
+  .aps-elearning-tracking__feedback strong{display:block;margin-bottom:4px;}
+  .aps-elearning-tracking__progress{margin:10px 0;color:#1d4ed8;font-weight:700;}
   .aps-elearning-tracking__status{
     display:inline-flex;
     align-items:center;
@@ -1501,6 +1507,14 @@
       {% endif %}
     </div>
 
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="aps-elearning-tracking__feedback aps-elearning-tracking__feedback--{{ category }}"
+           role="{{ 'alert' if category == 'error' else 'status' }}">
+        {% if category == 'error' %}<strong>L’opération n’a pas abouti</strong>{% endif %}
+        {{ message }}
+      </div>
+    {% endfor %}
+
     {% if aps_tracking.file %}
       <div class="aps-elearning-tracking__document">
         <div>
@@ -1583,6 +1597,7 @@
 
     {% if not is_read_only %}
       <form class="aps-elearning-tracking__upload"
+            id="apsDigiformaUploadForm"
             method="post"
             enctype="multipart/form-data"
             action="{{ url_for('admin_upload_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">
@@ -1594,6 +1609,29 @@
           {{ '↻ Remplacer le relevé' if aps_tracking.file else '⬆️ Importer le relevé complet' }}
         </button>
       </form>
+      <p class="aps-elearning-tracking__progress" id="apsDigiformaUploadProgress" role="status" hidden>
+        Import et préparation de l’attestation en cours… Merci de patienter.
+      </p>
+      <script>
+        (() => {
+          const form = document.getElementById('apsDigiformaUploadForm');
+          const button = form.querySelector('button[type="submit"]');
+          const progress = document.getElementById('apsDigiformaUploadProgress');
+          const label = button.textContent;
+          form.addEventListener('submit', () => {
+            form.setAttribute('aria-busy', 'true');
+            button.disabled = true;
+            button.textContent = 'Import en cours…';
+            progress.hidden = false;
+          });
+          window.addEventListener('pageshow', () => {
+            form.removeAttribute('aria-busy');
+            button.disabled = false;
+            button.textContent = label;
+            progress.hidden = true;
+          });
+        })();
+      </script>
     {% endif %}
 
     <div class="aps-elearning-tracking__download">

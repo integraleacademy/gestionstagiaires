@@ -327,10 +327,22 @@ class ApsElearningTests(unittest.TestCase):
                 data={"digiforma_pdf": (io.BytesIO(self._digiforma_pdf_bytes()), "attestation.pdf")},
                 content_type="multipart/form-data",
             )
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(trainee["aps_elearning_tracking"], tracking)
-        self.assertEqual(trainee["aps_elearning_signature"], signature)
-        save.assert_not_called()
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(trainee["aps_elearning_tracking"], tracking)
+            self.assertEqual(trainee["aps_elearning_signature"], signature)
+            save.assert_not_called()
+
+            page = self.client.get(response.location)
+            self.assertEqual(page.status_code, 200)
+            html = page.get_data(as_text=True)
+            section = html.split('id="apsElearningTrackingSection"', 1)[1].split('</section>', 1)[0]
+            self.assertIn('role="alert"', section)
+            self.assertIn("L’opération n’a pas abouti", section)
+            self.assertIn("Tableau non reconnu", section)
+            self.assertIn('id="apsDigiformaUploadProgress"', section)
+
+            # Acknowledged feedback is not shown again after another page load.
+            self.assertNotIn("Tableau non reconnu", self.client.get(response.location).get_data(as_text=True))
 
     def test_admin_can_reset_all_aps_elearning_data_and_files(self):
         self._admin_login()
