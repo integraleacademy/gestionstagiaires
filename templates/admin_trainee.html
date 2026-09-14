@@ -1598,6 +1598,7 @@
     {% if not is_read_only %}
       <form class="aps-elearning-tracking__upload"
             id="apsDigiformaUploadForm"
+            data-processing-version="2"
             method="post"
             enctype="multipart/form-data"
             action="{{ url_for('admin_upload_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">

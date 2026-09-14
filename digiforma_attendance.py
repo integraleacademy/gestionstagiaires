@@ -38,43 +38,77 @@ def _table_snapshot(table, result_column, header_row):
         "bbox": pymupdf.Rect(table.bbox),
         "rows": rows,
         "geometry": geometries,
+        "cells": [list(row.cells) for row in table.rows],
         "result_column": result_column,
         "header_row": header_row,
     }
 
 
-def _draw_table(page, table):
-    """Close the removed column's gap, keeping every other cell and row."""
-    removed = table["result_column"]
-    keep = [i for i in range(len(table["geometry"][0])) if i != removed]
-    bbox = table["bbox"]
-    original_widths = [table["geometry"][0][i][2] - table["geometry"][0][i][0] for i in keep]
-    widths = [width * bbox.width / sum(original_widths) for width in original_widths]
-    for row_index, (values, geometry) in enumerate(zip(table["rows"], table["geometry"])):
-        y0, y1 = geometry[0][1], geometry[0][3]
-        x = bbox.x0
-        header = row_index == table["header_row"]
-        for index, width in zip(keep, widths):
-            cell = pymupdf.Rect(x, y0, x + width, y1)
-            page.draw_rect(cell, color=(0.76, 0.79, 0.82), width=0.4,
-                           fill=(0.94, 0.96, 0.98) if header else (1, 1, 1))
-            value = str(values[index] or "").strip()
-            if value:
-                # Preserve explicit line breaks; shrink only if the source row is tight.
-                box = pymupdf.Rect(cell.x0 + 3, cell.y0 + 2, cell.x1 - 3, cell.y1 - 1)
-                for font_size in (9, 8.5, 8, 7.5, 7, 6):
-                    shape = page.new_shape()
-                    remaining = shape.insert_textbox(
-                        box, value, fontsize=font_size,
-                        fontname="hebo" if header else "helv", lineheight=1.05,
-                        color=(0.12, 0.16, 0.20),
+def _copy_pdf_region(page, source, clip, target):
+    """Copy original PDF artwork, physically discarding everything outside it.
+
+    show_pdf_page's clip alone only hides other content. clip_to_rect removes
+    that content first, so excluded scores and duplicate text cannot survive
+    inside the copied PDF form.
+    """
+    with pymupdf.open() as region:
+        region.insert_pdf(source, links=False, annots=False, widgets=False)
+        region_page = region[0]
+        region_page.clip_to_rect(clip)
+        # Font ascenders can overlap an adjacent short row even when its visible
+        # letters do not. Remove those neighbouring glyphs too, so PDF readers
+        # do not extract hidden duplicates from each copied cell. Texttrace
+        # gives tight glyph boxes; a tiny mark at their centre avoids deleting
+        # the retained row's neighbouring letters, borders or progress artwork.
+        has_neighbours = False
+        for span in region_page.get_texttrace():
+            for char in span["chars"]:
+                bbox = pymupdf.Rect(char[3])
+                centre = (bbox.tl + bbox.br) / 2
+                if centre not in clip:
+                    region_page.add_redact_annot(
+                        pymupdf.Rect(centre.x - .01, centre.y - .01, centre.x + .01, centre.y + .01),
+                        fill=False,
                     )
-                    if remaining >= 0:
-                        shape.commit()
-                        break
-                else:
-                    raise ValueError("Une cellule Digiforma ne peut pas être conservée lisiblement.")
-            x += width
+                    has_neighbours = True
+        if has_neighbours:
+            region_page.apply_redactions(images=0, graphics=0, text=0)
+        page.show_pdf_page(target, region, clip=clip, keep_proportion=False)
+
+
+def _draw_table(page, table, source):
+    """Remove the result column without re-typesetting the source text."""
+    result = pymupdf.Rect(table["geometry"][0][table["result_column"]])
+    bbox = table["bbox"]
+    cells = {tuple(cell) for row in table["cells"] for cell in row if cell is not None}
+    crosses_results = any(
+        cell[0] < result.x1 - .1 and cell[2] > result.x0 + .1
+        and (cell[0] < result.x0 - .1 or cell[2] > result.x1 + .1)
+        for cell in cells
+    )
+    if not crosses_results:
+        # Two vector strips keep dense/multiline rows, fonts, icons and progress
+        # bars at their original height. Close the gap instead of leaving an
+        # empty column. The rest of the page is untouched.
+        if result.x0 > bbox.x0:
+            clip = pymupdf.Rect(bbox.x0 - .5, bbox.y0 - .5, result.x0, bbox.y1 + .5)
+            _copy_pdf_region(page, source, clip, clip)
+        if result.x1 < bbox.x1:
+            clip = pymupdf.Rect(result.x1, bbox.y0 - .5, bbox.x1 + .5, bbox.y1 + .5)
+            _copy_pdf_region(page, source, clip, clip + (-result.width, 0, -result.width, 0))
+        return
+
+    def shifted_x(x):
+        return x - min(result.width, max(0, x - result.x0))
+
+    # A total or note can span the removed column. Preserve that whole cell's
+    # artwork, contracting only its width; never cut its text at the seam.
+    for coordinates in sorted(cells):
+        cell = pymupdf.Rect(coordinates)
+        target = pymupdf.Rect(shifted_x(cell.x0), cell.y0, shifted_x(cell.x1), cell.y1)
+        if target.width < .1:
+            continue
+        _copy_pdf_region(page, source, cell, target)
 
 
 def _append_signature(document, signature):
@@ -150,13 +184,15 @@ def _prepare_digiforma_attendance(pdf_bytes, signature):
                     "La colonne Résultats n’a pas pu être identifiée dans tous les tableaux. "
                     "Réexportez l’attestation Digiforma en PDF avec les tableaux complets."
                 )
-            for table in snapshots:
-                # Remove all original table objects, then write only the retained cells.
-                page.add_redact_annot(table["bbox"] + (-.5, -.5, .5, .5), fill=(1, 1, 1))
             if snapshots:
-                page.apply_redactions(images=2, graphics=1, text=0)
-                for table in snapshots:
-                    _draw_table(page, table)
+                with pymupdf.open() as source:
+                    source.insert_pdf(document, from_page=page.number, to_page=page.number,
+                                      links=False, annots=False, widgets=False)
+                    for table in snapshots:
+                        page.add_redact_annot(table["bbox"] + (-.5, -.5, .5, .5), fill=(1, 1, 1))
+                    page.apply_redactions(images=2, graphics=1, text=0)
+                    for table in snapshots:
+                        _draw_table(page, table, source)
                 removed_tables += len(snapshots)
             if connection_titles:
                 active_schema = None
@@ -165,5 +201,5 @@ def _prepare_digiforma_attendance(pdf_bytes, signature):
             "page_count": document.page_count,
             "results_tables_removed": removed_tables,
             "provider_signed": True,
-            "processing_version": 1,
+            "processing_version": 2,
         }
