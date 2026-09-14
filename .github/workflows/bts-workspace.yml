@@ -9,6 +9,10 @@ on:
       - 'bts_cerfa*.py'
       - 'bts_contract*.py'
       - 'bts_inscriptions.py'
+      - 'bts_npec.py'
+      - 'data/bts_npec.json.gz'
+      - 'scripts/build_bts_npec_reference.py'
+      - 'tests/test_bts_npec.py'
       - 'templates_word/bts/**'
       - 'tests/test_bts_contracts.py'
       - 'templates_word/cerfa_10103-14.pdf'
@@ -55,6 +59,7 @@ jobs:
           python -m py_compile bts_workspace.py bts_workspace_store.py bts_cerfa.py bts_cerfa_pdf.py wedof_bts_lookup.py crm_app.py scripts/check_bts_workspace_ui.py
           python -m unittest tests.test_bts_cerfa -v
           python -m unittest tests.test_bts_contracts -v
+          python -m unittest tests.test_bts_npec -v
           python -m unittest tests.test_bts_workspace -v
           python -m unittest tests.test_akto_bts -v
           python -m unittest tests.test_wedof_bts tests.test_wedof_isolation -v

@@ -15,6 +15,7 @@ from bts_contract_documents import (DOC_LABELS, SETTINGS_FIELDS, MODES, defaults
 from bts_contract_yousign import YousignClient, send_signature, refresh_signature, cancel_signature, ensure_files, ACTIVE_SIGNATURE_STATUSES
 from bts_contract_wedof import SubmissionClient, advance_submission, check_submission
 from bts_inscriptions import InscriptionsClient
+from bts_npec import context as financing_context, automatic as automatic_financing
 from bts_workspace_store import WorkspaceError, now
 from wedof_service import WedofApiError, WedofConfigurationError
 
@@ -59,7 +60,7 @@ def contract_context(legacy, record):
         "fingerprint": current_hash, "package": package, "stale": stale, "errors": errors,
         "signed": signed, "signature_active": bool(state.get("pending") or state.get("status") in ACTIVE_SIGNATURE_STATUSES),
         "yousign_ready": bool(getattr(legacy, "_yousign_is_configured", lambda: False)()), "doc_labels": DOC_LABELS,
-        "portal": PORTALS.get(settings.get("financer")),
+        "portal": PORTALS.get(settings.get("financer")), "financing": financing_context(values, settings),
         "history": store.packages(record["id"])[1:],
         "source": [{"label": label, "value": source[key]} for key,label in SOURCE_LABELS.items() if source.get(key) not in (None, "")],
         "imported": bool(imported), "source_documents": source.get("documents", [])}}
@@ -107,11 +108,17 @@ def register_contract_routes(legacy, protected, actor, get_record, endpoints):
             return redirect(url_for("bts_dossier", record_id=record_id, tab="etudiant"))
 
     def save_settings(record_id):
-        get_record(record_id)
+        record = get_record(record_id)
         db = store()
         try:
             with db.lock(record_id):
-                values = validate_settings(request.form)
+                record = get_record(record_id)
+                raw = request.form.to_dict()
+                if automatic_financing(db.settings(record_id)["values"]):
+                    raw["funding_mode"] = "npec"
+                submitted = validate_settings(raw)
+                cerfa_values = effective_values(record, db.cerfa_complements(record_id)["values"])
+                values = defaults(cerfa_values, submitted)
                 db.save_settings(record_id, values, int(request.form.get("revision", "-1")), actor())
             flash("Paramètres des conventions enregistrés.", "success")
         except (WorkspaceError, ValueError) as exc:
