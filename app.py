@@ -29461,8 +29461,9 @@ def admin_download_aps_elearning_digiforma(session_id: str, trainee_id: str):
     if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
         abort(404)
     tracking = _aps_elearning_tracking(trainee)
-    full_path = _detokenize_path(tracking.get("file") or "")
-    if not tracking.get("file") or not os.path.isfile(full_path):
+    file_key = "source_file" if request.args.get("original") == "1" else "file"
+    full_path = _detokenize_path(tracking.get(file_key) or "")
+    if not tracking.get(file_key) or not os.path.isfile(full_path):
         abort(404)
     download_name = secure_filename(tracking.get("original_name") or "attestation-assiduite-digiforma.pdf")
     return send_file(
