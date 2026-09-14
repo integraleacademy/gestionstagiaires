@@ -1,4 +1,4 @@
-"""Run WEDOF and optional Qonto reconciliation from the existing Render cron."""
+"""Run independent WEDOF, Qonto and document jobs from the existing Render cron."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from pathlib import Path
@@ -23,12 +23,18 @@ def run_qonto():
     subprocess.run([sys.executable, str(Path(__file__).with_name("run_qonto_sync.py"))], check=True)
 
 
+def run_documents():
+    subprocess.run([sys.executable, str(Path(__file__).with_name("run_document_reminders.py"))], check=True)
+
+
 def main():
     failed = False
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=3) as executor:
         tasks = {executor.submit(run_wedof): "WEDOF"}
         if os.environ.get("QONTO_SYNC_URL", "").strip():
             tasks[executor.submit(run_qonto)] = "Qonto"
+        if os.environ.get("WEDOF_AUTOMATION_URL", "").strip() or os.environ.get("DOCUMENT_REMINDERS_URL", "").strip():
+            tasks[executor.submit(run_documents)] = "Documents"
         # Start both requests independently: a slow or failed WEDOF call must
         # not stop the Qonto update (and a Qonto failure must not stop WEDOF).
         for future in as_completed(tasks):

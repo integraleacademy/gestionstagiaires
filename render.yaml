@@ -153,6 +153,8 @@ services:
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/wedof-automation
       - key: QONTO_SYNC_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/qonto-sync
+      - key: DOCUMENT_REMINDERS_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/document-reminders
   - type: cron
     name: gestionstagiaires-wedof-reconciliation
     runtime: docker
