@@ -26289,6 +26289,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     previous_elearning_link = (t.get("elearning_link") or "").strip()
     previous_cnaps_status = (t.get("cnaps") or "").strip()
     previous_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
+    previous_vae_jury_date = str(t.get("vae_jury_date") or "").strip()
     previous_vae_status = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
 
     # Your template uses:
@@ -26590,7 +26591,15 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 "status",
             )
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
-    if vae_fields_changed and current_vae_status != previous_vae_status:
+    current_vae_jury_date = str(t.get("vae_jury_date") or "").strip()
+    vae_status_changed = current_vae_status != previous_vae_status
+    vae_jury_date_changed = (
+        current_vae_status == "jury"
+        and "vae_jury_date" in payload
+        and bool(current_vae_jury_date)
+        and current_vae_jury_date != previous_vae_jury_date
+    )
+    if vae_fields_changed and (vae_status_changed or vae_jury_date_changed):
         if current_vae_status == "certified":
             current_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
             app.logger.warning(
@@ -26604,7 +26613,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             )
         if send_vae_notification:
             _notify_vae_status_change(t, current_vae_status)
-        if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
+        if vae_status_changed and (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
             current_view = vae_status_view(current_vae_status)
             previous_view = vae_status_view(previous_vae_status)
             _add_vae_live_notification(
@@ -32227,6 +32236,10 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     elif status_key == "jury":
         subject = "VAE : date de passage devant le jury"
         jury_date_iso = (t.get("vae_jury_date") or "").strip()
+        if not jury_date_iso:
+            trainee_id = str(t.get("id") or "")
+            print(f"[VAE][EMAIL] date de jury absente, envoi ignoré: trainee_id={trainee_id!r}")
+            return
         jury_date = jury_date_iso
         if jury_date_iso and re.match(r"^\d{4}-\d{2}-\d{2}$", jury_date_iso):
             y, m, d = jury_date_iso.split("-")
@@ -32235,7 +32248,7 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         <h2 style=\"margin:0 0 12px 0;color:#0f172a;text-align:center;\">📅 Votre date d'examen VAE Dirigeant (DESP)</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
         <p>Nous revenons vers vous concernant votre passage devant le jury de certification.</p>
-        <p>Votre examen est planifié le <strong>{jury_date or 'DD/MM/YYYY'}</strong>.</p>
+        <p>Votre examen est planifié le <strong>{jury_date}</strong>.</p>
         <p>Nous vous communiquerons prochainement toutes les informations utiles : horaires, modalités de passage, documents à prévoir et consignes pratiques.</p>
         <p>En attendant, n'hésitez pas à consulter votre espace candidat pour suivre votre dossier.</p>
         <p style=\"margin-top:18px;text-align:center;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Ouvrir mon espace candidat</a></p>
