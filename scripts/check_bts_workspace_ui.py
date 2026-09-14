@@ -199,7 +199,7 @@ def browser_check():
                 imported_url = page.url.split('?')[0]
                 page.goto(imported_url + '?tab=contrat')
                 assert page.locator('[name="teaching_mode"]').input_value() == 'presentiel'
-                assert page.locator('[name="rncp"]').input_value() == 'RNCP41000'
+                assert page.locator('[name="rncp"]').input_value() == '41000'  # Canonical CERFA code excludes the RNCP prefix.
                 assert page.get_by_role('button', name='Vérifier et télétransmettre le contrat').count() == 0
                 assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
                 page.screenshot(path=str(output / 'parcours-contrat-mobile.png'), full_page=True)
