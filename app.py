@@ -28489,6 +28489,7 @@ def _aps_elearning_tracking(trainee: Dict[str, Any]) -> Dict[str, Any]:
         "results_tables_removed": _safe_count("results_tables_removed"),
         "provider_signed": raw.get("provider_signed") is True,
         "processing_version": _safe_count("processing_version"),
+        "rebuilt_at": str(raw.get("rebuilt_at") or "").strip(),
         "original_name": str(raw.get("original_name") or "").strip(),
         "uploaded_at": str(raw.get("uploaded_at") or "").strip(),
         "page_count": page_count,
@@ -29259,7 +29260,7 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
     append_trainee_history_event(
         trainee,
         "Attestation d’assiduité Digiforma importée",
-        f"{metadata.get('page_count') or 0} page(s) · colonnes Résultats supprimées · signature du centre ajoutée",
+        f"{metadata.get('page_count') or 0} page(s) · mise en page reconstruite · sans résultats · signature du centre ajoutée",
         "action",
         uploaded_at,
     )
@@ -29288,7 +29289,65 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
             "warning",
         )
     else:
-        flash("L’attestation Digiforma a été importée sans les colonnes Résultats, avec la signature de Clément Vaillant en fin de document. Le dossier probatoire CNAPS est prêt.", "success")
+        flash("L’attestation a été reconstruite à partir du relevé Digiforma, sans les résultats et avec la signature de Clément Vaillant. Le dossier CNAPS est prêt.", "success")
+    return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/digiforma/rebuild")
+@admin_login_required
+@admin_write_required
+def admin_rebuild_aps_elearning_digiforma(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
+        abort(404)
+    tracking = dict(_aps_elearning_tracking(trainee))
+    signature_state = _aps_elearning_signature_state(trainee)
+    if _is_yousign_signature_pending(signature_state) or _is_yousign_signature_done(signature_state):
+        flash("Le dossier signé ou en cours de signature est conservé. Importez le PDF original pour créer une nouvelle version.", "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+    source_path = _detokenize_path(tracking.get("source_file") or "")
+    if not tracking.get("source_file") or not os.path.isfile(source_path):
+        flash("Le PDF Digiforma original n’est pas disponible. Réimportez-le pour refaire la mise en page.", "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+    try:
+        with open(source_path, "rb") as source:
+            pdf_bytes = source.read()
+        if not hmac.compare_digest(hashlib.sha256(pdf_bytes).hexdigest(), tracking.get("source_sha256") or ""):
+            raise ValueError("Le PDF original a changé depuis son import. Réimportez le relevé Digiforma.")
+        from digiforma_attendance import prepare_digiforma_attendance
+
+        prepared_bytes, preparation = prepare_digiforma_attendance(
+            pdf_bytes, _training_center_signature_assets()["signature"],
+        )
+        prepared_file = FileStorage(stream=BytesIO(prepared_bytes),
+                                    filename=tracking.get("original_name") or "attestation-assiduite.pdf",
+                                    content_type="application/pdf")
+        stored_path = _store_file(session_id, trainee_id, APS_ELEARNING_TRACKING_FOLDER, prepared_file)
+    except ValueError as exc:
+        flash(str(exc), "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+    except Exception:
+        app.logger.exception("[APS E-LEARNING] remise en page impossible trainee_id=%s", trainee_id)
+        flash("La mise en page n’a pas pu être refaite. Le document précédent est conservé.", "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
+
+    _invalidate_aps_elearning_signature_for_new_report(trainee)
+    if _aps_elearning_force_override(trainee):
+        _archive_aps_elearning_force_override(trainee, "digiforma_layout_rebuilt")
+        trainee.pop("aps_elearning_force_override", None)
+    now = _now_iso()
+    trainee["aps_elearning_tracking"] = {
+        **tracking, **preparation, "file": _tokenize_path(stored_path),
+        "file_sha256": hashlib.sha256(prepared_bytes).hexdigest(), "rebuilt_at": now,
+    }
+    trainee["updated_at"] = now
+    append_trainee_history_event(trainee, "Attestation d’assiduité remise en page",
+                                 f"{preparation['page_count']} pages · informations reprises du PDF Digiforma original", "action", now)
+    session_obj["trainees"] = trainees
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+    flash("La mise en page de l’attestation a été entièrement refaite. Le nouveau PDF et le dossier CNAPS sont disponibles.", "success")
     return _aps_elearning_tracking_redirect(session_id, trainee_id)
 
 

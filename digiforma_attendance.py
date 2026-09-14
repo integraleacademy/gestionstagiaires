@@ -1,205 +1,254 @@
-"""Prepare the imported attendance annex, without changing source-based checks."""
+"""Extract Digiforma evidence and rebuild a complete, paginated attendance PDF."""
 
 import re
 import threading
 import unicodedata
+from collections import Counter
 
 import pymupdf
 
+from digiforma_layout import render_attendance
+
 _PDF_LOCK = threading.Lock()
+PROCESSING_VERSION = 3
 
 
 def _normalized(value):
     value = unicodedata.normalize("NFKD", str(value or ""))
-    value = "".join(c for c in value if not unicodedata.combining(c))
-    return re.sub(r"\s+", " ", value).strip().lower()
+    return re.sub(r"\s+", " ", "".join(c for c in value if not unicodedata.combining(c))).strip().lower()
 
 
-def _result_column(values):
-    labels = [_normalized(value) for value in values]
-    if not all(any(label in cell for cell in labels) for label in (
-        "avancee pedagogique", "premiere connexion", "derniere connexion",
-    )):
-        return None
-    return next((i for i, label in enumerate(labels) if label == "resultats"), None)
+def _compact(value):
+    return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
-def _table_snapshot(table, result_column, header_row):
-    """Copy geometry/text before any change invalidates the table finder."""
-    rows = table.extract()
-    reference = next((row.cells for row in table.rows if all(cell is not None for cell in row.cells)), None)
-    if reference is None:
-        raise ValueError("Le tableau Digiforma contient des cellules fusionnées non reconnues.")
-    geometries = [
-        [(cell[0], row.bbox[1], cell[2], row.bbox[3]) for cell in reference]
-        for row in table.rows
-    ]
+def _header_map(values):
+    mapping = {}
+    for index, value in enumerate(values):
+        label = _normalized(value)
+        if label in ("n°", "no", "nº"):
+            mapping["number"] = index
+        elif label == "type":
+            mapping["type"] = index
+        elif label in ("nom", "module", "activite"):
+            mapping["name"] = index
+        elif label == "duree prevue":
+            mapping["duration"] = index
+        elif label.startswith("premiere"):
+            mapping["first"] = index
+        elif label.startswith("derniere"):
+            mapping["last"] = index
+        elif label.startswith("avancee"):
+            mapping["progress"] = index
+        elif label == "resultats":
+            mapping["results"] = index
+    return mapping if all(key in mapping for key in ("name", "first", "last", "progress")) else None
+
+
+def _cell_text(words):
+    lines = []
+    for word in sorted(words, key=lambda w: (w[1], w[0])):
+        if not lines or abs(word[1] - lines[-1][0]) > 2:
+            lines.append((word[1], [word]))
+        else:
+            lines[-1][1].append(word)
+    return "\n".join(" ".join(w[4] for w in sorted(line, key=lambda w: w[0])) for _, line in lines)
+
+
+def _rows_from_geometry(page_words, table, reference):
+    """Striped Word tables have false merged rows: reuse actual column bounds.
+
+    Values come from words inside each logical row/column, never from the
+    table finder's text for a falsely merged white row.
+    """
+    for row in table.rows:
+        buckets = [[] for _ in reference]
+        for word in page_words:
+            cx, cy = (word[0] + word[2]) / 2, (word[1] + word[3]) / 2
+            if not row.bbox[1] <= cy < row.bbox[3]:
+                continue
+            for index, cell in enumerate(reference):
+                if cell[0] <= cx < cell[2]:
+                    buckets[index].append(word)
+                    break
+        yield [_cell_text(bucket) for bucket in buckets]
+
+
+def _first_match(pattern, text):
+    match = re.search(pattern, text, re.I | re.M)
+    return _compact(match.group(1)) if match else ""
+
+
+def extract_digiforma_attendance(document):
+    text = "\n".join(page.get_text() for page in document)
+    identity = {
+        "attested_name": _first_match(r"atteste\s+que\s*:\s*([^\n]+)", text),
+        "training_title": _first_match(r"a\s+suivi\s+la\s+formation\s*:\s*([^\n]+)", text),
+        "period": _first_match(r"Dates de la formation\s*:\s*([^\n]+)", text),
+        "location": _first_match(r"Lieu de la formation\s*:\s*([^\n]+)", text),
+        "action_type": _first_match(r"Type d'action de formation\s*:\s*([^\n]+)", text),
+        "planned_duration": _first_match(r"Durée de la formation\s*:\s*([^\n]+)", text),
+        "effective_duration": _first_match(r"Durée effectivement suivie[^:]*:\s*([^\n]+)", text),
+        "completion_rate": _first_match(r"taux de réalisation de\s*([\d.,]+\s*%)", text),
+        "connection_duration": _first_match(r"Durée totale de connexion à l['’]extranet\s*:\s*([^\n]+)", text),
+        "access_days": _first_match(r"Nombre de jour\(s\) d['’]accès à l['’]extranet\s*:\s*(\d+)", text),
+        "email": _first_match(r"Adresse email utilisée\s*:\s*([^\s]+)", text),
+    }
+    identity["effective_duration"] = re.sub(r"\s+h\s*,?\s*$", "", identity["effective_duration"]).strip(" ,")
+    matches = list(re.finditer(r"^Parcours\s+(\d+)\s*[—–-]\s*([^\n]+)", text, re.I | re.M))
+    courses = {}
+    for index, match in enumerate(matches):
+        number = int(match.group(1))
+        block = text[match.end():matches[index + 1].start() if index + 1 < len(matches) else len(text)]
+        courses[number] = {
+            "number": number, "title": _compact(match.group(2)), "activities": [],
+            "planned": _first_match(r"Durée totale de la séquence\s*\n([^\n]+)", block),
+            "completed": _first_match(r"progression et la durée des activités\s*\n([^\n]+)", block),
+            "status": _first_match(r"Statut\s+(Terminé|En cours|Non commencé)", block),
+            "progress": _first_match(r"Progression\s+([\d.,]+\s*%)", block),
+        }
+    connections, connection_total = [], ""
+    active_course = None
+    active_schema = None
+    active_columns = None
+    in_connections = False
+    handled_headers = 0
+    source_headers = 0
+    for page in document:
+        words = page.get_text("words")
+        source_headers += sum(_normalized(word[4]) == "resultats" for word in words)
+        events = []
+        for block in page.get_text("dict")["blocks"]:
+            for line in block.get("lines", []):
+                line_text = "".join(span["text"] for span in line["spans"])
+                match = re.match(r"Parcours\s+(\d+)\s*[—–-]", line_text, re.I)
+                if match:
+                    events.append((line["bbox"][1], "course", int(match.group(1))))
+                if _normalized(line_text).startswith("releve de connexions"):
+                    events.append((line["bbox"][1], "connections", None))
+        for table in page.find_tables().tables:
+            events.append((table.bbox[1], "table", table))
+        for _, kind, value in sorted(events, key=lambda event: event[0]):
+            if kind == "course":
+                active_course = value
+                continue
+            if kind == "connections":
+                in_connections = True
+                active_schema = None
+                continue
+            table = value
+            extracted = table.extract()
+            reference = next((row.cells for row in table.rows if all(c is not None for c in row.cells)), None)
+            if in_connections:
+                if table.col_count != 4 or reference is None:
+                    continue
+                for row in _rows_from_geometry(words, table, reference):
+                    values = [_compact(v) for v in row]
+                    if _normalized(values[0]) == "total":
+                        connection_total = next((v for v in values[1:] if v), connection_total)
+                    elif re.match(r"(?:Le\s+)?\d{2}/\d{2}/\d{4}", values[0]):
+                        if not re.match(r"(?:Le\s+)?\d{2}/\d{2}/\d{4}", values[1]):
+                            raise ValueError("Une ligne du journal Digiforma est incomplète. Réexportez le PDF complet.")
+                        connections.append(values)
+                continue
+            header = next((_header_map(row) for row in extracted[:2] if _header_map(row)), None)
+            if header:
+                active_schema = header
+                active_columns = reference
+            elif active_schema and table.col_count == len(active_columns or []):
+                reference = reference or active_columns
+            else:
+                continue
+            if not reference:
+                raise ValueError("Les colonnes du tableau Digiforma n’ont pas pu être reconnues.")
+            rows = list(_rows_from_geometry(words, table, reference))
+            for row in rows:
+                if _header_map(row):
+                    handled_headers += int(any(_normalized(v) == "resultats" for v in row))
+                    continue
+                record = {key: row[column] for key, column in active_schema.items() if key != "results"}
+                name = _compact(record.get("name"))
+                if not any(_compact(v) for v in record.values()):
+                    continue
+                # Second line of a header split by the source page break.
+                if not name and all(_normalized(record.get(key)) in ("", "connexion", "pedagogique")
+                                    for key in ("first", "last", "progress")):
+                    continue
+                module = re.search(r"\bP(\d+)M\d+\b", name, re.I)
+                evaluation = re.search(r"[ÉE]valuation\s+Parcours\s+(\d+)", name, re.I)
+                if module or evaluation:
+                    active_course = int((module or evaluation).group(1))
+                if active_course is None:
+                    raise ValueError("Le parcours associé à une activité Digiforma n’a pas été reconnu.")
+                course = courses.setdefault(active_course, {"number": active_course, "title": f"Parcours {active_course}", "activities": []})
+                is_total = any(_normalized(v).startswith("total") for v in row[:active_schema["name"] + 1])
+                if is_total:
+                    course["total"] = {k: _compact(v) for k, v in record.items() if k in ("duration", "first", "last", "progress")}
+                    continue
+                if (not name or ("number" in active_schema and not _compact(record.get("number"))
+                                 and not _compact(record.get("type")) and not module and not evaluation)):
+                    # A source row can continue on the following page. Results
+                    # fragments are already excluded from this logical record.
+                    previous = course["activities"][-1] if course["activities"] else None
+                    if previous:
+                        for key, fragment in record.items():
+                            if key not in ("number", "type") and _compact(fragment):
+                                previous[key] = _compact(previous.get(key, "") + " " + fragment)
+                    continue
+                record["name"] = name
+                for key in ("number", "type", "duration", "progress"):
+                    record[key] = _compact(record.get(key))
+                course["activities"].append(record)
+    if source_headers != handled_headers:
+        raise ValueError("Les en-têtes de tous les tableaux Digiforma n’ont pas pu être reconnus. Réexportez le PDF original complet.")
+    expected_modules = set(re.findall(r"\bP\d+M\d+\b", text, re.I))
+    extracted_modules = set(re.findall(r"\bP\d+M\d+\b", " ".join(a["name"] for c in courses.values() for a in c["activities"]), re.I))
+    if expected_modules != extracted_modules:
+        raise ValueError("Des modules Digiforma n’ont pas pu être repris intégralement. Aucun document n’a été remplacé.")
+    expected_evaluations = set(re.findall(r"[ÉE]valuation\s+Parcours\s+(\d+)", text, re.I))
+    actual_evaluations = set(re.findall(r"[ÉE]valuation\s+Parcours\s+(\d+)", " ".join(a["name"] for c in courses.values() for a in c["activities"]), re.I))
+    if expected_evaluations != actual_evaluations:
+        raise ValueError("Des évaluations Digiforma n’ont pas pu être reprises intégralement. Aucun document n’a été remplacé.")
+    journal_sections = re.split(r"Relevé de connexions[^\n]*", text, flags=re.I, maxsplit=1)
+    if len(journal_sections) == 2:
+        timestamp = r"\b\d{2}/\d{2}/\d{4}\s*(?:à\s*)?\d{1,2}h\d{2}m\d{2}s"
+        expected = Counter(_compact(v) for v in re.findall(timestamp, journal_sections[1]))
+        actual = Counter(_compact(v) for row in connections for value in row[:2] for v in re.findall(timestamp, value))
+        if expected != actual:
+            raise ValueError("Le journal de connexions Digiforma n’a pas pu être repris intégralement. Aucun document n’a été remplacé.")
+    provider_lines = []
+    first_page = document[0].get_text()
+    for line in first_page.splitlines() if "Attestation d'assiduité" in first_page else []:
+        if line.startswith(("Attestation d'assiduité", "Je soussigné")):
+            break
+        if line.strip() and not re.match(r"Page\s+\d", line.strip()):
+            provider_lines.append(line.strip())
+    if not connection_total:
+        journal_text = re.split(r"Relevé de connexions", text, flags=re.I)[-1]
+        totals = re.findall(r"(?:^|\n)Total\s*\n?([^\n]+)", journal_text, re.I)
+        connection_total = _compact(totals[-1]) if totals else ""
     return {
-        "bbox": pymupdf.Rect(table.bbox),
-        "rows": rows,
-        "geometry": geometries,
-        "cells": [list(row.cells) for row in table.rows],
-        "result_column": result_column,
-        "header_row": header_row,
+        "identity": identity, "courses": sorted(courses.values(), key=lambda c: c["number"]),
+        "connections": connections, "connection_total": connection_total,
+        "issued": _first_match(r"(Fait\s+[àa][^\n]+)", text),
+        "provider": "\n".join(provider_lines), "results_tables_removed": handled_headers,
     }
 
 
-def _copy_pdf_region(page, source, clip, target):
-    """Copy original PDF artwork, physically discarding everything outside it.
-
-    show_pdf_page's clip alone only hides other content. clip_to_rect removes
-    that content first, so excluded scores and duplicate text cannot survive
-    inside the copied PDF form.
-    """
-    with pymupdf.open() as region:
-        region.insert_pdf(source, links=False, annots=False, widgets=False)
-        region_page = region[0]
-        region_page.clip_to_rect(clip)
-        # Font ascenders can overlap an adjacent short row even when its visible
-        # letters do not. Remove those neighbouring glyphs too, so PDF readers
-        # do not extract hidden duplicates from each copied cell. Texttrace
-        # gives tight glyph boxes; a tiny mark at their centre avoids deleting
-        # the retained row's neighbouring letters, borders or progress artwork.
-        has_neighbours = False
-        for span in region_page.get_texttrace():
-            for char in span["chars"]:
-                bbox = pymupdf.Rect(char[3])
-                centre = (bbox.tl + bbox.br) / 2
-                if centre not in clip:
-                    region_page.add_redact_annot(
-                        pymupdf.Rect(centre.x - .01, centre.y - .01, centre.x + .01, centre.y + .01),
-                        fill=False,
-                    )
-                    has_neighbours = True
-        if has_neighbours:
-            region_page.apply_redactions(images=0, graphics=0, text=0)
-        page.show_pdf_page(target, region, clip=clip, keep_proportion=False)
-
-
-def _draw_table(page, table, source):
-    """Remove the result column without re-typesetting the source text."""
-    result = pymupdf.Rect(table["geometry"][0][table["result_column"]])
-    bbox = table["bbox"]
-    cells = {tuple(cell) for row in table["cells"] for cell in row if cell is not None}
-    crosses_results = any(
-        cell[0] < result.x1 - .1 and cell[2] > result.x0 + .1
-        and (cell[0] < result.x0 - .1 or cell[2] > result.x1 + .1)
-        for cell in cells
-    )
-    if not crosses_results:
-        # Two vector strips keep dense/multiline rows, fonts, icons and progress
-        # bars at their original height. Close the gap instead of leaving an
-        # empty column. The rest of the page is untouched.
-        if result.x0 > bbox.x0:
-            clip = pymupdf.Rect(bbox.x0 - .5, bbox.y0 - .5, result.x0, bbox.y1 + .5)
-            _copy_pdf_region(page, source, clip, clip)
-        if result.x1 < bbox.x1:
-            clip = pymupdf.Rect(result.x1, bbox.y0 - .5, bbox.x1 + .5, bbox.y1 + .5)
-            _copy_pdf_region(page, source, clip, clip + (-result.width, 0, -result.width, 0))
-        return
-
-    def shifted_x(x):
-        return x - min(result.width, max(0, x - result.x0))
-
-    # A total or note can span the removed column. Preserve that whole cell's
-    # artwork, contracting only its width; never cut its text at the seam.
-    for coordinates in sorted(cells):
-        cell = pymupdf.Rect(coordinates)
-        target = pymupdf.Rect(shifted_x(cell.x0), cell.y0, shifted_x(cell.x1), cell.y1)
-        if target.width < .1:
-            continue
-        _copy_pdf_region(page, source, cell, target)
-
-
-def _append_signature(document, signature):
-    page = document[-1]
-    # Coordinates in an unrotated PDF page are used for both text and images.
-    bounds = page.rect * page.derotation_matrix
-    body_bottom = 36.0
-    for kind, rect in page.get_bboxlog():
-        rect = pymupdf.Rect(rect)
-        if rect.y0 >= bounds.height - 55:
-            continue  # Keep the existing footer's reserved band.
-        if kind == "fill-path" and rect.width >= bounds.width * .9 and rect.height >= bounds.height * .9:
-            continue  # A full-page background does not occupy the signature area.
-        body_bottom = max(body_bottom, rect.y1)
-    top = body_bottom + 18
-    if top + 112 > bounds.height - 60:
-        page = document.new_page(width=bounds.width, height=bounds.height)
-        top = 54
-    left = max(36, bounds.width - 240)
-    page.insert_text((left, top + 12), "Clément VAILLANT", fontsize=11, fontname="hebo")
-    page.insert_text((left, top + 28), "Directeur général Intégrale Academy", fontsize=9)
-    page.insert_image(pymupdf.Rect(left, top + 38, left + 180, top + 108), stream=signature)
-
-
 def prepare_digiforma_attendance(pdf_bytes, signature):
-    # MuPDF calls must not overlap in the application's threaded web worker.
     with _PDF_LOCK:
-        return _prepare_digiforma_attendance(pdf_bytes, signature)
-
-
-def _prepare_digiforma_attendance(pdf_bytes, signature):
-    """Remove results in course tables and add the provider's signature at the end.
-
-    Callers must extract completion evidence from the original *before* this
-    function. All redactions are applied to PDF content, not just painted over.
-    Unrecognized result headers cause an explicit error rather than a partial edit.
-    """
-    with pymupdf.open(stream=pdf_bytes, filetype="pdf") as document:
-        if not document.page_count or document.needs_pass:
-            raise ValueError("Le PDF Digiforma est vide ou protégé par un mot de passe.")
-        if document.get_sigflags() > 0:
-            raise ValueError("Importez le PDF Digiforma original, avant signature électronique.")
-        active_schema = None
-        removed_tables = 0
-        for page in document:
-            words = page.get_text("words")
-            result_headers = [pymupdf.Rect(word[:4]) for word in words if _normalized(word[4]) == "resultats"]
-            connection_titles = page.search_for("Relevé de connexions") + page.search_for("Releve de connexions")
-            connection_top = min((rect.y0 for rect in connection_titles), default=float("inf"))
-            snapshots = []
-            tables = sorted(page.find_tables().tables, key=lambda table: (table.bbox[1], table.bbox[0]))
-            for table in tables:
-                if table.bbox[1] >= connection_top:
-                    active_schema = None
-                    continue
-                values = table.extract()
-                header_row = next((i for i, row in enumerate(values[:2]) if _result_column(row) is not None), None)
-                if header_row is not None:
-                    column = _result_column(values[header_row])
-                    snapshot = _table_snapshot(table, column, header_row)
-                    active_schema = (table.col_count, column, table.bbox[0], table.bbox[2])
-                elif (active_schema and table.col_count == active_schema[0]
-                      and abs(table.bbox[0] - active_schema[2]) < 3
-                      and abs(table.bbox[2] - active_schema[3]) < 3):
-                    # A course table can continue on the next page without a header.
-                    snapshot = _table_snapshot(table, active_schema[1], None)
-                else:
-                    continue
-                snapshots.append(snapshot)
-            if any(not any(table["bbox"].contains(rect.tl + (1, 1)) for table in snapshots)
-                   for rect in result_headers):
-                raise ValueError(
-                    "La colonne Résultats n’a pas pu être identifiée dans tous les tableaux. "
-                    "Réexportez l’attestation Digiforma en PDF avec les tableaux complets."
-                )
-            if snapshots:
-                with pymupdf.open() as source:
-                    source.insert_pdf(document, from_page=page.number, to_page=page.number,
-                                      links=False, annots=False, widgets=False)
-                    for table in snapshots:
-                        page.add_redact_annot(table["bbox"] + (-.5, -.5, .5, .5), fill=(1, 1, 1))
-                    page.apply_redactions(images=2, graphics=1, text=0)
-                    for table in snapshots:
-                        _draw_table(page, table, source)
-                removed_tables += len(snapshots)
-            if connection_titles:
-                active_schema = None
-        _append_signature(document, signature)
-        return document.tobytes(garbage=4, deflate=True), {
-            "page_count": document.page_count,
-            "results_tables_removed": removed_tables,
-            "provider_signed": True,
-            "processing_version": 2,
-        }
+        with pymupdf.open(stream=pdf_bytes, filetype="pdf") as original:
+            if not original.page_count or original.needs_pass:
+                raise ValueError("Le PDF Digiforma est vide ou protégé par un mot de passe.")
+            if original.get_sigflags() > 0:
+                raise ValueError("Importez le PDF Digiforma original, avant signature électronique.")
+            report = extract_digiforma_attendance(original)
+        rendered = render_attendance(report, signature)
+        with pymupdf.open(stream=rendered, filetype="pdf") as document:
+            for index, page in enumerate(document, 1):
+                page.insert_textbox(pymupdf.Rect(455, page.rect.height - 43, page.rect.width - 40, page.rect.height - 25),
+                                    f"Page {index} / {len(document)}", fontsize=8, align=2)
+            return document.tobytes(garbage=4, deflate=True), {
+                "page_count": len(document), "results_tables_removed": report["results_tables_removed"],
+                "provider_signed": True, "processing_version": PROCESSING_VERSION,
+            }
