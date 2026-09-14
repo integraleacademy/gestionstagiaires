@@ -55,6 +55,7 @@ SETTINGS_FIELDS = (
     ("guardian_last_name", "Nom du représentant légal", "text"),
     ("guardian_phone", "Téléphone du représentant légal", "tel"),
     ("funding_mode", "Calcul du financement", "funding"),
+    ("precontract_training", "Formation commencée sans employeur", "precontract"),
     ("npec_cpne", "Branche professionnelle", "text"),
     ("funding_years", "Nombre d’années de financement", "years"),
     *((f"{prefix}_{year}", f"Année {year} · {label} (€)", "money") for year in range(1, 4)
@@ -121,6 +122,8 @@ def validate_settings(raw):
             raise WorkspaceError("Choisissez entre une et trois années de financement.")
         if kind == "funding" and value not in {"", "npec", "legacy"}:
             raise WorkspaceError("Mode de calcul du financement invalide.")
+        if kind == "precontract" and value not in {"", "yes", "no"}:
+            raise WorkspaceError("Choisissez si la formation a commencé sans employeur.")
         if key == "npec_cpne" and value and not re.fullmatch(r"\d{1,5}", value):
             raise WorkspaceError("Branche professionnelle invalide.")
         if kind == "financer":

@@ -6,6 +6,7 @@ are included in the document package; pre-existing manual amounts stay intact.
 from __future__ import annotations
 
 import datetime as dt
+import calendar
 import json
 import gzip
 import re
@@ -68,6 +69,42 @@ def periods(start, end, annual_cents):
     return result
 
 
+def precontract_period(values, settings, start, conclusion, annual_cents, year_days):
+    """Count confirmed L6222-12-1 training, never a prior employer's funding.
+
+    Signature limits the eligible pre-contract period (R6332-25 VI); execution
+    start limits it too, so no day is counted twice. Three calendar months are
+    measured from actual CFA entry, not a rolling 90-day allowance.
+    """
+    decision = settings.get("precontract_training", "")
+    if decision not in {"", "yes", "no"}:
+        raise WorkspaceError("Choisissez si la formation a commencé sans employeur.")
+    if decision == "no":
+        return None
+    training = _date(values, "training_start", "Début de formation")
+    boundary = min(start, conclusion)
+    if training >= boundary:
+        if decision == "yes":
+            raise WorkspaceError("La formation sans employeur doit commencer avant la signature et le début du contrat. Vérifiez les dates ou choisissez « Non ».")
+        return None
+    if not decision:
+        raise WorkspaceError("La formation commence avant le contrat : précisez ci-dessous si cette période relève de la formation sans employeur (trois mois maximum).")
+    if str(values.get("contract_type") or "") != "11":
+        raise WorkspaceError("La reprise après un précédent contrat nécessite une vérification OPCO pour éviter un double financement. La période sans employeur ne peut pas être ajoutée automatiquement à ce contrat successif.")
+    month_index = training.year * 12 + training.month - 1 + 3
+    year, month = divmod(month_index, 12)
+    month += 1
+    deadline = dt.date(year, month, min(training.day, calendar.monthrange(year, month)[1]))
+    if conclusion > deadline:
+        raise WorkspaceError("La signature intervient plus de trois mois calendaires après l’entrée en formation. Faites confirmer cette période par l’OPCO ; aucun supplément n’est calculé automatiquement.")
+    days = (boundary - training).days
+    amount = int((Decimal(annual_cents) * days / year_days).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return {"start": training.isoformat(), "end": (boundary - dt.timedelta(days=1)).isoformat(),
+            "days": days, "year_days": year_days, "opco_cents": amount,
+            "signature": conclusion.isoformat(), "deadline": deadline.isoformat(),
+            "gap_days": (start - boundary).days}
+
+
 def quote(values, settings, editions=None):
     """Resolve the exact RNCP × IDCC/CPNE pair as at contract conclusion."""
     conclusion = _date(values, "contract_conclusion", "Date de conclusion")
@@ -124,7 +161,12 @@ def quote(values, settings, editions=None):
     annual = rate[0]
     adjusted = min(annual, max(400000, int(Decimal(annual) * Decimal("0.8")))) if reduced else annual
     annual_periods = periods(start, end, adjusted)
-    return {"version": CALCULATION_VERSION, "reference": edition["id"], "published_at": edition["published_at"],
+    prior = precontract_period(values, settings, start, conclusion, adjusted, annual_periods[0]["year_days"])
+    if prior:
+        # Display contract execution dates unchanged; the separate supplement is
+        # assigned to year one in the convention, not to a fictitious fourth year.
+        annual_periods[0]["opco_cents"] += prior["opco_cents"]
+    result = {"version": CALCULATION_VERSION, "reference": edition["id"], "published_at": edition["published_at"],
             "source_url": edition["source_url"], "reference_url": REFERENCE_URL,
             "effective_from": rate[1], "conclusion": conclusion.isoformat(), "rncp": rncp,
             "title": certification["title"], "idcc": idcc, "cpne": cpne, "branch": edition["cpne_names"][cpne],
@@ -133,6 +175,10 @@ def quote(values, settings, editions=None):
             "remote_percent": str((remote / hours * 100).quantize(Decimal("0.01"))),
             "periods": annual_periods, "days": sum(p["days"] for p in annual_periods),
             "total_opco_cents": sum(p["opco_cents"] for p in annual_periods)}
+    if prior:
+        result.update(version="bts-npec-20260914-2", precontract=prior,
+                      days=result["days"] + prior["days"])
+    return result
 
 
 def resolve(values, settings):
