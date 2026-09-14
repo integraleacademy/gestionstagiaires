@@ -1871,7 +1871,7 @@
       return;
     }
     const fields = crmPrefillTransfer.payload || {};
-    selectedTrainingForCreate = crmPrefillTransfer.training_type || "";
+    selectedTrainingForCreate = normalizeTrainingChoice(crmPrefillTransfer.training_type || "");
     refreshTrainingButtons();
     refreshTrainingSpecificFields();
     refreshSessionChoices();
