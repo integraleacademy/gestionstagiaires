@@ -8,9 +8,10 @@ from collections import Counter
 import pymupdf
 
 from digiforma_layout import render_attendance
+from digiforma_duration import journal_attendance
 
 _PDF_LOCK = threading.Lock()
-PROCESSING_VERSION = 3
+PROCESSING_VERSION = 4
 
 
 def _normalized(value):
@@ -235,7 +236,7 @@ def extract_digiforma_attendance(document):
     }
 
 
-def prepare_digiforma_attendance(pdf_bytes, signature):
+def prepare_digiforma_attendance(pdf_bytes, signature, stamp):
     with _PDF_LOCK:
         with pymupdf.open(stream=pdf_bytes, filetype="pdf") as original:
             if not original.page_count or original.needs_pass:
@@ -243,12 +244,14 @@ def prepare_digiforma_attendance(pdf_bytes, signature):
             if original.get_sigflags() > 0:
                 raise ValueError("Importez le PDF Digiforma original, avant signature électronique.")
             report = extract_digiforma_attendance(original)
-        rendered = render_attendance(report, signature)
+        rendered = render_attendance(report, signature, stamp)
         with pymupdf.open(stream=rendered, filetype="pdf") as document:
             for index, page in enumerate(document, 1):
                 page.insert_textbox(pymupdf.Rect(455, page.rect.height - 43, page.rect.width - 40, page.rect.height - 25),
                                     f"Page {index} / {len(document)}", fontsize=8, align=2)
             return document.tobytes(garbage=4, deflate=True), {
                 "page_count": len(document), "results_tables_removed": report["results_tables_removed"],
-                "provider_signed": True, "processing_version": PROCESSING_VERSION,
+                "provider_signed": True, "provider_stamped": True, "processing_version": PROCESSING_VERSION,
+                "connection_log_total": report["connection_total"],
+                **journal_attendance(report["connection_total"]),
             }

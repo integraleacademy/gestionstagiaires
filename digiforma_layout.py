@@ -4,6 +4,8 @@ from io import BytesIO
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from digiforma_duration import journal_attendance
+
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
@@ -25,7 +27,7 @@ def _text(value):
     return escape(str(value or "Non renseigné").replace("\u00a0", " ").replace("—", "-").replace("–", "-"))
 
 
-def render_attendance(report, signature):
+def render_attendance(report, signature, stamp):
     styles = {
         "title": ParagraphStyle("title", fontName="Helvetica-Bold", fontSize=24, leading=28, textColor=INK, spaceAfter=18),
         "heading": ParagraphStyle("heading", fontName="Helvetica-Bold", fontSize=15, leading=19, textColor=INK, spaceAfter=12),
@@ -35,6 +37,7 @@ def render_attendance(report, signature):
         "center": ParagraphStyle("center", fontName="Helvetica", fontSize=9.2, leading=12, alignment=TA_CENTER, textColor=INK),
         "header": ParagraphStyle("header", fontName="Helvetica-Bold", fontSize=9, leading=12, textColor=colors.white),
         "log": ParagraphStyle("log", fontName="Helvetica", fontSize=8.5, leading=11, textColor=INK),
+        "duration": ParagraphStyle("duration", fontName="Helvetica-Bold", fontSize=24, leading=30, textColor=INK),
     }
 
     def p(value, style="body"):
@@ -60,8 +63,30 @@ def render_attendance(report, signature):
         return result
 
     def details(items):
-        return table([[p(label, "small"), p(value, "cell")] for label, value in items if value],
-                     [150, WIDTH - 150], header=False)
+        result = table([[p(label, "small"), p(value, "cell")] for label, value in items if value],
+                       [150, WIDTH - 150], header=False)
+        result.setStyle(TableStyle([("TOPPADDING", (0, 0), (-1, -1), 6),
+                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6)]))
+        return result
+
+    attendance = journal_attendance(report.get("connection_total"))
+
+    def connection_summary():
+        state = "Seuil dépassé" if attendance["connection_requirement_met"] else "Seuil non atteint"
+        block = Table([[[p("DURÉE TOTALE DE CONNEXION - JOURNAL", "small"),
+                         Spacer(1, 5), p(attendance["connection_duration_label"], "duration"),
+                         Spacer(1, 5), p("Suivi : " + attendance["attendance_rate_label"] + " - " + state),
+                         p("100 % de suivi uniquement au-delà de 62 heures de connexion.", "small")]]],
+                      colWidths=[WIDTH], hAlign="LEFT")
+        block.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF4D9")),
+            ("BOX", (0, 0), (-1, -1), .7, GOLD),
+            ("LEFTPADDING", (0, 0), (-1, -1), 14),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+            ("TOPPADDING", (0, 0), (-1, -1), 12),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+        ]))
+        return block
 
     def page_chrome(canvas, doc):
         canvas.saveState()
@@ -90,20 +115,19 @@ def render_attendance(report, signature):
         story += [p(identity["attested_name"], "heading")]
     if identity.get("training_title"):
         story += [p(identity["training_title"])]
-    story += [Spacer(1, 12), p("Formation et participation", "heading")]
+    story += [Spacer(1, 8), connection_summary(), Spacer(1, 16), p("Formation et participation", "heading")]
     story += [details([
         ("Période de formation", identity.get("period")),
         ("Lieu", identity.get("location")),
         ("Type d'action", identity.get("action_type")),
         ("Durée prévue", identity.get("planned_duration")),
-        ("Durée effectivement suivie", identity.get("effective_duration")),
-        ("Taux de réalisation", identity.get("completion_rate")),
         ("Identifiant Digiforma", identity.get("email")),
         ("Jours d'accès", identity.get("access_days")),
-        ("Connexions - synthèse Digiforma", identity.get("connection_duration")),
-        ("Connexions - total du journal", report.get("connection_total")),
     ])]
-    story += [Spacer(1, 18), p("Attestation du prestataire", "heading")]
+    if identity.get("effective_duration"):
+        story += [Spacer(1, 10), p("Durée pédagogique Digiforma : " + identity["effective_duration"] +
+                                  ". Durée théorique des activités réalisées, distincte du temps de connexion.", "small")]
+    story += [Spacer(1, 14), p("Attestation du prestataire", "heading")]
     story += [p("Je soussigné Clément VAILLANT, directeur général d'Intégrale Academy, "
                 "atteste de la participation du stagiaire à la formation et des éléments "
                 "d'assiduité détaillés dans le présent document, repris du relevé Digiforma.")]
@@ -114,8 +138,8 @@ def render_attendance(report, signature):
         story += [PageBreak(), p(f"PARCOURS {course['number']}", "small"), Spacer(1, 6),
                   p(course["title"], "heading")]
         metrics = []
-        for key, label in (("planned", "Durée prévue"), ("completed", "Durée réalisée"),
-                           ("status", "Statut"), ("progress", "Progression")):
+        for key, label in (("planned", "Durée prévue"), ("completed", "Durée pédagogique réalisée"),
+                           ("status", "Statut pédagogique"), ("progress", "Avancée pédagogique")):
             if course.get(key):
                 metrics.append(label + " : " + course[key])
         if metrics:
@@ -165,12 +189,21 @@ def render_attendance(report, signature):
         ]))
         story += [journal]
     if report.get("connection_total"):
-        story += [Spacer(1, 12), p("Durée totale du journal : " + report["connection_total"])]
+        story += [Spacer(1, 12), connection_summary()]
     signature_block = [Spacer(1, 18)]
     if report.get("issued"):
         signature_block += [p(report["issued"])]
     signature_block += [p("Clément VAILLANT", "heading"), p("Directeur général Intégrale Academy", "small"),
-                        Spacer(1, 8), Image(BytesIO(signature), width=170, height=66, kind="proportional", hAlign="LEFT")]
+                        Spacer(1, 8)]
+    signature_table = Table([[
+        [p("Signature", "small"), Spacer(1, 6),
+         Image(BytesIO(signature), width=170, height=66, kind="proportional", hAlign="LEFT")],
+        [p("Tampon Intégrale Academy", "small"), Spacer(1, 6),
+         Image(BytesIO(stamp), width=240, height=84, kind="proportional", hAlign="LEFT")],
+    ]], colWidths=[WIDTH - 255, 255], hAlign="LEFT")
+    signature_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                        ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
+    signature_block += [signature_table]
     story += [KeepTogether(signature_block)]
     output = BytesIO()
     doc = SimpleDocTemplate(output, pagesize=A4, leftMargin=40, rightMargin=40,

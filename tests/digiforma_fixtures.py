@@ -7,7 +7,8 @@ from reportlab.lib.styles import ParagraphStyle
 
 def attendance_pdf(*, trainee_name='ALICE MARTIN', complete=True, completion_rate=100,
                    effective_duration='62 heures', completed_paths=8, completed_evaluations=8,
-                   striped=True, split_course=False, long_label=False, connection_count=3):
+                   striped=True, split_course=False, long_label=False, connection_count=3,
+                   connection_total="62 heures et 1 seconde"):
     output=io.BytesIO()
     pdf=canvas.Canvas(output,pagesize=(595,842))
     pdf.setTitle('Attestation source fictive')
@@ -74,7 +75,7 @@ def attendance_pdf(*, trainee_name='ALICE MARTIN', complete=True, completion_rat
         for i in range(start,min(start+32,connection_count)):
             rows.append([f'Le 07/09/2026 à 08h{i%60:02}m01s',f'Le 07/09/2026 à 09h{i%60:02}m02s',
                          '1 heure et 1 seconde',f'192.0.2.{i%250+1}'])
-        if start+32>=connection_count: rows.append(['Total','62 heures','',''])
+        if start+32>=connection_count: rows.append(['Total',connection_total,'',''])
         table=Table(rows,colWidths=[165,165,105,80]);table.setStyle(TableStyle([
             ('GRID',(0,0),(-1,-1),.5,(0,0,0)),('FONTNAME',(0,0),(-1,-1),'Helvetica'),('FONTSIZE',(0,0),(-1,-1),8)]))
         _,h=table.wrap(515,700);table.drawOn(pdf,40,740-h)
