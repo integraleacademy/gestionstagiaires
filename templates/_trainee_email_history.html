@@ -7,6 +7,8 @@
                   <div style="font-weight:800;">📧 {{ item.subject }}</div>
                   {% if item.manual_reminder %}
                     <div class="hint" style="margin-top:4px;color:#16834f;font-weight:700;">Relance manuelle · Transmission confirmée</div>
+                  {% elif item.automatic_stage %}
+                    <div class="hint" style="margin-top:4px;color:#18386c;font-weight:700;">Relance automatique J−{{ item.automatic_stage }} · Transmission confirmée</div>
                   {% endif %}
                   {% if item.to_email %}
                     <div class="hint" style="margin-top:4px;">Destinataire : {{ item.to_email }}</div>

@@ -1,4 +1,4 @@
-"""Content for manual pre-training reminders (no delivery or storage side effects)."""
+"""Shared content for manual and scheduled pre-training document reminders."""
 
 import datetime
 import hashlib
@@ -124,7 +124,7 @@ def _email_html(*, first_name, training, date_label, deadline_label, overdue, to
 </td></tr></table></body></html>'''
 
 
-def build_content(*, first_name, training, start_date, today, portal_link, documents, missing_information, logo_url=""):
+def build_content(*, first_name, training, start_date, today, portal_link, documents, missing_information, logo_url="", automatic_stage=None):
     deadline = start_date - datetime.timedelta(days=10)
     date_label = start_date.strftime("%d/%m/%Y")
     deadline_label = deadline.strftime("%d/%m/%Y")
@@ -137,6 +137,16 @@ def build_content(*, first_name, training, start_date, today, portal_link, docum
         "soit 10 jours avant votre entrée en formation."
     )
     sms_deadline = f"Déposez-les dès que possible, au plus tard le {deadline_label} (10 jours avant l’entrée)."
+    if automatic_stage in (25, 15, 10):
+        subject = f"Rappel J−{automatic_stage} – Complétez votre dossier avant la formation du {date_label}"
+    if automatic_stage == 10 and today == deadline:
+        subject = f"URGENT – Dernier jour pour compléter votre dossier : {deadline_label}"
+        urgency = (
+            f"La date limite de dépôt de vos documents est aujourd’hui, le {deadline_label}, "
+            "soit 10 jours avant votre entrée en formation. Merci de déposer les éléments demandés "
+            "sur votre espace stagiaire dès maintenant et au plus tard aujourd’hui."
+        )
+        sms_deadline = f"Date limite aujourd’hui, le {deadline_label} (10 jours avant l’entrée) : déposez-les dès maintenant."
     if today > deadline:
         urgency = (
             f"Votre dossier devait être complet au plus tard le {deadline_label}, soit 10 jours avant votre entrée en formation. "

@@ -26,6 +26,7 @@ import sys
 from backup_chronology import backup_chronology_key
 from digiforma_duration import journal_attendance
 from manual_document_reminders import document_actions, build_content as build_manual_docs_content, content_fingerprint
+from automatic_document_reminders import run as run_automatic_document_reminders, schedule as automatic_document_schedule
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 try:
     import resource
@@ -8740,382 +8741,49 @@ def _session_start_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
         return None
 
 
-def _docs_relance_planned_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
-    start_date = _session_start_date(session_obj)
-    if not start_date:
-        return None
-    return start_date - datetime.timedelta(days=15)
-
-
-def _send_docs_relance_message(
-    data: Dict[str, Any],
-    session_obj: Dict[str, Any],
-    trainee: Dict[str, Any],
-    *,
-    source: str,
-) -> Dict[str, Any]:
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
-    training_type = _session_get(session_obj, "training_type", "")
-    ensure_documents_schema_for_trainee(trainee, training_type)
-
-    docs_details = docs_summary_text(
-        trainee,
-        allowed_statuses={
-            "A CONTRÔLER",
-            "A CONTROLER",
-            "NON CONFORME",
-            "NON_CONFORME",
-            "NON DÉPOSÉ",
-            "NON DEPOSE",
-            "NON_DEPOSE",
-        },
-    )
-    infos_details = infos_missing_text(trainee, training_type)
-
-    formation_type = formation_label(_session_get(session_obj, "training_type", ""))
-    dstart = fr_date(_session_get(session_obj, "date_start", ""))
-    dend = fr_date(_session_get(session_obj, "date_end", ""))
-
-    first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-
-    subject = "Relance : Dossier Formation incomplet"
-
-    html = mail_layout(f"""
-      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
-
-      <p>Bonjour <strong>{first_name}</strong>,</p>
-
-      <p>
-        Nous revenons vers vous concernant votre inscription en formation
-        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
-      </p>
-
-      <p>
-        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
-        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
-      </p>
-
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
-        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
-       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
-
-    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
-    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
-
-        <p style="margin:12px 0 0 0">
-          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
-          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
-        </p>
-
-        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
-          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
-        </p>
-      </div>
-
-      <p style="margin-top:22px">
-        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
-      </p>
-
-      <p style="margin-top:22px">
-        Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
-      </p>
-
-      <p style="text-align:center;margin-top:18px">
-        <a href="{link}"
-           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-          👉 Accéder à mon espace stagiaire
-        </a>
-      </p>
-    """)
-
-    sms = (
-        f"Intégrale Academy ⏰ Relance : Bonjour {trainee.get('first_name','')}, "
-        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
-        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
-        f"Besoin d’aide ? 04 22 47 07 68"
-    )
-
-    email_ok = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
-    sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
-
-    sent_at = _now_iso()
-    trainee["docs_last_relance_at"] = sent_at
-    trainee["updated_at"] = sent_at
-    trainee["docs_relance_auto_planned_date"] = ""
-    if source == "auto":
-        trainee["docs_relance_auto_sent_at"] = sent_at
-
-    trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
-    formation_label_text = formation_label(_session_get(session_obj, "training_type", ""))
-    add_notification(
-        data,
-        "notifications_phone_relances",
-        f"{trainee_display_name} • {formation_label_text}",
-        meta={
-            "first_name": (trainee.get("first_name") or "").strip(),
-            "last_name": (trainee.get("last_name") or "").strip(),
-            "training": formation_label_text,
-            "phone": (trainee.get("phone") or "").strip(),
-            "email": (trainee.get("email") or "").strip(),
-            "session_id": session_obj.get("id"),
-            "trainee_id": trainee.get("id"),
-            "call_status": "À appeler",
-            "no_answer_count": 0,
-            "source": f"docs_relance_{source}",
-        },
-    )
-
-    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
-
-
-def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
-    changed = False
-    today = datetime.date.today()
-
-    for session_obj in (data.get("sessions") or []):
-        if session_obj.get("archived"):
-            continue
-        planned_date = _docs_relance_planned_date(session_obj)
-        planned_date_iso = planned_date.isoformat() if planned_date else ""
-
-        trainees = _session_trainees_list(session_obj)
-        for trainee in trainees:
-            if _trainee_registration_is_cancelled(trainee):
-                if trainee.get("docs_relance_auto_planned_date"):
-                    trainee["docs_relance_auto_planned_date"] = ""
-                    changed = True
-                continue
-            training_type = _session_get(session_obj, "training_type", "")
-            dossier_complete = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
-
-            if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
-                trainee["docs_relance_auto_planned_date"] = planned_date_iso
-                changed = True
-
-            if dossier_complete:
-                if trainee.get("docs_relance_auto_planned_date"):
-                    trainee["docs_relance_auto_planned_date"] = ""
-                    changed = True
-                continue
-
-            if not planned_date or today < planned_date:
-                continue
-            if (trainee.get("docs_relance_auto_sent_at") or "").strip():
-                continue
-
-            _send_docs_relance_message(data, session_obj, trainee, source="auto")
-            changed = True
-
-        session_obj["trainees"] = trainees
-        session_obj.pop("stagiaires", None)
-
-    return changed
-
-
-def _session_start_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
-    raw = (_session_get(session_obj, "date_start", "") or "").strip()
-    if not raw:
-        return None
-    try:
-        return datetime.datetime.strptime(raw[:10], "%Y-%m-%d").date()
-    except Exception:
-        return None
-
-
-def _docs_relance_planned_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
-    if not _docs_relance_auto_enabled(session_obj):
-        return None
-    start_date = _session_start_date(session_obj)
-    if not start_date:
-        return None
-    return start_date - datetime.timedelta(days=15)
-
-
 def _docs_relance_auto_enabled(session_obj: Dict[str, Any]) -> bool:
     training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
-    if training_type == "DIRIGEANT VAE":
-        return False
-    if "VTC" in training_type:
-        return False
-    return True
+    partner_id = str(session_obj.get("partner_id") or INTEGRALE_PARTNER_ID)
+    return partner_id == INTEGRALE_PARTNER_ID and training_type != "DIRIGEANT VAE" and "VTC" not in training_type
 
 
-def _send_docs_relance_message(
-    data: Dict[str, Any],
-    session_obj: Dict[str, Any],
-    trainee: Dict[str, Any],
-    *,
-    source: str,
-) -> Dict[str, Any]:
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
-    training_type = _session_get(session_obj, "training_type", "")
-    ensure_documents_schema_for_trainee(trainee, training_type)
+def _docs_relance_schedule(session_obj, trainee, *, activated_on=None, today=None):
+    start = _session_start_date(session_obj)
+    if not start or not _docs_relance_auto_enabled(session_obj):
+        return []
+    today = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    return automatic_document_schedule(trainee, start, today, activated_on=activated_on)
 
-    docs_details = docs_summary_text(
-        trainee,
-        allowed_statuses={
-            "A CONTRÔLER",
-            "A CONTROLER",
-            "NON CONFORME",
-            "NON_CONFORME",
-            "NON DÉPOSÉ",
-            "NON DEPOSE",
-            "NON_DEPOSE",
-        },
-    )
-    infos_details = infos_missing_text(trainee, training_type)
 
-    formation_type = formation_label(_session_get(session_obj, "training_type", ""))
-    dstart = fr_date(_session_get(session_obj, "date_start", ""))
-    dend = fr_date(_session_get(session_obj, "date_end", ""))
-
-    first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-
-    subject = "Relance : Dossier Formation incomplet"
-
-    html = mail_layout(f"""
-      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
-
-      <p>Bonjour <strong>{first_name}</strong>,</p>
-
-      <p>
-        Nous revenons vers vous concernant votre inscription en formation
-        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
-      </p>
-
-      <p>
-        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
-        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
-      </p>
-
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
-        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
-       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
-
-    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
-    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
-
-        <p style="margin:12px 0 0 0">
-          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
-          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
-        </p>
-
-        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
-          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
-        </p>
-      </div>
-
-      <p style="margin-top:22px">
-        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
-      </p>
-
-      <p style="margin-top:22px">
-        Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
-      </p>
-
-      <p style="text-align:center;margin-top:18px">
-        <a href="{link}"
-           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-          👉 Accéder à mon espace stagiaire
-        </a>
-      </p>
-    """)
-
-    sms = (
-        f"Intégrale Academy ⏰ Relance : Bonjour {trainee.get('first_name','')}, "
-        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
-        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
-        f"Besoin d’aide ? 04 22 47 07 68"
-    )
-
-    email_ok = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
-    sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
-
-    sent_at = _now_iso()
-    trainee["docs_last_relance_at"] = sent_at
-    trainee["updated_at"] = sent_at
-    trainee["docs_relance_auto_planned_date"] = ""
-    if source == "auto":
-        trainee["docs_relance_auto_sent_at"] = sent_at
-
-    trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
-    formation_label_text = formation_label(_session_get(session_obj, "training_type", ""))
-    add_notification(
-        data,
-        "notifications_phone_relances",
-        f"{trainee_display_name} • {formation_label_text}",
-        meta={
-            "first_name": (trainee.get("first_name") or "").strip(),
-            "last_name": (trainee.get("last_name") or "").strip(),
-            "training": formation_label_text,
-            "phone": (trainee.get("phone") or "").strip(),
-            "email": (trainee.get("email") or "").strip(),
-            "session_id": session_obj.get("id"),
-            "trainee_id": trainee.get("id"),
-            "call_status": "À appeler",
-            "no_answer_count": 0,
-            "source": f"docs_relance_{source}",
-        },
-    )
-
-    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
+def _docs_relance_planned_date(session_obj, trainee=None, *, activated_on=None):
+    if session_obj.get("archived"):
+        return None
+    trainee = trainee or {}
+    if _trainee_registration_is_cancelled(trainee) or trainee.get("force_dossier_complete"):
+        return None
+    for row in _docs_relance_schedule(session_obj, trainee, activated_on=activated_on):
+        if row["state"] in {"Prévue", "À envoyer"}:
+            return datetime.date.fromisoformat(row["date"])
+    return None
 
 
 def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
+    """Legacy background hook only refreshes dates; delivery belongs to the cron.
+
+    Loading a page must never send document reminders or save a stale snapshot
+    over a delivery recorded by the protected scheduler.
+    """
     changed = False
-    today = datetime.date.today()
-
-    for session_obj in (data.get("sessions") or []):
-        if session_obj.get("archived"):
-            continue
-        if not _docs_relance_auto_enabled(session_obj):
-            trainees = _session_trainees_list(session_obj)
-            for trainee in trainees:
-                if trainee.get("docs_relance_auto_planned_date"):
-                    trainee["docs_relance_auto_planned_date"] = ""
-                    changed = True
-            session_obj["trainees"] = trainees
-            session_obj.pop("stagiaires", None)
-            continue
-        planned_date = _docs_relance_planned_date(session_obj)
-        planned_date_iso = planned_date.isoformat() if planned_date else ""
-
-        trainees = _session_trainees_list(session_obj)
-        for trainee in trainees:
-            if _trainee_registration_is_cancelled(trainee):
-                if trainee.get("docs_relance_auto_planned_date"):
-                    trainee["docs_relance_auto_planned_date"] = ""
-                    changed = True
-                continue
-            training_type = _session_get(session_obj, "training_type", "")
-            dossier_complete = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
-
-            if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
-                trainee["docs_relance_auto_planned_date"] = planned_date_iso
+    activation = (data.get("document_reminders_scheduler") or {}).get("activated_on")
+    for training in data.get("sessions", []):
+        for trainee in _session_trainees_list(training):
+            planned = _docs_relance_planned_date(training, trainee, activated_on=activation)
+            value = planned.isoformat() if planned else ""
+            if trainee.get("docs_relance_auto_planned_date") != value:
+                trainee["docs_relance_auto_planned_date"] = value
                 changed = True
-
-            if dossier_complete:
-                if trainee.get("docs_relance_auto_planned_date"):
-                    trainee["docs_relance_auto_planned_date"] = ""
-                    changed = True
-                continue
-
-            if not planned_date or today < planned_date:
-                continue
-            if (trainee.get("docs_relance_auto_sent_at") or "").strip():
-                continue
-
-            _send_docs_relance_message(data, session_obj, trainee, source="auto")
-            changed = True
-
-        session_obj["trainees"] = trainees
-        session_obj.pop("stagiaires", None)
-
     return changed
+
 
 # =========================
 # Helpers
@@ -9678,6 +9346,33 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     return _cache_request_data(cache_key, result)
 
 
+def _preserve_document_reminder_state(payload, canonical):
+    """Keep scheduler receipts when an older admin page saves its snapshot."""
+    if isinstance(canonical.get("document_reminders_scheduler"), dict):
+        payload["document_reminders_scheduler"] = copy.deepcopy(canonical["document_reminders_scheduler"])
+    sessions = {str(s.get("id")): s for s in canonical.get("sessions", [])}
+    for training in payload.get("sessions", []):
+        current = sessions.get(str(training.get("id")))
+        if not current:
+            continue
+        trainees = {str(t.get("id")): t for t in _session_trainees_list(current)}
+        for trainee in _session_trainees_list(training):
+            saved = trainees.get(str(trainee.get("id")))
+            if not saved:
+                continue
+            for key in ("automatic_docs_reminder_history", "manual_docs_reminder_history"):
+                if isinstance(saved.get(key), list):
+                    trainee[key] = copy.deepcopy(saved[key])
+            history = trainee.get("sent_email_history") or []
+            for entry in reversed(saved.get("sent_email_history") or []):
+                if entry.get("source") in {"manual_documents_reminder", "automatic_documents_reminder"} and not _email_history_contains(history, entry):
+                    history.insert(0, copy.deepcopy(entry))
+            if history:
+                trainee["sent_email_history"] = history[:200]
+            if (saved.get("docs_last_relance_at") or "") > (trainee.get("docs_last_relance_at") or ""):
+                trainee["docs_last_relance_at"] = saved["docs_last_relance_at"]
+
+
 def save_data(
     data: Dict[str, Any], *, preserve_qonto_oauth: bool = True, force_global: bool = False,
 ) -> None:
@@ -9733,6 +9428,7 @@ def save_data(
                 canonical if isinstance(canonical, dict) else _empty_data_payload(),
             )
         if isinstance(canonical, dict):
+            _preserve_document_reminder_state(payload, canonical)
             if not scoped_partner_id and preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
                 payload["qonto_oauth"] = canonical["qonto_oauth"]
             if not scoped_partner_id and isinstance(canonical.get("integrale_watch"), dict):
@@ -10764,7 +10460,7 @@ def build_trainee_email_history_entries(trainee: Dict[str, Any]) -> List[Dict[st
     history = list(trainee.get("sent_email_history") or [])
     # Recover confirmed manual transmissions from their durable attempt, even
     # when a worker stopped before the old end-of-SMS history write.
-    for attempt in (trainee.get("manual_docs_reminder_history") or []):
+    for attempt in [*(trainee.get("manual_docs_reminder_history") or []), *(trainee.get("automatic_docs_reminder_history") or [])]:
         if not isinstance(attempt, dict) or attempt.get("email_status") != "ACCEPTE":
             continue
         if not any(key in attempt for key in ("message_id", "email_sent_at", "email_attempt_id")):
@@ -10787,6 +10483,7 @@ def build_trainee_email_history_entries(trainee: Dict[str, Any]) -> List[Dict[st
             "sent_date": fr_date(sent_at),
             "sent_datetime": fr_datetime(sent_at),
             "manual_reminder": item.get("source") == "manual_documents_reminder",
+            "automatic_stage": item.get("automatic_stage"),
         })
 
     entries.sort(key=lambda item: _history_sort_key(item.get("sent_at") or ""), reverse=True)
@@ -10802,7 +10499,8 @@ def _manual_docs_email_history_entry(attempt):
             + html.escape(attempt.get("text") or "") + "</pre>"
         ),
         "sent_at": attempt.get("email_sent_at") or attempt.get("finished_at") or attempt.get("attempted_at") or "",
-        "source": "manual_documents_reminder",
+        "source": attempt.get("source") or "manual_documents_reminder",
+        "automatic_stage": attempt.get("automatic_stage"),
         "reminder_id": attempt.get("email_attempt_id") or attempt.get("id") or "",
         "message_id": attempt.get("message_id") or "",
     }
@@ -27055,7 +26753,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     training_type = _session_get(s, "training_type", "")
     dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
-    planned = _docs_relance_planned_date(s)
+    planned = _docs_relance_planned_date(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on"))
     t["docs_relance_auto_planned_date"] = "" if dossier_complete or registration_cancelled else (planned.isoformat() if planned else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
@@ -31761,6 +31459,13 @@ def admin_docs_relance(session_id: str, trainee_id: str):
             return {"error": "Le dossier a changé. Relancez l’aperçu avant l’envoi.", "http_status": 409}
         history = t.setdefault("manual_docs_reminder_history", [])
         now = datetime.datetime.now(datetime.timezone.utc)
+        for automatic in t.get("automatic_docs_reminder_history", []):
+            try:
+                automatic_age = (now - datetime.datetime.fromisoformat(automatic["attempted_at"].replace("Z", "+00:00"))).total_seconds()
+            except (KeyError, ValueError, TypeError):
+                automatic_age = 601
+            if automatic.get("pending") and automatic_age < 600:
+                return {"error": "Une relance automatique est déjà en cours pour ce stagiaire.", "http_status": 409}
         previous = None
         for attempt in history:
             if attempt.get("id") == request_id and not attempt.get("pending"):
@@ -31879,8 +31584,8 @@ def _manual_docs_delivery_result(attempt):
     }
 
 
-def _manual_docs_preview(session_obj, trainee):
-    today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+def _manual_docs_preview(session_obj, trainee, *, today=None, automatic_stage=None):
+    today = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
     start_date = _session_start_date(session_obj)
     if session_obj.get("archived") or _trainee_registration_is_cancelled(trainee):
         return None, "Inscription annulée ou session archivée."
@@ -31905,7 +31610,7 @@ def _manual_docs_preview(session_obj, trainee):
         return None, "Lien personnel indisponible : ouvrez la fiche stagiaire."
     content = build_manual_docs_content(
         first_name=str(t.get("first_name") or "").strip(), training=formation_label(training_type),
-        start_date=start_date, today=today, portal_link=f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{token}",
+        start_date=start_date, today=today, automatic_stage=automatic_stage, portal_link=f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{token}",
         documents=actions, missing_information=missing,
         logo_url=f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png",
     )
@@ -32056,7 +31761,7 @@ def api_docs_update(session_id: str, trainee_id: str):
     training_type = _session_get(s, "training_type", "")
     dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
-    planned = _docs_relance_planned_date(s)
+    planned = _docs_relance_planned_date(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on"))
     t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
@@ -38557,7 +38262,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     # ✅ dossier_status cohérent avec les docs requis
     dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
-    planned_relance_date = _docs_relance_planned_date(s)
+    planned_relance_date = _docs_relance_planned_date(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on"))
     t["docs_relance_auto_planned_date"] = "" if dossier_complete or t["registration_cancelled"] else (planned_relance_date.isoformat() if planned_relance_date else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
@@ -38630,6 +38335,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
             if (session.get("cpf_association_preview") or {}).get("trainee_id") == trainee_id else None,
         cpf_force_association_value=CPF_FORCE_ASSOCIATION_VALUE,
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
+        docs_reminder_schedule=_docs_relance_schedule(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on")),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
 
@@ -48062,6 +47768,18 @@ def internal_cron_a3p_hosting_reminders():
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     return jsonify({"ok": True, **run_a3p_hosting_reminders()})
+
+
+@app.post("/internal/cron/document-reminders")
+def internal_cron_document_reminders():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or "").strip()
+    if not expected or not provided or not hmac.compare_digest(expected, provided):
+        return jsonify(ok=False, error="forbidden"), 403
+    result = run_automatic_document_reminders(
+        sys.modules[__name__], dry_run=(request.get_json(silent=True) or {}).get("dry_run") is True,
+    )
+    return jsonify(result), 200 if result["ok"] else 502
 
 
 @app.post("/internal/cron/afc-documents-reminders")

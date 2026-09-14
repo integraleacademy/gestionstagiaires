@@ -2463,9 +2463,26 @@
       <div class="hint">🟧 Stagiaire relancé le : <strong>{{ trainee.docs_last_relance_at|frdatetime }}</strong></div>
     {% endif %}
     {% if docs_relance_planned_fr %}
-      <div class="hint">⏰ Relance stagiaire prévue le : <strong id="docsRelancePlannedDate">{{ docs_relance_planned_fr }}</strong></div>
+      <div class="hint" id="docsRelancePlannedHint">⏰ Prochaine relance automatique : <strong id="docsRelancePlannedDate">{{ docs_relance_planned_fr }}</strong></div>
     {% else %}
-      <div class="hint" id="docsRelancePlannedHint" style="display:none;">⏰ Relance stagiaire prévue le : <strong id="docsRelancePlannedDate"></strong></div>
+      <div class="hint" id="docsRelancePlannedHint" style="display:none;">⏰ Prochaine relance automatique : <strong id="docsRelancePlannedDate"></strong></div>
+    {% endif %}
+    {% if docs_reminder_schedule %}
+      <div id="docsAutomaticSchedule" style="margin-top:14px;padding:16px;border:1px solid #dce5f1;border-radius:14px;background:#f6f8fc;{% if dossier_is_complete or trainee.registration_cancelled %}display:none;{% endif %}">
+        <strong style="color:#18386c;">Relances automatiques du dossier</strong>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;">
+          {% for reminder in docs_reminder_schedule %}
+            <div style="flex:1;min-width:145px;border:1px solid #dce5f1;border-radius:10px;background:white;padding:12px;">
+              <strong>J−{{ reminder.stage }}</strong> · {{ reminder.date|frdate }}
+              <div class="hint" style="margin-top:6px;">{{ reminder.state }}</div>
+              {% if reminder.email_status or reminder.sms_status %}
+                <div class="hint">E-mail : {{ reminder.email_status }} · SMS : {{ reminder.sms_status }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="hint" style="margin-top:10px;">À partir de 9 h, heure de Paris, si des éléments restent à fournir. À J−10 : rappel de la date limite du jour. Les documents déjà déposés et en cours de vérification ne sont pas redemandés.</div>
+      </div>
     {% endif %}
 
     {% if show_no_bac_toggle %}
@@ -3435,6 +3452,8 @@ function formatIsoDateFr(isoDate){
 function updateDocsRelanceState(status, plannedDateIso){
   const btn = document.getElementById("btnDocsRelance");
   const isComplete = status === "complete";
+  const schedule = document.getElementById("docsAutomaticSchedule");
+  if(schedule) schedule.style.display = isComplete ? "none" : "";
   if(btn){
     btn.disabled = isComplete;
     btn.classList.toggle("btn-disabled-muted", isComplete);
