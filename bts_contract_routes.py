@@ -121,8 +121,13 @@ def register_contract_routes(legacy, protected, actor, get_record, endpoints):
                 values = defaults(cerfa_values, submitted)
                 db.save_settings(record_id, values, int(request.form.get("revision", "-1")), actor())
             flash("Paramètres des conventions enregistrés.", "success")
+            if request.headers.get("Accept") == "application/json":
+                return jsonify(ok=True, redirect_url=destination(record_id))
         except (WorkspaceError, ValueError) as exc:
-            flash(str(exc) if isinstance(exc, WorkspaceError) else "Version du formulaire invalide.", "error")
+            message = str(exc) if isinstance(exc, WorkspaceError) else "Version du formulaire invalide."
+            if request.headers.get("Accept") == "application/json":
+                return jsonify(ok=False, message=message), 400
+            flash(message, "error")
         return redirect(destination(record_id))
 
     def get_current(db, record_id, *, check_hash=True):

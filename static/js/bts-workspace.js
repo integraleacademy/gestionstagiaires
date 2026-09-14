@@ -52,7 +52,7 @@
     });
   });
   root.querySelectorAll('form[method="post"]').forEach(form => {
-    if (form.matches('[data-wedof-search], [data-candidate-search], [data-opco-submit]')) return;
+    if (form.matches('[data-wedof-search], [data-candidate-search], [data-opco-submit], [data-contract-settings]')) return;
     form.addEventListener('submit', event => {
       if (form.dataset.submitting === 'true') {
         event.preventDefault();
@@ -169,6 +169,37 @@
   root.querySelectorAll('[data-contract-settings], [data-cerfa-form]').forEach(form => {
     form.addEventListener('input', disableContractActions);
     form.addEventListener('change', disableContractActions);
+  });
+  root.querySelectorAll('[data-contract-settings]').forEach(form => {
+    let active = false;
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (active || !form.reportValidity()) return;
+      const body = new FormData(form);
+      // Named submit buttons (including the legacy NPEC conversion) are not
+      // included by FormData(form). Preserve the explicit action chosen.
+      if (event.submitter?.name) body.set(event.submitter.name, event.submitter.value);
+      const message = form.querySelector('[data-contract-save-message]');
+      const buttons = [...form.querySelectorAll('button:not([type="button"])')];
+      active = true;
+      form.setAttribute('aria-busy', 'true');
+      buttons.forEach(button => { button.disabled = true; });
+      message.hidden = true;
+      try {
+        const response = await fetch(form.action, {method: 'POST', body, credentials: 'same-origin', headers: {Accept: 'application/json'}});
+        const data = response.headers.get('content-type')?.includes('application/json') ? await response.json() : null;
+        if (!response.ok || !data?.ok) throw new Error(data?.message || 'Enregistrement non confirmé. Votre saisie reste affichée ; vérifiez votre connexion avant de réessayer.');
+        window.location.assign(data.redirect_url);
+      } catch (error) {
+        message.textContent = `Les paramètres n’ont pas été enregistrés : ${error.message} Votre saisie est conservée à l’écran.`;
+        message.hidden = false;
+        message.scrollIntoView({block: 'center', behavior: 'smooth'});
+      } finally {
+        active = false;
+        form.removeAttribute('aria-busy');
+        buttons.forEach(button => { button.disabled = false; });
+      }
+    });
   });
   root.querySelectorAll('[data-opco-submit]').forEach(form => {
     let active = false;
