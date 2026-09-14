@@ -300,6 +300,12 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(download.status_code, 200)
             self.assertEqual(download.data, prepared_bytes)
             self.assertIn("attachment", download.headers.get("Content-Disposition", ""))
+            original = self.client.get(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma?original=1"
+            )
+            self.assertEqual(original.status_code, 200)
+            self.assertEqual(original.data, pdf_bytes)
+            self.assertNotEqual(original.data, prepared_bytes)
 
             cover_path = os.path.join(directory, "cover.pdf")
             cover = canvas.Canvas(cover_path)

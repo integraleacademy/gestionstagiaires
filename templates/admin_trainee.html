@@ -1530,6 +1530,12 @@
              href="{{ url_for('admin_download_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">
             ⬇️ Télécharger l’attestation Digiforma
           </a>
+          {% if aps_tracking.source_file %}
+            <a class="btn btn-outline"
+               href="{{ url_for('admin_download_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id, original=1) }}">
+              Télécharger le PDF Digiforma original
+            </a>
+          {% endif %}
           {% if not is_read_only %}
             <form method="post"
                   action="{{ url_for('admin_reset_aps_elearning_tracking', session_id=session.id, trainee_id=trainee.id) }}"
