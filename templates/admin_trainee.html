@@ -2463,14 +2463,13 @@
       <button class="btn btn-outline btn-uniform" type="submit">⚠️ Notifier documents non conformes</button>
     </form>
 
-    <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
       <button id="btnDocsRelance"
               class="btn btn-outline btn-uniform {% if dossier_is_complete %}btn-disabled-muted{% endif %}"
-              type="submit"
+              type="button" data-manual-docs-reminder
+              data-preview-url="{{ url_for('admin_manual_docs_preview', session_id=session.id, trainee_id=trainee.id) }}"
               {% if dossier_is_complete %}disabled{% endif %}>
-        🔁 Relance stagiaire
+        RELANCE MANUELLE
       </button>
-    </form>
   {% endif %}
 
     <a class="btn btn-outline btn-uniform"
@@ -6770,4 +6769,5 @@ document.addEventListener('click', async (event) => {
 });
 </script>
 
+<script src="{{ url_for('static', filename='manual-docs-reminder.js') }}" defer></script>
 {% endblock %}
