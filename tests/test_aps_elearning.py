@@ -223,7 +223,7 @@ class ApsElearningTests(unittest.TestCase):
             for key in ("source_file", "source_sha256", "uploaded_at", "completion_rate", "evaluations_completed"):
                 self.assertEqual(after[key], before[key])
             self.assertNotEqual(after["file"], before["file"])
-            self.assertEqual(after["processing_version"], 4)
+            self.assertEqual(after["processing_version"], 5)
             self.assertTrue(after["rebuilt_at"])
             prepared_path = gestion_app._require_aps_elearning_report_file(after)
             with open(prepared_path, "rb") as prepared:

@@ -106,7 +106,7 @@ def render_attendance(report, signature, stamp):
         canvas.setLineWidth(.5)
         canvas.line(40, 48, A4[0] - 40, 48)
         canvas.setFont("Helvetica", 7.5)
-        canvas.drawString(40, 34, "Établi à partir du relevé Digiforma - mise en page Intégrale Academy")
+        canvas.drawString(40, 34, "Attestation d'assiduité e-learning Intégrale Academy")
         canvas.restoreState()
 
     identity = report["identity"]
@@ -199,7 +199,7 @@ def render_attendance(report, signature, stamp):
         [p("Signature", "small"), Spacer(1, 6),
          Image(BytesIO(signature), width=170, height=66, kind="proportional", hAlign="LEFT")],
         [p("Tampon Intégrale Academy", "small"), Spacer(1, 6),
-         Image(BytesIO(stamp), width=240, height=84, kind="proportional", hAlign="LEFT")],
+         Image(BytesIO(stamp), width=144, height=50.4, kind="proportional", hAlign="LEFT")],
     ]], colWidths=[WIDTH - 255, 255], hAlign="LEFT")
     signature_table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
                                         ("LEFTPADDING", (0, 0), (-1, -1), 0)]))
