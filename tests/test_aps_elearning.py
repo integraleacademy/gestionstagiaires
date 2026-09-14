@@ -266,7 +266,14 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(tracking["evaluations_completed"], 8)
             self.assertEqual(tracking["evaluations_total"], 8)
             self.assertEqual(tracking["module_fraction_count"], 8)
-            self.assertEqual(tracking["file_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
+            self.assertEqual(tracking["source_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
+            with open(gestion_app._detokenize_path(tracking["source_file"]), "rb") as source:
+                self.assertEqual(source.read(), pdf_bytes)
+            with open(gestion_app._require_aps_elearning_report_file(tracking), "rb") as prepared:
+                prepared_bytes = prepared.read()
+            self.assertEqual(tracking["file_sha256"], hashlib.sha256(prepared_bytes).hexdigest())
+            self.assertTrue(tracking["provider_signed"])
+            self.assertIn("Clément VAILLANT", PdfReader(io.BytesIO(prepared_bytes)).pages[-1].extract_text())
             self.assertEqual(tracking["remote_start"], "2026-07-23")
             self.assertEqual(tracking["remote_end"], "2026-09-03")
             self.assertTrue(os.path.isfile(gestion_app._detokenize_path(tracking["file"])))
@@ -291,8 +298,39 @@ class ApsElearningTests(unittest.TestCase):
                 "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma"
             )
             self.assertEqual(download.status_code, 200)
-            self.assertEqual(download.data, pdf_bytes)
+            self.assertEqual(download.data, prepared_bytes)
             self.assertIn("attachment", download.headers.get("Content-Disposition", ""))
+
+            cover_path = os.path.join(directory, "cover.pdf")
+            cover = canvas.Canvas(cover_path)
+            cover.drawString(36, 790, "Bordereau de suivi")
+            cover.save()
+            package_path = os.path.join(directory, "package.pdf")
+            gestion_app._combine_aps_elearning_tracking_pdf(
+                cover_path, gestion_app._require_aps_elearning_report_file(tracking), package_path,
+            )
+            self.assertIn("Clément VAILLANT", PdfReader(package_path).pages[-1].extract_text())
+
+    def test_failed_pdf_preparation_preserves_existing_report_and_signature(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        tracking = self._complete_tracking()
+        signature = {"status": "done", "signature_request_id": "existing-signature"}
+        trainee["aps_elearning_tracking"] = tracking
+        trainee["aps_elearning_signature"] = signature
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save, patch("digiforma_attendance.prepare_digiforma_attendance", side_effect=ValueError("Tableau non reconnu")):
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/upload",
+                data={"digiforma_pdf": (io.BytesIO(self._digiforma_pdf_bytes()), "attestation.pdf")},
+                content_type="multipart/form-data",
+            )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(trainee["aps_elearning_tracking"], tracking)
+        self.assertEqual(trainee["aps_elearning_signature"], signature)
+        save.assert_not_called()
 
     def test_admin_can_reset_all_aps_elearning_data_and_files(self):
         self._admin_login()
@@ -327,6 +365,7 @@ class ApsElearningTests(unittest.TestCase):
             outside_path = os.path.join(directory, "ne-pas-supprimer.pdf")
             managed_paths = (
                 report_path,
+                os.path.join(tracking_dir, "original.pdf"),
                 source_pdf_path,
                 source_docx_path,
                 clean_pdf_path,
@@ -341,6 +380,7 @@ class ApsElearningTests(unittest.TestCase):
 
             trainee["aps_elearning_tracking"] = self._complete_tracking(
                 file="uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
+                source_file="uploads/S-APS/T-APS/aps_elearning_tracking/original.pdf",
             )
             trainee["aps_elearning_signature"] = {
                 "status": "done",
@@ -391,7 +431,7 @@ class ApsElearningTests(unittest.TestCase):
                 trainee["activity_history"][0]["label"],
                 "Suivi e-learning APS remis à zéro",
             )
-            self.assertIn("8 fichier(s) local(aux) supprimé(s)", trainee["activity_history"][0]["details"])
+            self.assertIn("9 fichier(s) local(aux) supprimé(s)", trainee["activity_history"][0]["details"])
             save_data.assert_called_once_with(data)
 
     def test_reset_cancels_pending_yousign_request_before_clearing(self):
@@ -536,7 +576,8 @@ class ApsElearningTests(unittest.TestCase):
             override = trainee["aps_elearning_force_override"]
             self.assertTrue(override["active"])
             self.assertEqual(override["forced_by"], "admin@integraleacademy.com")
-            self.assertEqual(override["report_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
+            self.assertEqual(override["report_sha256"], tracking["file_sha256"])
+            self.assertEqual(tracking["source_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
             self.assertGreaterEqual(len(override["issues"]), 4)
             self.assertEqual(
                 gestion_app._require_aps_elearning_signature_ready(trainee)["file_sha256"],

@@ -8,5 +8,6 @@ python-docx==1.1.2
 Pillow
 pywebpush==2.3.0
 pypdf==5.2.0
+PyMuPDF==1.26.6
 reportlab==4.2.5
 docxtpl
