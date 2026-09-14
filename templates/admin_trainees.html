@@ -167,6 +167,13 @@
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if not is_read_only and not is_all_vtc %}
+    <button class="btn btn-outline" type="button" data-manual-docs-reminder
+            data-preview-url="{{ url_for('admin_manual_docs_preview', session_id=session.id) }}"
+            title="Relancer par e-mail et SMS les stagiaires de cette session ayant des éléments à fournir">
+      RELANCE MANUELLE
+    </button>
+    {% endif %}
     {% if not is_all_vtc %}
     <a class="btn btn-primary" id="btnFinancialReport" href="{{ url_for('admin_session_financial_report', session_id=session.id) }}">💶 Financier</a>
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
@@ -4380,4 +4387,5 @@ applyRowFilters();
 })();
 </script>
 {% endif %}
+<script src="{{ url_for('static', filename='manual-docs-reminder.js') }}" defer></script>
 {% endblock %}

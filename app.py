@@ -25,6 +25,7 @@ import atexit
 import sys
 from backup_chronology import backup_chronology_key
 from digiforma_duration import journal_attendance
+from manual_document_reminders import document_actions, build_content as build_manual_docs_content, content_fingerprint
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 try:
     import resource
@@ -31708,23 +31709,196 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
 @admin_login_required
 @admin_write_required
 def admin_docs_relance(session_id: str, trainee_id: str):
+    payload = request.get_json(silent=True) or {}
+    expected_csrf = str(session.get("manual_docs_csrf") or "")
+    if not expected_csrf or not hmac.compare_digest(str(payload.get("csrf") or ""), expected_csrf):
+        return jsonify(ok=False, error="Rechargez la page avant de relancer."), 403
+    request_id = str(payload.get("request_id") or "")
+    if not re.fullmatch(r"[a-f0-9-]{32,36}", request_id):
+        return jsonify(ok=False, error="Identifiant de relance invalide."), 400
+
+    # Reserve the attempt on the latest data under the file/process locks.
+    # Delivery is outside the transaction so other dossiers stay available.
+    def reserve(data):
+        s = find_session(data, session_id)
+        t = next((x for x in _session_trainees_list(s) if x.get("id") == trainee_id), None) if s else None
+        if t is None:
+            return {"error": "Stagiaire introuvable.", "http_status": 404}
+        preview, reason = _manual_docs_preview(s, t)
+        if reason:
+            return {"error": reason, "http_status": 409}
+        if not hmac.compare_digest(str(payload.get("preview_token") or ""), preview["preview_token"]):
+            return {"error": "Le dossier a changé. Relancez l’aperçu avant l’envoi.", "http_status": 409}
+        history = t.setdefault("manual_docs_reminder_history", [])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        previous = None
+        for attempt in history:
+            if attempt.get("id") == request_id and not attempt.get("pending"):
+                return {"cached": _manual_docs_delivery_result(attempt)}
+            try:
+                age = (now - datetime.datetime.fromisoformat(attempt["attempted_at"])).total_seconds()
+            except (KeyError, ValueError, TypeError):
+                age = 600
+            if attempt.get("pending") and age < 120:
+                return {"error": "Une relance est déjà en cours pour ce stagiaire.", "http_status": 409}
+            if attempt.get("preview_token") == preview["preview_token"] and age < 300 and not previous:
+                previous = attempt
+        if previous and previous.get("email_status") == previous.get("sms_status") == "ACCEPTE":
+            return {"cached": _manual_docs_delivery_result(previous)}
+        attempt = {
+            "id": request_id, "attempted_at": now.isoformat(), "pending": True,
+            "actor": str(session.get("admin_username") or session.get("admin_role") or "admin"),
+            "preview_token": preview["preview_token"], "subject": preview["subject"],
+            "text": preview["text"], "sms": preview["sms"], "deadline": preview["deadline"],
+            "email": preview["email"], "phone": preview["phone"],
+            "email_status": "ACCEPTE" if previous and previous.get("email_status") == "ACCEPTE" else "EN_ATTENTE",
+            "sms_status": "ACCEPTE" if previous and previous.get("sms_status") == "ACCEPTE" else "EN_ATTENTE",
+        }
+        history.insert(0, attempt)
+        del history[100:]
+        return {"preview": preview, "attempt": copy.deepcopy(attempt)}
+
+    reserved = _atomic_update_data(reserve)
+    if reserved.get("error"):
+        return jsonify(ok=False, error=reserved["error"]), reserved["http_status"]
+    if reserved.get("cached"):
+        return jsonify(reserved["cached"])
+    preview, attempt = reserved["preview"], reserved["attempt"]
+    email_was_sent = False
+    for channel, address_key, status_key in (("email", "email", "email_status"), ("sms", "phone", "sms_status")):
+        if attempt[status_key] == "ACCEPTE":
+            continue
+        if not preview[address_key]:
+            attempt[status_key] = "ABSENT"
+            continue
+        try:
+            if channel == "email":
+                result = brevo_send_email(
+                    preview["email"], preview["subject"], preview["html"],
+                    text_content=preview["text"],
+                    metadata={"purpose": "manual_documents_reminder", "session_id": session_id, "trainee_id": trainee_id},
+                )
+            else:
+                result = brevo_send_sms(preview["phone"], preview["sms"])
+            accepted = bool(result.get("ok")) if isinstance(result, dict) else bool(result)
+            attempt[status_key] = "ACCEPTE" if accepted else "ECHEC"
+            if not accepted:
+                attempt[f"{channel}_error"] = str(result.get("error") or "Envoi refusé") if isinstance(result, dict) else "Envoi refusé"
+            if channel == "email":
+                email_was_sent = accepted
+                attempt["message_id"] = result.get("message_id", "") if isinstance(result, dict) else ""
+        except Exception:
+            app.logger.exception("manual_documents_reminder %s failed", channel)
+            attempt[status_key] = "ECHEC"
+            attempt[f"{channel}_error"] = "Service d’envoi indisponible"
+
+        def record_channel(data):
+            s = find_session(data, session_id)
+            t = next((x for x in _session_trainees_list(s) if x.get("id") == trainee_id), None) if s else None
+            if t:
+                for entry in t.get("manual_docs_reminder_history", []):
+                    if entry.get("id") == request_id:
+                        entry.update(attempt)
+                        break
+            return {}
+
+        # Keep an accepted channel recorded even if the next delivery is interrupted.
+        _atomic_update_data(record_channel)
+    attempt["pending"] = False
+    attempt["finished_at"] = _now_iso()
+
+    def finish(data):
+        s = find_session(data, session_id)
+        t = next((x for x in _session_trainees_list(s) if x.get("id") == trainee_id), None) if s else None
+        if t is None:
+            return {"ok": False, "error": "Envoi traité, mais la fiche a été déplacée. Vérifiez l’historique avant de relancer."}
+        for entry in t.get("manual_docs_reminder_history", []):
+            if entry.get("id") == request_id:
+                entry.update(attempt)
+                break
+        t["updated_at"] = attempt["finished_at"]
+        if "ACCEPTE" in (attempt["email_status"], attempt["sms_status"]):
+            t["docs_last_relance_at"] = attempt["finished_at"]
+        if email_was_sent:
+            emails = t.setdefault("sent_email_history", [])
+            emails.insert(0, {"to_email": preview["email"], "subject": preview["subject"], "html": preview["html"], "sent_at": attempt["finished_at"]})
+            del emails[200:]
+        append_trainee_history_event(t, "Relance manuelle des documents", f"E-mail : {attempt['email_status']} · SMS : {attempt['sms_status']}", "mail", at=attempt["finished_at"])
+        return _manual_docs_delivery_result(attempt)
+
+    return jsonify(_atomic_update_data(finish))
+
+
+def _manual_docs_delivery_result(attempt):
+    email_ok = attempt.get("email_status") == "ACCEPTE"
+    sms_ok = attempt.get("sms_status") == "ACCEPTE"
+    return {
+        "ok": email_ok and sms_ok, "partial": email_ok != sms_ok,
+        "email_status": attempt.get("email_status"), "sms_status": attempt.get("sms_status"),
+        "error": " ; ".join(attempt.get(key, "") for key in ("email_error", "sms_error") if attempt.get(key)),
+    }
+
+
+def _manual_docs_preview(session_obj, trainee):
+    today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    start_date = _session_start_date(session_obj)
+    if session_obj.get("archived") or _trainee_registration_is_cancelled(trainee):
+        return None, "Inscription annulée ou session archivée."
+    if trainee.get("force_dossier_complete"):
+        return None, "Dossier marqué complet."
+    if not start_date:
+        return None, "Date d’entrée en formation non renseignée."
+    if start_date < today:
+        return None, "Formation déjà commencée."
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip().upper()
+    t = copy.deepcopy(trainee)
+    _sync_trainee_afc_medical_requirement(t, _session_get(session_obj, "name", ""))
+    actions = document_actions(t, required_docs_for_training(training_type, t), training_type=training_type,
+                               experience_required=_professional_experience_sheet_is_required(training_type, start_date.isoformat()))
+    missing = [] if infos_is_complete_for_training(t, training_type) else [line.removeprefix("- ") for line in infos_missing_text(t, training_type).splitlines() if line]
+    if "VTC" in training_type or "DIRIGEANT" in training_type or training_type.startswith("SSIAP"):
+        missing = [line for line in missing if not line.startswith("Numéro PRE / CAR")]
+    if not actions and not missing:
+        return None, "Aucun document ni renseignement à demander au stagiaire."
+    token = str(t.get("public_token") or "").strip()
+    if not token:
+        return None, "Lien personnel indisponible : ouvrez la fiche stagiaire."
+    content = build_manual_docs_content(
+        first_name=str(t.get("first_name") or "").strip(), training=formation_label(training_type),
+        start_date=start_date, today=today, portal_link=f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{token}",
+        documents=actions, missing_information=missing,
+        logo_url=f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png",
+    )
+    content.update({"email": str(t.get("email") or "").strip(), "phone": str(t.get("phone") or "").strip(),
+                    "trainee_id": t["id"], "name": _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))})
+    if not content["email"] and not content["phone"]:
+        return None, "E-mail et téléphone manquants."
+    content["preview_token"] = content_fingerprint(content)
+    content["send_url"] = url_for("admin_docs_relance", session_id=session_obj["id"], trainee_id=t["id"])
+    return content, ""
+
+
+@app.get("/api/admin/sessions/<session_id>/docs/manual-reminder-preview")
+@admin_login_required
+@admin_write_required
+def admin_manual_docs_preview(session_id):
     data = load_data()
     s = find_session(data, session_id)
     if not s:
         abort(404)
-
-    trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id") == trainee_id), None)
-    if not t:
+    trainee_id = str(request.args.get("trainee_id") or "")
+    trainees = [t for t in _session_trainees_list(s) if not trainee_id or t.get("id") == trainee_id]
+    if trainee_id and not trainees:
         abort(404)
-
-    _send_docs_relance_message(data, s, t, source="manual")
-
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
-    save_data(data)
-
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    eligible, skipped = [], []
+    for trainee in trainees:
+        preview, reason = _manual_docs_preview(s, trainee)
+        if preview:
+            eligible.append(preview)
+        else:
+            skipped.append({"name": _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", "")), "reason": reason})
+    csrf = session.setdefault("manual_docs_csrf", secrets.token_urlsafe(32))
+    return jsonify(ok=True, eligible=eligible, skipped=skipped, csrf=csrf)
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents.zip")
 @admin_login_required
