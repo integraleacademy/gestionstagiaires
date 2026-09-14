@@ -1084,10 +1084,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input id="tVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
         {% endif %}
+        {% if not is_vtc %}
         <label class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
-  <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
-  <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
-</label>
+          <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
+          <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
+        </label>
+        {% endif %}
 
       </div>
     </div>

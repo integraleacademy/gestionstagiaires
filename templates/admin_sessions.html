@@ -1208,7 +1208,7 @@
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
           <input id="sessionTVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
-        <label class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <label id="sessionCarteProField" class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
           <input id="sessionTCarteProOk" type="checkbox" style="width:18px;height:18px;">
           <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
         </label>
@@ -1762,13 +1762,22 @@
     });
   }
 
-  function refreshVtcRealTrainingDatesVisibility(){
+  function refreshTrainingSpecificFields(){
     const wrapper = document.getElementById("sessionVtcRealTrainingDatesField");
     const input = document.getElementById("sessionTVtcRealTrainingDates");
-    if(!wrapper) return;
+    const carteProField = document.getElementById("sessionCarteProField");
+    const carteProInput = document.getElementById("sessionTCarteProOk");
     const isVtc = selectedTrainingForCreate === "VTC";
-    wrapper.style.display = isVtc ? "block" : "none";
+    if(wrapper) wrapper.style.display = isVtc ? "block" : "none";
     if(!isVtc && input) input.value = "";
+    if(carteProField){
+      carteProField.style.display = isVtc ? "none" : "flex";
+      carteProField.setAttribute("aria-hidden", isVtc ? "true" : "false");
+    }
+    if(carteProInput){
+      if(isVtc) carteProInput.checked = false;
+      carteProInput.disabled = isVtc;
+    }
   }
 
   function refreshSessionChoices(){
@@ -1848,7 +1857,7 @@
     if(search) search.value = "";
     document.getElementById("traineeSessionSearchWrap")?.classList.remove("has-value");
     refreshTrainingButtons();
-    refreshVtcRealTrainingDatesVisibility();
+    refreshTrainingSpecificFields();
     refreshSessionChoices();
   }
 
@@ -1862,9 +1871,9 @@
       return;
     }
     const fields = crmPrefillTransfer.payload || {};
-    selectedTrainingForCreate = crmPrefillTransfer.training_type || "";
+    selectedTrainingForCreate = normalizeTrainingChoice(crmPrefillTransfer.training_type || "");
     refreshTrainingButtons();
-    refreshVtcRealTrainingDatesVisibility();
+    refreshTrainingSpecificFields();
     refreshSessionChoices();
     const inputs = {
       sessionTLastName: fields.nom,
@@ -1899,7 +1908,7 @@
       if(search) search.value = "";
       document.getElementById("traineeSessionSearchWrap")?.classList.remove("has-value");
       refreshTrainingButtons();
-      refreshVtcRealTrainingDatesVisibility();
+      refreshTrainingSpecificFields();
       refreshSessionChoices();
     });
   });

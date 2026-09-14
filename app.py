@@ -25981,6 +25981,7 @@ def api_create_trainee(session_id: str):
     trainee_id = "TRN-" + uuid.uuid4().hex[:8].upper()
 
     training_type = _session_get(s, "training_type", "")
+    is_vtc = "VTC" in (training_type or "").upper()
     show_hosting = (training_type == "A3P")
     show_vae = (training_type == "DIRIGEANT VAE")
     default_price = default_training_price(training_type)
@@ -26001,7 +26002,7 @@ def api_create_trainee(session_id: str):
         "zip_code": zip_code,
         "city": city,
         "comment": "",
-        "cnaps": "CARTE PROFESSIONNELLE OK" if carte_pro_ok else "INCONNU",
+        "cnaps": "CARTE PROFESSIONNELLE OK" if carte_pro_ok and not is_vtc else "INCONNU",
         "convention_status": "soon",
         "test_fr_status": "soon",
         "dossier_status": "incomplete",
