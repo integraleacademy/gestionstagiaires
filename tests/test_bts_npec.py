@@ -30,6 +30,75 @@ def values(**changes):
 
 
 class CalculationTests(unittest.TestCase):
+    def test_precontract_actual_days_added_to_first_year_without_overlap(self):
+        v = values(training_start='2026-07-01', contract_conclusion='2026-09-01')
+        result = quote(v, {'precontract_training': 'yes'})
+        self.assertEqual(result['precontract']['days'], 62)
+        self.assertEqual(result['precontract']['end'], '2026-08-31')
+        self.assertEqual(result['precontract']['opco_cents'], 148885)
+        self.assertEqual(result['periods'][0]['opco_cents'], 1025385)
+        self.assertEqual(result['periods'][0]['days'], 365)
+        self.assertEqual(result['days'], 793)
+        self.assertEqual(result['total_opco_cents'], 1901885)
+        self.assertEqual(result['reference'], '2026-09')
+        saved = defaults(v, {'precontract_training': 'yes', 'rac_1': '125.50'})
+        self.assertEqual(saved['npec_1'], '10253.85')
+        self.assertEqual(saved['rac_1'], '125.50')
+        self.assertEqual(defaults(v, saved), saved)
+        self.assertEqual(quote(v, {'precontract_training': 'no'})['total_opco_cents'], 1753000)
+
+    def test_precontract_calendar_months_and_leap_year(self):
+        for training, start, end, days in (
+            ('2026-06-01', '2026-09-01', '2027-08-31', 92),
+            ('2027-11-30', '2028-02-29', '2029-02-27', 91),
+            ('2026-01-31', '2026-04-30', '2027-04-29', 89),
+        ):
+            with self.subTest(training=training):
+                v = values(training_start=training, contract_start=start, contract_conclusion=start, contract_end=end)
+                self.assertEqual(quote(v, {'precontract_training': 'yes'})['precontract']['days'], days)
+                v['contract_conclusion'] = (dt.date.fromisoformat(start) + dt.timedelta(days=1)).isoformat()
+                with self.assertRaisesRegex(WorkspaceError, 'trois mois'):
+                    quote(v, {'precontract_training': 'yes'})
+
+    def test_precontract_requires_confirmation_and_never_finances_a_previous_contract(self):
+        v = values(training_start='2026-07-01', contract_conclusion='2026-09-01')
+        with self.assertRaisesRegex(WorkspaceError, 'précisez'):
+            quote(v, {})
+        for contract_type in ('21', '22', '23', ''):
+            with self.subTest(contract_type=contract_type), self.assertRaises(WorkspaceError):
+                quote(dict(v, contract_type=contract_type), {'precontract_training': 'yes'})
+        for changes in ({'training_start': ''}, {'training_start': '2026-09-01'},
+                        {'training_start': '2026-09-02'}):
+            with self.subTest(changes=changes), self.assertRaises(WorkspaceError):
+                quote(dict(v, **changes), {'precontract_training': 'yes'})
+        with self.assertRaises(WorkspaceError):
+            validate_settings({'precontract_training': 'forged'})
+
+    def test_signature_limits_prior_period_and_distance_reduction_applies(self):
+        v = values(training_start='2026-07-01', contract_conclusion='2026-08-20')
+        result = quote(v, {'precontract_training': 'yes'})
+        self.assertEqual(result['precontract']['end'], '2026-08-19')
+        self.assertEqual(result['precontract']['days'], 50)
+        self.assertEqual(result['precontract']['gap_days'], 12)
+        self.assertEqual(result['reference'], '2025-09')
+        distant = quote(dict(v, remote_hours='1350'), {'precontract_training': 'yes'})
+        self.assertLess(distant['precontract']['opco_cents'], result['precontract']['opco_cents'])
+        # A later signature does not duplicate days already in contract execution.
+        late = quote(dict(v, contract_conclusion='2026-09-14'), {'precontract_training': 'yes'})
+        self.assertEqual(late['precontract']['days'], 62)
+
+    def test_precontract_convention_total_and_existing_snapshot_invalidation(self):
+        v = values(training_start='2026-07-01', contract_conclusion='2026-09-01')
+        old = defaults(v, {'precontract_training': 'no', 'teaching_mode': 'presentiel',
+                           'employer_first_name': 'Alex', 'employer_last_name': 'EXEMPLE'})
+        updated = defaults(v, dict(old, precontract_training='yes'))
+        self.assertNotEqual(fingerprint(v, old), fingerprint(v, updated))
+        self.assertEqual(old['npec_1'], '8765.00')
+        doc = Document(io.BytesIO(fill_convention('formation', v, updated, assets())))
+        text = '\n'.join(p.text for p in doc.paragraphs) + '\n'.join(c.text for t in doc.tables for r in t.rows for c in r.cells)
+        self.assertIn('10 253,85', text)
+        self.assertIn('19 018,85', text)
+
     def test_exact_official_mos_values_and_conclusion_cutover(self):
         before = quote(values(contract_conclusion='2026-08-31'), {})
         after = quote(values(contract_conclusion='2026-09-01'), {})
@@ -159,6 +228,22 @@ class RouteTests(unittest.TestCase):
         self.assertEqual(saved['values']['_npec']['reference'], '2026-09')
         self.client.post(self.url + '/conventions/parametres', data=dict(payload, rac_1='99'))
         self.assertEqual(self.store.settings(self.rid)['values']['rac_1'], '12.30')
+
+    def test_precontract_confirmation_is_saved_and_rendered_with_real_dates(self):
+        v = values(training_start='2026-07-01', contract_conclusion='2026-09-01')
+        self.store.save_cerfa_complements(self.rid, v, 1, source_version(self.store.record(self.rid)), 'Test')
+        page = self.client.get(self.url + '?tab=contrat')
+        self.assertIn('précisez', page.text)
+        response = self.client.post(self.url + '/conventions/parametres', data=dict(
+            self.csrf, revision='0', precontract_training='yes', rac_1='125.50', npec_1='1'))
+        self.assertEqual(response.status_code, 302)
+        saved = self.store.settings(self.rid)['values']
+        self.assertEqual(saved['npec_1'], '10253.85')
+        self.assertEqual(saved['precontract_training'], 'yes')
+        self.assertEqual(saved['rac_1'], '125.50')
+        page = self.client.get(self.url + '?tab=contrat')
+        self.assertIn('data-npec-precontract', page.text)
+        self.assertIn('62 jours', page.text)
 
     def test_old_document_snapshot_is_retained_after_an_explicit_recalculation(self):
         old = defaults(values(), {'npec_1': '8000', 'npec_2': '8000', 'funding_years': '2', 'rac_1': '0', 'rac_2': '0'})

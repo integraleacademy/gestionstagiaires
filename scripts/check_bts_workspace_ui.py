@@ -230,6 +230,22 @@ def browser_check():
                 assert contract_store.settings(npec_id)['values']['rac_1'] == '125.50'
                 assert contract_store.settings(npec_id)['values']['npec_1'] == '8765.00'
                 assert contract_store.settings(npec_id)['values']['_npec']['reference'] == '2026-09'
+                contract_store.save_cerfa_complements(npec_id,
+                    npec_values(training_start='2026-07-01', contract_conclusion='2026-09-01'),
+                    1, source_version(contract_store.record(npec_id)), 'Test')
+                page.goto(npec_url)
+                page.locator('[name="precontract_training"]').select_option('yes')
+                page.get_by_role('button', name='Enregistrer les paramètres', exact=True).click()
+                page.wait_for_load_state()
+                assert contract_store.settings(npec_id)['values']['npec_1'] == '10253.85'
+                assert contract_store.settings(npec_id)['values']['rac_1'] == '125.50'
+                for width in (1440, 390):
+                    page.set_viewport_size({'width': width, 'height': 1100})
+                    page.goto(npec_url)
+                    assert '62 jours' in page.locator('[data-npec-precontract]').inner_text()
+                    assert page.locator('[name="npec_1"]').input_value() == '10253.85'
+                    assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth + 1')
+                    page.locator('[data-npec-financing]').screenshot(path=str(output / f'financement-avant-contrat-{width}.png'))
                 assert not errors, errors
                 browser.close()
         finally:

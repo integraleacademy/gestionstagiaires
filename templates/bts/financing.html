@@ -3,6 +3,12 @@
   <input type="hidden" name="funding_mode" value="{{ 'npec' if funding.automatic else 'legacy' }}">
   {% if funding.automatic %}
     <p class="ws-note">Calcul automatique selon le code RNCP du BTS, l’IDCC de l’entreprise et la date de conclusion du contrat. Les montants sont repris dans la convention de formation.</p>
+    <label><span>Formation commencée sans employeur avant ce contrat</span><select name="precontract_training">
+      <option value="" {% if not opts.get('precontract_training') %}selected{% endif %}>À préciser si la formation précède le contrat</option>
+      <option value="yes" {% if opts.get('precontract_training') == 'yes' %}selected{% endif %}>Oui — période éligible de stagiaire sans employeur</option>
+      <option value="no" {% if opts.get('precontract_training') == 'no' %}selected{% endif %}>Non — financer uniquement la période du contrat</option>
+    </select></label>
+    <p class="ws-note">« Oui » confirme l’entrée en CFA sans employeur sous le statut prévu par l’article L. 6222-12-1, sans financement par un précédent contrat. Le calcul reprend la date de début de formation de l’onglet Contrat, dans la limite de trois mois calendaires jusqu’à la signature. Enregistrez les paramètres pour recalculer.</p>
     {% if funding.error %}
       <p class="ws-alert ws-alert--info" role="status">{{ funding.error }}</p>
       {% for year in range(1,4) %}<input type="hidden" name="rac_{{ year }}" value="{{ opts.get('rac_' ~ year,'') }}">{% endfor %}
@@ -14,9 +20,13 @@
       <p class="ws-note"><strong>{{ funding.branch }}</strong><br>Barème applicable au {{ date_fr(funding.effective_from) }} · Contrat conclu le {{ date_fr(funding.conclusion) }} · <a href="{{ funding.source_url }}" target="_blank" rel="noopener noreferrer">Référentiel France compétences du {{ date_fr(funding.published_at) }}</a></p>
       {% if funding.remote_reduction %}<p class="ws-alert ws-alert--info">{{ funding.remote_percent|replace('.',',') }} % de formation à distance : minoration de 20 %, avec un plancher annuel de 4 000 € dans la limite du NPEC initial. NPEC annuel retenu : <strong>{{ cents(funding.adjusted_annual_cents) }}</strong>.</p>{% endif %}
       <input type="hidden" name="funding_years" value="{{ opts.funding_years }}">
+      {% if funding.precontract %}
+      <p class="ws-alert ws-alert--info" data-npec-precontract><strong>Formation avant contrat incluse :</strong> du {{ date_fr(funding.precontract.start) }} au {{ date_fr(funding.precontract.end) }}, soit {{ funding.precontract.days }} jours et <strong>{{ cents(funding.precontract.opco_cents) }}</strong> ajoutés à l’année 1. Aucun jour de contrat n’est compté deux fois.</p>
+      {% if funding.precontract.gap_days %}<p class="ws-note">La signature précède le début d’exécution : les {{ funding.precontract.gap_days }} jours entre ces deux dates ne sont pas ajoutés automatiquement. Leur prise en charge doit être confirmée par l’OPCO.</p>{% endif %}
+      {% endif %}
       {% for period in funding.periods %}
       <div class="ws-npec-period">
-        <div class="ws-npec-period-title"><strong>Année {{ period.year }}</strong><span>{{ date_fr(period.start) }} → {{ date_fr(period.end) }} · {{ period.days }} / {{ period.year_days }} jours</span></div>
+        <div class="ws-npec-period-title"><strong>Année {{ period.year }}</strong><span>{{ date_fr(period.start) }} → {{ date_fr(period.end) }} · {{ period.days }} / {{ period.year_days }} jours{% if period.year == 1 and funding.precontract %} + {{ funding.precontract.days }} jours avant contrat{% endif %}</span></div>
         <div class="ws-form-grid">
           <label><span>Prise en charge OPCO calculée (€)</span><input name="npec_{{ period.year }}" value="{{ opts.get('npec_' ~ period.year,'') }}" readonly aria-label="Année {{ period.year }} · Prise en charge OPCO calculée"></label>
           <label><span>Reste à charge entreprise convenu (€)</span><input name="rac_{{ period.year }}" value="{{ opts.get('rac_' ~ period.year,'0.00') }}" inputmode="decimal" maxlength="250" aria-label="Année {{ period.year }} · Reste à charge entreprise convenu"></label>

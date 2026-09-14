@@ -42,6 +42,38 @@ centime à la fin de chaque période. L’interface montre les dates et les jour
 pris en compte. L’exemple OPCO EP d’un NPEC de 8 000 € sur 370 jours donne
 8 109,59 €.
 
+### Formation commencée sans employeur
+
+Le formulaire demande de confirmer le statut éligible lorsque l’entrée en CFA
+précède la signature et le début du contrat. Ce statut ne se déduit pas des
+dates seules. « Non » conserve le financement de la seule période du contrat.
+« Oui » active le calcul pour un premier contrat (type 11), sous le régime de
+[L. 6222-12-1](https://code.travail.gouv.fr/code-du-travail/l6222-12-1) et
+[R. 6332-25 VI](https://code.travail.gouv.fr/code-du-travail/r6332-25).
+
+La date de début de formation du CERFA est le point de départ. La signature doit
+intervenir au plus tard trois mois calendaires après cette date (fin de mois
+ajustée si nécessaire), et non dans un forfait de 90 jours. Une signature plus
+tardive bloque ce supplément pour vérification OPCO ; on ne prélève pas
+arbitrairement les trois derniers mois. Les contrats successifs sont également
+renvoyés à une vérification pour éviter le double financement.
+
+Les jours ajoutés s’arrêtent à la veille de la signature ou du début d’exécution,
+selon la première de ces deux dates. Si la signature précède l’exécution, le
+formulaire signale les jours intermédiaires non financés automatiquement.
+Le supplément est proratisé au NPEC retenu (minoration distancielle incluse), avec
+le dénominateur de la première année de contrat, puis ajouté à cette année dans
+la convention. Les années d’exécution conservent leurs dates anniversaires ;
+le détail séparé affiche les dates, jours et montant supplémentaires. Le barème
+reste déterminé par la conclusion, même si la formation a commencé plus tôt.
+Exemple : entrée le 01/07/2026, signature et début le 01/09/2026, NPEC 8 765 € :
+62 jours supplémentaires, soit 1 488,85 € ajoutés à la première année.
+
+Le recalcul conserve le reste à charge et les documents archivés. La modification
+de la période financée invalide l’empreinte du paquet courant et impose sa
+régénération avant signature/transmission. Une période antérieure non qualifiée
+bloque la génération plutôt que de produire silencieusement un montant incomplet.
+
 À partir de 80 % d’heures à distance (heures du CERFA), le NPEC est minoré de
 20 %, avec plancher de 4 000 € sans augmenter le montant initial. Les BTS sont
 de niveau 5 : aucune participation légale de 750 € n’est ajoutée. Le reste à
