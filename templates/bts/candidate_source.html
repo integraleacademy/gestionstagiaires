@@ -1,0 +1,7 @@
+{% if contract_flow.imported %}
+<details class="ws-card ws-pad"><summary><strong>Informations reprises des inscriptions BTS</strong></summary>
+  <p class="ws-note">L’identité et les coordonnées sont préremplies dans les champs ci-dessous. Les autres informations de la préinscription sont conservées ici.</p>
+  <dl class="ws-reference-list">{% for item in contract_flow.source %}<div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>{% endfor %}</dl>
+  {% if contract_flow.source_documents %}<h3>Pièces disponibles dans les inscriptions</h3><div class="ws-source-documents">{% for doc in contract_flow.source_documents %}<a class="ws-button" href="{{ url_for('bts_source_document',record_id=record.id,document_id=doc.id) }}">{{ icon('download',16) }} {{ doc.label }} · {{ doc.name }}</a>{% endfor %}</div>{% endif %}
+</details>
+{% endif %}
