@@ -180,7 +180,7 @@
       // included by FormData(form). Preserve the explicit action chosen.
       if (event.submitter?.name) body.set(event.submitter.name, event.submitter.value);
       const message = form.querySelector('[data-contract-save-message]');
-      const buttons = [...form.querySelectorAll('button:not([type="button"])')];
+      const buttons = [...form.elements].filter(element => element.tagName === 'BUTTON' && element.type !== 'button');
       active = true;
       form.setAttribute('aria-busy', 'true');
       buttons.forEach(button => { button.disabled = true; });

@@ -14,6 +14,7 @@ import re
 import sqlite3
 import time
 import uuid
+from contextlib import nullcontext
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any, Mapping
 from zoneinfo import ZoneInfo
@@ -432,11 +433,12 @@ class WorkspaceStore(AktoBtsStore):
             row = connection.execute("SELECT * FROM bts_cerfa_complements WHERE dossier_id=?", (record_id,)).fetchone()
         return {"values": json.loads(row["payload_json"]), "revision": row["revision"], "updated_at": row["updated_at"]} if row else {"values": {}, "revision": 0}
 
-    def save_cerfa_complements(self, record_id: str, data: Mapping[str, Any], revision: int, source_hash: str, actor: str):
+    def save_cerfa_complements(self, record_id: str, data: Mapping[str, Any], revision: int, source_hash: str, actor: str, *, _connection=None):
         from bts_cerfa import source_values, source_version, validate_values
         submitted = validate_values(data)
-        with self._connect() as connection:
-            connection.execute("BEGIN IMMEDIATE")
+        with (self._connect() if _connection is None else nullcontext(_connection)) as connection:
+            if _connection is None:
+                connection.execute("BEGIN IMMEDIATE")
             record = self.record(record_id)
             if not record:
                 raise WorkspaceError("Dossier introuvable.")

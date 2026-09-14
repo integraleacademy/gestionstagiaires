@@ -44,6 +44,13 @@ pris en compte. L’exemple OPCO EP d’un NPEC de 8 000 € sur 370 jours donne
 
 ### Formation commencée sans employeur
 
+Les boutons « Enregistrer les paramètres » et « Enregistrer les informations »
+de l’onglet Contrat sauvegardent ensemble le CERFA et les paramètres des
+conventions. Les champs sont associés au même formulaire HTML, y compris sans
+JavaScript. Le calcul utilise les dates soumises dans cet enregistrement. Les
+deux révisions et la version des données source sont vérifiées dans une même
+transaction : aucun enregistrement partiel si l’une des sections est refusée.
+
 Le formulaire demande de confirmer le statut éligible lorsque l’entrée en CFA
 précède la signature et le début du contrat. Ce statut ne se déduit pas des
 dates seules. « Non » conserve le financement de la seule période du contrat.

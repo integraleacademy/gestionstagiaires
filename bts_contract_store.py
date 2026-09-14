@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path
 
 import fcntl
@@ -91,15 +91,33 @@ class ContractStore(WorkspaceStore):
             row = conn.execute("SELECT * FROM bts_contract_settings WHERE dossier_id=?", (dossier_id,)).fetchone()
         return {"values": json.loads(row["payload_json"]), "revision": row["revision"]} if row else {"values": {}, "revision": 0}
 
-    def save_settings(self, dossier_id, values, revision, actor):
-        with self._connect() as conn:
-            conn.execute("BEGIN IMMEDIATE")
+    def save_settings(self, dossier_id, values, revision, actor, *, _connection=None):
+        with (self._connect() if _connection is None else nullcontext(_connection)) as conn:
+            if _connection is None:
+                conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("SELECT revision FROM bts_contract_settings WHERE dossier_id=?", (dossier_id,)).fetchone()
             if (row[0] if row else 0) != revision:
                 raise EditConflict("Les paramètres ont changé. Rechargez le dossier avant d’enregistrer.")
             conn.execute("INSERT INTO bts_contract_settings VALUES(?,?,?,?) ON CONFLICT(dossier_id) DO UPDATE SET payload_json=excluded.payload_json,revision=excluded.revision,updated_at=excluded.updated_at",
                          (dossier_id, as_json(values), revision + 1, now()))
             self._event(conn, dossier_id, "Paramètres des conventions et signataires enregistrés", actor)
+
+    def save_contract_information(self, dossier_id, data, settings, revision, cerfa_revision, source_hash, actor):
+        """One transaction for both visible sections of the Contract tab."""
+        from bts_cerfa import effective_values, validate_values
+        from bts_contract_documents import defaults
+        submitted = validate_values(data)
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            record = self.record(dossier_id)
+            if not record:
+                raise WorkspaceError("Dossier introuvable.")
+            row = conn.execute("SELECT payload_json FROM bts_cerfa_complements WHERE dossier_id=?", (dossier_id,)).fetchone()
+            values = effective_values(record, json.loads(row[0]) if row else {})
+            values.update(submitted)
+            calculated = defaults(values, settings)
+            self.save_cerfa_complements(dossier_id, submitted, cerfa_revision, source_hash, actor, _connection=conn)
+            self.save_settings(dossier_id, calculated, revision, actor, _connection=conn)
 
     def packages(self, dossier_id):
         with self._connect() as conn:
