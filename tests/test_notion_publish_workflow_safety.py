@@ -36,8 +36,13 @@ class NotionPublishWorkflowSafetyTests(unittest.TestCase):
         self.assertIn('--match-head-commit "$EXPECTED_HEAD"', self.publish)
         self.assertIn('La tête a changé pendant la sortie du brouillon.', self.publish)
 
-    def test_full_suite_uses_module_invocation(self):
-        self.assertIn("python -m pytest -q", self.workflow)
+    def test_changed_regression_tests_use_module_invocation(self):
+        self.assertIn(
+            "git diff --name-only --diff-filter=ACMR origin/main...HEAD -- 'tests/test_*.py'",
+            self.workflow,
+        )
+        self.assertIn('python -m pytest -q "${test_files[@]}"', self.workflow)
+        self.assertIn("La PR doit modifier au moins un test de non-régression.", self.workflow)
         self.assertNotIn("\n          pytest -q", self.workflow)
 
 

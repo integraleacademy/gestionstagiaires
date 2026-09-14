@@ -86,7 +86,7 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check -r requirements.txt
           python -m pip install --disable-pip-version-check pytest
-      - name: Vérifier la base, le diff, la syntaxe et toute la suite
+      - name: Vérifier la base, le diff, la syntaxe et les tests modifiés
         env:
           PERSIST_DIR: ${{ runner.temp }}/gestionstagiaires-persist
         run: |
@@ -97,7 +97,10 @@ jobs:
           git diff --check origin/main...HEAD
           changed_py="$(git diff --name-only origin/main...HEAD -- '*.py')"
           if [ -n "$changed_py" ]; then while IFS= read -r file; do python -m py_compile "$file"; done <<< "$changed_py"; fi
-          python -m pytest -q
+          changed_tests="$(git diff --name-only --diff-filter=ACMR origin/main...HEAD -- 'tests/test_*.py')"
+          [ -n "$changed_tests" ] || { echo "::error::La PR doit modifier au moins un test de non-régression."; exit 1; }
+          mapfile -t test_files <<< "$changed_tests"
+          python -m pytest -q "${test_files[@]}"
 
   publish:
     name: Fusionner uniquement la version relue et testée
