@@ -2,6 +2,7 @@ import copy
 import datetime
 import json
 import uuid
+from html.parser import HTMLParser
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -194,6 +195,7 @@ def test_delivery_persistence_preserves_concurrent_edits(context, monkeypatch, t
         current = json.loads(data_file.read_text())
         t = current["sessions"][0]["trainees"][0]
         assert t["manual_docs_reminder_history"][0]["email_status"] == "ACCEPTE"
+        assert t["sent_email_history"][0]["html"] == prepared["eligible"][0]["html"]
         t["comment"] = "Concurrent admin edit"
         current["sessions"][0]["trainees"].append({"id": "T2", "first_name": "Autre"})
         data_file.write_text(json.dumps(current))
@@ -205,6 +207,101 @@ def test_delivery_persistence_preserves_concurrent_edits(context, monkeypatch, t
     assert current["sessions"][0]["trainees"][0]["comment"] == "Concurrent admin edit"
     assert current["sessions"][0]["trainees"][1]["id"] == "T2"
     assert current["sessions"][0]["trainees"][0]["manual_docs_reminder_history"][0]["sms_status"] == "ACCEPTE"
+
+
+def test_email_history_survives_worker_interruption_during_sms(context, monkeypatch, tmp_path):
+    client, data, training, trainee, calls = context
+    prepared = preview(client)
+    data_file = tmp_path / "data.json"
+    data_file.write_text(json.dumps(data))
+    monkeypatch.setattr(gestion_app, "DATA_FILE", str(data_file))
+    monkeypatch.setattr(gestion_app, "BACKUP_DIR", str(tmp_path / "backups"))
+    monkeypatch.setattr(gestion_app, "_partner_postgres_active", lambda: False)
+    monkeypatch.setattr(gestion_app, "_atomic_update_data", REAL_ATOMIC_UPDATE)
+    monkeypatch.setattr(gestion_app, "load_data", lambda *a, **kw: json.loads(data_file.read_text()))
+
+    def interrupted_sms(*args):
+        raise SystemExit("worker stopped")
+
+    monkeypatch.setattr(gestion_app, "brevo_send_sms", interrupted_sms)
+    with pytest.raises(SystemExit):
+        send(client, prepared)
+    current = json.loads(data_file.read_text())["sessions"][0]["trainees"][0]
+    assert current["manual_docs_reminder_history"][0]["pending"]
+    assert len(current["sent_email_history"]) == 1
+    assert current["sent_email_history"][0]["message_id"] == "fake-email"
+    response = client.get("/api/admin/sessions/S1/stagiaires/T1/email-history")
+    assert response.status_code == 200
+    assert "Transmission confirmée" in response.get_data(as_text=True)
+    assert len(gestion_app.build_trainee_email_history_entries(current)) == 1
+
+
+def test_history_refresh_and_detail_page_show_the_exact_sent_email(context, monkeypatch):
+    client, data, training, trainee, calls = context
+    url = "/api/admin/sessions/S1/stagiaires/T1/email-history"
+    assert "Aucun mail" in client.get(url).get_data(as_text=True)
+    prepared = preview(client)
+    monkeypatch.setattr(gestion_app, "brevo_send_sms", lambda *a: False)
+    assert send(client, prepared).get_json()["partial"]
+    response = client.get(url)
+    assert response.cache_control.no_store
+
+    class PreviewParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.previews = []
+
+        def handle_starttag(self, tag, attrs):
+            values = dict(attrs)
+            if "data-open-email-preview" in values:
+                self.previews.append(values)
+
+    for markup in (response.get_data(as_text=True), client.get("/admin/sessions/S1/stagiaires/T1").get_data(as_text=True)):
+        parser = PreviewParser()
+        parser.feed(markup)
+        assert len(parser.previews) == 1
+        assert parser.previews[0]["data-email-html"] == prepared["eligible"][0]["html"]
+        assert parser.previews[0]["data-email-subject"] == prepared["eligible"][0]["subject"]
+        assert " à " in parser.previews[0]["data-email-date"]
+        assert "Transmission confirmée" in markup
+
+    # Retrying the SMS must not add a second mail to either history source.
+    monkeypatch.setattr(gestion_app, "brevo_send_sms", lambda *a: True)
+    assert send(client, prepared).get_json()["ok"]
+    assert len(gestion_app.build_trainee_email_history_entries(trainee)) == 1
+    assert len(trainee["sent_email_history"]) == 1
+
+
+def test_old_confirmed_attempts_are_recovered_but_failures_and_sms_retries_are_not():
+    attempt = {"id": "old", "attempted_at": "2026-09-14T14:00:00Z", "pending": True,
+               "email_status": "ACCEPTE", "email": "alice@example.test", "subject": "Relance",
+               "text": "Bonjour <Alice>", "message_id": "old-message"}
+    failed = dict(attempt, id="failed", email_status="ECHEC", message_id="")
+    sms_retry = {"id": "retry", "email_status": "ACCEPTE", "attempted_at": "2026-09-14T14:01:00Z"}
+    trainee = {"manual_docs_reminder_history": [sms_retry, failed, attempt]}
+    entries = gestion_app.build_trainee_email_history_entries(trainee)
+    assert len(entries) == 1
+    assert entries[0]["manual_reminder"]
+    assert "Bonjour &lt;Alice&gt;" in entries[0]["html"]
+    trainee["sent_email_history"] = [{"to_email": attempt["email"], "subject": "Relance", "sent_at": attempt["attempted_at"], "html": "original"}]
+    entries = gestion_app.build_trainee_email_history_entries(trainee)
+    assert len(entries) == 1 and entries[0]["html"] == "original"
+
+
+def test_history_does_not_claim_failed_or_unattempted_mail_was_sent(context, monkeypatch):
+    client, data, training, trainee, calls = context
+    monkeypatch.setattr(gestion_app, "brevo_send_email", lambda *a, **kw: {"ok": False})
+    send(client, preview(client))
+    assert gestion_app.build_trainee_email_history_entries(trainee) == []
+    assert "Aucun mail" in client.get("/api/admin/sessions/S1/stagiaires/T1/email-history").get_data(as_text=True)
+
+
+def test_history_endpoint_requires_login_and_known_trainee(context):
+    client, data, training, trainee, calls = context
+    assert client.get("/api/admin/sessions/S1/stagiaires/missing/email-history").status_code == 404
+    with client.session_transaction() as session:
+        session.clear()
+    assert client.get("/api/admin/sessions/S1/stagiaires/T1/email-history").status_code == 401
 
 
 def test_cancelled_or_modified_dossier_is_rechecked_at_send_time(context):

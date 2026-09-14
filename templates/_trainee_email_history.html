@@ -1,0 +1,34 @@
+      {% if trainee_email_history %}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for item in trainee_email_history %}
+            <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff;">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                <div>
+                  <div style="font-weight:800;">📧 {{ item.subject }}</div>
+                  {% if item.manual_reminder %}
+                    <div class="hint" style="margin-top:4px;color:#16834f;font-weight:700;">Relance manuelle · Transmission confirmée</div>
+                  {% endif %}
+                  {% if item.to_email %}
+                    <div class="hint" style="margin-top:4px;">Destinataire : {{ item.to_email }}</div>
+                  {% endif %}
+                </div>
+                <div class="hint" style="white-space:nowrap;">{{ item.sent_datetime }}</div>
+              </div>
+              <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+                <button
+                  class="btn btn-outline"
+                  type="button"
+                  data-open-email-preview
+                  data-email-subject="{{ item.subject|e }}"
+                  data-email-date="{{ item.sent_datetime|e }}"
+                  data-email-html="{{ item.html|e }}"
+                >
+                  👁️ Voir le mail HTML
+                </button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="hint">Aucun mail enregistré pour le moment.</div>
+      {% endif %}

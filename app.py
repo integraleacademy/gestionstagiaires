@@ -10759,9 +10759,21 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
     return entries
 
 
-def build_trainee_email_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
-    entries: List[Dict[str, str]] = []
-    for item in (trainee.get("sent_email_history") or []):
+def build_trainee_email_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
+    entries: List[Dict[str, Any]] = []
+    history = list(trainee.get("sent_email_history") or [])
+    # Recover confirmed manual transmissions from their durable attempt, even
+    # when a worker stopped before the old end-of-SMS history write.
+    for attempt in (trainee.get("manual_docs_reminder_history") or []):
+        if not isinstance(attempt, dict) or attempt.get("email_status") != "ACCEPTE":
+            continue
+        if not any(key in attempt for key in ("message_id", "email_sent_at", "email_attempt_id")):
+            # Old SMS-only retries copied ACCEPTE without sending another email.
+            continue
+        entry = _manual_docs_email_history_entry(attempt)
+        if not _email_history_contains(history, entry):
+            history.append(entry)
+    for item in history:
         if not isinstance(item, dict):
             continue
         sent_at = (item.get("sent_at") or "").strip()
@@ -10773,10 +10785,38 @@ def build_trainee_email_history_entries(trainee: Dict[str, Any]) -> List[Dict[st
             "html": item.get("html") or "",
             "sent_at": sent_at,
             "sent_date": fr_date(sent_at),
+            "sent_datetime": fr_datetime(sent_at),
+            "manual_reminder": item.get("source") == "manual_documents_reminder",
         })
 
     entries.sort(key=lambda item: _history_sort_key(item.get("sent_at") or ""), reverse=True)
     return entries
+
+
+def _manual_docs_email_history_entry(attempt):
+    return {
+        "to_email": attempt.get("email") or "",
+        "subject": attempt.get("subject") or "Relance manuelle des documents",
+        "html": attempt.get("html") or (
+            '<pre style="white-space:pre-wrap;font:16px/1.6 Arial,sans-serif">'
+            + html.escape(attempt.get("text") or "") + "</pre>"
+        ),
+        "sent_at": attempt.get("email_sent_at") or attempt.get("finished_at") or attempt.get("attempted_at") or "",
+        "source": "manual_documents_reminder",
+        "reminder_id": attempt.get("email_attempt_id") or attempt.get("id") or "",
+        "message_id": attempt.get("message_id") or "",
+    }
+
+
+def _email_history_contains(history, entry):
+    for item in history:
+        if not isinstance(item, dict):
+            continue
+        if any(entry.get(key) and item.get(key) == entry[key] for key in ("reminder_id", "message_id")):
+            return True
+        if all(item.get(key) == entry.get(key) for key in ("to_email", "subject", "sent_at")):
+            return True
+    return False
 
 
 def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> List[str]:
@@ -31717,11 +31757,22 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     if not re.fullmatch(r"[a-f0-9-]{32,36}", request_id):
         return jsonify(ok=False, error="Identifiant de relance invalide."), 400
 
+    def current_trainee(data):
+        s = find_session(data, session_id)
+        if not s:
+            return None, None
+        trainees = _session_trainees_list(s)
+        t = next((x for x in trainees if x.get("id") == trainee_id), None)
+        if t is not None:
+            # The legacy French-key helper returns converted copies.
+            s["trainees"] = trainees
+            s.pop("stagiaires", None)
+        return s, t
+
     # Reserve the attempt on the latest data under the file/process locks.
     # Delivery is outside the transaction so other dossiers stay available.
     def reserve(data):
-        s = find_session(data, session_id)
-        t = next((x for x in _session_trainees_list(s) if x.get("id") == trainee_id), None) if s else None
+        s, t = current_trainee(data)
         if t is None:
             return {"error": "Stagiaire introuvable.", "http_status": 404}
         preview, reason = _manual_docs_preview(s, t)
@@ -31749,11 +31800,17 @@ def admin_docs_relance(session_id: str, trainee_id: str):
             "id": request_id, "attempted_at": now.isoformat(), "pending": True,
             "actor": str(session.get("admin_username") or session.get("admin_role") or "admin"),
             "preview_token": preview["preview_token"], "subject": preview["subject"],
-            "text": preview["text"], "sms": preview["sms"], "deadline": preview["deadline"],
+            "text": preview["text"], "html": preview["html"], "sms": preview["sms"], "deadline": preview["deadline"],
             "email": preview["email"], "phone": preview["phone"],
             "email_status": "ACCEPTE" if previous and previous.get("email_status") == "ACCEPTE" else "EN_ATTENTE",
             "sms_status": "ACCEPTE" if previous and previous.get("sms_status") == "ACCEPTE" else "EN_ATTENTE",
         }
+        if previous and previous.get("email_status") == "ACCEPTE":
+            attempt.update({
+                "email_attempt_id": previous.get("email_attempt_id") or previous["id"],
+                "email_sent_at": previous.get("email_sent_at") or previous.get("finished_at") or previous["attempted_at"],
+                "message_id": previous.get("message_id") or "",
+            })
         history.insert(0, attempt)
         del history[100:]
         return {"preview": preview, "attempt": copy.deepcopy(attempt)}
@@ -31764,7 +31821,6 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     if reserved.get("cached"):
         return jsonify(reserved["cached"])
     preview, attempt = reserved["preview"], reserved["attempt"]
-    email_was_sent = False
     for channel, address_key, status_key in (("email", "email", "email_status"), ("sms", "phone", "sms_status")):
         if attempt[status_key] == "ACCEPTE":
             continue
@@ -31785,21 +31841,30 @@ def admin_docs_relance(session_id: str, trainee_id: str):
             if not accepted:
                 attempt[f"{channel}_error"] = str(result.get("error") or "Envoi refusé") if isinstance(result, dict) else "Envoi refusé"
             if channel == "email":
-                email_was_sent = accepted
                 attempt["message_id"] = result.get("message_id", "") if isinstance(result, dict) else ""
+                if accepted:
+                    attempt["email_sent_at"] = _now_iso()
+                    attempt["email_attempt_id"] = request_id
         except Exception:
             app.logger.exception("manual_documents_reminder %s failed", channel)
             attempt[status_key] = "ECHEC"
             attempt[f"{channel}_error"] = "Service d’envoi indisponible"
 
         def record_channel(data):
-            s = find_session(data, session_id)
-            t = next((x for x in _session_trainees_list(s) if x.get("id") == trainee_id), None) if s else None
-            if t:
+            s, t = current_trainee(data)
+            if t is not None:
                 for entry in t.get("manual_docs_reminder_history", []):
                     if entry.get("id") == request_id:
                         entry.update(attempt)
                         break
+                if channel == "email" and attempt[status_key] == "ACCEPTE":
+                    email_entry = _manual_docs_email_history_entry(attempt)
+                    emails = t.setdefault("sent_email_history", [])
+                    if not _email_history_contains(emails, email_entry):
+                        emails.insert(0, email_entry)
+                        del emails[200:]
+                    t["docs_last_relance_at"] = attempt["email_sent_at"]
+                    t["updated_at"] = attempt["email_sent_at"]
             return {}
 
         # Keep an accepted channel recorded even if the next delivery is interrupted.
@@ -31808,8 +31873,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     attempt["finished_at"] = _now_iso()
 
     def finish(data):
-        s = find_session(data, session_id)
-        t = next((x for x in _session_trainees_list(s) if x.get("id") == trainee_id), None) if s else None
+        s, t = current_trainee(data)
         if t is None:
             return {"ok": False, "error": "Envoi traité, mais la fiche a été déplacée. Vérifiez l’historique avant de relancer."}
         for entry in t.get("manual_docs_reminder_history", []):
@@ -31819,10 +31883,6 @@ def admin_docs_relance(session_id: str, trainee_id: str):
         t["updated_at"] = attempt["finished_at"]
         if "ACCEPTE" in (attempt["email_status"], attempt["sms_status"]):
             t["docs_last_relance_at"] = attempt["finished_at"]
-        if email_was_sent:
-            emails = t.setdefault("sent_email_history", [])
-            emails.insert(0, {"to_email": preview["email"], "subject": preview["subject"], "html": preview["html"], "sent_at": attempt["finished_at"]})
-            del emails[200:]
         append_trainee_history_event(t, "Relance manuelle des documents", f"E-mail : {attempt['email_status']} · SMS : {attempt['sms_status']}", "mail", at=attempt["finished_at"])
         return _manual_docs_delivery_result(attempt)
 
@@ -31835,6 +31895,7 @@ def _manual_docs_delivery_result(attempt):
     return {
         "ok": email_ok and sms_ok, "partial": email_ok != sms_ok,
         "email_status": attempt.get("email_status"), "sms_status": attempt.get("sms_status"),
+        "email_sent_at": attempt.get("email_sent_at") or "",
         "error": " ; ".join(attempt.get(key, "") for key in ("email_error", "sms_error") if attempt.get(key)),
     }
 
@@ -31899,6 +31960,21 @@ def admin_manual_docs_preview(session_id):
             skipped.append({"name": _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", "")), "reason": reason})
     csrf = session.setdefault("manual_docs_csrf", secrets.token_urlsafe(32))
     return jsonify(ok=True, eligible=eligible, skipped=skipped, csrf=csrf)
+
+
+@app.get("/api/admin/sessions/<session_id>/stagiaires/<trainee_id>/email-history")
+@admin_login_required
+def admin_trainee_email_history(session_id, trainee_id):
+    data = load_data(run_background_tasks=False)
+    s = find_session(data, session_id)
+    t = next((x for x in _session_trainees_list(s) if x.get("id") == trainee_id), None) if s else None
+    if t is None:
+        abort(404)
+    response = make_response(render_template(
+        "_trainee_email_history.html", trainee_email_history=build_trainee_email_history_entries(t),
+    ))
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents.zip")
 @admin_login_required
