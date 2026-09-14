@@ -1,4 +1,6 @@
+import subprocess
 import unittest
+from pathlib import Path
 
 import app as gestion_app
 
@@ -61,6 +63,57 @@ class VtcCreateCarteProTests(unittest.TestCase):
             'selectedTrainingForCreate = normalizeTrainingChoice(crmPrefillTransfer.training_type || "");',
             html,
         )
+
+    def test_global_create_form_executes_vtc_then_non_vtc_visibility(self):
+        template = Path("templates/admin_sessions.html").read_text(encoding="utf-8")
+        normalize_start = template.index("  function normalizeTrainingChoice(value){")
+        normalize_end = template.index("\n\n  function closeQuickCreateMenu", normalize_start)
+        refresh_start = template.index("  function refreshTrainingSpecificFields(){")
+        refresh_end = template.index("\n\n  function refreshSessionChoices", refresh_start)
+        javascript = template[normalize_start:normalize_end] + "\n" + template[refresh_start:refresh_end]
+
+        script = r'''
+const vm = require("vm");
+const source = process.argv[1];
+const elements = {
+  sessionVtcRealTrainingDatesField: {style: {}},
+  sessionTVtcRealTrainingDates: {value: "10/05/2026 au 12/05/2026"},
+  sessionCarteProField: {
+    style: {}, attributes: {},
+    setAttribute(name, value){ this.attributes[name] = value; }
+  },
+  sessionTCarteProOk: {checked: true, disabled: false}
+};
+const context = {
+  selectedTrainingForCreate: "Chauffeur VTC",
+  document: {getElementById(id){ return elements[id] || null; }}
+};
+vm.createContext(context);
+vm.runInContext(source, context);
+context.selectedTrainingForCreate = context.normalizeTrainingChoice(context.selectedTrainingForCreate);
+context.refreshTrainingSpecificFields();
+if (context.selectedTrainingForCreate !== "VTC") throw new Error("VTC label was not normalized");
+if (elements.sessionVtcRealTrainingDatesField.style.display !== "block")
+  throw new Error("VTC dates were hidden");
+if (elements.sessionTVtcRealTrainingDates.value !== "10/05/2026 au 12/05/2026")
+  throw new Error("VTC dates were cleared");
+if (elements.sessionCarteProField.style.display !== "none" ||
+    elements.sessionCarteProField.attributes["aria-hidden"] !== "true")
+  throw new Error("carte pro field was not hidden for VTC");
+if (elements.sessionTCarteProOk.checked || !elements.sessionTCarteProOk.disabled)
+  throw new Error("carte pro input was not reset and disabled for VTC");
+
+context.selectedTrainingForCreate = "APS";
+context.refreshTrainingSpecificFields();
+if (elements.sessionVtcRealTrainingDatesField.style.display !== "none" ||
+    elements.sessionTVtcRealTrainingDates.value !== "")
+  throw new Error("VTC dates were not reset outside VTC");
+if (elements.sessionCarteProField.style.display !== "flex" ||
+    elements.sessionCarteProField.attributes["aria-hidden"] !== "false" ||
+    elements.sessionTCarteProOk.disabled)
+  throw new Error("carte pro field was not restored outside VTC");
+'''
+        subprocess.run(["node", "-e", script, javascript], check=True, cwd=Path.cwd())
 
     def test_api_ignores_carte_pro_for_vtc_but_keeps_it_for_aps(self):
         vtc_response = self.client.post(
