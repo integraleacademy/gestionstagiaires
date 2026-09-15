@@ -331,26 +331,28 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         )
 
     def test_public_submission_rejects_invalid_optional_end_date(self):
-        self._authenticate_public()
-        payload = self._valid_payload()
-        payload["experiences"] = [
-            dict(payload["experiences"][0], end_date="pas-une-date"),
-            dict(
-                payload["experiences"][0],
-                job_title="Directrice sécurité",
-                company_name="Entreprise actuelle",
-                start_date="2026-06-01",
-                end_date="2026-09-01",
-            ),
-        ]
+        for invalid_date in ("pas-une-date", "2026-02-31"):
+            with self.subTest(invalid_date=invalid_date):
+                self._authenticate_public()
+                payload = self._valid_payload()
+                payload["experiences"] = [
+                    dict(payload["experiences"][0], end_date=invalid_date),
+                    dict(
+                        payload["experiences"][0],
+                        job_title="Directrice sécurité",
+                        company_name="Entreprise actuelle",
+                        start_date="2026-06-01",
+                        end_date="2026-09-01",
+                    ),
+                ]
 
-        response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=payload)
+                response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=payload)
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.get_json()["errors"]["experiences.0.end_date"],
-            "Renseignez une date de sortie valide.",
-        )
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.get_json()["errors"]["experiences.0.end_date"],
+                    "Renseignez une date de sortie valide.",
+                )
 
     def test_end_date_requirement_is_rendered_and_reassigned_by_javascript(self):
         self._authenticate_public()
