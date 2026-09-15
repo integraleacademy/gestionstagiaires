@@ -1,10 +1,12 @@
-"""One journal-based attendance rule, shared by the admin view and PDF layouts."""
+"""Digiforma journal attendance and overall APS e-learning progress."""
 
 import re
 import unicodedata
 from decimal import Decimal
 
 REQUIRED_CONNECTION_SECONDS = 62 * 60 * 60
+REQUIRED_APS_PATHS = 8
+REQUIRED_APS_EVALUATIONS = 8
 
 
 def duration_seconds(value):
@@ -56,4 +58,43 @@ def journal_attendance(value):
         "connection_requirement_met": met,
         "attendance_rate": rate,
         "attendance_rate_label": f"{rate:g}".replace(".", ",") + " %",
+    }
+
+
+def aps_elearning_completion(tracking):
+    """Give each of the three required objectives equal weight, without early 100%."""
+    attendance = journal_attendance(tracking.get("connection_log_total"))
+
+    def completed_count(prefix, required):
+        try:
+            total = int(tracking.get(prefix + "_total"))
+            completed = int(tracking.get(prefix + "_completed"))
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if total <= 0 or completed < 0 or completed > total:
+            return None
+        return min(completed, required)
+
+    paths = completed_count("paths", REQUIRED_APS_PATHS)
+    evaluations = completed_count("evaluations", REQUIRED_APS_EVALUATIONS)
+    paths_met = paths == REQUIRED_APS_PATHS
+    evaluations_met = evaluations == REQUIRED_APS_EVALUATIONS
+    complete = paths_met and evaluations_met and attendance["connection_requirement_met"]
+    rate = None
+    if paths is not None and evaluations is not None and attendance["connection_seconds"] is not None:
+        average = (paths * 100 / REQUIRED_APS_PATHS
+                   + evaluations * 100 / REQUIRED_APS_EVALUATIONS
+                   + attendance["attendance_rate"]) / 3
+        rate = 100.0 if complete else min(99.9, round(average, 1))
+    return {
+        **attendance,
+        "paths_completed": paths,
+        "paths_required": REQUIRED_APS_PATHS,
+        "paths_requirement_met": paths_met,
+        "evaluations_completed": evaluations,
+        "evaluations_required": REQUIRED_APS_EVALUATIONS,
+        "evaluations_requirement_met": evaluations_met,
+        "overall_rate": rate,
+        "overall_rate_label": f"{rate:g}".replace(".", ",") + " %" if rate is not None else "À vérifier",
+        "is_complete": complete,
     }

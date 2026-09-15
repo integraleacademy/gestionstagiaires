@@ -116,6 +116,46 @@ def test_no_relevant_import_means_no_attendance_block(context):
     assert 'id="apsElearningAttendance"' not in client.get('/espace/PUBLIC-TOKEN').text
 
 
+def test_public_completion_requires_all_three_objectives_and_follows_reimports(context):
+    client, data, trainees, save = context
+    for paths, evaluations, duration, rate, complete in [
+        (7, 8, '63 heures', '95,8 %', False),
+        (8, 7, '63 heures', '95,8 %', False),
+        (8, 8, '62 heures', '99,9 %', False),
+        (8, 8, '62 heures et 1 seconde', '100 %', True),
+        (8, 8, '44 heures, 54 minutes et 51 secondes', '90,8 %', False),
+    ]:
+        result = upload(client, attendance_pdf(completed_paths=paths, completed_evaluations=evaluations,
+                                              connection_total=duration))
+        assert result.status_code == 200
+        html = client.get('/espace/PUBLIC-TOKEN').text
+        section = html.split('id="apsElearningAttendance"', 1)[1].split('</section>', 1)[0]
+        paths_tile = section.split('id="apsPathsProgress"', 1)[1].split('</div>', 1)[0]
+        evaluations_tile = section.split('id="apsEvaluationsProgress"', 1)[1].split('</div>', 1)[0]
+        assert f'<strong>{paths}/8</strong>' in paths_tile
+        assert f'<strong>{evaluations}/8</strong>' in evaluations_tile
+        assert f'id="apsOverallRate">{rate}</strong>' in section
+        assert 'id="apsOverallProgress"' in section
+        assert ('E-learning terminé' in section) == complete
+        assert ('Bravo !' in section) == complete
+        assert ('E-learning en cours' in section) != complete
+    assert 'Parcours suivis' in section and 'Questionnaires d’évaluation' in section
+    assert '44 h 54' in section and '72,4 %' in section
+
+
+@pytest.mark.parametrize('missing', ['paths_total', 'evaluations_total', 'connection_log_total'])
+def test_public_does_not_announce_completion_with_missing_metrics(context, missing):
+    client, data, trainees, save = context
+    tracking = existing.ApsElearningTests._complete_tracking()
+    tracking.pop(missing)
+    trainees[0]['aps_elearning_tracking'] = tracking
+    html = client.get('/espace/PUBLIC-TOKEN').text
+    section = html.split('id="apsElearningAttendance"', 1)[1].split('</section>', 1)[0]
+    assert 'id="apsOverallRate">À vérifier</strong>' in section
+    assert 'id="apsOverallProgress"' not in section
+    assert 'E-learning terminé' not in section and 'Bravo !' not in section
+
+
 @pytest.mark.parametrize('name, email', [
     ('', 'alice.martin@example.test'),
     ('ALICE MARTIN DUPONT', 'alice.martin@example.test'),
