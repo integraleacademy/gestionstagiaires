@@ -19,7 +19,7 @@ def context(monkeypatch, tmp_path):
     trainees = data['sessions'][0]['trainees']
     trainees.append(dict(trainees[0], id='T-BOB', first_name='Bob', last_name='DUPONT',
                          email='bob@example.test', public_token='BOB-TOKEN', documents=[]))
-    monkeypatch.setattr(gestion, 'load_data', lambda: data)
+    monkeypatch.setattr(gestion, 'load_data', lambda **kwargs: data)
     save = Mock()
     monkeypatch.setattr(gestion, 'save_data', save)
     monkeypatch.setattr(gestion, 'PERSIST_DIR', str(tmp_path))
@@ -149,37 +149,84 @@ def test_matching_is_scoped_to_selected_session(context):
     save.assert_not_called()
 
 
-def test_repeated_pdf_preserves_tracking_and_signature(context):
+def test_repeated_pdf_replaces_the_stored_files(context):
     client, data, trainees, save = context
     pdf = attendance_pdf()
     assert upload(client, pdf).status_code == 200
-    trainees[0]['aps_elearning_signature'] = {'status': 'done', 'signature_request_id': 'SIGNED'}
-    before = copy.deepcopy(trainees[0])
-    save.reset_mock()
+    before = copy.deepcopy(trainees[0]['aps_elearning_tracking'])
     response = upload(client, pdf)
-    assert response.json['status'] == 'unchanged'
-    assert trainees[0] == before
-    save.assert_not_called()
+    assert response.status_code == 200
+    assert response.json['status'] == 'replaced'
+    assert save.call_count == 2
+    for key in ('file', 'source_file'):
+        assert trainees[0]['aps_elearning_tracking'][key] != before[key]
+        assert not Path(gestion._detokenize_path(before[key])).exists()
+        assert Path(gestion._detokenize_path(trainees[0]['aps_elearning_tracking'][key])).is_file()
 
 
 @pytest.mark.parametrize('signature_status', ['ongoing', 'done'])
-def test_bulk_never_replaces_signed_or_pending_dossier(context, signature_status):
+def test_bulk_replaces_signed_or_pending_dossier_and_archives_signature(context, signature_status, monkeypatch, tmp_path):
     client, data, trainees, save = context
-    trainees[0]['aps_elearning_signature'] = {'status': signature_status, 'signature_request_id': 'REQUEST'}
+    assert upload(client, attendance_pdf(connection_total='31 heures')).status_code == 200
+    signed_path = tmp_path / 'previous-signed-dossier.pdf'
+    signed_path.write_bytes(b'previous signed evidence')
+    state = {'status': signature_status, 'signature_request_id': 'REQUEST', 'signed_pdf_path': str(signed_path)}
+    trainees[0]['aps_elearning_signature'] = state
+    monkeypatch.setattr(gestion, '_yousign_is_configured', lambda: True)
+    cancel = Mock()
+    monkeypatch.setattr(gestion, '_yousign_json', cancel)
+    calls = Mock()
+    calls.attach_mock(save, 'save')
+    calls.attach_mock(cancel, 'cancel')
+    save.reset_mock()
+    result = upload(client, attendance_pdf(connection_total='70 heures'))
+    assert result.status_code == 200
+    assert result.json['status'] == 'replaced'
+    assert result.json['attendance_rate'] == '100 %'
+    assert trainees[0]['aps_elearning_signature'] == {}
+    archived = trainees[0]['aps_elearning_signature_history'][-1]
+    assert archived['archive_reason'] == 'digiforma_report_replaced'
+    assert all(archived[key] == value for key, value in state.items())
+    assert signed_path.read_bytes() == b'previous signed evidence'
+    assert [call[0] for call in calls.mock_calls] == (['save', 'cancel'] if signature_status == 'ongoing' else ['save'])
+    if signature_status == 'ongoing':
+        assert cancel.call_args.args == ('POST', '/signature_requests/REQUEST/cancel')
+
+
+def test_last_report_for_same_person_replaces_files_and_updates_both_spaces(context):
+    client, data, trainees, save = context
+    first = upload(client, attendance_pdf(connection_total='31 heures'), filename='ancien.pdf')
+    assert first.json['status'] == 'imported'
+    old_tracking = copy.deepcopy(trainees[0]['aps_elearning_tracking'])
+    latest_pdf = attendance_pdf(connection_total='44 heures, 54 minutes et 51 secondes')
+    response = upload(client, latest_pdf, filename='dernier.pdf', processed=['T-APS'])
+    assert response.status_code == 200
+    assert response.json['status'] == 'replaced'
+    assert response.json['duration'] == '44 h 54'
+    assert response.json['attendance_rate'] == '72,4 %'
+    tracking = trainees[0]['aps_elearning_tracking']
+    assert tracking['original_name'] == 'dernier.pdf'
+    assert Path(gestion._detokenize_path(tracking['source_file'])).read_bytes() == latest_pdf
+    for key in ('file', 'source_file'):
+        assert not Path(gestion._detokenize_path(old_tracking[key])).exists()
+    assert save.call_count == 2
+    public = client.get('/espace/PUBLIC-TOKEN').text
+    section = public.split('id="apsElearningAttendance"', 1)[1].split('</section>', 1)[0]
+    admin = client.get('/admin/sessions/S-APS/trainees').text
+    row = admin.split('data-trainee-id="T-APS"', 1)[1].split('</tr>', 1)[0]
+    cell = row.split('<td class="col-aps-attendance">', 1)[1].split('</td>', 1)[0]
+    for view in (section, cell):
+        assert '44 h 54' in view and '/ 62 heures' in view and '72,4 %' in view
+        assert '31 h 00' not in view
+        assert '<progress' in view and 'value="72.4"' in view
+
+
+def test_invalid_file_or_multiple_files_cannot_replace_tracking(context, tmp_path):
+    client, data, trainees, save = context
+    assert upload(client).status_code == 200
     before = copy.deepcopy(trainees[0])
-    assert upload(client).status_code == 400
-    assert trainees[0] == before
-    save.assert_not_called()
-
-
-def test_second_report_for_same_person_in_one_selection_is_rejected(context):
-    client, data, trainees, save = context
-    assert upload(client, processed=['T-APS']).status_code == 400
-    save.assert_not_called()
-
-
-def test_invalid_file_or_multiple_files_cannot_replace_tracking(context):
-    client, data, trainees, save = context
+    files_before = sorted(p for p in tmp_path.rglob('*') if p.is_file())
+    save.reset_mock()
     for pdf, filename in [(b'broken', 'broken.pdf'), (attendance_pdf(complete=False), 'incomplete.pdf'),
                           (attendance_pdf(), 'report.txt')]:
         assert upload(client, pdf, filename).status_code == 400
@@ -187,12 +234,18 @@ def test_invalid_file_or_multiple_files_cannot_replace_tracking(context):
         (io.BytesIO(attendance_pdf()), 'one.pdf'), (io.BytesIO(attendance_pdf()), 'two.pdf'),
     ]}, headers={'Accept': 'application/json'})
     assert result.status_code == 400
+    assert trainees[0] == before
+    assert sorted(p for p in tmp_path.rglob('*') if p.is_file()) == files_before
     save.assert_not_called()
 
 
-def test_failed_save_keeps_old_dossier_and_cleans_new_files(context, tmp_path):
+def test_failed_save_keeps_old_dossier_and_cleans_new_files(context, tmp_path, monkeypatch):
     client, data, trainees, save = context
     assert upload(client).status_code == 200
+    trainees[0]['aps_elearning_signature'] = {'status': 'ongoing', 'signature_request_id': 'REQUEST'}
+    monkeypatch.setattr(gestion, '_yousign_is_configured', lambda: True)
+    cancel = Mock()
+    monkeypatch.setattr(gestion, '_yousign_json', cancel)
     before = copy.deepcopy(trainees[0])
     files_before = sorted(p for p in tmp_path.rglob('*') if p.is_file())
     save.side_effect = OSError('storage unavailable')
@@ -200,3 +253,4 @@ def test_failed_save_keeps_old_dossier_and_cleans_new_files(context, tmp_path):
     assert result.status_code == 500
     assert trainees[0] == before
     assert sorted(p for p in tmp_path.rglob('*') if p.is_file()) == files_before
+    cancel.assert_not_called()

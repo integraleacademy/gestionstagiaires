@@ -28973,28 +28973,19 @@ def admin_bulk_upload_aps_elearning_digiforma(session_id: str):
         metadata = _extract_digiforma_attendance_metadata(pdf_bytes)
         trainee = _aps_elearning_bulk_match(metadata, trainees)
         trainee_id = str(trainee["id"])
-        if trainee_id in request.form.getlist("processed_trainee_ids"):
-            raise ValueError("Un relevé de ce stagiaire a déjà été traité dans cet import. Vérifiez les doublons.")
-        tracking = _aps_elearning_tracking(dict(trainee))
-        source_sha = hashlib.sha256(pdf_bytes).hexdigest()
+        previous_tracking = _aps_elearning_tracking(dict(trainee))
+        replacing = bool(previous_tracking.get("file") or previous_tracking.get("source_file"))
+        tracking = _import_aps_elearning_digiforma(
+            data, session_obj, trainees, trainee, incoming_file, pdf_bytes, metadata,
+        )
         result = {
             "ok": True,
+            "status": "replaced" if replacing else "imported",
+            "message": "Ancien relevé remplacé, suivi mis à jour." if replacing else "Relevé importé, espace stagiaire mis à jour.",
             "trainee_id": trainee_id,
             "trainee_name": metadata.get("attested_name"),
             "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#apsElearningTrackingSection",
         }
-        if (tracking.get("source_sha256") == source_sha
-                and all(tracking.get(key) and os.path.isfile(_detokenize_path(tracking[key]))
-                        for key in ("file", "source_file"))):
-            result.update(status="unchanged", message="Ce relevé est déjà importé.")
-        else:
-            signature = trainee.get("aps_elearning_signature") or {}
-            if _is_yousign_signature_pending(signature) or _is_yousign_signature_done(signature):
-                raise ValueError("Ce dossier est signé ou en cours de signature. Utilisez l’import individuel pour le remplacer.")
-            tracking = _import_aps_elearning_digiforma(
-                data, session_obj, trainees, trainee, incoming_file, pdf_bytes, metadata,
-            )
-            result.update(status="imported", message="Relevé importé, espace stagiaire mis à jour.")
         progress = journal_attendance(tracking.get("connection_log_total"))
         result.update(
             duration=progress["connection_duration_short_label"],
@@ -29048,7 +29039,7 @@ def _import_aps_elearning_digiforma(
 
     previous_trainee = copy.deepcopy(trainee)
     if previous_tracking.get("file"):
-        _invalidate_aps_elearning_signature_for_new_report(trainee)
+        _invalidate_aps_elearning_signature_for_new_report(trainee, cancel_request=False)
     if _aps_elearning_force_override(trainee):
         _archive_aps_elearning_force_override(trainee, "digiforma_report_replaced")
         trainee.pop("aps_elearning_force_override", None)
@@ -29065,7 +29056,7 @@ def _import_aps_elearning_digiforma(
     trainee["updated_at"] = uploaded_at
     append_trainee_history_event(
         trainee,
-        "Attestation d’assiduité Digiforma importée",
+        "Attestation d’assiduité Digiforma remplacée" if previous_tracking.get("file") else "Attestation d’assiduité Digiforma importée",
         f"{metadata.get('page_count') or 0} page(s) · mise en page reconstruite · sans résultats · signature du centre ajoutée",
         "action",
         uploaded_at,
@@ -29081,6 +29072,10 @@ def _import_aps_elearning_digiforma(
             if os.path.isfile(new_path):
                 os.remove(new_path)
         raise
+
+    # Only cancel the previous request once its replacement has been saved.
+    if previous_tracking.get("file"):
+        _cancel_replaced_aps_elearning_signature(previous_trainee.get("aps_elearning_signature") or {})
 
     for previous_token in {str(previous_tracking.get(key) or "").strip() for key in ("file", "source_file")} - {""}:
         try:
@@ -34409,10 +34404,7 @@ def _reset_aps_elearning_data(
     return removed_files
 
 
-def _invalidate_aps_elearning_signature_for_new_report(trainee: Dict[str, Any]) -> None:
-    state = _aps_elearning_signature_state(trainee)
-    if not state:
-        return
+def _cancel_replaced_aps_elearning_signature(state: Dict[str, Any]) -> None:
     request_id = str(state.get("signature_request_id") or "").strip()
     if request_id and _is_yousign_signature_pending(state) and _yousign_is_configured():
         try:
@@ -34426,6 +34418,16 @@ def _invalidate_aps_elearning_signature_for_new_report(trainee: Dict[str, Any]) 
                 request_id,
                 exc_info=True,
             )
+
+
+def _invalidate_aps_elearning_signature_for_new_report(
+    trainee: Dict[str, Any], *, cancel_request: bool = True,
+) -> None:
+    state = _aps_elearning_signature_state(trainee)
+    if not state:
+        return
+    if cancel_request:
+        _cancel_replaced_aps_elearning_signature(state)
     _archive_aps_elearning_signature_state(trainee, "digiforma_report_replaced")
     trainee["aps_elearning_signature"] = {}
 

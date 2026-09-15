@@ -7,10 +7,11 @@
   </div>
   <div class="aps-bulk-body">
     <p>Sélectionnez toutes les attestations d’assiduité PDF de cette session. Chaque relevé sera rattaché au stagiaire correspondant et mettra à jour son temps de connexion et son taux de suivi.</p>
+    <p><strong>Les nouveaux relevés remplacent automatiquement les anciens.</strong> Si plusieurs PDF concernent le même stagiaire, le dernier traité sera conservé.</p>
     <label class="aps-bulk-picker" for="apsDigiformaFiles">Choisir les PDF Digiforma
       <input id="apsDigiformaFiles" type="file" accept=".pdf,application/pdf" multiple>
     </label>
-    <p class="muted">Les noms ambigus et les fichiers non reconnus seront signalés. Les dossiers signés restent à traiter depuis la fiche du stagiaire.</p>
+    <p class="muted">Les noms ambigus et les fichiers non reconnus seront signalés. En cas de remplacement, l’ancienne signature est archivée et le nouveau dossier devra être signé à nouveau.</p>
     <p id="apsBulkStatus" role="status" aria-live="polite">Aucun fichier sélectionné.</p>
     <progress id="apsBulkProgress" max="1" value="0" aria-label="Avancement de l’import" hidden></progress>
     <ul id="apsBulkResults" class="aps-bulk-results" aria-label="Résultat par fichier"></ul>
@@ -33,9 +34,8 @@
   .aps-bulk-results li{padding:12px;margin:8px 0;border:1px solid #e2e8f0;border-radius:10px;overflow-wrap:anywhere;}
   .aps-bulk-results strong,.aps-bulk-results span,.aps-bulk-results a{display:block;}
   .aps-bulk-results span,.aps-bulk-results a{margin-top:5px;font-size:13px;line-height:1.5;}
-  .aps-bulk-results [data-status="imported"]{background:#f0fdf4;border-color:#86efac;}
+  .aps-bulk-results [data-status="imported"],.aps-bulk-results [data-status="replaced"]{background:#f0fdf4;border-color:#86efac;}
   .aps-bulk-results [data-status="error"]{background:#fff7ed;border-color:#fdba74;}
-  .aps-bulk-results [data-status="unchanged"]{background:#f8fafc;}
   .aps-bulk-footer{position:sticky;bottom:0;flex-wrap:wrap;border-top:1px solid #e2e8f0;}
 </style>
 <script src="{{ url_for('static', filename='js/aps-digiforma-bulk.js') }}" defer></script>
