@@ -43,13 +43,16 @@ def journal_attendance(value):
     met = seconds is not None and seconds > REQUIRED_CONNECTION_SECONDS
     rate = 100.0 if met else min(99.9, round((seconds or 0) * 100 / REQUIRED_CONNECTION_SECONDS, 1))
     label = "Non renseignée"
+    short_label = "Non renseignée"
     if seconds is not None:
         hours, remainder = divmod(seconds, 3600)
         minutes, seconds_part = divmod(remainder, 60)
         label = f"{hours} h {minutes:02} min {seconds_part:02} s"
+        short_label = f"{hours} h {minutes:02}"
     return {
         "connection_seconds": seconds,
         "connection_duration_label": label,
+        "connection_duration_short_label": short_label,
         "connection_requirement_met": met,
         "attendance_rate": rate,
         "attendance_rate_label": f"{rate:g}".replace(".", ",") + " %",

@@ -28915,6 +28915,179 @@ def admin_view_private_document(session_id: str, trainee_id: str, document_id: s
     return send_file(full_path, as_attachment=False, download_name=download_name)
 
 
+def _aps_elearning_bulk_match(metadata, trainees):
+    """Resolve only a full identity within the selected session; never guess."""
+    def name_tokens(value):
+        return sorted(_normalize_person_name(str(value or "")).replace("-", " ").split())
+
+    attested = name_tokens(metadata.get("attested_name"))
+    if not attested:
+        raise ValueError("Nom du stagiaire introuvable dans le PDF. Importez-le depuis sa fiche après vérification.")
+    candidates = [t for t in trainees if t.get("id") and name_tokens(
+        f"{t.get('first_name') or t.get('prenom') or ''} {t.get('last_name') or t.get('nom') or ''}"
+    ) == attested]
+    if not candidates:
+        raise ValueError("Aucun stagiaire de cette session ne correspond au nom figurant dans le PDF.")
+    email = str(metadata.get("digiforma_identifier") or "").strip().casefold()
+    email_matches = []
+    if email:
+        email_matches = [t for t in trainees if email in {
+            str(t.get("email") or "").strip().casefold(),
+            str((t.get("aps_elearning_tracking") or {}).get("digiforma_identifier") or "").strip().casefold(),
+        }]
+    matching_candidates = [t for t in candidates if any(t is match for match in email_matches)]
+    if email_matches and not matching_candidates:
+        raise ValueError("Le nom et l’adresse e-mail du PDF correspondent à des dossiers différents. Vérifiez le relevé.")
+    if len(matching_candidates) == 1:
+        return matching_candidates[0]
+    if len(candidates) == 1:
+        return candidates[0]
+    raise ValueError("Plusieurs stagiaires portent ce nom. Importez le PDF depuis la bonne fiche après vérification.")
+
+
+@app.post("/admin/sessions/<session_id>/aps-elearning/digiforma/bulk-upload")
+@admin_login_required
+@admin_write_required
+def admin_bulk_upload_aps_elearning_digiforma(session_id: str):
+    # The browser submits the selected files in sequence to keep each request bounded.
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj or not _is_aps_elearning_session(session_obj):
+        abort(404)
+    trainees = _session_trainees_list(session_obj)
+    files = request.files.getlist("digiforma_pdf")
+    if len(files) != 1 or not files[0].filename or _safe_ext(files[0].filename) != ".pdf":
+        return jsonify(ok=False, error="Sélectionnez des relevés Digiforma au format PDF."), 400
+    incoming_file = files[0]
+    pdf_bytes = incoming_file.read()
+    try:
+        metadata = _extract_digiforma_attendance_metadata(pdf_bytes)
+        trainee = _aps_elearning_bulk_match(metadata, trainees)
+        trainee_id = str(trainee["id"])
+        if trainee_id in request.form.getlist("processed_trainee_ids"):
+            raise ValueError("Un relevé de ce stagiaire a déjà été traité dans cet import. Vérifiez les doublons.")
+        tracking = _aps_elearning_tracking(dict(trainee))
+        source_sha = hashlib.sha256(pdf_bytes).hexdigest()
+        result = {
+            "ok": True,
+            "trainee_id": trainee_id,
+            "trainee_name": metadata.get("attested_name"),
+            "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#apsElearningTrackingSection",
+        }
+        if (tracking.get("source_sha256") == source_sha
+                and all(tracking.get(key) and os.path.isfile(_detokenize_path(tracking[key]))
+                        for key in ("file", "source_file"))):
+            result.update(status="unchanged", message="Ce relevé est déjà importé.")
+        else:
+            signature = trainee.get("aps_elearning_signature") or {}
+            if _is_yousign_signature_pending(signature) or _is_yousign_signature_done(signature):
+                raise ValueError("Ce dossier est signé ou en cours de signature. Utilisez l’import individuel pour le remplacer.")
+            tracking = _import_aps_elearning_digiforma(
+                data, session_obj, trainees, trainee, incoming_file, pdf_bytes, metadata,
+            )
+            result.update(status="imported", message="Relevé importé, espace stagiaire mis à jour.")
+        progress = journal_attendance(tracking.get("connection_log_total"))
+        result.update(
+            duration=progress["connection_duration_short_label"],
+            attendance_rate=progress["attendance_rate_label"] if progress["connection_seconds"] is not None else "Non renseigné",
+        )
+        return jsonify(result)
+    except ValueError as exc:
+        return jsonify(ok=False, error=str(exc)), 400
+    except Exception:
+        app.logger.exception("[APS E-LEARNING] import groupé impossible session_id=%s", session_id)
+        return jsonify(ok=False, error="Ce relevé n’a pas pu être enregistré. Réessayez son import."), 500
+
+
+def _import_aps_elearning_digiforma(
+    data, session_obj, trainees, trainee, incoming_file, pdf_bytes, metadata,
+):
+    """Use the same evidence, layout and persistence for both import entry points."""
+    session_id, trainee_id = session_obj["id"], trainee["id"]
+    # Keep the original evidence for the completion checks and audit trail;
+    # downloads, the annex digest and Yousign use the prepared PDF exclusively.
+    try:
+        from digiforma_attendance import prepare_digiforma_attendance
+
+        prepared_bytes, preparation = prepare_digiforma_attendance(
+            pdf_bytes, _training_center_signature_assets()["signature"],
+            _training_center_signature_assets()["stamp"],
+        )
+    except ValueError:
+        raise
+    except Exception:
+        app.logger.exception("[APS E-LEARNING] préparation Digiforma impossible trainee_id=%s", trainee_id)
+        raise ValueError("L’attestation n’a pas pu être préparée avec la signature du centre. Aucun document n’a été remplacé.")
+
+    incoming_file.stream.seek(0)
+    previous_tracking = dict(_aps_elearning_tracking(dict(trainee)))
+    source_path = ""
+    try:
+        source_path = _store_file(session_id, trainee_id, APS_ELEARNING_TRACKING_FOLDER, incoming_file)
+        prepared_file = FileStorage(
+            stream=BytesIO(prepared_bytes), filename=incoming_file.filename,
+            content_type="application/pdf",
+        )
+        stored_path = _store_file(session_id, trainee_id, APS_ELEARNING_TRACKING_FOLDER, prepared_file)
+    except (ValueError, OSError):
+        if source_path and os.path.isfile(source_path):
+            os.remove(source_path)
+        raise ValueError("L’attestation n’a pas pu être enregistrée. Réessayez l’import.")
+    metadata.update(preparation)
+    metadata["source_sha256"] = hashlib.sha256(pdf_bytes).hexdigest()
+    metadata["file_sha256"] = hashlib.sha256(prepared_bytes).hexdigest()
+
+    previous_trainee = copy.deepcopy(trainee)
+    if previous_tracking.get("file"):
+        _invalidate_aps_elearning_signature_for_new_report(trainee)
+    if _aps_elearning_force_override(trainee):
+        _archive_aps_elearning_force_override(trainee, "digiforma_report_replaced")
+        trainee.pop("aps_elearning_force_override", None)
+
+    uploaded_at = _now_iso()
+    trainee["aps_elearning_tracking"] = {
+        "file": _tokenize_path(stored_path),
+        "source_file": _tokenize_path(source_path),
+        "original_name": secure_filename(incoming_file.filename or "attestation-assiduite-digiforma.pdf")[:180]
+        or "attestation-assiduite-digiforma.pdf",
+        "uploaded_at": uploaded_at,
+        **metadata,
+    }
+    trainee["updated_at"] = uploaded_at
+    append_trainee_history_event(
+        trainee,
+        "Attestation d’assiduité Digiforma importée",
+        f"{metadata.get('page_count') or 0} page(s) · mise en page reconstruite · sans résultats · signature du centre ajoutée",
+        "action",
+        uploaded_at,
+    )
+    session_obj["trainees"] = trainees
+    session_obj.pop("stagiaires", None)
+    try:
+        save_data(data)
+    except Exception:
+        trainee.clear()
+        trainee.update(previous_trainee)
+        for new_path in (source_path, stored_path):
+            if os.path.isfile(new_path):
+                os.remove(new_path)
+        raise
+
+    for previous_token in {str(previous_tracking.get(key) or "").strip() for key in ("file", "source_file")} - {""}:
+        try:
+            previous_path = _detokenize_path(previous_token)
+            if os.path.isfile(previous_path):
+                os.remove(previous_path)
+        except Exception:
+            app.logger.warning(
+                "[APS E-LEARNING] ancien relevé Digiforma non supprimé trainee_id=%s",
+                trainee_id,
+                exc_info=True,
+            )
+
+    return _aps_elearning_tracking(trainee)
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/aps-elearning/digiforma/upload")
 @admin_login_required
 @admin_write_required
@@ -28949,80 +29122,13 @@ def admin_upload_aps_elearning_digiforma(session_id: str, trainee_id: str):
         )
         return _aps_elearning_tracking_redirect(session_id, trainee_id)
 
-    # Keep the original evidence for the completion checks and audit trail;
-    # downloads, the annex digest and Yousign use the prepared PDF exclusively.
     try:
-        from digiforma_attendance import prepare_digiforma_attendance
-
-        prepared_bytes, preparation = prepare_digiforma_attendance(
-            pdf_bytes, _training_center_signature_assets()["signature"],
-            _training_center_signature_assets()["stamp"],
+        _import_aps_elearning_digiforma(
+            data, session_obj, trainees, trainee, incoming_file, pdf_bytes, metadata,
         )
     except ValueError as exc:
         flash(str(exc), "error")
         return _aps_elearning_tracking_redirect(session_id, trainee_id)
-    except Exception:
-        app.logger.exception("[APS E-LEARNING] préparation Digiforma impossible trainee_id=%s", trainee_id)
-        flash("L’attestation n’a pas pu être préparée avec la signature du centre. Aucun document n’a été remplacé.", "error")
-        return _aps_elearning_tracking_redirect(session_id, trainee_id)
-
-    incoming_file.stream.seek(0)
-    previous_tracking = dict(_aps_elearning_tracking(trainee))
-    source_path = ""
-    try:
-        source_path = _store_file(session_id, trainee_id, APS_ELEARNING_TRACKING_FOLDER, incoming_file)
-        prepared_file = FileStorage(
-            stream=BytesIO(prepared_bytes), filename=incoming_file.filename,
-            content_type="application/pdf",
-        )
-        stored_path = _store_file(session_id, trainee_id, APS_ELEARNING_TRACKING_FOLDER, prepared_file)
-    except (ValueError, OSError):
-        if source_path and os.path.isfile(source_path):
-            os.remove(source_path)
-        flash("L’attestation n’a pas pu être enregistrée. Réessayez l’import.", "error")
-        return _aps_elearning_tracking_redirect(session_id, trainee_id)
-    metadata.update(preparation)
-    metadata["source_sha256"] = hashlib.sha256(pdf_bytes).hexdigest()
-    metadata["file_sha256"] = hashlib.sha256(prepared_bytes).hexdigest()
-
-    if previous_tracking.get("file"):
-        _invalidate_aps_elearning_signature_for_new_report(trainee)
-    if _aps_elearning_force_override(trainee):
-        _archive_aps_elearning_force_override(trainee, "digiforma_report_replaced")
-        trainee.pop("aps_elearning_force_override", None)
-
-    uploaded_at = _now_iso()
-    trainee["aps_elearning_tracking"] = {
-        "file": _tokenize_path(stored_path),
-        "source_file": _tokenize_path(source_path),
-        "original_name": secure_filename(incoming_file.filename or "attestation-assiduite-digiforma.pdf")[:180]
-        or "attestation-assiduite-digiforma.pdf",
-        "uploaded_at": uploaded_at,
-        **metadata,
-    }
-    trainee["updated_at"] = uploaded_at
-    append_trainee_history_event(
-        trainee,
-        "Attestation d’assiduité Digiforma importée",
-        f"{metadata.get('page_count') or 0} page(s) · mise en page reconstruite · sans résultats · signature du centre ajoutée",
-        "action",
-        uploaded_at,
-    )
-    session_obj["trainees"] = trainees
-    session_obj.pop("stagiaires", None)
-    save_data(data)
-
-    for previous_token in {str(previous_tracking.get(key) or "").strip() for key in ("file", "source_file")} - {""}:
-        try:
-            previous_path = _detokenize_path(previous_token)
-            if os.path.isfile(previous_path):
-                os.remove(previous_path)
-        except Exception:
-            app.logger.warning(
-                "[APS E-LEARNING] ancien relevé Digiforma non supprimé trainee_id=%s",
-                trainee_id,
-                exc_info=True,
-            )
 
     completion_issues = _aps_elearning_report_completion_issues(metadata)
     if completion_issues:
@@ -32759,6 +32865,13 @@ def public_trainee_space(token):
         and datetime.date.today() >= aps_elearning_start_date
     )
 
+    aps_elearning_progress = None
+    if aps_elearning_enabled:
+        tracking = _aps_elearning_tracking(t)
+        if tracking.get("file"):
+            aps_elearning_progress = journal_attendance(tracking.get("connection_log_total"))
+            aps_elearning_progress["updated_at_label"] = _aps_elearning_datetime_label(tracking.get("uploaded_at"))
+
     # ✅ persistance
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
@@ -32792,6 +32905,7 @@ def public_trainee_space(token):
         is_aps_training=is_aps_training,
         aps_elearning_enabled=aps_elearning_enabled,
         aps_elearning_available=aps_elearning_available,
+        aps_elearning_progress=aps_elearning_progress,
         dossier_ok=dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")),
         vae_required_docs_deposited=required_docs_are_deposited(t, training_type, _session_get(s, "date_start", "")),
         ssiap_exam_date=ssiap_exam_date,

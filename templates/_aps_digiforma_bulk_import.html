@@ -1,0 +1,41 @@
+<dialog id="apsDigiformaBulkDialog" class="aps-bulk-dialog" aria-labelledby="apsBulkTitle"
+        data-upload-url="{{ url_for('admin_bulk_upload_aps_elearning_digiforma', session_id=session.id) }}"
+        data-max-bytes="{{ config.MAX_CONTENT_LENGTH }}">
+  <div class="aps-bulk-header">
+    <div><h2 id="apsBulkTitle">Importer les relevés Digiforma</h2><p>{{ session.name }}</p></div>
+    <button type="button" class="btn btn-outline" data-aps-bulk-close aria-label="Fermer">×</button>
+  </div>
+  <div class="aps-bulk-body">
+    <p>Sélectionnez toutes les attestations d’assiduité PDF de cette session. Chaque relevé sera rattaché au stagiaire correspondant et mettra à jour son temps de connexion et son taux de suivi.</p>
+    <label class="aps-bulk-picker" for="apsDigiformaFiles">Choisir les PDF Digiforma
+      <input id="apsDigiformaFiles" type="file" accept=".pdf,application/pdf" multiple>
+    </label>
+    <p class="muted">Les noms ambigus et les fichiers non reconnus seront signalés. Les dossiers signés restent à traiter depuis la fiche du stagiaire.</p>
+    <p id="apsBulkStatus" role="status" aria-live="polite">Aucun fichier sélectionné.</p>
+    <progress id="apsBulkProgress" max="1" value="0" aria-label="Avancement de l’import" hidden></progress>
+    <ul id="apsBulkResults" class="aps-bulk-results" aria-label="Résultat par fichier"></ul>
+  </div>
+  <div class="aps-bulk-footer">
+    <button type="button" class="btn btn-outline" data-aps-bulk-close>Fermer</button>
+    <button type="button" class="btn btn-primary" id="apsBulkStart" disabled>Importer les relevés</button>
+  </div>
+</dialog>
+<style>
+  .aps-bulk-dialog{width:min(760px,calc(100vw - 32px));max-height:88vh;padding:0;border:0;border-radius:20px;color:#0f172a;box-shadow:0 28px 90px #0f172a55;}
+  .aps-bulk-dialog::backdrop{background:#0f172a99;}
+  .aps-bulk-header,.aps-bulk-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 24px;background:#f8fafc;}
+  .aps-bulk-header h2{margin:0;font-size:22px;}.aps-bulk-header p{margin:5px 0 0;color:#64748b;}
+  .aps-bulk-body{padding:6px 24px 18px;}.aps-bulk-body>p{line-height:1.6;}
+  .aps-bulk-picker{display:block;padding:18px;border:2px dashed #a5b4fc;border-radius:12px;background:#eef2ff;font-weight:700;}
+  .aps-bulk-picker input{display:block;max-width:100%;margin-top:12px;}
+  #apsBulkProgress{width:100%;height:10px;accent-color:#4f46e5;}
+  .aps-bulk-results{list-style:none;margin:12px 0 0;padding:0;max-height:35vh;overflow:auto;}
+  .aps-bulk-results li{padding:12px;margin:8px 0;border:1px solid #e2e8f0;border-radius:10px;overflow-wrap:anywhere;}
+  .aps-bulk-results strong,.aps-bulk-results span,.aps-bulk-results a{display:block;}
+  .aps-bulk-results span,.aps-bulk-results a{margin-top:5px;font-size:13px;line-height:1.5;}
+  .aps-bulk-results [data-status="imported"]{background:#f0fdf4;border-color:#86efac;}
+  .aps-bulk-results [data-status="error"]{background:#fff7ed;border-color:#fdba74;}
+  .aps-bulk-results [data-status="unchanged"]{background:#f8fafc;}
+  .aps-bulk-footer{position:sticky;bottom:0;flex-wrap:wrap;border-top:1px solid #e2e8f0;}
+</style>
+<script src="{{ url_for('static', filename='js/aps-digiforma-bulk.js') }}" defer></script>
