@@ -32807,6 +32807,16 @@ def _professional_experience_sheet_for_trainee(trainee: Dict[str, Any]) -> Optio
     return sheet if isinstance(sheet, dict) else None
 
 
+def _professional_experience_date_is_valid(value: str) -> bool:
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return False
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Dict[str, str]]:
     """Validate and normalize the public VAE professional-experience form."""
     payload = raw if isinstance(raw, dict) else {}
@@ -32870,7 +32880,10 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
             errors[f"experiences.{index}.company_name"] = "Renseignez le nom de l’entreprise."
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date):
             errors[f"experiences.{index}.start_date"] = "Renseignez la date d’entrée."
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
+        is_last_experience = index == min(len(raw_experiences), 5) - 1
+        if not end_date and is_last_experience:
+            errors[f"experiences.{index}.end_date"] = "Renseignez la date de sortie de votre dernière expérience."
+        elif end_date and not _professional_experience_date_is_valid(end_date):
             errors[f"experiences.{index}.end_date"] = "Renseignez une date de sortie valide."
         if contract_type not in allowed_contracts or not contract_type:
             errors[f"experiences.{index}.contract_type"] = "Sélectionnez le type de contrat."

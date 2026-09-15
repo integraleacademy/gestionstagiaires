@@ -53,11 +53,21 @@
   };
 
   const renumber = () => {
-    [...experiences.children].forEach((card, index) => {
+    const cards = [...experiences.children];
+    cards.forEach((card, index) => {
       card.dataset.experienceIndex = index;
       card.querySelector("h4 span").textContent = index + 1;
       card.querySelectorAll('[data-field="contract_type"]').forEach(input => input.name = `contract_type_${index}`);
       card.querySelectorAll('[data-field="executive_status"]').forEach(input => input.name = `executive_status_${index}`);
+      const endDate = card.querySelector('[data-field="end_date"]');
+      const endDateLabel = card.querySelector("[data-end-date-label]");
+      const isLast = index === cards.length - 1;
+      if (endDate) endDate.required = isLast;
+      if (endDateLabel) {
+        endDateLabel.innerHTML = isLast
+          ? "Date de sortie <strong>*</strong>"
+          : "Date de sortie <small>(facultatif)</small>";
+      }
     });
     const full = experiences.children.length >= 5;
     addButton.disabled = full;
