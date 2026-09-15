@@ -702,6 +702,39 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertEqual(queue_response.status_code, 200)
         self.assertNotIn("/T-HISTORY", queue_response.get_data(as_text=True))
 
+    def test_search_counts_only_matching_records_without_reopening_historical_print_queue(self):
+        fake_data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [
+            {"id": "T-CANCELLED", "last_name": "ANNULEE", "registration_cancelled": True,
+             "convention_signature": {"status": "done"}},
+            {"id": "T-HISTORY", "last_name": "HISTORIQUE",
+             "convention_signature": {"status": "done", "created_at": "2026-06-01T10:00:00Z"}},
+            {"id": "T-UNRELATED", "last_name": "AUTRE",
+             "convention_signature": {"status": "ongoing", "signature_request_id": "request-other"}},
+        ]}]}
+        captured = {}
+
+        def fake_render_template(template_name, **context):
+            captured.update(context)
+            return "OK"
+
+        for query, expected in (("q=ANNULEE", ["T-CANCELLED"]),
+                                ("q=HISTORIQUE", ["T-HISTORY"]),
+                                ("q=HISTORIQUE&status=to_print", [])):
+            with self.subTest(query=query), \
+                 patch.object(gestion_app, "load_data", return_value=fake_data), \
+                 patch.object(gestion_app, "render_template", side_effect=fake_render_template), \
+                 patch.object(gestion_app, "_refresh_yousign_convention_status_if_pending", return_value=False) as refresh:
+                response = self.client.get(f"/admin/sessions/conventions?{query}")
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual([row["trainee_id"] for row in captured["rows"]], expected)
+            self.assertEqual(captured["stats"]["total"], 1)
+            self.assertEqual(captured["stats"]["signed"], 1)
+            self.assertEqual(captured["stats"]["to_print"], 0)
+            self.assertEqual(captured["stats"]["waiting_signature"], 0)
+            self.assertEqual(captured["stats"]["action_required"], 0)
+            self.assertTrue(all(call.args[3]["id"] != "T-UNRELATED" for call in refresh.call_args_list))
+
 
 if __name__ == "__main__":
     unittest.main()

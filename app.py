@@ -17976,9 +17976,16 @@ def admin_sessions_conventions():
                 inferred_vae_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
                 if inferred_vae_key and VAE_STATUS_RANK.get(inferred_vae_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
                     vae_key = inferred_vae_key
-                if not registration_cancelled and not selected_q and VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
+                if not registration_cancelled and VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
                     continue
             state = _yousign_state(trainee)
+            full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+            searchable = " ".join([
+                full_name, trainee_id, str(trainee.get("email") or ""), formation_display_label,
+                str(state.get("signature_request_id") or ""), str(state.get("external_id") or ""),
+            ]).lower()
+            if selected_q and selected_q not in searchable:
+                continue
             if not registration_cancelled and _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
                 state = _yousign_state(trainee)
@@ -18005,10 +18012,15 @@ def admin_sessions_conventions():
             )
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
             row_needs_action = not registration_cancelled and status_key in {"not_generated", "generated", "expired", "refused"}
-            row_needs_printing = not registration_cancelled and status_key == "signed" and not bool(trainee.get("printed"))
+            row_needs_printing = (
+                not registration_cancelled
+                and status_key == "signed"
+                and _convention_created_on_or_after_tracking_start(trainee)
+                and not bool(trainee.get("printed"))
+            )
             is_problem = status_key in {"error", "expired", "refused"}
 
-            # Les compteurs des tuiles KPI décrivent le périmètre courant (ex. formation),
+            # Les compteurs décrivent la formation et la recherche courantes,
             # mais restent indépendants du filtre de statut sélectionné. Ainsi, cliquer sur
             # "Signées" ou "Actions" n'altère pas les chiffres affichés sur les autres tuiles.
             stats["total"] += 1
@@ -18029,14 +18041,6 @@ def admin_sessions_conventions():
             if selected_status == "registration_cancelled" and not registration_cancelled:
                 continue
             if selected_status and selected_status not in virtual_statuses and status_key != selected_status:
-                continue
-
-            full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
-            searchable = " ".join([
-                full_name, trainee_id, str(trainee.get("email") or ""), formation_display_label,
-                str(state.get("signature_request_id") or ""), str(state.get("external_id") or ""),
-            ]).lower()
-            if selected_q and selected_q not in searchable:
                 continue
 
             row = {
