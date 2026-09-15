@@ -1,3 +1,4 @@
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -363,8 +364,69 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn('data-field="end_date" value="" required', form)
 
         javascript = Path("static/js/professional-experience.js").read_text(encoding="utf-8")
-        self.assertIn("endDate.required = isLast", javascript)
-        self.assertIn('card.querySelector("[data-end-date-label]")', javascript)
+        runner = r'''
+const vm = require("vm");
+const source = process.argv[1];
+const start = source.indexOf("  const renumber = () => {");
+const end = source.indexOf("\n\n  addButton.addEventListener", start);
+if (start < 0 || end < 0) throw new Error("renumber() production function not found");
+const renumberSource = source.slice(start, end).replace("const renumber =", "var renumber =");
+
+const makeCard = () => {
+  const heading = {textContent: ""};
+  const endDate = {required: false};
+  const endDateLabel = {innerHTML: ""};
+  const contractInputs = [{name: ""}, {name: ""}];
+  const executiveInputs = [{name: ""}, {name: ""}];
+  return {
+    dataset: {}, heading, endDate, endDateLabel, contractInputs, executiveInputs,
+    querySelector(selector) {
+      if (selector === "h4 span") return heading;
+      if (selector === '[data-field="end_date"]') return endDate;
+      if (selector === "[data-end-date-label]") return endDateLabel;
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-field="contract_type"]') return contractInputs;
+      if (selector === '[data-field="executive_status"]') return executiveInputs;
+      return [];
+    }
+  };
+};
+
+const first = makeCard();
+const experiences = {children: [first]};
+const addButton = {disabled: false};
+const limit = {hidden: true};
+const context = {experiences, addButton, limit};
+vm.createContext(context);
+vm.runInContext(renumberSource, context);
+
+context.renumber();
+if (!first.endDate.required || first.endDateLabel.innerHTML !== "Date de sortie <strong>*</strong>")
+  throw new Error("the only experience is not required");
+
+const second = makeCard();
+experiences.children.push(second);
+context.renumber();
+if (first.endDate.required || !first.endDateLabel.innerHTML.includes("facultatif"))
+  throw new Error("adding a card did not make the previous card optional");
+if (!second.endDate.required || second.endDateLabel.innerHTML !== "Date de sortie <strong>*</strong>")
+  throw new Error("adding a card did not make the new last card required");
+
+experiences.children.pop();
+context.renumber();
+if (!first.endDate.required || first.endDateLabel.innerHTML !== "Date de sortie <strong>*</strong>")
+  throw new Error("removing the last card did not restore the requirement");
+if (first.dataset.experienceIndex !== 0 || first.heading.textContent !== 1)
+  throw new Error("renumbering did not preserve the first card index");
+
+const addHandler = source.slice(source.indexOf('addButton.addEventListener'), source.indexOf('experiences.addEventListener'));
+const removeHandler = source.slice(source.indexOf('experiences.addEventListener'), source.indexOf('form.addEventListener("change"'));
+if (!addHandler.includes("renumber();") || !removeHandler.includes("renumber();"))
+  throw new Error("add/remove handlers do not invoke renumber()");
+'''
+        subprocess.run(["node", "-e", runner, javascript], check=True, cwd=Path.cwd())
 
     def test_sheet_requirement_depends_on_training_start_date_for_non_vae(self):
         for start_date, expected in (
