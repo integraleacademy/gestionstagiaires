@@ -17919,11 +17919,10 @@ def admin_sessions_conventions():
         save_data(data)
     selected_formation = (request.args.get("formation") or "").strip().upper()
     selected_status_param = (request.args.get("status") or "").strip().lower()
-    # The operational view is the print queue when no status was explicitly
-    # requested. An explicit empty value still means "all statuses" (used by
-    # the Total tile and the status filter).
-    selected_status = selected_status_param if "status" in request.args else "to_print"
     selected_q = (request.args.get("q") or "").strip().lower()
+    # Keep the print queue as the landing view, but a search without an explicit
+    # status must also find historical, printed and cancelled registrations.
+    selected_status = selected_status_param if "status" in request.args else ("" if selected_q else "to_print")
     convention_rows = []
     formation_options_by_key = {}
     status_options = [
@@ -17935,10 +17934,11 @@ def admin_sessions_conventions():
         {"key": "expired", "label": "Expirée"},
         {"key": "refused", "label": "Refusée"},
         {"key": "error", "label": "Erreur"},
+        {"key": "registration_cancelled", "label": "Inscriptions annulées"},
     ]
     if selected_status == "signing":
         selected_status = "waiting_signature"
-    virtual_statuses = {"action_required", "to_print"}
+    virtual_statuses = {"action_required", "to_print", "registration_cancelled"}
     valid_statuses = {option["key"] for option in status_options} | virtual_statuses
     if selected_status and selected_status not in valid_statuses:
         selected_status = ""
@@ -17959,14 +17959,14 @@ def admin_sessions_conventions():
 
         trainees = _session_trainees_list(sess)
         for trainee_index, trainee in enumerate(trainees):
-            if _trainee_registration_is_cancelled(trainee):
-                continue
+            registration_cancelled = _trainee_registration_is_cancelled(trainee)
             trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
-            # Les conventions signées avant le 15 juillet ne nécessitent plus de
-            # suivi. Celles créées depuis cette date restent visibles, y compris
-            # lorsqu'elles ont déjà été signées.
+            # Historical conventions stay outside the operational tracking scope,
+            # but remain retrievable by search and for cancelled registrations.
             if (
-                _public_trainee_convention_is_signed(trainee)
+                not registration_cancelled
+                and not selected_q
+                and _public_trainee_convention_is_signed(trainee)
                 and not _convention_created_on_or_after_tracking_start(trainee)
             ):
                 continue
@@ -17976,10 +17976,10 @@ def admin_sessions_conventions():
                 inferred_vae_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
                 if inferred_vae_key and VAE_STATUS_RANK.get(inferred_vae_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
                     vae_key = inferred_vae_key
-                if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
+                if not registration_cancelled and not selected_q and VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
                     continue
             state = _yousign_state(trainee)
-            if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
+            if not registration_cancelled and _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
                 state = _yousign_state(trainee)
             legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
@@ -18004,8 +18004,8 @@ def admin_sessions_conventions():
                 or _recoverable_yousign_convention_request_id(trainee)
             )
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
-            row_needs_action = status_key in {"not_generated", "generated", "expired", "refused"}
-            row_needs_printing = status_key == "signed" and not bool(trainee.get("printed"))
+            row_needs_action = not registration_cancelled and status_key in {"not_generated", "generated", "expired", "refused"}
+            row_needs_printing = not registration_cancelled and status_key == "signed" and not bool(trainee.get("printed"))
             is_problem = status_key in {"error", "expired", "refused"}
 
             # Les compteurs des tuiles KPI décrivent le périmètre courant (ex. formation),
@@ -18026,12 +18026,14 @@ def admin_sessions_conventions():
                 continue
             if selected_status == "to_print" and not row_needs_printing:
                 continue
+            if selected_status == "registration_cancelled" and not registration_cancelled:
+                continue
             if selected_status and selected_status not in virtual_statuses and status_key != selected_status:
                 continue
 
             full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
             searchable = " ".join([
-                full_name, str(trainee.get("email") or ""), formation_display_label,
+                full_name, trainee_id, str(trainee.get("email") or ""), formation_display_label,
                 str(state.get("signature_request_id") or ""), str(state.get("external_id") or ""),
             ]).lower()
             if selected_q and selected_q not in searchable:
@@ -18044,6 +18046,10 @@ def admin_sessions_conventions():
                 "first_name": (trainee.get("first_name") or "").strip(),
                 "email": (trainee.get("email") or "").strip(),
                 "phone": (trainee.get("phone") or trainee.get("telephone") or "").strip(),
+                "registration_cancelled": registration_cancelled,
+                "registration_cancelled_at": _format_automation_datetime(
+                    trainee.get("registration_cancelled_at") or trainee.get("inscription_annulee_at") or ""
+                ) if registration_cancelled else "",
                 "formation": formation_display_label,
                 "formation_key": formation_key,
                 "date_start_label": fr_date(_session_get(sess, "date_start", "")),
@@ -18067,8 +18073,8 @@ def admin_sessions_conventions():
                 "original_pdf_url": url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if original_pdf else "",
                 "signed_pdf_url": url_for("admin_view_signed_convention", session_id=session_id, trainee_id=trainee_id) if signed_pdf else "",
                 "download_url": convention.get("download_url") or "",
-                "can_send": True,
-                "can_remind": status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
+                "can_send": not registration_cancelled,
+                "can_remind": not registration_cancelled and status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
                 "legacy_signed": _has_legacy_signed_convention(trainee),
                 "legacy_toggle_url": url_for("admin_toggle_legacy_convention_signed", session_id=session_id, trainee_id=trainee_id),
                 "printed": bool(trainee.get("printed")),
