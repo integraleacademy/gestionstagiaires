@@ -17,7 +17,13 @@ def _open_convention_transmission_source() -> str:
     return source[start:end]
 
 
-def _run_ssiap_price_case(*, combined: bool, existing_price: str = "") -> dict:
+def _run_ssiap_price_case(
+    *,
+    combined: bool,
+    existing_price: str = "",
+    training_type: str = "SSIAP 1",
+    modern_modal: bool = True,
+) -> dict:
     node = shutil.which("node")
     if not node:
         pytest.skip("Node.js est requis pour exécuter le comportement JavaScript de la modale.")
@@ -27,7 +33,10 @@ def _run_ssiap_price_case(*, combined: bool, existing_price: str = "") -> dict:
 const functionSource = {json.dumps(function_source)};
 const combined = {json.dumps(combined)};
 const existingPrice = {json.dumps(existing_price)};
+const trainingType = {json.dumps(training_type)};
+const modernModal = {json.dumps(modern_modal)};
 let promptOptions = null;
+let nativePrompt = null;
 
 const makeElement = () => ({{
   value: "",
@@ -56,18 +65,20 @@ const elements = {{
 
 global.document = {{ getElementById: (id) => elements[id] || null }};
 global.window = {{
-  AppModal: {{
-    confirm: async (options) => {{ promptOptions = options; return combined; }},
-  }},
-  confirm: () => combined,
+  confirm: (message) => {{ nativePrompt = message; return combined; }},
 }};
+if (modernModal) {{
+  window.AppModal = {{
+    confirm: async (options) => {{ promptOptions = options; return combined; }},
+  }};
+}}
 global.openModal = () => {{}};
 global.closeModal = () => {{}};
 eval(functionSource);
 
 (async () => {{
   const pending = openConventionTransmission({{
-    trainingType: "SSIAP 1",
+    trainingType,
     defaults: {{
       training_price: existingPrice,
       cpf_amount: "",
@@ -78,7 +89,7 @@ eval(functionSource);
   await new Promise((resolve) => setImmediate(resolve));
   elements.conventionTransmissionNo.onclick();
   const payload = await pending;
-  process.stdout.write(JSON.stringify({{ payload, promptOptions }}));
+  process.stdout.write(JSON.stringify({{ payload, promptOptions, nativePrompt }}));
 }})().catch((error) => {{
   console.error(error);
   process.exit(1);
@@ -114,3 +125,20 @@ def test_existing_ssiap_price_is_preserved_without_prompt():
 
     assert result["payload"]["training_price"] == "1110"
     assert result["promptOptions"] is None
+
+
+def test_native_fallback_names_aps_and_applies_1230_euros():
+    result = _run_ssiap_price_case(combined=True, modern_modal=False)
+
+    assert result["payload"]["training_price"] == "1230"
+    assert "SSIAP + APS" in result["nativePrompt"]
+    assert "1 230 €" in result["nativePrompt"]
+    assert result["promptOptions"] is None
+
+
+def test_non_ssiap_training_is_not_prompted_or_changed():
+    result = _run_ssiap_price_case(combined=True, training_type="APS")
+
+    assert result["payload"]["training_price"] == ""
+    assert result["promptOptions"] is None
+    assert result["nativePrompt"] is None
