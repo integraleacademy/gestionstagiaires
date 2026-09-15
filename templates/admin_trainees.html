@@ -167,6 +167,9 @@
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
+    <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
+    {% endif %}
     {% if not is_read_only and not is_all_vtc %}
     <button class="btn btn-outline" type="button" data-manual-docs-reminder
             data-preview-url="{{ url_for('admin_manual_docs_preview', session_id=session.id) }}"
@@ -4390,4 +4393,7 @@ applyRowFilters();
 </script>
 {% endif %}
 {% include '_manual_docs_reminder.html' %}
+{% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
+{% include '_aps_digiforma_bulk_import.html' %}
+{% endif %}
 {% endblock %}

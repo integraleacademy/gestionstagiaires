@@ -8,7 +8,7 @@ from reportlab.lib.styles import ParagraphStyle
 def attendance_pdf(*, trainee_name='ALICE MARTIN', complete=True, completion_rate=100,
                    effective_duration='62 heures', completed_paths=8, completed_evaluations=8,
                    striped=True, split_course=False, long_label=False, connection_count=3,
-                   connection_total="62 heures et 1 seconde"):
+                   connection_total="62 heures et 1 seconde", email="alice.martin@example.test"):
     output=io.BytesIO()
     pdf=canvas.Canvas(output,pagesize=(595,842))
     pdf.setTitle('Attestation source fictive')
@@ -68,7 +68,7 @@ def attendance_pdf(*, trainee_name='ALICE MARTIN', complete=True, completion_rat
         pdf.showPage()
     pdf.setFont('Helvetica',10)
     pdf.drawString(40,790,"Relevé de connexions à l'extranet")
-    pdf.drawString(40,770,'Adresse email utilisée : alice.martin@example.test')
+    pdf.drawString(40,770,f'Adresse email utilisée : {email}')
     log_headers=['Date de connexion','Date de déconnexion','Durée de connexion','IP']
     for start in range(0,connection_count,32):
         rows=[log_headers]
