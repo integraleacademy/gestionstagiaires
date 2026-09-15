@@ -82,6 +82,7 @@ class VaeAdminEmailNotificationTests(unittest.TestCase):
         self.assertIn("Changement de statut VAE", sent_emails[0]["subject"])
         self.assertIn("Bob MARTIN", sent_emails[0]["html"])
 
+
     def _configure_jury_update(self, *, status="livret_2_validated", jury_date=""):
         trainee = {
             "id": "T-VAE-JURY",
@@ -118,12 +119,10 @@ class VaeAdminEmailNotificationTests(unittest.TestCase):
 
     def test_setting_jury_status_and_date_sends_date_once(self):
         _trainee, sent_emails = self._configure_jury_update()
-
         response = self.client.post(
             "/api/sessions/S-VAE-JURY/stagiaires/T-VAE-JURY/update",
             json={"vae_status": "jury", "vae_jury_date": "2026-10-15"},
         )
-
         self.assertEqual(response.status_code, 200)
         student_emails = self._student_jury_emails(sent_emails)
         self.assertEqual(len(student_emails), 1)
@@ -132,12 +131,10 @@ class VaeAdminEmailNotificationTests(unittest.TestCase):
 
     def test_setting_date_for_existing_jury_status_sends_updated_date_once(self):
         _trainee, sent_emails = self._configure_jury_update(status="jury")
-
         response = self.client.post(
             "/api/sessions/S-VAE-JURY/stagiaires/T-VAE-JURY/update",
             json={"vae_status": "jury", "vae_jury_date": "2026-11-03"},
         )
-
         self.assertEqual(response.status_code, 200)
         student_emails = self._student_jury_emails(sent_emails)
         self.assertEqual(len(student_emails), 1)
@@ -145,7 +142,6 @@ class VaeAdminEmailNotificationTests(unittest.TestCase):
 
     def test_unchanged_or_cleared_jury_date_does_not_send_email(self):
         trainee, sent_emails = self._configure_jury_update(status="jury", jury_date="2026-11-03")
-
         unchanged = self.client.post(
             "/api/sessions/S-VAE-JURY/stagiaires/T-VAE-JURY/update",
             json={"vae_status": "jury", "vae_jury_date": "2026-11-03"},
@@ -154,12 +150,10 @@ class VaeAdminEmailNotificationTests(unittest.TestCase):
             "/api/sessions/S-VAE-JURY/stagiaires/T-VAE-JURY/update",
             json={"vae_status": "jury", "vae_jury_date": ""},
         )
-
         self.assertEqual(unchanged.status_code, 200)
         self.assertEqual(cleared.status_code, 200)
         self.assertEqual(trainee["vae_jury_date"], "")
         self.assertEqual(self._student_jury_emails(sent_emails), [])
-
 
 if __name__ == "__main__":
     unittest.main()
