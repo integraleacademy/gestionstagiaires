@@ -602,6 +602,106 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("aucune convention à imprimer", html)
         self.assertNotIn('href="/admin/sessions/conventions?status=to_print"', html)
 
+    def test_cancelled_legacy_convention_remains_searchable_without_creation_date(self):
+        trainee = {
+            "id": "T-CANCELLED-LEGACY",
+            "last_name": "ANNULEE",
+            "convention_status": "signed",
+            "convention_legacy_signed": True,
+            "convention_legacy_signed_at": "2026-07-21T08:24:00Z",
+            "registration_cancelled": True,
+            "registration_cancelled_at": "2026-09-07T03:29:00Z",
+            "printed": True,
+        }
+        fake_data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [trainee]}]}
+        for query in ("q=ANNULEE", "q=T-CANCELLED-LEGACY", "status=", "status=registration_cancelled"):
+            with self.subTest(query=query), \
+                 patch.object(gestion_app, "load_data", return_value=fake_data), \
+                 patch.object(gestion_app, "save_data") as save, \
+                 patch.object(gestion_app, "_refresh_yousign_convention_status_if_pending") as refresh:
+                response = self.client.get(f"/admin/sessions/conventions?{query}")
+
+            self.assertEqual(response.status_code, 200)
+            html = response.get_data(as_text=True)
+            self.assertIn("ANNULEE", html)
+            self.assertIn("Inscription annulée", html)
+            self.assertIn("07/09/2026", html)
+            self.assertIn("PDF signé non rattaché", html)
+            self.assertIn("Signée via ancien logiciel", html)
+            self.assertIn("/T-CANCELLED-LEGACY/convention/signed-pdf?download=1", html)
+            self.assertNotIn('method="post"', html)
+            self.assertNotIn('data-trainee-id="T-CANCELLED-LEGACY"', html)
+            self.assertNotIn("PDF final disponible", html)
+            refresh.assert_not_called()
+            save.assert_not_called()
+            self.assertTrue(trainee["registration_cancelled"])
+
+    def test_cancelled_conventions_are_kept_out_of_operational_queues(self):
+        fake_data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [
+            {"id": "T-ACTIVE", "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"}},
+            {"id": "T-CANCELLED-SIGNED", "registration_cancelled": True,
+             "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"}},
+            {"id": "T-CANCELLED-NO-PDF", "inscription_annulee": "oui"},
+        ]}]}
+        captured = {}
+
+        def fake_render_template(template_name, **context):
+            captured.update(context)
+            return "OK"
+
+        for query, expected in (("", ["T-ACTIVE"]), ("?status=action_required", []),
+                                ("?status=registration_cancelled", ["T-CANCELLED-SIGNED", "T-CANCELLED-NO-PDF"])):
+            with self.subTest(query=query), \
+                 patch.object(gestion_app, "load_data", return_value=fake_data), \
+                 patch.object(gestion_app, "render_template", side_effect=fake_render_template), \
+                 patch.object(gestion_app, "_refresh_yousign_convention_status_if_pending", return_value=False):
+                response = self.client.get(f"/admin/sessions/conventions{query}")
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual({row["trainee_id"] for row in captured["rows"]}, set(expected))
+            self.assertEqual(captured["stats"]["total"], 3)
+            self.assertEqual(captured["stats"]["to_print"], 1)
+            self.assertEqual(captured["stats"]["action_required"], 0)
+            for row in captured["rows"]:
+                if row["registration_cancelled"]:
+                    self.assertFalse(row["can_send"])
+                    self.assertFalse(row["can_remind"])
+                    self.assertFalse(row["needs_printing"])
+
+    def test_cancelled_pending_and_early_vae_conventions_remain_read_only(self):
+        fake_data = {"sessions": [{"id": "S-VAE", "training_type": "DIRIGEANT VAE", "trainees": [{
+            "id": "T-CANCELLED-PENDING",
+            "last_name": "ANNULEE-EN-ATTENTE",
+            "registration_canceled": "true",
+            "vae_status": "livret_1_validated",
+            "convention_signature": {"status": "ongoing", "signature_request_id": "request-1",
+                                     "signature_link": "https://example.test/sign"},
+        }]}]}
+        with patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "_refresh_yousign_convention_status_if_pending") as refresh:
+            response = self.client.get("/admin/sessions/conventions?status=registration_cancelled")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("ANNULEE-EN-ATTENTE", html)
+        self.assertNotIn('method="post"', html)
+        self.assertNotIn('data-copy-signature-link="https://example.test/sign"', html)
+        refresh.assert_not_called()
+
+    def test_search_can_find_a_printed_historical_convention_with_explicit_status_preserved(self):
+        fake_data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [{
+            "id": "T-HISTORY", "last_name": "HISTORIQUE", "printed": True,
+            "convention_signature": {"status": "done", "created_at": "2026-06-01T10:00:00Z"},
+        }]}]}
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            search_response = self.client.get("/admin/sessions/conventions?q=HISTORIQUE")
+            queue_response = self.client.get("/admin/sessions/conventions?q=HISTORIQUE&status=to_print")
+
+        self.assertEqual(search_response.status_code, 200)
+        self.assertIn("/T-HISTORY", search_response.get_data(as_text=True))
+        self.assertEqual(queue_response.status_code, 200)
+        self.assertNotIn("/T-HISTORY", queue_response.get_data(as_text=True))
+
 
 if __name__ == "__main__":
     unittest.main()
