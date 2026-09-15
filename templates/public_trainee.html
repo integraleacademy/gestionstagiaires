@@ -380,12 +380,25 @@
   .aps-elearning-icon svg{width:24px;height:24px;display:block;}
   .aps-elearning-content{min-width:0;flex:1;}
   .aps-attendance{margin-top:20px;padding:18px;border:1px solid #c7d2fe;border-radius:16px;background:#fff;}
-  .aps-attendance-metrics{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;}
-  .aps-attendance-metrics span{display:block;color:#475569;font-size:13px;margin-bottom:6px;}
-  .aps-attendance-metrics strong{font-size:24px;color:#312e81;}
-  .aps-attendance-metrics small{font-size:16px;font-weight:600;color:#64748b;}
+  .aps-attendance-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .aps-attendance-heading h3{margin:0;font-size:18px;color:#312e81;}
+  .aps-attendance-heading strong{font-size:30px;color:#4338ca;}
+  .aps-attendance-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin-top:18px;}
+  .aps-attendance-metric{padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;min-width:0;}
+  .aps-attendance-label{display:block;color:#475569;font-size:13px;margin-bottom:8px;}
+  .aps-attendance-metric strong{font-size:23px;color:#312e81;}
+  .aps-attendance-metric small{font-size:14px;font-weight:600;color:#64748b;}
+  .aps-attendance-check{display:block;margin-top:10px;font-size:12px;font-weight:700;color:#64748b;}
+  .aps-attendance-metric.is-met{border-color:#bbf7d0;background:#f0fdf4;}
+  .aps-attendance-metric.is-met strong,.aps-attendance-metric.is-met .aps-attendance-check{color:#166534;}
   .aps-attendance progress{display:block;width:100%;height:10px;margin:16px 0 12px;accent-color:#4f46e5;}
   .aps-attendance p{margin:6px 0 0;color:#64748b;font-size:12px;line-height:1.5;}
+  .aps-attendance-status{margin-top:18px;padding:14px 16px;border-radius:12px;background:#eef2ff;color:#3730a3;}
+  .aps-attendance-status p{color:inherit;font-size:13px;}
+  .aps-attendance.is-complete{border-color:#86efac;}
+  .aps-attendance.is-complete .aps-attendance-heading strong{color:#15803d;}
+  .aps-attendance.is-complete progress,.aps-attendance-metric.is-met progress{accent-color:#16a34a;}
+  .aps-attendance.is-complete .aps-attendance-status{background:#dcfce7;color:#166534;}
   .aps-elearning-card h2{font-size:23px;margin:0;color:#111827;letter-spacing:-.02em;}
   .aps-elearning-card .aps-elearning-subtitle{max-width:760px;margin:7px 0 0;color:#4b5563;line-height:1.55;}
   .aps-elearning-badge{display:inline-flex;align-items:center;margin-top:14px;padding:8px 12px;border:1px solid #c7d2fe;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:13px;font-weight:1000;box-shadow:0 6px 16px rgba(79,70,229,.08);}
@@ -1017,19 +1030,60 @@
           <div class="aps-elearning-badge">Accès disponible le {{ session.date_start|frdate }}</div>
           <p class="aps-elearning-note">Votre progression restera suivie pendant toute la formation, sans identifiant ni mot de passe à saisir.</p>
           {% if aps_elearning_progress %}
-          <div class="aps-attendance" id="apsElearningAttendance">
-            <div class="aps-attendance-metrics">
-              <div><span>Durée totale de connexion</span><strong>{{ aps_elearning_progress.connection_duration_short_label }}</strong> <small>/ 62 heures</small></div>
-              <div><span>Taux de suivi</span><strong>{{ aps_elearning_progress.attendance_rate_label if aps_elearning_progress.connection_seconds is not none else 'Non renseigné' }}</strong></div>
+          <section class="aps-attendance{% if aps_elearning_progress.is_complete %} is-complete{% endif %}" id="apsElearningAttendance" aria-labelledby="apsAttendanceTitle">
+            <div class="aps-attendance-heading">
+              <h3 id="apsAttendanceTitle">Suivi global du e-learning</h3>
+              <strong id="apsOverallRate">{{ aps_elearning_progress.overall_rate_label }}</strong>
             </div>
-            {% if aps_elearning_progress.connection_seconds is not none %}
-            <progress max="100" value="{{ aps_elearning_progress.attendance_rate }}" aria-label="Taux de suivi e-learning">{{ aps_elearning_progress.attendance_rate_label }}</progress>
-            <p>Suivi calculé à partir du temps total du relevé de connexions. 100 % de suivi au-delà de 62 heures de connexion.</p>
-            {% else %}
-            <p>La durée de connexion n’a pas pu être lue dans le relevé. L’équipe pédagogique doit vérifier le document.</p>
+            {% if aps_elearning_progress.overall_rate is not none %}
+            <progress id="apsOverallProgress" max="100" value="{{ aps_elearning_progress.overall_rate }}" aria-label="Pourcentage global de suivi du e-learning">{{ aps_elearning_progress.overall_rate_label }}</progress>
             {% endif %}
+            <div class="aps-attendance-metrics">
+              <div class="aps-attendance-metric{% if aps_elearning_progress.paths_requirement_met %} is-met{% endif %}" id="apsPathsProgress">
+                <span class="aps-attendance-label">Parcours suivis</span>
+                {% if aps_elearning_progress.paths_completed is not none %}
+                <strong>{{ aps_elearning_progress.paths_completed }}/{{ aps_elearning_progress.paths_required }}</strong>
+                <span class="aps-attendance-check">{{ '✓ Objectif atteint' if aps_elearning_progress.paths_requirement_met else 'À poursuivre' }}</span>
+                {% else %}
+                <strong>À vérifier</strong><small> / {{ aps_elearning_progress.paths_required }} parcours</small>
+                {% endif %}
+              </div>
+              <div class="aps-attendance-metric{% if aps_elearning_progress.evaluations_requirement_met %} is-met{% endif %}" id="apsEvaluationsProgress">
+                <span class="aps-attendance-label">Questionnaires d’évaluation</span>
+                {% if aps_elearning_progress.evaluations_completed is not none %}
+                <strong>{{ aps_elearning_progress.evaluations_completed }}/{{ aps_elearning_progress.evaluations_required }}</strong> <small>réalisés</small>
+                <span class="aps-attendance-check">{{ '✓ Objectif atteint' if aps_elearning_progress.evaluations_requirement_met else 'À poursuivre' }}</span>
+                {% else %}
+                <strong>À vérifier</strong><small> / {{ aps_elearning_progress.evaluations_required }} évaluations</small>
+                {% endif %}
+              </div>
+              <div class="aps-attendance-metric{% if aps_elearning_progress.connection_requirement_met %} is-met{% endif %}" id="apsConnectionProgress">
+                <span class="aps-attendance-label">Durée totale de connexion</span>
+                <strong title="{{ aps_elearning_progress.connection_duration_label }}">{{ aps_elearning_progress.connection_duration_short_label }}</strong> <small>/ 62 heures</small>
+                {% if aps_elearning_progress.connection_seconds is not none %}
+                <progress max="100" value="{{ aps_elearning_progress.attendance_rate }}" aria-label="Objectif de durée de connexion">{{ aps_elearning_progress.attendance_rate_label }}</progress>
+                <p>Objectif de connexion : {{ aps_elearning_progress.attendance_rate_label }}.</p>
+                <span class="aps-attendance-check">{{ '✓ Plus de 62 heures : objectif atteint' if aps_elearning_progress.connection_requirement_met else 'À poursuivre : plus de 62 heures requises' }}</span>
+                {% else %}
+                <p>Durée non renseignée dans le relevé.</p>
+                {% endif %}
+              </div>
+            </div>
+            <div class="aps-attendance-status">
+              {% if aps_elearning_progress.is_complete %}
+              <strong>E-learning terminé</strong>
+              <p>Bravo ! Vous avez suivi les 8 parcours, réalisé les 8 évaluations et dépassé les 62 heures de connexion. Félicitations pour votre travail !</p>
+              {% elif aps_elearning_progress.overall_rate is none %}
+              <strong>Suivi à vérifier</strong>
+              <p>Le dernier relevé contient des informations manquantes ou illisibles. L’équipe pédagogique doit les vérifier pour calculer votre suivi global.</p>
+              {% else %}
+              <strong>E-learning en cours</strong>
+              <p>Pour terminer : 8/8 parcours suivis, 8/8 évaluations réalisées et plus de 62 heures de connexion.</p>
+              {% endif %}
+            </div>
+            <p>Le suivi global est la moyenne des trois objectifs, chacun comptant pour un tiers. Il atteint 100 % uniquement lorsque les trois conditions sont remplies.</p>
             {% if aps_elearning_progress.updated_at_label %}<p>Dernière mise à jour : {{ aps_elearning_progress.updated_at_label }}.</p>{% endif %}
-          </div>
+          </section>
           {% endif %}
         {% if not aps_elearning_available %}
           <div class="aps-elearning-pending">

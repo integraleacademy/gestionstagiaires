@@ -24,7 +24,7 @@ import signal
 import atexit
 import sys
 from backup_chronology import backup_chronology_key
-from digiforma_duration import journal_attendance
+from digiforma_duration import aps_elearning_completion, journal_attendance
 from manual_document_reminders import document_actions, build_content as build_manual_docs_content, content_fingerprint
 from automatic_document_reminders import run as run_automatic_document_reminders, schedule as automatic_document_schedule
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -32873,7 +32873,7 @@ def public_trainee_space(token):
     if aps_elearning_enabled:
         tracking = _aps_elearning_tracking(t)
         if tracking.get("file"):
-            aps_elearning_progress = journal_attendance(tracking.get("connection_log_total"))
+            aps_elearning_progress = aps_elearning_completion(tracking)
             aps_elearning_progress["updated_at_label"] = _aps_elearning_datetime_label(tracking.get("uploaded_at"))
 
     # ✅ persistance
