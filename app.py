@@ -24594,6 +24594,14 @@ def admin_trainees(session_id: str):
     is_aps_training = bool(re.search(
         r"\bAPS\b", (session_view["training_type"] or "").strip().upper()
     ))
+    aps_attendance_by_id = {}
+    if is_aps_training:
+        for trainee in trainees:
+            tracking = trainee.get("aps_elearning_tracking")
+            if isinstance(tracking, dict) and tracking.get("file"):
+                aps_attendance_by_id[str(trainee.get("id") or "")] = journal_attendance(
+                    tracking.get("connection_log_total")
+                )
     is_dirigeant = ("DIRIGEANT" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
@@ -24658,6 +24666,7 @@ def admin_trainees(session_id: str):
         is_vtc=is_vtc,
         is_aps=is_aps,
         is_aps_training=is_aps_training,
+        aps_attendance_by_id=aps_attendance_by_id,
         is_dirigeant=is_dirigeant,
         is_desp_initial=_is_desp_initial_session(s),
         desp_kickoff_attendance=_desp_kickoff_attendance_view(s),
