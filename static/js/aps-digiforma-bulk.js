@@ -11,12 +11,16 @@
   let running = false;
   let files = [];
   let rows = [];
+  let refreshOnClose = false;
 
   open.addEventListener('click', () => dialog.showModal());
   closeButtons.forEach(button => button.addEventListener('click', () => {
     if (!running) dialog.close();
   }));
   dialog.addEventListener('cancel', event => { if (running) event.preventDefault(); });
+  dialog.addEventListener('close', () => {
+    if (refreshOnClose) window.location.reload();
+  });
   window.addEventListener('beforeunload', event => {
     if (running) { event.preventDefault(); event.returnValue = ''; }
   });
@@ -76,7 +80,7 @@
           processedIds.add(payload.trainee_id);
           row.dataset.status = payload.status;
           if (payload.status === 'unchanged') unchanged += 1;
-          else imported += 1;
+          else { imported += 1; refreshOnClose = true; }
           detail.textContent = `${payload.message} ${payload.trainee_name} · ${payload.duration} / 62 heures · Suivi : ${payload.attendance_rate}`;
           const link = document.createElement('a');
           link.href = payload.trainee_url;
