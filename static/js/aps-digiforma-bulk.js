@@ -53,8 +53,7 @@
     progress.hidden = false;
     progress.max = files.length;
     progress.value = 0;
-    const processedIds = new Set();
-    let imported = 0, unchanged = 0, errors = 0;
+    let imported = 0, replaced = 0, errors = 0;
     try {
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
@@ -67,7 +66,6 @@
           if (file.size > Number(dialog.dataset.maxBytes) - 65536) throw new Error('Ce PDF est trop volumineux. Réduisez sa taille puis réessayez.');
           const form = new FormData();
           form.append('digiforma_pdf', file);
-          processedIds.forEach(id => form.append('processed_trainee_ids', id));
           const response = await fetch(dialog.dataset.uploadUrl, {
             method: 'POST', credentials: 'same-origin', headers: {Accept: 'application/json'}, body: form,
           });
@@ -77,10 +75,10 @@
             throw Object.assign(new Error(payload.error || 'Votre session a expiré ou vos droits ne permettent plus cet import. Reconnectez-vous.'), {stopBatch: true});
           }
           if (!response.ok || !payload.ok) throw new Error(payload.error || 'Import impossible. Vérifiez ce fichier puis réessayez.');
-          processedIds.add(payload.trainee_id);
           row.dataset.status = payload.status;
-          if (payload.status === 'unchanged') unchanged += 1;
-          else { imported += 1; refreshOnClose = true; }
+          if (payload.status === 'replaced') replaced += 1;
+          else imported += 1;
+          refreshOnClose = true;
           detail.textContent = `${payload.message} ${payload.trainee_name} · ${payload.duration} / 62 heures · Suivi : ${payload.attendance_rate}`;
           const link = document.createElement('a');
           link.href = payload.trainee_url;
@@ -107,7 +105,7 @@
       running = false;
       input.disabled = false;
       closeButtons.forEach(button => { button.disabled = false; });
-      status.textContent = `Import terminé : ${imported} importé(s), ${unchanged} déjà présent(s), ${errors} à vérifier.`;
+      status.textContent = `Import terminé : ${imported} nouveau(x), ${replaced} remplacé(s), ${errors} à vérifier.`;
       start.textContent = 'Import terminé';
     }
   });
