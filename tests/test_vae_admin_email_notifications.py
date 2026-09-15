@@ -155,5 +155,17 @@ class VaeAdminEmailNotificationTests(unittest.TestCase):
         self.assertEqual(trainee["vae_jury_date"], "")
         self.assertEqual(self._student_jury_emails(sent_emails), [])
 
+    def test_unchanged_jury_date_on_legacy_status_label_does_not_send_email(self):
+        trainee, sent_emails = self._configure_jury_update(status="jury", jury_date="2026-11-03")
+        trainee.pop("vae_status")
+
+        response = self.client.post(
+            "/api/sessions/S-VAE-JURY/stagiaires/T-VAE-JURY/update",
+            json={"vae_jury_date": "2026-11-03"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(sent_emails, [])
+
 if __name__ == "__main__":
     unittest.main()

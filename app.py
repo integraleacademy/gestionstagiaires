@@ -26374,7 +26374,6 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     }
 
-    previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
     previous_financement_status = str(t.get("financement_status") or "").strip()
     vae_fields_changed = any(k in payload for k in ("vae_status", "vae_status_label", "vae_action_dates", "vae_jury_date"))
     transmission_only_vae_action_update = False
