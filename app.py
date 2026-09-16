@@ -4302,6 +4302,7 @@ def _merge_partner_scoped_payload(
                 current[key] = []
     partner_id = str(partner_id or "")
 
+    _preserve_aps_elearning_report_state(scoped, current)
     for key in PARTNER_SCOPED_COLLECTION_KEYS - {"activity_logs"}:
         if not isinstance(scoped.get(key), list):
             continue
@@ -9346,6 +9347,54 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     return _cache_request_data(cache_key, result)
 
 
+def _aps_elearning_report_changed_at(trainee: Dict[str, Any]) -> datetime.datetime:
+    tracking = trainee.get("aps_elearning_tracking")
+    tracking = tracking if isinstance(tracking, dict) else {}
+    return max(
+        (_parse_iso_datetime(value) or datetime.datetime.min for value in (
+            tracking.get("uploaded_at"), tracking.get("rebuilt_at"),
+            trainee.get("aps_elearning_reset_at"),
+        )),
+    )
+
+
+def _preserve_aps_elearning_report_state(payload, canonical):
+    """Never let a request loaded before an import put the old report back.
+
+    Keep report-bound signatures and overrides together with their evidence.
+    Compare import times, not hours or PDF issue dates: a newly imported
+    correction with fewer hours must still replace the previous report.
+    The caller holds the JSON lock or PostgreSQL transaction while merging.
+    """
+    def session_key(training):
+        return (str(training.get("partner_id") or INTEGRALE_PARTNER_ID), str(training.get("id")))
+
+    sessions = {session_key(s): s for s in canonical.get("sessions", [])}
+    for training in payload.get("sessions", []):
+        current = sessions.get(session_key(training))
+        if not current:
+            continue
+        saved_trainees = {str(t.get("id")): t for t in _session_trainees_list(current)}
+        for trainee in _session_trainees_list(training):
+            saved = saved_trainees.get(str(trainee.get("id")))
+            if not saved or _aps_elearning_report_changed_at(saved) <= _aps_elearning_report_changed_at(trainee):
+                continue
+            for key in (*APS_ELEARNING_RESET_FIELDS, "aps_elearning_reset_at"):
+                if key in saved:
+                    trainee[key] = copy.deepcopy(saved[key])
+                else:
+                    trainee.pop(key, None)
+            history = list(trainee.get("activity_history") or [])
+            for event in reversed(saved.get("activity_history") or []):
+                if str(event.get("label") or "").startswith((
+                    "Attestation d’assiduité Digiforma", "Attestation d’assiduité remise en page",
+                    "Suivi e-learning APS remis à zéro",
+                )) and event not in history:
+                    history.insert(0, copy.deepcopy(event))
+            if history:
+                trainee["activity_history"] = history[:1000]
+
+
 def _preserve_document_reminder_state(payload, canonical):
     """Keep scheduler receipts when an older admin page saves its snapshot."""
     if isinstance(canonical.get("document_reminders_scheduler"), dict):
@@ -9428,6 +9477,7 @@ def save_data(
                 canonical if isinstance(canonical, dict) else _empty_data_payload(),
             )
         if isinstance(canonical, dict):
+            _preserve_aps_elearning_report_state(payload, canonical)
             _preserve_document_reminder_state(payload, canonical)
             if not scoped_partner_id and preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
                 payload["qonto_oauth"] = canonical["qonto_oauth"]
@@ -34411,6 +34461,8 @@ def _reset_aps_elearning_data(
 
     for key in APS_ELEARNING_RESET_FIELDS:
         trainee.pop(key, None)
+    # Keep a tombstone so a concurrent stale request cannot resurrect the PDF.
+    trainee["aps_elearning_reset_at"] = _now_iso()
     return removed_files
 
 
