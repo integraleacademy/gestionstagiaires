@@ -1,3 +1,17 @@
+.wedof-requests-table td {
+  vertical-align: top;
+}
+
+.wedof-request-actions > summary {
+  margin-top: 6px;
+}
+
+.wedof-request-actions[open] > .btn,
+.wedof-request-actions[open] > details,
+.wedof-request-actions[open] > form {
+  margin-top: 6px;
+}
+
 .wedof-page {
   --wedof-navy: #172554;
   --wedof-indigo: #4f46e5;
