@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260903-deduplicated-filters') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260916-grouped-requests') }}">
 {% set st = wedof_dashboard.stats %}
 {% set active_section = wedof_active_section|default('consumption', true) %}
 {% set state_labels = {
@@ -556,13 +556,14 @@
       <div>
         <span class="wedof-section-label">Webhooks CPF / EDOF</span>
         <h2 id="wedof-requests-title">Demandes entrantes WEDOF</h2>
-        <p>Notifications et transmissions automatiques vers Salesforce et le CRM · {{ public_base_url }}/api/webhooks/wedof</p>
+        <p>Une ligne par dossier de formation. Les mises à jour d’un même dossier sont regroupées.</p>
       </div>
-      <span class="wedof-content-count">{{ wedof_webhooks|length }} demande{{ 's' if wedof_webhooks|length > 1 else '' }}</span>
+      <span class="wedof-content-count">{{ wedof_requests_total }} demande{{ 's' if wedof_requests_total > 1 else '' }}</span>
     </div>
     <div class="wedof-content-body">
+      {% if wedof_technical_count %}<p class="hint">{{ wedof_technical_count }} notifications de documents, de certification ou autres événements techniques sont exclues de cette liste. Leur historique est conservé.</p>{% endif %}
       <div class="wedof-subtable-wrap">
-        <table class="table">
+        <table class="table wedof-requests-table">
           <thead><tr><th>Nom</th><th>Prénom</th><th>E-mail</th><th>Téléphone</th><th>Formation</th><th>Dates sélectionnées</th><th>Actions</th></tr></thead>
           <tbody>
             {% for item in wedof_webhooks %}
@@ -571,7 +572,10 @@
               {% set training = p.trainingActionInfo or {} %}
               {% set display = item.display_fields or {} %}
               <tr>
-                <td>{{ display.last_name or attendee.lastName or '—' }}</td>
+                <td>{{ display.last_name or attendee.lastName or 'À compléter' }}
+                  {% if item.folder_id %}<div class="hint">Dossier {{ item.folder_id }}</div>{% endif %}
+                  {% if item.event_count > 1 %}<div class="hint">{{ item.event_count }} notifications regroupées</div>{% endif %}
+                </td>
                 <td>{{ display.first_name or attendee.firstName or '—' }}</td>
                 <td>{{ display.email or attendee.email or '—' }}</td>
                 <td>{{ display.phone or attendee.phoneNumber or '—' }}</td>
@@ -588,34 +592,42 @@
                   {% endif %}
                 </td>
                 <td>
+                  {% if item.salesforce_sent_at %}
+                    <div class="hint">Envoyé à Salesforce le {{ item.salesforce_sent_at|frdate }}</div>
+                  {% elif item.salesforce_last_error %}
+                    <div class="hint" style="color:#b91c1c">{{ item.salesforce_last_error }}</div>
+                  {% endif %}
+                  {% if item.crm_last_error %}
+                    <div class="hint" style="color:#b91c1c">Transmission CRM échouée : {{ item.crm_last_error }}</div>
+                  {% elif item.crm_sent_at %}
+                    <div class="hint">Envoyé au CRM le {{ item.crm_sent_at|frdate }}</div>
+                  {% endif %}
+                  {% if item.processed %}<div class="hint">Demande traitée</div>{% endif %}
+                  <details class="wedof-request-actions">
+                    <summary class="btn btn-outline">Actions</summary>
                   <button
                     class="btn {{ 'btn-outline' if item.processed else 'btn-blue' }}"
                     type="button"
                     data-wedof-notify
                     data-entry-id="{{ item.id }}"
-                    data-last-name="{{ attendee.lastName or '' }}"
-                    data-first-name="{{ attendee.firstName or '' }}"
-                    data-phone="{{ attendee.phoneNumber or '' }}"
-                    data-email="{{ attendee.email or '' }}"
-                    data-training="{{ training.title or '' }}"
-                    {% if item.processed %}disabled{% endif %}
+                    data-last-name="{{ display.last_name or '' }}"
+                    data-first-name="{{ display.first_name or '' }}"
+                    data-phone="{{ display.phone or '' }}"
+                    data-email="{{ display.email or '' }}"
+                    data-training="{{ display.training_title or '' }}"
+                    {% if item.processed or not (display.email and display.phone and display.training_title) %}disabled{% endif %}
                   >{{ 'Notifié ✅' if item.processed else 'Notifier' }}</button>
                   <div class="hint" data-wedof-feedback></div>
-                  <button class="btn {{ 'btn-outline' if item.salesforce_sent else 'btn-violet' }}" type="button" data-salesforce-send data-entry-id="{{ item.id }}">
+                  <button class="btn {{ 'btn-outline' if item.salesforce_sent else 'btn-violet' }}" type="button" data-salesforce-send data-entry-id="{{ item.id }}" {% if not (display.email or display.phone) %}disabled{% endif %}>
                     {{ 'Renvoyer Salesforce' if item.salesforce_sent else 'Réessayer Salesforce' }}
                   </button>
-                  {% if item.salesforce_sent_at %}
-                    <div class="hint">Envoyé à Salesforce le {{ item.salesforce_sent_at }}{% if item.salesforce_send_count %} · {{ item.salesforce_send_count }} envoi{{ 's' if item.salesforce_send_count > 1 else '' }}{% endif %}</div>
-                  {% elif item.salesforce_last_error %}
-                    <div class="hint" style="color:#b91c1c">Envoi automatique échoué : {{ item.salesforce_last_error }}</div>
-                  {% endif %}
                   <button class="btn {{ 'btn-outline' if item.crm_sent else 'btn-blue' }}" type="button" data-crm-send data-entry-id="{{ item.id }}">
                     {{ 'Renvoyer au CRM' if item.crm_sent else ('Réessayer CRM' if item.crm_last_error else 'Envoyer au CRM') }}
                   </button>
-                  {% if item.crm_sent_at %}
-                    <div class="hint">Envoyé au CRM le {{ item.crm_sent_at }}{% if item.crm_send_count %} · {{ item.crm_send_count }} envoi{{ 's' if item.crm_send_count > 1 else '' }}{% endif %}</div>
-                  {% elif item.crm_last_error %}
-                    <div class="hint" style="color:#b91c1c">Transmission CRM échouée : {{ item.crm_last_error }}</div>
+                  {% if item.event_count > 1 %}
+                    <details><summary class="btn btn-outline">Historique des notifications</summary>
+                      <ul>{% for notification in item.related_entries %}<li>{{ notification.received_at|frdate }} · {{ notification.event or 'Mise à jour du dossier' }}</li>{% endfor %}</ul>
+                    </details>
                   {% endif %}
                   <details>
                     <summary class="btn btn-outline">JSON brut</summary>
@@ -629,6 +641,7 @@
                   <form method="post" action="{{ url_for('admin_delete_wedof_entry', entry_id=item.id) }}" onsubmit="return confirm('Supprimer cette demande WeDoF ?');">
                     <button class="btn btn-danger" type="submit">Supprimer</button>
                   </form>
+                  </details>
                 </td>
               </tr>
             {% else %}
@@ -637,6 +650,13 @@
           </tbody>
         </table>
       </div>
+      {% if wedof_request_page_count > 1 %}
+        <nav aria-label="Pages des demandes WEDOF">
+          {% if wedof_request_page > 1 %}<a class="btn btn-outline" href="{{ url_for('admin_wedof_requests', section='requests', request_page=wedof_request_page-1) }}">Précédent</a>{% endif %}
+          <span>Page {{ wedof_request_page }} sur {{ wedof_request_page_count }}</span>
+          {% if wedof_request_page < wedof_request_page_count %}<a class="btn btn-outline" href="{{ url_for('admin_wedof_requests', section='requests', request_page=wedof_request_page+1) }}">Suivant</a>{% endif %}
+        </nav>
+      {% endif %}
     </div>
   </section>
   </div>

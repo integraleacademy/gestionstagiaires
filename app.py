@@ -24,6 +24,15 @@ import signal
 import atexit
 import sys
 from backup_chronology import backup_chronology_key
+from wedof_requests import (
+    entry_kind as wedof_entry_kind,
+    grouped_requests as group_wedof_requests,
+    merge_folder as merge_wedof_folder,
+    notification_kind as wedof_notification_kind,
+    registration_id as wedof_registration_id,
+    registration_payload as wedof_registration_payload,
+    related_entries as related_wedof_entries,
+)
 from digiforma_duration import aps_elearning_completion, journal_attendance
 from manual_document_reminders import document_actions, build_content as build_manual_docs_content, content_fingerprint
 from automatic_document_reminders import run as run_automatic_document_reminders, schedule as automatic_document_schedule
@@ -3726,6 +3735,7 @@ _cnaps_public_annuaire_monitor_lock = threading.Lock()
 _afc_documents_reminders_lock = threading.Lock()
 _convention_signature_reminders_lock = threading.Lock()
 _wedof_webhook_lock = threading.RLock()
+_wedof_webhook_processing_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
 _storage_startup_logged = False
 
@@ -9615,6 +9625,23 @@ def _atomic_update_data(
     _invalidate_request_data_cache()
     return result
 
+def _serialize_wedof_updates(view):
+    """Keep read, deduplication, delivery and save in one journal transaction."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        os.makedirs(os.path.dirname(WEDOF_WEBHOOK_FILE) or ".", exist_ok=True)
+        with _wedof_webhook_processing_lock:
+            # Separate from the atomic writer lock, which is acquired by saves
+            # inside the transaction (including the existing VTC workflow).
+            with open(WEDOF_WEBHOOK_FILE + ".processing.lock", "a+") as lock_file:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                try:
+                    return view(*args, **kwargs)
+                finally:
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    return wrapped
+
+
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
     if not os.path.exists(WEDOF_WEBHOOK_FILE):
         return []
@@ -9700,47 +9727,40 @@ def _wedof_entry_display_fields(entry: Dict[str, Any]) -> Dict[str, str]:
     candidates.append(folder_details)
     if isinstance(folder_details.get("data"), dict):
         candidates.append(folder_details["data"])
+    for source in (payload, folder_details):
+        embedded = _embedded_wedof_folder(source)
+        if embedded:
+            candidates.append(embedded)
+    # A lightweight update must not erase the previously received contact,
+    # training title or dates. No API call is needed to render the journal.
+    for previous in entry.get("related_entries", []):
+        if previous is not entry:
+            candidates.append(_embedded_wedof_folder(previous.get("payload")) or previous.get("payload") or {})
+            candidates.append(previous.get("wedof_folder_details") or {})
 
-    extracted = [_extract_wedof_payload_fields(candidate) for candidate in candidates]
     keys = ("first_name", "last_name", "email", "phone", "training_title", "training_date", "training_end_date")
-    return {
-        key: next((fields[key] for fields in extracted if fields.get(key)), "")
-        for key in keys
-    }
+    result = dict.fromkeys(keys, "")
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        fields = _extract_wedof_payload_fields(candidate)
+        for key in keys:
+            if not result[key] and fields.get(key):
+                result[key] = fields[key]
+        if all(result.values()):
+            break
+    return result
 
 
 def _find_wedof_folder_id(payload: Any) -> str:
-    if not isinstance(payload, dict):
-        return ""
-    external_id = str(payload.get("externalId") or "").strip()
-    if external_id:
-        return external_id
-    for key in ("registrationFolder", "folder", "resource", "data", "payload"):
-        nested_id = _find_wedof_folder_id(payload.get(key))
-        if nested_id:
-            return nested_id
-    candidates = [
-        payload.get("id"),
-        payload.get("dataProviderId"),
-        payload.get("folderId"),
-        payload.get("registrationFolderId"),
-        payload.get("registration_folder_id"),
-        payload.get("resourceId"),
-        payload.get("objectId"),
-        payload.get("dossierId"),
-    ]
-    for value in candidates:
-        if value is None:
-            continue
-        text = str(value).strip()
-        if text:
-            return text
-    return ""
+    return wedof_registration_id(payload)
 
 
 def _embedded_wedof_folder(payload: Any) -> Dict[str, Any]:
     """Réutilise un dossier complet du webhook au lieu de le relire."""
     if not isinstance(payload, dict):
+        return {}
+    if wedof_notification_kind(payload) in {"certification", "document"}:
         return {}
     if payload.get("externalId") and any(
             key in payload for key in ("state", "attendee", "trainingActionInfo")):
@@ -18458,6 +18478,25 @@ def _wedof_invoiced_external_ids(data: Dict[str, Any]) -> Set[str]:
     return invoiced
 
 
+def _wedof_requests_context():
+    grouped_requests, technical_count = group_wedof_requests(_load_wedof_webhooks())
+    wedof_new_requests_count = sum(1 for item in grouped_requests if not item.get("processed"))
+    page_count = max(1, math.ceil(len(grouped_requests) / 100))
+    request_page = max(1, min(request.args.get("request_page", 1, type=int), page_count))
+    wedof_webhooks = grouped_requests[(request_page - 1) * 100:request_page * 100]
+    for item in wedof_webhooks:
+        if isinstance(item, dict):
+            item["display_fields"] = _wedof_entry_display_fields(item)
+    return {
+        "wedof_webhooks": wedof_webhooks,
+        "wedof_requests_total": len(grouped_requests),
+        "wedof_technical_count": technical_count,
+        "wedof_request_page": request_page,
+        "wedof_request_page_count": page_count,
+        "wedof_new_requests_count": wedof_new_requests_count,
+    }
+
+
 @app.get("/admin/wedof")
 @admin_login_required
 def admin_wedof_requests():
@@ -18465,17 +18504,11 @@ def admin_wedof_requests():
     requested_section = str(request.args.get("section") or "").strip()
     if requested_section not in {"consumption", "state", "technical", "requests"}:
         requested_section = "state" if request.args.get("tab") else "consumption"
-    wedof_webhooks = _load_wedof_webhooks()[:100]
-    for item in wedof_webhooks:
-        if isinstance(item, dict):
-            item["display_fields"] = _wedof_entry_display_fields(item)
-    wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
     displayed_links = _wedof_links_for_display(data)
     maintenance = is_wedof_maintenance_window()
     response = make_response(render_template(
         "admin_wedof.html",
-        wedof_webhooks=wedof_webhooks,
-        wedof_new_requests_count=wedof_new_requests_count,
+        **_wedof_requests_context(),
         wedof_active_section=requested_section,
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
         **_admin_wedof_execution_flags(),
@@ -18774,15 +18807,10 @@ def admin_wedof_matching_preview():
         flash(str(exc), "error")
         return redirect(url_for("admin_wedof_requests", section="state"))
 
-    wedof_webhooks = _load_wedof_webhooks()[:100]
-    for item in wedof_webhooks:
-        if isinstance(item, dict):
-            item["display_fields"] = _wedof_entry_display_fields(item)
     displayed_links = _wedof_links_for_display(data)
     response = make_response(render_template(
         "admin_wedof.html",
-        wedof_webhooks=wedof_webhooks,
-        wedof_new_requests_count=sum(1 for item in wedof_webhooks if not bool(item.get("processed"))),
+        **_wedof_requests_context(),
         wedof_active_section="state",
         wedof_api_key_configured=True,
         **_admin_wedof_execution_flags(),
@@ -19221,16 +19249,14 @@ def admin_test_wedof_api():
 @app.post("/admin/wedof/mark-treated/<entry_id>")
 @admin_login_required
 @admin_write_required
+@_serialize_wedof_updates
 def admin_mark_wedof_treated(entry_id: str):
     entries = _load_wedof_webhooks()
-    changed = False
-    for item in entries:
-        if str(item.get("id") or "") == str(entry_id):
+    entry = next((item for item in entries if str(item.get("id") or "") == str(entry_id)), None)
+    if entry:
+        for item in related_wedof_entries(entries, entry):
             item["processed"] = True
             item["processed_at"] = _now_iso()
-            changed = True
-            break
-    if changed:
         _save_wedof_webhooks(entries)
     return redirect(url_for("admin_wedof_requests", section="requests"))
 
@@ -19238,17 +19264,23 @@ def admin_mark_wedof_treated(entry_id: str):
 @app.post("/admin/wedof/delete/<entry_id>")
 @admin_login_required
 @admin_write_required
+@_serialize_wedof_updates
 def admin_delete_wedof_entry(entry_id: str):
     entries = _load_wedof_webhooks()
-    filtered = [item for item in entries if str(item.get("id") or "") != str(entry_id)]
-    if len(filtered) != len(entries):
-        _save_wedof_webhooks(filtered)
+    entry = next((item for item in entries if str(item.get("id") or "") == str(entry_id)), None)
+    if entry:
+        for item in related_wedof_entries(entries, entry):
+            item["archived"] = True
+            item["archived_at"] = _now_iso()
+        _save_wedof_webhooks(entries)
     return redirect(url_for("admin_wedof_requests", section="requests"))
 
 def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     from wedof_bts import is_apprenticeship_event
     if is_apprenticeship_event(entry):
         return {"success": True, "skipped": True, "reason": "apprenticeship_bts_only"}, 200
+    if wedof_entry_kind(entry) != "registration":
+        return {"success": False, "error": "Cette notification ne concerne pas une demande de formation."}, 422
     entry_id = str(entry.get("id") or "")
     payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
@@ -19379,7 +19411,8 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
             timeout=20,
         )
     except Exception:
-        error = "Erreur réseau lors de l'envoi Salesforce."
+        error = "Erreur réseau Salesforce : réception non confirmée. Vérifiez le prospect avant de réessayer."
+        entry["salesforce_delivery_uncertain"] = True
         entry["salesforce_last_error"] = error
         app.logger.exception("[SALESFORCE] erreur d'envoi Web-to-Lead")
         return {
@@ -19400,7 +19433,12 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
     )
 
     if sf_response.status_code != 200:
-        error = f"Salesforce a répondu {sf_response.status_code}. Vérifiez les champs obligatoires et la réponse."
+        entry["salesforce_last_status"] = sf_response.status_code
+        if sf_response.status_code >= 500:
+            entry["salesforce_delivery_uncertain"] = True
+            error = f"Service Salesforce temporairement indisponible (HTTP {sf_response.status_code}). Vérifiez la réception avant de réessayer."
+        else:
+            error = f"Salesforce a répondu {sf_response.status_code}. Vérifiez les champs obligatoires et la réponse."
         entry["salesforce_last_error"] = error
         return {
             "success": False,
@@ -19411,6 +19449,7 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
         }, 502
 
     entry["salesforce_sent"] = True
+    entry.pop("salesforce_delivery_uncertain", None)
     entry["salesforce_sent_at"] = attempted_at
     entry["salesforce_send_count"] = int(entry.get("salesforce_send_count") or 0) + 1
     return {
@@ -19453,6 +19492,8 @@ def _send_wedof_entry_to_crm(
     from wedof_bts import is_apprenticeship_event
     if is_apprenticeship_event(entry):
         return {"success": True, "skipped": True, "reason": "apprenticeship_bts_only"}, 200
+    if wedof_entry_kind(entry) != "registration":
+        return {"success": False, "error": "Cette notification ne concerne pas une demande de formation."}, 422
     entry_id = str(entry.get("id") or "")
     target_url = (
         os.environ.get("CRM_WEDOF_WEBHOOK_URL")
@@ -19530,12 +19571,13 @@ def _send_wedof_entry_to_crm(
         response_payload = {}
     crm_status = int(getattr(crm_response, "status_code", 0) or 0)
     if crm_status != 200 or not isinstance(response_payload, dict) \
-            or response_payload.get("ok") is not True:
+            or response_payload.get("ok") is not True or response_payload.get("ignored"):
         remote_error = (
             response_payload.get("error")
             if isinstance(response_payload, dict) else ""
         )
-        error = str(remote_error or (
+        ignored = isinstance(response_payload, dict) and response_payload.get("ignored")
+        error = str(remote_error or ("Notification ignorée par le CRM." if ignored else "") or (
             f"Le CRM a répondu {crm_status}."
             if crm_status else "Réponse CRM invalide."
         ))
@@ -19552,6 +19594,8 @@ def _send_wedof_entry_to_crm(
         }, 502
 
     entry["crm_sent"] = True
+    entry["crm_processed"] = bool(response_payload.get("processed"))
+    entry["crm_duplicate"] = bool(response_payload.get("duplicate"))
     entry["crm_sent_at"] = attempted_at
     entry["crm_send_count"] = int(entry.get("crm_send_count") or 0) + 1
     entry.pop("crm_last_error", None)
@@ -19571,16 +19615,36 @@ def _send_wedof_entry_to_crm(
     }, 200
 
 
+def _wedof_entry_with_history(entry, entries):
+    view = dict(entry)
+    history = related_wedof_entries(entries, entry)
+    details = {}
+    for item in reversed(history):
+        snapshot = wedof_registration_payload(item.get("wedof_folder_details"))
+        incoming = wedof_registration_payload(item.get("payload"), item.get("event") or "")
+        details = merge_wedof_folder(merge_wedof_folder(snapshot, incoming), details)
+    if details:
+        view["wedof_folder_details"] = details
+    view["related_entries"] = history
+    return view
+
+
 @app.post("/api/send-to-salesforce/<entry_id>")
 @admin_login_required
 @admin_write_required
+@_serialize_wedof_updates
 def send_wedof_to_salesforce(entry_id: str):
     entries = _load_wedof_webhooks()
     entry = next((item for item in entries if str(item.get("id") or "") == str(entry_id)), None)
     if entry is None:
         return jsonify({"ok": False, "error": "Demande introuvable."}), 404
 
-    result, status_code = _send_wedof_entry_to_salesforce(entry)
+    view = _wedof_entry_with_history(entry, entries)
+    result, status_code = _send_wedof_entry_to_salesforce(view)
+    for key in list(entry):
+        if key.startswith("salesforce_") and key not in view:
+            entry.pop(key, None)
+    entry.update({key: value for key, value in view.items() if key.startswith("salesforce_")})
     _save_wedof_webhooks(entries)
     return jsonify(result), status_code
 
@@ -19588,6 +19652,7 @@ def send_wedof_to_salesforce(entry_id: str):
 @app.post("/api/send-to-crm/<entry_id>")
 @admin_login_required
 @admin_write_required
+@_serialize_wedof_updates
 def send_wedof_to_crm(entry_id: str):
     entries = _load_wedof_webhooks()
     entry = next(
@@ -19597,12 +19662,18 @@ def send_wedof_to_crm(entry_id: str):
     if entry is None:
         return jsonify({"ok": False, "error": "Demande introuvable."}), 404
 
-    result, status_code = _send_wedof_entry_to_crm(entry)
+    view = _wedof_entry_with_history(entry, entries)
+    result, status_code = _send_wedof_entry_to_crm(view)
+    for key in list(entry):
+        if key.startswith("crm_") and key not in view:
+            entry.pop(key, None)
+    entry.update({key: value for key, value in view.items() if key.startswith("crm_")})
     _save_wedof_webhooks(entries)
     return jsonify(result), status_code
 
 
 @app.route("/api/webhooks/wedof", methods=["POST"])
+@_serialize_wedof_updates
 def wedof_webhook():
     from wedof_bts import is_apprenticeship_event
     event = (request.headers.get("X-Wedof-Event") or "").strip()
@@ -19676,6 +19747,11 @@ def wedof_webhook():
         # workingContracts explicitly; no commercial relay or CPF action runs here.
         if is_apprenticeship_event({"event": event, "payload": payload}):
             return jsonify({"ok": True, "ignored": True, "reason": "apprenticeship_bts_only"}), 200
+        if wedof_notification_kind(payload, event) != "registration":
+            # Documents, certification dossiers and other technical resources
+            # are not prospects. Acknowledge before any lookup or relay.
+            app.logger.info("[WEDOF WEBHOOK] notification technique ignorée event=%s", event)
+            return jsonify({"ok": True, "ignored": True, "reason": "not_registration_folder"}), 200
         resolved_delivery_id = delivery_id or hashlib.sha256(raw_body).hexdigest()
         entries = _load_wedof_webhooks()
         duplicate_entry = next((
@@ -19700,11 +19776,9 @@ def wedof_webhook():
                     allow_validation=False,
                 )
             return jsonify(response), 200
-        folder_id = _find_wedof_folder_id(payload)
+        folder_id = wedof_registration_id(payload, event)
         app.logger.info("[WEDOF] identifiant dossier trouvé = %s", folder_id or "(aucun)")
         wedof_folder_details = _embedded_wedof_folder(payload)
-        if not wedof_folder_details and folder_id and trusted_for_wedof:
-            wedof_folder_details = _fetch_wedof_folder_details(folder_id)
 
         if is_apprenticeship_event(wedof_folder_details):
             return jsonify({"ok": True, "ignored": True, "reason": "apprenticeship_bts_only"}), 200
@@ -19724,20 +19798,40 @@ def wedof_webhook():
             "signature_present": bool(signature),
             "signature_valid": bool(sig_valid),
         }
+        history_view = _wedof_entry_with_history(entry, [entry] + entries)
+        wedof_folder_details = history_view.get("wedof_folder_details") or {}
+        if (folder_id and trusted_for_wedof
+                and not wedof_folder_details.get("trainingActionInfo")
+                and not wedof_folder_details.get("attendee")):
+            fetched = _fetch_wedof_folder_details(folder_id)
+            if is_apprenticeship_event(fetched):
+                return jsonify({"ok": True, "ignored": True, "reason": "apprenticeship_bts_only"}), 200
+            wedof_folder_details = merge_wedof_folder(wedof_folder_details, fetched)
+        entry["wedof_folder_details"] = wedof_folder_details
+        previous_events = history_view["related_entries"][1:]
         entries.insert(0, entry)
         if trusted_for_wedof and isinstance(wedof_folder_details, dict):
             wedof_folder_details = _process_vtc_cpf_auto_workflow(
                 wedof_folder_details, entries, entry,
             )
             entry["wedof_folder_details"] = wedof_folder_details
-        salesforce_result, salesforce_status = _send_wedof_entry_to_salesforce(entry)
-        if not salesforce_result.get("success"):
-            app.logger.warning(
-                "[WEDOF WEBHOOK] envoi Salesforce automatique échoué id=%s status=%s error=%s",
-                entry.get("id"),
-                salesforce_status,
-                salesforce_result.get("error") or "erreur inconnue",
-            )
+        previous_delivery = next((item for item in previous_events if item.get("salesforce_sent")), None)
+        uncertain_delivery = next((item for item in previous_events if item.get("salesforce_delivery_uncertain")), None)
+        if previous_delivery:
+            entry["salesforce_duplicate_of"] = previous_delivery.get("id")
+        elif uncertain_delivery:
+            entry["salesforce_delivery_uncertain"] = True
+            entry["salesforce_last_error"] = uncertain_delivery.get("salesforce_last_error")
+        elif trusted_for_wedof:
+            salesforce_result, salesforce_status = _send_wedof_entry_to_salesforce(entry)
+            if not salesforce_result.get("success"):
+                app.logger.warning(
+                    "[WEDOF WEBHOOK] envoi Salesforce automatique échoué id=%s status=%s error=%s",
+                    entry.get("id"), salesforce_status,
+                    salesforce_result.get("error") or "erreur inconnue",
+                )
+        else:
+            entry["salesforce_last_error"] = "Envoi Salesforce non tenté : webhook WEDOF non authentifié."
         if trusted_for_wedof:
             crm_result, crm_status = _send_wedof_entry_to_crm(entry)
             if not crm_result.get("success"):
