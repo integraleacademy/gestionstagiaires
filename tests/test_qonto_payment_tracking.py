@@ -432,10 +432,9 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         ts=str(int(time.time())); sig=hmac.new(secret.encode(),f"{ts}.".encode()+raw,hashlib.sha256).hexdigest(); header=f"t={ts},v1={sig}"
         data={"sessions":[{"id":"S1","date_start":"2026-01-01","trainees":[{"id":"T1","personal_amount":1650,"qonto_invoice":{"qonto_invoice_id":"inv","amount_ttc":1650}}]}],"billing_lines":[]}
         remote={"client_invoice":{"id":"inv","status":"unpaid","total_amount":{"value":"1650.00"},"amount_paid":{"value":"600.00"}}}
-        saved=[]
-        with patch.dict(os.environ,{"QONTO_WEBHOOK_SECRET":secret}), patch.object(gestion_app,"load_data",return_value=data), patch.object(gestion_app,"save_data",side_effect=saved.append), patch.object(gestion_app,"get_qonto_invoice",return_value=remote):
+        with patch.dict(os.environ,{"QONTO_WEBHOOK_SECRET":secret}), patch.object(gestion_app,"load_data",return_value=data), patch.object(gestion_app,"_atomic_update_data",side_effect=lambda mutate: mutate(data)), patch.object(gestion_app,"get_qonto_invoice",return_value=remote):
             self.assertEqual(client.post('/api/qonto/webhooks',data=raw,headers={"X-Qonto-Signature":header,"Content-Type":"application/json"}).status_code,200)
             self.assertEqual(client.post('/api/qonto/webhooks',data=raw,headers={"X-Qonto-Signature":header,"Content-Type":"application/json"}).status_code,200)
-        self.assertEqual(saved[-1]['sessions'][0]['trainees'][0]['qonto_invoice']['qonto_amount_paid_cents'],60000)
+        self.assertEqual(data['sessions'][0]['trainees'][0]['qonto_invoice']['qonto_amount_paid_cents'],60000)
 
 if __name__ == '__main__': unittest.main()
