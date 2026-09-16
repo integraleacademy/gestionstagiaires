@@ -24659,9 +24659,7 @@ def admin_trainees(session_id: str):
         for trainee in trainees:
             tracking = trainee.get("aps_elearning_tracking")
             if isinstance(tracking, dict) and tracking.get("file"):
-                aps_attendance_by_id[str(trainee.get("id") or "")] = journal_attendance(
-                    tracking.get("connection_log_total")
-                )
+                aps_attendance_by_id[str(trainee.get("id") or "")] = aps_elearning_completion(tracking)
     is_dirigeant = ("DIRIGEANT" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
