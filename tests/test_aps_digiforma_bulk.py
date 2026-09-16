@@ -139,6 +139,16 @@ def test_public_completion_requires_all_three_objectives_and_follows_reimports(c
         assert ('E-learning terminé' in section) == complete
         assert ('Bravo !' in section) == complete
         assert ('E-learning en cours' in section) != complete
+        admin = client.get('/admin/sessions/S-APS/trainees').text
+        assert 'scope="col">Suivi global du e-learning</th>' in admin
+        row = admin.split('data-trainee-id="T-APS"', 1)[1].split('</tr>', 1)[0]
+        cell = row.split('<td class="col-aps-attendance">', 1)[1].split('</td>', 1)[0]
+        assert f'<strong class="aps-followup-rate">{rate}</strong>' in cell
+        assert f'value="{float(rate[:-2].replace(",", "."))}"' in cell
+        assert f'Parcours : {paths}/8' in cell
+        assert f'Évaluations : {evaluations}/8' in cell
+        assert ('E-learning terminé' in cell) == complete
+        assert ('aps-followup--complete' in cell) == complete
     assert 'Parcours suivis' in section and 'Questionnaires d’évaluation' in section
     assert '44 h 54' in section and '72,4 %' in section
 
@@ -154,6 +164,12 @@ def test_public_does_not_announce_completion_with_missing_metrics(context, missi
     assert 'id="apsOverallRate">À vérifier</strong>' in section
     assert 'id="apsOverallProgress"' not in section
     assert 'E-learning terminé' not in section and 'Bravo !' not in section
+    admin = client.get('/admin/sessions/S-APS/trainees').text
+    row = admin.split('data-trainee-id="T-APS"', 1)[1].split('</tr>', 1)[0]
+    cell = row.split('<td class="col-aps-attendance">', 1)[1].split('</td>', 1)[0]
+    assert 'À vérifier' in cell
+    assert '<progress' not in cell
+    assert 'E-learning terminé' not in cell and 'aps-followup--complete' not in cell
 
 
 @pytest.mark.parametrize('name, email', [
@@ -256,9 +272,9 @@ def test_last_report_for_same_person_replaces_files_and_updates_both_spaces(cont
     row = admin.split('data-trainee-id="T-APS"', 1)[1].split('</tr>', 1)[0]
     cell = row.split('<td class="col-aps-attendance">', 1)[1].split('</td>', 1)[0]
     for view in (section, cell):
-        assert '44 h 54' in view and '/ 62 heures' in view and '72,4 %' in view
+        assert '44 h 54' in view and '/ 62 heures' in view and '90,8 %' in view
         assert '31 h 00' not in view
-        assert '<progress' in view and 'value="72.4"' in view
+        assert '<progress' in view and 'value="90.8"' in view
 
 
 def test_invalid_file_or_multiple_files_cannot_replace_tracking(context, tmp_path):

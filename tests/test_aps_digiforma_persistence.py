@@ -79,7 +79,7 @@ def test_reimport_survives_a_stale_save_and_fresh_page_load(storage, endpoint):
     assert Path(gestion._detokenize_path(restored['source_file'])).read_bytes() == pdf
     for url in ('/admin/sessions/S-APS/trainees', '/espace/PUBLIC-TOKEN'):
         html = client.get(url).text
-        assert '31 h 00' in html and '50 %' in html
+        assert '31 h 00' in html and '83,3 %' in html
         if url.endswith('/trainees'):
             assert 'Dernier import' in html
 
