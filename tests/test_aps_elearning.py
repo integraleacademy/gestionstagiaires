@@ -1098,6 +1098,71 @@ class ApsElearningTests(unittest.TestCase):
         )
         save_data.assert_called_once()
 
+    def test_admin_never_resends_after_live_yousign_completion(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "foad-request-1",
+            "signature_link": "https://example.test/foad-sign",
+        }
+
+        def complete_live_status(_data, _session, _trainees, target):
+            target["aps_elearning_signature"].update({
+                "status": "done",
+                "provider_status": "done",
+                "signed_at": "2026-09-17T12:06:00Z",
+            })
+            return True
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data, patch.object(
+            gestion_app,
+            "_refresh_yousign_aps_elearning_status_if_pending",
+            side_effect=complete_live_status,
+        ), patch.object(
+            gestion_app, "create_yousign_aps_elearning_tracking_signature"
+        ) as create_signature, patch.object(
+            gestion_app, "send_yousign_aps_elearning_signature_email"
+        ) as send_email:
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/tableau-suivi/yousign"
+            )
+
+        self.assertEqual(response.status_code, 302)
+        create_signature.assert_not_called()
+        send_email.assert_not_called()
+        save_data.assert_called_once()
+
+    def test_completed_signature_without_local_pdf_hides_send_button(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "provider_status": "done",
+            "signature_request_id": "foad-request-1",
+            "signed_at": "2026-09-17T12:06:00Z",
+            "signed_pdf_path": "",
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ), patch.object(gestion_app, "_yousign_is_configured", return_value=False):
+            response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+
+        self.assertEqual(response.status_code, 200)
+        section = response.get_data(as_text=True).split(
+            'id="apsElearningTrackingSection"', 1
+        )[1].split("</section>", 1)[0]
+        self.assertIn("Déjà signé · PDF en récupération", section)
+        self.assertNotIn("Envoyer à signer avec Yousign", section)
+        self.assertNotIn("Renvoyer le lien Yousign", section)
+
     def test_signed_tracking_table_is_downloadable(self):
         self._admin_login()
         data = self._data("2026-07-23")
@@ -1149,6 +1214,78 @@ class ApsElearningTests(unittest.TestCase):
         mark_tracking.assert_called_once()
         mark_convention.assert_not_called()
         save_data.assert_called_once()
+
+    def test_yousign_webhook_accepts_direct_signature_request_data(self):
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "foad-request-direct",
+        }
+        payload = {
+            "event_name": "signature_request.done",
+            "event_id": "event-direct",
+            "data": {
+                "id": "foad-request-direct",
+                "status": "done",
+                "external_id": "aps_foad_S-APS_T-APS",
+            },
+        }
+
+        with patch.object(gestion_app, "_verify_yousign_webhook_signature", return_value=True), patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data") as save_data, patch.object(
+            gestion_app, "_mark_yousign_aps_elearning_tracking_signed"
+        ) as mark_tracking:
+            response = self.client.post("/webhooks/yousign", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        mark_tracking.assert_called_once()
+        save_data.assert_called_once()
+
+    def test_pending_status_recovers_completed_request_with_same_external_id(self):
+        data = self._data("2026-07-23")
+        session_obj = data["sessions"][0]
+        trainees = session_obj["trainees"]
+        trainee = trainees[0]
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "stale-request",
+            "external_id": "aps_foad_S-APS_T-APS",
+            "activated_at": "2026-09-17T11:32:00Z",
+        }
+        completed = {
+            "id": "completed-request",
+            "status": "done",
+            "external_id": "aps_foad_S-APS_T-APS",
+            "completed_at": "2026-09-17T12:06:00Z",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            signed_path = os.path.join(directory, "tableau-signe.pdf")
+            with open(signed_path, "wb") as signed_pdf:
+                signed_pdf.write(b"%PDF-signed-foad")
+            with patch.object(gestion_app, "_yousign_is_configured", return_value=True), patch.object(
+                gestion_app,
+                "_yousign_json",
+                return_value={"id": "stale-request", "status": "ongoing"},
+            ), patch.object(
+                gestion_app, "_list_yousign_signature_requests", return_value=[completed]
+            ), patch.object(
+                gestion_app, "_download_yousign_aps_elearning_signed_pdf", return_value=signed_path
+            ):
+                changed = gestion_app._refresh_yousign_aps_elearning_status_if_pending(
+                    data,
+                    session_obj,
+                    trainees,
+                    trainee,
+                )
+
+        state = trainee["aps_elearning_signature"]
+        self.assertTrue(changed)
+        self.assertEqual(state["status"], "done")
+        self.assertEqual(state["signature_request_id"], "completed-request")
+        self.assertEqual(state["signed_pdf_path"], signed_path)
 
     def test_trainee_api_saves_link_only_when_aps_elearning_is_enabled(self):
         self._admin_login()

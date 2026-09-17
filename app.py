@@ -9387,18 +9387,50 @@ def _preserve_aps_elearning_report_state(payload, canonical):
         saved_trainees = {str(t.get("id")): t for t in _session_trainees_list(current)}
         for trainee in _session_trainees_list(training):
             saved = saved_trainees.get(str(trainee.get("id")))
-            if not saved or _aps_elearning_report_changed_at(saved) <= _aps_elearning_report_changed_at(trainee):
+            if not saved:
                 continue
-            for key in (*APS_ELEARNING_RESET_FIELDS, "aps_elearning_reset_at"):
-                if key in saved:
-                    trainee[key] = copy.deepcopy(saved[key])
-                else:
-                    trainee.pop(key, None)
+            saved_changed_at = _aps_elearning_report_changed_at(saved)
+            incoming_changed_at = _aps_elearning_report_changed_at(trainee)
+            saved_report_is_newer = saved_changed_at > incoming_changed_at
+            if saved_report_is_newer:
+                for key in (*APS_ELEARNING_RESET_FIELDS, "aps_elearning_reset_at"):
+                    if key in saved:
+                        trainee[key] = copy.deepcopy(saved[key])
+                    else:
+                        trainee.pop(key, None)
+
+            saved_tracking = saved.get("aps_elearning_tracking") if isinstance(saved.get("aps_elearning_tracking"), dict) else {}
+            incoming_tracking = trainee.get("aps_elearning_tracking") if isinstance(trainee.get("aps_elearning_tracking"), dict) else {}
+            saved_fingerprint = str(saved_tracking.get("file_sha256") or saved_tracking.get("file") or "").strip()
+            incoming_fingerprint = str(incoming_tracking.get("file_sha256") or incoming_tracking.get("file") or "").strip()
+            same_report = bool(saved_fingerprint and hmac.compare_digest(saved_fingerprint, incoming_fingerprint))
+
+            # A request which loaded the trainee before Yousign completed must
+            # never put the signature back to "ongoing" when it saves later.
+            # Report replacements remain authoritative because their
+            # fingerprint/timestamp changes and are handled above.
+            saved_signature = saved.get("aps_elearning_signature") if isinstance(saved.get("aps_elearning_signature"), dict) else {}
+            incoming_signature = trainee.get("aps_elearning_signature") if isinstance(trainee.get("aps_elearning_signature"), dict) else {}
+            saved_is_completed = bool(
+                _is_yousign_signature_done(saved_signature)
+                or saved_signature.get("signed_at")
+                or _normalize_yousign_status(saved_signature.get("provider_status")) in YOUSIGN_FINAL_STATUSES
+            )
+            incoming_is_completed = bool(
+                _is_yousign_signature_done(incoming_signature)
+                or incoming_signature.get("signed_at")
+                or _normalize_yousign_status(incoming_signature.get("provider_status")) in YOUSIGN_FINAL_STATUSES
+            )
+            if same_report and saved_is_completed and not incoming_is_completed:
+                trainee["aps_elearning_signature"] = copy.deepcopy(saved_signature)
+                if isinstance(saved.get("aps_elearning_signature_history"), list):
+                    trainee["aps_elearning_signature_history"] = copy.deepcopy(saved["aps_elearning_signature_history"])
+
             history = list(trainee.get("activity_history") or [])
             for event in reversed(saved.get("activity_history") or []):
                 if str(event.get("label") or "").startswith((
                     "Attestation d’assiduité Digiforma", "Attestation d’assiduité remise en page",
-                    "Suivi e-learning APS remis à zéro",
+                    "Suivi e-learning APS remis à zéro", "Tableau de suivi FOAD signé",
                 )) and event not in history:
                     history.insert(0, copy.deepcopy(event))
             if history:
@@ -29575,6 +29607,32 @@ def admin_create_aps_elearning_tracking_signature(session_id: str, trainee_id: s
     session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
     if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
         abort(404)
+    current_state = _aps_elearning_signature_state(trainee)
+    if current_state.get("signature_request_id") and (
+        _is_yousign_signature_pending(current_state) or _is_yousign_signature_done(current_state)
+    ):
+        _refresh_yousign_aps_elearning_status_if_pending(
+            data,
+            session_obj,
+            trainees,
+            trainee,
+        )
+        current_state = _aps_elearning_signature_state(trainee)
+        if _is_yousign_signature_done(current_state):
+            session_obj["trainees"] = trainees
+            session_obj.pop("stagiaires", None)
+            save_data(data)
+            flash("Ce tableau de suivi FOAD est déjà signé. Aucun nouvel e-mail n’a été envoyé.", "info")
+            return _aps_elearning_tracking_redirect(session_id, trainee_id)
+        if current_state.get("last_status_sync_error"):
+            session_obj["trainees"] = trainees
+            session_obj.pop("stagiaires", None)
+            save_data(data)
+            flash(
+                "Le statut Yousign n’a pas pu être vérifié. Par sécurité, aucun nouvel e-mail n’a été envoyé.",
+                "error",
+            )
+            return _aps_elearning_tracking_redirect(session_id, trainee_id)
     try:
         state = create_yousign_aps_elearning_tracking_signature(
             session_obj,
@@ -29603,7 +29661,8 @@ def admin_create_aps_elearning_tracking_signature(session_id: str, trainee_id: s
             message,
         )
         state = _aps_elearning_signature_state(trainee)
-        state["status"] = "error"
+        if not _is_yousign_signature_done(state):
+            state["status"] = "error"
         state["last_error"] = message
         trainee["updated_at"] = _now_iso()
         flash(f"Signature du tableau FOAD : {message}", "error")
@@ -29617,9 +29676,18 @@ def admin_create_aps_elearning_tracking_signature(session_id: str, trainee_id: s
 @admin_login_required
 def admin_download_signed_aps_elearning_tracking_table(session_id: str, trainee_id: str):
     data = load_data()
-    session_obj, _, trainee = _find_session_trainee(data, session_id, trainee_id)
+    session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
     if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
         abort(404)
+    if _refresh_yousign_aps_elearning_status_if_pending(
+        data,
+        session_obj,
+        trainees,
+        trainee,
+    ):
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+        save_data(data)
     state = _aps_elearning_signature_state(trainee)
     signed_path = os.path.realpath(str(state.get("signed_pdf_path") or ""))
     signed_root = os.path.realpath(YOUSIGN_APS_ELEARNING_SIGNED_DIR)
@@ -34665,7 +34733,40 @@ def _yousign_payload_signature_request(payload: Dict[str, Any]) -> Dict[str, Any
     signature_request = data.get("signature_request") if isinstance(data.get("signature_request"), dict) else {}
     if signature_request:
         return signature_request
+    # Yousign's webhook envelope has changed shape across API revisions and
+    # subscription migrations.  Some deliveries expose the Signature Request
+    # directly in ``data`` while signer events may only carry an explicit
+    # ``signature_request_id``.  Keep the documented nested shape first, but
+    # accept the direct shape so a valid completion is never acknowledged and
+    # silently discarded.
+    event_name = str(payload.get("event_name") or payload.get("event") or "").strip().lower()
+    if event_name.startswith("signature_request.") and data.get("id"):
+        return data
+    top_level = payload.get("signature_request")
+    if isinstance(top_level, dict) and top_level:
+        return top_level
     return payload if isinstance(payload, dict) else {}
+
+
+def _yousign_webhook_signature_request_id(payload: Dict[str, Any]) -> str:
+    signature_request = _yousign_payload_signature_request(payload)
+    request_id = str(signature_request.get("id") or "").strip()
+    if request_id:
+        return request_id
+
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    signer = data.get("signer") if isinstance(data.get("signer"), dict) else {}
+    signer_request = signer.get("signature_request") if isinstance(signer.get("signature_request"), dict) else {}
+    for candidate in (
+        data.get("signature_request_id"),
+        signer.get("signature_request_id"),
+        signer_request.get("id"),
+        payload.get("signature_request_id"),
+    ):
+        request_id = str(candidate or "").strip()
+        if request_id:
+            return request_id
+    return ""
 
 
 def _yousign_signature_request_status(payload: Dict[str, Any]) -> str:
@@ -36029,6 +36130,108 @@ def _find_trainee_by_aps_elearning_yousign_request_id(data: Dict[str, Any], requ
     return None, None, None
 
 
+def _yousign_completed_request_datetime(item: Dict[str, Any]) -> Optional[datetime.datetime]:
+    for key in ("completed_at", "done_at", "updated_at", "created_at"):
+        value = _parse_iso_datetime(item.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _completed_yousign_aps_elearning_request_matches_state(
+    state: Dict[str, Any],
+    request_item: Dict[str, Any],
+) -> bool:
+    """Reject a completed request belonging to an older Digiforma version."""
+    request_id = str(request_item.get("id") or "").strip()
+    current_id = str(state.get("signature_request_id") or "").strip()
+    if request_id and request_id == current_id:
+        return True
+
+    activated_at = _parse_iso_datetime(
+        state.get("activated_at") or state.get("created_at") or state.get("report_uploaded_at")
+    )
+    completed_at = _yousign_completed_request_datetime(request_item)
+    return bool(activated_at and completed_at and completed_at >= activated_at)
+
+
+def _find_completed_yousign_aps_elearning_request(
+    session_id: str,
+    trainee_id: str,
+    state: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Find the latest valid completed FOAD request, even if the saved ID is stale."""
+    external_id = make_yousign_aps_elearning_external_id(session_id, trainee_id)
+    candidates = _list_yousign_signature_requests({
+        "external_id[eq]": external_id,
+        "status[eq]": "done",
+        "limit": 100,
+    })
+    completed = []
+    for item in candidates:
+        request_id = str(item.get("id") or "").strip()
+        item_external_id = str(item.get("external_id") or "").strip()
+        if not request_id or _normalize_yousign_status(item.get("status")) not in YOUSIGN_FINAL_STATUSES:
+            continue
+        if item_external_id and item_external_id != external_id:
+            continue
+        if _completed_yousign_aps_elearning_request_matches_state(state, item):
+            completed.append(item)
+    if not completed:
+        return {}
+    return max(
+        completed,
+        key=lambda item: _yousign_completed_request_datetime(item) or datetime.datetime.min,
+    )
+
+
+def _find_trainee_by_aps_elearning_yousign_external_id(
+    data: Dict[str, Any],
+    external_id: str,
+    request_item: Dict[str, Any],
+):
+    external_id = str(external_id or "").strip()
+    if not external_id:
+        return None, None, None
+    for sess in data.get("sessions", []):
+        session_id = str(sess.get("id") or "").strip()
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            trainee_id = str(trainee.get("id") or "").strip()
+            if make_yousign_aps_elearning_external_id(session_id, trainee_id) != external_id:
+                continue
+            state = _aps_elearning_signature_state(trainee)
+            if _completed_yousign_aps_elearning_request_matches_state(state, request_item):
+                return sess, trainees, trainee
+    return None, None, None
+
+
+def _adopt_completed_yousign_aps_elearning_request(
+    trainee: Dict[str, Any],
+    request_item: Dict[str, Any],
+) -> str:
+    state = _aps_elearning_signature_state(trainee)
+    completed_request_id = str(request_item.get("id") or "").strip()
+    previous_request_id = str(state.get("signature_request_id") or "").strip()
+    if not completed_request_id:
+        return previous_request_id
+    if previous_request_id and previous_request_id != completed_request_id:
+        _archive_aps_elearning_signature_state(trainee, "completed_request_recovered")
+        state["superseded_pending_request_id"] = previous_request_id
+    state["signature_request_id"] = completed_request_id
+    state["external_id"] = str(request_item.get("external_id") or state.get("external_id") or "")
+    state["provider_status"] = "done"
+    completed_at = str(
+        request_item.get("completed_at")
+        or request_item.get("done_at")
+        or request_item.get("updated_at")
+        or ""
+    ).strip()
+    if completed_at:
+        state["signed_at"] = state.get("signed_at") or completed_at
+    return completed_request_id
+
+
 def _download_yousign_aps_elearning_signed_pdf(signature_request_id: str, trainee_id: str) -> str:
     response = _yousign_request(
         "GET",
@@ -36942,7 +37145,7 @@ def _mark_yousign_aps_elearning_tracking_signed(
     event_id: str = "",
 ) -> None:
     state = _aps_elearning_signature_state(trainee)
-    if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
+    if _is_yousign_signature_done(state) and _is_pdf_file(str(state.get("signed_pdf_path") or "")):
         return
     signed_path = _download_yousign_aps_elearning_signed_pdf(
         request_id,
@@ -36951,11 +37154,14 @@ def _mark_yousign_aps_elearning_tracking_signed(
     now = _now_iso()
     state.update({
         "status": "done",
+        "provider_status": "done",
         "signed_at": state.get("signed_at") or now,
         "signed_pdf_path": signed_path,
         "last_error": "",
+        "signed_pdf_download_error": "",
         "last_event_id": event_id or state.get("last_event_id") or "",
     })
+    state.pop("last_status_sync_error", None)
     trainee["updated_at"] = now
     append_trainee_history_event(
         trainee,
@@ -36964,6 +37170,31 @@ def _mark_yousign_aps_elearning_tracking_signed(
         "action",
         now,
     )
+    sess["trainees"] = trainees
+    sess.pop("stagiaires", None)
+
+
+def _record_yousign_aps_elearning_pdf_recovery_error(
+    sess: Dict[str, Any],
+    trainees: List[Dict[str, Any]],
+    trainee: Dict[str, Any],
+    message: str,
+) -> None:
+    """Keep the provider completion final even when its PDF download fails."""
+    state = _aps_elearning_signature_state(trainee)
+    now = _now_iso()
+    safe_message = _sanitize_yousign_error(message)
+    state.update({
+        "status": "done",
+        "provider_status": "done",
+        "signed_at": state.get("signed_at") or now,
+        "signed_pdf_download_error": safe_message,
+        "last_error": (
+            "Le tableau a bien été signé dans Yousign, mais le PDF signé n’a pas encore pu être récupéré. "
+            "Rechargez la fiche pour réessayer."
+        ),
+    })
+    trainee["updated_at"] = now
     sess["trainees"] = trainees
     sess.pop("stagiaires", None)
 
@@ -37002,31 +37233,102 @@ def _refresh_yousign_aps_elearning_status_if_pending(
 ) -> bool:
     state = _aps_elearning_signature_state(trainee)
     request_id = str(state.get("signature_request_id") or "").strip()
-    if not request_id or not _is_yousign_signature_pending(state) or not _yousign_is_configured():
+    if not _yousign_is_configured():
         return False
-    try:
-        signature_request = _yousign_json("GET", f"/signature_requests/{request_id}")
-    except Exception as exc:
-        state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
-        app.logger.warning(
-            "[APS E-LEARNING] Yousign status refresh failed request_id=%s error=%s",
-            request_id,
-            state["last_status_sync_error"],
-        )
-        return False
-    status = _yousign_signature_request_status(signature_request)
-    if not status:
-        return False
-    if status in YOUSIGN_FINAL_STATUSES:
-        _mark_yousign_aps_elearning_tracking_signed(data, sess, trainees, trainee, request_id)
+    changed = False
+
+    if request_id and _is_yousign_signature_done(state):
+        if _is_pdf_file(str(state.get("signed_pdf_path") or "")):
+            return False
+        try:
+            _mark_yousign_aps_elearning_tracking_signed(data, sess, trainees, trainee, request_id)
+        except Exception as exc:
+            _record_yousign_aps_elearning_pdf_recovery_error(sess, trainees, trainee, str(exc))
+            app.logger.warning(
+                "[APS E-LEARNING] signed PDF recovery failed request_id=%s error=%s",
+                request_id,
+                _sanitize_yousign_error(str(exc)),
+                exc_info=True,
+            )
         return True
-    if status != _normalize_yousign_status(state.get("status")):
-        state["status"] = status
-        trainee["updated_at"] = _now_iso()
-        sess["trainees"] = trainees
-        sess.pop("stagiaires", None)
-        return True
-    return False
+
+    if request_id and _is_yousign_signature_pending(state):
+        try:
+            signature_request = _yousign_json("GET", f"/signature_requests/{request_id}")
+        except Exception as exc:
+            state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
+            app.logger.warning(
+                "[APS E-LEARNING] Yousign status refresh failed request_id=%s error=%s",
+                request_id,
+                state["last_status_sync_error"],
+            )
+        else:
+            state.pop("last_status_sync_error", None)
+            status = _yousign_signature_request_status(signature_request)
+            if status in YOUSIGN_FINAL_STATUSES:
+                state["provider_status"] = status
+                try:
+                    _mark_yousign_aps_elearning_tracking_signed(data, sess, trainees, trainee, request_id)
+                except Exception as exc:
+                    _record_yousign_aps_elearning_pdf_recovery_error(sess, trainees, trainee, str(exc))
+                    app.logger.warning(
+                        "[APS E-LEARNING] signed PDF recovery failed request_id=%s error=%s",
+                        request_id,
+                        _sanitize_yousign_error(str(exc)),
+                        exc_info=True,
+                    )
+                return True
+            if status and status != _normalize_yousign_status(state.get("status")):
+                state["status"] = status
+                trainee["updated_at"] = _now_iso()
+                sess["trainees"] = trainees
+                sess.pop("stagiaires", None)
+                changed = True
+
+    # A stale local request id must not hide a different completed request for
+    # the same trainee/report.  This also repairs the production records whose
+    # completion webhooks were previously acknowledged without being matched.
+    session_id = str(sess.get("id") or "").strip()
+    trainee_id = str(trainee.get("id") or "").strip()
+    if session_id and trainee_id:
+        try:
+            completed_request = _find_completed_yousign_aps_elearning_request(
+                session_id,
+                trainee_id,
+                state,
+            )
+        except Exception as exc:
+            state["last_completed_lookup_error"] = _sanitize_yousign_error(str(exc))
+            app.logger.warning(
+                "[APS E-LEARNING] completed request lookup failed trainee_id=%s error=%s",
+                trainee_id,
+                state["last_completed_lookup_error"],
+            )
+        else:
+            state.pop("last_completed_lookup_error", None)
+            if completed_request:
+                completed_request_id = _adopt_completed_yousign_aps_elearning_request(
+                    trainee,
+                    completed_request,
+                )
+                try:
+                    _mark_yousign_aps_elearning_tracking_signed(
+                        data,
+                        sess,
+                        trainees,
+                        trainee,
+                        completed_request_id,
+                    )
+                except Exception as exc:
+                    _record_yousign_aps_elearning_pdf_recovery_error(sess, trainees, trainee, str(exc))
+                    app.logger.warning(
+                        "[APS E-LEARNING] recovered signed PDF download failed request_id=%s error=%s",
+                        completed_request_id,
+                        _sanitize_yousign_error(str(exc)),
+                        exc_info=True,
+                    )
+                return True
+    return changed
 
 
 def _pdf_page_count(pdf_path: str) -> int:
@@ -49118,9 +49420,16 @@ def webhooks_yousign():
         return jsonify({"ok": False, "error": "invalid_signature"}), 401
     payload = request.get_json(silent=True) or {}
     event_name = str(payload.get("event_name") or payload.get("event") or "").strip()
-    request_id = (((payload.get("data") or {}).get("signature_request") or {}).get("id") or "").strip()
+    signature_request_payload = _yousign_payload_signature_request(payload)
+    request_id = _yousign_webhook_signature_request_id(payload)
     if not request_id:
-        return jsonify({"ok": True, "ignored": True, "reason": "missing_signature_request_id"})
+        data_keys = sorted((payload.get("data") or {}).keys()) if isinstance(payload.get("data"), dict) else []
+        app.logger.warning(
+            "[YOUSIGN] webhook missing signature request id event=%s data_keys=%s",
+            event_name,
+            data_keys,
+        )
+        return jsonify({"ok": False, "error": "missing_signature_request_id"}), 422
     app.logger.info("[YOUSIGN] webhook received event=%s request_id=%s", event_name, request_id)
     payload_status = _yousign_signature_request_status(payload)
     done_events = {"signature_request.done", "signature_request.completed", "signer.done", "signer.completed"}
@@ -49186,10 +49495,36 @@ def webhooks_yousign():
     target_type = "aps_elearning"
     sess, trainees, trainee = _find_trainee_by_aps_elearning_yousign_request_id(data, request_id)
     if not trainee:
+        request_item = dict(signature_request_payload) if isinstance(signature_request_payload, dict) else {}
+        request_item.setdefault("id", request_id)
+        external_id = str(request_item.get("external_id") or "").strip()
+        if not external_id:
+            try:
+                request_item = _yousign_json("GET", f"/signature_requests/{request_id}")
+            except Exception:
+                app.logger.warning(
+                    "[YOUSIGN] unable to resolve unmatched webhook request_id=%s",
+                    request_id,
+                    exc_info=True,
+                )
+            external_id = str(request_item.get("external_id") or "").strip()
+        sess, trainees, trainee = _find_trainee_by_aps_elearning_yousign_external_id(
+            data,
+            external_id,
+            request_item,
+        )
+        if trainee:
+            _adopt_completed_yousign_aps_elearning_request(trainee, request_item)
+    if not trainee:
         target_type = "convention"
         sess, trainees, trainee = _find_trainee_by_yousign_request_id(data, request_id)
     if not trainee:
-        return jsonify({"ok": True, "updated": False, "reason": "signature_request_not_found"})
+        app.logger.warning(
+            "[YOUSIGN] completed request not found locally event=%s request_id=%s",
+            event_name,
+            request_id,
+        )
+        return jsonify({"ok": False, "error": "signature_request_not_found"}), 409
     state = _aps_elearning_signature_state(trainee) if target_type == "aps_elearning" else _yousign_state(trainee)
     try:
         if target_type == "aps_elearning":
@@ -49214,8 +49549,11 @@ def webhooks_yousign():
     except Exception as exc:
         message = _sanitize_yousign_error(str(exc))
         app.logger.exception("[YOUSIGN] signed PDF download failed request_id=%s error=%s", request_id, message)
-        state["status"] = "download_error"
-        state["last_error"] = message
+        if target_type == "aps_elearning":
+            _record_yousign_aps_elearning_pdf_recovery_error(sess, trainees, trainee, message)
+        else:
+            state["status"] = "download_error"
+            state["last_error"] = message
         sess["trainees"] = trainees
         save_data(data)
         return jsonify({"ok": False, "error": "signed_pdf_download_failed"}), 500
