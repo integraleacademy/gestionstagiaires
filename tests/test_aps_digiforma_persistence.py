@@ -112,6 +112,32 @@ def test_current_report_signature_changes_are_still_saved(storage):
     assert trainee(gestion.load_data())['aps_elearning_signature']['status'] == 'done'
 
 
+def test_stale_save_cannot_reopen_a_completed_signature(storage):
+    stale = gestion.load_data()
+    trainee(stale)['aps_elearning_signature'] = {
+        'status': 'ongoing',
+        'signature_request_id': 'REQUEST',
+    }
+    gestion.save_data(stale)
+    stale = gestion.load_data()
+    completed = copy.deepcopy(stale)
+    trainee(completed)['aps_elearning_signature'].update({
+        'status': 'done',
+        'provider_status': 'done',
+        'signed_at': '2026-09-17T12:06:00Z',
+        'signed_pdf_path': '/data/generated/tableau-signe.pdf',
+    })
+    gestion.save_data(completed)
+
+    trainee(stale)['comment'] = 'Sauvegarde concurrente plus ancienne'
+    gestion.save_data(stale)
+
+    persisted = trainee(gestion.load_data())
+    assert persisted['aps_elearning_signature']['status'] == 'done'
+    assert persisted['aps_elearning_signature']['signed_at'] == '2026-09-17T12:06:00Z'
+    assert persisted['comment'] == 'Sauvegarde concurrente plus ancienne'
+
+
 def test_partner_merge_preserves_latest_report_without_crossing_tenants(storage):
     canonical = gestion.load_data()
     canonical['sessions'][0]['partner_id'] = 'PARTNER-A'

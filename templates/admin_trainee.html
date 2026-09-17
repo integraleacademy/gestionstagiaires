@@ -1490,8 +1490,9 @@
   {% set aps_force = trainee.aps_elearning_force_override or {} %}
   {% set aps_force_active = trainee.aps_elearning_force_active|default(false) %}
   {% set aps_signature_status = (aps_signature.status or '')|lower %}
-  {% set aps_signature_pending = aps_signature_status in ['ongoing', 'activated', 'pending', 'en_attente'] %}
-  {% set aps_signature_signed = aps_signature_status in ['done', 'signed'] and aps_signature.signed_pdf_path %}
+  {% set aps_signature_completed = aps_signature_status in ['done', 'signed'] or aps_signature.provider_status in ['done', 'signed'] or aps_signature.signed_at %}
+  {% set aps_signature_pending = not aps_signature_completed and aps_signature_status in ['ongoing', 'activated', 'pending', 'en_attente'] %}
+  {% set aps_signature_signed = aps_signature_completed and aps_signature.signed_pdf_path %}
   <section class="aps-elearning-tracking" id="apsElearningTrackingSection" aria-labelledby="apsElearningTrackingTitle">
     <div class="aps-elearning-tracking__header">
       <div>
@@ -1664,6 +1665,8 @@
         <span>Bordereau probatoire de 2 pages complété automatiquement, puis assemblé avec l’attestation remise en page. Le tampon et la signature de Clément Vaillant sont intégrés ; le stagiaire signe électroniquement le dossier complet avec Yousign.</span>
         {% if aps_signature_signed %}
           <span class="aps-elearning-tracking__signature-state aps-elearning-tracking__signature-state--signed">✓ Tableau signé électroniquement le {{ aps_signature.signed_at|frdatetime }}</span>
+        {% elif aps_signature_completed %}
+          <span class="aps-elearning-tracking__signature-state aps-elearning-tracking__signature-state--error">✓ Signature Yousign terminée · récupération du PDF signé à relancer en rechargeant la fiche</span>
         {% elif aps_signature_pending %}
           <span class="aps-elearning-tracking__signature-state aps-elearning-tracking__signature-state--waiting">⏳ En attente de la signature Yousign du stagiaire</span>
         {% elif aps_signature.last_error %}
@@ -1684,6 +1687,8 @@
              href="{{ url_for('admin_download_signed_aps_elearning_tracking_table', session_id=session.id, trainee_id=trainee.id) }}">
             ✓ Télécharger le dossier signé
           </a>
+      {% elif aps_signature_completed %}
+          <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">✓ Déjà signé · PDF en récupération</button>
       {% elif not is_read_only %}
         {% if aps_signature_allowed %}
           <form method="post"
