@@ -47327,28 +47327,35 @@ def api_qonto_webhooks():
     if not invoice_id:
         data = load_data(); _record_qonto_webhook(data, event, item, "error", "missing_invoice_id"); save_data(data)
         return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
-    data = load_data()
     try:
         invoice_payload = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
     except Exception as exc:
         app.logger.warning("[QONTO] webhook invoice refresh failed invoice_id=%s error=%s", invoice_id, _sanitize_qonto_error(str(exc)))
         invoice_payload = {"id": invoice_id, "status": item.get("status"), "paid_at": item.get("paid_at"), "amount_paid": item.get("amount_paid")}
-    updated = False
-    for line in _billing_lines(data):
-        if str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '') == str(invoice_id):
-            _apply_qonto_invoice_payment_to_billing_line(line, invoice_payload)
-            _billing_log(line, 'Paiement facture Qonto synchronisé', 'success', line.get('paymentStatus') or '', str(invoice_id))
-            _save_billing_line(data, line)
+
+    def persist_invoice_event(data: Dict[str, Any]) -> Dict[str, Any]:
+        # Qonto can notify us before create-draft has saved its response. Read
+        # the canonical data only after remote I/O, under the same file lock as
+        # the write. Saving the snapshot taken before the GET used to erase the
+        # newly created invoice (even when this webhook matched no local row).
+        updated = False
+        for line in _billing_lines(data):
+            if str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '') == str(invoice_id):
+                _apply_qonto_invoice_payment_to_billing_line(line, invoice_payload)
+                _billing_log(line, 'Paiement facture Qonto synchronisé', 'success', line.get('paymentStatus') or '', str(invoice_id))
+                _save_billing_line(data, line)
+                updated = True
+        sess, trainees, trainee = _find_trainee_by_qonto_invoice_id(data, invoice_id)
+        if trainee:
+            inv = _qonto_invoice_state(trainee)
+            _apply_qonto_invoice_status(inv, invoice_payload)
+            sess["trainees"] = trainees
             updated = True
-    sess, trainees, trainee = _find_trainee_by_qonto_invoice_id(data, invoice_id)
-    if trainee:
-        inv = _qonto_invoice_state(trainee)
-        _apply_qonto_invoice_status(inv, invoice_payload)
-        sess["trainees"] = trainees
-        updated = True
-    _record_qonto_webhook(data, event, item, "updated" if updated else "ignored")
-    save_data(data)
-    return jsonify({"ok": True, "updated": updated})
+        _record_qonto_webhook(data, event, item, "updated" if updated else "ignored")
+        return {"updated": updated}
+
+    result = _atomic_update_data(persist_invoice_event)
+    return jsonify({"ok": True, **result})
 
 
 @app.get("/admin/trainee/<trainee_id>/convocation-aps/preview")

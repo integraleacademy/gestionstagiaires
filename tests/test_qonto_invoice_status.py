@@ -62,7 +62,10 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         raw = json.dumps(body).encode("utf-8")
         signature = "sha256=" + hmac.new(secret.encode("utf-8"), raw, hashlib.sha256).hexdigest()
         client = gestion_app.app.test_client()
-        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=self.data), patch.object(gestion_app, "save_data", side_effect=self.saved.append):
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), \
+             patch.object(gestion_app, "load_data", return_value=self.data), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": body["data"]}), \
+             patch.object(gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(self.data)) as persist:
             response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
 
         self.assertEqual(response.status_code, 200)
@@ -70,7 +73,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(invoice["qonto_invoice_status"], "paid")
         self.assertEqual(invoice["qonto_invoice_paid_at"], "2026-06-29T11:30:00Z")
         self.assertEqual(invoice["qonto_invoice_amount_paid"], 950.0)
-        self.assertEqual(len(self.saved), 1)
+        persist.assert_called_once()
 
     def test_manual_sepa_sync_refreshes_signed_mandate_and_creates_installments(self):
         line = {
@@ -359,7 +362,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         raw = b'{"event":"v1/client-invoices","data":{"id":"inv_1"}}'
         secret = "history-secret"
         signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
-        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"), patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_1", "status": "paid", "total_amount": 10, "amount_paid": 10}}):
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "_atomic_update_data", side_effect=lambda mutate: mutate(data)), patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_1", "status": "paid", "total_amount": 10, "amount_paid": 10}}):
             response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
         self.assertEqual(response.status_code, 200)
         entry = data["qonto_webhook_history"][0]
