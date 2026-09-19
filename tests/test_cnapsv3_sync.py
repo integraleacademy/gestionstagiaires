@@ -1790,6 +1790,26 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual([row["last_name"] for row in rows], ["KEEP", "STATUS", "FRENCH"])
 
+    def test_tracking_requests_keep_stable_request_id_for_monitoring(self):
+        def fake_get(url, headers, timeout):
+            return DummyResponse(200, {
+                "requests": [{
+                    "id": 158,
+                    "dossier_id": 91,
+                    "nom": "DOE",
+                    "prenom": "Jane",
+                    "nub": "",
+                    "statut_cnaps": "TRANSMIS",
+                    "created_at": "2026-07-16T00:00:00Z",
+                }]
+            })
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+
+        self.assertIsNone(error)
+        self.assertEqual(rows[0]["tracking_id"], "158")
+        self.assertEqual(rows[0]["nub"], "")
+
     def test_tracking_requests_keep_every_status_since_june_cutoff(self):
         def fake_get(url, headers, timeout):
             return DummyResponse(200, {
@@ -2231,6 +2251,118 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(
             data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["signature"],
             "AP SH ACTIF",
+        )
+
+    def test_background_monitor_notifies_when_nub_appears_after_missing_state(self):
+        data = {}
+        row = {
+            "tracking_id": "158",
+            "last_name": "DOE",
+            "first_name": "Jane",
+            "nub": "",
+            "cnaps_status": "TRANSMIS",
+        }
+        sent = []
+        original_tracking = gestion_app.fetch_cnapsv3_tracking_requests
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        original_email = gestion_app.brevo_send_email
+        original_delay = gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([dict(row)], None)
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {
+            "check_status": "success",
+            "active_titles": [{"display_status": "AP SH ACTIF"}],
+        }
+        gestion_app.load_data = lambda **kwargs: data
+        gestion_app.save_data = lambda payload, **kwargs: None
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = 0
+        try:
+            baseline = gestion_app.run_cnaps_public_annuaire_monitor()
+            row["nub"] = "1234567"
+            transition = gestion_app.run_cnaps_public_annuaire_monitor()
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_tracking
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+            gestion_app.brevo_send_email = original_email
+            gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = original_delay
+
+        self.assertEqual(baseline, {"checked": 0, "notified": 0, "errors": 0, "status": "done"})
+        self.assertEqual(transition, {"checked": 1, "notified": 1, "errors": 0, "status": "done"})
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Ancien statut", sent[0][2])
+        self.assertIn("NUB absent", sent[0][2])
+        self.assertEqual(
+            data["cnaps_public_annuaire_statuses"]["TRACKING|158"]["display_status"],
+            "AP SH ACTIF",
+        )
+        self.assertEqual(
+            data["cnaps_status_change_notifications"]["DOE|1234567"]["previous_status"],
+            "NUB absent",
+        )
+
+    def test_status_change_badge_survives_email_delivery_failure(self):
+        data = {"cnaps_public_annuaire_statuses": {}}
+        gestion_app._record_cnaps_tracking_state(
+            data,
+            first_name="Jane",
+            last_name="DOE",
+            nub="",
+            tracking_id="158",
+            result=None,
+        )
+        original_email = gestion_app.brevo_send_email
+        gestion_app.brevo_send_email = lambda *args, **kwargs: {"ok": False, "error": "Brevo indisponible"}
+        try:
+            notified = gestion_app._record_cnaps_tracking_state(
+                data,
+                first_name="Jane",
+                last_name="DOE",
+                nub="1234567",
+                tracking_id="158",
+                result={"check_status": "success", "active_titles": [{"display_status": "AP SH ACTIF"}]},
+            )
+        finally:
+            gestion_app.brevo_send_email = original_email
+
+        self.assertTrue(notified)
+        notification = data["cnaps_status_change_notifications"]["DOE|1234567"]
+        self.assertEqual(notification["email_status"], "failed")
+        self.assertEqual(gestion_app._cnaps_pending_status_change_count(data), 1)
+
+    def test_nub_appearance_without_title_is_still_a_notified_change(self):
+        data = {"cnaps_public_annuaire_statuses": {}}
+        sent = []
+        original_email = gestion_app.brevo_send_email
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            gestion_app._record_cnaps_tracking_state(
+                data,
+                first_name="Jane",
+                last_name="DOE",
+                nub="",
+                tracking_id="158",
+                result=None,
+            )
+            notified = gestion_app._record_cnaps_tracking_state(
+                data,
+                first_name="Jane",
+                last_name="DOE",
+                nub="1234567",
+                tracking_id="158",
+                result={"check_status": "success", "active_titles": []},
+            )
+        finally:
+            gestion_app.brevo_send_email = original_email
+
+        self.assertTrue(notified)
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(
+            data["cnaps_status_change_notifications"]["DOE|1234567"]["signature"],
+            "Aucun titre CNAPS trouvé",
         )
 
     def test_public_annuaire_notifies_when_a_known_status_changes(self):
