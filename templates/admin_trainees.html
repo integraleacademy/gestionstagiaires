@@ -648,24 +648,35 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
         {% if is_aps_training %}
         {% set attendance = (aps_attendance_by_id or {}).get(t.id|string) %}
+        {% set tracking = t.aps_elearning_tracking if t.aps_elearning_tracking is mapping else {} %}
+        {% set signature = t.aps_elearning_signature if t.aps_elearning_signature is mapping else {} %}
+        {% set signature_status = (signature.status or '')|trim|lower %}
+        {% set show_completion_badge = attendance and attendance.is_complete and tracking.file and signature_status in ['done', 'signed'] %}
         <td class="col-aps-attendance">
           {% if attendance %}
             <div class="aps-followup{% if attendance.is_complete %} aps-followup--complete{% endif %}">
-              <strong class="aps-followup-rate">{{ attendance.overall_rate_label }}</strong>
+              <div class="aps-followup-heading">
+                <strong class="aps-followup-rate">{{ attendance.overall_rate_label }}</strong>
+                {% if show_completion_badge %}
+                <span class="aps-followup-badge"
+                      data-aps-elearning-complete-badge
+                      role="img"
+                      aria-label="E-learning terminé et tableau de suivi FOAD signé par le stagiaire"
+                      title="E-learning terminé et tableau de suivi FOAD signé par le stagiaire">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path class="aps-followup-badge-seal" d="M23 12l-2.44-2.79.34-3.69-3.61-.82L15.4 1.52 12 2.97 8.6 1.52 6.71 4.7l-3.61.81.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.81 1.89 3.18 3.4-1.46 3.4 1.45 1.89-3.18 3.61-.82-.34-3.69L23 12z"/>
+                    <path class="aps-followup-badge-check" d="M10.09 16.2 6.7 12.81l1.41-1.42 1.98 1.98 5.8-5.8 1.41 1.42-7.21 7.21z"/>
+                  </svg>
+                </span>
+                {% endif %}
+              </div>
               {% if attendance.overall_rate is not none %}
               <progress class="aps-followup-bar" max="100" value="{{ attendance.overall_rate }}"
                         aria-label="Suivi global du e-learning de {{ t.first_name }} {{ t.last_name }}">{{ attendance.overall_rate_label }}</progress>
               {% endif %}
-              <span class="aps-followup-detail">Parcours : {{ attendance.paths_completed if attendance.paths_completed is not none else 'À vérifier' }}/{{ attendance.paths_required }}</span>
-              <span class="aps-followup-detail">Évaluations : {{ attendance.evaluations_completed if attendance.evaluations_completed is not none else 'À vérifier' }}/{{ attendance.evaluations_required }}</span>
-              <span class="aps-followup-duration" title="{{ attendance.connection_duration_label }}">Connexion : {{ attendance.connection_duration_short_label }} / 62 heures</span>
-              {% if attendance.is_complete %}<strong class="aps-followup-status">E-learning terminé</strong>{% endif %}
             </div>
           {% else %}
             <span class="aps-followup-empty">Aucun relevé importé</span>
-          {% endif %}
-          {% if attendance and t.aps_elearning_tracking.uploaded_at %}
-            <span class="aps-followup-imported">Dernier import : {{ t.aps_elearning_tracking.uploaded_at|frdatetime }}</span>
           {% endif %}
         </td>
         {% endif %}
@@ -1238,17 +1249,20 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 <style>
 
-#traineesTable .col-aps-attendance{min-width:180px;width:190px;vertical-align:middle;}
+#traineesTable .col-aps-attendance{min-width:150px;width:165px;vertical-align:middle;}
 .aps-followup{--followup-color:#2563eb;display:flex;flex-direction:column;gap:7px;padding:5px 0;}
 .aps-followup--complete{--followup-color:#15803d;}
+.aps-followup-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;}
 .aps-followup-rate{color:var(--followup-color);font-size:16px;font-variant-numeric:tabular-nums;}
-.aps-followup-imported{display:block;margin-top:5px;color:#64748b;font-size:11px;line-height:1.4;}
+.aps-followup-badge{display:inline-flex;flex:0 0 32px;width:32px;height:32px;color:#48b4f4;filter:drop-shadow(0 2px 3px rgba(37,99,235,.18));}
+.aps-followup-badge svg{display:block;width:100%;height:100%;}
+.aps-followup-badge-seal{fill:currentColor;}
+.aps-followup-badge-check{fill:#fff;}
 .aps-followup-bar{display:block;appearance:none;width:100%;height:8px;border:0;border-radius:999px;overflow:hidden;background:#e2e8f0;accent-color:var(--followup-color);}
 .aps-followup-bar::-webkit-progress-bar{background:#e2e8f0;border-radius:999px;}
 .aps-followup-bar::-webkit-progress-value{background:var(--followup-color);border-radius:999px;}
 .aps-followup-bar::-moz-progress-bar{background:var(--followup-color);border-radius:999px;}
-.aps-followup-detail,.aps-followup-duration,.aps-followup-empty{font-size:12px;color:#64748b;line-height:1.4;}
-.aps-followup-status{font-size:12px;color:var(--followup-color);}
+.aps-followup-empty{font-size:12px;color:#64748b;line-height:1.4;}
 
 #traineesTable .col-card-pro-followup{
   width:210px;

@@ -201,6 +201,46 @@ class ApsElearningTests(unittest.TestCase):
         self.assertNotIn("Lien e-learning APS", response.get_data(as_text=True))
         self.assertNotIn("Suivi du e-learning", response.get_data(as_text=True))
 
+    def test_admin_list_compacts_progress_and_requires_completion_and_signature_for_badge(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+
+        def render_attendance_cell():
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "save_data"
+            ):
+                response = self.client.get("/admin/sessions/S-APS/trainees")
+            self.assertEqual(response.status_code, 200)
+            html = response.get_data(as_text=True)
+            return html.split('<td class="col-aps-attendance">', 1)[1].split("</td>", 1)[0]
+
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "signed_at": "2026-09-17T12:06:00Z",
+        }
+        cell = render_attendance_cell()
+        self.assertIn("100 %", cell)
+        self.assertIn('<progress class="aps-followup-bar"', cell)
+        self.assertIn("data-aps-elearning-complete-badge", cell)
+        self.assertNotIn("Parcours :", cell)
+        self.assertNotIn("Évaluations :", cell)
+        self.assertNotIn("Connexion :", cell)
+        self.assertNotIn('class="aps-followup-status"', cell)
+        self.assertNotIn("Dernier import :", cell)
+
+        trainee["aps_elearning_signature"]["status"] = "ongoing"
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_cell())
+
+        trainee["aps_elearning_signature"]["status"] = "done"
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            connection_duration="54h",
+            connection_log_total="54 heures",
+            effective_duration="54 heures",
+        )
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_cell())
+
     def test_rebuild_uses_the_preserved_original_and_updates_the_annex(self):
         from digiforma_attendance import prepare_digiforma_attendance
         self._admin_login()
