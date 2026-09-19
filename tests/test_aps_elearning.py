@@ -232,15 +232,30 @@ class ApsElearningTests(unittest.TestCase):
         self.assertIn("Relevé en cours de transmission", section)
         self.assertIn('id="apsElearningSignatureProgress"', section)
         self.assertIn("Envoi en signature", section)
+        self.assertIn("aps-elearning-tracking__journal--complete", section)
+        self.assertNotIn("aps-elearning-tracking__download--complete", section)
 
         trainee["aps_elearning_signature"] = {
             "status": "done",
             "provider_status": "done",
             "signed_at": "2026-09-17T12:06:00Z",
+            "signed_pdf_path": "uploads/S-APS/T-APS/aps_elearning_tracking/signed.pdf",
         }
         signed_html = render_page()
         signed_summary = signed_html.split('<summary class="aps-elearning-tracking__summary', 1)[1].split("</summary>", 1)[0]
         self.assertIn("data-aps-elearning-complete-badge", signed_summary)
+        signed_section = signed_html.split('id="apsElearningTrackingSection"', 1)[1].split("</section>", 1)[0]
+        self.assertIn("aps-elearning-tracking__download--complete", signed_section)
+
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            connection_duration="54h",
+            connection_log_total="54 heures",
+            effective_duration="54 heures",
+        )
+        trainee["aps_elearning_signature"] = {}
+        incomplete_section = render_page().split('id="apsElearningTrackingSection"', 1)[1].split("</section>", 1)[0]
+        self.assertNotIn("aps-elearning-tracking__journal--complete", incomplete_section)
+        self.assertNotIn("aps-elearning-tracking__download--complete", incomplete_section)
 
     def test_admin_list_compacts_progress_and_requires_completion_and_signature_for_badge(self):
         self._admin_login()
