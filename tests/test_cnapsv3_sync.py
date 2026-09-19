@@ -2304,6 +2304,32 @@ class CnapsTrackingTests(unittest.TestCase):
             "NUB absent",
         )
 
+    def test_browser_refresh_uses_monitor_identity_when_nub_appears(self):
+        data = {}
+        gestion_app._record_cnaps_tracking_state(
+            data, first_name="Jane", last_name="DOE", nub="", tracking_id="158",
+        )
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        result = {"check_status": "success", "active_titles": [{"display_status": "AP SH ACTIF"}]}
+        with mock.patch.object(gestion_app, "load_data", return_value=data), \
+                mock.patch.object(gestion_app, "save_data"), \
+                mock.patch.object(gestion_app, "fetch_cnaps_public_annuaire", return_value=result), \
+                mock.patch.object(gestion_app, "brevo_send_email", return_value={"ok": True}) as email:
+            first = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&tracking_id=158")
+            repeated = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&tracking_id=158")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertTrue(first.get_json()["notification_sent"])
+        self.assertEqual(first.get_json()["pending_status_changes_count"], 1)
+        self.assertFalse(repeated.get_json()["notification_sent"])
+        email.assert_called_once()
+        self.assertEqual(data["cnaps_public_annuaire_statuses"]["TRACKING|158"]["display_status"], "AP SH ACTIF")
+        self.assertEqual(data["cnaps_status_change_notifications"]["DOE|1234567"]["previous_status"], "NUB absent")
+
     def test_status_change_badge_survives_email_delivery_failure(self):
         data = {"cnaps_public_annuaire_statuses": {}}
         gestion_app._record_cnaps_tracking_state(
