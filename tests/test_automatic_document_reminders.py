@@ -219,7 +219,9 @@ def test_stale_admin_save_cannot_erase_receipts_and_cause_another_send(dossier, 
 def test_cron_secret_is_required_and_dry_run_is_forwarded(monkeypatch):
     client = gestion.app.test_client()
     engine = Mock(return_value={"ok": True, "status": "dry_run", "due": 0})
+    attestations = Mock(return_value={"ok": True, "status": "dry_run", "due": 0})
     monkeypatch.setattr(gestion, "run_automatic_document_reminders", engine)
+    monkeypatch.setattr(gestion, "run_automatic_training_attestations", attestations)
     monkeypatch.delenv("CRON_SECRET", raising=False)
     url = "/internal/cron/document-reminders"
     assert client.post(url).status_code == 403
@@ -228,3 +230,4 @@ def test_cron_secret_is_required_and_dry_run_is_forwarded(monkeypatch):
     engine.assert_not_called()
     assert client.post(url, headers={"X-Cron-Secret": "test-secret"}, json={"dry_run": True}).status_code == 200
     assert engine.call_args.kwargs["dry_run"] is True
+    assert attestations.call_args.kwargs["dry_run"] is True

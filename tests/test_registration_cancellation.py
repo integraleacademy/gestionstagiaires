@@ -195,6 +195,9 @@ class RegistrationCancellationTests(unittest.TestCase):
         cancelled = saved["sessions"][0]["trainees"][1]
         self.assertTrue(cancelled["registration_cancelled"])
         self.assertTrue(cancelled["registration_cancelled_at"])
+        self.assertEqual(cancelled["automation_disabled_reason"], "registration_cancelled")
+        self.assertEqual(cancelled["convocation_auto_scheduled_at"], "")
+        self.assertEqual(cancelled["docs_relance_auto_planned_date"], "")
         self.assertTrue(saved["notifications_admin"][0]["done"])
         self.assertEqual(saved["notifications_admin"][0]["resolution"], "Inscription annulée")
 
@@ -261,6 +264,7 @@ class RegistrationCancellationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.get_json()["registration_cancelled"])
         self.assertEqual(trainee["registration_cancelled_at"], "")
+        self.assertNotIn("automation_disabled_reason", trainee)
         self.assertEqual(gestion_app.compute_stats(data["sessions"][0])["total"], 2)
 
     @staticmethod

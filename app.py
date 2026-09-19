@@ -36,6 +36,7 @@ from wedof_requests import (
 from digiforma_duration import aps_elearning_completion, journal_attendance
 from manual_document_reminders import document_actions, build_content as build_manual_docs_content, content_fingerprint
 from automatic_document_reminders import run as run_automatic_document_reminders, schedule as automatic_document_schedule
+from automatic_training_attestations import run as run_automatic_training_attestations
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 try:
     import resource
@@ -7690,6 +7691,8 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
 
 
 def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_notifications: bool = True) -> Dict[str, Any]:
+    if _trainee_registration_is_cancelled(trainee):
+        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
     practice_training_date = (
         _session_get(session_obj, "practice_training_date", "")
         or _session_get(session_obj, "exam_practice_date", "")
@@ -8123,6 +8126,8 @@ def _extract_vtc_exam_results(file_name: str, file_bytes: bytes) -> Dict[str, An
 
 
 def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_notifications: bool = True) -> Dict[str, Any]:
+    if _trainee_registration_is_cancelled(trainee):
+        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
     practice_training_date = (
         _session_get(session_obj, "practice_training_date", "")
         or _session_get(session_obj, "exam_practice_date", "")
@@ -8164,6 +8169,8 @@ def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dic
 
 
 def _send_vtc_practice_exam_success_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, Any]:
+    if _trainee_registration_is_cancelled(trainee):
+        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
     practice_exam_date = (
         _session_get(session_obj, "exam_practice_date", "")
         or _session_get(session_obj, "exam_date", "")
@@ -8547,6 +8554,8 @@ def build_vtc_credentials_invalid_sms(first_name: str, form_link: str) -> str:
 
 
 def _send_vtc_credentials_invalid_notification(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    if _trainee_registration_is_cancelled(trainee):
+        return False
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
     first_name = (trainee.get("first_name") or "").strip()
     subject, html_content = build_vtc_credentials_invalid_email(first_name, link)
@@ -8595,6 +8604,8 @@ def _send_vtc_credentials_invalid_notification(data: Dict[str, Any], session_obj
 
 
 def _send_vtc_credentials_reminder(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any], details: str) -> bool:
+    if _trainee_registration_is_cancelled(trainee):
+        return False
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
     first_name = (trainee.get("first_name") or "").strip()
     subject, html_content = build_vtc_credentials_reminder_email(first_name, link)
@@ -10998,6 +11009,96 @@ def _trainee_registration_is_cancelled(trainee: Optional[Dict[str, Any]]) -> boo
     return str(value or "").strip().lower() in {
         "1", "true", "yes", "on", "oui", "annulee", "annulée", "cancelled", "canceled",
     }
+
+
+AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE = (
+    "Automatisation désactivée : l'inscription est annulée."
+)
+
+
+def _disable_trainee_automations_for_cancellation(trainee: Dict[str, Any], at: str) -> None:
+    """Stop every pending training-document automation on cancellation."""
+    trainee["automation_disabled_at"] = at
+    trainee["automation_disabled_reason"] = "registration_cancelled"
+    if trainee.get("convocation_auto_scheduled_at") and not trainee.get("convocation_auto_scheduled_before_cancellation"):
+        trainee["convocation_auto_scheduled_before_cancellation"] = trainee["convocation_auto_scheduled_at"]
+    trainee["convocation_auto_scheduled_at"] = ""
+    trainee["docs_relance_auto_planned_date"] = ""
+    trainee.pop("vtc_cm_reminder_scheduled_for", None)
+
+    vae_relances = trainee.get("vae_relances")
+    if isinstance(vae_relances, dict):
+        for item in vae_relances.values():
+            if isinstance(item, dict):
+                item["planned_at"] = ""
+
+    for key in ("convention_signature", "convocation_signature"):
+        state = trainee.get(key)
+        if isinstance(state, dict):
+            if state.get("next_reminder_at") and not state.get("next_reminder_at_before_cancellation"):
+                state["next_reminder_at_before_cancellation"] = state["next_reminder_at"]
+            state["next_reminder_at"] = ""
+            state["automation_disabled_at"] = at
+
+    for attempt in trainee.get("automatic_docs_reminder_history", []) or []:
+        if not isinstance(attempt, dict) or not attempt.get("pending"):
+            continue
+        attempt["pending"] = False
+        attempt["finished_at"] = at
+        for channel in ("email", "sms"):
+            if str(attempt.get(f"{channel}_status") or "").upper() in {"", "EN_ATTENTE"}:
+                attempt[f"{channel}_status"] = "DESACTIVE"
+        attempt["error"] = AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE
+
+    attestation_state = trainee.get("training_attestation_automation")
+    if isinstance(attestation_state, dict):
+        for kind, state in attestation_state.items():
+            if not isinstance(state, dict) or str(state.get("email_status") or "").upper() == "ACCEPTE":
+                continue
+            state.update({
+                "pending": False,
+                "email_status": "DESACTIVE",
+                "error": AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE,
+                "finished_at": at,
+            })
+            status_key = "attestation_entree_aps_status" if kind == "entry" else "attestation_fin_aps_status"
+            sent_key = "attestation_entree_aps_sent_at" if kind == "entry" else "attestation_fin_aps_sent_at"
+            if not trainee.get(sent_key):
+                trainee[status_key] = "disabled"
+
+
+def _reactivate_trainee_automations(trainee: Dict[str, Any]) -> None:
+    """Release only cancellation locks; completed automation evidence remains."""
+    trainee.pop("automation_disabled_at", None)
+    trainee.pop("automation_disabled_reason", None)
+    if trainee.get("convocation_auto_scheduled_before_cancellation"):
+        trainee["convocation_auto_scheduled_at"] = trainee.pop("convocation_auto_scheduled_before_cancellation")
+    for key in ("convention_signature", "convocation_signature"):
+        state = trainee.get(key)
+        if not isinstance(state, dict):
+            continue
+        if state.get("next_reminder_at_before_cancellation"):
+            state["next_reminder_at"] = state.pop("next_reminder_at_before_cancellation")
+        state.pop("automation_disabled_at", None)
+    docs_history = trainee.get("automatic_docs_reminder_history")
+    if isinstance(docs_history, list):
+        trainee["automatic_docs_reminder_history"] = [
+            attempt for attempt in docs_history
+            if not (
+                isinstance(attempt, dict)
+                and attempt.get("error") == AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE
+                and str(attempt.get("email_status") or "").upper() == "DESACTIVE"
+                and str(attempt.get("sms_status") or "").upper() == "DESACTIVE"
+            )
+        ]
+    attestation_state = trainee.get("training_attestation_automation")
+    if isinstance(attestation_state, dict):
+        for kind in tuple(attestation_state):
+            state = attestation_state.get(kind)
+            if isinstance(state, dict) and str(state.get("email_status") or "").upper() == "DESACTIVE":
+                attestation_state.pop(kind, None)
+        if not attestation_state:
+            trainee.pop("training_attestation_automation", None)
 
 
 def _registered_trainees(source: Any) -> List[Dict[str, Any]]:
@@ -26738,10 +26839,15 @@ def api_update_trainee(session_id: str, trainee_id: str):
     _sync_financement_status_from_manual_validation(t)
     registration_cancelled = _trainee_registration_is_cancelled(t)
     t["registration_cancelled"] = registration_cancelled
+    if registration_cancelled:
+        send_vae_notification = False
+        send_exam_fees_notification = False
+        send_elearning_notification = False
     if "registration_cancelled" in payload and registration_cancelled != previous_registration_cancelled:
         changed_at = _now_iso()
         if registration_cancelled:
             t["registration_cancelled_at"] = changed_at
+            _disable_trainee_automations_for_cancellation(t, changed_at)
             cancellation_tracking = _registration_cancellation_tracking_state(t, create=True)
             cancellation_tracking["case_status"] = "to_process"
             cancellation_tracking["request_received_at"] = changed_at[:10]
@@ -26763,6 +26869,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             )
         else:
             t["registration_cancelled_at"] = ""
+            _reactivate_trainee_automations(t)
             if isinstance(t.get("cancellation_tracking"), dict):
                 cancellation_tracking = _registration_cancellation_tracking_state(t, create=True)
                 cancellation_tracking["case_status"] = "closed"
@@ -26969,6 +27076,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
     theory_notification = None
     requested_vtc_theory_status = (t.get("vtc_theory_status_manual") or "").strip().lower()
     if (
+        not registration_cancelled
+        and
         "vtc_theory_status_manual" in payload
         and requested_vtc_theory_status == "success"
         and previous_vtc_theory_status != "success"
@@ -27371,6 +27480,8 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
 
     payload = request.get_json(silent=True) or {}
     send_notifications_raw = payload.get("send_notifications", payload.get("send_email", True))
@@ -27403,6 +27514,8 @@ def api_send_vtc_practice_exam_success(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
 
     result = _send_vtc_practice_exam_success_notification(s, t)
 
@@ -29607,6 +29720,9 @@ def admin_create_aps_elearning_tracking_signature(session_id: str, trainee_id: s
     session_obj, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
     if not session_obj or not trainee or not _is_aps_elearning_session(session_obj):
         abort(404)
+    if _trainee_registration_is_cancelled(trainee):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return _aps_elearning_tracking_redirect(session_id, trainee_id)
     current_state = _aps_elearning_signature_state(trainee)
     if current_state.get("signature_request_id") and (
         _is_yousign_signature_pending(current_state) or _is_yousign_signature_done(current_state)
@@ -31059,6 +31175,9 @@ def admin_vtc_cmar_relance(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     _send_vtc_credentials_reminder(data, s, t, "Relance manuelle CMAR (admin)")
     t["vtc_cm_reminder_auto_disabled"] = True
@@ -31120,6 +31239,9 @@ def admin_vtc_cmar_identifiants_errones(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     _send_vtc_credentials_invalid_notification(data, s, t)
 
@@ -31144,6 +31266,9 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
@@ -32345,6 +32470,14 @@ def refresh_vae_relance_schedule(trainee: Dict[str, Any]) -> None:
 
 
 def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any], relance_key: str, mode: str) -> Dict[str, Any]:
+    if _trainee_registration_is_cancelled(trainee):
+        return {
+            "email_ok": False,
+            "sms_ok": False,
+            "sent_at": "",
+            "disabled": True,
+            "error": AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE,
+        }
     cfg = VAE_RELANCE_CONFIGS[relance_key]
     first_name = (trainee.get("first_name") or "").strip()
     last_name = (trainee.get("last_name") or "").strip()
@@ -34027,8 +34160,22 @@ def _financing_partner_module_enabled() -> bool:
     return partner_has_module("financing")
 
 
-def _automation_is_enabled(session_obj: Dict[str, Any]) -> bool:
-    return bool(_automation_document_config(session_obj).get("enabled")) and _automation_partner_module_enabled()
+def _automation_is_enabled(
+    session_obj: Dict[str, Any], trainee: Optional[Dict[str, Any]] = None,
+) -> bool:
+    return (
+        bool(_automation_document_config(session_obj).get("enabled"))
+        and _automation_partner_module_enabled()
+        and not _trainee_registration_is_cancelled(trainee)
+    )
+
+
+def _cancelled_registration_automation_response():
+    return jsonify({
+        "ok": False,
+        "error": AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE,
+        "code": "automation_disabled",
+    }), 409
 
 
 def _automation_has_entry_attestation(session_obj: Dict[str, Any]) -> bool:
@@ -34853,6 +35000,8 @@ def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
     sess, trainees, trainee, state = _find_trainee_by_convocation_signature_id(data, signature_id)
     if not trainee or not state:
         return False, "Signature introuvable."
+    if _trainee_registration_is_cancelled(trainee):
+        return False, AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE
     state = _yousign_state(trainee)
     if _is_yousign_signature_done(state):
         state["next_reminder_at"] = ""
@@ -35072,6 +35221,8 @@ def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Di
     return subject, html_body, text_body
 
 def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> bool:
+    if _trainee_registration_is_cancelled(trainee):
+        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
     email = str(trainee.get("email") or "").strip()
     if not email:
         raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
@@ -35126,6 +35277,8 @@ def send_yousign_aps_elearning_signature_email(
     trainee: Dict[str, Any],
     signature_link: str,
 ) -> bool:
+    if _trainee_registration_is_cancelled(trainee):
+        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
     email = str(trainee.get("email") or "").strip()
     if not email:
         raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
@@ -35169,6 +35322,8 @@ def _auto_send_convention_signature_if_needed(
     trigger: str,
 ) -> bool:
     """Create the Yousign convention and email it once when business rules allow it."""
+    if _trainee_registration_is_cancelled(trainee):
+        return False
     if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
         return False
     state = _yousign_state(trainee)
@@ -35285,6 +35440,7 @@ AUTOMATION_TRAINEE_FIELDS = (
     "attestation_fin_aps_docx_path",
     "attestation_fin_aps_pdf_token",
     "attestation_fin_aps_last_error",
+    "training_attestation_automation",
 )
 
 
@@ -35324,6 +35480,8 @@ def _reset_trainee_automations(trainee: Dict[str, Any]) -> None:
 
 
 def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str, force_new: bool = False) -> Dict[str, Any]:
+    if _trainee_registration_is_cancelled(trainee):
+        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
     existing_state = _yousign_state(trainee)
     has_existing_request = bool(existing_state.get("signature_request_id"))
     has_active_link = bool(existing_state.get("signature_link"))
@@ -35521,6 +35679,8 @@ def create_yousign_aps_elearning_tracking_signature(
     trainee_id: str,
     force_new: bool = False,
 ) -> Dict[str, Any]:
+    if _trainee_registration_is_cancelled(trainee):
+        raise RuntimeError(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE)
     if not _is_aps_elearning_session(session_obj):
         raise RuntimeError("La signature du tableau FOAD est réservée aux sessions APS avec e-learning.")
     tracking = _require_aps_elearning_signature_ready(trainee)
@@ -38486,6 +38646,10 @@ def _store_public_file_token(path: str) -> str:
 
 def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> bool:
     """Generate, send by email, and expose the convocation once the convention is signed."""
+    if _trainee_registration_is_cancelled(trainee):
+        trainee["convocation_auto_scheduled_at"] = ""
+        trainee["convocation_auto_last_error"] = AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE
+        return False
     if str(_automation_document_config(session_obj).get("slug") or "") == "vtc":
         # En VTC, seule la réussite à la théorie déclenche la convocation.
         return False
@@ -38800,6 +38964,10 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     t["registration_cancelled"] = _trainee_registration_is_cancelled(t)
     if not t["registration_cancelled"]:
         _refresh_trainee_hebergement_status(s, t)
+    else:
+        _disable_trainee_automations_for_cancellation(
+            t, str(t.get("registration_cancelled_at") or _now_iso()),
+        )
 
     # L'ouverture d'une fiche reste strictement locale. Les webhooks, les
     # lectures ciblées explicites et les réconciliations bornées alimentent ce
@@ -38856,8 +39024,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         t["vae_action_dates"] = {}
     _sync_vae_status_with_actions(t)
     ensure_vae_relances_state(t)
-    refresh_vae_relance_schedule(t)
-    _refresh_vtc_cm_reminder_schedule(t)
+    if not t["registration_cancelled"]:
+        refresh_vae_relance_schedule(t)
+        _refresh_vtc_cm_reminder_schedule(t)
 
     # ✅ s'assure que les booléens dossiers sont cohérents
     t["no_permis"] = bool(t.get("no_permis"))
@@ -38875,10 +39044,12 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         t["docs_relance_auto_sent_at"] = ""
     t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
-    _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
+    if not t["registration_cancelled"]:
+        _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
     aps_elearning_progress = None
     if _is_aps_elearning_session(s):
-        _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
+        if not t["registration_cancelled"]:
+            _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
         aps_tracking = _aps_elearning_tracking(t)
         if aps_tracking.get("file"):
             aps_elearning_progress = aps_elearning_completion(aps_tracking)
@@ -38939,6 +39110,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         brevo_no_credit_notice=brevo_no_credit_notice,
         automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
         automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
+        automation_disabled_by_cancellation=t["registration_cancelled"],
         financing_module_locked=not _financing_partner_module_enabled(),
         cpf_tracking=build_cpf_view(t, s, data),
         cpf_association_preview=(session.get("cpf_association_preview") or {})
@@ -47671,6 +47843,8 @@ def admin_preview_aps_convocation_by_trainee(trainee_id: str):
     s, _, t = _find_trainee_any_session(data, trainee_id)
     if not s or not t or not _is_aps_session(s):
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     try:
         _, pdf_path = _generate_aps_convocation_files(s, t, "", trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -47686,6 +47860,8 @@ def admin_preview_aps_convocation(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t or not _is_aps_session(s):
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     try:
         _, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -47703,6 +47879,8 @@ def admin_preview_aps_entry_attestation(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t or not _automation_has_entry_attestation(s):
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     try:
         _, pdf_path = _generate_aps_entry_attestation_files(s, t, session_id, trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -47763,6 +47941,8 @@ def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
     if not _automation_has_entry_attestation(s):
         return jsonify({"ok": False, "error": "Attestation d’entrée non configurée pour cette formation"}), 400
     try:
@@ -47805,6 +47985,8 @@ def admin_preview_aps_end_attestation(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t or not _automation_has_end_attestation(s):
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
     try:
         _, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -47821,6 +48003,8 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
     if not _automation_has_end_attestation(s):
         return jsonify({"ok": False, "error": "Attestation de fin non configurée pour cette formation"}), 400
     try:
@@ -47862,7 +48046,9 @@ def admin_trainee_automation_status(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
+    if not _automation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
     return jsonify({"ok": True, "automation_status": _build_trainee_automation_status(s, t, session_id, trainee_id)})
@@ -47876,7 +48062,9 @@ def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
+    if not _automation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
@@ -47909,7 +48097,9 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
+    if not _automation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
@@ -47978,7 +48168,9 @@ def admin_preview_convention(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         abort(404)
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        return make_response(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, 409)
+    if not _automation_is_enabled(s, t):
         abort(403)
     try:
         _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
@@ -48009,7 +48201,9 @@ def api_update_convention_financing(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
+    if not _automation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _financing_partner_module_enabled():
         return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
@@ -48029,7 +48223,9 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
+    if not _automation_is_enabled(s, t):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     payload = request.get_json(silent=True) or {}
     _apply_convention_financing_payload(t, payload)
@@ -48064,6 +48260,9 @@ def admin_toggle_legacy_convention_signed(session_id: str, trainee_id: str):
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return redirect(request.referrer or url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
     checked = str(request.form.get("legacy_signed") or "").lower() in {"1", "true", "yes", "on"}
     now = _now_iso()
     state = _yousign_state(t)
@@ -48115,7 +48314,10 @@ def admin_create_convention_signature(session_id: str, trainee_id: str):
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    if not _automation_is_enabled(s, t):
         flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
         abort(403)
     try:
@@ -48151,7 +48353,10 @@ def admin_reset_trainee_automations(session_id: str, trainee_id: str):
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
-    if not _automation_is_enabled(s):
+    if _trainee_registration_is_cancelled(t):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    if not _automation_is_enabled(s, t):
         flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
         abort(403)
     try:
@@ -48177,6 +48382,9 @@ def admin_resend_convention_signature_email(session_id: str, trainee_id: str):
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
+    if _trainee_registration_is_cancelled(t):
+        flash(AUTOMATION_DISABLED_REGISTRATION_CANCELLED_MESSAGE, "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
     state = _yousign_state(t)
     signature_link = str(state.get("signature_link") or "").strip()
     try:
@@ -48394,9 +48602,27 @@ def internal_cron_document_reminders():
     provided = (request.headers.get("X-Cron-Secret") or "").strip()
     if not expected or not provided or not hmac.compare_digest(expected, provided):
         return jsonify(ok=False, error="forbidden"), 403
-    result = run_automatic_document_reminders(
-        sys.modules[__name__], dry_run=(request.get_json(silent=True) or {}).get("dry_run") is True,
-    )
+    dry_run = (request.get_json(silent=True) or {}).get("dry_run") is True
+    document_reminders = run_automatic_document_reminders(sys.modules[__name__], dry_run=dry_run)
+    training_attestations = run_automatic_training_attestations(sys.modules[__name__], dry_run=dry_run)
+    result = {
+        "ok": bool(document_reminders.get("ok")) and bool(training_attestations.get("ok")),
+        "status": "dry_run" if dry_run else (
+            "completed" if document_reminders.get("ok") and training_attestations.get("ok") else "completed_with_issues"
+        ),
+        "checked": int(document_reminders.get("checked") or 0) + int(training_attestations.get("checked") or 0),
+        "due": int(document_reminders.get("due") or 0) + int(training_attestations.get("due") or 0),
+        "processed": int(document_reminders.get("processed") or 0) + int(training_attestations.get("processed") or 0),
+        "emails_accepted": int(document_reminders.get("emails_accepted") or 0) + int(training_attestations.get("emails_accepted") or 0),
+        "sms_accepted": int(document_reminders.get("sms_accepted") or 0),
+        "entry_sent": int(training_attestations.get("entry_sent") or 0),
+        "end_sent": int(training_attestations.get("end_sent") or 0),
+        "skipped_cancelled": int(training_attestations.get("skipped_cancelled") or 0),
+        "failed": int(document_reminders.get("failed") or 0) + int(training_attestations.get("failed") or 0),
+        "activated_on": document_reminders.get("activated_on") or training_attestations.get("activated_on") or "",
+        "document_reminders": document_reminders,
+        "training_attestations": training_attestations,
+    }
     return jsonify(result), 200 if result["ok"] else 502
 
 
@@ -51259,6 +51485,8 @@ def api_send_vae_relance(session_id: str, trainee_id: str, relance_key: str):
     s, t = _find_session_and_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "not_found"}), 404
+    if _trainee_registration_is_cancelled(t):
+        return _cancelled_registration_automation_response()
 
     training_type = (_session_get(s, "training_type", "") or "").strip().upper()
     if training_type != "DIRIGEANT VAE":

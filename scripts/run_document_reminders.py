@@ -1,4 +1,4 @@
-"""Invoke only the document-reminder scheduler using the existing cron secret."""
+"""Invoke scheduled document reminders and training attestations."""
 import json
 import os
 from urllib.parse import urlsplit, urlunsplit
@@ -22,13 +22,17 @@ def main():
     url = reminder_url()
     token = os.environ.get("CRON_SECRET", "").strip()
     if not url or not token:
-        raise SystemExit("Document reminder URL and CRON_SECRET must be configured")
+        raise SystemExit("Scheduled document URL and CRON_SECRET must be configured")
     response = requests.post(url, headers={"X-Cron-Secret": token, "Accept": "application/json"}, timeout=240)
     if not response.ok:
-        raise SystemExit(f"Document reminders failed: HTTP {response.status_code}")
+        raise SystemExit(f"Scheduled documents failed: HTTP {response.status_code}")
     result = response.json()
-    keys = ("ok", "status", "checked", "due", "processed", "emails_accepted", "sms_accepted", "failed", "activated_on")
-    print("Document reminders: " + json.dumps({k: result[k] for k in keys if k in result}, ensure_ascii=False), flush=True)
+    keys = (
+        "ok", "status", "checked", "due", "processed", "emails_accepted",
+        "sms_accepted", "entry_sent", "end_sent", "skipped_cancelled",
+        "failed", "activated_on",
+    )
+    print("Scheduled documents: " + json.dumps({k: result[k] for k in keys if k in result}, ensure_ascii=False), flush=True)
     if not result.get("ok"):
         raise SystemExit(1)
 
