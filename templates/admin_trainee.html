@@ -513,6 +513,106 @@
     color:#fff !important;
     animation:none !important;
   }
+  #documentsSection{
+    min-width:0;
+    overflow:hidden;
+  }
+  #documentsSection > summary{
+    margin-bottom:12px;
+  }
+  .documents-statusbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    padding:10px 12px;
+    border:1px solid #e2e8f0;
+    border-radius:13px;
+    background:#f8fafc;
+  }
+  .documents-actions{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+    gap:10px;
+    margin-top:12px;
+  }
+  .documents-actions > form,
+  .documents-actions > a,
+  .documents-actions > button{
+    width:100%;
+    min-width:0;
+    margin:0;
+    box-sizing:border-box;
+  }
+  .documents-actions > form{
+    display:flex;
+  }
+  .documents-actions .btn{
+    width:100%;
+    min-width:0;
+    min-height:42px;
+    padding:10px 12px;
+    white-space:normal;
+    line-height:1.25;
+    text-align:center;
+  }
+  .documents-table-wrap{
+    max-width:100%;
+    overflow-x:auto;
+  }
+  #docsTable{
+    width:100%;
+    min-width:1120px !important;
+    table-layout:fixed;
+  }
+  #docsTable th,
+  #docsTable td{
+    min-width:0 !important;
+    max-width:none !important;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  #docsTable th:nth-child(1),
+  #docsTable td:nth-child(1){width:40%;}
+  #docsTable th:nth-child(2),
+  #docsTable td:nth-child(2){width:18%;}
+  #docsTable th:nth-child(3),
+  #docsTable td:nth-child(3){width:16%;}
+  #docsTable th:nth-child(4),
+  #docsTable td:nth-child(4){width:26%;}
+  #docsTable .status{
+    box-sizing:border-box;
+    max-width:100%;
+  }
+  .document-file-stack{
+    display:grid;
+    gap:8px;
+    align-items:start;
+  }
+  .document-file-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  #docsTable .document-file-actions form{
+    display:flex;
+    margin:0;
+  }
+  .document-file-action{
+    min-height:34px;
+    padding:7px 10px !important;
+    border-radius:10px;
+    font-size:12px;
+    line-height:1.2;
+    white-space:nowrap;
+    text-decoration:none;
+  }
+  @media(max-width:640px){
+    .documents-actions{grid-template-columns:1fr;}
+    .documents-statusbar{align-items:flex-start;flex-direction:column;}
+  }
   @keyframes docsPendingPulse{
     0%,100%{ transform: scale(1); box-shadow:0 0 0 0 rgba(245,158,11,.35); }
     50%{ transform: scale(1.03); box-shadow:0 0 0 10px rgba(245,158,11,0); }
@@ -2677,7 +2777,7 @@
       📁 Gestion des documents
     </summary>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div class="documents-statusbar">
       {% set dossier_label = ("DOSSIER COMPLET" if dossier_is_complete else "DOSSIER INCOMPLET") %}
       <span id="dossierStatusPill" class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
         {{ dossier_label }}
@@ -2703,7 +2803,7 @@
   </div>
 {% endif %}
 
-   <div class="btn-row" style="margin-top:10px;">
+   <div class="documents-actions">
   {% if not is_read_only %}
     <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
       <button class="btn btn-primary btn-uniform" type="submit">📩 Notifier envoi documents</button>
@@ -2770,7 +2870,7 @@
       </div>
     {% endif %}
 
-    <div class="table-wrap" style="margin-top:10px;">
+    <div class="table-wrap documents-table-wrap" style="margin-top:10px;">
       <table class="table" id="docsTable" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}">
         <thead>
           <tr>
@@ -2808,13 +2908,13 @@
               {% endif %}
             </td>
             <td><span class="hint">—</span></td>
-            <td class="mono" style="max-width:320px;">
+            <td class="documents-file-cell">
               {% if professional_sheet %}
-                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                  <a href="{{ url_for('admin_professional_experience_sheet_print', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">🖨️ Voir et imprimer la fiche</a>
+                <div class="document-file-actions">
+                  <a class="btn btn-outline document-file-action" href="{{ url_for('admin_professional_experience_sheet_print', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">🖨️ Voir et imprimer</a>
                   {% if not is_read_only %}
-                  <form method="post" action="{{ url_for('admin_professional_experience_sheet_delete', session_id=session.id, trainee_id=trainee.id) }}" onsubmit="return confirm('Supprimer définitivement cette fiche expérience professionnelle ?');" style="display:inline;">
-                    <button class="btn btn-danger" type="submit" style="padding:6px 10px;">🗑️ Supprimer</button>
+                  <form method="post" action="{{ url_for('admin_professional_experience_sheet_delete', session_id=session.id, trainee_id=trainee.id) }}" onsubmit="return confirm('Supprimer définitivement cette fiche expérience professionnelle ?');">
+                    <button class="btn btn-danger document-file-action" type="submit">🗑️ Supprimer</button>
                   </form>
                   {% endif %}
                 </div>
@@ -2886,20 +2986,19 @@
               </div>
             </td>
 
-            <td class="mono" style="max-width:320px;">
+            <td class="documents-file-cell">
              {% if has_file %}
-  <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+  <div class="document-file-stack">
     {% for ft in (d.file_tokens or []) %}
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <a href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank">📎 Voir fichier {{ loop.index }}</a>
-        <a href="{{ url_for('admin_download_upload', path=ft) }}">⬇️ Télécharger</a>
+      <div class="document-file-actions">
+        <a class="btn btn-outline document-file-action" href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank" rel="noopener">📎 Voir fichier {{ loop.index }}</a>
+        <a class="btn btn-outline document-file-action" href="{{ url_for('admin_download_upload', path=ft) }}">⬇️ Télécharger</a>
 
         {% if not is_read_only %}
           <form method="post"
                 action="{{ url_for('admin_delete_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key, file_token=ft) }}"
-                onsubmit="return confirm('Supprimer ce fichier ?');"
-                style="display:inline;">
-            <button class="btn btn-danger" type="submit" style="padding:6px 10px;">🗑️ Supprimer</button>
+                onsubmit="return confirm('Supprimer ce fichier ?');">
+            <button class="btn btn-danger document-file-action" type="submit">🗑️ Supprimer</button>
           </form>
         {% endif %}
       </div>
@@ -2938,8 +3037,6 @@
         </tbody>
       </table>
     </div>
-
-  </div>
 
 </details>
 {% endif %}
