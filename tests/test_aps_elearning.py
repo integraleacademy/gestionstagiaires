@@ -297,6 +297,43 @@ class ApsElearningTests(unittest.TestCase):
         )
         self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_cell())
 
+    def test_public_space_requires_completion_and_signature_for_blue_badge(self):
+        self._public_login()
+        data = self._data(datetime.date.today().isoformat())
+        trainee = data["sessions"][0]["trainees"][0]
+
+        def render_attendance_section():
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "save_data"
+            ):
+                response = self.client.get("/espace/PUBLIC-TOKEN")
+            self.assertEqual(response.status_code, 200)
+            html = response.get_data(as_text=True)
+            return html.split('id="apsElearningAttendance"', 1)[1].split("</section>", 1)[0]
+
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "signed_at": "2026-09-17T12:06:00Z",
+        }
+        section = render_attendance_section()
+        self.assertIn("data-aps-elearning-complete-badge", section)
+        self.assertIn(
+            'aria-label="E-learning terminé et tableau de suivi FOAD signé par le stagiaire"',
+            section,
+        )
+
+        trainee["aps_elearning_signature"]["status"] = "ongoing"
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_section())
+
+        trainee["aps_elearning_signature"]["status"] = "done"
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            connection_duration="54h",
+            connection_log_total="54 heures",
+            effective_duration="54 heures",
+        )
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_section())
+
     def test_rebuild_uses_the_preserved_original_and_updates_the_annex(self):
         from digiforma_attendance import prepare_digiforma_attendance
         self._admin_login()

@@ -382,7 +382,12 @@
   .aps-attendance{margin-top:20px;padding:18px;border:1px solid #c7d2fe;border-radius:16px;background:#fff;}
   .aps-attendance-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
   .aps-attendance-heading h3{margin:0;font-size:18px;color:#312e81;}
-  .aps-attendance-heading strong{font-size:30px;color:#4338ca;}
+  .aps-attendance-heading-result{display:flex;align-items:center;gap:10px;}
+  .aps-attendance-heading-result > strong{font-size:30px;color:#4338ca;}
+  .aps-attendance-completion-badge{display:inline-flex;flex:0 0 38px;width:38px;height:38px;color:#48b4f4;filter:drop-shadow(0 3px 5px rgba(37,99,235,.2));}
+  .aps-attendance-completion-badge svg{display:block;width:100%;height:100%;}
+  .aps-attendance-completion-badge-seal{fill:currentColor;}
+  .aps-attendance-completion-badge-check{fill:#fff;}
   .aps-attendance-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin-top:18px;}
   .aps-attendance-metric{padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;min-width:0;}
   .aps-attendance-label{display:block;color:#475569;font-size:13px;margin-bottom:8px;}
@@ -1016,6 +1021,10 @@
     {% if aps_elearning_enabled %}
       {% set aps_link = (trainee.aps_elearning_login or '')|trim %}
       {% set aps_link_is_valid = aps_link[:8] == 'https://' %}
+      {% set aps_tracking = trainee.aps_elearning_tracking if trainee.aps_elearning_tracking is mapping else {} %}
+      {% set aps_signature = trainee.aps_elearning_signature if trainee.aps_elearning_signature is mapping else {} %}
+      {% set aps_signature_status = (aps_signature.status or '')|trim|lower %}
+      {% set aps_show_completion_badge = aps_elearning_progress and aps_elearning_progress.is_complete and aps_tracking.file and aps_signature_status in ['done', 'signed'] %}
       <section class="card aps-elearning-card" aria-labelledby="apsElearningTitle">
         <div class="aps-elearning-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" role="img">
@@ -1033,7 +1042,21 @@
           <section class="aps-attendance{% if aps_elearning_progress.is_complete %} is-complete{% endif %}" id="apsElearningAttendance" aria-labelledby="apsAttendanceTitle">
             <div class="aps-attendance-heading">
               <h3 id="apsAttendanceTitle">Suivi global du e-learning</h3>
-              <strong id="apsOverallRate">{{ aps_elearning_progress.overall_rate_label }}</strong>
+              <div class="aps-attendance-heading-result">
+                <strong id="apsOverallRate">{{ aps_elearning_progress.overall_rate_label }}</strong>
+                {% if aps_show_completion_badge %}
+                <span class="aps-attendance-completion-badge"
+                      data-aps-elearning-complete-badge
+                      role="img"
+                      aria-label="E-learning terminé et tableau de suivi FOAD signé par le stagiaire"
+                      title="E-learning terminé et tableau de suivi FOAD signé par le stagiaire">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path class="aps-attendance-completion-badge-seal" d="M23 12l-2.44-2.79.34-3.69-3.61-.82L15.4 1.52 12 2.97 8.6 1.52 6.71 4.7l-3.61.81.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.81 1.89 3.18 3.4-1.46 3.4 1.45 1.89-3.18 3.61-.82-.34-3.69L23 12z"/>
+                    <path class="aps-attendance-completion-badge-check" d="M10.09 16.2 6.7 12.81l1.41-1.42 1.98 1.98 5.8-5.8 1.41 1.42-7.21 7.21z"/>
+                  </svg>
+                </span>
+                {% endif %}
+              </div>
             </div>
             {% if aps_elearning_progress.overall_rate is not none %}
             <progress id="apsOverallProgress" max="100" value="{{ aps_elearning_progress.overall_rate }}" aria-label="Pourcentage global de suivi du e-learning">{{ aps_elearning_progress.overall_rate_label }}</progress>

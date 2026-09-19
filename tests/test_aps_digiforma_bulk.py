@@ -145,9 +145,10 @@ def test_public_completion_requires_all_three_objectives_and_follows_reimports(c
         cell = row.split('<td class="col-aps-attendance">', 1)[1].split('</td>', 1)[0]
         assert f'<strong class="aps-followup-rate">{rate}</strong>' in cell
         assert f'value="{float(rate[:-2].replace(",", "."))}"' in cell
-        assert f'Parcours : {paths}/8' in cell
-        assert f'Évaluations : {evaluations}/8' in cell
-        assert ('E-learning terminé' in cell) == complete
+        assert 'Parcours :' not in cell
+        assert 'Évaluations :' not in cell
+        assert 'Connexion :' not in cell
+        assert 'E-learning terminé' not in cell
         assert ('aps-followup--complete' in cell) == complete
     assert 'Parcours suivis' in section and 'Questionnaires d’évaluation' in section
     assert '44 h 54' in section and '72,4 %' in section
@@ -271,10 +272,11 @@ def test_last_report_for_same_person_replaces_files_and_updates_both_spaces(cont
     admin = client.get('/admin/sessions/S-APS/trainees').text
     row = admin.split('data-trainee-id="T-APS"', 1)[1].split('</tr>', 1)[0]
     cell = row.split('<td class="col-aps-attendance">', 1)[1].split('</td>', 1)[0]
-    for view in (section, cell):
-        assert '44 h 54' in view and '/ 62 heures' in view and '90,8 %' in view
-        assert '31 h 00' not in view
-        assert '<progress' in view and 'value="90.8"' in view
+    assert '44 h 54' in section and '/ 62 heures' in section and '90,8 %' in section
+    assert '31 h 00' not in section
+    assert '<progress' in section and 'value="90.8"' in section
+    assert '90,8 %' in cell and '<progress' in cell and 'value="90.8"' in cell
+    assert '44 h 54' not in cell and '/ 62 heures' not in cell
 
 
 def test_invalid_file_or_multiple_files_cannot_replace_tracking(context, tmp_path):
