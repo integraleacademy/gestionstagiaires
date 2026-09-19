@@ -23,11 +23,72 @@
     border:2px solid #ef4444;
     background:linear-gradient(135deg,#fff 0%,#fef2f2 100%);
   }
+  .aps-elearning-tracking-shell{margin-top:22px;}
   .aps-elearning-tracking{
-    margin-top:22px;
-    padding-top:20px;
-    border-top:1px solid #bfdbfe;
+    overflow:hidden;
+    border:1px solid #bfdbfe;
+    border-radius:20px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 16px 38px rgba(37,99,235,.09);
   }
+  .aps-elearning-tracking__summary{
+    display:grid;
+    grid-template-columns:minmax(210px,.75fr) minmax(430px,1.45fr) auto;
+    align-items:center;
+    gap:18px;
+    min-height:92px;
+    padding:16px 18px;
+    color:#0f172a;
+    cursor:pointer;
+    list-style:none;
+    transition:background .18s ease,border-color .18s ease;
+  }
+  .aps-elearning-tracking__summary::-webkit-details-marker{display:none;}
+  .aps-elearning-tracking__summary::marker{display:none;content:"";}
+  .aps-elearning-tracking__summary:hover{background:#f8fbff;}
+  .aps-elearning-tracking__summary:focus-visible{outline:3px solid rgba(37,99,235,.2);outline-offset:-3px;}
+  .aps-elearning-tracking[open]>.aps-elearning-tracking__summary{border-bottom:1px solid #dbeafe;background:#f8fbff;}
+  .aps-elearning-tracking__summary-title{display:flex;align-items:center;gap:12px;min-width:0;}
+  .aps-elearning-tracking__summary-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 42px;
+    width:42px;
+    height:42px;
+    border-radius:14px;
+    background:linear-gradient(135deg,#2563eb,#60a5fa);
+    color:#fff;
+    box-shadow:0 9px 20px rgba(37,99,235,.2);
+  }
+  .aps-elearning-tracking__summary-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .aps-elearning-tracking__title{margin:0;color:#172033;font-size:18px;font-weight:950;}
+  .aps-elearning-tracking__summary-metrics{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(250px,1.3fr);gap:10px;min-width:0;}
+  .aps-elearning-tracking__summary-metric{min-width:0;padding:11px 13px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;}
+  .aps-elearning-tracking__summary-metric>span,.aps-elearning-tracking__summary-rate>span{display:block;color:#64748b;font-size:10px;font-weight:900;letter-spacing:.045em;text-transform:uppercase;}
+  .aps-elearning-tracking__summary-metric>strong{display:block;margin-top:5px;color:#0f172a;font-size:17px;font-weight:950;font-variant-numeric:tabular-nums;}
+  .aps-elearning-tracking__summary-rate{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .aps-elearning-tracking__summary-rate strong{color:#2563eb;font-size:16px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .aps-elearning-tracking__summary--complete .aps-elearning-tracking__summary-rate strong{color:#15803d;}
+  .aps-elearning-tracking__summary-progress{display:block;appearance:none;width:100%;height:8px;margin-top:8px;border:0;border-radius:999px;overflow:hidden;background:#e2e8f0;accent-color:#2563eb;}
+  .aps-elearning-tracking__summary-progress::-webkit-progress-bar{background:#e2e8f0;border-radius:999px;}
+  .aps-elearning-tracking__summary-progress::-webkit-progress-value{background:#2563eb;border-radius:999px;}
+  .aps-elearning-tracking__summary-progress::-moz-progress-bar{background:#2563eb;border-radius:999px;}
+  .aps-elearning-tracking__summary--complete .aps-elearning-tracking__summary-progress{accent-color:#15803d;}
+  .aps-elearning-tracking__summary--complete .aps-elearning-tracking__summary-progress::-webkit-progress-value{background:#15803d;}
+  .aps-elearning-tracking__summary--complete .aps-elearning-tracking__summary-progress::-moz-progress-bar{background:#15803d;}
+  .aps-elearning-tracking__summary-value{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .aps-elearning-tracking__badge{display:inline-flex;flex:0 0 31px;width:31px;height:31px;color:#48b4f4;filter:drop-shadow(0 2px 3px rgba(37,99,235,.2));}
+  .aps-elearning-tracking__badge svg{display:block;width:100%;height:100%;}
+  .aps-elearning-tracking__badge-seal{fill:currentColor;}
+  .aps-elearning-tracking__badge-check{fill:#fff;}
+  .aps-elearning-tracking__toggle{display:inline-flex;align-items:center;justify-content:flex-end;gap:8px;color:#1d4ed8;font-size:12px;font-weight:900;white-space:nowrap;}
+  .aps-elearning-tracking__toggle-label::before{content:"Afficher le détail";}
+  .aps-elearning-tracking[open] .aps-elearning-tracking__toggle-label::before{content:"Masquer le détail";}
+  .aps-elearning-tracking__chevron{display:inline-flex;align-items:center;justify-content:center;width:31px;height:31px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;transition:transform .18s ease;}
+  .aps-elearning-tracking__chevron svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+  .aps-elearning-tracking[open] .aps-elearning-tracking__chevron{transform:rotate(180deg);}
+  .aps-elearning-tracking__content{padding:18px;}
   .aps-elearning-tracking__header{
     display:flex;
     align-items:flex-start;
@@ -35,14 +96,12 @@
     gap:14px;
     flex-wrap:wrap;
   }
-  .aps-elearning-tracking__title{margin:0;color:#172033;font-size:18px;font-weight:950;}
-  .aps-elearning-tracking__subtitle{margin:6px 0 0;max-width:780px;color:#64748b;font-size:13px;line-height:1.5;}
+  .aps-elearning-tracking__subtitle{margin:0;max-width:780px;color:#64748b;font-size:13px;line-height:1.5;}
   .aps-elearning-tracking__feedback{margin:14px 0;padding:14px 16px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1e40af;line-height:1.5;}
   .aps-elearning-tracking__feedback--error{border-color:#fca5a5;background:#fef2f2;color:#991b1b;}
   .aps-elearning-tracking__feedback--warning{border-color:#fcd34d;background:#fffbeb;color:#92400e;}
   .aps-elearning-tracking__feedback--success{border-color:#86efac;background:#f0fdf4;color:#166534;}
   .aps-elearning-tracking__feedback strong{display:block;margin-bottom:4px;}
-  .aps-elearning-tracking__progress{margin:10px 0;color:#1d4ed8;font-weight:700;}
   .aps-elearning-tracking__status{
     display:inline-flex;
     align-items:center;
@@ -155,15 +214,105 @@
   .aps-elearning-tracking__signature-state--signed{color:#166534!important;}
   .aps-elearning-tracking__signature-state--waiting{color:#1d4ed8!important;}
   .aps-elearning-tracking__signature-state--error{color:#b91c1c!important;}
+  body.aps-saas-modal-open{overflow:hidden;}
+  .aps-saas-modal[hidden]{display:none!important;}
+  .aps-saas-modal{
+    position:fixed;
+    inset:0;
+    z-index:12000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(8,17,35,.68);
+    backdrop-filter:blur(9px);
+  }
+  .aps-saas-modal__panel{
+    position:relative;
+    overflow:hidden;
+    width:min(480px,100%);
+    padding:30px;
+    border:1px solid rgba(255,255,255,.72);
+    border-radius:26px;
+    background:linear-gradient(160deg,#fff 0%,#f7faff 100%);
+    box-shadow:0 34px 100px rgba(2,6,23,.42);
+    color:#0f172a;
+    text-align:center;
+  }
+  .aps-saas-modal__panel::before{
+    content:"";
+    position:absolute;
+    width:230px;
+    height:230px;
+    right:-120px;
+    top:-135px;
+    border-radius:999px;
+    background:radial-gradient(circle,rgba(96,165,250,.24),rgba(96,165,250,0) 70%);
+    pointer-events:none;
+  }
+  .aps-saas-modal__icon{
+    position:relative;
+    display:grid;
+    place-items:center;
+    width:68px;
+    height:68px;
+    margin:0 auto 18px;
+    border-radius:22px;
+    background:#eff6ff;
+    color:#2563eb;
+  }
+  .aps-saas-modal__icon::before{
+    content:"";
+    position:absolute;
+    inset:-5px;
+    border:2px solid rgba(37,99,235,.12);
+    border-top-color:#2563eb;
+    border-radius:24px;
+    animation:apsSaasModalSpin 1.15s linear infinite;
+  }
+  .aps-saas-modal__icon svg{width:31px;height:31px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+  .aps-saas-modal__eyebrow{display:block;margin-bottom:8px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;}
+  .aps-saas-modal__panel h2{position:relative;margin:0;color:#0f172a;font-size:24px;line-height:1.18;font-weight:950;}
+  .aps-saas-modal__panel>p{max-width:390px;margin:11px auto 0;color:#64748b;font-size:14px;line-height:1.55;}
+  .aps-saas-modal__progress{overflow:hidden;height:7px;margin:23px 0 19px;border-radius:999px;background:#dbeafe;}
+  .aps-saas-modal__progress span{display:block;width:45%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#60a5fa,#2563eb);animation:apsSaasModalProgress 1.45s ease-in-out infinite;}
+  .aps-saas-modal__steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;text-align:left;}
+  .aps-saas-modal__step{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border:1px solid #e2e8f0;border-radius:13px;background:#fff;color:#475569;font-size:12px;font-weight:850;line-height:1.35;}
+  .aps-saas-modal__step i{flex:0 0 8px;width:8px;height:8px;margin-top:4px;border-radius:999px;background:#60a5fa;box-shadow:0 0 0 5px #eff6ff;animation:apsSaasModalPulse 1.25s ease-in-out infinite;}
+  .aps-saas-modal__step:nth-child(2) i{animation-delay:.35s;}
+  .aps-saas-modal__note{display:block;margin-top:18px;color:#94a3b8;font-size:11px;font-weight:800;}
+  @keyframes apsSaasModalSpin{to{transform:rotate(360deg);}}
+  @keyframes apsSaasModalProgress{0%{transform:translateX(-110%);}100%{transform:translateX(245%);}}
+  @keyframes apsSaasModalPulse{0%,100%{opacity:.42;transform:scale(.82);}50%{opacity:1;transform:scale(1);}}
+  @media(max-width:1050px){
+    .aps-elearning-tracking__summary{grid-template-columns:minmax(210px,1fr) auto;}
+    .aps-elearning-tracking__summary-metrics{grid-column:1 / -1;grid-row:2;}
+    .aps-elearning-tracking__toggle{grid-column:2;grid-row:1;}
+  }
   @media(max-width:720px){
+    .aps-elearning-tracking__summary{grid-template-columns:1fr auto;gap:12px;padding:14px;}
+    .aps-elearning-tracking__summary-metrics{grid-template-columns:1fr;}
+    .aps-elearning-tracking__toggle-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+    .aps-elearning-tracking__content{padding:14px;}
     .aps-elearning-tracking__document{grid-template-columns:1fr;}
     .aps-elearning-tracking__evidence{grid-template-columns:1fr 1fr;}
     .aps-elearning-tracking__actions{justify-content:flex-start;}
     .aps-elearning-tracking__signature-actions{width:100%;justify-content:flex-start;}
     .aps-elearning-tracking__signature-actions form{width:100%;}
     .aps-elearning-tracking__upload .btn,.aps-elearning-tracking__download .btn{width:100%;}
+    .aps-saas-modal__panel{padding:26px 20px;border-radius:22px;}
   }
-  @media(max-width:480px){.aps-elearning-tracking__evidence{grid-template-columns:1fr;}}
+  @media(max-width:480px){
+    .aps-elearning-tracking__evidence{grid-template-columns:1fr;}
+    .aps-elearning-tracking__summary-title{gap:9px;}
+    .aps-elearning-tracking__summary-icon{width:38px;height:38px;flex-basis:38px;border-radius:12px;}
+    .aps-elearning-tracking__title{font-size:16px;}
+    .aps-saas-modal__steps{grid-template-columns:1fr;}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .aps-saas-modal__icon::before,.aps-saas-modal__progress span,.aps-saas-modal__step i{animation:none;}
+    .aps-elearning-tracking__chevron{transition:none;}
+  }
   .registration-cancelled-control{
     display:inline-flex;
     align-items:center;
@@ -1489,27 +1638,75 @@
   {% set aps_signature_issues = trainee.aps_elearning_signature_issues|default([]) %}
   {% set aps_force = trainee.aps_elearning_force_override or {} %}
   {% set aps_force_active = trainee.aps_elearning_force_active|default(false) %}
-  {% set aps_signature_status = (aps_signature.status or '')|lower %}
+  {% set aps_signature_status = (aps_signature.status or '')|trim|lower %}
   {% set aps_signature_completed = aps_signature_status in ['done', 'signed'] or aps_signature.provider_status in ['done', 'signed'] or aps_signature.signed_at %}
   {% set aps_signature_pending = not aps_signature_completed and aps_signature_status in ['ongoing', 'activated', 'pending', 'en_attente'] %}
   {% set aps_signature_signed = aps_signature_completed and aps_signature.signed_pdf_path %}
-  <section class="aps-elearning-tracking" id="apsElearningTrackingSection" aria-labelledby="apsElearningTrackingTitle">
-    <div class="aps-elearning-tracking__header">
-      <div>
-        <h3 class="aps-elearning-tracking__title" id="apsElearningTrackingTitle">📊 Suivi du e-learning</h3>
-        <p class="aps-elearning-tracking__subtitle">
-          Importez l’attestation d’assiduité Digiforma complète. Une nouvelle attestation sera créée avec une mise en page lisible,
-          le détail des parcours, le journal de connexions, le tampon du centre et la signature de Clément Vaillant. Les résultats ne seront pas affichés.
-        </p>
-      </div>
-      {% if aps_signature_ready %}
-        <span class="aps-elearning-tracking__status">✓ Dossier contrôlé et signable</span>
-      {% elif aps_force_active %}
-        <span class="aps-elearning-tracking__status aps-elearning-tracking__status--forced">⚠ Forçage actif · dossier incomplet</span>
-      {% elif aps_tracking.file %}
-        <span class="aps-elearning-tracking__status aps-elearning-tracking__status--warning">⚠ Contrôle requis</span>
-      {% endif %}
-    </div>
+  {% set aps_progress = aps_elearning_progress or {} %}
+  {% set aps_show_completion_badge = aps_progress.is_complete and aps_tracking.file and aps_signature_status in ['done', 'signed'] %}
+  <section class="aps-elearning-tracking-shell" id="apsElearningTrackingSection" aria-labelledby="apsElearningTrackingTitle">
+    <details class="aps-elearning-tracking" id="apsElearningTrackingAccordion">
+      <summary class="aps-elearning-tracking__summary{% if aps_progress.is_complete %} aps-elearning-tracking__summary--complete{% endif %}">
+        <div class="aps-elearning-tracking__summary-title">
+          <span class="aps-elearning-tracking__summary-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+          </span>
+          <h3 class="aps-elearning-tracking__title" id="apsElearningTrackingTitle">Suivi du e-learning</h3>
+        </div>
+        <div class="aps-elearning-tracking__summary-metrics">
+          <div class="aps-elearning-tracking__summary-metric">
+            <span>Durée totale de connexion</span>
+            <strong>{{ aps_progress.connection_duration_label or '—' }}</strong>
+          </div>
+          <div class="aps-elearning-tracking__summary-metric">
+            <div class="aps-elearning-tracking__summary-rate">
+              <span>Suivi global du e-learning</span>
+              <div class="aps-elearning-tracking__summary-value">
+                <strong>{{ aps_progress.overall_rate_label or 'Aucun relevé' }}</strong>
+                {% if aps_show_completion_badge %}
+                  <span class="aps-elearning-tracking__badge"
+                        data-aps-elearning-complete-badge
+                        role="img"
+                        aria-label="E-learning terminé et tableau de suivi FOAD signé par le stagiaire"
+                        title="E-learning terminé et tableau de suivi FOAD signé par le stagiaire">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path class="aps-elearning-tracking__badge-seal" d="M23 12l-2.44-2.79.34-3.69-3.61-.82L15.4 1.52 12 2.97 8.6 1.52 6.71 4.7l-3.61.81.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.81 1.89 3.18 3.4-1.46 3.4 1.45 1.89-3.18 3.61-.82-.34-3.69L23 12z"/>
+                      <path class="aps-elearning-tracking__badge-check" d="M10.09 16.2 6.7 12.81l1.41-1.42 1.98 1.98 5.8-5.8 1.41 1.42-7.21 7.21z"/>
+                    </svg>
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+            {% if aps_progress.overall_rate is defined and aps_progress.overall_rate is not none %}
+              <progress class="aps-elearning-tracking__summary-progress"
+                        max="100"
+                        value="{{ aps_progress.overall_rate }}"
+                        aria-label="Suivi global du e-learning">{{ aps_progress.overall_rate_label }}</progress>
+            {% endif %}
+          </div>
+        </div>
+        <span class="aps-elearning-tracking__toggle" aria-hidden="true">
+          <span class="aps-elearning-tracking__toggle-label"></span>
+          <span class="aps-elearning-tracking__chevron">
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+        </span>
+      </summary>
+
+      <div class="aps-elearning-tracking__content">
+        <div class="aps-elearning-tracking__header">
+          <p class="aps-elearning-tracking__subtitle">
+            Importez l’attestation d’assiduité Digiforma complète. Une nouvelle attestation sera créée avec une mise en page lisible,
+            le détail des parcours, le journal de connexions, le tampon du centre et la signature de Clément Vaillant. Les résultats ne seront pas affichés.
+          </p>
+          {% if aps_signature_ready %}
+            <span class="aps-elearning-tracking__status">✓ Dossier contrôlé et signable</span>
+          {% elif aps_force_active %}
+            <span class="aps-elearning-tracking__status aps-elearning-tracking__status--forced">⚠ Forçage actif · dossier incomplet</span>
+          {% elif aps_tracking.file %}
+            <span class="aps-elearning-tracking__status aps-elearning-tracking__status--warning">⚠ Contrôle requis</span>
+          {% endif %}
+        </div>
 
     {% for category, message in get_flashed_messages(with_categories=true) %}
       <div class="aps-elearning-tracking__feedback aps-elearning-tracking__feedback--{{ category }}"
@@ -1622,6 +1819,7 @@
       <form class="aps-elearning-tracking__upload"
             id="apsDigiformaUploadForm"
             data-processing-version="5"
+            data-loading-button-label="Transmission en cours…"
             method="post"
             enctype="multipart/form-data"
             action="{{ url_for('admin_upload_aps_elearning_digiforma', session_id=session.id, trainee_id=trainee.id) }}">
@@ -1633,30 +1831,6 @@
           {{ '↻ Remplacer le relevé' if aps_tracking.file else '⬆️ Importer le relevé complet' }}
         </button>
       </form>
-      <p class="aps-elearning-tracking__progress" id="apsDigiformaUploadProgress" role="status" hidden>
-        Préparation de l’attestation en cours… Merci de patienter.
-      </p>
-      <script>
-        (() => {
-          document.querySelectorAll('#apsDigiformaUploadForm, #apsDigiformaRebuildForm').forEach((form) => {
-          const button = form.querySelector('button[type="submit"]');
-          const progress = document.getElementById('apsDigiformaUploadProgress');
-          const label = button.textContent;
-          form.addEventListener('submit', () => {
-            form.setAttribute('aria-busy', 'true');
-            button.disabled = true;
-            button.textContent = 'Préparation en cours…';
-            progress.hidden = false;
-          });
-          window.addEventListener('pageshow', () => {
-            form.removeAttribute('aria-busy');
-            button.disabled = false;
-            button.textContent = label;
-            progress.hidden = true;
-          });
-          });
-        })();
-      </script>
     {% endif %}
 
     <div class="aps-elearning-tracking__download">
@@ -1692,6 +1866,7 @@
       {% elif not is_read_only %}
         {% if aps_signature_allowed %}
           <form method="post"
+                id="apsElearningSignatureForm"
                 action="{{ url_for('admin_create_aps_elearning_tracking_signature', session_id=session.id, trainee_id=trainee.id) }}">
             {% if aps_signature.signature_request_id and not aps_signature_pending %}<input type="hidden" name="force_new" value="1">{% endif %}
             <button class="btn btn-primary" type="submit">
@@ -1704,6 +1879,101 @@
       {% endif %}
       </div>
     </div>
+      </div>
+    </details>
+
+    {% if not is_read_only %}
+      <div class="aps-saas-modal"
+           id="apsDigiformaUploadProgress"
+           role="dialog"
+           aria-modal="true"
+           aria-live="assertive"
+           aria-labelledby="apsDigiformaUploadProgressTitle"
+           aria-describedby="apsDigiformaUploadProgressDescription"
+           hidden>
+        <div class="aps-saas-modal__panel" tabindex="-1">
+          <div class="aps-saas-modal__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+          </div>
+          <span class="aps-saas-modal__eyebrow">Import Digiforma</span>
+          <h2 id="apsDigiformaUploadProgressTitle">Relevé en cours de transmission</h2>
+          <p id="apsDigiformaUploadProgressDescription">Le PDF est envoyé de façon sécurisée, puis ses données sont contrôlées avant la préparation de l’attestation.</p>
+          <div class="aps-saas-modal__progress" aria-hidden="true"><span></span></div>
+          <div class="aps-saas-modal__steps" aria-hidden="true">
+            <div class="aps-saas-modal__step"><i></i><span>Transmission sécurisée du relevé</span></div>
+            <div class="aps-saas-modal__step"><i></i><span>Analyse et mise en page automatiques</span></div>
+          </div>
+          <small class="aps-saas-modal__note">Veuillez conserver cette page ouverte pendant quelques instants.</small>
+        </div>
+      </div>
+
+      <div class="aps-saas-modal"
+           id="apsElearningSignatureProgress"
+           role="dialog"
+           aria-modal="true"
+           aria-live="assertive"
+           aria-labelledby="apsElearningSignatureProgressTitle"
+           aria-describedby="apsElearningSignatureProgressDescription"
+           hidden>
+        <div class="aps-saas-modal__panel" tabindex="-1">
+          <div class="aps-saas-modal__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m15 5 4 4M4 20l4.3-1 10-10a2.8 2.8 0 0 0-4-4l-10 10L4 20Z"/><path d="M13 7l4 4M4 20h7"/></svg>
+          </div>
+          <span class="aps-saas-modal__eyebrow">Signature électronique</span>
+          <h2 id="apsElearningSignatureProgressTitle">Envoi en signature</h2>
+          <p id="apsElearningSignatureProgressDescription">Le dossier complet est préparé et la demande sécurisée Yousign est créée pour le stagiaire.</p>
+          <div class="aps-saas-modal__progress" aria-hidden="true"><span></span></div>
+          <div class="aps-saas-modal__steps" aria-hidden="true">
+            <div class="aps-saas-modal__step"><i></i><span>Création de la demande Yousign</span></div>
+            <div class="aps-saas-modal__step"><i></i><span>Préparation de la notification stagiaire</span></div>
+          </div>
+          <small class="aps-saas-modal__note">Veuillez conserver cette page ouverte jusqu’à la confirmation.</small>
+        </div>
+      </div>
+
+      <script>
+        (() => {
+          const section = document.getElementById('apsElearningTrackingSection');
+          const accordion = document.getElementById('apsElearningTrackingAccordion');
+          if (!section || !accordion) return;
+
+          if (window.location.hash === '#apsElearningTrackingSection' || section.querySelector('.aps-elearning-tracking__feedback')) {
+            accordion.open = true;
+          }
+
+          const bindings = [];
+          const bindLoadingModal = (form, modalId, busyLabel) => {
+            const modal = document.getElementById(modalId);
+            const button = form?.querySelector('button[type="submit"]');
+            if (!form || !modal || !button) return;
+            const originalButtonHtml = button.innerHTML;
+            bindings.push({form, modal, button, originalButtonHtml});
+            form.addEventListener('submit', () => {
+              form.setAttribute('aria-busy', 'true');
+              button.disabled = true;
+              button.textContent = busyLabel;
+              modal.hidden = false;
+              document.body.classList.add('aps-saas-modal-open');
+              window.requestAnimationFrame(() => modal.querySelector('.aps-saas-modal__panel')?.focus({preventScroll:true}));
+            });
+          };
+
+          bindLoadingModal(document.getElementById('apsDigiformaUploadForm'), 'apsDigiformaUploadProgress', 'Transmission en cours…');
+          bindLoadingModal(document.getElementById('apsDigiformaRebuildForm'), 'apsDigiformaUploadProgress', 'Mise en page en cours…');
+          bindLoadingModal(document.getElementById('apsElearningSignatureForm'), 'apsElearningSignatureProgress', 'Envoi en cours…');
+
+          window.addEventListener('pageshow', () => {
+            bindings.forEach(({form, modal, button, originalButtonHtml}) => {
+              form.removeAttribute('aria-busy');
+              button.disabled = false;
+              button.innerHTML = originalButtonHtml;
+              modal.hidden = true;
+            });
+            document.body.classList.remove('aps-saas-modal-open');
+          });
+        })();
+      </script>
+    {% endif %}
   </section>
 </div>
 {% endif %}

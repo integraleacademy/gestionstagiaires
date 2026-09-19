@@ -201,6 +201,47 @@ class ApsElearningTests(unittest.TestCase):
         self.assertNotIn("Lien e-learning APS", response.get_data(as_text=True))
         self.assertNotIn("Suivi du e-learning", response.get_data(as_text=True))
 
+    def test_admin_trainee_elearning_uses_closed_summary_and_loading_modals(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+
+        def render_page():
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "save_data"
+            ), patch.object(gestion_app, "_yousign_is_configured", return_value=False):
+                response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+            self.assertEqual(response.status_code, 200)
+            return response.get_data(as_text=True)
+
+        html = render_page()
+        section = html.split('id="apsElearningTrackingSection"', 1)[1].split("</section>", 1)[0]
+        details_tag = section.split('<details class="aps-elearning-tracking"', 1)[1].split(">", 1)[0]
+        summary = section.split('<summary class="aps-elearning-tracking__summary', 1)[1].split("</summary>", 1)[0]
+
+        self.assertNotIn(" open", details_tag)
+        self.assertIn("Durée totale de connexion", summary)
+        self.assertIn("62 h 00", summary)
+        self.assertIn("Suivi global du e-learning", summary)
+        self.assertIn("100 %", summary)
+        self.assertIn('class="aps-elearning-tracking__summary-progress"', summary)
+        self.assertNotIn("data-aps-elearning-complete-badge", summary)
+        self.assertIn('id="apsElearningSignatureForm"', section)
+        self.assertIn('id="apsDigiformaUploadProgress"', section)
+        self.assertIn("Relevé en cours de transmission", section)
+        self.assertIn('id="apsElearningSignatureProgress"', section)
+        self.assertIn("Envoi en signature", section)
+
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "provider_status": "done",
+            "signed_at": "2026-09-17T12:06:00Z",
+        }
+        signed_html = render_page()
+        signed_summary = signed_html.split('<summary class="aps-elearning-tracking__summary', 1)[1].split("</summary>", 1)[0]
+        self.assertIn("data-aps-elearning-complete-badge", signed_summary)
+
     def test_admin_list_compacts_progress_and_requires_completion_and_signature_for_badge(self):
         self._admin_login()
         data = self._data("2026-07-23")

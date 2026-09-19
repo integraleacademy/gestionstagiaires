@@ -38876,9 +38876,12 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
     _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
+    aps_elearning_progress = None
     if _is_aps_elearning_session(s):
         _refresh_yousign_aps_elearning_status_if_pending(data, s, trainees, t)
         aps_tracking = _aps_elearning_tracking(t)
+        if aps_tracking.get("file"):
+            aps_elearning_progress = aps_elearning_completion(aps_tracking)
         aps_signature_issues = _aps_elearning_signature_issues(t, aps_tracking) if aps_tracking.get("file") else []
         aps_force_active = bool(aps_signature_issues) and _aps_elearning_force_is_active(
             t,
@@ -38944,6 +38947,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         docs_reminder_schedule=_docs_relance_schedule(s, t, activated_on=(data.get("document_reminders_scheduler") or {}).get("activated_on")),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
+        aps_elearning_progress=aps_elearning_progress,
     )
 
 
