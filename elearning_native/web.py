@@ -37,6 +37,8 @@ from flask import (
 from markupsafe import Markup
 from werkzeug.exceptions import Conflict
 
+from .videos import activity_videos, course_videos, video_blocker, videos_complete
+
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
     CourseCatalog,
@@ -457,7 +459,8 @@ def create_native_elearning_blueprint(
         raw = store().get_progress(access, activity_order=course.get("activity_order") or [],
                                    scored_activity_ids=_scored_activity_ids(course),
                                    mastery_score=float(course.get("settings", {}).get("mastery_score", 80)),
-                                   required_seconds=int(course.get("required_minutes") or 0) * 60)
+                                   required_seconds=int(course.get("required_minutes") or 0) * 60,
+                                   video_requirements=course_videos(course))
         return project_progress(raw, course)
 
     def load_path(session_obj: Mapping[str, Any], cache: Optional[Dict[Any, Any]] = None) -> List[Dict[str, Any]]:
@@ -512,6 +515,10 @@ def create_native_elearning_blueprint(
             public_block["video"] = {
                 "src": asset_url(asset_token, course_id, src) if src else "",
                 "poster": asset_url(asset_token, course_id, poster) if poster else "",
+                "id": str(video.get("id") or block.get("id") or ""),
+                "title": str(video.get("title") or "Vidéo pédagogique"),
+                "required": bool(video.get("required")),
+                "duration_seconds": video.get("duration_seconds") or 0,
             }
         return public_block
 
@@ -581,6 +588,7 @@ def create_native_elearning_blueprint(
                     continue
                 activity_id = str(activity.get("id") or "")
                 locked = force_navigation and sequence > first_incomplete_index and activity_id not in completed
+                locked = locked or (not preview and bool(video_blocker(course, progress, activity_id)))
                 items.append(
                     {
                         "id": activity_id,
@@ -1251,6 +1259,7 @@ def create_native_elearning_blueprint(
         if requested_id not in order:
             requested_id = _next_incomplete(order, progress.get("completed_activity_ids") or []) or order[0]
         completed = set(progress.get("completed_activity_ids") or [])
+        requested_id = video_blocker(course, progress, requested_id) or requested_id
         first_incomplete = _next_incomplete(order, list(completed))
         if course.get("settings", {}).get("force_navigation") and first_incomplete in order:
             if order.index(requested_id) > order.index(first_incomplete) and requested_id not in completed:
@@ -1293,6 +1302,8 @@ def create_native_elearning_blueprint(
             activity_position=index + 1,
             activity_count=len(order),
             activity_completed=requested_id in completed,
+            required_videos=activity_videos(raw_activity),
+            videos_completed=videos_complete(progress.get("video_progress", {}).get(requested_id, {}), activity_videos(raw_activity)),
             previous_url=previous_url,
             next_url=next_url,
             portal_url=url_for("public_trainee_space", token=token),
@@ -1341,6 +1352,8 @@ def create_native_elearning_blueprint(
         activity_id = str(payload.get("activity_id") or "")
         if activity_id not in order:
             return jsonify({"ok": False, "error": "Activité inconnue."}), 400
+        if not can_complete(_course, current_progress(access, _course), activity_id):
+            return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente et ses vidéos."}), 409
         try:
             started = store().start_tracking(
                 access,
@@ -1359,6 +1372,8 @@ def create_native_elearning_blueprint(
         activity_id = str(payload.get("activity_id") or "")
         if activity_id not in order:
             return jsonify({"ok": False, "error": "Activité inconnue."}), 400
+        if video_blocker(_course, current_progress(access, _course), activity_id):
+            return jsonify({"ok": False, "error": "Regardez la vidéo précédente avant de continuer."}), 409
         if payload.get("interaction_age_seconds") is None:
             return jsonify({"ok": False, "error": "Rechargez le lecteur pour activer le suivi d’inactivité."}), 409
         try:
@@ -1371,6 +1386,8 @@ def create_native_elearning_blueprint(
                 recent_activity=payload.get("recent_activity") is True,
                 media_playing=payload.get("media_playing") is True,
                 interaction_age_seconds=payload["interaction_age_seconds"],
+                video_requirements=course_videos(_course).get(activity_id, {}),
+                video_samples=payload.get("videos"),
             )
             result["progress"] = current_progress(access, _course)
         except TrackingError as exc:
@@ -1396,6 +1413,8 @@ def create_native_elearning_blueprint(
         order = [str(value) for value in course.get("activity_order") or []]
         if activity_id not in order:
             return False
+        if video_blocker(course, progress, activity_id):
+            return False
         if not course.get("settings", {}).get("force_navigation"):
             return True
         completed = set(progress.get("completed_activity_ids") or [])
@@ -1410,14 +1429,15 @@ def create_native_elearning_blueprint(
         current = current_progress(access, course)
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
-        result = store().complete_activity(
-            access,
-            activity_id,
-            activity_order=order,
-            scored_activity_ids=scored_ids,
-            mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
-            required_seconds=int(course.get("required_minutes") or 0) * 60,
-        )
+        try:
+            result = store().complete_activity(
+                access, activity_id, activity_order=order, scored_activity_ids=scored_ids,
+                mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
+                required_seconds=int(course.get("required_minutes") or 0) * 60,
+                video_requirements=course_videos(course),
+            )
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 409
         return jsonify({"ok": True, "progress": project_progress(result, course), "next_activity_id": result.get("current_activity_id")})
 
     @blueprint.post("/api/elearning/v1/activities/<activity_id>/answer")
@@ -1453,6 +1473,7 @@ def create_native_elearning_blueprint(
             mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
             required_seconds=int(course.get("required_minutes") or 0) * 60,
             answer=answer,
+            video_requirements=course_videos(course),
         )
         return jsonify(
             {

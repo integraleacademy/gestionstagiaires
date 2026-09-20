@@ -34,8 +34,8 @@ Une version de cours est immuable. Réimporter un ZIP identique est sans effet; 
 La hiérarchie est **session → parcours → modules importés → séquences → activités**.
 Le nom du parcours et les noms de ses modules sont personnalisables. Les activités
 d’une séquence restent dans leur ordre d’origine et les règles de navigation du
-module sont conservées. L’ordre entre modules guide la navigation sans imposer
-un verrouillage supplémentaire.
+module sont conservées. Le passage au module suivant nécessite la validation des
+activités précédentes et de leur durée obligatoire.
 
 Le champ `aps_native_modules` de la session contient la liste ordonnée des
 références (`course_id`, `course_version`, `title`, `section_ids`).
@@ -67,13 +67,46 @@ document administratif ni les cours en mémoire. Une page déjà ouverte doit
 
 ## Mesure du temps
 
-Le navigateur envoie un battement toutes les 15 secondes, mais le serveur reste l’autorité de calcul. Le temps est crédité uniquement lorsque :
+Le navigateur envoie un battement toutes les 15 secondes (4 secondes pour une
+activité avec vidéo obligatoire), mais le serveur reste l’autorité de calcul.
+Le temps est crédité uniquement lorsque :
 
 - la page est visible;
-- le navigateur est actif et l’apprenant a interagi au cours des deux dernières minutes, ou une vidéo est en lecture;
+- le navigateur est actif ou une vidéo est en lecture, et l’apprenant a interagi au cours des cinq dernières minutes;
 - aucun autre onglet n’est déjà en train de comptabiliser du temps pour le même stagiaire dans la même session, même sur un autre module.
 
 Chaque battement crédite au maximum 20 secondes. Une coupure réseau, un ordinateur en veille ou un onglet laissé ouvert ne peut donc pas ajouter une longue période artificielle. Les démarrages, pauses, reprises, doublons et fins de session sont journalisés.
+
+## Vidéo Intégrale Academy obligatoire
+
+La capsule graphique validée **Missions et limites de l’agent de sécurité**
+(1 min 39 s, 4K) est placée au début de l’activité **Missions et limites de l’agent**
+du module P1M1. `elearning_native/videos.py` associe explicitement le média à
+l’activité `91d2d66063374f0f9ea3cb268859b3a6` du cours
+`eg-3c985ae8a9fe4dd6a5842605f952cb39`, version `20260907-141439-975`.
+L’enrichissement à la lecture ne modifie ni le fichier importé ni ses identifiants.
+Une nouvelle version importée nécessite une association vérifiée séparément.
+
+Le stagiaire doit regarder chaque vidéo obligatoire jusqu’à la fin avant de
+terminer l’activité ou d’accéder aux suivantes, même par le sommaire ou une URL
+directe. Le serveur enregistre la portion regardée sans saut et vérifie la durée
+à partir des métadonnées connues, du temps réellement écoulé et d’une seule
+session active. Les variations de latence disposent d’un solde de temps déjà
+crédité, borné à 500 ms, qui ne se renouvelle pas à chaque requête.
+Un événement `ended` isolé ou une ancienne activité terminée ne suffit pas.
+
+La pause, la reprise après rechargement et le retour sur un passage déjà regardé
+restent possibles. La vitesse reste normale jusqu’à validation. Quitter l’onglet
+ou perdre la connexion met la vidéo en pause ; la reprise utilise la dernière
+position confirmée. L’aperçu administrateur conserve une lecture libre sans
+enregistrer de progression stagiaire.
+
+Le MP4 et son affiche sont livrés dans `elearning_native/media/` et passent par
+la route de médias authentifiée, compatible avec les requêtes HTTP Range.
+Ils ne sont pas exposés dans le dossier public `static`. Le suivi persiste dans
+`learner_course_progress.video_progress_json`, avec les positions temporaires
+dans `tracking_sessions.video_samples_json` et un événement `video_completed`
+à la validation. Les colonnes sont ajoutées automatiquement et sans effacement.
 
 ## Données persistantes
 

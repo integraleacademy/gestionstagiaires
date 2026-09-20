@@ -17,6 +17,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Tuple
 from urllib.parse import urlparse
 
+from .videos import bundled_asset_path, enrich_course
+
 try:
     import fcntl
 except ImportError:  # pragma: no cover - Windows development fallback
@@ -954,7 +956,7 @@ class CourseCatalog:
             raise CourseImportError("Cours introuvable ou corrompu.") from exc
         if course.get("id") != course_id or course.get("version") != safe_version:
             raise CourseImportError("Métadonnées de cours incohérentes.")
-        return course
+        return enrich_course(course)
 
     def list_courses(self) -> List[Dict[str, Any]]:
         courses_root = self.root / "courses"
@@ -977,6 +979,10 @@ class CourseCatalog:
         normalized = _archive_member_name(str(asset_name or ""))
         if not safe_version or safe_version != version or not normalized.startswith("media/"):
             raise CourseImportError("Chemin de média invalide.")
+        if bundled := bundled_asset_path(course_id, version, normalized):
+            # The normal signed course-asset route still owns authorization.
+            self.load_course(course_id, version)
+            return bundled
         path = (course_root / safe_version / "assets").joinpath(*PurePosixPath(normalized).parts)
         expected_root = (course_root / safe_version / "assets").resolve()
         resolved = path.resolve()

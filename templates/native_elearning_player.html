@@ -6,18 +6,26 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260920-preview') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260920-video') }}">
 </head>
 <body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
+        {% if block.video.required %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
         <div class="native-video-shell">
-          <video class="native-course-video" controls preload="metadata" playsinline{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
+          <video class="native-course-video" controls preload="metadata" playsinline aria-label="{{ block.video.title }}"{% if block.video.required and not preview_mode %} data-required-video="{{ block.video.id }}" data-video-duration="{{ block.video.duration_seconds }}" controlslist="nodownload noplaybackrate" disablepictureinpicture{% endif %}{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
             <source src="{{ block.video.src }}">
             Votre navigateur ne permet pas de lire cette vidéo.
           </video>
         </div>
+        {% if block.video.required %}
+        <div class="native-video-followup"{% if not preview_mode %} data-video-followup="{{ block.video.id }}"{% endif %}>
+          <div><strong>{{ 'Visionnage obligatoire pour les stagiaires' if preview_mode else 'Vidéo à regarder en entier' }}</strong><span data-video-status role="status" aria-live="polite">{{ 'Lecture libre en mode aperçu' if preview_mode else 'Votre progression est enregistrée au fil de la lecture.' }}</span></div>
+          {% if not preview_mode %}<div class="native-video-progress" role="progressbar" aria-label="Progression du visionnage" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+          <p>Vous pouvez faire une pause ou revoir un passage. La suite se débloquera une fois la vidéo entièrement visionnée.</p>{% endif %}
+        </div>
+        {% endif %}
       {% endif %}
       {% if block.html %}<div class="native-imported-content">{{ block.html }}</div>{% endif %}
       {% if block.children %}
@@ -179,8 +187,8 @@
             <a class="native-button native-button--primary" href="{{ next_url or portal_url }}">{{ 'Suivant →' if next_url else 'Retour aux modules →' }}</a>
           </div>
           {% else %}
-          <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}"{% if activity_completed and is_last_activity and has_next_module and not progress.module_complete %} disabled{% endif %}>
-            {% if activity_completed %}{{ end_label if is_last_activity else 'Continuer' }}{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}Terminer le module{% else %}Terminer et continuer{% endif %} →
+          <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}"{% if (required_videos and not videos_completed) or (activity_completed and is_last_activity and has_next_module and not progress.module_complete) %} disabled{% endif %}>
+            {% if required_videos and not videos_completed %}Regardez la vidéo jusqu’à la fin{% else %}{% if activity_completed %}{{ end_label if is_last_activity else 'Continuer' }}{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}Terminer le module{% else %}Terminer et continuer{% endif %} →{% endif %}
           </button>
           {% endif %}
         </div>
@@ -231,9 +239,11 @@
     'initialProgressPercent': progress.progress_percent,
     'initialScorePercent': progress.score_percent,
     'initialStatus': progress.status,
-    'savedAnswer': progress.answers.get(activity.id, {})
+    'savedAnswer': progress.answers.get(activity.id, {}),
+    'requiredVideos': required_videos|default({}),
+    'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260908-2') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260920-video') }}" defer></script>
   {% endif %}
 </body>
 </html>

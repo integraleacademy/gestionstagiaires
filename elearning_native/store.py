@@ -12,6 +12,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence
 
+from .videos import videos_complete
+
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
 ACTIVE_SESSION_STALE_SECONDS = 45.0
@@ -139,6 +141,11 @@ class NativeElearningStore:
                 columns = {row["name"] for row in connection.execute("PRAGMA table_info(tracking_sessions)")}
                 if "active_until_epoch" not in columns:
                     connection.execute("ALTER TABLE tracking_sessions ADD COLUMN active_until_epoch REAL NOT NULL DEFAULT 0")
+                if "video_samples_json" not in columns:
+                    connection.execute("ALTER TABLE tracking_sessions ADD COLUMN video_samples_json TEXT NOT NULL DEFAULT '{}'")
+                progress_columns = {row["name"] for row in connection.execute("PRAGMA table_info(learner_course_progress)")}
+                if "video_progress_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN video_progress_json TEXT NOT NULL DEFAULT '{}'")
             _INITIALIZED_DATABASES.add(key)
 
     @contextlib.contextmanager
@@ -230,6 +237,7 @@ class NativeElearningStore:
             "current_activity_id": row["current_activity_id"],
             "completed_activity_ids": completed,
             "answers": answers,
+            "video_progress": _json_dict(row["video_progress_json"]),
             "active_seconds": math.floor(float(row["active_seconds"] or 0) * 100) / 100,
             "score_percent": round(float(row["score_percent"] or 0), 2),
             "correct_answers": correct_count,
@@ -283,6 +291,7 @@ class NativeElearningStore:
         scored_activity_ids: Sequence[str] = (),
         mastery_score: float = 80,
         required_seconds: int = 0,
+        video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
     ) -> Dict[str, Any]:
         now_iso = _utc_iso()
         with self._transaction() as connection:
@@ -299,6 +308,8 @@ class NativeElearningStore:
                     activity_order=activity_order, scored_activity_ids=scored_activity_ids,
                     mastery_score=mastery_score, active_seconds=float(row["active_seconds"] or 0),
                     required_seconds=required_seconds,
+                    video_requirements=video_requirements,
+                    video_progress=_json_dict(row["video_progress_json"]),
                 )
                 completed_at = (row["completed_at"] or now_iso) if completion["all_complete"] else None
                 if row["status"] != completion["status"] or row["completed_at"] != completed_at or row["score_percent"] != completion["score"]:
@@ -391,6 +402,8 @@ class NativeElearningStore:
         media_playing: bool,
         interaction_age_seconds: Optional[float] = None,
         now_epoch: Optional[float] = None,
+        video_requirements: Optional[Mapping[str, float]] = None,
+        video_samples: Any = None,
     ) -> Dict[str, Any]:
         epoch = float(now_epoch if now_epoch is not None else time.time())
         now_iso = _utc_iso(epoch)
@@ -540,6 +553,12 @@ class NativeElearningStore:
                     at=now_iso,
                 )
 
+            video_resync = self._record_video_samples(
+                connection, access, tracking, progress, activity_id=activity_id,
+                requirements=video_requirements or {}, samples=video_samples,
+                credited=credited, delta=delta, accepted_active=accepted_active,
+                visible=visible, focused=focused, now_iso=now_iso,
+            )
             updated = self._progress_row(connection, access)
             return {
                 "ended": False,
@@ -547,8 +566,101 @@ class NativeElearningStore:
                 "active": accepted_active,
                 "credited_seconds": round(credited, 2),
                 "server_time": now_iso,
+                "video_resync": video_resync,
                 "progress": self._serialize_progress(updated),
             }
+
+    def _record_video_samples(
+        self, connection: sqlite3.Connection, access: Mapping[str, Any],
+        tracking: sqlite3.Row, progress: sqlite3.Row, *, activity_id: str,
+        requirements: Mapping[str, float], samples: Any, credited: float,
+        delta: float, accepted_active: bool, visible: bool, focused: bool, now_iso: str,
+    ) -> Dict[str, float]:
+        """Credit only a continuous prefix, within the same active-time budget.
+
+        Durations come from reviewed media metadata, never from the browser.
+        The per-tracking-session baseline prevents reloads, duplicate tabs,
+        repeated ended events and replayed requests from manufacturing viewing.
+        """
+        if samples is None:
+            samples = []
+        if not isinstance(samples, list) or len(samples) > 20:
+            raise TrackingError("Suivi vidéo invalide.")
+        incoming = {}
+        for sample in samples:
+            if not isinstance(sample, dict):
+                raise TrackingError("Suivi vidéo invalide.")
+            video_id = sample.get("id")
+            position = sample.get("position")
+            rate = sample.get("rate", 1)
+            if (not isinstance(video_id, str) or video_id not in requirements or video_id in incoming
+                    or isinstance(position, bool) or not isinstance(position, (int, float))
+                    or not math.isfinite(position) or position < 0
+                    or isinstance(rate, bool) or not isinstance(rate, (int, float)) or not math.isfinite(rate)):
+                raise TrackingError("Position de lecture invalide.")
+            incoming[video_id] = sample
+        if sum(sample.get("playing") is True for sample in incoming.values()) > 1:
+            raise TrackingError("Regardez une seule vidéo à la fois.")
+        saved = _json_dict(progress["video_progress_json"])
+        activity_saved = saved.setdefault(activity_id, {})
+        previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
+        next_samples = {}
+        resync = {}
+        budget = credited if visible and focused else 0.0
+        for video_id, sample in incoming.items():
+            duration = requirements[video_id]
+            record = activity_saved.get(video_id) or {}
+            if record.get("duration_seconds") != duration:
+                record = {"duration_seconds": duration, "watched_seconds": 0.0, "completed": False}
+            if videos_complete({video_id: record}, {video_id: duration}):
+                continue
+            frontier = min(duration, max(0.0, float(record.get("watched_seconds") or 0)))
+            position = float(sample["position"])
+            before = previous.get(video_id) or {}
+            previous_position = float(before.get("position") or 0)
+            advancement = position - previous_position
+            normal_rate = sample.get("rate", 1) == 1
+            valid_position = normal_rate and position <= duration + .05
+            continuous = (before.get("playing") is True and previous_position <= frontier + .5
+                          and -.25 <= advancement <= min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5)
+            carry = 0.0
+            if valid_position and continuous and budget > 0:
+                # Retain a small amount of *already credited* time to absorb
+                # request jitter without losing viewing time on every ping.
+                # This is a balance, not a fresh allowance per request.
+                available = budget + min(.5, max(0.0, float(before.get("credit_carry") or 0)))
+                extension = max(0.0, min(position, frontier + available) - frontier)
+                frontier += extension
+                carry = min(.5, max(0.0, available - extension))
+                budget = 0.0
+            if not valid_position or position > frontier + .5:
+                resync[video_id] = round(frontier, 3)
+            completed = (video_id not in resync and sample.get("ended") is True
+                         and position >= duration - .05 and frontier >= duration - .5)
+            if completed:
+                frontier = duration
+                self._event(connection, access, "video_completed", tracking_session_id=tracking["id"],
+                            activity_id=activity_id, at=now_iso,
+                            details={"video_id": video_id, "duration_seconds": duration})
+            activity_saved[video_id] = {
+                "duration_seconds": duration, "watched_seconds": round(frontier, 3),
+                "completed": completed, "completed_at": now_iso if completed else None,
+            }
+            next_samples[video_id] = {
+                "position": frontier if video_id in resync else min(position, duration),
+                "playing": bool(sample.get("playing") is True and normal_rate and accepted_active
+                                and visible and focused and video_id not in resync),
+                "credit_carry": carry if sample.get("playing") is True and video_id not in resync else 0.0,
+            }
+        connection.execute("UPDATE tracking_sessions SET video_samples_json = ? WHERE id = ?",
+                           (json.dumps(next_samples, separators=(",", ":")), tracking["id"]))
+        if incoming:
+            connection.execute(
+                """UPDATE learner_course_progress SET video_progress_json = ?
+                   WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?""",
+                (json.dumps(saved, separators=(",", ":")), *self._key_values(access)),
+            )
+        return resync
 
     def finish_tracking(
         self,
@@ -602,8 +714,13 @@ class NativeElearningStore:
         mastery_score: float,
         active_seconds: float = 0,
         required_seconds: int = 0,
+        video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
+        video_progress: Optional[Mapping[str, Any]] = None,
     ) -> Dict[str, Any]:
         completed_set = {str(value) for value in completed}
+        for activity_id, videos in (video_requirements or {}).items():
+            if not videos_complete((video_progress or {}).get(activity_id, {}), videos):
+                completed_set.discard(activity_id)
         ordered_completed = [activity_id for activity_id in activity_order if activity_id in completed_set]
         correct = sum(
             1
@@ -641,6 +758,7 @@ class NativeElearningStore:
         mastery_score: float,
         required_seconds: int = 0,
         answer: Optional[Mapping[str, Any]] = None,
+        video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
     ) -> Dict[str, Any]:
         if activity_id not in activity_order:
             raise TrackingError("Activité inconnue.")
@@ -654,6 +772,9 @@ class NativeElearningStore:
                 current_activity_id=activity_id,
             )
             row = self._progress_row(connection, access)
+            video_progress = _json_dict(row["video_progress_json"])
+            if not videos_complete(video_progress.get(activity_id, {}), (video_requirements or {}).get(activity_id, {})):
+                raise TrackingError("Regardez toute la vidéo avant de continuer.")
             completed = [str(value) for value in _json_list(row["completed_json"])]
             answers = _json_dict(row["answers_json"])
             already_completed = activity_id in completed
@@ -669,6 +790,7 @@ class NativeElearningStore:
                 scored_activity_ids=scored_activity_ids,
                 mastery_score=mastery_score,
                 active_seconds=float(row["active_seconds"] or 0), required_seconds=required_seconds,
+                video_requirements=video_requirements, video_progress=video_progress,
             )
             completed_at = (row["completed_at"] or now_iso) if completion["all_complete"] else None
             connection.execute(
