@@ -130,6 +130,8 @@ def _verify_asset_access(raw_token: Any) -> Dict[str, Any]:
     nonce = str(payload.get("nonce") or "")
     if payload.get("kind") != "course_asset" or not nonce:
         abort(401, "Accès au média invalide.")
+    if payload.get("admin_preview") and not session.get("admin_logged_in"):
+        abort(401, "Session administrateur expirée.")
     if not hmac.compare_digest(nonce, str(session.get("native_elearning_nonce") or "")):
         abort(401, "Session e-learning expirée.")
     for field in ("course_id", "course_version"):
@@ -561,12 +563,13 @@ def create_native_elearning_blueprint(
         *,
         token: str,
         current_activity_id: str,
+        preview: bool = False,
     ) -> List[Dict[str, Any]]:
         completed = set(progress.get("completed_activity_ids") or [])
         order = [str(value) for value in course.get("activity_order") or []]
         first_incomplete = _next_incomplete(order, list(completed))
         first_incomplete_index = order.index(first_incomplete) if first_incomplete in order else len(order)
-        force_navigation = bool(course.get("settings", {}).get("force_navigation"))
+        force_navigation = not preview and bool(course.get("settings", {}).get("force_navigation"))
         result: List[Dict[str, Any]] = []
         sequence = 0
         for section in course.get("sections") or []:
@@ -586,6 +589,11 @@ def create_native_elearning_blueprint(
                         "current": activity_id == current_activity_id,
                         "locked": locked,
                         "url": url_for(
+                            "native_elearning.admin_preview",
+                            course_id=course.get("id"),
+                            version=course.get("version"),
+                            activity=activity_id,
+                        ) if preview else url_for(
                             "native_elearning.course_player",
                             token=token,
                             course_id=course.get("id"),
@@ -714,6 +722,84 @@ def create_native_elearning_blueprint(
             upload_chunk_mb=UPLOAD_CHUNK_BYTES // (1024 * 1024),
             csrf_token=_csrf_token(),
         )
+
+    def preview_course(course_id: str) -> Dict[str, Any]:
+        try:
+            return catalog().load_course(course_id, request.args.get("version") or None)
+        except CourseImportError:
+            abort(404)
+
+    @blueprint.get("/admin/elearning/courses/<course_id>/preview")
+    @admin_required
+    def admin_preview(course_id: str) -> Any:
+        # Preview never creates a learner context or opens the tracking store.
+        course = preview_course(course_id)
+        order = [str(value) for value in course.get("activity_order") or []]
+        if not order:
+            abort(404, "Ce module ne contient aucune activité.")
+        requested_id = str(request.args.get("activity") or order[0])
+        if requested_id not in order:
+            abort(404, "Activité introuvable.")
+        index = order.index(requested_id)
+        section, raw_activity = next(
+            (section, activity) for section, activity in _activity_pairs(course)
+            if str(activity.get("id")) == requested_id
+        )
+        nonce = str(session.get("native_elearning_nonce") or "")
+        if not nonce:
+            nonce = secrets.token_urlsafe(24)
+            session["native_elearning_nonce"] = nonce
+        asset_token = _sign_access({
+            "kind": "course_asset", "admin_preview": True,
+            "course_id": course_id, "course_version": course["version"],
+            "nonce": nonce, "expires_at": int(time.time()) + ACCESS_TOKEN_TTL_SECONDS,
+        })
+
+        def activity_url(activity_id: str) -> str:
+            return url_for("native_elearning.admin_preview", course_id=course_id,
+                           version=course["version"], activity=activity_id)
+
+        return render_template(
+            "native_elearning_player.html", preview_mode=True,
+            course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course),
+                    "version": course["version"], "counts": course["counts"]},
+            activity=prepare_activity(raw_activity, asset_token, course_id),
+            introduction=[prepare_block(block, asset_token, course_id)
+                          for block in course.get("introduction") or []
+                          if isinstance(block, Mapping)] if index == 0 else [],
+            section_title=str(section.get("title") or ""),
+            progress=project_progress({}, course), activity_completed=False,
+            navigation=navigation_for(course, {}, token="", current_activity_id=requested_id, preview=True),
+            activity_position=index + 1, activity_count=len(order),
+            previous_url=activity_url(order[index - 1]) if index else "",
+            next_url=activity_url(order[index + 1]) if index + 1 < len(order) else "",
+            portal_url=url_for("native_elearning.admin_catalog"),
+            preview_config={
+                "questionType": raw_activity.get("question_type") or "",
+                "csrfToken": _csrf_token(),
+                "answerUrl": url_for("native_elearning.admin_preview_answer", course_id=course_id,
+                                     activity_id=requested_id, version=course["version"]),
+            },
+            preview_can_answer=session.get("admin_role") != "viewer",
+        )
+
+    @blueprint.post("/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/answer")
+    @admin_required
+    def admin_preview_answer(course_id: str, activity_id: str) -> Any:
+        _require_csrf()
+        course = preview_course(course_id)
+        activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
+        if activity is None or not activity.get("scored"):
+            return jsonify({"ok": False, "error": "Question introuvable."}), 404
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get("answer"), dict):
+            return jsonify({"ok": False, "error": "Réponse invalide."}), 400
+        try:
+            correct, _answer = _evaluate_answer(activity, payload["answer"])
+        except TrackingError as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 400
+        # Evaluate with the learner's grading rules, without storing anything.
+        return jsonify({"ok": True, "correct": correct})
 
     @blueprint.get("/admin/sessions/<session_id>/elearning")
     @admin_required

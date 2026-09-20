@@ -8,6 +8,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
 import app as gestion_app
 
@@ -121,6 +122,99 @@ class NativeElearningWebTests(unittest.TestCase):
             headers={"X-Elearning-CSRF": config["csrfToken"]},
         )
 
+    def _preview_config(self, activity="content-1"):
+        response = self.client.get(f"/admin/elearning/courses/{self.course['id']}/preview",
+                                   query_string={"activity": activity, "version": self.course["version"]})
+        self.assertEqual(response.status_code, 200)
+        page = response.get_data(as_text=True)
+        config = json.loads(re.search(r'<script id="nativePreviewConfig" type="application/json">(.*?)</script>',
+                                      page, flags=re.DOTALL).group(1))
+        return page, config
+
+    def test_admin_preview_navigates_unassigned_course_without_tracking(self):
+        self._admin_login()
+        self.data["sessions"] = []
+        with patch("elearning_native.web.NativeElearningStore", side_effect=AssertionError("Preview must not open tracking")):
+            page, config = self._preview_config()
+            self.assertIn("Mode aperçu", page)
+            self.assertIn("Texte <strong>utile</strong>", page)
+            self.assertNotIn("native-elearning-player.js", page)
+            self.assertNotIn("nativeElearningConfig", page)
+            self.assertNotIn("nativeActiveTimer", page)
+            self.assertNotIn("/espace/", page)
+            self.assertNotIn("Verrouillé", page)
+            self.assertNotIn("accessToken", config)
+            self.assertNotIn("onclick", page)
+            for activity in self.course["activity_order"]:
+                with self.subTest(activity=activity):
+                    activity_page, _ = self._preview_config(activity)
+                    self.assertIn(f'data-activity-id="{activity}"', activity_page)
+            asset_url = html.unescape(re.search(r'src="([^"]*?/elearning/assets/[^"]+)"', page).group(1))
+            asset = self.client.get(asset_url)
+            self.assertEqual(asset.status_code, 200)
+            self.assertEqual(asset.data, b"not-a-real-image")
+            # Media-only preview credentials cannot start learner tracking.
+            token = parse_qs(urlsplit(asset_url).query)["access"][0]
+            started = self.client.post("/api/elearning/v1/tracking/start",
+                json={"access_token": token, "activity_id": "content-1", "tab_id": "preview"},
+                headers={"X-Elearning-CSRF": config["csrfToken"]})
+            self.assertEqual(started.status_code, 401)
+        self.assertIsNone(self.saved_data)
+        self.assertFalse((self.persist_dir / "native_elearning" / "tracking.sqlite3").exists())
+        with self.client.session_transaction() as browser_session:
+            browser_session.pop("admin_logged_in")
+        self.assertEqual(self.client.get(asset_url).status_code, 401)
+
+    def test_admin_preview_answers_are_repeatable_and_not_recorded(self):
+        self._admin_login()
+        with patch("elearning_native.web.NativeElearningStore", side_effect=AssertionError("Preview must not open tracking")):
+            _, config = self._preview_config("question-1")
+            headers = {"X-Elearning-CSRF": config["csrfToken"]}
+            for choice, correct in [("answer-b", False), ("answer-a", True), ("answer-b", False)]:
+                response = self.client.post(config["answerUrl"], json={"answer": {"selected": [choice]}}, headers=headers)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.get_json(), {"ok": True, "correct": correct})
+            self.assertEqual(self.client.post(config["answerUrl"], json={"answer": {"selected": ["unknown"]}}, headers=headers).status_code, 400)
+            self.assertEqual(self.client.post(config["answerUrl"], json=[], headers=headers).status_code, 400)
+            self.assertEqual(self.client.post(config["answerUrl"], json={"answer": {"selected": ["answer-a"]}}).status_code, 403)
+            _, blank = self._preview_config("question-2")
+            response = self.client.post(blank["answerUrl"], json={"answer": {"groups": {"group-1": "blank-a"}}}, headers=headers)
+            self.assertTrue(response.get_json()["correct"])
+        self.assertIsNone(self.saved_data)
+        self.assertFalse((self.persist_dir / "native_elearning" / "tracking.sqlite3").exists())
+
+    def test_admin_preview_requires_admin_and_respects_read_only_role(self):
+        preview_url = f"/admin/elearning/courses/{self.course['id']}/preview"
+        self.assertEqual(self.client.get(preview_url).status_code, 302)
+        self._public_login()
+        self.assertEqual(self.client.get(preview_url).status_code, 302)
+        answer_url = f"/api/admin/elearning/courses/{self.course['id']}/preview/activities/question-1/answer"
+        self.assertEqual(self.client.post(answer_url, json={}).status_code, 401)
+        self._admin_login()
+        with self.client.session_transaction() as browser_session:
+            browser_session["admin_role"] = "viewer"
+        page, config = self._preview_config("question-1")
+        self.assertIn("Choisissez", page)
+        self.assertNotIn('id="nativePreviewAnswerButton"', page)
+        self.assertEqual(self.client.post(config["answerUrl"], json={"answer": {"selected": ["answer-a"]}},
+            headers={"X-Elearning-CSRF": config["csrfToken"]}).status_code, 403)
+
+    def test_admin_preview_pins_version_and_rejects_unknown_content(self):
+        self._admin_login()
+        self._second_course(course_id="course-test", extra_section=True)
+        page, config = self._preview_config()
+        self.assertNotIn("Leçon complémentaire", page)
+        self.assertEqual(parse_qs(urlsplit(config["answerUrl"]).query)["version"], [self.course["version"]])
+        links = [html.unescape(link) for link in re.findall(r'href="([^"]*?/preview[^"]*)"', page)]
+        self.assertGreater(len(links), 0)
+        for link in links:
+            self.assertEqual(parse_qs(urlsplit(link).query)["version"], [self.course["version"]])
+        base = f"/admin/elearning/courses/{self.course['id']}/preview"
+        self.assertIn("Leçon complémentaire", self.client.get(base).get_data(as_text=True))
+        self.assertEqual(self.client.get(base, query_string={"version": "missing"}).status_code, 404)
+        self.assertEqual(self.client.get(base, query_string={"activity": "missing"}).status_code, 404)
+        self.assertEqual(self.client.get("/admin/elearning/courses/missing/preview").status_code, 404)
+
     def test_native_player_tracks_completes_scores_and_feeds_live_dashboard(self) -> None:
         self._public_login()
         portal = self.client.get("/espace/public-token")
@@ -202,6 +296,7 @@ class NativeElearningWebTests(unittest.TestCase):
         catalog_page = self.client.get("/admin/elearning")
         self.assertEqual(catalog_page.status_code, 200)
         self.assertIn("E-learning natif", catalog_page.get_data(as_text=True))
+        self.assertIn("Visualiser le contenu", catalog_page.get_data(as_text=True))
         self.assertEqual(
             catalog_page.get_data(as_text=True).count(
                 'href="/admin/sessions/session-aps/elearning"'
