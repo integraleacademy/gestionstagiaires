@@ -23,6 +23,8 @@
   const toast = document.getElementById("nativeToast");
   const questionForm = document.getElementById("nativeQuestionForm");
   const videos = Array.from(document.querySelectorAll(".native-course-video"));
+  const requiredVideos = videos.filter((video) => Object.prototype.hasOwnProperty.call(config.requiredVideos || {}, video.dataset.requiredVideo));
+  const videoReaders = new Map();
   const remainingTime = document.getElementById("nativeRemainingTime");
   const durationStatus = document.getElementById("nativeDurationStatus");
   const idleNotice = document.getElementById("nativeIdleNotice");
@@ -31,6 +33,7 @@
   const state = {
     trackingSessionId: "",
     heartbeatRunning: false,
+    heartbeatQueued: false,
     stopped: false,
     serverActive: false,
     baseSeconds: Number(config.initialActiveSeconds || 0),
@@ -41,6 +44,7 @@
     progress: {
       remaining_seconds: Number(config.initialRemainingSeconds || 0),
       module_complete: Boolean(config.initialModuleComplete),
+      video_progress: config.initialVideoProgress || {},
     },
   };
 
@@ -90,7 +94,17 @@
     if (!actionButton) return;
     const blocked = actionButton.dataset.mode === "navigate" && config.isLastActivity
       && config.hasNextModule && !state.progress.module_complete;
-    actionButton.disabled = state.saving || blocked;
+    const videoBlocked = requiredVideos.some((video) => !videoCompleted(video));
+    actionButton.disabled = state.saving || blocked || videoBlocked;
+    if (videoBlocked && !state.saving) {
+      actionButton.textContent = "Regardez la vidéo jusqu’à la fin";
+      return;
+    }
+    if (requiredVideos.length && !state.saving && !blocked) {
+      actionButton.textContent = actionButton.dataset.mode === "navigate"
+        ? `${config.isLastActivity ? (config.endLabel || 'Retour au parcours') : 'Continuer'} →`
+        : `${config.isLastActivity ? 'Terminer le module' : 'Terminer et continuer'} →`;
+    }
     if (actionButton.dataset.mode === "navigate" && config.isLastActivity && !state.saving) {
       actionButton.textContent = blocked
         ? (state.progress.remaining_seconds > 0 ? `Encore ${formatSeconds(state.progress.remaining_seconds)} de temps actif` : "Terminez les activités du module")
@@ -153,9 +167,124 @@
     };
   }
 
+  function videoProgress(video) {
+    return state.progress.video_progress?.[config.activityId]?.[video.dataset.requiredVideo] || {};
+  }
+
+  function videoCompleted(video) {
+    return videoProgress(video).completed === true;
+  }
+
+  function videoSignals() {
+    return requiredVideos.map((video) => ({
+      id: video.dataset.requiredVideo,
+      position: Math.max(0, Number(video.currentTime) || 0),
+      rate: Number(video.playbackRate) || 1,
+      playing: !video.paused && !video.ended && !video.seeking && video.readyState >= 2,
+      ended: video.ended,
+    }));
+  }
+
+  function pauseRequiredVideos(reset = false) {
+    requiredVideos.forEach((video) => {
+      if (videoCompleted(video)) return;
+      if (!video.paused) video.pause();
+      if (reset && video.readyState >= 1) {
+        const reader = videoReaders.get(video);
+        const position = Number(videoProgress(video).watched_seconds) || 0;
+        if (reader) reader.maximum = position;
+        if (Math.abs(video.currentTime - position) > .05) video.currentTime = position;
+      }
+    });
+  }
+
+  function renderVideoProgress() {
+    requiredVideos.forEach((video) => {
+      const reader = videoReaders.get(video);
+      if (!reader) return;
+      const progress = videoProgress(video);
+      const confirmed = Number(progress.watched_seconds) || 0;
+      reader.maximum = Math.max(reader.maximum, confirmed);
+      const percent = Math.min(100, confirmed / Number(config.requiredVideos[video.dataset.requiredVideo]) * 100);
+      const panel = reader.panel;
+      if (!panel) return;
+      panel.classList.toggle("is-complete", progress.completed === true);
+      const status = panel.querySelector("[data-video-status]");
+      if (status) status.textContent = progress.completed ? "Vidéo entièrement visionnée ✓"
+        : `Visionnage enregistré : ${Math.floor(percent)} %`;
+      const bar = panel.querySelector('[role="progressbar"]');
+      bar?.setAttribute("aria-valuenow", String(Math.floor(percent)));
+      const fill = bar?.querySelector("i");
+      if (fill) fill.style.width = `${percent}%`;
+    });
+  }
+
+  function setupRequiredVideos() {
+    const panels = Array.from(document.querySelectorAll("[data-video-followup]"));
+    requiredVideos.forEach((video) => {
+      const reader = { maximum: Number(videoProgress(video).watched_seconds) || 0,
+        lastPosition: 0, lastTime: Date.now(), restored: false,
+        panel: panels.find((panel) => panel.dataset.videoFollowup === video.dataset.requiredVideo) };
+      videoReaders.set(video, reader);
+      const anchor = () => { reader.lastPosition = video.currentTime; reader.lastTime = Date.now(); };
+      const restore = () => {
+        if (reader.restored || video.readyState < 1) return;
+        reader.restored = true;
+        if (!videoCompleted(video) && reader.maximum > 0) {
+          video.currentTime = Math.min(reader.maximum, Math.max(0, video.duration - .1));
+        }
+        anchor();
+      };
+      video.addEventListener("loadedmetadata", restore);
+      restore();
+      video.addEventListener("timeupdate", () => {
+        const elapsed = Math.max(0, (Date.now() - reader.lastTime) / 1000);
+        const delta = video.currentTime - reader.lastPosition;
+        if (!videoCompleted(video) && !video.paused && !video.seeking
+            && document.visibilityState === "visible" && document.hasFocus()
+            && delta >= 0 && delta <= elapsed + .5 && video.currentTime <= reader.maximum + elapsed + .5) {
+          reader.maximum = Math.max(reader.maximum, video.currentTime);
+        }
+        anchor();
+      });
+      video.addEventListener("seeking", () => {
+        if (!videoCompleted(video) && video.currentTime > reader.maximum + .25) {
+          video.currentTime = reader.maximum;
+          showToast("Regardez ce passage avant d’avancer dans la vidéo.");
+        }
+        anchor();
+      });
+      video.addEventListener("seeked", () => { anchor(); sendHeartbeat(); });
+      video.addEventListener("ratechange", () => {
+        if (!videoCompleted(video) && video.playbackRate !== 1) video.playbackRate = 1;
+        anchor();
+      });
+      const playing = () => {
+        if (!state.trackingSessionId || document.visibilityState !== "visible" || !document.hasFocus()) {
+          video.pause();
+          return;
+        }
+        requiredVideos.forEach((other) => { if (other !== video && !other.paused) other.pause(); });
+        if (!videoCompleted(video) && video.playbackRate !== 1) video.playbackRate = 1;
+        anchor();
+        sendHeartbeat();
+      };
+      video.addEventListener("play", playing);
+      video.addEventListener("playing", playing);
+      ["pause", "ended", "waiting"].forEach((eventName) => video.addEventListener(eventName, () => {
+        anchor(); sendHeartbeat();
+      }));
+      video.addEventListener("error", () => {
+        showToast("La vidéo ne peut pas être chargée. Vérifiez votre connexion puis rechargez la page.", true);
+      });
+    });
+    renderVideoProgress();
+  }
+
   function applyProgress(progress) {
     if (!progress) return;
     state.progress = progress;
+    renderVideoProgress();
     const activeSeconds = Number(progress.active_seconds);
     if (Number.isFinite(activeSeconds)) {
       state.baseSeconds = activeSeconds;
@@ -173,18 +302,30 @@
   }
 
   async function sendHeartbeat() {
-    if (!state.trackingSessionId || state.heartbeatRunning || state.stopped) return;
+    if (!state.trackingSessionId || state.stopped) return;
+    if (state.heartbeatRunning) { state.heartbeatQueued = true; return; }
     state.heartbeatRunning = true;
     try {
       const result = await postJson(config.heartbeatUrl, {
         tracking_session_id: state.trackingSessionId,
         activity_id: config.activityId,
         ...activitySignals(),
+        videos: videoSignals(),
       });
       applyProgress(result.progress);
+      for (const video of requiredVideos) {
+        const position = result.video_resync?.[video.dataset.requiredVideo];
+        if (Number.isFinite(position)) {
+          video.pause();
+          videoReaders.get(video).maximum = position;
+          if (Math.abs(video.currentTime - position) > .05) video.currentTime = position;
+          showToast("Reprenez la vidéo à la dernière position enregistrée.");
+        }
+      }
       state.serverActive = Boolean(result.active) && activitySignals().recent_activity && document.visibilityState === "visible";
       state.displayAnchor = Date.now();
       if (result.duplicate) {
+        pauseRequiredVideos(true);
         setTrackingState("duplicate", "Autre onglet actif");
         if (duplicateNotice) duplicateNotice.classList.add("is-visible");
       } else {
@@ -195,12 +336,17 @@
         );
       }
     } catch (error) {
+      pauseRequiredVideos(true);
       state.serverActive = false;
       state.displayAnchor = Date.now();
       setTrackingState("offline", "Suivi déconnecté");
       if ([401, 403, 409].includes(Number(error.status))) showToast("Votre accès ou le parcours a changé. Rechargez la page.", true);
     } finally {
       state.heartbeatRunning = false;
+      if (state.heartbeatQueued) {
+        state.heartbeatQueued = false;
+        window.setTimeout(sendHeartbeat, 0);
+      }
       renderTimer();
     }
   }
@@ -238,6 +384,7 @@
   function scheduleIdlePause() {
     window.clearTimeout(idleTimeout);
     idleTimeout = window.setTimeout(() => {
+      pauseRequiredVideos();
       pauseDisplay();
       setTrackingState("paused", "Pause · inactif depuis 5 min");
       if (idleNotice) idleNotice.hidden = false;
@@ -260,13 +407,13 @@
     window.addEventListener(eventName, markActivity, { passive: true });
   });
   window.addEventListener("focus", () => { markActivity(); sendHeartbeat(); });
-  window.addEventListener("blur", () => { pauseDisplay(); sendHeartbeat(); });
+  window.addEventListener("blur", () => { pauseRequiredVideos(); pauseDisplay(); sendHeartbeat(); });
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState !== "visible") pauseDisplay();
+    if (document.visibilityState !== "visible") { pauseRequiredVideos(); pauseDisplay(); }
     sendHeartbeat();
   });
   document.getElementById("nativeResumeTimer")?.addEventListener("click", () => { markActivity(); sendHeartbeat(); });
-  videos.forEach((video) => {
+  videos.filter((video) => !requiredVideos.includes(video)).forEach((video) => {
     ["play", "pause", "ended", "seeking"].forEach((eventName) => {
       // Playback events (including autoplay/ended) are not learner interactions.
       video.addEventListener(eventName, sendHeartbeat);
@@ -435,12 +582,13 @@
   window.addEventListener("keydown", (event) => { if (event.key === "Escape") setMenu(false); });
 
   restoreSavedAnswer();
+  setupRequiredVideos();
   updateAction();
   renderTimer();
   scheduleIdlePause();
   startTracking();
   window.setInterval(renderTimer, 1000);
-  window.setInterval(sendHeartbeat, Math.max(5, Number(config.heartbeatSeconds || 15)) * 1000);
+  window.setInterval(sendHeartbeat, requiredVideos.length ? 4000 : Math.max(5, Number(config.heartbeatSeconds || 15)) * 1000);
   window.addEventListener("pagehide", finishTracking);
   window.addEventListener("pageshow", (event) => { if (event.persisted && state.stopped) startTracking(); });
 })();

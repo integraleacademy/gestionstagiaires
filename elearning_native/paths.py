@@ -7,6 +7,7 @@ import math
 from typing import Any, Dict, List, Mapping
 
 from .importer import CourseCatalog, CourseImportError
+from .videos import course_videos, videos_complete
 
 
 MAX_PATH_MODULES = 100
@@ -106,6 +107,11 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
     """Compute completion against the current selection, retaining stored history."""
     order = course.get("activity_order") or []
     completed = set(progress.get("completed_activity_ids") or []) & set(order)
+    requirements = course_videos(course)
+    video_progress = progress.get("video_progress") or {}
+    for activity_id, videos in requirements.items():
+        if not videos_complete(video_progress.get(activity_id, {}), videos):
+            completed.discard(activity_id)
     scored = [activity["id"] for section in course.get("sections") or []
               for activity in section.get("activities") or [] if activity.get("scored")]
     answers = {key: value for key, value in (progress.get("answers") or {}).items() if key in order}
@@ -128,5 +134,10 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
         "required_seconds": required_seconds, "remaining_seconds": remaining_seconds,
         "duration_met": duration_met, "activities_completed": finished,
         "module_complete": finished and duration_met,
+        "video_progress": video_progress,
+        "required_video_count": sum(len(videos) for videos in requirements.values()),
+        "completed_video_count": sum(videos_complete(video_progress.get(activity_id, {}), {video_id: duration})
+                                     for activity_id, videos in requirements.items()
+                                     for video_id, duration in videos.items()),
         "completed_at": progress.get("completed_at") if finished and duration_met else None,
     }
