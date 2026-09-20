@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260908-2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260920-preview') }}">
 </head>
 <body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
@@ -37,6 +37,9 @@
         <strong>{{ course.title }}</strong>
       </div>
     </div>
+    {% if preview_mode %}
+    <span class="native-preview-badge">Mode aperçu</span>
+    {% else %}
     <div class="native-live-metrics" aria-label="Suivi de la session">
       <div class="native-tracking-state" id="nativeTrackingState" data-state="connecting">
         <i aria-hidden="true"></i><span>Connexion…</span>
@@ -46,15 +49,23 @@
         <strong id="nativeActiveTimer">00:00:00</strong>
       </div>
     </div>
+    {% endif %}
   </header>
 
   <div class="native-layout">
     <aside class="native-sidebar" id="nativeSidebar" aria-label="Sommaire du cours">
       <div class="native-sidebar__learner">
+        {% if preview_mode %}
+        <a class="native-back-link" href="{{ portal_url }}">← Retour aux modules</a>
+        <span>Aperçu administrateur</span>
+        <strong>{{ course.counts.sections }} séquences · {{ activity_count }} activités</strong>
+        {% else %}
         <a class="native-back-link" href="{{ path_url }}">← Tous mes modules</a>
         <span>Module {{ module_position }} sur {{ module_count }}</span>
         <strong>{{ learner_name or 'Stagiaire' }}</strong>
+        {% endif %}
       </div>
+      {% if not preview_mode %}
       <div class="native-progress-summary">
         <div><span>Activités terminées</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
         <div class="native-progress-track" aria-hidden="true"><i id="nativeProgressBar" style="width:{{ progress.progress_percent }}%"></i></div>
@@ -65,6 +76,7 @@
           <strong id="nativeRemainingTime">{{ remaining_time_label }}</strong>
         </section>{% endif %}
       </div>
+      {% endif %}
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
           <section>
@@ -83,12 +95,18 @@
           </section>
         {% endfor %}
       </nav>
-      <a class="native-back-link" href="{{ portal_url }}">← Retour à mon espace</a>
+      <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
     </aside>
     <button class="native-sidebar-overlay" id="nativeSidebarOverlay" type="button" aria-label="Fermer le sommaire"></button>
 
     <main class="native-main">
       <div class="native-main__inner">
+        {% if preview_mode %}
+        <section class="native-preview-notice" aria-label="Mode aperçu">
+          <strong>Visualisation du contenu</strong>
+          <p>Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.</p>
+        </section>
+        {% endif %}
         <div class="native-breadcrumb"><span>{{ section_title }}</span><b>Activité {{ activity_position }} sur {{ activity_count }}</b></div>
 
         {% if introduction %}
@@ -146,22 +164,37 @@
           {% endif %}
         </article>
 
+        {% if not preview_mode %}
         <div class="native-course-result{% if progress.status in ['passed', 'failed', 'awaiting_time'] %} is-visible{% endif %}" id="nativeCourseResult" data-status="{{ progress.status }}" role="status">
           <strong>{{ 'Activités terminées · temps à compléter' if progress.status == 'awaiting_time' else ('Module terminé' if progress.module_complete else '') }}</strong>
           <span>{% if progress.status == 'awaiting_time' %}Il reste {{ remaining_time_label }} de temps actif à suivre. Reprenez les séquences depuis le sommaire pour poursuivre votre formation.{% elif progress.status == 'passed' %}Objectif atteint avec un score de {{ progress.score_percent|round|int }} %.{% elif progress.status == 'failed' %}Parcours terminé avec un score de {{ progress.score_percent|round|int }} %. L’équipe pédagogique pourra vous accompagner.{% endif %}</span>
         </div>
+        {% endif %}
 
         <div class="native-navigation-actions">
           {% if previous_url %}<a class="native-button native-button--secondary" href="{{ previous_url }}">← Précédent</a>{% else %}<span></span>{% endif %}
+          {% if preview_mode %}
+          <div class="native-preview-actions">
+            {% if activity.scored and preview_can_answer %}<button class="native-button native-button--secondary" id="nativePreviewAnswerButton" type="button">Tester ma réponse</button>{% endif %}
+            <a class="native-button native-button--primary" href="{{ next_url or portal_url }}">{{ 'Suivant →' if next_url else 'Retour aux modules →' }}</a>
+          </div>
+          {% else %}
           <button class="native-button native-button--primary" id="nativeActionButton" type="button" data-mode="{{ 'navigate' if activity_completed else ('answer' if activity.scored else 'complete') }}"{% if activity_completed and is_last_activity and has_next_module and not progress.module_complete %} disabled{% endif %}>
             {% if activity_completed %}{{ end_label if is_last_activity else 'Continuer' }}{% elif activity.scored %}Valider ma réponse{% elif is_last_activity %}Terminer le module{% else %}Terminer et continuer{% endif %} →
           </button>
+          {% endif %}
         </div>
+        {% if not preview_mode %}
         <p class="native-tracking-explainer">Le compteur valide uniquement le temps actif sur ce module. Il se met en pause quand vous quittez la page ou après 5 minutes sans interaction, même si une vidéo continue. Bougez la souris, cliquez ou utilisez le clavier pour reprendre. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.</p>
+        {% endif %}
       </div>
     </main>
   </div>
 
+  {% if preview_mode %}
+  <script id="nativePreviewConfig" type="application/json">{{ preview_config|tojson }}</script>
+  <script src="{{ url_for('static', filename='js/native-elearning-preview.js', v='20260920-1') }}" defer></script>
+  {% else %}
   <div class="native-duplicate-notice" id="nativeDuplicateNotice" role="alert" aria-live="assertive">
     <strong>Chrono en pause sur cet onglet</strong>
     <span>Le cours est déjà actif dans un autre onglet. Fermez l’autre page ou attendez sa déconnexion.</span>
@@ -201,5 +234,6 @@
     'savedAnswer': progress.answers.get(activity.id, {})
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260908-2') }}" defer></script>
+  {% endif %}
 </body>
 </html>

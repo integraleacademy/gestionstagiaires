@@ -7,6 +7,12 @@ Ce module remplace progressivement Easygenerator pour la diffusion des cours et 
 1. Ouvrir **Administration → E-learning APS**.
 2. Importer un export **SCORM manuel** Easygenerator au format ZIP.
 3. Contrôler le nombre de séquences, d’activités et de questions détectées.
+   Le bouton **Visualiser le contenu** ouvre le lecteur en **Mode aperçu** :
+   toutes les séquences sont accessibles, les médias et interactions sont
+   consultables, et les administrateurs peuvent tester plusieurs réponses.
+   Aucun temps, score ni résultat stagiaire n’est enregistré. Cet aperçu ne
+   nécessite aucune affectation à une session et conserve la version du module
+   lors de la navigation. Les comptes en lecture seule peuvent consulter le contenu.
 4. Dans **Parcours des sessions APS**, cliquer sur **Composer le parcours**.
    Ajouter les modules importés (jusqu’à 100), les ordonner avec les flèches,
    déplier chaque module pour choisir et ordonner ses séquences, puis enregistrer.
