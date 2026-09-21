@@ -21382,6 +21382,22 @@ def _afc_find_latest_positioning_score(candidate: Dict[str, Any], positioning_te
         return None
 
 
+def _afc_icop_date_options(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    counts: Dict[str, int] = {}
+    for candidate in candidates:
+        value = str(candidate.get("date_icop") or "").strip()
+        try:
+            date = datetime.date.fromisoformat(value)
+        except ValueError:
+            continue
+        if date.isoformat() == value:
+            counts[value] = counts.get(value, 0) + 1
+    return [
+        {"value": value, "label": datetime.date.fromisoformat(value).strftime("%d/%m/%Y"), "count": counts[value]}
+        for value in sorted(counts)
+    ]
+
+
 @app.get("/admin/afc")
 def admin_afc():
     data = load_data()
@@ -21431,6 +21447,7 @@ def admin_afc():
         "admin_afc.html",
         afc=bucket,
         candidates=ordered_candidates,
+        icop_dates=_afc_icop_date_options(candidates),
         show_archived=show_archived,
         archived_count=archived_count,
         afc_presence_status_labels=AFC_PRESENCE_STATUS_LABELS,
@@ -22287,6 +22304,39 @@ def admin_afc_candidate_sheet(candidate_id: str):
         positioning_score=positioning_score,
         refusal_reasons=AFC_REFUSAL_REASONS,
         refusal_complements=AFC_REFUSAL_COMPLEMENTS,
+    )
+
+
+@app.get("/admin/afc/feuille-presence")
+@admin_login_required
+def admin_afc_attendance():
+    selected_date = str(request.args.get("date_icop") or "").strip()
+    try:
+        icop_date = datetime.date.fromisoformat(selected_date)
+    except ValueError:
+        abort(400, description="Sélectionnez une date ICOP valide.")
+    if icop_date.isoformat() != selected_date:
+        abort(400, description="Sélectionnez une date ICOP valide.")
+
+    # Printing must not migrate records or change a candidate's presence status.
+    data = load_data()
+    show_archived = request.args.get("archives") == "1"
+    candidates = [
+        candidate for candidate in (data.get("afc") or {}).get("candidates", [])
+        if bool(candidate.get("archived")) == show_archived
+        and str(candidate.get("date_icop") or "").strip() == selected_date
+    ]
+    if not candidates:
+        abort(404, description="Aucun candidat pour cette date ICOP.")
+    candidates.sort(key=lambda c: (
+        normalize_last_name(c.get("nom") or ""),
+        normalize_first_name(c.get("prenom") or ""),
+    ))
+    return render_template(
+        "admin_afc_attendance.html",
+        candidates=candidates,
+        icop_date=icop_date.strftime("%d/%m/%Y"),
+        show_archived=show_archived,
     )
 
 

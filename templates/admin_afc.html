@@ -115,6 +115,11 @@
     font-weight:700;
     color:#334155;
   }
+  .afc-attendance{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;}
+  .afc-attendance label{font-weight:700;}
+  .afc-attendance select{min-height:40px;max-width:100%;border:1px solid #d6dce5;border-radius:8px;padding:0 10px;background:#fff;}
+  .afc-attendance p{flex-basis:100%;margin:0;color:#64748b;font-size:13px;}
+  .afc-attendance button:disabled{opacity:.5;cursor:not-allowed;}
   .afc-cnaps-overview{
     margin-top:12px;
   }
@@ -234,6 +239,19 @@
       {% endif %}
     </div>
   </div>
+  <form class="afc-attendance" action="{{ url_for('admin_afc_attendance') }}" method="get" target="_blank" rel="noopener">
+    {% if show_archived %}<input type="hidden" name="archives" value="1">{% endif %}
+    <label for="afcAttendanceDate">Feuille de présence ICOP</label>
+    <select id="afcAttendanceDate" name="date_icop" required {% if not icop_dates %}disabled{% endif %}>
+      {% for date in icop_dates %}
+      <option value="{{ date.value }}">{{ date.label }} · {{ date.count }} candidat{{ 's' if date.count > 1 else '' }}</option>
+      {% else %}
+      <option value="">Aucune date ICOP renseignée</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-outline" id="afcAttendancePrint" type="submit" {% if not icop_dates %}disabled{% endif %}>Imprimer la feuille de présence</button>
+    <p>Tous les candidats {{ 'archivés ' if show_archived else '' }}de la date choisie, par ordre alphabétique, avec un espace pour leur signature.</p>
+  </form>
 </div>
 
 <section class="card afc-cnaps-overview" aria-labelledby="afcCnapsOverviewTitle">
@@ -763,7 +781,7 @@ function chooseAfcFile(file){
   if(!['image/png','image/jpeg','image/webp'].includes(file.type)){error.textContent='Format non autorisé. Utilisez PNG, JPG, JPEG ou WEBP.';return;}
   afcSelectedFile=file; afcAnalyzeImage.disabled=false; const img=document.getElementById('afcImagePreview');img.src=URL.createObjectURL(file);img.hidden=false;
 }
-btnImportCandidates.addEventListener('click',openAfcImport);
+btnImportCandidates?.addEventListener('click',openAfcImport);
 document.getElementById('afcChooseImage').addEventListener('click',()=>afcImportInput.click());
 afcImportInput.addEventListener('change',()=>chooseAfcFile(afcImportInput.files?.[0]));
 ['dragenter','dragover'].forEach(e=>afcDropzone.addEventListener(e,x=>{x.preventDefault();afcDropzone.classList.add('drag')}));
@@ -805,6 +823,7 @@ btnArchiveAllCandidates?.addEventListener('click', async ()=>{
     }
     alert(`Archivage terminé : ${body.archived || 0} candidat(s) archivé(s).`);
     document.querySelectorAll('#afcTable tbody tr').forEach((tr)=> tr.remove());
+    refreshAfcAttendanceDates();
     applyAfcFilters();
   }catch(_err){
     alert('Erreur lors de l’archivage global');
@@ -825,6 +844,7 @@ btnDeleteAllCandidates?.addEventListener('click', async ()=>{
     }
     alert(`Suppression terminée : ${body.deleted || 0} ligne(s) supprimée(s).`);
     document.querySelectorAll('#afcTable tbody tr').forEach((tr)=> tr.remove());
+    refreshAfcAttendanceDates();
     applyAfcFilters();
   }catch(_err){
     alert('Erreur suppression globale');
@@ -872,7 +892,34 @@ afcConfirmImport.addEventListener('click',async()=>{
 });
 
 
-document.getElementById('btnAddCandidate').addEventListener('click', openModal);
+// Keep the date selector in sync with successfully saved dates, including rows
+// hidden by the search and status filters.
+const afcAttendanceDate = document.getElementById('afcAttendanceDate');
+const afcAttendancePrint = document.getElementById('afcAttendancePrint');
+const afcIcopInputs = [...document.querySelectorAll('#afcTable input[data-field="date_icop"]')];
+let afcIcopSavesPending = 0;
+afcIcopInputs.forEach((input) => { input.dataset.savedIcopDate = input.value; });
+function refreshAfcAttendanceDates(){
+  const previous = afcAttendanceDate.value;
+  const counts = new Map();
+  afcIcopInputs.forEach((input) => {
+    if(!input.isConnected) return;
+    const value = input.dataset.savedIcopDate;
+    if(value) counts.set(value, (counts.get(value) || 0) + 1);
+  });
+  afcAttendanceDate.replaceChildren();
+  [...counts.keys()].sort().forEach((value) => {
+    const count = counts.get(value);
+    const label = value.split('-').reverse().join('/');
+    afcAttendanceDate.add(new Option(`${label} · ${count} candidat${count > 1 ? 's' : ''}`, value));
+  });
+  if(!counts.size) afcAttendanceDate.add(new Option('Aucune date ICOP renseignée', ''));
+  if(counts.has(previous)) afcAttendanceDate.value = previous;
+  afcAttendanceDate.disabled = !counts.size;
+  afcAttendancePrint.disabled = !counts.size || afcIcopSavesPending > 0;
+}
+
+document.getElementById('btnAddCandidate')?.addEventListener('click', openModal);
 document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
 btnToggleTemplates.addEventListener('click', toggleMailTemplates);
 modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
@@ -903,10 +950,20 @@ document.querySelectorAll('#afcTable tbody tr input').forEach((input)=>{
   input.addEventListener('change', async (e)=>{
     const tr = e.target.closest('tr');
     const payload = {}; payload[e.target.dataset.field] = e.target.value;
-    const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}`,{
-      method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
-    });
-    if(!res.ok) alert('Erreur sauvegarde');
+    const isIcopDate = e.target.dataset.field === 'date_icop';
+    if(isIcopDate){ afcIcopSavesPending += 1; afcAttendancePrint.disabled = true; input.disabled = true; }
+    try{
+      const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}`,{
+        method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+      });
+      if(!res.ok) throw new Error('save_failed');
+      if(isIcopDate) input.dataset.savedIcopDate = payload.date_icop;
+    }catch(_err){
+      if(isIcopDate) input.value = input.dataset.savedIcopDate;
+      alert('Erreur sauvegarde');
+    }finally{
+      if(isIcopDate){ afcIcopSavesPending -= 1; input.disabled = false; refreshAfcAttendanceDates(); }
+    }
   });
 });
 
@@ -965,6 +1022,7 @@ document.querySelectorAll('[data-delete-candidate]').forEach((btn)=>{
       return;
     }
     tr.remove();
+    refreshAfcAttendanceDates();
     applyAfcFilters();
   });
 });
@@ -980,6 +1038,7 @@ document.querySelectorAll('[data-restore-candidate]').forEach((btn)=>{
       return;
     }
     tr.remove();
+    refreshAfcAttendanceDates();
     applyAfcFilters();
   });
 });
