@@ -4185,9 +4185,6 @@ PARTNER_SCOPED_COLLECTION_KEYS = {
     "notifications_vtc_books",
     "notifications_admin",
     "cnaps_pending_imports",
-    "cnaps_public_annuaire_statuses",
-    "cnaps_status_change_notifications",
-    "cnaps_tracking_manual_nubs",
     "wedof_links",
     "wedof_folder_cache",
 }
@@ -4196,6 +4193,12 @@ PARTNER_SCOPED_VALUE_KEYS = {
     "ssiap_diploma_sequences",
     "daily_recap_sent_dates",
     "cnaps_tracking_deleted_keys",
+    # These are identity-keyed dictionaries, not lists of tenant records.
+    # Treating them as collections discarded the complete CNAPS history on
+    # scoped reads and when overlaying an external PostgreSQL tenant.
+    "cnaps_public_annuaire_statuses",
+    "cnaps_status_change_notifications",
+    "cnaps_tracking_manual_nubs",
 }
 PARTNER_VISIBLE_FIELDS = {
     "id", "name", "legal_name", "siret", "activity_declaration_number",

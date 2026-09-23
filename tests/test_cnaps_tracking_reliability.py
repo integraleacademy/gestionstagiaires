@@ -107,3 +107,37 @@ def test_tracking_page_embeds_last_success_before_live_requests(cnaps_data, monk
     assert 'data-cnaps-snapshot=' in html
     assert 'AP A3P ACTIF' in html
     assert '2027-03-22' in html
+
+
+@pytest.mark.parametrize('key', ['cnaps_public_annuaire_statuses', 'cnaps_status_change_notifications', 'cnaps_tracking_manual_nubs'])
+def test_partner_overlay_never_erases_integrale_cnaps_maps(key):
+    internal = {'TEST|1234567': {'known': True}} if key != 'cnaps_tracking_manual_nubs' else {'TEST|JANE': '1234567'}
+    external = {'EXTERNAL|7654321': {'known': False}} if key != 'cnaps_tracking_manual_nubs' else {'EXTERNAL|JANE': '7654321'}
+    canonical = {'partners': [], key: copy.deepcopy(internal)}
+    bundle = {'partners': [{'id': 'external-centre', 'name': 'External'}], key: external}
+    gestion_app._overlay_partner_bundle(canonical, bundle, "external-centre")
+    assert canonical[key] == internal
+    assert gestion_app._filter_data_for_partner(canonical, gestion_app.INTEGRALE_PARTNER_ID)[key] == internal
+    assert gestion_app._filter_data_for_partner(canonical, 'external-centre')[key] == external
+    assert gestion_app._filter_data_for_partner(canonical, 'another-centre')[key] == {}
+
+
+def test_monitor_detects_transition_after_loading_external_partner(cnaps_data, monkeypatch):
+    original_load = gestion_app.load_data
+    bundle = {'partners': [{'id': 'external-centre', 'name': 'External'}]}
+    def load_with_overlay(**kwargs):
+        data = original_load(**kwargs)
+        gestion_app._overlay_partner_bundle(data, bundle, "external-centre")
+        return data
+    monkeypatch.setattr(gestion_app, 'load_data', load_with_overlay)
+    monkeypatch.setattr(gestion_app, 'fetch_cnapsv3_tracking_requests', lambda: ([{'tracking_id': '115', 'last_name': 'TEST', 'first_name': 'Jane', 'nub': '1234567'}], None))
+    current = {'check_status': 'success', 'active_titles': []}
+    monkeypatch.setattr(gestion_app, 'fetch_cnaps_public_annuaire', lambda *args: copy.deepcopy(current))
+    emails = []
+    monkeypatch.setattr(gestion_app, 'brevo_send_email', lambda *args, **kwargs: emails.append(args) or {'ok': True})
+    assert gestion_app.run_cnaps_public_annuaire_monitor()['notified'] == 0
+    current.update(ACTIVE)
+    assert gestion_app.run_cnaps_public_annuaire_monitor()['notified'] == 1
+    assert gestion_app.run_cnaps_public_annuaire_monitor()['notified'] == 0
+    assert len(emails) == 1
+    assert gestion_app.load_data()['cnaps_status_change_notifications']['TEST|1234567']['email_status'] == 'sent'
