@@ -7144,6 +7144,9 @@ def _send_cnaps_notification_email(data, key, notification):
         enrollments,
         previous_status=notification.get("previous_status", ""),
     )
+    if notification.get("recovery_batch_id"):
+        subject = subject.replace("Changement de statut CNAPS", "Rattrapage CNAPS", 1)
+        html_body = html_body.replace("Nouveau statut détecté", "Notification de rattrapage", 1)
     try:
         response = brevo_send_email(
             CNAPS_STATUS_CHANGE_NOTIFICATION_TO,

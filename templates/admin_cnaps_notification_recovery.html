@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" style="margin:24px;padding:28px">
+  <a href="{{ url_for('admin_cnaps_tracking') }}">← Retour au suivi CNAPS</a>
+  <h1>Rattrapage des notifications CNAPS</h1>
+  <p>Recherche des alertes manquantes pour les dossiers actuellement actifs. Les anciens envois retrouvés sont conservés. Une notification est créée par dossier ; un mail est envoyé uniquement si aucun envoi correspondant n’a été retrouvé.</p>
+  {% if error %}<p role="alert" style="color:#b91c1c">{{ error }}</p>{% endif %}
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="action" value="scan">
+    <button class="btn" type="submit">Analyser les dossiers et les anciens envois</button>
+  </form>
+  {% if plan %}
+    <p><strong>{{ rows|length }} dossiers actifs · {{ pending }} notifications à rétablir</strong></p>
+    <p>Destinataire : {{ plan.recipients[0] }}. Copie : {{ plan.recipients[1:]|join(', ') }}.</p>
+    <p>{{ plan.backups.read }} sauvegardes lues ; {{ plan.backups.invalid }} illisibles. {{ plan.brevo.examined }} traces d’envoi consultées chez Brevo.</p>
+    <p>Plus ancienne sauvegarde : {{ plan.backups.oldest or 'Aucune' }}.</p>
+    <p>Lorsque l’ancien statut a disparu, le mail précise que l’historique et la date d’acceptation sont inconnus.</p>
+    <form method="post" style="display:inline-block">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="plan_id" value="{{ plan.id }}">
+      <input type="hidden" name="action" value="apply">
+      <button class="btn btn-primary" type="submit" {% if not pending %}disabled{% endif %}>Rattraper les 10 dossiers suivants</button>
+    </form>
+    <form method="post" style="display:inline-block">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="plan_id" value="{{ plan.id }}">
+      <input type="hidden" name="action" value="verify">
+      <button class="btn" type="submit">Vérifier la remise des mails</button>
+    </form>
+    <div style="overflow-x:auto;margin-top:20px"><table style="width:100%;border-collapse:collapse">
+      <thead><tr><th>Dossier</th><th>Statut actuel</th><th>Ancien statut</th><th>Notification</th><th>Mail</th><th>Remise confirmée</th></tr></thead>
+      <tbody>{% for row in rows %}
+        <tr style="border-top:1px solid #e2e8f0" data-recovery-row data-key="{{ row.key }}" data-email-status="{{ row.email_status }}" data-message-id="{{ row.message_id }}" data-delivery='{{ row.delivery|tojson }}'>
+          <td style="padding:12px">{{ row.first_name }} {{ row.last_name }}<br>NUB {{ row.nub }}{% if row.is_enrolled %}<br>Inscrit(e) en formation{% endif %}</td>
+          <td>{{ row.signature }}</td><td>{{ row.previous_status }}</td>
+          <td>{{ 'Créée' if row.notified else ('Ancien mail à vérifier' if row.ambiguous_email and not row.receipt else 'À rétablir') }}</td>
+          <td>{{ {'sent':'Envoyé', 'pending':'En attente', 'failed':'Échec, nouvelle tentative automatique'}.get(row.email_status, 'Ancien envoi retrouvé' if row.receipt else 'À envoyer') }}</td>
+          <td>{% for email, state in row.delivery.items() %}{{ email }} : {{ 'remis' if state == 'delivered' else state }}<br>{% endfor %}</td>
+        </tr>
+      {% endfor %}</tbody>
+    </table></div>
+  {% endif %}
+</section>
+{% endblock %}
