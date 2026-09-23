@@ -2036,7 +2036,7 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn('>1</div><div class="cnaps-stat__label">Changements de statut</div>', page.get_data(as_text=True))
         self.assertEqual(badge.get_json(), {"ok": True, "count": 1})
 
-    def test_tracking_page_forces_chiocca_ap_sh_active_by_name_and_nub(self):
+    def test_tracking_page_has_no_hardcoded_person_status(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
             sess["admin_logged_in"] = True
@@ -2058,8 +2058,8 @@ class CnapsTrackingTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn('data-nom="CHIOCCA"', html)
         self.assertIn('data-nub="1079213"', html)
-        self.assertIn('normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"', html)
-        self.assertIn('validite_titre:"ACTIF"', html)
+        self.assertNotIn('normalizedLastName==="CHIOCCA"', html)
+        self.assertIn('data-cnaps-snapshot=', html)
 
     def test_tracking_page_displays_active_ap_titles_in_green(self):
         client = gestion_app.app.test_client()
@@ -2113,7 +2113,7 @@ class CnapsTrackingTests(unittest.TestCase):
             gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
 
         html = response.get_data(as_text=True)
-        self.assertIn('const nubDigits=nub.replace(/\\D+/g,"");if(nubDigits.length!==7)', html)
+        self.assertIn('if(nub.length!==7)', html)
         self.assertIn('renderCardProFollowupResult(resultEl,null,"nub-missing")', html)
 
     def test_manual_tracking_nub_is_saved_and_enriches_matching_row(self):
@@ -2166,8 +2166,8 @@ class CnapsTrackingTests(unittest.TestCase):
             "validite_titre": "ACTIF",
             "results": [{"activite": "Autorisation préalable - Surveillance humaine ou gardiennage", "validite_titre": "ACTIF"}],
         }
-        gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        gestion_app.load_data = lambda **kwargs: data
+        gestion_app.save_data = lambda payload, **kwargs: saved.append(payload.copy())
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append({"args": args, "kwargs": kwargs}) or {"ok": True}
         try:
             response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&previous_status=INCONNU")
@@ -2202,7 +2202,7 @@ class CnapsTrackingTests(unittest.TestCase):
             "active_titles": [{"display_status": "AP SH ACTIF", "label": "Surveillance humaine", "status": "ACTIF"}],
             "results": [],
         }
-        gestion_app.load_data = lambda: data
+        gestion_app.load_data = lambda **kwargs: data
         gestion_app.save_data = lambda payload, **kwargs: None
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
         try:
@@ -2462,9 +2462,9 @@ class CnapsTrackingTests(unittest.TestCase):
             "validite_titre": "ACTIF",
             "results": [{"activite": "Autorisation préalable - Surveillance humaine ou gardiennage", "validite_titre": "ACTIF"}],
         }
-        gestion_app.load_data = lambda: data
+        gestion_app.load_data = lambda **kwargs: data
         saved = []
-        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        gestion_app.save_data = lambda payload, **kwargs: saved.append(payload.copy())
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
         try:
             response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&previous_status=INCONNU")
@@ -2496,8 +2496,8 @@ class CnapsTrackingTests(unittest.TestCase):
             "nub": "NUB123",
             "cnaps_status": "ACCEPTE",
         }], None)
-        gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        gestion_app.load_data = lambda **kwargs: data
+        gestion_app.save_data = lambda payload, **kwargs: saved.append(payload.copy())
         try:
             delete_response = client.post("/api/admin/cnaps-tracking/delete", json={
                 "last_name": "Doe",

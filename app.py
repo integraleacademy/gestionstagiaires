@@ -6855,6 +6855,7 @@ CNAPS_STATUS_CHANGE_NOTIFICATION_TO = "cassandre@integraleacademy.com"
 CNAPS_STATUS_CHANGE_NOTIFICATION_CC = ["elsa@integraleacademy.com", "clement@integraleacademy.com"]
 CNAPS_MONITOR_TOKEN = os.environ.get("CNAPS_MONITOR_TOKEN", "").strip()
 CNAPS_MONITOR_REQUEST_DELAY_SECONDS = max(0.0, float(os.environ.get("CNAPS_MONITOR_REQUEST_DELAY_SECONDS", "1")))
+_cnaps_notification_delivery_lock = threading.Lock()
 AFC_CNAPS_REFRESH_INTERVAL_SECONDS = max(60, int(os.environ.get("AFC_CNAPS_REFRESH_INTERVAL_SECONDS", "900")))
 AFC_CNAPS_REFRESH_REQUEST_DELAY_SECONDS = max(
     0.0,
@@ -6928,6 +6929,7 @@ def _annotate_cnaps_tracking_status_changes(rows: List[Dict[str, Any]], data: Di
             )
         row["status_change_notified"] = isinstance(notification, dict)
         row["status_change_reviewed"] = bool(notification.get("reviewed_at")) if isinstance(notification, dict) else False
+        row["notification_email_status"] = notification.get("email_status", "") if isinstance(notification, dict) else ""
     return sorted(rows, key=lambda row: not (row["status_change_notified"] and not row["status_change_reviewed"]))
 
 
@@ -6940,6 +6942,7 @@ def _mark_cnaps_status_change_imported(data: Dict[str, Any], *, last_name: str, 
     if not isinstance(item, dict) or item.get("reviewed_at"):
         return False
     item["reviewed_at"] = _now_iso()
+    item["updated_at"] = item["reviewed_at"]
     item["reviewed_reason"] = "import_pre_cnaps"
     return True
 
@@ -7081,6 +7084,7 @@ def _create_cnaps_status_change_notification(
     previous_status: str,
     new_status: str,
     tracking_id: str = "",
+    send_email: bool = True,
 ) -> bool:
     """Create the in-app alert and attempt its email delivery.
 
@@ -7103,12 +7107,12 @@ def _create_cnaps_status_change_notification(
     if isinstance(sent.get(key), dict) and sent[key].get("signature") == signature:
         return False
     first_name = str(first_name or "").strip() or _cnaps_trainee_first_name(data, last_name=last_name, nub=nub)
-    enrollments = _cnaps_trainee_enrollments(data, first_name=first_name, last_name=last_name, nub=nub)
     created_at = _now_iso()
     notification = {
         "signature": signature,
         "previous_status": str(previous_status or "").strip(),
         "created_at": created_at,
+        "updated_at": created_at,
         "sent_at": "",
         "email_status": "pending",
         "first_name": first_name,
@@ -7118,13 +7122,24 @@ def _create_cnaps_status_change_notification(
     }
     # Persist the dashboard alert before attempting the external email call.
     sent[key] = notification
+    if send_email:
+        notification.update(_send_cnaps_notification_email(data, key, notification))
+    return True
+
+
+def _send_cnaps_notification_email(data, key, notification):
+    """Perform external delivery outside a production data transaction."""
+    first_name = notification.get("first_name", "")
+    last_name = notification.get("last_name", "")
+    nub = notification.get("nub", "")
+    enrollments = _cnaps_trainee_enrollments(data, first_name=first_name, last_name=last_name, nub=nub)
     subject, html_body = build_cnaps_status_change_email(
         first_name,
         last_name,
         nub,
-        signature,
+        notification.get("signature", ""),
         enrollments,
-        previous_status=str(previous_status or "").strip(),
+        previous_status=notification.get("previous_status", ""),
     )
     try:
         response = brevo_send_email(
@@ -7139,17 +7154,45 @@ def _create_cnaps_status_change_notification(
         response = {"ok": False, "error": str(exc) or "Erreur inattendue Brevo"}
     if not isinstance(response, dict):
         response = {"ok": bool(response), "error": "Réponse Brevo invalide" if not response else ""}
+    delivery = {"updated_at": _now_iso(), "email_last_attempt_at": _now_iso(),
+                "email_attempts": int(notification.get("email_attempts") or 0) + 1}
     if response.get("ok"):
-        notification["sent_at"] = _now_iso()
-        notification["email_sent_at"] = notification["sent_at"]
-        notification["email_status"] = "sent"
-        notification["email_message_id"] = str(response.get("message_id") or "")
+        delivery.update(sent_at=_now_iso(), email_sent_at=_now_iso(), email_status="sent",
+                        email_message_id=str(response.get("message_id") or ""), email_error="")
     else:
-        notification["email_status"] = "failed"
-        notification["email_error"] = str(response.get("error") or "Envoi Brevo impossible")[:500]
-        notification["email_last_attempt_at"] = _now_iso()
+        delivery.update(email_status="failed", email_error=str(response.get("error") or "Envoi Brevo impossible")[:500])
         app.logger.warning("[CNAPS_STATUS_CHANGE] email non envoyé key=%s error=%s", key, response.get("error"))
-    return True
+    return delivery
+
+
+def _deliver_pending_cnaps_notifications():
+    """Retry the durable outbox, including failures with no new status change."""
+    if not _cnaps_notification_delivery_lock.acquire(blocking=False):
+        return
+    try:
+        data = load_data()
+        notifications = data.get("cnaps_status_change_notifications") or {}
+        for key, notification in list(notifications.items()):
+            if not isinstance(notification, dict) or notification.get("email_status") not in {"pending", "failed"}:
+                continue
+            last_attempt = str(notification.get("email_last_attempt_at") or "")
+            if last_attempt:
+                try:
+                    elapsed = time.time() - datetime.datetime.fromisoformat(last_attempt.replace("Z", "+00:00")).timestamp()
+                    if elapsed < 300:
+                        continue
+                except ValueError:
+                    pass
+            delivery = _send_cnaps_notification_email(data, key, notification)
+
+            def record_delivery(latest):
+                current = (latest.get("cnaps_status_change_notifications") or {}).get(key)
+                if isinstance(current, dict) and current.get("created_at") == notification.get("created_at") and current.get("signature") == notification.get("signature"):
+                    current.update(delivery)
+
+            update_data(record_delivery, run_background_tasks=False)
+    finally:
+        _cnaps_notification_delivery_lock.release()
 
 
 def _notify_cnaps_status_change(
@@ -7225,6 +7268,25 @@ def _cnaps_tracking_state_display(entry: Dict[str, Any]) -> str:
     return "Aucun titre CNAPS trouvé"
 
 
+def _cnaps_saved_result(status):
+    """Read the last successful check, including pre-snapshot persisted states."""
+    if not isinstance(status, dict):
+        return None
+    if isinstance(status.get("result"), dict):
+        return status["result"]
+    state = _cnaps_tracking_state_code(status)
+    if state == "nub_missing":
+        return None
+    titles = []
+    if state == "titles":
+        for part in str(status.get("signature") or "").split(" || "):
+            values = part.split(" • ")
+            if values[0]:
+                titles.append({"display_status": values[0], "label": values[0],
+                               "date_fin_validite": next((v for v in values if re.fullmatch(r"\d{4}-\d{2}-\d{2}", v)), "")})
+    return {"check_status": "success", "active_titles": titles, "checked_at": status.get("checked_at", "")}
+
+
 def _record_cnaps_tracking_state(
     data: Dict[str, Any],
     *,
@@ -7233,12 +7295,22 @@ def _record_cnaps_tracking_state(
     nub: str,
     tracking_id: str = "",
     result: Optional[Dict[str, Any]] = None,
+    send_email: bool = True,
 ) -> bool:
     """Persist every visible tracking state and notify on a real transition.
 
     In particular, ``NUB absent`` is retained under the CNAPSV3 request ID so
     the later first annuaire result is a change, not a fresh baseline.
     """
+    statuses = data.setdefault("cnaps_public_annuaire_statuses", {})
+    if not isinstance(statuses, dict):
+        statuses = {}
+        data["cnaps_public_annuaire_statuses"] = statuses
+    # Trainee pages do not supply the request ID. Reuse the monitor identity
+    # instead of creating an independent baseline for the same person.
+    legacy = statuses.get(_cnaps_public_annuaire_status_key(last_name, nub))
+    if not tracking_id and isinstance(legacy, dict):
+        tracking_id = str(legacy.get("tracking_id") or "")
     monitor_key = _cnaps_tracking_monitor_key(
         tracking_id=tracking_id,
         first_name=first_name,
@@ -7246,11 +7318,6 @@ def _record_cnaps_tracking_state(
     )
     if not monitor_key:
         return False
-    statuses = data.setdefault("cnaps_public_annuaire_statuses", {})
-    if not isinstance(statuses, dict):
-        statuses = {}
-        data["cnaps_public_annuaire_statuses"] = statuses
-
     normalized_nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
     legacy_key = (
         _cnaps_public_annuaire_status_key(last_name, normalized_nub)
@@ -7275,6 +7342,8 @@ def _record_cnaps_tracking_state(
         "last_name": str(last_name or "").strip(),
         "nub": normalized_nub,
     }
+    if isinstance(result, dict):
+        base_entry["result"] = copy.deepcopy(result)
     if previous is None:
         current_entry = {**base_entry, "status_since": checked_at}
         statuses[monitor_key] = current_entry
@@ -7322,6 +7391,7 @@ def _record_cnaps_tracking_state(
         previous_status=_cnaps_tracking_state_display(previous),
         new_status=display_status,
         tracking_id=tracking_id,
+        send_email=send_email,
     )
 
 
@@ -7333,6 +7403,7 @@ def _record_cnaps_public_annuaire_status(
     nub: str,
     result: Dict[str, Any],
     tracking_id: str = "",
+    send_email: bool = True,
 ) -> bool:
     """Record a successful public-annuaire result and notify on a change."""
     return _record_cnaps_tracking_state(
@@ -7342,6 +7413,7 @@ def _record_cnaps_public_annuaire_status(
         nub=nub,
         tracking_id=tracking_id,
         result=result,
+        send_email=send_email,
     )
 
 
@@ -7355,9 +7427,11 @@ def run_cnaps_public_annuaire_monitor() -> Dict[str, Any]:
         step_started_at = time.monotonic()
         app.logger.info("[CNAPS_MONITOR] CANDIDATE_SELECTION_BEGIN")
         rows, fetch_error = fetch_cnapsv3_tracking_requests()
+        _deliver_pending_cnaps_notifications()
         if fetch_error:
             app.logger.warning("[CNAPS_MONITOR] CANDIDATE_SELECTION_ERROR duration_ms=%s error=%s", int((time.monotonic() - step_started_at) * 1000), fetch_error)
             return {"checked": 0, "notified": 0, "errors": 1, "status": "fetch_error", "error": str(fetch_error)[:160]}
+        rows = enrich_cnaps_tracking_rows_with_enrollment(rows, load_data())
         app.logger.info("[CNAPS_MONITOR] CANDIDATE_SELECTION_END duration_ms=%s candidates=%s", int((time.monotonic() - step_started_at) * 1000), len(rows))
 
         seen: Set[str] = set()
@@ -7411,11 +7485,13 @@ def run_cnaps_public_annuaire_monitor() -> Dict[str, Any]:
                         nub=nub,
                         tracking_id=tracking_id,
                         result=result,
+                        send_email=False,
                     ):
                         merged_notified += 1
                 return merged_notified
 
             notified = update_data(merge_cnaps_results, run_background_tasks=False)
+            _deliver_pending_cnaps_notifications()
             app.logger.info("[CNAPS_MONITOR] SAVE_END duration_ms=%s", int((time.monotonic() - save_started_at) * 1000))
         return {"checked": checked, "notified": notified, "errors": errors, "status": "done"}
     finally:
@@ -9681,6 +9757,29 @@ def _preserve_document_reminder_state(payload, canonical):
                 trainee["docs_last_relance_at"] = saved["docs_last_relance_at"]
 
 
+def _preserve_cnaps_tracking_state(payload, canonical):
+    """An unrelated stale form save must not erase checks or delivery receipts."""
+    for collection, timestamp_fields in (
+        ("cnaps_public_annuaire_statuses", ("checked_at",)),
+        ("cnaps_status_change_notifications", ("updated_at", "email_last_attempt_at", "reviewed_at", "sent_at", "created_at")),
+    ):
+        current = canonical.get(collection)
+        if not isinstance(current, dict):
+            continue
+        incoming = payload.get(collection)
+        if not isinstance(incoming, dict):
+            incoming = {}
+            payload[collection] = incoming
+        for key, saved in current.items():
+            if not isinstance(saved, dict):
+                continue
+            item = incoming.get(key)
+            saved_time = max(str(saved.get(field) or "") for field in timestamp_fields)
+            incoming_time = max(str(item.get(field) or "") for field in timestamp_fields) if isinstance(item, dict) else ""
+            if not isinstance(item, dict) or saved_time > incoming_time:
+                incoming[key] = copy.deepcopy(saved)
+
+
 def save_data(
     data: Dict[str, Any], *, preserve_qonto_oauth: bool = True, force_global: bool = False,
 ) -> None:
@@ -9738,6 +9837,7 @@ def save_data(
         if isinstance(canonical, dict):
             _preserve_aps_elearning_report_state(payload, canonical)
             _preserve_document_reminder_state(payload, canonical)
+            _preserve_cnaps_tracking_state(payload, canonical)
             if not scoped_partner_id and preserve_qonto_oauth and isinstance(canonical.get("qonto_oauth"), dict):
                 payload["qonto_oauth"] = canonical["qonto_oauth"]
             if not scoped_partner_id and isinstance(canonical.get("integrale_watch"), dict):
@@ -17527,6 +17627,13 @@ def admin_cnaps_tracking():
         status = annuaire_statuses.get(
             _cnaps_public_annuaire_status_key(str(row.get("last_name") or ""), nub)
         ) if isinstance(annuaire_statuses, dict) else None
+        if not status and isinstance(annuaire_statuses, dict):
+            status = annuaire_statuses.get(_cnaps_tracking_monitor_key(
+                tracking_id=row.get("tracking_id", ""), first_name=row.get("first_name", ""),
+                last_name=row.get("last_name", "")))
+        row["annuaire_result"] = _cnaps_saved_result(status)
+        row["annuaire_checked_at"] = status.get("checked_at", "") if isinstance(status, dict) else ""
+        row["annuaire_status_since"] = status.get("status_since", "") if isinstance(status, dict) else ""
         since = _daily_recap_date(status.get("status_since") or status.get("checked_at")) if isinstance(status, dict) else None
         row["taj_suspected"] = bool(
             status is not None and not status.get("known") and since and (today - since).days >= 10
@@ -17577,6 +17684,7 @@ def api_admin_cnaps_status_change_toggle_reviewed():
     else:
         notification.pop("reviewed_at", None)
         notification.pop("reviewed_reason", None)
+    notification["updated_at"] = _now_iso()
     save_data(data)
     return jsonify({
         "ok": True,
@@ -28134,12 +28242,14 @@ def api_cnaps_public_annuaire():
     notified = False
     data = None
     if result.get("check_status") == "success":
-        data = load_data()
-        notified = _record_cnaps_public_annuaire_status(
-            data, first_name=prenom, last_name=nom, nub=nub, result=result,
-            tracking_id=tracking_id,
-        )
-        save_data(data)
+        def record_result(latest):
+            changed = _record_cnaps_public_annuaire_status(
+                latest, first_name=prenom, last_name=nom, nub=nub, result=result,
+                tracking_id=tracking_id, send_email=False,
+            )
+            return changed, latest
+        notified, data = update_data(record_result, run_background_tasks=False)
+        _deliver_pending_cnaps_notifications()
 
     if result.get("check_status") == "error":
         return jsonify({"ok": False, "notification_sent": False, "pending_status_changes_count": None, **result}), 502
