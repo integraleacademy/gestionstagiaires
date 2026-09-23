@@ -168,3 +168,17 @@ def test_preview_does_not_send_and_fails_closed_when_brevo_is_unavailable(fixtur
     with pytest.raises(ValueError, match='HTTP 503'):
         recovery.make_plan(gestion)
     assert not calls and not data['cnaps_status_change_notifications']
+
+
+def test_brevo_history_respects_rate_limits_and_retries_read_only(monkeypatch):
+    sleeps, requests = [], []
+    responses = [SimpleNamespace(status_code=429, headers={'Retry-After': '3'}),
+                 SimpleNamespace(status_code=200, headers={}, json=lambda: {'transactionalEmails': []})]
+    def get(*args, **kwargs):
+        requests.append(args[0])
+        return responses.pop(0)
+    host = SimpleNamespace(BREVO_API_KEY='test', requests=SimpleNamespace(get=get))
+    monkeypatch.setattr(recovery.time, 'sleep', lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr(recovery, '_last_brevo_read', 0)
+    assert recovery._brevo_get(host, 'emails') == {'transactionalEmails': []}
+    assert len(requests) == 2 and 3 in sleeps

@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import re
 import threading
+import time
 import uuid
 
 from flask import abort, redirect, render_template, request, session, url_for
@@ -21,6 +22,8 @@ from backup_chronology import backup_chronology_key
 
 UNKNOWN_PREVIOUS = "Historique antérieur indisponible — notification de rattrapage ; date d’acceptation inconnue"
 _recovery_lock = threading.Lock()
+_brevo_read_lock = threading.Lock()
+_last_brevo_read = 0.0
 
 
 def _mapping(value):
@@ -101,10 +104,29 @@ def inspect_backups(host, candidates):
 
 
 def _brevo_get(host, path, params=None):
+    global _last_brevo_read
     if not host.BREVO_API_KEY:
         raise ValueError("La configuration Brevo est absente.")
-    response = host.requests.get("https://api.brevo.com/v3/smtp/" + path,
-        headers={"api-key": host.BREVO_API_KEY, "accept": "application/json"}, params=params, timeout=15)
+    for attempt in range(4):
+        with _brevo_read_lock:
+            # Brevo's email-history endpoints use a tighter quota than sends.
+            delay = max(0.0, 1.1 - (time.monotonic() - _last_brevo_read))
+            if delay:
+                time.sleep(delay)
+            try:
+                response = host.requests.get("https://api.brevo.com/v3/smtp/" + path,
+                    headers={"api-key": host.BREVO_API_KEY, "accept": "application/json"}, params=params, timeout=15)
+            finally:
+                _last_brevo_read = time.monotonic()
+        if response.status_code != 429 or attempt == 3:
+            break
+        try:
+            retry_after = float(response.headers.get("Retry-After", 2 ** (attempt + 1)))
+        except (ValueError, TypeError):
+            retry_after = 2 ** (attempt + 1)
+        if retry_after > 30:
+            raise ValueError("Brevo demande d’attendre avant de consulter l’historique. Réessayez plus tard ; aucun mail déclenché.")
+        time.sleep(max(2, retry_after))
     if response.status_code != 200:
         raise ValueError(f"Impossible de vérifier les traces Brevo (HTTP {response.status_code}). Aucun nouveau mail déclenché.")
     payload = response.json()
