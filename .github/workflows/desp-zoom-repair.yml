@@ -1,0 +1,36 @@
+name: DESP Zoom repair checks
+on:
+  push:
+    branches: [fix/desp-zoom-signed-download-20260925]
+    paths: [.github/workflows/desp-zoom-repair.yml, scripts/repair_desp_zoom.py, tests/test_desp_zoom_download_regression.py]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect attendance code (no production data)
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path('app.py').read_text()
+          lines = source.splitlines()
+          names = {'_desp_kickoff_attendance_state', '_desp_kickoff_attendance_view', '_refresh_yousign_desp_kickoff_status_if_pending', '_download_yousign_desp_kickoff_signed_pdf', '_finalize_yousign_desp_kickoff', 'admin_view_signed_desp_kickoff_attendance', '_is_yousign_signature_done', '_is_yousign_signature_pending', '_yousign_request', '_yousign_get_signature_request'}
+          for node in ast.parse(source).body:
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and (node.name in names or ('desp_kickoff' in node.name and 'build' not in node.name and 'create_yousign' not in node.name and 'send_yousign' not in node.name)):
+                  print('\n=== FUNCTION', node.name, 'LINES', node.lineno, node.end_lineno, '===')
+                  print('\n'.join(lines[node.lineno-1:node.end_lineno]))
+          template = Path('templates/admin_trainees.html').read_text().splitlines()
+          indexes = [i for i,line in enumerate(template) if 'desp_kickoff' in line or 'desp-kickoff' in line]
+          if indexes:
+              print('\n=== DESP TEMPLATE ===')
+              print('\n'.join(f'{i+1}: {line}' for i,line in enumerate(template) if min(indexes)-8 <= i <= max(indexes)+8))
+          print('\n=== TEST FILES ===')
+          for path in Path('tests').rglob('*.py'):
+              if 'desp_kickoff' in path.read_text():
+                  print(path)
+          print('\n=== REQUIREMENTS ===')
+          print(Path('requirements.txt').read_text())
+          PY
