@@ -24570,25 +24570,59 @@ def admin_send_desp_kickoff_attendance_yousign(session_id: str):
 @app.get("/admin/sessions/<session_id>/trainees/desp-kickoff-attendance/signed.pdf")
 @admin_login_required
 def admin_view_signed_desp_kickoff_attendance(session_id: str):
+    """Download the original Yousign PDF, including signatures already collected."""
     data = load_data()
     session_item = find_session(data, session_id)
     if not session_item or not _is_desp_initial_session(session_item):
         abort(404)
     state = _desp_kickoff_attendance_state(session_item)
-    signed_path = os.path.abspath(str(state.get("signed_pdf_path") or ""))
-    signed_root = os.path.abspath(YOUSIGN_DESP_KICKOFF_SIGNED_DIR)
-    if (
-        not signed_path
-        or not signed_path.startswith(signed_root + os.sep)
-        or not os.path.isfile(signed_path)
-    ):
+    signed_path = _desp_kickoff_signed_pdf_path(state)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if not request_id and not (_is_yousign_signature_done(state) and signed_path):
         abort(404)
-    return send_file(
-        signed_path,
-        mimetype="application/pdf",
-        as_attachment=False,
-        download_name=os.path.basename(signed_path),
-    )
+    try:
+        if not (_is_yousign_signature_done(state) and signed_path):
+            if not _yousign_is_configured():
+                raise RuntimeError("La connexion Yousign est indisponible.")
+            if _refresh_yousign_desp_kickoff_status_if_pending(session_item):
+                save_data(data)
+            state = _desp_kickoff_attendance_state(session_item)
+            signed_path = _desp_kickoff_signed_pdf_path(state)
+            if _is_yousign_signature_done(state) and not signed_path:
+                _mark_yousign_desp_kickoff_signed(session_item, request_id)
+                save_data(data)
+                signed_path = _desp_kickoff_signed_pdf_path(state)
+        if _is_yousign_signature_done(state) and signed_path:
+            document = signed_path
+            filename = os.path.basename(signed_path)
+        else:
+            # Never rebuild, annotate or merge a signed PDF: keep Yousign's bytes.
+            response = _yousign_request(
+                "GET",
+                f"/signature_requests/{request_id}/documents/download",
+                params={"version": "current", "archive": "false"},
+                headers={"Accept": "application/pdf"},
+            )
+            content = _desp_kickoff_pdf_response_content(response)
+            document = BytesIO(content)
+            filename = f"feuille_presence_zoom_desp_{_safe_filename_part(session_id)}_en_cours.pdf"
+        response = send_file(
+            document,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=filename,
+            max_age=0,
+        )
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        app.logger.warning(
+            "[DESP KICKOFF] document download failed session_id=%s error=%s",
+            session_id, message,
+        )
+        flash(f"Impossible de télécharger la présence Zoom : {message}", "error")
+        return redirect(url_for("admin_trainees", session_id=session_id))
 
 
 def _require_exam_dossier_session(data: Dict[str, Any], session_id: str, training: str = "A3P") -> Dict[str, Any]:
@@ -36799,22 +36833,51 @@ def _desp_kickoff_attendance_state(
     return {}
 
 
+def _desp_kickoff_signed_pdf_path(state: Dict[str, Any]) -> str:
+    """Only trust a real PDF inside the dedicated signed-document directory."""
+    raw = str(state.get("signed_pdf_path") or "").strip()
+    if not raw:
+        return ""
+    path = os.path.realpath(raw)
+    root = os.path.realpath(YOUSIGN_DESP_KICKOFF_SIGNED_DIR)
+    if not path.startswith(root + os.sep):
+        return ""
+    try:
+        if not os.path.isfile(path):
+            return ""
+        with open(path, "rb") as document:
+            return path if b"%PDF-" in document.read(1024) else ""
+    except OSError:
+        return ""
+
+
+def _desp_kickoff_pdf_response_content(response) -> bytes:
+    content = response.content
+    if not isinstance(content, bytes) or b"%PDF-" not in content[:1024]:
+        raise RuntimeError("Yousign n’a pas renvoyé de document PDF valide. Réessayez dans quelques instants.")
+    return content
+
+
 def _desp_kickoff_attendance_view(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     state = _desp_kickoff_attendance_state(session_obj)
     signers = state.get("signers") if isinstance(state.get("signers"), list) else []
     signed_count = sum(
         1 for signer in signers
-        if _normalize_yousign_status(signer.get("status")) in YOUSIGN_FINAL_STATUSES
+        if isinstance(signer, dict)
+        and _normalize_yousign_status(signer.get("status")) in YOUSIGN_FINAL_STATUSES
     )
     status = _normalize_yousign_status(state.get("status"))
+    has_signed_pdf = bool(_desp_kickoff_signed_pdf_path(state))
     return {
         "status": status,
         "is_pending": status in YOUSIGN_PENDING_STATUSES,
         "is_done": status in YOUSIGN_FINAL_STATUSES,
         "signed_count": signed_count,
         "signer_count": len(signers),
-        "last_error": str(state.get("last_error") or ""),
-        "has_signed_pdf": bool(state.get("signed_pdf_path")),
+        "last_error": str(state.get("last_error") or state.get("last_status_sync_error") or ""),
+        "has_signed_pdf": has_signed_pdf,
+        "can_download_pdf": bool(str(state.get("signature_request_id") or "").strip())
+        or (status in YOUSIGN_FINAL_STATUSES and has_signed_pdf),
     }
 
 
@@ -37341,21 +37404,29 @@ def _find_session_by_desp_kickoff_yousign_request_id(
 
 
 def _download_yousign_desp_kickoff_signed_pdf(signature_request_id: str, session_id: str) -> str:
+    import tempfile
+
     response = _yousign_request(
         "GET",
         f"/signature_requests/{signature_request_id}/documents/download",
         params={"version": "completed", "archive": "false"},
         headers={"Accept": "application/pdf"},
     )
+    content = _desp_kickoff_pdf_response_content(response)
     os.makedirs(YOUSIGN_DESP_KICKOFF_SIGNED_DIR, exist_ok=True)
     path = os.path.join(
         YOUSIGN_DESP_KICKOFF_SIGNED_DIR,
         f"feuille_presence_demarrage_desp_{_safe_filename_part(session_id)}_signee.pdf",
     )
-    with open(path, "wb") as signed_pdf:
-        signed_pdf.write(response.content)
-    if not os.path.isfile(path) or os.path.getsize(path) <= 0:
-        raise RuntimeError("Téléchargement de la feuille de présence DESP signée vide.")
+    temporary_path = ""
+    try:
+        with tempfile.NamedTemporaryFile(dir=YOUSIGN_DESP_KICKOFF_SIGNED_DIR, suffix=".tmp", delete=False) as document:
+            temporary_path = document.name
+            document.write(content)
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path and os.path.exists(temporary_path):
+            os.unlink(temporary_path)
     return path
 
 
@@ -37386,7 +37457,8 @@ def _mark_yousign_desp_kickoff_signed(
     event_id: str = "",
 ) -> None:
     state = _desp_kickoff_attendance_state(session_obj)
-    if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
+    already_done = _is_yousign_signature_done(state)
+    if already_done and _desp_kickoff_signed_pdf_path(state):
         return
     signed_path = _download_yousign_desp_kickoff_signed_pdf(
         request_id,
@@ -37401,6 +37473,8 @@ def _mark_yousign_desp_kickoff_signed(
         "last_event_id": event_id or state.get("last_event_id") or "",
         "updated_at": now,
     })
+    if already_done:
+        return
     signers = state.get("signers") if isinstance(state.get("signers"), list) else []
     trainees_by_id = {
         str(trainee.get("id") or ""): trainee
@@ -37424,7 +37498,9 @@ def _mark_yousign_desp_kickoff_signed(
 def _refresh_yousign_desp_kickoff_status_if_pending(session_obj: Dict[str, Any]) -> bool:
     state = _desp_kickoff_attendance_state(session_obj)
     request_id = str(state.get("signature_request_id") or "").strip()
-    if not request_id or not _is_yousign_signature_pending(state) or not _yousign_is_configured():
+    if not request_id or not _yousign_is_configured():
+        return False
+    if _is_yousign_signature_done(state) and _desp_kickoff_signed_pdf_path(state):
         return False
     try:
         signature_request = _yousign_json("GET", f"/signature_requests/{request_id}")
@@ -37432,8 +37508,7 @@ def _refresh_yousign_desp_kickoff_status_if_pending(session_obj: Dict[str, Any])
         state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
         app.logger.warning(
             "[DESP KICKOFF] Yousign status refresh failed request_id=%s error=%s",
-            request_id,
-            state["last_status_sync_error"],
+            request_id, state["last_status_sync_error"],
         )
         return False
     status = _yousign_signature_request_status(signature_request)
@@ -37441,12 +37516,33 @@ def _refresh_yousign_desp_kickoff_status_if_pending(session_obj: Dict[str, Any])
         return False
     if status in YOUSIGN_FINAL_STATUSES:
         _mark_yousign_desp_kickoff_signed(session_obj, request_id)
+        state.pop("last_status_sync_error", None)
         return True
+    changed = bool(state.pop("last_status_sync_error", None))
+    # Recover signer progress when a signer.done webhook was missed.
+    remote_signers = signature_request.get("signers") if isinstance(signature_request, dict) else None
+    local_signers = state.get("signers")
+    if isinstance(remote_signers, list) and isinstance(local_signers, list):
+        statuses = {
+            str(signer.get("id") or ""): _normalize_yousign_status(signer.get("status"))
+            for signer in remote_signers if isinstance(signer, dict)
+        }
+        for signer in local_signers:
+            if not isinstance(signer, dict):
+                continue
+            remote_status = statuses.get(str(signer.get("signer_id") or ""))
+            if remote_status and remote_status != _normalize_yousign_status(signer.get("status")):
+                # Never downgrade a signature already confirmed by a webhook.
+                if _normalize_yousign_status(signer.get("status")) not in YOUSIGN_FINAL_STATUSES:
+                    signer["status"] = remote_status
+                    changed = True
     if status != _normalize_yousign_status(state.get("status")):
         state["status"] = status
+        state["last_error"] = ""
+        changed = True
+    if changed:
         state["updated_at"] = _now_iso()
-        return True
-    return False
+    return changed
 
 
 APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS = 5 * 60
