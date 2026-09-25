@@ -132,3 +132,9 @@ Ces éléments doivent être inclus dans la politique de sauvegarde du disque pe
 - choix unique, choix multiple, affirmations, associations et texte à trous.
 
 L’importeur n’exécute aucun JavaScript contenu dans le ZIP. Il retire scripts, gestionnaires d’événements, styles injectés et médias externes. Seuls les exports Easygenerator manuels contenant `content/data.js` sont convertibles; les petits ZIP dynamiques qui chargent le cours depuis Easygenerator sont volontairement refusés.
+
+## Vidéos dans chaque séquence APS
+
+Les deux versions APS relues disposent de 17 vidéos Academy obligatoires : 8 pour le cadre légal, 9 pour le cadre pénal. Chaque vidéo apparaît dans la troisième activité de contenu, avant la question de sa séquence. L'aperçu administrateur reste libre ; le parcours stagiaire impose le visionnage intégral de chaque vidéo et conserve la progression côté serveur. Le catalogue et la navigation signalent les vidéos.
+
+Le manifeste `elearning_native/video_series.json` complète la première capsule déjà intégrée. Chaque association est liée à un cours, une version et une activité. Les sources de production et les références pédagogiques figurent dans `scripts/academy_videos/`.

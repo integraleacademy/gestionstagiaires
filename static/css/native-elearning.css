@@ -78,3 +78,5 @@ a{color:inherit}
 .native-video-followup.is-complete{background:#f0fdf4;border-color:#bbf7d0}
 .native-video-followup.is-complete [data-video-status]{color:#166534}
 .native-video-followup.is-complete .native-video-progress i{background:#16a34a}
+
+.native-nav-video{display:block;margin-top:4px;font-size:10px;font-weight:700;color:#6366f1;line-height:1.3}.is-locked .native-nav-video{color:#64748b}

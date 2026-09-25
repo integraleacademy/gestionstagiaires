@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260920-video') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
 </head>
 <body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
@@ -93,9 +93,9 @@
               {% for item in nav_section.activities %}
                 <li class="{% if item.current %}is-current{% endif %} {% if item.completed %}is-complete{% endif %} {% if item.locked %}is-locked{% endif %}">
                   {% if item.locked %}
-                    <span><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}</b><em>Verrouillé</em></span>
+                    <span><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}{% if item.has_video %}<small class="native-nav-video">Vidéo obligatoire</small>{% endif %}</b><em>Verrouillé</em></span>
                   {% else %}
-                    <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}</b></a>
+                    <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}{% if item.has_video %}<small class="native-nav-video">Vidéo obligatoire</small>{% endif %}</b></a>
                   {% endif %}
                 </li>
               {% endfor %}
