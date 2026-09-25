@@ -8,15 +8,14 @@
     "course_id": "eg-3c985ae8a9fe4dd6a5842605f952cb39",
     "course_version": "20260907-141439-975",
     "activity_id": "26f19a3410434b6b927efe3f2ebf22a3",
-    "id": "aps-m1-s02-20260925",
+    "id": "aps-m1-s02-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Un métier.\nUn cadre légal.",
         "lines": [
-          "Le Livre six du Code de la sécurité intérieure encadre les activités privées de sécurité.",
-          "Il donne les repères pour savoir qui peut exercer et dans quelles conditions."
+          "Le Livre six du Code de la sécurité intérieure encadre les activités privées de sécurité. Il donne les repères pour savoir qui peut exercer et dans quelles conditions."
         ]
       },
       {
@@ -30,8 +29,7 @@
         ],
         "lines": [
           "Il définit les activités réglementées, les conditions applicables aux professionnels, puis les obligations et les contrôles.",
-          "Le CNAPS délivre des autorisations et contrôle la profession.",
-          "L’employeur organise la mission, sans pouvoir vous donner des pouvoirs de police."
+          "Le CNAPS délivre des autorisations et contrôle la profession. L’employeur organise la mission, sans pouvoir vous donner des pouvoirs de police."
         ]
       },
       {
@@ -43,11 +41,9 @@
           "B · Non, la loi reste la limite."
         ],
         "lines": [
-          "Votre responsable vous remet une consigne écrite qui demande un acte illégal.",
-          "Devez-vous l’appliquer ?",
-          "Prenez quelques secondes."
+          "Votre responsable vous remet une consigne écrite qui demande un acte illégal. Devez-vous l’appliquer ? Prenez quelques secondes."
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -59,8 +55,7 @@
           "Refuser un acte illégal"
         ],
         "lines": [
-          "La réponse B.",
-          "Une consigne ne rend pas un acte illégal autorisé.",
+          "La réponse B. Une consigne ne rend pas un acte illégal autorisé.",
           "Demandez une clarification, refusez l’acte manifestement illégal et rendez compte par les voies prévues."
         ]
       },
@@ -71,16 +66,8 @@
         "lines": [
           "Votre méthode : identifier la mission, vérifier le cadre, puis agir dans les limites de la loi."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 1,
@@ -91,15 +78,14 @@
     "course_id": "eg-3c985ae8a9fe4dd6a5842605f952cb39",
     "course_version": "20260907-141439-975",
     "activity_id": "81631e2b7b2a4da69fb22bb575011a68",
-    "id": "aps-m1-s03-20260925",
+    "id": "aps-m1-s03-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Se former.\nPuis exercer.",
         "lines": [
-          "Entrer en formation et exercer une activité de sécurité privée sont deux étapes différentes.",
-          "Ne confondez pas leurs justificatifs."
+          "Entrer en formation et exercer une activité de sécurité privée sont deux étapes différentes. Ne confondez pas leurs justificatifs."
         ]
       },
       {
@@ -113,8 +99,7 @@
         ],
         "lines": [
           "Avant la formation, une autorisation du CNAPS est en principe nécessaire, sauf situation prévue par les textes.",
-          "L’aptitude professionnelle et la moralité sont examinées.",
-          "Pour exercer, la carte professionnelle doit être valide et correspondre à l’activité."
+          "L’aptitude professionnelle et la moralité sont examinées. Pour exercer, la carte professionnelle doit être valide et correspondre à l’activité."
         ]
       },
       {
@@ -126,11 +111,9 @@
           "B · Il faut vérifier le droit d’exercer."
         ],
         "lines": [
-          "Vous venez d’obtenir votre diplôme.",
-          "Une entreprise propose une mission dès demain, mais votre carte n’est pas encore délivrée.",
-          "Pouvez-vous commencer ?"
+          "Vous venez d’obtenir votre diplôme. Une entreprise propose une mission dès demain, mais votre carte n’est pas encore délivrée. Pouvez-vous commencer ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -142,10 +125,8 @@
           "Anticiper le renouvellement"
         ],
         "lines": [
-          "La réponse B.",
-          "Le diplôme ne remplace pas la carte professionnelle requise pour le poste.",
-          "Vérifiez votre situation avec l’employeur et le CNAPS.",
-          "Une autorisation provisoire destinée à la formation ne permet pas d’être affecté à une mission réglementée."
+          "La réponse B. Le diplôme ne remplace pas la carte professionnelle requise pour le poste.",
+          "Vérifiez votre situation avec l’employeur et le CNAPS. Une autorisation provisoire destinée à la formation ne permet pas d’être affecté à une mission réglementée."
         ]
       },
       {
@@ -155,16 +136,8 @@
         "lines": [
           "Retenez trois étapes : se former, obtenir le droit d’exercer, puis vérifier sa validité avant l’affectation."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 1,
@@ -175,15 +148,14 @@
     "course_id": "eg-3c985ae8a9fe4dd6a5842605f952cb39",
     "course_version": "20260907-141439-975",
     "activity_id": "badc6fe7b6b645888970e478dcd3260e",
-    "id": "aps-m1-s04-20260925",
+    "id": "aps-m1-s04-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Une mission\nbien délimitée.",
         "lines": [
-          "Une prestation de sécurité doit rester dans son périmètre.",
-          "La facilité du moment ne justifie pas de mélanger les fonctions."
+          "Une prestation de sécurité doit rester dans son périmètre. La facilité du moment ne justifie pas de mélanger les fonctions."
         ]
       },
       {
@@ -197,8 +169,7 @@
         ],
         "lines": [
           "Le principe d’exclusivité encadre les activités des entreprises de sécurité.",
-          "Un service interne protège sa propre entreprise et bénéficie de règles particulières.",
-          "Cela ne supprime ni les obligations des agents ni les titres requis."
+          "Un service interne protège sa propre entreprise et bénéficie de règles particulières. Cela ne supprime ni les obligations des agents ni les titres requis."
         ]
       },
       {
@@ -210,11 +181,9 @@
           "B · Partir immédiatement."
         ],
         "lines": [
-          "Vous surveillez un accès.",
-          "Le client vous demande d’abandonner ce poste pour tenir une caisse.",
-          "Quel réflexe choisissez-vous ?"
+          "Vous surveillez un accès. Le client vous demande d’abandonner ce poste pour tenir une caisse. Quel réflexe choisissez-vous ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -226,10 +195,8 @@
           "Organiser une solution conforme"
         ],
         "lines": [
-          "La réponse A.",
-          "Expliquez que le poste doit rester assuré et contactez votre responsable.",
-          "Il faut vérifier le cadre de la mission, le statut du service et organiser une solution conforme.",
-          "Une demande du client ne suffit pas à modifier toutes vos obligations."
+          "La réponse A. Expliquez que le poste doit rester assuré et contactez votre responsable.",
+          "Il faut vérifier le cadre de la mission, le statut du service et organiser une solution conforme. Une demande du client ne suffit pas à modifier toutes vos obligations."
         ]
       },
       {
@@ -239,16 +206,8 @@
         "lines": [
           "Avant de changer de tâche : vérifiez votre mission, maintenez la sécurité du poste et faites clarifier la demande."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 1,
@@ -259,15 +218,14 @@
     "course_id": "eg-3c985ae8a9fe4dd6a5842605f952cb39",
     "course_version": "20260907-141439-975",
     "activity_id": "a806d94c32c24e998c163cbecd8b495d",
-    "id": "aps-m1-s05-20260925",
+    "id": "aps-m1-s05-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Des faits.\nPas des préjugés.",
         "lines": [
-          "Une décision de sécurité doit pouvoir s’expliquer par des faits.",
-          "Votre sympathie, vos opinions et les préjugés ne sont pas des critères professionnels."
+          "Une décision de sécurité doit pouvoir s’expliquer par des faits. Votre sympathie, vos opinions et les préjugés ne sont pas des critères professionnels."
         ]
       },
       {
@@ -281,8 +239,7 @@
         ],
         "lines": [
           "Appuyez-vous sur l’autorisation d’accès, la consigne applicable et les risques constatés.",
-          "Parlez calmement.",
-          "Respectez la dignité de chacun et écartez les critères discriminatoires."
+          "Parlez calmement. Respectez la dignité de chacun et écartez les critères discriminatoires."
         ]
       },
       {
@@ -294,11 +251,9 @@
           "B · Vous vérifiez les autorisations des deux."
         ],
         "lines": [
-          "Deux visiteurs arrivent sans badge.",
-          "Vous connaissez personnellement l’un d’eux.",
-          "Lequel de ces comportements respecte la neutralité ?"
+          "Deux visiteurs arrivent sans badge. Vous connaissez personnellement l’un d’eux. Lequel de ces comportements respecte la neutralité ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -311,8 +266,7 @@
         ],
         "lines": [
           "La réponse B : vérifiez les autorisations des deux personnes selon les mêmes critères.",
-          "Le résultat peut différer si leurs autorisations sont différentes.",
-          "Ce sont les éléments objectifs qui justifient votre décision, jamais une préférence personnelle."
+          "Le résultat peut différer si leurs autorisations sont différentes. Ce sont les éléments objectifs qui justifient votre décision, jamais une préférence personnelle."
         ]
       },
       {
@@ -322,16 +276,8 @@
         "lines": [
           "La bonne posture : observer les faits, expliquer la règle et respecter chaque personne."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 1,
@@ -342,7 +288,7 @@
     "course_id": "eg-3c985ae8a9fe4dd6a5842605f952cb39",
     "course_version": "20260907-141439-975",
     "activity_id": "a5fc0e4341764b6ca0a11fbce0959f44",
-    "id": "aps-m1-s06-20260925",
+    "id": "aps-m1-s06-20260923",
     "scenes": [
       {
         "kind": "hero",
@@ -375,10 +321,9 @@
           "B · Le conserver pour impressionner."
         ],
         "lines": [
-          "On vous propose un écusson ressemblant à celui de la police, sous prétexte d’être plus dissuasif.",
-          "Que faites-vous ?"
+          "On vous propose un écusson ressemblant à celui de la police, sous prétexte d’être plus dissuasif. Que faites-vous ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -390,10 +335,8 @@
           "Se présenter comme agent de sécurité"
         ],
         "lines": [
-          "La réponse A.",
-          "Faites corriger cet élément et utilisez une présentation conforme.",
-          "Au contact du public, annoncez votre fonction réelle.",
-          "Votre uniforme vous identifie ; il ne vous attribue aucun pouvoir de police."
+          "La réponse A. Faites corriger cet élément et utilisez une présentation conforme.",
+          "Au contact du public, annoncez votre fonction réelle. Votre uniforme vous identifie ; il ne vous attribue aucun pouvoir de police."
         ]
       },
       {
@@ -403,16 +346,8 @@
         "lines": [
           "Avant la prise de poste, vérifiez la tenue, la visibilité de l’identification et l’absence de confusion avec un service public."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 1,
@@ -423,7 +358,7 @@
     "course_id": "eg-3c985ae8a9fe4dd6a5842605f952cb39",
     "course_version": "20260907-141439-975",
     "activity_id": "ebd29f2a2a95401880ad611c8c5bb1cb",
-    "id": "aps-m1-s07-20260925",
+    "id": "aps-m1-s07-20260923",
     "scenes": [
       {
         "kind": "hero",
@@ -444,8 +379,7 @@
         ],
         "lines": [
           "Le cadre dépend de l’activité, de la catégorie d’arme et des autorisations requises.",
-          "Il impose des compétences adaptées et des règles de stockage, de transport, de port et de traçabilité.",
-          "Une autorisation de port n’autorise pas tout usage."
+          "Il impose des compétences adaptées et des règles de stockage, de transport, de port et de traçabilité. Une autorisation de port n’autorise pas tout usage."
         ]
       },
       {
@@ -457,11 +391,9 @@
           "B · Vous signalez le risque au responsable."
         ],
         "lines": [
-          "Une ronde vous inquiète.",
-          "Vous envisagez d’emporter une arme personnelle pour vous rassurer.",
-          "Quel est le bon réflexe ?"
+          "Une ronde vous inquiète. Vous envisagez d’emporter une arme personnelle pour vous rassurer. Quel est le bon réflexe ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -473,10 +405,8 @@
           "Respecter le cadre autorisé"
         ],
         "lines": [
-          "La réponse B.",
-          "Signalez le risque et faites adapter l’organisation de la mission.",
-          "N’improvisez aucun armement.",
-          "L’usage éventuel d’une arme reste soumis à des conditions légales strictes et engage votre responsabilité."
+          "La réponse B. Signalez le risque et faites adapter l’organisation de la mission.",
+          "N’improvisez aucun armement. L’usage éventuel d’une arme reste soumis à des conditions légales strictes et engage votre responsabilité."
         ]
       },
       {
@@ -486,16 +416,8 @@
         "lines": [
           "Retenez : une mission préparée, un cadre autorisé et aucune initiative personnelle d’armement."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 1,
@@ -506,15 +428,14 @@
     "course_id": "eg-3c985ae8a9fe4dd6a5842605f952cb39",
     "course_version": "20260907-141439-975",
     "activity_id": "f490ccc7460845ca8d18ae51fa06f486",
-    "id": "aps-m1-s08-20260925",
+    "id": "aps-m1-s08-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Être conforme.\nRendre compte.",
         "lines": [
-          "Le contrôle de la profession ne porte pas seulement sur les documents.",
-          "Les pratiques sur le terrain doivent aussi respecter les règles."
+          "Le contrôle de la profession ne porte pas seulement sur les documents. Les pratiques sur le terrain doivent aussi respecter les règles."
         ]
       },
       {
@@ -528,8 +449,7 @@
         ],
         "lines": [
           "Le CNAPS contrôle les professionnels et peut engager des procédures disciplinaires.",
-          "Un même fait peut aussi relever de la justice pénale.",
-          "Les responsabilités dépendent des actes commis et des textes applicables."
+          "Un même fait peut aussi relever de la justice pénale. Les responsabilités dépendent des actes commis et des textes applicables."
         ]
       },
       {
@@ -541,10 +461,9 @@
           "B · Effacer puisque le responsable demande."
         ],
         "lines": [
-          "Après un incident, un responsable vous demande d’effacer les faits gênants de la main courante.",
-          "Quelle conduite choisissez-vous ?"
+          "Après un incident, un responsable vous demande d’effacer les faits gênants de la main courante. Quelle conduite choisissez-vous ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -556,10 +475,8 @@
           "Corriger sans falsifier"
         ],
         "lines": [
-          "La réponse A.",
-          "Refusez de falsifier le rapport et signalez la demande par la voie appropriée.",
-          "Une correction doit rester identifiable et fidèle aux faits.",
-          "Conservez une trace professionnelle de ce que vous avez observé et réalisé."
+          "La réponse A. Refusez de falsifier le rapport et signalez la demande par la voie appropriée.",
+          "Une correction doit rester identifiable et fidèle aux faits. Conservez une trace professionnelle de ce que vous avez observé et réalisé."
         ]
       },
       {
@@ -569,16 +486,8 @@
         "lines": [
           "Des titres valides, une pratique conforme et un compte rendu sincère : trois repères essentiels pour exercer."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -589,15 +498,14 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "a985f03207de497b86e72ef18de1b78f",
-    "id": "aps-m2-s01-20260925",
+    "id": "aps-m2-s01-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Comprendre les faits.\nRépondre de ses actes.",
         "lines": [
-          "Une infraction est un comportement interdit par un texte pénal.",
-          "Les contraventions, les délits et les crimes sont les trois catégories à connaître."
+          "Une infraction est un comportement interdit par un texte pénal. Les contraventions, les délits et les crimes sont les trois catégories à connaître."
         ]
       },
       {
@@ -611,8 +519,7 @@
         ],
         "lines": [
           "La qualification dépend des textes et des circonstances, pas seulement de votre impression de gravité.",
-          "Chacun répond de ses propres actes.",
-          "L’intention compte, mais une imprudence peut aussi engager une responsabilité lorsque la loi le prévoit."
+          "Chacun répond de ses propres actes. L’intention compte, mais une imprudence peut aussi engager une responsabilité lorsque la loi le prévoit."
         ]
       },
       {
@@ -624,10 +531,9 @@
           "B · Vous relatez précisément les faits."
         ],
         "lines": [
-          "Après une erreur ayant causé un dommage, un collègue vous propose de modifier le récit pour protéger l’équipe.",
-          "Que faites-vous ?"
+          "Après une erreur ayant causé un dommage, un collègue vous propose de modifier le récit pour protéger l’équipe. Que faites-vous ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -639,8 +545,7 @@
           "Transmettre sans dissimuler"
         ],
         "lines": [
-          "La réponse B.",
-          "Décrivez précisément les faits, sans les cacher ni accuser sans preuve.",
+          "La réponse B. Décrivez précisément les faits, sans les cacher ni accuser sans preuve.",
           "Signalez ce que vous savez, distinguez ce que vous avez vu de ce qu’on vous a rapporté et suivez la procédure."
         ]
       },
@@ -651,16 +556,8 @@
         "lines": [
           "L’ordre d’un collègue ou d’un responsable n’efface pas votre responsabilité personnelle."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -671,15 +568,14 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "235208a20ceb48a2a77efc049fff9c79",
-    "id": "aps-m2-s02-20260925",
+    "id": "aps-m2-s02-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Se protéger.\nSans punir.",
         "lines": [
-          "La légitime défense vise à protéger une personne contre une atteinte injustifiée.",
-          "Elle ne donne pas le droit de punir l’agresseur."
+          "La légitime défense vise à protéger une personne contre une atteinte injustifiée. Elle ne donne pas le droit de punir l’agresseur."
         ]
       },
       {
@@ -705,10 +601,9 @@
           "B · Vous cessez la riposte et alertez."
         ],
         "lines": [
-          "L’agression vient de cesser et la personne s’éloigne.",
-          "Pouvez-vous la poursuivre pour lui donner une leçon ?"
+          "L’agression vient de cesser et la personne s’éloigne. Pouvez-vous la poursuivre pour lui donner une leçon ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -720,8 +615,7 @@
           "Alerter et rendre compte"
         ],
         "lines": [
-          "La réponse B.",
-          "Une riposte punitive après la fin de l’attaque n’est pas de la légitime défense.",
+          "La réponse B. Une riposte punitive après la fin de l’attaque n’est pas de la légitime défense.",
           "Mettez-vous en sécurité, alertez les services compétents et rendez compte des faits."
         ]
       },
@@ -732,16 +626,8 @@
         "lines": [
           "Retenez les trois critères ensemble : une réaction nécessaire, simultanée et proportionnée."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -752,7 +638,7 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "a415e5c40abf46cabd1d8cc2165f1b43",
-    "id": "aps-m2-s03-20260925",
+    "id": "aps-m2-s03-20260923",
     "scenes": [
       {
         "kind": "hero",
@@ -772,10 +658,8 @@
           "Des moyens proportionnés"
         ],
         "lines": [
-          "Le danger doit être réel et proche.",
-          "L’acte doit être nécessaire à la sauvegarde.",
-          "Les moyens employés ne doivent pas être disproportionnés par rapport à la menace.",
-          "Une simple commodité ne suffit pas."
+          "Le danger doit être réel et proche. L’acte doit être nécessaire à la sauvegarde.",
+          "Les moyens employés ne doivent pas être disproportionnés par rapport à la menace. Une simple commodité ne suffit pas."
         ]
       },
       {
@@ -787,10 +671,9 @@
           "B · Toute action devient automatiquement permise."
         ],
         "lines": [
-          "Une personne est menacée par un danger immédiat.",
-          "Avant une action dommageable, faut-il rechercher une solution utile, plus sûre et moins dommageable ?"
+          "Une personne est menacée par un danger immédiat. Avant une action dommageable, faut-il rechercher une solution utile, plus sûre et moins dommageable ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -802,8 +685,7 @@
           "Alerter et expliquer les faits"
         ],
         "lines": [
-          "La réponse A.",
-          "L’urgence ne rend pas automatiquement tous les moyens autorisés.",
+          "La réponse A. L’urgence ne rend pas automatiquement tous les moyens autorisés.",
           "Choisissez une action adaptée, sans exposition inutile, alertez les secours et décrivez ensuite le danger et les raisons de votre décision."
         ]
       },
@@ -814,16 +696,8 @@
         "lines": [
           "Trois questions : quel danger, pourquoi cet acte, et les moyens étaient-ils proportionnés ?"
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -834,15 +708,14 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "b07de7357d51449ab546b6ff4ce26831",
-    "id": "aps-m2-s04-20260925",
+    "id": "aps-m2-s04-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Protéger.\nRespecter les droits.",
         "lines": [
-          "Toute personne conserve ses droits, même lorsqu’elle est soupçonnée d’une infraction.",
-          "Votre mission n’autorise ni humiliation ni violence injustifiée."
+          "Toute personne conserve ses droits, même lorsqu’elle est soupçonnée d’une infraction. Votre mission n’autorise ni humiliation ni violence injustifiée."
         ]
       },
       {
@@ -855,10 +728,8 @@
           "La liberté d’aller et venir"
         ],
         "lines": [
-          "Protégez l’intégrité physique et la dignité.",
-          "N’entravez pas l’accès aux secours.",
-          "Une restriction de liberté exige un fondement légal précis.",
-          "Une consigne interne ne crée pas un pouvoir général de retenir quelqu’un."
+          "Protégez l’intégrité physique et la dignité. N’entravez pas l’accès aux secours.",
+          "Une restriction de liberté exige un fondement légal précis. Une consigne interne ne crée pas un pouvoir général de retenir quelqu’un."
         ]
       },
       {
@@ -870,11 +741,9 @@
           "B · Non, cette raison ne le permet pas."
         ],
         "lines": [
-          "Un visiteur souhaite repartir.",
-          "Vous voulez l’enfermer dans un bureau pour obtenir son identité et terminer votre rapport.",
-          "Est-ce permis pour cette seule raison ?"
+          "Un visiteur souhaite repartir. Vous voulez l’enfermer dans un bureau pour obtenir son identité et terminer votre rapport. Est-ce permis pour cette seule raison ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -886,10 +755,8 @@
           "Contacter les autorités si nécessaire"
         ],
         "lines": [
-          "La réponse B.",
-          "La facilité administrative ne justifie pas une privation de liberté.",
-          "Expliquez la situation et contactez les autorités compétentes si nécessaire.",
-          "Toute mesure de contrainte doit avoir un fondement légal et rester dans ses limites."
+          "La réponse B. La facilité administrative ne justifie pas une privation de liberté.",
+          "Expliquez la situation et contactez les autorités compétentes si nécessaire. Toute mesure de contrainte doit avoir un fondement légal et rester dans ses limites."
         ]
       },
       {
@@ -899,16 +766,8 @@
         "lines": [
           "Une intervention professionnelle protège la sécurité tout en respectant les droits des personnes."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -919,7 +778,7 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "99bd16d7d331411aa5ccf3a92fb2da10",
-    "id": "aps-m2-s05-20260925",
+    "id": "aps-m2-s05-20260923",
     "scenes": [
       {
         "kind": "hero",
@@ -940,8 +799,7 @@
         ],
         "lines": [
           "L’aide peut consister à agir personnellement ou à provoquer un secours.",
-          "Il faut aussi prévenir, lorsque c’est possible sans risque, un crime ou un délit contre l’intégrité corporelle.",
-          "Votre sécurité et celle des tiers restent essentielles."
+          "Il faut aussi prévenir, lorsque c’est possible sans risque, un crime ou un délit contre l’intégrité corporelle. Votre sécurité et celle des tiers restent essentielles."
         ]
       },
       {
@@ -953,10 +811,9 @@
           "B · Rédiger d’abord la main courante."
         ],
         "lines": [
-          "Une personne s’effondre près d’une zone dangereuse.",
-          "Commencez-vous par rédiger la main courante ou par évaluer la situation et déclencher l’aide ?"
+          "Une personne s’effondre près d’une zone dangereuse. Commencez-vous par rédiger la main courante ou par évaluer la situation et déclencher l’aide ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -968,10 +825,8 @@
           "Guider les secours"
         ],
         "lines": [
-          "La réponse A.",
-          "Évaluez le danger, protégez si possible et alertez les secours.",
-          "Donnez le lieu exact, la situation observée et les risques présents.",
-          "Suivez leurs instructions et réalisez seulement les gestes adaptés que vous maîtrisez."
+          "La réponse A. Évaluez le danger, protégez si possible et alertez les secours.",
+          "Donnez le lieu exact, la situation observée et les risques présents. Suivez leurs instructions et réalisez seulement les gestes adaptés que vous maîtrisez."
         ]
       },
       {
@@ -979,19 +834,10 @@
         "label": "À RETENIR",
         "headline": "Protéger.\nAlerter.\nAssister selon sa formation.",
         "lines": [
-          "Le compte rendu vient après l’action urgente.",
-          "Il ne remplace jamais une assistance possible."
+          "Le compte rendu vient après l’action urgente. Il ne remplace jamais une assistance possible."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -1002,7 +848,7 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "d263d7079c59410ba91becf1239ec2ed",
-    "id": "aps-m2-s06-20260925",
+    "id": "aps-m2-s06-20260923",
     "scenes": [
       {
         "kind": "hero",
@@ -1035,10 +881,9 @@
           "B · Vous corrigez la confusion."
         ],
         "lines": [
-          "Un collègue annonce à un visiteur : vous êtes en garde à vue.",
-          "Quelle est votre réaction professionnelle ?"
+          "Un collègue annonce à un visiteur : vous êtes en garde à vue. Quelle est votre réaction professionnelle ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -1050,11 +895,8 @@
           "Appeler les autorités si nécessaire"
         ],
         "lines": [
-          "La réponse B.",
-          "Corrigez la confusion et rappelez votre rôle réel.",
-          "Présentez-vous comme agent de sécurité du site.",
-          "Expliquez la règle applicable et appelez les forces de l’ordre si la situation le nécessite.",
-          "Ne prétendez pas exercer leurs pouvoirs."
+          "La réponse B. Corrigez la confusion et rappelez votre rôle réel.",
+          "Présentez-vous comme agent de sécurité du site. Expliquez la règle applicable et appelez les forces de l’ordre si la situation le nécessite. Ne prétendez pas exercer leurs pouvoirs."
         ]
       },
       {
@@ -1064,16 +906,8 @@
         "lines": [
           "Une présentation claire protège le public, votre entreprise et votre responsabilité."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -1084,15 +918,14 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "c56dd505675e463d9d437023d4bc93c3",
-    "id": "aps-m2-s07-20260925",
+    "id": "aps-m2-s07-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Trouvé ne veut pas dire\nà vous.",
         "lines": [
-          "Le vol est la soustraction frauduleuse du bien d’autrui.",
-          "Un objet trouvé ou laissé sans surveillance ne devient pas automatiquement votre propriété."
+          "Le vol est la soustraction frauduleuse du bien d’autrui. Un objet trouvé ou laissé sans surveillance ne devient pas automatiquement votre propriété."
         ]
       },
       {
@@ -1106,8 +939,7 @@
         ],
         "lines": [
           "Ne gardez pas un bien pour vous et ne détournez pas un objet qui vous a été confié.",
-          "Les qualifications pénales dépendent des faits.",
-          "Une faible valeur ou une habitude du service ne suffit pas à rendre l’appropriation licite."
+          "Les qualifications pénales dépendent des faits. Une faible valeur ou une habitude du service ne suffit pas à rendre l’appropriation licite."
         ]
       },
       {
@@ -1119,11 +951,9 @@
           "B · Vous le gardez à la fin du service."
         ],
         "lines": [
-          "Vous trouvez un portefeuille pendant une ronde.",
-          "À la fin du service, personne ne l’a réclamé.",
-          "Que faites-vous ?"
+          "Vous trouvez un portefeuille pendant une ronde. À la fin du service, personne ne l’a réclamé. Que faites-vous ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -1135,10 +965,8 @@
           "Remettre au service désigné"
         ],
         "lines": [
-          "La réponse A.",
-          "Appliquez la procédure des objets trouvés.",
-          "Sécurisez le bien, notez le lieu et l’heure de découverte, puis remettez-le au service désigné avec une trace.",
-          "Ne l’utilisez pas et ne prélevez rien."
+          "La réponse A. Appliquez la procédure des objets trouvés.",
+          "Sécurisez le bien, notez le lieu et l’heure de découverte, puis remettez-le au service désigné avec une trace. Ne l’utilisez pas et ne prélevez rien."
         ]
       },
       {
@@ -1148,16 +976,8 @@
         "lines": [
           "La bonne conduite protège le bien, son propriétaire et la traçabilité de votre intervention."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -1168,7 +988,7 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "49ffc9d1eb7e494e88ee283a29ecee76",
-    "id": "aps-m2-s08-20260925",
+    "id": "aps-m2-s08-20260923",
     "scenes": [
       {
         "kind": "hero",
@@ -1189,8 +1009,7 @@
         ],
         "lines": [
           "Utilisez votre propre compte, dans les limites de votre mission, sans partager votre mot de passe.",
-          "Un accès frauduleux, une entrave au système ou une modification frauduleuse de données peuvent constituer des infractions.",
-          "Ne cherchez jamais à contourner une restriction."
+          "Un accès frauduleux, une entrave au système ou une modification frauduleuse de données peuvent constituer des infractions. Ne cherchez jamais à contourner une restriction."
         ]
       },
       {
@@ -1202,10 +1021,9 @@
           "B · Vous signalez sans la connecter."
         ],
         "lines": [
-          "Une clé USB inconnue est retrouvée au poste.",
-          "Faut-il la brancher pour rechercher son propriétaire ?"
+          "Une clé USB inconnue est retrouvée au poste. Faut-il la brancher pour rechercher son propriétaire ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -1217,11 +1035,8 @@
           "Conserver les éléments utiles"
         ],
         "lines": [
-          "La réponse B.",
-          "Ne la connectez pas.",
-          "Prévenez le service compétent et suivez la procédure.",
-          "En cas d’incident, notez les faits et l’heure.",
-          "Ne supprimez pas les traces et ne lancez pas votre propre enquête informatique."
+          "La réponse B. Ne la connectez pas. Prévenez le service compétent et suivez la procédure.",
+          "En cas d’incident, notez les faits et l’heure. Ne supprimez pas les traces et ne lancez pas votre propre enquête informatique."
         ]
       },
       {
@@ -1231,16 +1046,8 @@
         "lines": [
           "Restez dans votre rôle : protéger, préserver et signaler."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   },
   {
     "module": 2,
@@ -1251,15 +1058,14 @@
     "course_id": "eg-ed951da2ca4f4a759d4c52f8d1130623",
     "course_version": "20260907-163535-708",
     "activity_id": "dcab2b683481429e9a775e153584d9fe",
-    "id": "aps-m2-s09-20260925",
+    "id": "aps-m2-s09-20260923",
     "scenes": [
       {
         "kind": "hero",
         "label": "LES ESSENTIELS APS",
         "headline": "Observer les faits.\nLa justice décide.",
         "lines": [
-          "Votre compte rendu peut être utile à une procédure.",
-          "Votre rôle consiste à relater les faits ; la justice apprécie les responsabilités."
+          "Votre compte rendu peut être utile à une procédure. Votre rôle consiste à relater les faits ; la justice apprécie les responsabilités."
         ]
       },
       {
@@ -1273,8 +1079,7 @@
         ],
         "lines": [
           "Les contraventions relèvent du tribunal de police, les délits du tribunal correctionnel.",
-          "Les crimes sont jugés par une cour d’assises ou une cour criminelle départementale selon les règles applicables.",
-          "Le procureur décide des suites d’une enquête, et le tribunal juge lorsqu’il est saisi."
+          "Les crimes sont jugés par une cour d’assises ou une cour criminelle départementale selon les règles applicables. Le procureur décide des suites d’une enquête, et le tribunal juge lorsqu’il est saisi."
         ]
       },
       {
@@ -1286,10 +1091,9 @@
           "B · « Cette personne est forcément coupable. »"
         ],
         "lines": [
-          "Vous avez vu une personne prendre un objet.",
-          "Dans votre rapport, décrivez-vous ce geste ou affirmez-vous qu’elle est forcément coupable ?"
+          "Vous avez vu une personne prendre un objet. Dans votre rapport, décrivez-vous ce geste ou affirmez-vous qu’elle est forcément coupable ?"
         ],
-        "pause": 5
+        "pause": 4
       },
       {
         "kind": "answer",
@@ -1301,10 +1105,8 @@
           "Distinguer les informations rapportées"
         ],
         "lines": [
-          "La réponse A.",
-          "Décrivez le geste observé, l’heure, le lieu et vos actions.",
-          "Séparez vos observations des propos rapportés.",
-          "Préservez les éléments utiles selon la procédure, sans mener vous-même une enquête judiciaire."
+          "La réponse A. Décrivez le geste observé, l’heure, le lieu et vos actions.",
+          "Séparez vos observations des propos rapportés. Préservez les éléments utiles selon la procédure, sans mener vous-même une enquête judiciaire."
         ]
       },
       {
@@ -1314,15 +1116,7 @@
         "lines": [
           "Un témoignage utile est précis, objectif et traçable."
         ]
-      },
-      {
-        "kind": "outro",
-        "label": "",
-        "lines": [],
-        "pause": 4
       }
-    ],
-    "voice": "fr-FR-HenriNeural",
-    "reference_style": "missions-limites-20260920"
+    ]
   }
 ]

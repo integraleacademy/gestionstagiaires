@@ -11,10 +11,10 @@ def add(m,s,title,icon,hook,rules,case,options,answer,actions,recap,lines):
     url=section['activities'][2]['url']; p=urlparse(url); q=parse_qs(p.query)
     VIDEOS.append(dict(module=m,sequence=s,section_title=section['title'],title=title,icon=icon,
        course_id=p.path.split('/')[4],course_version=q['version'][0],activity_id=q['activity'][0],
-       id=f'aps-m{m}-s{s:02}-20260923', scenes=[
+       id=f'aps-m{m}-s{s:02}-20260925', scenes=[
         dict(kind='hero',label='LES ESSENTIELS APS',headline=hook,lines=lines[0]),
         dict(kind='rules',label='COMPRENDRE',headline='Trois repères.',items=rules,lines=lines[1]),
-        dict(kind='case',label='MISE EN SITUATION',headline=case,items=options,lines=lines[2],pause=4),
+        dict(kind='case',label='MISE EN SITUATION',headline=case,items=options,lines=lines[2],pause=5),
         dict(kind='answer',label='LE BON RÉFLEXE',headline=answer,items=actions,lines=lines[3]),
         dict(kind='recap',label='À RETENIR',headline=recap,lines=lines[4])]))
 
@@ -179,7 +179,26 @@ add(2,9,'La justice pénale et votre rôle de témoin','court','Observer les fai
  ['La réponse A. Décrivez le geste observé, l’heure, le lieu et vos actions.','Séparez vos observations des propos rapportés. Préservez les éléments utiles selon la procédure, sans mener vous-même une enquête judiciaire.'],
  ['Un témoignage utile est précis, objectif et traçable.']])
 
+def short_lines(text):
+    """Keep natural sentence boundaries and the short subtitle cadence of the model."""
+    import re
+    result=[]
+    for sentence in re.split(r'(?<=[.!?])\s+',text):
+        words=sentence.split()
+        while len(words)>24:
+            candidates=[i+1 for i,w in enumerate(words[:24]) if i>=8 and w.endswith((',', ';', ':'))]
+            cut=candidates[-1] if candidates else 20
+            result.append(' '.join(words[:cut]));words=words[cut:]
+        if words:result.append(' '.join(words))
+    return result
+
 if __name__=='__main__':
     assert len(VIDEOS)==16
+    for v in VIDEOS:
+        v['voice']='fr-FR-HenriNeural'
+        v['reference_style']='missions-limites-20260920'
+        for scene in v['scenes']:
+            scene['lines']=[part for line in scene['lines'] for part in short_lines(line)]
+        v['scenes'].append(dict(kind='outro',label='',lines=[],pause=4))
     (ROOT/'series.json').write_text(json.dumps(VIDEOS,ensure_ascii=False,indent=2)+'\n')
-    print(f'{len(VIDEOS)} vidéos · '+str(sum(len(line.split()) for v in VIDEOS for sc in v['scenes'] for line in sc['lines']))+' mots')
+    print(f'{len(VIDEOS)} capsules conformes au modèle de référence')
