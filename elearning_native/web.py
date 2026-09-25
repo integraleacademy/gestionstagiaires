@@ -595,6 +595,7 @@ def create_native_elearning_blueprint(
                         "title": str(activity.get("title") or ""),
                         "completed": activity_id in completed,
                         "current": activity_id == current_activity_id,
+                        "has_video": bool(activity_videos(activity)),
                         "locked": locked,
                         "url": url_for(
                             "native_elearning.admin_preview",

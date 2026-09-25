@@ -6,6 +6,7 @@ bound to a reviewed course version and activity, and ship with the application.
 from __future__ import annotations
 
 import copy
+import json
 import math
 from pathlib import Path
 from typing import Any, Mapping
@@ -20,7 +21,7 @@ ACADEMY_VIDEOS = ({
     "poster": "aps-missions-limites-20260920.jpg",
     "duration_seconds": 99.44,
     "title": "Missions et limites de l’agent de sécurité",
-},)
+},) + tuple(json.loads((Path(__file__).parent / "video_series.json").read_text(encoding="utf-8")))
 
 
 def enrich_course(course: dict) -> dict:
@@ -43,6 +44,11 @@ def enrich_course(course: dict) -> dict:
                     "poster": "media/academy/" + entry["poster"],
                     "duration_seconds": entry["duration_seconds"],
                 }})
+    enriched.setdefault("counts", {})["required_videos"] = sum(
+        len(activity_videos(activity))
+        for section in enriched.get("sections") or []
+        for activity in section.get("activities") or []
+    )
     return enriched
 
 

@@ -42,6 +42,7 @@
               <div>
                 <h3>{{ course.title }}</h3>
                 <div class="nel-course__meta"><span class="nel-pill">{{ course.counts.sections }} séquences</span><span class="nel-pill">{{ course.counts.activities }} activités</span><span class="nel-pill">{{ course.counts.scored_activities }} questions</span><span class="nel-pill">Seuil {{ course.settings.mastery_score }} %</span></div>
+                {% if course.counts.required_videos %}<div class="nel-course__meta"><span class="nel-pill">{{ course.counts.required_videos }} vidéos · visionnage intégral obligatoire</span></div>{% endif %}
                 <div class="nel-course__version">Version {{ course.version }} · source {{ course.source.sha256[:12] }}</div>
                 {% if course.import_warnings %}<div class="nel-warning">⚠ {{ course.import_warnings|length }} point(s) à vérifier après import</div>{% endif %}
               </div>

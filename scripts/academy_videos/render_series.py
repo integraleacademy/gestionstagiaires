@@ -162,13 +162,15 @@ def render(v):
  (folder/'frames.txt').write_text('\n'.join(concat)+'\n');build_ass(v,tl,folder/'graphics.ass')
  filt=f"fps=25,subtitles={folder}/graphics.ass:fontsdir={ASSETS},format=yuv420p"
  tmp=OUT/(v['id']+'.partial.mp4')
- cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-threads','1','-f','concat','-safe','0','-i',str(folder/'frames.txt'),'-i',str(folder/'narration.wav'),'-vf',filt,'-filter_threads','1','-c:v','libx264','-preset','veryfast','-crf','20','-threads','4','-c:a','aac','-b:a','160k','-af','loudnorm=I=-16:TP=-1.5:LRA=11','-ar','48000','-movflags','+faststart','-t',str(dur),str(tmp)]
- subprocess.run(cmd,check=True,timeout=600)
+ cmd=['ffmpeg','-nostdin','-hide_banner','-loglevel','info','-y','-threads','1','-f','concat','-safe','0','-i',str(folder/'frames.txt'),'-i',str(folder/'narration.wav'),'-vf',filt,'-filter_threads','1','-c:v','libx264','-preset','veryfast','-crf','20','-threads','4','-c:a','aac','-b:a','160k','-af','loudnorm=I=-16:TP=-1.5:LRA=11','-ar','48000','-movflags','+faststart','-t',str(dur),str(tmp)]
+ print(v['id'], 'rendering', flush=True)
+ with (folder/'ffmpeg.log').open('w') as log:
+  subprocess.run(cmd,check=True,timeout=600,stdout=log,stderr=log)
  probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(tmp)]))
  vs=next(s for s in probe['streams'] if s['codec_type']=='video');a=next(s for s in probe['streams'] if s['codec_type']=='audio')
  assert(vs['width'],vs['height'])==(3840,2160) and abs(float(probe['format']['duration'])-dur)<.1
  tmp.replace(out)
- subprocess.run(['ffmpeg','-loglevel','error','-y','-ss','3','-i',str(out),'-frames:v','1','-vf','scale=1280:-1',str(OUT/(v['id']+'.jpg'))],check=True)
+ subprocess.run(['ffmpeg','-nostdin','-loglevel','error','-y','-threads','1','-ss','3','-i',str(out),'-frames:v','1','-vf','scale=1280:-1','-filter_threads','1','-threads','1',str(OUT/(v['id']+'.jpg'))],check=True,timeout=60)
  (folder/'render.json').write_text(json.dumps(dict(id=v['id'],duration_seconds=float(probe['format']['duration']),bytes=out.stat().st_size,width=vs['width'],height=vs['height']),indent=2))
  print(v['id'],dur,out.stat().st_size,'VIDEO READY',flush=True)
 if __name__=='__main__':

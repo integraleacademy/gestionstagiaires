@@ -144,6 +144,42 @@ def test_network_jitter_does_not_accumulate_lost_viewing_time(lesson):
     assert video_state(result)["completed"] is True
 
 
+def test_each_sequence_video_must_be_watched_independently(lesson):
+    c = lesson
+    course = copy.deepcopy(c.course)
+    question = copy.deepcopy(course["sections"][0]["activities"][1])
+    question["id"] = "question-next-sequence"
+    course["sections"].append({"id": "next-sequence", "title": "Séquence suivante", "activities": [
+        {"id": "content-next-sequence", "title": "Vidéo suivante", "type": "content", "blocks": [
+            {"id": "second-video", "type": "video", "video": {"id": "second-video", "required": True,
+             "src": "media/second.mp4", "duration_seconds": 4}}]}, question]})
+    course["activity_order"].extend(["content-next-sequence", "question-next-sequence"])
+    location = c.persist_dir / "native_elearning/courses" / course["id"] / course["version"] / "course.json"
+    location.write_text(json.dumps(course))
+    heartbeat(c, 0)
+    assert video_state(heartbeat(c, 8, seconds=8, playing=False, ended=True))["completed"]
+    assert c._api_post(c.config["completeUrl"], c.config).status_code == 200
+    c._api_post(c.config["finishUrl"], c.config, tracking_session_id=c.tracking, activity_id="content-1")
+    next_page = c.client.get(c.player_url, query_string={"activity": "question-next-sequence"})
+    cfg = c._player_config(next_page)
+    assert cfg["activityId"] == "content-next-sequence"
+    assert cfg["requiredVideos"] == {"second-video": 4}
+    assert c._api_post(cfg["completeUrl"], cfg).status_code == 409
+    tracking = c._api_post(cfg["startUrl"], cfg, activity_id=cfg["activityId"], tab_id="next").get_json()["tracking_session_id"]
+    def second_heartbeat(position, elapsed=0):
+        c.clock[0] += elapsed
+        return c._api_post(cfg["heartbeatUrl"], cfg, tracking_session_id=tracking,
+            activity_id=cfg["activityId"], visible=True, focused=True, recent_activity=True, media_playing=position < 4,
+            videos=[{"id": "second-video", "position": position, "playing": position < 4, "ended": position == 4, "rate": 1}])
+    second_heartbeat(0)
+    second_heartbeat(4, 1)
+    assert c._api_post(cfg["completeUrl"], cfg).status_code == 409
+    second_heartbeat(0)
+    second_heartbeat(4, 4)
+    assert c._api_post(cfg["completeUrl"], cfg).status_code == 200
+    assert c._player_config(c.client.get(c.player_url, query_string={"activity": "question-next-sequence"}))["activityId"] == "question-next-sequence"
+
+
 def test_bundled_approved_video_is_version_bound_and_uses_authenticated_range_requests(lesson):
     c = lesson
     entry = ACADEMY_VIDEOS[0]
