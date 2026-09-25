@@ -213,9 +213,14 @@ path.write_text(source)
 
 template_path = Path('templates/admin_trainees.html')
 template = template_path.read_text()
-start = template.index('    {% if is_desp_initial %}\n')
-end = template.index('    {% if is_ssiap_session', start)
-template = template[:start] + '''    {% if is_desp_initial %}
+button_index = template.index('id="btnPreviewDespKickoffAttendance"')
+start = template.rfind('    {% if is_desp_initial %}\n', 0, button_index)
+assert start >= 0
+end = template.index('    {% if is_ssiap_session', button_index)
+assert 'id="btnSendDespKickoffAttendance"' in template[start:end]
+assert len(template[start:end].splitlines()) < 40
+prefix, suffix = template[:start], template[end:]
+template = prefix + '''    {% if is_desp_initial %}
     <a class="btn btn-outline" id="btnPreviewDespKickoffAttendance"
        href="{{ url_for('admin_desp_kickoff_attendance_preview', session_id=session.id) }}"
        target="_blank" rel="noopener"
@@ -244,6 +249,9 @@ template = template[:start] + '''    {% if is_desp_initial %}
       <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur de synchronisation</span>
       {% endif %}
     {% endif %}
-''' + template[end:]
+''' + suffix
+from jinja2 import Environment
+Environment().parse(template)
+assert template.startswith(prefix) and template.endswith(suffix)
 template_path.write_text(template)
 print('Updated DESP download, partial-signature access, archive recovery and template.')
