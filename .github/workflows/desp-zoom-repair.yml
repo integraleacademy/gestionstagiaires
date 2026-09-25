@@ -4,33 +4,47 @@ on:
     branches: [fix/desp-zoom-signed-download-20260925]
     paths: [.github/workflows/desp-zoom-repair.yml, scripts/repair_desp_zoom.py, tests/test_desp_zoom_download_regression.py]
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: desp-zoom-repair
+  cancel-in-progress: false
 jobs:
-  inspect:
+  repair-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PERSIST_DIR: /tmp/desp-zoom-tests
+      SECRET_KEY: isolated-regression-tests-only
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect attendance code (no production data)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependencies
+        run: python -m pip install -q -r requirements.txt pytest
+      - name: Prove the partial-signature download regression
         run: |
-          python - <<'PY'
-          import ast
-          from pathlib import Path
-          source = Path('app.py').read_text()
-          lines = source.splitlines()
-          names = {'_desp_kickoff_attendance_state', '_desp_kickoff_attendance_view', '_refresh_yousign_desp_kickoff_status_if_pending', '_download_yousign_desp_kickoff_signed_pdf', '_finalize_yousign_desp_kickoff', 'admin_view_signed_desp_kickoff_attendance', '_is_yousign_signature_done', '_is_yousign_signature_pending', '_yousign_request', '_yousign_get_signature_request'}
-          for node in ast.parse(source).body:
-              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and (node.name in names or ('desp_kickoff' in node.name and 'build' not in node.name and 'create_yousign' not in node.name and 'send_yousign' not in node.name)):
-                  print('\n=== FUNCTION', node.name, 'LINES', node.lineno, node.end_lineno, '===')
-                  print('\n'.join(lines[node.lineno-1:node.end_lineno]))
-          template = Path('templates/admin_trainees.html').read_text().splitlines()
-          indexes = [i for i,line in enumerate(template) if 'desp_kickoff' in line or 'desp-kickoff' in line]
-          if indexes:
-              print('\n=== DESP TEMPLATE ===')
-              print('\n'.join(f'{i+1}: {line}' for i,line in enumerate(template) if min(indexes)-8 <= i <= max(indexes)+8))
-          print('\n=== TEST FILES ===')
-          for path in Path('tests').rglob('*.py'):
-              if 'desp_kickoff' in path.read_text():
-                  print(path)
-          print('\n=== REQUIREMENTS ===')
-          print(Path('requirements.txt').read_text())
-          PY
+          set +e
+          python -m pytest -q tests/test_desp_zoom_download_regression.py::DespZoomDownloadRegressionTests::test_partial_signatures_download_original_current_pdf > /tmp/desp-before.txt 2>&1
+          result=$?
+          cat /tmp/desp-before.txt
+          test "$result" -eq 1
+      - name: Apply targeted source repair
+        run: python scripts/repair_desp_zoom.py
+      - name: Verify DESP attendance and download regressions
+        run: |
+          python -m py_compile app.py
+          python -m pytest -q tests/test_desp_kickoff_attendance.py tests/test_desp_zoom_download_regression.py
+      - name: Verify related Yousign and kickoff behavior
+        run: |
+          mapfile -t related < <(find tests -maxdepth 1 -type f \( -name '*yousign*' -o -name '*aps_kickoff*' \) | sort)
+          if [ ${#related[@]} -gt 0 ]; then python -m pytest -q "${related[@]}"; fi
+      - name: Commit only the tested application changes to the repair branch
+        run: |
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.py templates/admin_trainees.html
+          git diff --cached --stat
+          git commit -m 'fix: download DESP Zoom attendance with collected Yousign signatures'
+          git push origin HEAD:fix/desp-zoom-signed-download-20260925
