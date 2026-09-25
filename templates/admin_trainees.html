@@ -190,12 +190,15 @@
     <a class="btn btn-outline" id="btnPreviewDespKickoffAttendance"
        href="{{ url_for('admin_desp_kickoff_attendance_preview', session_id=session.id) }}"
        target="_blank" rel="noopener"
-       title="Prévisualiser la feuille de présence de la réunion DESP sur Zoom">👁️ Aperçu présence Zoom</a>
-      {% if desp_kickoff_attendance.is_done and desp_kickoff_attendance.has_signed_pdf %}
+       title="Modèle de la feuille de présence, sans les signatures des stagiaires">👁️ Aperçu vierge présence Zoom</a>
+      {% if desp_kickoff_attendance.can_download_pdf %}
       <a class="btn btn-primary" id="btnSignedDespKickoffAttendance"
          href="{{ url_for('admin_view_signed_desp_kickoff_attendance', session_id=session.id) }}"
-         target="_blank" rel="noopener">✅ Présence Zoom signée</a>
-      {% elif not is_read_only %}
+         title="Télécharger le PDF original Yousign avec les signatures déjà apposées, sans attendre les autres signataires">
+        {% if desp_kickoff_attendance.is_done %}📥 Télécharger présence Zoom signée{% else %}📥 Télécharger avec les signatures reçues{% endif %}
+      </a>
+      {% endif %}
+      {% if not desp_kickoff_attendance.is_done and not is_read_only %}
       <form method="post"
             action="{{ url_for('admin_send_desp_kickoff_attendance_yousign', session_id=session.id) }}"
             style="display:inline;"
@@ -206,9 +209,10 @@
       </form>
       {% endif %}
       {% if desp_kickoff_attendance.is_pending %}
-      <span class="pill" title="Signatures électroniques reçues">Yousign : {{ desp_kickoff_attendance.signed_count }}/{{ desp_kickoff_attendance.signer_count }} signature(s)</span>
-      {% elif desp_kickoff_attendance.last_error %}
-      <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur</span>
+      <span class="pill" title="Version en cours : le téléchargement contient uniquement les signatures déjà apposées.">Yousign : {{ desp_kickoff_attendance.signed_count }}/{{ desp_kickoff_attendance.signer_count }} signature(s)</span>
+      {% endif %}
+      {% if desp_kickoff_attendance.last_error %}
+      <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur de synchronisation</span>
       {% endif %}
     {% endif %}
     {% if is_ssiap_session and not is_read_only and registered_trainees|selectattr('ssiap_exam_status', 'equalto', 'certified')|list %}
