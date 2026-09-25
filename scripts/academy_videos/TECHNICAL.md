@@ -24,11 +24,11 @@ python author_series.py
 export ACADEMY_WORK=/chemin/vers/intermediaires
 python build_audio.py
 python render_series.py --preview
-python render_series.py
+python render_keyframes.py
 python build_manifest.py
 ```
 
 Les scripts acceptent une liste d'identifiants pour limiter les exports. Les prises audio sont mises en cache par contenu. Une vidéo n'est réutilisée que si les sources et la chronologie correspondent à leur empreinte enregistrée.
-Le rendu est natif en 3840 × 2160 à 25 images/seconde, H.264 CRF 17, AAC. L'export temporaire est vérifié par ffprobe avant remplacement du fichier final.
+Le rendu est natif en 3840 × 2160 à 25 images/seconde, H.264 CRF 17, AAC. `render_series.py` est le moteur graphique de référence ; `render_keyframes.py` réutilise les images stables et anime la progression dans FFmpeg pour accélérer les exports. Les fenêtres d’entrée des textes gardent leurs images natives. Les prises restent indépendantes de cette optimisation. L'export temporaire est vérifié par ffprobe avant remplacement du fichier final.
 Les identifiants des nouvelles versions portent la date 20260925 pour éviter la réutilisation des anciens médias en cache.
 Les informations techniques de synthèse restent dans ce fichier ; aucun crédit de voix n'apparaît dans les vidéos ou dans les références pédagogiques.
