@@ -33,6 +33,7 @@ from wedof_requests import (
     registration_payload as wedof_registration_payload,
     related_entries as related_wedof_entries,
 )
+import wedof_cancellation_notifications as cpf_cancellation_alerts
 from digiforma_duration import aps_elearning_completion, journal_attendance
 from manual_document_reminders import document_actions, build_content as build_manual_docs_content, content_fingerprint
 from automatic_document_reminders import run as run_automatic_document_reminders, schedule as automatic_document_schedule
@@ -7518,11 +7519,11 @@ def brevo_send_email(
     if not to_email:
         missing.append("destinataire")
     if missing:
-        result = {"ok": False, "status_code": None, "message_id": "", "error": "Configuration Brevo incomplète : " + ", ".join(missing)}
+        result = {"ok": False, "not_sent": True, "status_code": None, "message_id": "", "error": "Configuration Brevo incomplète : " + ", ".join(missing)}
         return result if metadata is not None else False
     if _is_blocked_email_recipient(to_email):
         print(f"[EMAIL] blocked recipient skipped: {to_email}")
-        result = {"ok": False, "status_code": None, "message_id": "", "error": "Destinataire bloqué"}
+        result = {"ok": False, "not_sent": True, "status_code": None, "message_id": "", "error": "Destinataire bloqué"}
         return result if metadata is not None else False
 
     url = "https://api.brevo.com/v3/smtp/email"
@@ -7544,6 +7545,10 @@ def brevo_send_email(
     if text_content:
         payload["textContent"] = text_content
 
+    idempotency_key = str((metadata or {}).get("idempotency_key") or "").strip()
+    if idempotency_key:
+        payload["headers"] = {"idempotencyKey": idempotency_key}
+
     cc_list = [
         email.strip()
         for email in (cc_emails or [])
@@ -7564,6 +7569,11 @@ def brevo_send_email(
             response_json = {}
         message_id = str(response_json.get("messageId") or response_json.get("message_id") or "")
         error_message = str(response_json.get("message") or response_json.get("error") or (r.text or ""))[:500]
+        if (idempotency_key and r.status_code == 400
+                and response_json.get("code") == "duplicate_parameter"
+                and "idempotenc" in error_message.casefold()):
+            # The same durable delivery was already accepted by Brevo.
+            ok = True
         _safe_brevo_log("send", timestamp=_now_iso(), partner_id=(metadata or {}).get("partner_id"), partner_name=(metadata or {}).get("partner_name"), user_id=(metadata or {}).get("user_id"), to_email=to_email, status_code=r.status_code, error="" if ok else error_message, message_id=message_id)
         if ok and has_request_context():
             session["_mail_sent_notice"] = True
@@ -10011,6 +10021,63 @@ def _load_wedof_webhooks() -> List[Dict[str, Any]]:
 
 def _save_wedof_webhooks(entries: List[Dict[str, Any]]) -> None:
     _write_json_with_backups(WEDOF_WEBHOOK_FILE, entries, _wedof_webhook_lock)
+
+
+def build_cpf_cancellation_alert_email(folder, received_at, data=None):
+    notice = cpf_cancellation_alerts.email_context(
+        folder, received_at=received_at, base_url=PUBLIC_BASE_URL, local_data=data,
+    )
+    body = app.jinja_env.get_template("emails/cpf_cancellation.html").render(notice=notice)
+    return notice["subject"], body, notice["text"]
+
+
+def _process_cpf_cancellation_alert(folder, entries, entry):
+    """Called only from authenticated WEDOF processing under the journal lock."""
+    if not cpf_cancellation_alerts.is_cancellation(folder):
+        return
+    folder_id = str(extract_folder(folder).get("external_id") or "")
+    if not folder_id:
+        return
+    try:
+        notification = cpf_cancellation_alerts.find_notification(entries, folder_id)
+        if notification is None:
+            # Cancellation notifications often contain only a changed state.
+            # Read full details once; the journal/local association fills gaps
+            # if WEDOF is temporarily unavailable.
+            fetched = _fetch_wedof_folder_details(folder_id)
+            if fetched and str(extract_folder(fetched).get("external_id") or "") == folder_id:
+                folder = merge_wedof_folder(fetched, folder)
+            if not cpf_cancellation_alerts.is_cancellation(folder):
+                return
+            data = load_data(run_background_tasks=False)
+            message = build_cpf_cancellation_alert_email(folder, entry.get("received_at") or _now_iso(), data)
+            notification = cpf_cancellation_alerts.enqueue(entries, entry, folder, message)
+            _save_wedof_webhooks(entries)
+        if notification and not read_env_bool("WEDOF_AUTOMATION_KILL_SWITCH", False):
+            cpf_cancellation_alerts.deliver(
+                entries, notification, save=_save_wedof_webhooks, send=brevo_send_email,
+            )
+    except Exception:
+        app.logger.exception("[CPF CANCELLATION] notification error folder=%s", folder_id)
+
+
+@_serialize_wedof_updates
+def _deliver_pending_cpf_cancellation_alerts():
+    """Retry queued recipients without scanning or emailing old cancellations."""
+    entries = _load_wedof_webhooks()
+    attempted = 0
+    for entry in entries:
+        notification = entry.get(cpf_cancellation_alerts.QUEUE_KEY) if isinstance(entry, dict) else None
+        if not isinstance(notification, dict):
+            continue
+        if not any(item.get("status") in {"pending", "failed", "sending"}
+                   for item in notification.get("recipients", {}).values() if isinstance(item, dict)):
+            continue
+        cpf_cancellation_alerts.deliver(entries, notification, save=_save_wedof_webhooks, send=brevo_send_email)
+        attempted += 1
+        if attempted >= 10:
+            break
+    return {"processed": attempted}
 
 def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
     flat = json.dumps(payload, ensure_ascii=False)
@@ -20235,6 +20302,8 @@ def wedof_webhook():
                 response["crm_relayed"] = bool(crm_result.get("success"))
             duplicate_folder = duplicate_entry.get("wedof_folder_details")
             if trusted_for_wedof and isinstance(duplicate_folder, dict):
+                if duplicate_entry.get("signature_valid"):
+                    _process_cpf_cancellation_alert(duplicate_folder, entries, duplicate_entry)
                 _process_vtc_cpf_auto_workflow(
                     duplicate_folder, entries, duplicate_entry,
                     allow_validation=False,
@@ -20275,6 +20344,7 @@ def wedof_webhook():
         previous_events = history_view["related_entries"][1:]
         entries.insert(0, entry)
         if trusted_for_wedof and isinstance(wedof_folder_details, dict):
+            _process_cpf_cancellation_alert(wedof_folder_details, entries, entry)
             wedof_folder_details = _process_vtc_cpf_auto_workflow(
                 wedof_folder_details, entries, entry,
             )
@@ -49013,6 +49083,10 @@ def internal_cron_wedof_automation():
         return jsonify({"ok": False, "error": "forbidden"}), 403
     if not _wedof_live_mode_enabled():
         return jsonify({"ok": True, "status": "suspended", "mode": "disabled"}), 200
+    try:
+        _deliver_pending_cpf_cancellation_alerts()
+    except Exception:
+        app.logger.exception("[CPF CANCELLATION] pending delivery failed")
     try:
         result = run_wedof_automation_live()
     except (WedofConfigurationError, WedofApiError, WedofGovernorError) as exc:

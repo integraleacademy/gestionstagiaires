@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ notice.subject }}</title>
+<style>@media only screen and (max-width:600px){.outer{padding:12px 8px!important}.card-pad{padding:24px 20px!important}.hero-inner{padding:24px 20px 0!important}.hero-meta{padding:0 20px 24px!important}.headline{font-size:29px!important}.label{width:42%!important}.data-cell{font-size:13px!important}}</style></head>
+<body style="margin:0;background:#eef2f7;color:#17233b;font-family:Arial,Helvetica,sans-serif">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">Annulation CPF de {{ notice.name }} — {{ notice.training }}. Retrouvez les informations du dossier.</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#eef2f7"><tr><td class="outer" align="center" style="padding:36px 16px">
+    <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px;text-align:left">
+      <tr><td style="padding:0 8px 22px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%"><tr>
+        <td><img src="{{ notice.logo_url }}" alt="Intégrale Academy" width="58" style="display:block;width:58px;max-width:58px;height:auto;border:0"></td>
+        <td align="right" style="text-align:right;font-size:11px;letter-spacing:1.5px;font-weight:700;color:#64748b">INTÉGRALE CONNECT<br><span style="display:inline-block;margin-top:5px;font-size:10px;letter-spacing:1px;font-weight:400">SUIVI DES DOSSIERS CPF</span></td>
+      </tr></table></td></tr>
+      <tr><td style="background:#101d35;border-radius:22px 22px 0 0;border-top:5px solid #fb7185">
+        <div class="hero-inner" style="padding:32px 32px 0">
+          <span style="display:inline-block;background:#38243a;color:#fda4af;border:1px solid #693a50;padding:8px 12px;border-radius:30px;font-size:11px;letter-spacing:1.4px;font-weight:700">ALERTE · ANNULATION CPF</span>
+          <h1 class="headline" style="font-size:36px;line-height:1.15;letter-spacing:-1px;color:#ffffff;margin:23px 0 12px">Une inscription<br>a été annulée.</h1>
+          <p style="font-size:15px;line-height:1.65;color:#cbd5e1;margin:0 0 26px">Le titulaire a annulé son dossier de formation.<br><strong style="color:#ffffff">{{ notice.status }}</strong></p>
+        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%"><tr><td class="hero-meta" style="padding:0 32px 30px;color:#94a3b8;font-size:12px">{{ notice.received_at }} <span style="color:#475569">&nbsp; / &nbsp;</span> Dossier {{ notice.folder_id }}</td></tr></table>
+      </td></tr>
+      <tr><td class="card-pad" style="background:#ffffff;padding:30px 32px 10px">
+        <p style="margin:0 0 8px;font-size:11px;letter-spacing:1.4px;font-weight:700;color:#64748b">STAGIAIRE CONCERNÉ</p>
+        <h2 style="margin:0 0 7px;font-size:26px;line-height:1.25;letter-spacing:-.5px;color:#17233b">{{ notice.name }}</h2>
+        <p style="margin:0 0 22px;font-size:15px;line-height:1.6;color:#52617a">{{ notice.training }}</p>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;background:#f5f7fc;border:1px solid #e5eaf3;border-radius:12px"><tr>
+          <td style="padding:18px 20px;font-size:12px;color:#64748b">Montant de la formation</td><td align="right" style="padding:18px 20px;font-size:23px;font-weight:700;color:#17233b">{{ notice.amount }}</td>
+        </tr></table>
+      </td></tr>
+      {% for section in notice.sections %}
+      <tr><td class="card-pad" style="padding:22px 32px 0;background:#ffffff">
+        <h3 style="margin:0 0 12px;font-size:15px;color:#17233b">{{ section.title }}</h3>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;border-top:1px solid #e7ecf4;table-layout:fixed">
+          {% for label, value in section.rows %}<tr>
+            <td class="label data-cell" width="40%" valign="top" style="width:40%;padding:11px 14px 11px 0;border-bottom:1px solid #edf1f6;font-size:13px;line-height:1.5;color:#748096">{{ label }}</td>
+            <td class="data-cell" valign="top" style="padding:11px 0;border-bottom:1px solid #edf1f6;font-size:13px;font-weight:600;line-height:1.5;color:#23314a;overflow-wrap:anywhere;word-break:break-word">{{ value }}</td>
+          </tr>{% endfor %}
+        </table>
+      </td></tr>
+      {% endfor %}
+      <tr><td class="card-pad" style="padding:30px 32px 32px;background:#ffffff;border-radius:0 0 22px 22px">
+        <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="width:100%"><tr><td align="center" bgcolor="#3658d4" style="background-color:#3658d4;border-radius:10px;text-align:center"><a href="{{ notice.url }}" style="display:block;padding:17px 20px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700">Consulter les annulations &nbsp; →</a></td></tr></table>
+        {% if notice.local_url %}<p style="text-align:center;margin:18px 0 0"><a href="{{ notice.local_url }}" style="color:#3658d4;font-size:13px;font-weight:600;text-decoration:underline">Ouvrir la fiche stagiaire</a></p>{% endif %}
+        <p style="margin:22px 0 0;font-size:11px;line-height:1.65;color:#8490a4">Les champs « Non renseigné » correspondent aux informations absentes du dossier. Les montants présentés sont ceux disponibles dans WEDOF et ne constituent pas un calcul d’indemnité d’annulation.</p>
+      </td></tr>
+      <tr><td align="center" style="padding:22px 20px 0;font-size:11px;line-height:1.7;color:#8490a4">Notification automatique · Intégrale Academy<br>Suivi interne des annulations CPF</td></tr>
+    </table>
+  </td></tr></table>
+</body></html>
