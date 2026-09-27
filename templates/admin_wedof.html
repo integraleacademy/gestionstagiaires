@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260916-grouped-requests') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260927-cancellations') }}">
 {% set st = wedof_dashboard.stats %}
 {% set active_section = wedof_active_section|default('consumption', true) %}
 {% set state_labels = {
@@ -75,7 +75,7 @@
   </header>
 
   <nav class="wedof-page-tabs" role="tablist" aria-label="Sections de la page WEDOF">
-    {% for key, label in [('consumption','Consommation WEDOF'),('state','État des dossiers'),('technical','Connexion et paramètres techniques'),('requests','Demandes entrantes WEDOF')] %}
+    {% for key, label in [('consumption','Consommation WEDOF'),('state','État des dossiers'),('technical','Connexion et paramètres techniques'),('requests','Demandes entrantes WEDOF'),('cancellations','Annulations')] %}
       <button
         id="wedof-page-tab-{{ key }}"
         type="button"
@@ -660,6 +660,7 @@
     </div>
   </section>
   </div>
+  {% include "partials/wedof_cancellations.html" %}
 </div>
 
 <dialog id="wedof-loading-modal" class="wedof-loading" aria-labelledby="wedof-loading-title" aria-describedby="wedof-loading-description">
@@ -718,7 +719,7 @@
 <div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
 
 <script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260903-deduplicated-filters') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260927-cancellations') }}" defer></script>
 <script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20260811-exact-auto-link') }}" defer></script>
 
 <script>
