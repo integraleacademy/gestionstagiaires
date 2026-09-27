@@ -4,6 +4,11 @@
 
   function showPageSection(section, {updateUrl = true} = {}) {
     if (!pageTabs.some(tab => tab.dataset.wedofPageTab === section)) return;
+    const selectedPanel = pagePanels.find(panel => panel.dataset.wedofPagePanel === section);
+    if (updateUrl && selectedPanel?.dataset.wedofLoadUrl) {
+      selectedPanel.setAttribute('aria-busy', 'true');
+      window.location.assign(selectedPanel.dataset.wedofLoadUrl);
+    }
     pageTabs.forEach(tab => {
       const active = tab.dataset.wedofPageTab === section;
       tab.classList.toggle('is-active', active);

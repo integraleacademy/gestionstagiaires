@@ -18955,14 +18955,25 @@ def _wedof_requests_context():
 def admin_wedof_requests():
     data = load_data(run_background_tasks=False)
     requested_section = str(request.args.get("section") or "").strip()
-    if requested_section not in {"consumption", "state", "technical", "requests"}:
+    if requested_section not in {"consumption", "state", "technical", "requests", "cancellations"}:
         requested_section = "state" if request.args.get("tab") else "consumption"
+    cancellations = {"loaded": False, "rows": [], "error": "", "page": 1, "total": None, "has_next": False}
+    if requested_section == "cancellations":
+        cancellations["loaded"] = True
+        cancellations["page"] = max(1, request.args.get("cancellation_page", 1, type=int))
+        try:
+            result = WedofClient().list_attendee_cancellations(page=cancellations["page"])
+            cancellations.update(result)
+            cancellations["rows"] = [extract_folder(item) for item in result["items"]]
+        except (WedofConfigurationError, WedofApiError) as exc:
+            cancellations["error"] = str(exc)
     displayed_links = _wedof_links_for_display(data)
     maintenance = is_wedof_maintenance_window()
     response = make_response(render_template(
         "admin_wedof.html",
         **_wedof_requests_context(),
         wedof_active_section=requested_section,
+        wedof_cancellations=cancellations,
         wedof_api_key_configured=bool((os.environ.get("WEDOF_API_KEY") or "").strip()),
         **_admin_wedof_execution_flags(),
         wedof_links=displayed_links,

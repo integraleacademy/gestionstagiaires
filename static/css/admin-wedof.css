@@ -185,7 +185,7 @@
   z-index: 20;
   top: 12px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
   gap: 6px;
   overflow-x: auto;
   border: 1px solid #dbe4f0;

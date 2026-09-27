@@ -17,6 +17,7 @@ from wedof_governor import (
 
 
 WEDOF_BASE_URL = "https://www.wedof.fr/api"
+ATTENDEE_CANCELLATION_STATE = "canceledByAttendeeNotRealized"
 _TRUE_VALUES = {"true", "1", "yes", "on"}
 logger = logging.getLogger(__name__)
 
@@ -366,6 +367,30 @@ class WedofClient:
             response.status_code, state, len(items),
         )
         return items
+
+    def list_attendee_cancellations(self, *, page: int = 1, limit: int = 50) -> Dict[str, Any]:
+        """Read one page of holder cancellations, only when the admin opens it."""
+        page, limit = max(1, int(page)), max(1, min(int(limit), 100))
+        payload, response = self._get_json_response(
+            "/registrationFolders",
+            params={"state": ATTENDEE_CANCELLATION_STATE, "type": "cpf", "limit": limit, "page": page},
+            timeout=(3, 8), max_attempts=1, backoff=0,
+            operation="cpf_attendee_cancellations",
+        )
+        items = self._folder_items(payload)
+        headers = getattr(response, "headers", {}) or {}
+        total = None
+        try:
+            total = max(0, int(headers["x-total-count"]))
+            per_page = max(1, int(headers.get("x-item-per-page", limit)))
+            has_next = page * per_page < total
+        except (KeyError, TypeError, ValueError):
+            has_next = len(items) >= limit
+        # Keep the exact category even if an upstream response ignores a filter.
+        rows = [item for item in items
+                if item.get("state") == ATTENDEE_CANCELLATION_STATE
+                and str(item.get("type") or "cpf").casefold() == "cpf"]
+        return {"items": rows, "page": page, "total": total, "has_next": has_next}
 
     def get_registration_folder(self, external_id: str) -> Dict[str, Any]:
         """Relit un dossier précis sans jamais effectuer de requête mutatrice."""
