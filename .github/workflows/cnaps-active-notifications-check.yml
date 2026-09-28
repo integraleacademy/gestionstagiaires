@@ -1,0 +1,46 @@
+name: CNAPS active-only verification
+on:
+  push:
+    branches: [fix/cnaps-active-notifications-20260928]
+    paths:
+      - .github/workflows/cnaps-active-notifications-check.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Export tracked source for isolated regression testing
+        shell: bash
+        run: |
+          mkdir -p /tmp/cnaps-review
+          git rev-parse HEAD > /tmp/cnaps-review/source-commit.txt
+          git archive --format=tar.gz HEAD > /tmp/cnaps-review/source.tar.gz
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+          source = Path('app.py').read_text()
+          tree = ast.parse(source)
+          names = {
+              '_cnaps_status_change_key', '_pending_cnaps_status_change_count',
+              '_annotate_cnaps_tracking_status_changes', '_create_cnaps_status_change_notification',
+              '_send_cnaps_notification_email', '_deliver_pending_cnaps_notifications',
+              '_notify_cnaps_status_change', '_cnaps_tracking_state_code',
+              '_cnaps_tracking_state_display', '_record_cnaps_tracking_state',
+              '_record_cnaps_public_annuaire_status', '_cnaps_public_annuaire_signature',
+              'admin_cnaps_tracking', 'api_cnaps_public_annuaire',
+          }
+          for node in tree.body:
+              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and (node.name in names or ('cnaps' in node.name and 'count' in node.name)):
+                  print('\n###', node.name, 'line', node.lineno)
+                  print(ast.get_source_segment(source, node))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cnaps-source-review
+          path: /tmp/cnaps-review/
+          retention-days: 1
