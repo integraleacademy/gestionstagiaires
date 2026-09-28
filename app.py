@@ -6898,6 +6898,49 @@ def _cnaps_result_has_known_status(result: Dict[str, Any]) -> bool:
     signature = _cnaps_result_signature(result).upper()
     return bool(signature and "INCONNU" not in signature)
 
+def _cnaps_active_status_codes(signature: str) -> Set[str]:
+    """Extract active title identities, ignoring expiry dates and formatting.
+
+    Match ACTIF as a complete status, never INACTIF or NON ACTIF. Legacy
+    label-only signatures and today's abbreviated display use the same code.
+    """
+    codes: Set[str] = set()
+    for title in str(signature or "").split(" || "):
+        fields = [part.strip() for part in title.split(" • ") if part.strip()]
+        active_fields = [
+            part for part in fields
+            if re.search(r"(?:^|\s)ACTIF$", part, re.IGNORECASE)
+            and not re.search(r"\b(?:NON|PAS)[\s-]+ACTIF$", part, re.IGNORECASE)
+        ]
+        if not active_fields:
+            continue
+        display = next((part for part in active_fields if part.upper() != "ACTIF"), "")
+        label = re.sub(r"\s+ACTIF$", "", display, flags=re.IGNORECASE) if display else next(
+            (part for part in fields if part.upper() != "ACTIF"
+             and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", part)), ""
+        )
+        codes.add(_normalize_cnaps_activity(_cnaps_activity_code(label)) if label else "*")
+    return codes
+
+
+def _cnaps_is_activation(previous_status: str, new_status: str) -> bool:
+    """Only a newly active title qualifies; other changes remain silent."""
+    current = _cnaps_active_status_codes(new_status)
+    previous = _cnaps_active_status_codes(previous_status)
+    if not current or "*" in previous:
+        return False
+    if "*" in current:
+        return not previous
+    return bool(current - previous)
+
+
+def _cnaps_notification_is_activation(notification: Any) -> bool:
+    """Apply the same rule to persisted alerts, including pre-fix records."""
+    return isinstance(notification, dict) and _cnaps_is_activation(
+        notification.get("previous_status", ""), notification.get("signature", "")
+    )
+
+
 def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
     notifications = data.get("cnaps_status_change_notifications") or {}
     if not isinstance(notifications, dict):
@@ -6905,7 +6948,7 @@ def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
     return sum(
         1
         for item in notifications.values()
-        if isinstance(item, dict) and not item.get("reviewed_at")
+        if _cnaps_notification_is_activation(item) and not item.get("reviewed_at")
     )
 
 
@@ -6931,6 +6974,10 @@ def _annotate_cnaps_tracking_status_changes(rows: List[Dict[str, Any]], data: Di
                 ),
                 None,
             )
+        # Keep historical receipts intact, but never display a non-activation
+        # as an alert (including the old NUB-missing -> no-title false alert).
+        if not _cnaps_notification_is_activation(notification):
+            notification = None
         row["status_change_notified"] = isinstance(notification, dict)
         row["status_change_reviewed"] = bool(notification.get("reviewed_at")) if isinstance(notification, dict) else False
         row["notification_email_status"] = notification.get("email_status", "") if isinstance(notification, dict) else ""
@@ -7100,7 +7147,7 @@ def _create_cnaps_status_change_notification(
     if not key or key == "|":
         return False
     signature = str(new_status or "").strip()
-    if not signature:
+    if not _cnaps_is_activation(previous_status, signature):
         return False
     sent = data.setdefault("cnaps_status_change_notifications", {})
     if not isinstance(sent, dict):
@@ -7132,7 +7179,11 @@ def _create_cnaps_status_change_notification(
 
 
 def _send_cnaps_notification_email(data, key, notification):
-    """Perform external delivery outside a production data transaction."""
+    """Deliver activations only, including when retrying a pre-fix outbox."""
+    if not _cnaps_notification_is_activation(notification):
+        return {"email_status": "cancelled", "updated_at": _now_iso(),
+                "email_cancelled_at": _now_iso(),
+                "email_cancelled_reason": "not_an_activation", "email_error": ""}
     first_name = notification.get("first_name", "")
     last_name = notification.get("last_name", "")
     nub = notification.get("nub", "")
@@ -7212,7 +7263,7 @@ def _notify_cnaps_status_change(
     previous_status: str = "",
     tracking_id: str = "",
 ) -> bool:
-    if not _cnaps_result_has_known_status(result):
+    if result.get("check_status") not in (None, "success") or not _cnaps_result_has_known_status(result):
         return False
     return _create_cnaps_status_change_notification(
         data,
@@ -7304,11 +7355,13 @@ def _record_cnaps_tracking_state(
     result: Optional[Dict[str, Any]] = None,
     send_email: bool = True,
 ) -> bool:
-    """Persist every visible tracking state and notify on a real transition.
+    """Persist successful states, but notify only when a title becomes active.
 
-    In particular, ``NUB absent`` is retained under the CNAPSV3 request ID so
-    the later first annuaire result is a change, not a fresh baseline.
+    Keep the missing-NUB baseline so its later activation is detected. Adding
+    a NUB without an active title, refusals and technical failures stay silent.
     """
+    if isinstance(result, dict) and result.get("check_status") not in (None, "success"):
+        return False
     statuses = data.setdefault("cnaps_public_annuaire_statuses", {})
     if not isinstance(statuses, dict):
         statuses = {}
@@ -7388,7 +7441,7 @@ def _record_cnaps_tracking_state(
     if legacy_key:
         statuses[legacy_key] = dict(current_entry)
 
-    if not changed or state_code == "nub_missing":
+    if not changed or not _cnaps_is_activation(_cnaps_tracking_state_display(previous), display_status):
         return False
     return _create_cnaps_status_change_notification(
         data,
