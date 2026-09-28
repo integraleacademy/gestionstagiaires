@@ -5,42 +5,59 @@ on:
     paths:
       - .github/workflows/cnaps-active-notifications-check.yml
 permissions:
-  contents: read
+  contents: write
 jobs:
-  inspect:
+  verify:
+    if: github.ref == 'refs/heads/fix/cnaps-active-notifications-20260928'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    env:
+      PERSIST_DIR: ${{ runner.temp }}/cnaps-test-persist
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          persist-credentials: false
-      - name: Export tracked source for isolated regression testing
+          python-version: '3.12'
+          cache: pip
+      - name: Apply the reviewed patch without overwriting unrelated edits
+        run: |
+          test "$(git hash-object app.py)" = ebd5ac49606e3ab39a6b2753a0a1ef2634743917
+          git apply --check .cnaps-active-only.patch
+          git apply .cnaps-active-only.patch
+          test "$(git hash-object app.py)" = 7031115eec56983f8f6eac319f55f68fcc8120a4
+          test "$(git hash-object tests/test_cnapsv3_sync.py)" = 4164e87a925902de8e391a25fca040f429e642aa
+          python -m py_compile app.py crm_app.py tests/test_cnaps_active_only_notifications.py
+          git diff --check
+      - name: Install isolated test dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements.txt pytest
+      - name: CNAPS and notification regressions with external network blocked
         shell: bash
         run: |
-          mkdir -p /tmp/cnaps-review
-          git rev-parse HEAD > /tmp/cnaps-review/source-commit.txt
-          git archive --format=tar.gz HEAD > /tmp/cnaps-review/source.tar.gz
+          set -o pipefail
+          python -m pytest -q tests/test_cnaps*.py tests/test_admin_cnaps*.py tests/test_afc_cnaps*.py tests/test_admin_notifications.py 2>&1 | tee /tmp/cnaps-tests.log
+          node --test tests/test_cnaps_tracking_ui.cjs 2>&1 | tee /tmp/cnaps-ui-tests.log
           python - <<'PY'
-          import ast
-          from pathlib import Path
-          source = Path('app.py').read_text()
-          tree = ast.parse(source)
-          names = {
-              '_cnaps_status_change_key', '_pending_cnaps_status_change_count',
-              '_annotate_cnaps_tracking_status_changes', '_create_cnaps_status_change_notification',
-              '_send_cnaps_notification_email', '_deliver_pending_cnaps_notifications',
-              '_notify_cnaps_status_change', '_cnaps_tracking_state_code',
-              '_cnaps_tracking_state_display', '_record_cnaps_tracking_state',
-              '_record_cnaps_public_annuaire_status', '_cnaps_public_annuaire_signature',
-              'admin_cnaps_tracking', 'api_cnaps_public_annuaire',
-          }
-          for node in tree.body:
-              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and (node.name in names or ('cnaps' in node.name and 'count' in node.name)):
-                  print('\n###', node.name, 'line', node.lineno)
-                  print(ast.get_source_segment(source, node))
+          from crm_app import app
+          response = app.test_client().get('/healthz')
+          assert response.status_code == 200, response.status_code
+          print('crm_app import and /healthz: OK')
           PY
+      - name: Commit only the tested correction on the fix branch
+        run: |
+          test "$GITHUB_REF_NAME" = fix/cnaps-active-notifications-20260928
+          git add app.py tests/test_cnapsv3_sync.py tests/test_cnaps_active_only_notifications.py
+          git rm .cnaps-active-only.patch .github/workflows/cnaps-active-notifications-check.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Notifie uniquement les passages réels à Actif et masque les anciennes fausses alertes CNAPS'
+          git push origin HEAD:refs/heads/fix/cnaps-active-notifications-20260928
+          git rev-parse HEAD > /tmp/cnaps-tested-commit.txt
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: cnaps-source-review
-          path: /tmp/cnaps-review/
-          retention-days: 1
+          name: cnaps-active-only-test-results
+          path: |
+            /tmp/cnaps-tests.log
+            /tmp/cnaps-ui-tests.log
+            /tmp/cnaps-tested-commit.txt
+          retention-days: 7
