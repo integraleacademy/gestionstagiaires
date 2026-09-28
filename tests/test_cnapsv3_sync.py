@@ -2359,7 +2359,7 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(notification["email_status"], "failed")
         self.assertEqual(gestion_app._cnaps_pending_status_change_count(data), 1)
 
-    def test_nub_appearance_without_title_is_still_a_notified_change(self):
+    def test_nub_appearance_without_title_does_not_notify(self):
         data = {"cnaps_public_annuaire_statuses": {}}
         sent = []
         original_email = gestion_app.brevo_send_email
@@ -2384,14 +2384,15 @@ class CnapsTrackingTests(unittest.TestCase):
         finally:
             gestion_app.brevo_send_email = original_email
 
-        self.assertTrue(notified)
-        self.assertEqual(len(sent), 1)
+        self.assertFalse(notified)
+        self.assertEqual(sent, [])
+        self.assertEqual(data.get("cnaps_status_change_notifications", {}), {})
         self.assertEqual(
-            data["cnaps_status_change_notifications"]["DOE|1234567"]["signature"],
+            data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["display_status"],
             "Aucun titre CNAPS trouvé",
         )
 
-    def test_public_annuaire_notifies_when_a_known_status_changes(self):
+    def test_public_annuaire_does_not_notify_when_a_known_status_is_refused(self):
         data = {
             "cnaps_public_annuaire_statuses": {
                 "DOE|1234567": {"known": True, "signature": "AP SH ACTIF"},
@@ -2412,10 +2413,11 @@ class CnapsTrackingTests(unittest.TestCase):
         finally:
             gestion_app.brevo_send_email = original_email
 
-        self.assertTrue(notified)
-        self.assertEqual(len(sent), 1)
+        self.assertFalse(notified)
+        self.assertEqual(sent, [])
+        self.assertEqual(data["cnaps_status_change_notifications"], {})
         self.assertEqual(
-            data["cnaps_status_change_notifications"]["DOE|1234567"]["signature"],
+            data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["signature"],
             "AP SH REFUSÉ",
         )
 
