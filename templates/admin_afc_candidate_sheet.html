@@ -131,7 +131,7 @@
   <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
     <input id="cnaps_priority" type="checkbox" {% if candidate.cnaps_priority %}checked{% endif %}>
     CNAPS
-    <span style="font-size:13px;color:#475569;">(force automatiquement le statut à accepté et prioritaire)</span>
+    <span style="font-size:13px;color:#475569;">(marque le CNAPS comme accepté et prioritaire, sans modifier la décision du candidat)</span>
   </label>
 
   <label style="display:block;margin-top:10px;">Commentaire résultats des tests
@@ -581,7 +581,6 @@ cnapsPriority.addEventListener('change', async ()=>{
   const previousStatus = cnapsStatusBadge.textContent;
   if(cnapsPriority.checked){
     renderAfcCnapsStatuses(cnapsStatusBadge, 'ACCEPTE', []);
-    decision.value = 'RETENU';
     refreshUI();
     applyCnapsBadge(cnapsStatusBadge);
   }

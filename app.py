@@ -21664,10 +21664,6 @@ def admin_afc():
         if candidate.get("cnaps_priority"):
             if _set_afc_candidate_cnaps_status(candidate, "ACCEPTE"):
                 changed = True
-            candidate["decision"] = "RETENU"
-            candidate["motif_refus"] = ""
-            candidate["complement_refus"] = ""
-            candidate["complement_refus_autre"] = ""
         if not (candidate.get("cnaps_status") or "").strip():
             cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
             cnaps_status = cnaps_lookup.get("status")
@@ -21956,11 +21952,8 @@ def api_admin_afc_update_candidate(candidate_id: str):
     if "cnaps_priority" in payload:
         candidate["cnaps_priority"] = bool(payload.get("cnaps_priority"))
         if candidate["cnaps_priority"]:
+            # CNAPS priority never selects the candidate or clears a refusal.
             _set_afc_candidate_cnaps_status(candidate, "ACCEPTE")
-            candidate["decision"] = "RETENU"
-            candidate["motif_refus"] = ""
-            candidate["complement_refus"] = ""
-            candidate["complement_refus_autre"] = ""
 
     if "presence_afc" in payload:
         candidate["presence_afc"] = bool(payload.get("presence_afc"))
@@ -22539,10 +22532,6 @@ def admin_afc_candidate_sheet(candidate_id: str):
     candidate.setdefault("cnaps_priority", False)
     if candidate.get("cnaps_priority"):
         candidate["cnaps_status"] = "ACCEPTE"
-        candidate["decision"] = "RETENU"
-        candidate["motif_refus"] = ""
-        candidate["complement_refus"] = ""
-        candidate["complement_refus_autre"] = ""
     candidate.setdefault("test_results_comment", "")
     positioning_score = _afc_find_latest_positioning_score(candidate, list(data.get("positioning_tests") or []))
     return render_template(
