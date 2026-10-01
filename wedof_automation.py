@@ -1090,6 +1090,14 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
     # opérationnel des rattachements à traiter.
     unlinked_tracking_start = "2026-06-01"
     for row in rows:
+        # Même périmètre que le bouton d'association manuelle, y compris
+        # les dossiers terminés encore affichés dans le tableau.
+        row["manual_link_required"] = (
+            bool(row.get("external_id"))
+            and not row["linked"]
+            and row.get("wedof_type") == "cpf"
+            and row.get("state") in ALL_STATES
+        )
         row["unlinked_since_tracking_start"] = (
             not row["linked"]
             # Un dossier terminé reste dans l'historique WEDOF, mais son
@@ -1107,5 +1115,6 @@ def build_automation_dashboard(folders: Iterable[Dict[str, Any]], *, links: Iter
              "invoiced":sum(x["invoiced"] for x in rows),
              "planned":sum(x["automation_status"] in {"planned", "quota_blocked", "retry_pending"} for x in rows), "entry_success":sum(x["entry_success"] for x in rows), "service_success":sum(x["service_success"] for x in rows),
              "blocked":sum(x["automation_blocked"] for x in rows),
+             "to_associate":sum(x["manual_link_required"] for x in rows),
              "unlinked":sum(x["unlinked_since_tracking_start"] for x in rows)}
     return {"rows": rows, "stats": stats}

@@ -612,7 +612,7 @@
 
 .wedof-counters {
   display: grid;
-  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
   padding: 18px 22px 20px;
 }
@@ -680,6 +680,7 @@
 .wedof-counter[data-wedof-counter="training"]::before { background: #0ea5e9; }
 .wedof-counter[data-wedof-counter="service"]::before { background: #22c55e; }
 .wedof-counter[data-wedof-counter="invoiced"]::before { background: #f59e0b; }
+.wedof-counter[data-wedof-counter="to_associate"]::before { background: #14b8a6; }
 .wedof-counter[data-wedof-counter="anomaly"]::before { background: #ef4444; }
 
 .wedof-table-panel { overflow: hidden; }

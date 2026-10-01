@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20260927-cancellations') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-wedof.css', v='20261001-to-associate') }}">
 {% set st = wedof_dashboard.stats %}
 {% set active_section = wedof_active_section|default('consumption', true) %}
 {% set state_labels = {
@@ -327,9 +327,9 @@
       </div>
     </div>
     <div class="wedof-counters" aria-label="États WEDOF">
-      {% for key, label in [('planned','Automatisations prévues'),('accepted','Acceptés'),('training','En formation'),('service','Services faits'),('invoiced','Facturés'),('anomaly','Anomalies')] %}
+      {% for key, label in [('planned','Automatisations prévues'),('accepted','Acceptés'),('training','En formation'),('service','Services faits'),('invoiced','Facturés'),('to_associate','À associer'),('anomaly','Anomalies')] %}
         <button type="button" class="wedof-counter" data-wedof-counter="{{ key }}" aria-label="Afficher les dossiers : {{ label }}">
-          <strong>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong>
+          <strong{% if key == 'to_associate' %} id="wedof-unlinked-count"{% endif %}>{{ '—' if wedof_dashboard_state == 'never_synchronized' else st[key] }}</strong>
           <span>{{ label }}</span>
         </button>
       {% endfor %}
@@ -363,6 +363,7 @@
               data-wedof-panel="{{ item.tab }}"
               data-wedof-planned="{{ 'true' if item.automation_status in ['planned','quota_blocked','retry_pending'] else 'false' }}"
               data-wedof-invoiced="{{ 'true' if item.invoiced else 'false' }}"
+              data-wedof-to-associate="{{ 'true' if item.manual_link_required else 'false' }}"
               data-wedof-row="{{ item.external_id|e }}"
               {% if item.tab != 'accepted' %}hidden{% endif %}
             >
@@ -437,7 +438,7 @@
                   <strong data-local-trainee>{{ item.trainee }}</strong>
                   <span data-local-session>{{ item.session }}</span>
                   <span class="wedof-badge {{ 'is-danger' if item.association_orphan else 'is-warning' if not item.linked else 'is-neutral' }}" data-local-association-badge>{{ item.association }}</span>
-                  {% if item.external_id and not item.linked and item.wedof_type == 'cpf' and item.state in ['accepted','inTraining','serviceDoneDeclared','serviceDoneValidated'] %}
+                  {% if item.manual_link_required %}
                     <div class="wedof-manual-action">
                       <button
                         type="button"
@@ -719,8 +720,8 @@
 <div id="wedof-manual-feedback" class="wedof-toast is-success" role="status" hidden></div>
 
 <script src="{{ url_for('static', filename='js/wedof-loading.js') }}" defer></script>
-<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20260927-cancellations') }}" defer></script>
-<script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20260811-exact-auto-link') }}" defer></script>
+<script src="{{ url_for('static', filename='js/admin-wedof-dashboard.js', v='20261001-to-associate') }}" defer></script>
+<script src="{{ url_for('static', filename='js/wedof-manual-links.js', v='20261001-to-associate') }}" defer></script>
 
 <script>
   (() => {
