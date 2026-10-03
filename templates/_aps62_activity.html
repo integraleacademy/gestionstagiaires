@@ -1,0 +1,45 @@
+{% set lesson = activity.academy %}
+<div class="aps-book" data-aps-work>
+  {% if lesson.kind == 'lesson' %}
+  <div class="aps-lesson-hero">
+    <img src="{{ lesson.image }}" alt="Scène professionnelle illustrée du manuel APS" loading="eager">
+    <div><span class="aps-label">Dossier {{ lesson.dossier }} · Observer, comprendre, agir</span><h2>Votre situation de départ</h2><p>{{ lesson.case }}</p></div>
+  </div>
+  <div class="aps-route" aria-label="Organisation du dossier : 60 minutes de travail guidé">
+    <span><b>18 min</b> Comprendre</span><span><b>8 min</b> Mémoriser</span><span><b>16 min</b> Produire</span><span><b>8 min</b> Vérifier</span><span><b>10 min</b> Transférer et résumer</span>
+  </div>
+  <section class="aps-objectives"><span class="aps-label">À l’issue de ce dossier</span><ul>{% for objective in lesson.objectives %}<li>{{ objective }}</li>{% endfor %}</ul></section>
+  <section class="aps-editorial"><span class="aps-label">Le raisonnement professionnel</span><h2>Comprendre ce qui guide la décision</h2><p>{{ lesson.reason }}</p></section>
+  {% for reference in lesson.lessons %}
+  <section class="aps-manual-lesson">
+    <header><span class="aps-label">Le cours illustré · Repère {{ reference.ref }}</span><h2>{{ reference.title }}</h2></header>
+    <div class="aps-manual-layout">
+      <div>{% for paragraph in reference.paragraphs %}{% if paragraph.kind == 'heading' %}<h3>{{ paragraph.text }}</h3>{% elif paragraph.kind == 'takeaway' %}<p class="aps-takeaway">{{ paragraph.text }}</p>{% else %}<p>{{ paragraph.text }}</p>{% endif %}{% endfor %}</div>
+      <figure><button type="button" class="aps-page-zoom" data-aps-image="{{ reference.diagram }}" aria-label="Agrandir le repère {{ reference.ref }}"><img src="{{ reference.diagram }}" alt="Fiche illustrée {{ reference.ref }} : {{ reference.title }}" loading="lazy"><span>Agrandir la fiche ↗</span></button><figcaption>Manuel APS · page {{ reference.page }} du fichier</figcaption></figure>
+    </div>
+    {% if reference.practice %}<div class="aps-manual-practice"><h3>Mettre ce repère à l’épreuve</h3>{% if reference.practice.background %}<p>{{ reference.practice.background }}</p>{% endif %}<div class="aps-case"><b>Un autre cas à analyser</b><p>{{ reference.practice.case }}</p><p><strong>Puis changez de contexte :</strong> {{ reference.practice.transfer }}</p></div><p class="aps-small">Prenez quelques notes ou expliquez votre décision à voix haute avant de poursuivre. Manuel APS, page {{ reference.practice.page }} du fichier.</p></div>{% endif %}
+  </section>
+  {% endfor %}
+  <section class="aps-editorial"><span class="aps-label">Relier les notions</span><h2>Du constat à la décision</h2><div class="aps-flow">{% for step in lesson.flow %}<div><span>{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></div>{% endfor %}</div></section>
+  <section class="aps-editorial"><h2>Le tableau de décision</h2><div class="aps-table-wrap"><table><thead><tr><th scope="col">Question</th><th scope="col">Application au cas</th></tr></thead><tbody>{% for row in lesson.table %}<tr><th scope="row">{{ row[0] }}</th><td>{{ row[1] }}</td></tr>{% endfor %}</tbody></table></div></section>
+  <aside class="aps-takeaway"><b>Le repère à conserver</b><p>{{ lesson.decision }}</p></aside>
+  {% elif lesson.kind == 'memory' %}
+  <section class="aps-editorial"><span class="aps-label">Mémoriser en participant</span><h2>Expliquez avant de retourner</h2><p>{{ lesson.instruction }}</p><div class="aps-flashcards">{% for card in lesson.cards %}<details><summary><span>{{ '%02d'|format(loop.index) }}</span><h3>{{ card.front }}</h3><b>Vérifier mon explication +</b></summary><p>{{ card.back }}</p></details>{% endfor %}</div></section>
+  {% if lesson.transcript %}<details class="aps-transcript"><summary>Lire la transcription de la capsule</summary>{% for paragraph in lesson.transcript.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}<p class="aps-small">Narration de synthèse Piper · <a href="https://datashare.ed.ac.uk/handle/10283/2353" target="_blank" rel="noopener noreferrer">base vocale SIWIS</a> de J. Yamagishi, P.-E. Honnet, P. Garner et A. Lazaridis (2017), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>, adaptée en capsules pédagogiques.</p></details>{% endif %}
+  {% elif lesson.kind in ['workshop','transfer'] %}
+  <section class="aps-case"><span class="aps-label">{{ 'À vous de décider' if lesson.kind == 'workshop' else 'Une nouvelle information change la situation' }}</span><h2>{{ 'Le cas professionnel' if lesson.kind == 'workshop' else 'Le défi de transfert' }}</h2><p>{{ lesson.case }}</p></section>
+  {% if lesson.choices %}<section class="aps-editorial"><h2>Quelle première décision proposez-vous ?</h2><p>Testez une option pour analyser ses conséquences. Cet entraînement précède les questions évaluées.</p><div class="aps-choices">{% for choice in lesson.choices %}<button type="button" data-aps-choice data-feedback="{{ choice.feedback }}" data-correct="{{ 'true' if choice.correct else 'false' }}" aria-pressed="false"><b>{{ 'ABC'[loop.index0] }}</b><span>{{ choice.text }}</span></button>{% endfor %}</div><div class="aps-decision-feedback" role="status" aria-live="polite" hidden></div></section>{% endif %}
+  <section class="aps-workbook"><span class="aps-label">Votre production écrite</span><h2>Construire une réponse professionnelle</h2><p>{{ lesson.task }}</p><p class="aps-small">Utilisez uniquement les personnages et faits fictifs du dossier. {{ 'En aperçu, aucun travail n’est enregistré.' if preview_mode else 'Votre production sera enregistrée avec votre progression lorsque vous terminerez l’activité. Elle reste à relire avec votre formateur.' }}</p>
+    {% set saved_work = progress.answers.get(activity.id, {}).get('reflection','') %}
+    <label for="apsReflection">Votre analyse, votre message ou votre compte rendu</label><textarea id="apsReflection" rows="10" minlength="{{ activity.workbook.min_chars }}" maxlength="{{ activity.workbook.max_chars }}" data-min-chars="{{ activity.workbook.min_chars }}"{% if activity_completed %} readonly{% endif %} placeholder="Décrivez les faits, expliquez votre décision, ses limites et la suite à donner…">{{ saved_work }}</textarea>
+    <div class="aps-writing-status"><span data-aps-char-count>0 caractère</span><span>{{ activity.workbook.min_chars }} caractères minimum · raisonnement à développer</span></div>
+    <div class="aps-work-actions"><button type="button" class="aps-small-button" data-aps-download>Exporter mon travail en texte</button><span data-aps-draft-status role="status"></span></div>
+    <h3>Relisez votre travail avec cette grille</h3><div class="aps-rubric">{% for criterion in lesson.criteria %}<label><input type="checkbox"> {{ criterion }}</label>{% endfor %}</div>
+  </section>
+  <details class="aps-model"><summary>Comparer avec les repères de correction</summary><p>{{ lesson.model }}</p><p class="aps-small">Ce modèle éclaire le raisonnement. Plusieurs formulations sont possibles ; la longueur seule ne valide pas la qualité de votre travail. Pour la variante, identifiez vous-même les points qui changent.</p></details>
+  {% elif lesson.kind == 'recap' %}
+  <section class="aps-editorial"><span class="aps-label">Je retiens et je réutilise</span><h2>La décision à savoir expliquer</h2><p class="aps-takeaway">{{ lesson.decision }}</p><p>{{ lesson.reason }}</p><div class="aps-pitfall"><b>Le piège de ce dossier</b><p>{{ lesson.pitfall }}</p></div><p>{{ lesson.instruction }}</p></section>
+  <details class="aps-transcript"><summary>Repères du manuel et sources de référence</summary><p>Manuel APS, édition de septembre 2026 : {% for ref in lesson.manual_refs %}leçon {{ ref.ref }}, page {{ ref.page }} du fichier{% if not loop.last %} ; {% endif %}{% endfor %}.</p><ul>{% for source in lesson.sources %}<li><a href="{{ source[1] }}" target="_blank" rel="noopener noreferrer">{{ source[0] }} ↗</a></li>{% endfor %}</ul><p class="aps-small">Sources vérifiées pour cette édition le 3 octobre 2026. Les consignes et informations évolutives se vérifient au moment de l’utilisation.</p></details>
+  {% endif %}
+</div>
+<dialog class="aps-image-dialog" id="apsImageDialog"><button type="button" data-aps-close aria-label="Fermer la fiche agrandie">Fermer ×</button><img alt="Repère du manuel en grand format"></dialog>

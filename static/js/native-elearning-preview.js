@@ -57,6 +57,11 @@
       }
       showFeedback(result.correct ? "Bonne réponse ! Aucun résultat n’est enregistré."
         : "Réponse incorrecte. Vous pouvez modifier votre réponse et réessayer.", Boolean(result.correct));
+      if (result.explanation && feedback) {
+        const detail = document.createElement('p');
+        detail.textContent = result.explanation;
+        feedback.append(detail);
+      }
     } catch (error) {
       showFeedback(error.message || "Impossible de vérifier cette réponse.", false);
     } finally {

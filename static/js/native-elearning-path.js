@@ -81,7 +81,7 @@
       card.append(button(present ? "Déjà dans le parcours" : "+ Ajouter au parcours", () => {
         if (readonly() || modules.length >= 100) return;
         modules.push({ course_id: course.course_id, course_version: course.course_version,
-          required_minutes: 0,
+          required_minutes: course.planned_minutes || 0,
           title: "", section_ids: course.sections.map((section) => section.id) });
         changed();
         renderModules();
@@ -91,6 +91,20 @@
     });
     if (!matches.length) library.append(textNode("p", "np-empty", "Aucun module trouvé. Importez un ZIP depuis la bibliothèque."));
   }
+  document.getElementById('aps62AddPath')?.addEventListener('click', () => {
+    if (readonly()) return;
+    const additions = config.catalog.filter(course => course.academy && !modules.some(item => item.course_id === course.course_id));
+    if (modules.length + additions.length > 100) {
+      status.textContent = 'Le parcours ne peut pas dépasser 100 modules.';
+      return;
+    }
+    additions.sort((a,b) => a.course_id.localeCompare(b.course_id)).forEach(course => {
+      modules.push({course_id:course.course_id,course_version:course.course_version,title:'',
+        required_minutes:course.planned_minutes,section_ids:course.sections.map(section => section.id)});
+    });
+    if (modules.length === 15 && additions.length === 15) title.value = 'APS · Le parcours illustré · 62 h';
+    changed();renderModules();renderLibrary();
+  });
   function renderModules() {
     moduleList.replaceChildren();
     modules.forEach((item, index) => {

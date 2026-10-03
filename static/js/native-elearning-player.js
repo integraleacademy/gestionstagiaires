@@ -510,12 +510,21 @@
         const result = await postJson(config.answerUrl, { answer: collectAnswer() });
         applyProgress(result.progress);
         showAnswerFeedback(Boolean(result.correct));
+        if (result.explanation) {
+          const detail = document.createElement('p');
+          detail.textContent = result.explanation;
+          document.getElementById('nativeAnswerFeedback')?.append(detail);
+        }
         showCourseResult(result.progress, true);
         actionButton.dataset.mode = "navigate";
         actionButton.textContent = config.isLastActivity ? `${config.endLabel || 'Retour au parcours'} →` : "Continuer →";
         questionForm?.querySelectorAll("input,select").forEach((field) => { field.disabled = true; });
       } else {
-        const result = await postJson(config.completeUrl, {});
+        const reflection = document.getElementById('apsReflection');
+        if (reflection && reflection.value.trim().length < Number(reflection.dataset.minChars)) {
+          throw new Error(`Développez votre production : ${reflection.dataset.minChars} caractères minimum.`);
+        }
+        const result = await postJson(config.completeUrl, reflection ? {reflection: reflection.value.trim()} : {});
         applyProgress(result.progress);
         if (config.isLastActivity) {
           showCourseResult(result.progress, true);

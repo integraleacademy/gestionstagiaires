@@ -94,6 +94,8 @@ def course_outline(course: Mapping[str, Any]) -> Dict[str, Any]:
     """Only descriptive metadata may be sent to the path composer/browser."""
     return {
         "course_id": course["id"], "course_version": course["version"], "title": course["title"],
+        "planned_minutes": int(course.get("planned_minutes") or 0),
+        "academy": course.get("source", {}).get("type") == "academy-aps62",
         "sections": [{
             "id": str(section["id"]), "title": str(section.get("title") or "Séquence"),
             "activities": [{"title": str(activity.get("title") or "Activité"),

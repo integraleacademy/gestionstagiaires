@@ -295,7 +295,7 @@ class NativeElearningWebTests(unittest.TestCase):
         self.data["sessions"].append(dict(self.data["sessions"][0]))
         catalog_page = self.client.get("/admin/elearning")
         self.assertEqual(catalog_page.status_code, 200)
-        self.assertIn("E-learning natif", catalog_page.get_data(as_text=True))
+        self.assertIn("E-learning APS", catalog_page.get_data(as_text=True))
         self.assertIn("Visualiser le contenu", catalog_page.get_data(as_text=True))
         self.assertEqual(
             catalog_page.get_data(as_text=True).count(

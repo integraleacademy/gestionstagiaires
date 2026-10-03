@@ -38,6 +38,7 @@ from markupsafe import Markup
 from werkzeug.exceptions import Conflict
 
 from .videos import activity_videos, course_videos, video_blocker, videos_complete
+from .academy import curriculum_manifest
 
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
@@ -519,6 +520,7 @@ def create_native_elearning_blueprint(
                 "title": str(video.get("title") or "Vidéo pédagogique"),
                 "required": bool(video.get("required")),
                 "duration_seconds": video.get("duration_seconds") or 0,
+                "captions": asset_url(asset_token, course_id, str(video['captions'])) if video.get('captions') else '',
             }
         return public_block
 
@@ -533,7 +535,22 @@ def create_native_elearning_blueprint(
             "type": str(activity.get("type") or "content"),
             "question_type": str(activity.get("question_type") or ""),
             "scored": bool(activity.get("scored")),
+            "planned_minutes": int(activity.get("planned_minutes") or 0),
+            "prompt": str(activity.get("prompt") or ""),
+            "workbook": dict(activity.get("workbook") or {}),
         }
+        if isinstance(activity.get('academy'), Mapping):
+            # Structured content stays autoescaped by Jinja. Only declared media
+            # paths are converted to the usual signed, session-bound asset URLs.
+            def prepare_academy(value):
+                if isinstance(value, dict):
+                    return {k: prepare_academy(v) for k, v in value.items()}
+                if isinstance(value, list):
+                    return [prepare_academy(v) for v in value]
+                if isinstance(value, str) and value.startswith('media/aps62/'):
+                    return asset_url(asset_token, course_id, value)
+                return value
+            public['academy'] = prepare_academy(dict(activity['academy']))
         if public["type"] == "content":
             public["blocks"] = [
                 prepare_block(block, asset_token, course_id)
@@ -730,6 +747,9 @@ def create_native_elearning_blueprint(
             upload_limit_bytes=max_archive_bytes(),
             upload_chunk_mb=UPLOAD_CHUNK_BYTES // (1024 * 1024),
             csrf_token=_csrf_token(),
+            academy_manifest=curriculum_manifest(),
+            academy_courses=[c for c in courses if c.get('source', {}).get('type') == 'academy-aps62'],
+            imported_courses=[c for c in courses if c.get('source', {}).get('type') != 'academy-aps62'],
         )
 
     def preview_course(course_id: str) -> Dict[str, Any]:
@@ -808,7 +828,10 @@ def create_native_elearning_blueprint(
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
         # Evaluate with the learner's grading rules, without storing anything.
-        return jsonify({"ok": True, "correct": correct})
+        result = {"ok": True, "correct": correct}
+        if activity.get('explanation'):
+            result['explanation'] = str(activity['explanation'])
+        return jsonify(result)
 
     @blueprint.get("/admin/sessions/<session_id>/elearning")
     @admin_required
@@ -1072,7 +1095,7 @@ def create_native_elearning_blueprint(
         save_data(data)
         return redirect(url_for("native_elearning.admin_catalog"))
 
-    def live_payload(course_id: str) -> Dict[str, Any]:
+    def live_payload(course_id: str, *, include_work: bool = False) -> Dict[str, Any]:
         try:
             course = catalog().load_course(course_id)
         except CourseImportError:
@@ -1123,6 +1146,17 @@ def create_native_elearning_blueprint(
             row["active_time_label"] = _format_seconds(row.get("active_seconds"))
             row["required_time_label"] = _format_seconds(row["required_seconds"])
             row["remaining_time_label"] = _format_seconds(row["remaining_seconds"])
+            if include_work:
+                row['written_work'] = [
+                    {'activity_id': item['id'], 'title': item.get('title', ''),
+                     'dossier': section.get('title', ''),
+                     'task': item.get('academy', {}).get('task', ''),
+                     'reflection': row['answers'][item['id']]['reflection'],
+                     'submitted_at': row['answers'][item['id']].get('submitted_at', '')}
+                    for section, item in _activity_pairs(row_course)
+                    if isinstance(row.get('answers', {}).get(item['id']), Mapping)
+                    and isinstance(row['answers'][item['id']].get('reflection'), str)
+                ]
             row.pop("answers", None)
         return {
             "ok": True,
@@ -1146,6 +1180,32 @@ def create_native_elearning_blueprint(
     @admin_required
     def admin_live_api(course_id: str) -> Any:
         return jsonify(live_payload(course_id))
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/work')
+    @admin_required
+    def admin_written_work(course_id: str) -> Any:
+        payload = live_payload(course_id, include_work=True)
+        return render_template('admin_native_elearning_work.html', initial=payload,
+                               work_count=sum(len(row['written_work']) for row in payload['learners']))
+
+    @blueprint.get('/admin/elearning/courses/<course_id>/work.csv')
+    @admin_required
+    def admin_written_work_export(course_id: str) -> Any:
+        payload = live_payload(course_id, include_work=True)
+        output = io.StringIO(newline='')
+        writer = csv.writer(output, delimiter=';')
+        writer.writerow(['Stagiaire', 'Session', 'Version', 'Dossier', 'Activité', 'Consigne', 'Production', 'Date de remise'])
+        def cell(value):
+            value = str(value or '')
+            return "'" + value if value.lstrip().startswith(('=', '+', '-', '@')) or value.startswith(('\t', '\r', '\n')) else value
+        for row in payload['learners']:
+            for work in row['written_work']:
+                writer.writerow([cell(value) for value in [row['trainee_name'], row['session_name'],
+                    row['course_version'], work['dossier'], work['title'], work['task'],
+                    work['reflection'], work['submitted_at']]])
+        response = Response('\ufeff' + output.getvalue(), content_type='text/csv; charset=utf-8')
+        response.headers['Content-Disposition'] = f'attachment; filename="travaux-{course_id}.csv"'
+        return response
 
     @blueprint.get("/admin/elearning/courses/<course_id>/export.csv")
     @admin_required
@@ -1303,6 +1363,7 @@ def create_native_elearning_blueprint(
             activity_position=index + 1,
             activity_count=len(order),
             activity_completed=requested_id in completed,
+            answer_explanation=str(raw_activity.get('explanation') or '') if requested_id in completed else '',
             required_videos=activity_videos(raw_activity),
             videos_completed=videos_complete(progress.get("video_progress", {}).get(requested_id, {}), activity_videos(raw_activity)),
             previous_url=previous_url,
@@ -1430,12 +1491,27 @@ def create_native_elearning_blueprint(
         current = current_progress(access, course)
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
+        answer = None
+        if activity.get('workbook'):
+            existing = current.get('answers', {}).get(activity_id)
+            if isinstance(existing, Mapping):
+                answer = existing
+            else:
+                payload = request.get_json(silent=True) or {}
+                reflection = payload.get('reflection') if isinstance(payload, dict) else None
+                minimum = int(activity['workbook'].get('min_chars') or 120)
+                maximum = int(activity['workbook'].get('max_chars') or 12000)
+                if not isinstance(reflection, str) or not minimum <= len(reflection.strip()) <= maximum:
+                    return jsonify({'ok': False, 'error': f'Rédigez votre travail ({minimum} à {maximum} caractères) avant de continuer.'}), 400
+                answer = {'reflection': reflection.strip(), 'review_status': 'to_review',
+                          'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
         try:
             result = store().complete_activity(
                 access, activity_id, activity_order=order, scored_activity_ids=scored_ids,
                 mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
                 required_seconds=int(course.get("required_minutes") or 0) * 60,
                 video_requirements=course_videos(course),
+                answer=answer,
             )
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 409
@@ -1452,7 +1528,8 @@ def create_native_elearning_blueprint(
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
         existing = current.get("answers", {}).get(activity_id)
         if isinstance(existing, Mapping):
-            return jsonify({"ok": True, "already_answered": True, "correct": bool(existing.get("correct")), "progress": current})
+            return jsonify({"ok": True, "already_answered": True, "correct": bool(existing.get("correct")), "progress": current,
+                            "explanation": str(activity.get('explanation') or '')})
         payload = request.get_json(silent=True) or {}
         answer_payload = payload.get("answer")
         if not isinstance(answer_payload, Mapping):
@@ -1481,6 +1558,7 @@ def create_native_elearning_blueprint(
                 "ok": True,
                 "already_answered": False,
                 "correct": correct,
+                "explanation": str(activity.get('explanation') or ''),
                 "progress": project_progress(result, course),
                 "next_activity_id": result.get("current_activity_id"),
             }

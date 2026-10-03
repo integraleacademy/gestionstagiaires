@@ -7,6 +7,7 @@
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261003-1') }}">
 </head>
 <body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
@@ -16,6 +17,7 @@
         <div class="native-video-shell">
           <video class="native-course-video" controls preload="metadata" playsinline aria-label="{{ block.video.title }}"{% if block.video.required and not preview_mode %} data-required-video="{{ block.video.id }}" data-video-duration="{{ block.video.duration_seconds }}" controlslist="nodownload noplaybackrate" disablepictureinpicture{% endif %}{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
             <source src="{{ block.video.src }}">
+            {% if block.video.captions %}<track kind="captions" src="{{ block.video.captions }}" srclang="fr" label="Français">{% endif %}
             Votre navigateur ne permet pas de lire cette vidéo.
           </video>
         </div>
@@ -128,15 +130,18 @@
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
             <span class="native-kicker">{{ 'Question évaluée' if activity.scored else 'Cours' }}</span>
+            {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} min de travail guidé</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
 
           {% if activity.type == 'content' %}
             <div class="native-content-flow">
               {% for block in activity.blocks %}{{ render_block(block) }}{% endfor %}
+              {% if activity.academy %}{% include '_aps62_activity.html' %}{% endif %}
             </div>
           {% else %}
             {% set saved_answer = progress.answers.get(activity.id, {}) %}
+            {% if activity.prompt %}<div class="aps-question-prompt">{{ activity.prompt }}</div>{% endif %}
             <form class="native-question" id="nativeQuestionForm" data-question-type="{{ activity.question_type }}">
               {% if activity.question_type == 'single_choice' %}
                 <p class="native-question__instruction">Sélectionnez une réponse.</p>
@@ -168,6 +173,7 @@
             </form>
             <div class="native-answer-feedback{% if activity_completed %} is-visible {{ 'is-correct' if saved_answer.get('correct') else 'is-incorrect' }}{% endif %}" id="nativeAnswerFeedback" role="status" aria-live="polite">
               {% if activity_completed %}{{ 'Bonne réponse enregistrée.' if saved_answer.get('correct') else 'Réponse enregistrée. La correction sera reprise avec votre formateur.' }}{% endif %}
+              {% if answer_explanation %}<p>{{ answer_explanation }}</p>{% endif %}
             </div>
           {% endif %}
         </article>
@@ -201,7 +207,7 @@
 
   {% if preview_mode %}
   <script id="nativePreviewConfig" type="application/json">{{ preview_config|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-preview.js', v='20260920-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-preview.js', v='20261003-aps62') }}" defer></script>
   {% else %}
   <div class="native-duplicate-notice" id="nativeDuplicateNotice" role="alert" aria-live="assertive">
     <strong>Chrono en pause sur cet onglet</strong>
@@ -243,7 +249,8 @@
     'requiredVideos': required_videos|default({}),
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20260920-video') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261003-aps62') }}" defer></script>
   {% endif %}
+<script src="{{ url_for('static', filename='js/aps62.js', v='20261003-1') }}" defer></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
 <div class="nellive">
   <header class="nellive-head">
     <div class="nellive-head__copy"><span>Suivi pédagogique en direct</span><h1>{{ initial.course.title }}</h1><p>Version {{ initial.course.version }} · actualisation automatique toutes les 10 secondes</p></div>
-    <div class="nellive-actions"><span class="nellive-connection" id="nativeLiveConnection"><i></i><b>Connecté</b></span><a class="nellive-button" href="{{ url_for('native_elearning.admin_course_export', course_id=initial.course.id) }}">Exporter CSV</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_catalog') }}">← Cours et affectations</a></div>
+    <div class="nellive-actions"><span class="nellive-connection" id="nativeLiveConnection"><i></i><b>Connecté</b></span><a class="nellive-button" href="{{ url_for('native_elearning.admin_written_work', course_id=initial.course.id) }}">Travaux écrits</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_course_export', course_id=initial.course.id) }}">Exporter CSV</a><a class="nellive-button" href="{{ url_for('native_elearning.admin_catalog') }}">← Cours et affectations</a></div>
   </header>
 
   <section class="nellive-stats" aria-label="Synthèse">

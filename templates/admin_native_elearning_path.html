@@ -9,7 +9,8 @@
   </header>
   <div class="np-layout">
     <aside class="np-library np-panel">
-      <span class="np-eyebrow">1 · Ajouter</span><h2>Vos modules importés</h2>
+      <span class="np-eyebrow">1 · Ajouter</span><h2>Vos modules disponibles</h2>
+      <div class="aps-preset"><button class="np-button np-button--primary" id="aps62AddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours illustré · 62 h</button><p>Ajoute les 15 modules et leurs durées. Pour le TFP APS ADEF, adaptez la sélection aux 50 h 30 de séquences autorisées à distance. L’enregistrement reste nécessaire.</p></div>
       <p>Un ZIP importé devient un module. Ajoutez-en autant que nécessaire, jusqu’à 100 par parcours.</p>
       <label class="np-field">Rechercher un module<input type="search" id="nativeModuleSearch" placeholder="Ex. cadre légal, intervention…"></label>
       <div id="nativeModuleLibrary" class="np-library-list"></div>
@@ -33,5 +34,6 @@
   </div>
 </div>
 <script id="nativePathConfig" type="application/json">{{ path_config|tojson }}</script>
-<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20260908-2') }}" defer></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-catalog.css', v='20261003-1') }}">
+<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20261003-1') }}" defer></script>
 {% endblock %}
