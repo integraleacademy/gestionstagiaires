@@ -1,0 +1,1472 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-09",
+  "version": "20261004-aps62-v2",
+  "title": "APS 09 · Justifier ses décisions",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-04"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 180,
+  "required_minutes": 180,
+  "regulation": "Annexe III · Compléments pénal et libertés",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-09-01",
+      "title": "01 · Justifier une défense avec une chronologie",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-09-01-comprendre",
+          "title": "Comprendre · Justifier une défense avec une chronologie",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.01",
+            "title": "Justifier une défense avec une chronologie",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-09.webp",
+            "case": "Lors d’un conflit, plusieurs gestes se succèdent très vite. Votre collègue résume : « C’était forcément de la légitime défense ». Vous avez seulement vu le dernier geste ; une autre personne a observé le début.",
+            "reason": "Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée.",
+            "lessons": [
+              {
+                "ref": "02.10",
+                "title": "Comprendre la légitime défense",
+                "page": 92,
+                "diagram": "media/aps62/repere-02.10.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une réponse à une atteinte actuelle"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La légitime défense des personnes suppose une atteinte injustifiée et une réponse accomplie dans le même temps, nécessaire et proportionnée. La nécessité signifie que l'acte doit répondre au besoin de défense. La proportionnalité s'apprécie entre les moyens employés et la gravité de l'atteinte. Il ne s'agit ni de punir une insulte ni de se venger d'un geste déjà terminé."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Réévaluer dès que la situation change"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une réaction peut cesser d'être nécessaire si l'agression s'arrête ou si la personne s'éloigne. L'agent doit donc adapter son action, demander du soutien et protéger les personnes. La défense des biens obéit à des conditions propres et plus restrictives ; elle ne se confond pas avec la défense d'une personne. Une consigne ou un ressenti de colère ne remplace pas l'analyse des conditions légales."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne tente de frapper un agent, puis recule et quitte les lieux. Les gestes nécessaires à la protection pendant l'attaque doivent cesser lorsque leur justification disparaît. La poursuivre pour la « corriger » ne prolonge pas la légitime défense. L'agent met l'équipe en sécurité, alerte et décrit la chronologie."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La question n'est pas « ai-je été provoqué ? », mais « quelle atteinte actuelle exige cette réponse, et cette réponse reste-t-elle nécessaire et proportionnée ? »"
+                  }
+                ],
+                "course_page": 93,
+                "practice": {
+                  "background": "La défense des biens obéit à des conditions spécifiques : l’acte doit interrompre l’exécution d’un crime ou d’un délit contre un bien, être strictement nécessaire et proportionné ; un homicide volontaire n’entre pas dans cette justification. Pour l’agent, le choix professionnel recherche d’abord l’évitement, la protection et l’alerte lorsque cela est possible. Si une action physique est indispensable, elle cesse dès que sa nécessité disparaît. Une insulte, un refus ou une provocation ne justifie pas automatiquement une violence.",
+                  "case": "Une personne vous pousse puis recule, mains visibles, en s’éloignant. Votre collègue veut la poursuivre pour lui donner « une leçon » avant l’arrivée de la police. Quels faits devez-vous distinguer dans le temps ? Quelle décision prenez-vous ?",
+                  "transfer": "Après la fin d’une agression, un agent poursuit la personne pour « lui donner une leçon ». Quel critère pose immédiatement problème ?",
+                  "page": 121
+                }
+              },
+              {
+                "ref": "02.11",
+                "title": "Nécessité et obligation d'assistance",
+                "page": 94,
+                "diagram": "media/aps62/repere-02.11.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Faire face à un danger"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné. Il ne constitue pas une autorisation générale d'ignorer les règles. Il faut pouvoir expliquer le danger, l'urgence, les options disponibles et pourquoi l'action choisie était adaptée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Porter assistance sans créer une autre victime"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'obligation d'assistance à une personne en péril peut être satisfaite par une action personnelle ou par l'appel aux secours, selon les circonstances et sans risque pour soi ou pour les tiers. Alerter efficacement, empêcher d'autres personnes d'entrer dans une zone dangereuse et guider les secours sont des formes d'action utiles. L'agent ne doit pas confondre prudence et absence totale de réponse."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent voit une personne inanimée dans un local rempli de fumée. Entrer sans protection respiratoire adaptée l'exposerait gravement. Il donne l'alerte, empêche l'accès, indique la localisation de la victime et facilite l'intervention. Son rôle consiste à rendre le secours possible sans ajouter une victime. Une effraction destinée à sauver une personne se juge, elle aussi, sur ses circonstances exactes."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une urgence ne rend pas toutes les actions équivalentes. Choisissez celle qui protège réellement, dans les limites de vos moyens et des conditions légales."
+                  }
+                ],
+                "course_page": 95,
+                "practice": {
+                  "background": "L’assistance à une personne en péril peut prendre la forme d’un secours direct ou d’un appel aux services compétents, lorsque cela peut être fait sans risque pour soi ou pour autrui. La loi sanctionne aussi certaines abstentions face à un crime ou un délit contre l’intégrité corporelle lorsque l’action est possible sans risque. Dans le métier, appelez, protégez et facilitez les secours. L’obligation d’assistance ne commande pas de se jeter dans un danger incontrôlé ni de dépasser ses compétences techniques.",
+                  "case": "Une personne est enfermée dans un local et appelle à l’aide. De la fumée se répand à proximité. La clé n’est pas immédiatement disponible et les secours sont appelés. Quels éléments guident votre décision ? Que faut-il transmettre et préserver après l’action ?",
+                  "transfer": "Face à un local potentiellement toxique, appeler les secours spécialisés et empêcher l’accès est-il une absence d’aide ?",
+                  "page": 122
+                }
+              },
+              {
+                "ref": "02.16",
+                "title": "Construire une décision professionnelle",
+                "page": 104,
+                "diagram": "media/aps62/repere-02.16.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Relier quatre éléments"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel. Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Expliquer sans créer un débat infini"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'explication au public doit rester simple : ce qui manque, ce qui est possible et qui peut valider la suite. L'agent peut reconnaître une gêne sans abandonner une exigence. En interne, la trace doit permettre de retrouver le raisonnement et les informations disponibles au moment de la décision. Une information obtenue plus tard ne doit pas être présentée comme si elle était connue dès le début."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un prestataire arrive avec une autorisation pour un autre bâtiment. L'agent constate l'écart, maintient l'attente dans la zone prévue et appelle le responsable habilité. Il explique : « Votre intervention est annoncée au bâtiment A ; je fais confirmer l'accès au bâtiment B avant de vous orienter. » La décision protège le site tout en proposant une issue claire."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une bonne justification ne repose ni sur le ton de la voix ni sur « parce que je le décide ». Elle rend visibles les faits et les limites du rôle."
+                  }
+                ],
+                "course_page": 105,
+                "practice": {
+                  "background": "Les sanctions possibles dépendent du texte enfreint et de la situation. Pour apprendre, il est plus utile de savoir prévenir une atteinte que de réciter une liste de peines détachée du contexte. Le livre VI prévoit des infractions et des conséquences administratives ou disciplinaires propres au secteur. Les atteintes aux personnes, aux biens et aux systèmes numériques relèvent aussi du droit commun. Conservez des faits précis et signalez les erreurs sans les masquer. Une correction rapide et loyale protège mieux qu’un récit arrangé.",
+                  "case": "Un visiteur sans badge insiste pour entrer. Il connaît le nom du directeur mais la personne attendue reste injoignable. Une réunion importante doit commencer dans deux minutes. Quelle décision est défendable ? Comment la formulez-vous au visiteur et dans la trace ?",
+                  "transfer": "Reformulez « j’ai refusé parce que c’est comme ça » en trois éléments professionnels.",
+                  "page": 127
+                }
+              }
+            ],
+            "decision": "Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant.",
+            "pitfall": "Reprendre la qualification du collègue sans détail.",
+            "objectives": [
+              "Expliquer : justifier une défense avec une chronologie",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Lors d’un conflit, plusieurs gestes se succèdent très vite. Votre collègue résume : « C’était forcément de la légitime défense ». Vous avez seulement vu le dernier geste ; une autre personne a observé le début."
+              ],
+              [
+                "Décision à justifier",
+                "Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant."
+              ],
+              [
+                "Piège à éviter",
+                "Reprendre la qualification du collègue sans détail."
+              ],
+              [
+                "Pourquoi ?",
+                "Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Lors d’un conflit, plusieurs gestes se succèdent très vite."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Une justification juridique se construit à partir d’éléments vérifiables."
+              },
+              {
+                "label": "Décider",
+                "text": "Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une caméra ne couvre pas le premier geste. Pourquoi cette limite doit-elle apparaître dans l’analyse ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Justifier ses décisions",
+            "visual_board": {
+              "title": "Construire une décision défendable",
+              "steps": [
+                {
+                  "label": "Observer",
+                  "text": "Séparer les faits des hypothèses et identifier les inconnues."
+                },
+                {
+                  "label": "Comparer",
+                  "text": "Relier la règle aux options et à leurs conséquences."
+                },
+                {
+                  "label": "Décider",
+                  "text": "Choisir une mesure suffisante, licite et proportionnée."
+                },
+                {
+                  "label": "Réévaluer",
+                  "text": "Vérifier l’effet, ajuster, transmettre et tracer."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "Deux options, deux risques",
+              "case": "Un cheminement est obstrué. Le détour le plus court traverse une zone de livraison active ; un autre passage est plus long mais protégé. Le public se presse et réclame l’option rapide.",
+              "task": "Comparez les deux options, puis expliquez votre décision en quatre phrases.",
+              "model": "Le gain de temps doit être comparé à l’exposition aux véhicules. Organiser le parcours protégé dans le cadre des consignes, expliquer le motif, demander le traitement de l’obstacle et réévaluer après correction."
+            },
+            "sorting": [
+              {
+                "text": "Lors d’un conflit, plusieurs gestes se succèdent très vite. Votre collègue résume : « C’était forcément de la légitime défense ». Vous avez seulement vu le dernier geste ; une autre personne a observé le début.",
+                "category": "fait"
+              },
+              {
+                "text": "Reprendre la qualification du collègue sans détail.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant.",
+                "category": "adapte"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-09-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-09-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-09-01-video",
+                "title": "Justifier une défense avec une chronologie",
+                "required": true,
+                "src": "media/aps62/v2/aps62-09-01.mp4",
+                "poster": "media/aps62/v2/aps62-09-01.jpg",
+                "captions": "media/aps62/v2/aps62-09-01.vtt",
+                "duration_seconds": 76.730667,
+                "transcript": "La situation : Lors d’un conflit, plusieurs gestes se succèdent très vite. Votre collègue résume : « C’était forcément de la légitime défense ». Vous avez seulement vu le dernier geste ; une autre personne a observé le début.\n\nÀ vous de décider : Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant. Ou bien : Reprendre la qualification du collègue sans détail. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée.\n\nLe bon relais : La frise distingue les faits vus, les faits rapportés et les horaires estimés. Le dernier geste ne permet pas à lui seul de déduire tout le déroulement. Le rapport explique les actions sans affirmer automatiquement qu’elles sont justifiées. Il indique les témoins et les éléments accessibles selon procédure.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "09.01",
+            "title": "Justifier une défense avec une chronologie",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une réponse à une atteinte actuelle",
+                "back": "La légitime défense des personnes suppose une atteinte injustifiée et une réponse accomplie dans le même temps, nécessaire et proportionnée. La nécessité signifie que l'acte doit répondre au besoin de défense. La proportionnalité s'apprécie entre les moyens employés et la gravité de l'atteinte. Il ne s'agit ni de punir une insulte ni de se venger d'un geste déjà terminé."
+              },
+              {
+                "front": "Réévaluer dès que la situation change",
+                "back": "Une réaction peut cesser d'être nécessaire si l'agression s'arrête ou si la personne s'éloigne. L'agent doit donc adapter son action, demander du soutien et protéger les personnes. La défense des biens obéit à des conditions propres et plus restrictives ; elle ne se confond pas avec la défense d'une personne. Une consigne ou un ressenti de colère ne remplace pas l'analyse des conditions légales."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une personne tente de frapper un agent, puis recule et quitte les lieux. Les gestes nécessaires à la protection pendant l'attaque doivent cesser lorsque leur justification disparaît. La poursuivre pour la « corriger » ne prolonge pas la légitime défense. L'agent met l'équipe en sécurité, alerte et décrit la chronologie."
+              },
+              {
+                "front": "Faire face à un danger",
+                "back": "L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné. Il ne constitue pas une autorisation générale d'ignorer les règles. Il faut pouvoir expliquer le danger, l'urgence, les options disponibles et pourquoi l'action choisie était adaptée."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Lors d’un conflit, plusieurs gestes se succèdent très vite. Votre collègue résume : « C’était forcément de la légitime défense ». Vous avez seulement vu le dernier geste ; une autre personne a observé le début.\n\nÀ vous de décider : Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant. Ou bien : Reprendre la qualification du collègue sans détail. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée.\n\nLe bon relais : La frise distingue les faits vus, les faits rapportés et les horaires estimés. Le dernier geste ne permet pas à lui seul de déduire tout le déroulement. Le rapport explique les actions sans affirmer automatiquement qu’elles sont justifiées. Il indique les témoins et les éléments accessibles selon procédure.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-09-01-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.01",
+            "title": "Justifier une défense avec une chronologie",
+            "kind": "workshop",
+            "case": "Lors d’un conflit, plusieurs gestes se succèdent très vite. Votre collègue résume : « C’était forcément de la légitime défense ». Vous avez seulement vu le dernier geste ; une autre personne a observé le début.",
+            "choices": [
+              {
+                "text": "Reprendre la qualification du collègue sans détail.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée.",
+                "correct": false
+              },
+              {
+                "text": "Décrire comme observées les images racontées par un témoin.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. La frise distingue les faits vus, les faits rapportés et les horaires estimés. Le dernier geste ne permet pas à lui seul de déduire tout le déroulement. Le rapport explique les actions sans affirmer automatiquement qu’elles sont justifiées. Il indique les témoins et les éléments accessibles selon procédure.",
+                "correct": false
+              },
+              {
+                "text": "Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant.",
+                "feedback": "Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée.",
+                "correct": true
+              }
+            ],
+            "task": "Construisez une frise en six cases : avant, déclenchement, réponse, évolution, cessation, relais. Rédigez les inconnues sous la frise.",
+            "model": "La frise distingue les faits vus, les faits rapportés et les horaires estimés. Le dernier geste ne permet pas à lui seul de déduire tout le déroulement. Le rapport explique les actions sans affirmer automatiquement qu’elles sont justifiées. Il indique les témoins et les éléments accessibles selon procédure.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-09-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Lors d’un conflit, plusieurs gestes se succèdent très vite. Votre collègue résume : « C’était forcément de la légitime défense ». Vous avez seulement vu le dernier geste ; une autre personne a observé le début.",
+          "options": [
+            {
+              "id": "aps62-09-01-a0",
+              "text": "Reprendre la qualification du collègue sans détail.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-09-01-a1",
+              "text": "Décrire comme observées les images racontées par un témoin.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-09-01-a2",
+              "text": "Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée."
+        },
+        {
+          "id": "aps62-09-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-09-01-pair0",
+              "left": "Une réponse à une atteinte actuelle",
+              "right": "La légitime défense des personnes suppose une atteinte injustifiée et une réponse accomplie dans le même temps, nécessaire et proportionnée."
+            },
+            {
+              "id": "aps62-09-01-pair1",
+              "left": "Réévaluer dès que la situation change",
+              "right": "Une réaction peut cesser d'être nécessaire si l'agression s'arrête ou si la personne s'éloigne."
+            },
+            {
+              "id": "aps62-09-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Une personne tente de frapper un agent, puis recule et quitte les lieux."
+            }
+          ],
+          "explanation": "Une réponse à une atteinte actuelle : La légitime défense des personnes suppose une atteinte injustifiée et une réponse accomplie dans le même temps, nécessaire et proportionnée. Réévaluer dès que la situation change : Une réaction peut cesser d'être nécessaire si l'agression s'arrête ou si la personne s'éloigne. EXEMPLE EXPLIQUÉ : Une personne tente de frapper un agent, puis recule et quitte les lieux."
+        },
+        {
+          "id": "aps62-09-01-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.01",
+            "title": "Justifier une défense avec une chronologie",
+            "kind": "transfer",
+            "case": "Une caméra ne couvre pas le premier geste. Pourquoi cette limite doit-elle apparaître dans l’analyse ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée. La frise distingue les faits vus, les faits rapportés et les horaires estimés. Le dernier geste ne permet pas à lui seul de déduire tout le déroulement. Le rapport explique les actions sans affirmer automatiquement qu’elles sont justifiées. Il indique les témoins et les éléments accessibles selon procédure.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-09-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.01",
+            "title": "Justifier une défense avec une chronologie",
+            "kind": "recap",
+            "decision": "Reconstituer les faits, attribuer les observations et examiner les conditions à chaque instant.",
+            "reason": "Une justification juridique se construit à partir d’éléments vérifiables. La nécessité, l’actualité et la proportion ne sont pas des mots à ajouter après coup : elles renvoient à une situation précise. Une information manquante ne se remplace pas par une certitude. L’examen revient aux autorités compétentes si une procédure est engagée.",
+            "pitfall": "Reprendre la qualification du collègue sans détail.",
+            "cards": [
+              {
+                "front": "Une réponse à une atteinte actuelle",
+                "back": "La légitime défense des personnes suppose une atteinte injustifiée et une réponse accomplie dans le même temps, nécessaire et proportionnée. La nécessité signifie que l'acte doit répondre au besoin de défense. La proportionnalité s'apprécie entre les moyens employés et la gravité de l'atteinte. Il ne s'agit ni de punir une insulte ni de se venger d'un geste déjà terminé."
+              },
+              {
+                "front": "Réévaluer dès que la situation change",
+                "back": "Une réaction peut cesser d'être nécessaire si l'agression s'arrête ou si la personne s'éloigne. L'agent doit donc adapter son action, demander du soutien et protéger les personnes. La défense des biens obéit à des conditions propres et plus restrictives ; elle ne se confond pas avec la défense d'une personne. Une consigne ou un ressenti de colère ne remplace pas l'analyse des conditions légales."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Une personne tente de frapper un agent, puis recule et quitte les lieux. Les gestes nécessaires à la protection pendant l'attaque doivent cesser lorsque leur justification disparaît. La poursuivre pour la « corriger » ne prolonge pas la légitime défense. L'agent met l'équipe en sécurité, alerte et décrit la chronologie."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.10",
+                "page": 93
+              },
+              {
+                "ref": "02.11",
+                "page": 95
+              },
+              {
+                "ref": "02.16",
+                "page": 105
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-09-02",
+      "title": "02 · Assistance et nécessité dans une demande urgente",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-09-02-comprendre",
+          "title": "Comprendre · Assistance et nécessité dans une demande urgente",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.02",
+            "title": "Assistance et nécessité dans une demande urgente",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-09.webp",
+            "case": "Un enfant paraît enfermé dans un véhicule au soleil. Vous ne connaissez ni la durée ni l’état exact de l’enfant. Un passant exige une action immédiate sur le véhicule ; un autre propose d’attendre le propriétaire sans alerter.",
+            "reason": "La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois.",
+            "lessons": [
+              {
+                "ref": "02.11",
+                "title": "Nécessité et obligation d'assistance",
+                "page": 94,
+                "diagram": "media/aps62/repere-02.11.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Faire face à un danger"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné. Il ne constitue pas une autorisation générale d'ignorer les règles. Il faut pouvoir expliquer le danger, l'urgence, les options disponibles et pourquoi l'action choisie était adaptée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Porter assistance sans créer une autre victime"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'obligation d'assistance à une personne en péril peut être satisfaite par une action personnelle ou par l'appel aux secours, selon les circonstances et sans risque pour soi ou pour les tiers. Alerter efficacement, empêcher d'autres personnes d'entrer dans une zone dangereuse et guider les secours sont des formes d'action utiles. L'agent ne doit pas confondre prudence et absence totale de réponse."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent voit une personne inanimée dans un local rempli de fumée. Entrer sans protection respiratoire adaptée l'exposerait gravement. Il donne l'alerte, empêche l'accès, indique la localisation de la victime et facilite l'intervention. Son rôle consiste à rendre le secours possible sans ajouter une victime. Une effraction destinée à sauver une personne se juge, elle aussi, sur ses circonstances exactes."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une urgence ne rend pas toutes les actions équivalentes. Choisissez celle qui protège réellement, dans les limites de vos moyens et des conditions légales."
+                  }
+                ],
+                "course_page": 95,
+                "practice": {
+                  "background": "L’assistance à une personne en péril peut prendre la forme d’un secours direct ou d’un appel aux services compétents, lorsque cela peut être fait sans risque pour soi ou pour autrui. La loi sanctionne aussi certaines abstentions face à un crime ou un délit contre l’intégrité corporelle lorsque l’action est possible sans risque. Dans le métier, appelez, protégez et facilitez les secours. L’obligation d’assistance ne commande pas de se jeter dans un danger incontrôlé ni de dépasser ses compétences techniques.",
+                  "case": "Une personne est enfermée dans un local et appelle à l’aide. De la fumée se répand à proximité. La clé n’est pas immédiatement disponible et les secours sont appelés. Quels éléments guident votre décision ? Que faut-il transmettre et préserver après l’action ?",
+                  "transfer": "Face à un local potentiellement toxique, appeler les secours spécialisés et empêcher l’accès est-il une absence d’aide ?",
+                  "page": 122
+                }
+              },
+              {
+                "ref": "06.03",
+                "title": "Protéger la personne et sa dignité",
+                "page": 268,
+                "diagram": "media/aps62/repere-06.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "La sécurité reste due à tous"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne soupçonnée ou appréhendée conserve ses droits et sa dignité. Une difficulté respiratoire, une blessure ou un malaise doit être prise au sérieux. L'agent ne peut pas considérer un signe de détresse comme de la simulation sans évaluation adaptée. La contrainte n'est jamais une punition, une humiliation ou un moyen d'obtenir des aveux."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Éviter les risques supplémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les pressions sur le cou, le thorax ou une position gênant la respiration peuvent avoir des conséquences graves. La formation pratique encadrée doit porter sur les limites légales et la protection, pas sur des techniques improvisées. L'agent surveille l'état de la personne et demande les secours si nécessaire. Le public est tenu à distance pour préserver la sécurité et éviter les prises d'images ou commentaires humiliants."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Dans l'attente des forces de l'ordre, une personne indique qu'elle respire mal. L'agent transmet immédiatement le signe, fait demander l'aide médicale et adapte la protection. La présence d'un soupçon d'infraction ne justifie pas de différer l'assistance. Les heures, plaintes et actions sont consignées factuellement."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La nécessité d'une mesure doit être réévaluée pendant toute sa durée. L'état de santé et la dignité ne deviennent jamais secondaires du fait du comportement reproché."
+                  }
+                ],
+                "course_page": 269,
+                "practice": {
+                  "background": "Les positions et techniques susceptibles d’entraver la respiration ou de créer une blessure grave sont particulièrement dangereuses. Aucune technique de contrainte ne s’improvise à partir d’un livre. Le menottage n’est jamais une commodité ou une routine : son éventuelle mise en œuvre doit satisfaire les conditions légales et être maîtrisée dans un cadre professionnel validé. Surveillez la réponse et la respiration et prenez au sérieux une plainte de malaise. La présence de collègues ne réduit pas cette obligation de vigilance.",
+                  "case": "Après une intervention, une personne se plaint de difficultés respiratoires. Un collègue répond qu’elle simule et souhaite poursuivre les questions en attendant la police. Quelle priorité s’impose ? Comment transmettre sans poser de diagnostic ?",
+                  "transfer": "Des témoins veulent filmer la personne pour la publier. Quelle attitude professionnelle adoptez-vous dans votre propre mission ?",
+                  "page": 282
+                }
+              }
+            ],
+            "decision": "Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées.",
+            "pitfall": "Attendre sans alerter pour éviter toute atteinte au véhicule.",
+            "objectives": [
+              "Expliquer : assistance et nécessité dans une demande urgente",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un enfant paraît enfermé dans un véhicule au soleil. Vous ne connaissez ni la durée ni l’état exact de l’enfant. Un passant exige une action immédiate sur le véhicule ; un autre propose d’attendre le propriétaire sans alerter."
+              ],
+              [
+                "Décision à justifier",
+                "Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées."
+              ],
+              [
+                "Piège à éviter",
+                "Attendre sans alerter pour éviter toute atteinte au véhicule."
+              ],
+              [
+                "Pourquoi ?",
+                "La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un enfant paraît enfermé dans un véhicule au soleil."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités."
+              },
+              {
+                "label": "Décider",
+                "text": "Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Le propriétaire revient pendant l’appel. Pourquoi faut-il informer les secours au lieu de simplement raccrocher ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Justifier ses décisions",
+            "sorting": [
+              {
+                "text": "Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées.",
+                "category": "adapte"
+              },
+              {
+                "text": "Un enfant paraît enfermé dans un véhicule au soleil. Vous ne connaissez ni la durée ni l’état exact de l’enfant. Un passant exige une action immédiate sur le véhicule ; un autre propose d’attendre le propriétaire sans alerter.",
+                "category": "fait"
+              },
+              {
+                "text": "Attendre sans alerter pour éviter toute atteinte au véhicule.",
+                "category": "ecarter"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-09-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-09-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-09-02-video",
+                "title": "Assistance et nécessité dans une demande urgente",
+                "required": true,
+                "src": "media/aps62/v2/aps62-09-02.mp4",
+                "poster": "media/aps62/v2/aps62-09-02.jpg",
+                "captions": "media/aps62/v2/aps62-09-02.vtt",
+                "duration_seconds": 81.146667,
+                "transcript": "La situation : Un enfant paraît enfermé dans un véhicule au soleil. Vous ne connaissez ni la durée ni l’état exact de l’enfant. Un passant exige une action immédiate sur le véhicule ; un autre propose d’attendre le propriétaire sans alerter.\n\nÀ vous de décider : Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées. Ou bien : Attendre sans alerter pour éviter toute atteinte au véhicule. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois.\n\nLe bon relais : L’appel précise la localisation, l’accès, les signes visibles, le nombre de personnes et les conditions observées, sans diagnostic. Une mise à jour signale immédiatement toute aggravation. L’agent fait organiser l’accueil et les recherches utiles sans retarder la réponse au danger ni présumer d’un pouvoir illimité sur le véhicule.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "09.02",
+            "title": "Assistance et nécessité dans une demande urgente",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Faire face à un danger",
+                "back": "L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné. Il ne constitue pas une autorisation générale d'ignorer les règles. Il faut pouvoir expliquer le danger, l'urgence, les options disponibles et pourquoi l'action choisie était adaptée."
+              },
+              {
+                "front": "Porter assistance sans créer une autre victime",
+                "back": "L'obligation d'assistance à une personne en péril peut être satisfaite par une action personnelle ou par l'appel aux secours, selon les circonstances et sans risque pour soi ou pour les tiers. Alerter efficacement, empêcher d'autres personnes d'entrer dans une zone dangereuse et guider les secours sont des formes d'action utiles. L'agent ne doit pas confondre prudence et absence totale de réponse."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent voit une personne inanimée dans un local rempli de fumée. Entrer sans protection respiratoire adaptée l'exposerait gravement. Il donne l'alerte, empêche l'accès, indique la localisation de la victime et facilite l'intervention. Son rôle consiste à rendre le secours possible sans ajouter une victime. Une effraction destinée à sauver une personne se juge, elle aussi, sur ses circonstances exactes."
+              },
+              {
+                "front": "La sécurité reste due à tous",
+                "back": "Une personne soupçonnée ou appréhendée conserve ses droits et sa dignité. Une difficulté respiratoire, une blessure ou un malaise doit être prise au sérieux. L'agent ne peut pas considérer un signe de détresse comme de la simulation sans évaluation adaptée. La contrainte n'est jamais une punition, une humiliation ou un moyen d'obtenir des aveux."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Un enfant paraît enfermé dans un véhicule au soleil. Vous ne connaissez ni la durée ni l’état exact de l’enfant. Un passant exige une action immédiate sur le véhicule ; un autre propose d’attendre le propriétaire sans alerter.\n\nÀ vous de décider : Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées. Ou bien : Attendre sans alerter pour éviter toute atteinte au véhicule. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois.\n\nLe bon relais : L’appel précise la localisation, l’accès, les signes visibles, le nombre de personnes et les conditions observées, sans diagnostic. Une mise à jour signale immédiatement toute aggravation. L’agent fait organiser l’accueil et les recherches utiles sans retarder la réponse au danger ni présumer d’un pouvoir illimité sur le véhicule.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-09-02-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.02",
+            "title": "Assistance et nécessité dans une demande urgente",
+            "kind": "workshop",
+            "case": "Un enfant paraît enfermé dans un véhicule au soleil. Vous ne connaissez ni la durée ni l’état exact de l’enfant. Un passant exige une action immédiate sur le véhicule ; un autre propose d’attendre le propriétaire sans alerter.",
+            "choices": [
+              {
+                "text": "Considérer que toute dégradation est automatiquement justifiée sans examiner les faits.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. L’appel précise la localisation, l’accès, les signes visibles, le nombre de personnes et les conditions observées, sans diagnostic. Une mise à jour signale immédiatement toute aggravation. L’agent fait organiser l’accueil et les recherches utiles sans retarder la réponse au danger ni présumer d’un pouvoir illimité sur le véhicule.",
+                "correct": false
+              },
+              {
+                "text": "Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées.",
+                "feedback": "La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois.",
+                "correct": true
+              },
+              {
+                "text": "Attendre sans alerter pour éviter toute atteinte au véhicule.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois.",
+                "correct": false
+              }
+            ],
+            "task": "Rédigez l’appel initial et une mise à jour si l’état de l’enfant change. Listez ce qui est certain, incertain et urgent.",
+            "model": "L’appel précise la localisation, l’accès, les signes visibles, le nombre de personnes et les conditions observées, sans diagnostic. Une mise à jour signale immédiatement toute aggravation. L’agent fait organiser l’accueil et les recherches utiles sans retarder la réponse au danger ni présumer d’un pouvoir illimité sur le véhicule.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-09-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Un enfant paraît enfermé dans un véhicule au soleil. Vous ne connaissez ni la durée ni l’état exact de l’enfant. Un passant exige une action immédiate sur le véhicule ; un autre propose d’attendre le propriétaire sans alerter.",
+          "options": [
+            {
+              "id": "aps62-09-02-a0",
+              "text": "Considérer que toute dégradation est automatiquement justifiée sans examiner les faits.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-09-02-a1",
+              "text": "Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-09-02-a2",
+              "text": "Attendre sans alerter pour éviter toute atteinte au véhicule.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois."
+        },
+        {
+          "id": "aps62-09-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-09-02-pair0",
+              "left": "Faire face à un danger",
+              "right": "L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné."
+            },
+            {
+              "id": "aps62-09-02-pair1",
+              "left": "Porter assistance sans créer une autre victime",
+              "right": "L'obligation d'assistance à une personne en péril peut être satisfaite par une action personnelle ou par l'appel aux secours, selon les circonstances et sans risque pour soi ou pour les tiers."
+            },
+            {
+              "id": "aps62-09-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un agent voit une personne inanimée dans un local rempli de fumée."
+            }
+          ],
+          "explanation": "Faire face à un danger : L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné. Porter assistance sans créer une autre victime : L'obligation d'assistance à une personne en péril peut être satisfaite par une action personnelle ou par l'appel aux secours, selon les circonstances et sans risque pour soi ou pour les tiers. EXEMPLE EXPLIQUÉ : Un agent voit une personne inanimée dans un local rempli de fumée."
+        },
+        {
+          "id": "aps62-09-02-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.02",
+            "title": "Assistance et nécessité dans une demande urgente",
+            "kind": "transfer",
+            "case": "Le propriétaire revient pendant l’appel. Pourquoi faut-il informer les secours au lieu de simplement raccrocher ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois. L’appel précise la localisation, l’accès, les signes visibles, le nombre de personnes et les conditions observées, sans diagnostic. Une mise à jour signale immédiatement toute aggravation. L’agent fait organiser l’accueil et les recherches utiles sans retarder la réponse au danger ni présumer d’un pouvoir illimité sur le véhicule.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-09-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.02",
+            "title": "Assistance et nécessité dans une demande urgente",
+            "kind": "recap",
+            "decision": "Alerter immédiatement et décrire les signes, évaluer l’urgence et suivre les instructions adaptées.",
+            "reason": "La protection d’une personne et le respect des biens se raisonnent au regard du danger réel et des possibilités. L’état de nécessité demande une action nécessaire et proportionnée face à un danger actuel ou imminent. L’agent doit fournir une information fiable aux secours, organiser l’accès et éviter les initiatives inutiles. La scène évolue : l’évaluation ne se fait pas une seule fois.",
+            "pitfall": "Attendre sans alerter pour éviter toute atteinte au véhicule.",
+            "cards": [
+              {
+                "front": "Faire face à un danger",
+                "back": "L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné. Il ne constitue pas une autorisation générale d'ignorer les règles. Il faut pouvoir expliquer le danger, l'urgence, les options disponibles et pourquoi l'action choisie était adaptée."
+              },
+              {
+                "front": "Porter assistance sans créer une autre victime",
+                "back": "L'obligation d'assistance à une personne en péril peut être satisfaite par une action personnelle ou par l'appel aux secours, selon les circonstances et sans risque pour soi ou pour les tiers. Alerter efficacement, empêcher d'autres personnes d'entrer dans une zone dangereuse et guider les secours sont des formes d'action utiles. L'agent ne doit pas confondre prudence et absence totale de réponse."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent voit une personne inanimée dans un local rempli de fumée. Entrer sans protection respiratoire adaptée l'exposerait gravement. Il donne l'alerte, empêche l'accès, indique la localisation de la victime et facilite l'intervention. Son rôle consiste à rendre le secours possible sans ajouter une victime. Une effraction destinée à sauver une personne se juge, elle aussi, sur ses circonstances exactes."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.11",
+                "page": 95
+              },
+              {
+                "ref": "06.03",
+                "page": 269
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-09-03",
+      "title": "03 · Libertés : expliquer une limite au donneur d’ordre",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-09-03-comprendre",
+          "title": "Comprendre · Libertés : expliquer une limite au donneur d’ordre",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.03",
+            "title": "Libertés : expliquer une limite au donneur d’ordre",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-09.webp",
+            "case": "Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée. Le visiteur veut repartir et aucun élément ne correspond à une infraction flagrante relevant de l’article 73.",
+            "reason": "Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision.",
+            "lessons": [
+              {
+                "ref": "02.13",
+                "title": "Comprendre une donnée personnelle",
+                "page": 98,
+                "diagram": "media/aps62/repere-02.13.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une personne peut être identifiable indirectement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Ne collecter que ce qui est utile"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Avant une utilisation, posez trois questions : pour quelle mission, par quelle personne autorisée et pendant quelle durée ?"
+                  }
+                ],
+                "course_page": 99,
+                "practice": {
+                  "background": "Recueillez seulement les données utiles, exactes et nécessaires à la mission. Ne recopiez pas une pièce d’identité sur un téléphone personnel. Un registre visiteurs se consulte à l’abri du regard des autres visiteurs. Les durées de conservation sont fixées et justifiées par le responsable du traitement ; elles ne se choisissent pas selon la capacité de stockage. Une demande d’accès, d’effacement ou une erreur de destinataire doit être transmise à l’interlocuteur prévu, notamment au délégué à la protection des données lorsqu’il existe.",
+                  "case": "Un salarié vous demande l’heure de départ d’une collègue pour « vérifier quelque chose de personnel ». Vous pouvez la retrouver dans l’historique des badges en quelques secondes. Avez-vous une raison professionnelle de consulter ? Comment répondez-vous ?",
+                  "transfer": "Pourquoi photographier une pièce d’identité « au cas où » ne constitue-t-il pas une bonne pratique par défaut ?",
+                  "page": 124
+                }
+              },
+              {
+                "ref": "02.16",
+                "title": "Construire une décision professionnelle",
+                "page": 104,
+                "diagram": "media/aps62/repere-02.16.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Relier quatre éléments"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel. Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Expliquer sans créer un débat infini"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'explication au public doit rester simple : ce qui manque, ce qui est possible et qui peut valider la suite. L'agent peut reconnaître une gêne sans abandonner une exigence. En interne, la trace doit permettre de retrouver le raisonnement et les informations disponibles au moment de la décision. Une information obtenue plus tard ne doit pas être présentée comme si elle était connue dès le début."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un prestataire arrive avec une autorisation pour un autre bâtiment. L'agent constate l'écart, maintient l'attente dans la zone prévue et appelle le responsable habilité. Il explique : « Votre intervention est annoncée au bâtiment A ; je fais confirmer l'accès au bâtiment B avant de vous orienter. » La décision protège le site tout en proposant une issue claire."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une bonne justification ne repose ni sur le ton de la voix ni sur « parce que je le décide ». Elle rend visibles les faits et les limites du rôle."
+                  }
+                ],
+                "course_page": 105,
+                "practice": {
+                  "background": "Les sanctions possibles dépendent du texte enfreint et de la situation. Pour apprendre, il est plus utile de savoir prévenir une atteinte que de réciter une liste de peines détachée du contexte. Le livre VI prévoit des infractions et des conséquences administratives ou disciplinaires propres au secteur. Les atteintes aux personnes, aux biens et aux systèmes numériques relèvent aussi du droit commun. Conservez des faits précis et signalez les erreurs sans les masquer. Une correction rapide et loyale protège mieux qu’un récit arrangé.",
+                  "case": "Un visiteur sans badge insiste pour entrer. Il connaît le nom du directeur mais la personne attendue reste injoignable. Une réunion importante doit commencer dans deux minutes. Quelle décision est défendable ? Comment la formulez-vous au visiteur et dans la trace ?",
+                  "transfer": "Reformulez « j’ai refusé parce que c’est comme ça » en trois éléments professionnels.",
+                  "page": 127
+                }
+              },
+              {
+                "ref": "09.01",
+                "title": "Nommer correctement un contrôle",
+                "page": 444,
+                "diagram": "media/aps62/repere-09.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Trois opérations distinctes"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'inspection visuelle d'un bagage consiste à regarder le contenu présenté. La fouille implique une recherche et des manipulations ; elle exige le consentement du propriétaire dans le cadre légal applicable. La palpation de sécurité porte sur l'extérieur des vêtements et répond à des conditions spécifiques. Elle ne se confond pas avec une fouille corporelle. Employer le mot « contrôle » pour tout peut masquer des différences essentielles de pouvoirs."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Le geste réel détermine la qualification"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Ce n'est pas le nom donné par l'agent qui décide de la nature de l'opération. Déplacer lui-même des objets dans un sac ne devient pas une simple inspection parce qu'il dit « je regarde seulement ». Le consentement requis doit correspondre à l'opération et le cadre légal doit être réuni. Un règlement privé ne crée pas un pouvoir général de contrainte."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne ouvre son sac et en écarte elle-même les côtés pour présenter le contenu. L'agent observe. S'il veut rechercher sous les affaires en les manipulant, il change d'opération et doit vérifier les conditions de la fouille. Une affiche à l'entrée ne dispense pas de cette distinction."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Avant de commencer, nommez le geste envisagé, son fondement et ses conditions. Cette précision protège la personne et la qualité du contrôle."
+                  }
+                ],
+                "course_page": 445,
+                "practice": {
+                  "background": "Avant un dispositif de filtrage, l’encadrement doit vérifier la mission, le lieu, les personnels et les autorisations nécessaires. Le consentement ne rend pas légal un acte qui n’entre pas dans les pouvoirs prévus. L’agent connaît la conduite en cas de refus et les relais disponibles. Une règle d’accès privée ne permet pas de forcer le contrôle. La présentation au public doit être claire, respectueuse et adaptée, notamment aux mineurs et aux personnes ayant des besoins spécifiques.",
+                  "case": "À l’entrée d’un bâtiment ordinaire, un responsable vous demande une palpation de tous les visiteurs. Il estime qu’une affiche « entrée soumise au contrôle » suffit à autoriser le dispositif. Quelle vérification manque ? Que pouvez-vous appliquer immédiatement ?",
+                  "transfer": "Un agent dit « tout contrôle accepté par le visiteur est autorisé ». Quelle condition oublie-t-il ?",
+                  "page": 462
+                }
+              }
+            ],
+            "decision": "Refuser la rétention imposée et transmettre le litige au responsable compétent.",
+            "pitfall": "Conserver le document comme garantie commerciale.",
+            "objectives": [
+              "Expliquer : libertés : expliquer une limite au donneur d’ordre",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée. Le visiteur veut repartir et aucun élément ne correspond à une infraction flagrante relevant de l’article 73."
+              ],
+              [
+                "Décision à justifier",
+                "Refuser la rétention imposée et transmettre le litige au responsable compétent."
+              ],
+              [
+                "Piège à éviter",
+                "Conserver le document comme garantie commerciale."
+              ],
+              [
+                "Pourquoi ?",
+                "Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue."
+              },
+              {
+                "label": "Décider",
+                "text": "Refuser la rétention imposée et transmettre le litige au responsable compétent."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Le visiteur accepte librement d’attendre. Comment vérifier que cette attente ne devient pas une contrainte déguisée ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Justifier ses décisions",
+            "sorting": [
+              {
+                "text": "Refuser la rétention imposée et transmettre le litige au responsable compétent.",
+                "category": "adapte"
+              },
+              {
+                "text": "Conserver le document comme garantie commerciale.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée. Le visiteur veut repartir et aucun élément ne correspond à une infraction flagrante relevant de l’article 73.",
+                "category": "fait"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-09-03-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-09-03-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-09-03-video",
+                "title": "Libertés : expliquer une limite au donneur d’ordre",
+                "required": true,
+                "src": "media/aps62/v2/aps62-09-03.mp4",
+                "poster": "media/aps62/v2/aps62-09-03.jpg",
+                "captions": "media/aps62/v2/aps62-09-03.vtt",
+                "duration_seconds": 76.135661,
+                "transcript": "La situation : Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée. Le visiteur veut repartir et aucun élément ne correspond à une infraction flagrante relevant de l’article 73.\n\nÀ vous de décider : Refuser la rétention imposée et transmettre le litige au responsable compétent. Ou bien : Conserver le document comme garantie commerciale. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision.\n\nLe bon relais : L’agent explique qu’il ne peut retenir le document ou la personne comme garantie de paiement. Il propose un relais commercial et laisse la liberté d’aller et venir dans le cadre applicable. Il trace la demande, sa réponse et le contact avisé. La note évite de qualifier le visiteur de fraudeur sans éléments.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "09.03",
+            "title": "Libertés : expliquer une limite au donneur d’ordre",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une personne peut être identifiable indirectement",
+                "back": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+              },
+              {
+                "front": "Ne collecter que ce qui est utile",
+                "back": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+              },
+              {
+                "front": "Relier quatre éléments",
+                "back": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel. Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée. Le visiteur veut repartir et aucun élément ne correspond à une infraction flagrante relevant de l’article 73.\n\nÀ vous de décider : Refuser la rétention imposée et transmettre le litige au responsable compétent. Ou bien : Conserver le document comme garantie commerciale. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision.\n\nLe bon relais : L’agent explique qu’il ne peut retenir le document ou la personne comme garantie de paiement. Il propose un relais commercial et laisse la liberté d’aller et venir dans le cadre applicable. Il trace la demande, sa réponse et le contact avisé. La note évite de qualifier le visiteur de fraudeur sans éléments.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-09-03-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.03",
+            "title": "Libertés : expliquer une limite au donneur d’ordre",
+            "kind": "workshop",
+            "case": "Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée. Le visiteur veut repartir et aucun élément ne correspond à une infraction flagrante relevant de l’article 73.",
+            "choices": [
+              {
+                "text": "Refuser la rétention imposée et transmettre le litige au responsable compétent.",
+                "feedback": "Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision.",
+                "correct": true
+              },
+              {
+                "text": "Conserver le document comme garantie commerciale.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision.",
+                "correct": false
+              },
+              {
+                "text": "Bloquer la sortie jusqu’à l’arrivée du service comptable.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. L’agent explique qu’il ne peut retenir le document ou la personne comme garantie de paiement. Il propose un relais commercial et laisse la liberté d’aller et venir dans le cadre applicable. Il trace la demande, sa réponse et le contact avisé. La note évite de qualifier le visiteur de fraudeur sans éléments.",
+                "correct": false
+              }
+            ],
+            "task": "Écrivez un dialogue agent-responsable-visiteur puis une note d’incident de dix lignes. Reliez chaque décision à un fait et à une limite.",
+            "model": "L’agent explique qu’il ne peut retenir le document ou la personne comme garantie de paiement. Il propose un relais commercial et laisse la liberté d’aller et venir dans le cadre applicable. Il trace la demande, sa réponse et le contact avisé. La note évite de qualifier le visiteur de fraudeur sans éléments.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-09-03-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Un responsable demande de conserver la pièce d’identité d’un visiteur jusqu’au règlement d’une facture contestée. Le visiteur veut repartir et aucun élément ne correspond à une infraction flagrante relevant de l’article 73.",
+          "options": [
+            {
+              "id": "aps62-09-03-a0",
+              "text": "Refuser la rétention imposée et transmettre le litige au responsable compétent.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-09-03-a1",
+              "text": "Conserver le document comme garantie commerciale.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-09-03-a2",
+              "text": "Bloquer la sortie jusqu’à l’arrivée du service comptable.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision."
+        },
+        {
+          "id": "aps62-09-03-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-09-03-pair0",
+              "left": "Une personne peut être identifiable indirectement",
+              "right": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement."
+            },
+            {
+              "id": "aps62-09-03-pair1",
+              "left": "Ne collecter que ce qui est utile",
+              "right": "La finalité explique pourquoi l'information est nécessaire."
+            },
+            {
+              "id": "aps62-09-03-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un visiteur laisse son numéro pour être joint par l'accueil."
+            }
+          ],
+          "explanation": "Une personne peut être identifiable indirectement : Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Ne collecter que ce qui est utile : La finalité explique pourquoi l'information est nécessaire. EXEMPLE EXPLIQUÉ : Un visiteur laisse son numéro pour être joint par l'accueil."
+        },
+        {
+          "id": "aps62-09-03-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.03",
+            "title": "Libertés : expliquer une limite au donneur d’ordre",
+            "kind": "transfer",
+            "case": "Le visiteur accepte librement d’attendre. Comment vérifier que cette attente ne devient pas une contrainte déguisée ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision. L’agent explique qu’il ne peut retenir le document ou la personne comme garantie de paiement. Il propose un relais commercial et laisse la liberté d’aller et venir dans le cadre applicable. Il trace la demande, sa réponse et le contact avisé. La note évite de qualifier le visiteur de fraudeur sans éléments.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-09-03-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "09.03",
+            "title": "Libertés : expliquer une limite au donneur d’ordre",
+            "kind": "recap",
+            "decision": "Refuser la rétention imposée et transmettre le litige au responsable compétent.",
+            "reason": "Le droit de propriété du site et le besoin commercial ne créent pas un pouvoir général de retenue. Une consigne ne peut transformer une dette contestée en justification de privation de liberté. Il faut distinguer la vérification d’accès, le consentement à discuter et la contrainte. Le compte rendu protège la compréhension de la décision.",
+            "pitfall": "Conserver le document comme garantie commerciale.",
+            "cards": [
+              {
+                "front": "Une personne peut être identifiable indirectement",
+                "back": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+              },
+              {
+                "front": "Ne collecter que ce qui est utile",
+                "back": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.13",
+                "page": 99
+              },
+              {
+                "ref": "02.16",
+                "page": 105
+              },
+              {
+                "ref": "09.01",
+                "page": 445
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-09-01-comprendre",
+    "aps62-09-01-memoriser",
+    "aps62-09-01-atelier",
+    "aps62-09-01-q1",
+    "aps62-09-01-q2",
+    "aps62-09-01-transfert",
+    "aps62-09-01-synthese",
+    "aps62-09-02-comprendre",
+    "aps62-09-02-memoriser",
+    "aps62-09-02-atelier",
+    "aps62-09-02-q1",
+    "aps62-09-02-q2",
+    "aps62-09-02-transfert",
+    "aps62-09-02-synthese",
+    "aps62-09-03-comprendre",
+    "aps62-09-03-memoriser",
+    "aps62-09-03-atelier",
+    "aps62-09-03-q1",
+    "aps62-09-03-q2",
+    "aps62-09-03-transfert",
+    "aps62-09-03-synthese"
+  ],
+  "counts": {
+    "sections": 3,
+    "activities": 21,
+    "scored_activities": 6,
+    "required_videos": 3,
+    "workbooks": 6,
+    "assets": 16
+  },
+  "assets": [
+    "media/aps62/repere-02.10.webp",
+    "media/aps62/repere-02.11.webp",
+    "media/aps62/repere-02.13.webp",
+    "media/aps62/repere-02.16.webp",
+    "media/aps62/repere-06.03.webp",
+    "media/aps62/repere-09.01.webp",
+    "media/aps62/v2/aps62-09-01.jpg",
+    "media/aps62/v2/aps62-09-01.mp4",
+    "media/aps62/v2/aps62-09-01.vtt",
+    "media/aps62/v2/aps62-09-02.jpg",
+    "media/aps62/v2/aps62-09-02.mp4",
+    "media/aps62/v2/aps62-09-02.vtt",
+    "media/aps62/v2/aps62-09-03.jpg",
+    "media/aps62/v2/aps62-09-03.mp4",
+    "media/aps62/v2/aps62-09-03.vtt",
+    "media/aps62/v2/module-09.webp"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-09",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-09.webp"
+}

@@ -1,0 +1,1907 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-06",
+  "version": "20261004-aps62-v2",
+  "title": "APS 06 · Déontologie au quotidien",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-04"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 240,
+  "required_minutes": 240,
+  "regulation": "Annexe II · Déontologie professionnelle",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-06-01",
+      "title": "01 · Intégrité : cadeaux et passe-droits",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-06-01-comprendre",
+          "title": "Comprendre · Intégrité : cadeaux et passe-droits",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.01",
+            "title": "Intégrité : cadeaux et passe-droits",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-06.webp",
+            "case": "Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle. Il affirme que le directeur a déjà donné son accord. La livraison n’a pas de référence exploitable dans les documents disponibles.",
+            "reason": "L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie.",
+            "lessons": [
+              {
+                "ref": "02.07",
+                "title": "Appliquer la déontologie",
+                "page": 86,
+                "diagram": "media/aps62/repere-02.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Des règles pour les décisions ordinaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Elle concerne l'honnêteté, la dignité, la compétence, le respect des lois, la confidentialité et la relation aux autres. Elle s'applique dans une crise comme dans une tâche simple. Accepter un cadeau pour fermer les yeux sur un contrôle compromet l'impartialité, même en l'absence d'incident immédiat."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Éviter les arrangements personnels"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent ne transforme pas son poste en moyen de pression, de faveur ou de règlement de comptes. Il garde une distance professionnelle avec les personnes qu'il contrôle. Une difficulté réelle peut justifier une adaptation validée, mais elle doit être traçable et accessible selon les mêmes critères aux autres personnes concernées. La neutralité du service consiste à agir selon la mission et les règles, sans prosélytisme ni préférence personnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un habitué propose régulièrement un avantage pour entrer sans contrôle. L'agent refuse cet échange, explique la procédure et informe son responsable. Si l'habitué bénéficie réellement d'un accès particulier, celui-ci doit être prévu dans les droits et vérifiable, sans dépendre d'une relation privée avec l'agent."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une action doit pouvoir être expliquée à votre responsable et à la personne concernée. Le secret d'un arrangement ne doit jamais devenir une condition du service."
+                  }
+                ],
+                "course_page": 87,
+                "practice": {
+                  "background": "Une demande hiérarchique ne dispense pas d’examiner sa légalité. Si une instruction expose à une atteinte aux droits, demandez une clarification et alertez l’échelon approprié. Ne modifiez pas un compte rendu pour protéger une relation ou masquer une erreur. Une posture déontologique se voit dans les détails : parler sans insulter, respecter une personne en difficulté, ne pas accepter un passe-droit et préserver les informations confiées. Le contrôle externe doit être accueilli avec loyauté et coopération.",
+                  "case": "Un fournisseur vous offre un cadeau important et demande que ses livraisons ne soient plus contrôlées. Il ajoute que le responsable « sera forcément d’accord ». Comment répondez-vous sans provoquer inutilement ? Que devez-vous tracer ?",
+                  "transfer": "Un visiteur propose un cadeau pour passer plus vite. Quel risque professionnel identifiez-vous ?",
+                  "page": 116
+                }
+              },
+              {
+                "ref": "02.16",
+                "title": "Construire une décision professionnelle",
+                "page": 104,
+                "diagram": "media/aps62/repere-02.16.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Relier quatre éléments"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel. Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Expliquer sans créer un débat infini"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'explication au public doit rester simple : ce qui manque, ce qui est possible et qui peut valider la suite. L'agent peut reconnaître une gêne sans abandonner une exigence. En interne, la trace doit permettre de retrouver le raisonnement et les informations disponibles au moment de la décision. Une information obtenue plus tard ne doit pas être présentée comme si elle était connue dès le début."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un prestataire arrive avec une autorisation pour un autre bâtiment. L'agent constate l'écart, maintient l'attente dans la zone prévue et appelle le responsable habilité. Il explique : « Votre intervention est annoncée au bâtiment A ; je fais confirmer l'accès au bâtiment B avant de vous orienter. » La décision protège le site tout en proposant une issue claire."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une bonne justification ne repose ni sur le ton de la voix ni sur « parce que je le décide ». Elle rend visibles les faits et les limites du rôle."
+                  }
+                ],
+                "course_page": 105,
+                "practice": {
+                  "background": "Les sanctions possibles dépendent du texte enfreint et de la situation. Pour apprendre, il est plus utile de savoir prévenir une atteinte que de réciter une liste de peines détachée du contexte. Le livre VI prévoit des infractions et des conséquences administratives ou disciplinaires propres au secteur. Les atteintes aux personnes, aux biens et aux systèmes numériques relèvent aussi du droit commun. Conservez des faits précis et signalez les erreurs sans les masquer. Une correction rapide et loyale protège mieux qu’un récit arrangé.",
+                  "case": "Un visiteur sans badge insiste pour entrer. Il connaît le nom du directeur mais la personne attendue reste injoignable. Une réunion importante doit commencer dans deux minutes. Quelle décision est défendable ? Comment la formulez-vous au visiteur et dans la trace ?",
+                  "transfer": "Reformulez « j’ai refusé parce que c’est comme ça » en trois éléments professionnels.",
+                  "page": 127
+                }
+              }
+            ],
+            "decision": "Refuser la faveur, appliquer la procédure et informer votre responsable.",
+            "pitfall": "Accepter si la livraison paraît habituelle.",
+            "objectives": [
+              "Expliquer : intégrité : cadeaux et passe-droits",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle. Il affirme que le directeur a déjà donné son accord. La livraison n’a pas de référence exploitable dans les documents disponibles."
+              ],
+              [
+                "Décision à justifier",
+                "Refuser la faveur, appliquer la procédure et informer votre responsable."
+              ],
+              [
+                "Piège à éviter",
+                "Accepter si la livraison paraît habituelle."
+              ],
+              [
+                "Pourquoi ?",
+                "L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle."
+              },
+              {
+                "label": "Vérifier",
+                "text": "L’intégrité protège la fiabilité de la décision."
+              },
+              {
+                "label": "Décider",
+                "text": "Refuser la faveur, appliquer la procédure et informer votre responsable."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Le cadeau est offert après une intervention, sans demande explicite. Quelles règles internes et quels risques devez-vous encore examiner ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Déontologie au quotidien",
+            "visual_board": {
+              "title": "La boussole déontologique",
+              "steps": [
+                {
+                  "label": "Licéité",
+                  "text": "Une consigne ne permet pas de dépasser la loi."
+                },
+                {
+                  "label": "Impartialité",
+                  "text": "Pas de faveur personnelle, de cadeau intéressé ou de discrimination."
+                },
+                {
+                  "label": "Confidentialité",
+                  "text": "Pas d’usage privé des informations ou moyens du site."
+                },
+                {
+                  "label": "Fiabilité",
+                  "text": "Décrire fidèlement, reconnaître les erreurs et organiser leur correction."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "Le service rendu en échange",
+              "case": "Un habitué propose des invitations gratuites à l’équipe pour que son matériel entre sans vérification. Il insiste sur ses bonnes relations avec le client et demande de ne pas inscrire l’échange.",
+              "task": "Quels indices révèlent un conflit avec les obligations professionnelles ?",
+              "model": "L’avantage vise une exception et l’absence de trace. Refuser, appliquer la procédure et signaler la proposition par le relais prévu. Une relation personnelle ne remplace pas une autorisation."
+            },
+            "sorting": [
+              {
+                "text": "Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle. Il affirme que le directeur a déjà donné son accord. La livraison n’a pas de référence exploitable dans les documents disponibles.",
+                "category": "fait"
+              },
+              {
+                "text": "Refuser la faveur, appliquer la procédure et informer votre responsable.",
+                "category": "adapte"
+              },
+              {
+                "text": "Accepter si la livraison paraît habituelle.",
+                "category": "ecarter"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-06-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-06-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-06-01-video",
+                "title": "Intégrité : cadeaux et passe-droits",
+                "required": true,
+                "src": "media/aps62/v2/aps62-06-01.mp4",
+                "poster": "media/aps62/v2/aps62-06-01.jpg",
+                "captions": "media/aps62/v2/aps62-06-01.vtt",
+                "duration_seconds": 74.551025,
+                "transcript": "La situation : Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle. Il affirme que le directeur a déjà donné son accord. La livraison n’a pas de référence exploitable dans les documents disponibles.\n\nÀ vous de décider : Refuser la faveur, appliquer la procédure et informer votre responsable. Ou bien : Accepter si la livraison paraît habituelle. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie.\n\nLe bon relais : « Je ne peux pas accepter cette faveur. Le passage reste soumis à la vérification prévue. Je contacte mon responsable par notre canal habituel. » La trace indique l’heure, les termes utiles de la proposition, la réponse et la suite, sans recopier inutilement des données personnelles.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "06.01",
+            "title": "Intégrité : cadeaux et passe-droits",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Des règles pour les décisions ordinaires",
+                "back": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Elle concerne l'honnêteté, la dignité, la compétence, le respect des lois, la confidentialité et la relation aux autres. Elle s'applique dans une crise comme dans une tâche simple. Accepter un cadeau pour fermer les yeux sur un contrôle compromet l'impartialité, même en l'absence d'incident immédiat."
+              },
+              {
+                "front": "Éviter les arrangements personnels",
+                "back": "L'agent ne transforme pas son poste en moyen de pression, de faveur ou de règlement de comptes. Il garde une distance professionnelle avec les personnes qu'il contrôle. Une difficulté réelle peut justifier une adaptation validée, mais elle doit être traçable et accessible selon les mêmes critères aux autres personnes concernées. La neutralité du service consiste à agir selon la mission et les règles, sans prosélytisme ni préférence personnelle."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un habitué propose régulièrement un avantage pour entrer sans contrôle. L'agent refuse cet échange, explique la procédure et informe son responsable. Si l'habitué bénéficie réellement d'un accès particulier, celui-ci doit être prévu dans les droits et vérifiable, sans dépendre d'une relation privée avec l'agent."
+              },
+              {
+                "front": "Relier quatre éléments",
+                "back": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel. Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle. Il affirme que le directeur a déjà donné son accord. La livraison n’a pas de référence exploitable dans les documents disponibles.\n\nÀ vous de décider : Refuser la faveur, appliquer la procédure et informer votre responsable. Ou bien : Accepter si la livraison paraît habituelle. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie.\n\nLe bon relais : « Je ne peux pas accepter cette faveur. Le passage reste soumis à la vérification prévue. Je contacte mon responsable par notre canal habituel. » La trace indique l’heure, les termes utiles de la proposition, la réponse et la suite, sans recopier inutilement des données personnelles.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-06-01-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.01",
+            "title": "Intégrité : cadeaux et passe-droits",
+            "kind": "workshop",
+            "case": "Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle. Il affirme que le directeur a déjà donné son accord. La livraison n’a pas de référence exploitable dans les documents disponibles.",
+            "choices": [
+              {
+                "text": "Accepter si la livraison paraît habituelle.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie.",
+                "correct": false
+              },
+              {
+                "text": "Faire passer le fournisseur et signaler le cadeau en fin de semaine.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. « Je ne peux pas accepter cette faveur. Le passage reste soumis à la vérification prévue. Je contacte mon responsable par notre canal habituel. » La trace indique l’heure, les termes utiles de la proposition, la réponse et la suite, sans recopier inutilement des données personnelles.",
+                "correct": false
+              },
+              {
+                "text": "Refuser la faveur, appliquer la procédure et informer votre responsable.",
+                "feedback": "L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie.",
+                "correct": true
+              }
+            ],
+            "task": "Rédigez un refus de trois phrases, une entrée de main courante et un message au responsable. Comparez leur niveau de détail.",
+            "model": "« Je ne peux pas accepter cette faveur. Le passage reste soumis à la vérification prévue. Je contacte mon responsable par notre canal habituel. » La trace indique l’heure, les termes utiles de la proposition, la réponse et la suite, sans recopier inutilement des données personnelles.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Un fournisseur vous propose une enveloppe en échange d’un passage sans contrôle. Il affirme que le directeur a déjà donné son accord. La livraison n’a pas de référence exploitable dans les documents disponibles.",
+          "options": [
+            {
+              "id": "aps62-06-01-a0",
+              "text": "Accepter si la livraison paraît habituelle.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-06-01-a1",
+              "text": "Faire passer le fournisseur et signaler le cadeau en fin de semaine.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-06-01-a2",
+              "text": "Refuser la faveur, appliquer la procédure et informer votre responsable.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie."
+        },
+        {
+          "id": "aps62-06-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-06-01-pair0",
+              "left": "Des règles pour les décisions ordinaires",
+              "right": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement."
+            },
+            {
+              "id": "aps62-06-01-pair1",
+              "left": "Éviter les arrangements personnels",
+              "right": "L'agent ne transforme pas son poste en moyen de pression, de faveur ou de règlement de comptes."
+            },
+            {
+              "id": "aps62-06-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un habitué propose régulièrement un avantage pour entrer sans contrôle."
+            }
+          ],
+          "explanation": "Des règles pour les décisions ordinaires : La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Éviter les arrangements personnels : L'agent ne transforme pas son poste en moyen de pression, de faveur ou de règlement de comptes. EXEMPLE EXPLIQUÉ : Un habitué propose régulièrement un avantage pour entrer sans contrôle."
+        },
+        {
+          "id": "aps62-06-01-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.01",
+            "title": "Intégrité : cadeaux et passe-droits",
+            "kind": "transfer",
+            "case": "Le cadeau est offert après une intervention, sans demande explicite. Quelles règles internes et quels risques devez-vous encore examiner ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie. « Je ne peux pas accepter cette faveur. Le passage reste soumis à la vérification prévue. Je contacte mon responsable par notre canal habituel. » La trace indique l’heure, les termes utiles de la proposition, la réponse et la suite, sans recopier inutilement des données personnelles.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.01",
+            "title": "Intégrité : cadeaux et passe-droits",
+            "kind": "recap",
+            "decision": "Refuser la faveur, appliquer la procédure et informer votre responsable.",
+            "reason": "L’intégrité protège la fiabilité de la décision. Un cadeau présenté comme une condition de traitement fragilise l’impartialité du contrôle. L’affirmation d’un accord supérieur se vérifie par un canal connu ; elle ne dispense pas de la consigne. Le compte rendu conserve les faits sans surenchère ni accusation non établie.",
+            "pitfall": "Accepter si la livraison paraît habituelle.",
+            "cards": [
+              {
+                "front": "Des règles pour les décisions ordinaires",
+                "back": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Elle concerne l'honnêteté, la dignité, la compétence, le respect des lois, la confidentialité et la relation aux autres. Elle s'applique dans une crise comme dans une tâche simple. Accepter un cadeau pour fermer les yeux sur un contrôle compromet l'impartialité, même en l'absence d'incident immédiat."
+              },
+              {
+                "front": "Éviter les arrangements personnels",
+                "back": "L'agent ne transforme pas son poste en moyen de pression, de faveur ou de règlement de comptes. Il garde une distance professionnelle avec les personnes qu'il contrôle. Une difficulté réelle peut justifier une adaptation validée, mais elle doit être traçable et accessible selon les mêmes critères aux autres personnes concernées. La neutralité du service consiste à agir selon la mission et les règles, sans prosélytisme ni préférence personnelle."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un habitué propose régulièrement un avantage pour entrer sans contrôle. L'agent refuse cet échange, explique la procédure et informe son responsable. Si l'habitué bénéficie réellement d'un accès particulier, celui-ci doit être prévu dans les droits et vérifiable, sans dépendre d'une relation privée avec l'agent."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.07",
+                "page": 87
+              },
+              {
+                "ref": "02.16",
+                "page": 105
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-06-02",
+      "title": "02 · Confidentialité au poste et hors service",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-06-02-comprendre",
+          "title": "Comprendre · Confidentialité au poste et hors service",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.02",
+            "title": "Confidentialité au poste et hors service",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-06.webp",
+            "case": "Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site. Il explique vouloir simplement une photo. Dans le même temps, un groupe de messagerie personnelle partage une main courante contenant des noms.",
+            "reason": "Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure.",
+            "lessons": [
+              {
+                "ref": "02.13",
+                "title": "Comprendre une donnée personnelle",
+                "page": 98,
+                "diagram": "media/aps62/repere-02.13.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une personne peut être identifiable indirectement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Ne collecter que ce qui est utile"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Avant une utilisation, posez trois questions : pour quelle mission, par quelle personne autorisée et pendant quelle durée ?"
+                  }
+                ],
+                "course_page": 99,
+                "practice": {
+                  "background": "Recueillez seulement les données utiles, exactes et nécessaires à la mission. Ne recopiez pas une pièce d’identité sur un téléphone personnel. Un registre visiteurs se consulte à l’abri du regard des autres visiteurs. Les durées de conservation sont fixées et justifiées par le responsable du traitement ; elles ne se choisissent pas selon la capacité de stockage. Une demande d’accès, d’effacement ou une erreur de destinataire doit être transmise à l’interlocuteur prévu, notamment au délégué à la protection des données lorsqu’il existe.",
+                  "case": "Un salarié vous demande l’heure de départ d’une collègue pour « vérifier quelque chose de personnel ». Vous pouvez la retrouver dans l’historique des badges en quelques secondes. Avez-vous une raison professionnelle de consulter ? Comment répondez-vous ?",
+                  "transfer": "Pourquoi photographier une pièce d’identité « au cas où » ne constitue-t-il pas une bonne pratique par défaut ?",
+                  "page": 124
+                }
+              },
+              {
+                "ref": "02.14",
+                "title": "Protéger une information numérique",
+                "page": 100,
+                "diagram": "media/aps62/repere-02.14.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Trois qualités complémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Les gestes ordinaires sont déterminants"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Utilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu. Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification."
+                  }
+                ],
+                "course_page": 101,
+                "practice": {
+                  "background": "Sur les outils numériques, utilisez votre compte, verrouillez la session et ne partagez pas de mot de passe. Une demande urgente de code par téléphone doit être vérifiée par un canal connu. N’accédez pas à un système au-delà des droits attribués ; une session ouverte ne vaut pas autorisation. Une erreur, un courriel suspect ou une perte de matériel doit être signalé rapidement. Préservez les traces sans mener votre propre investigation technique et appliquez le plan de continuité prévu.",
+                  "case": "Une personne se présente au téléphone comme technicien et vous demande votre identifiant, votre mot de passe et un code reçu par SMS. Elle affirme que le système va tomber en panne dans cinq minutes. Quels indices vous alertent ? Quelle méthode permet de vérifier la demande ?",
+                  "transfer": "Un collègue vous demande votre mot de passe pour gagner du temps. Quel principe explique votre refus ?",
+                  "page": 125
+                }
+              }
+            ],
+            "decision": "Préserver la confidentialité et utiliser uniquement les canaux autorisés.",
+            "pitfall": "Donner l’horaire sans communiquer le numéro de téléphone.",
+            "objectives": [
+              "Expliquer : confidentialité au poste et hors service",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site. Il explique vouloir simplement une photo. Dans le même temps, un groupe de messagerie personnelle partage une main courante contenant des noms."
+              ],
+              [
+                "Décision à justifier",
+                "Préserver la confidentialité et utiliser uniquement les canaux autorisés."
+              ],
+              [
+                "Piège à éviter",
+                "Donner l’horaire sans communiquer le numéro de téléphone."
+              ],
+              [
+                "Pourquoi ?",
+                "Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service."
+              },
+              {
+                "label": "Décider",
+                "text": "Préserver la confidentialité et utiliser uniquement les canaux autorisés."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Un supérieur demande le document sur son adresse personnelle pour gagner du temps. Comment vérifier et proposer une solution appropriée ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Déontologie au quotidien",
+            "sorting": [
+              {
+                "text": "Préserver la confidentialité et utiliser uniquement les canaux autorisés.",
+                "category": "adapte"
+              },
+              {
+                "text": "Donner l’horaire sans communiquer le numéro de téléphone.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site. Il explique vouloir simplement une photo. Dans le même temps, un groupe de messagerie personnelle partage une main courante contenant des noms.",
+                "category": "fait"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-06-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-06-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-06-02-video",
+                "title": "Confidentialité au poste et hors service",
+                "required": true,
+                "src": "media/aps62/v2/aps62-06-02.mp4",
+                "poster": "media/aps62/v2/aps62-06-02.jpg",
+                "captions": "media/aps62/v2/aps62-06-02.vtt",
+                "duration_seconds": 77.300293,
+                "transcript": "La situation : Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site. Il explique vouloir simplement une photo. Dans le même temps, un groupe de messagerie personnelle partage une main courante contenant des noms.\n\nÀ vous de décider : Préserver la confidentialité et utiliser uniquement les canaux autorisés. Ou bien : Donner l’horaire sans communiquer le numéro de téléphone. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure.\n\nLe bon relais : Horaires sensibles, codes, images, identités, incidents et coordonnées professionnelles ne se diffusent que pour un besoin autorisé. Pour l’erreur de messagerie, l’agent informe le responsable, conserve les faits nécessaires et suit la procédure de traitement de l’incident ; il ne promet pas d’avoir supprimé toutes les copies.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "06.02",
+            "title": "Confidentialité au poste et hors service",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une personne peut être identifiable indirectement",
+                "back": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+              },
+              {
+                "front": "Ne collecter que ce qui est utile",
+                "back": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+              },
+              {
+                "front": "Trois qualités complémentaires",
+                "back": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site. Il explique vouloir simplement une photo. Dans le même temps, un groupe de messagerie personnelle partage une main courante contenant des noms.\n\nÀ vous de décider : Préserver la confidentialité et utiliser uniquement les canaux autorisés. Ou bien : Donner l’horaire sans communiquer le numéro de téléphone. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure.\n\nLe bon relais : Horaires sensibles, codes, images, identités, incidents et coordonnées professionnelles ne se diffusent que pour un besoin autorisé. Pour l’erreur de messagerie, l’agent informe le responsable, conserve les faits nécessaires et suit la procédure de traitement de l’incident ; il ne promet pas d’avoir supprimé toutes les copies.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-06-02-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.02",
+            "title": "Confidentialité au poste et hors service",
+            "kind": "workshop",
+            "case": "Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site. Il explique vouloir simplement une photo. Dans le même temps, un groupe de messagerie personnelle partage une main courante contenant des noms.",
+            "choices": [
+              {
+                "text": "Partager le document car le groupe ne contient que des collègues.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Horaires sensibles, codes, images, identités, incidents et coordonnées professionnelles ne se diffusent que pour un besoin autorisé. Pour l’erreur de messagerie, l’agent informe le responsable, conserve les faits nécessaires et suit la procédure de traitement de l’incident ; il ne promet pas d’avoir supprimé toutes les copies.",
+                "correct": false
+              },
+              {
+                "text": "Préserver la confidentialité et utiliser uniquement les canaux autorisés.",
+                "feedback": "Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure.",
+                "correct": true
+              },
+              {
+                "text": "Donner l’horaire sans communiquer le numéro de téléphone.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure.",
+                "correct": false
+              }
+            ],
+            "task": "Faites l’inventaire de six informations sensibles d’un PC et associez à chacune un destinataire légitime, un canal et une précaution.",
+            "model": "Horaires sensibles, codes, images, identités, incidents et coordonnées professionnelles ne se diffusent que pour un besoin autorisé. Pour l’erreur de messagerie, l’agent informe le responsable, conserve les faits nécessaires et suit la procédure de traitement de l’incident ; il ne promet pas d’avoir supprimé toutes les copies.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Après une vacation, un ami vous demande les horaires d’une personnalité accueillie sur le site. Il explique vouloir simplement une photo. Dans le même temps, un groupe de messagerie personnelle partage une main courante contenant des noms.",
+          "options": [
+            {
+              "id": "aps62-06-02-a0",
+              "text": "Partager le document car le groupe ne contient que des collègues.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-06-02-a1",
+              "text": "Préserver la confidentialité et utiliser uniquement les canaux autorisés.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-06-02-a2",
+              "text": "Donner l’horaire sans communiquer le numéro de téléphone.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure."
+        },
+        {
+          "id": "aps62-06-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-06-02-pair0",
+              "left": "Une personne peut être identifiable indirectement",
+              "right": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement."
+            },
+            {
+              "id": "aps62-06-02-pair1",
+              "left": "Ne collecter que ce qui est utile",
+              "right": "La finalité explique pourquoi l'information est nécessaire."
+            },
+            {
+              "id": "aps62-06-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un visiteur laisse son numéro pour être joint par l'accueil."
+            }
+          ],
+          "explanation": "Une personne peut être identifiable indirectement : Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Ne collecter que ce qui est utile : La finalité explique pourquoi l'information est nécessaire. EXEMPLE EXPLIQUÉ : Un visiteur laisse son numéro pour être joint par l'accueil."
+        },
+        {
+          "id": "aps62-06-02-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.02",
+            "title": "Confidentialité au poste et hors service",
+            "kind": "transfer",
+            "case": "Un supérieur demande le document sur son adresse personnelle pour gagner du temps. Comment vérifier et proposer une solution appropriée ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure. Horaires sensibles, codes, images, identités, incidents et coordonnées professionnelles ne se diffusent que pour un besoin autorisé. Pour l’erreur de messagerie, l’agent informe le responsable, conserve les faits nécessaires et suit la procédure de traitement de l’incident ; il ne promet pas d’avoir supprimé toutes les copies.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.02",
+            "title": "Confidentialité au poste et hors service",
+            "kind": "recap",
+            "decision": "Préserver la confidentialité et utiliser uniquement les canaux autorisés.",
+            "reason": "Les informations connues dans le cadre du travail ne deviennent pas librement utilisables en fin de service. Le besoin d’en connaître et l’habilitation du destinataire comptent autant que sa proximité avec l’agent. Une messagerie personnelle peut créer des copies incontrôlées et des accès non prévus. Une divulgation accidentelle doit être signalée rapidement selon la procédure.",
+            "pitfall": "Donner l’horaire sans communiquer le numéro de téléphone.",
+            "cards": [
+              {
+                "front": "Une personne peut être identifiable indirectement",
+                "back": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+              },
+              {
+                "front": "Ne collecter que ce qui est utile",
+                "back": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.13",
+                "page": 99
+              },
+              {
+                "ref": "02.14",
+                "page": 101
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-06-03",
+      "title": "03 · Recevoir un contrôle avec professionnalisme",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-06-03-comprendre",
+          "title": "Comprendre · Recevoir un contrôle avec professionnalisme",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.03",
+            "title": "Recevoir un contrôle avec professionnalisme",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-06.webp",
+            "case": "Des contrôleurs se présentent au poste. Votre collègue veut cacher un planning incomplet et modifier une mention avant de leur remettre les documents. Le site doit continuer à être surveillé pendant l’échange.",
+            "reason": "La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle.",
+            "lessons": [
+              {
+                "ref": "02.03",
+                "title": "Comprendre le rôle du CNAPS",
+                "page": 78,
+                "diagram": "media/aps62/repere-02.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un régulateur du secteur"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le Conseil national des activités privées de sécurité, ou CNAPS, participe à la régulation des professions de sécurité privée. Il instruit des titres et autorisations, réalise des contrôles et dispose d'un pouvoir disciplinaire dans son champ. Il ne constitue pas le service d'urgence auquel demander une intervention sur un vol en cours. Les forces de sécurité et les secours ont des missions différentes."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Formation et exercice sont deux étapes"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'accès à la formation peut nécessiter une autorisation préalable ou le titre adapté à la situation. Après la formation, l'aptitude professionnelle ne suffit pas à elle seule : l'exercice exige les conditions et la carte correspondant à l'activité. L'autorisation d'entrer en formation ne devient pas automatiquement une carte professionnelle. Il faut aussi distinguer les démarches de l'agent et celles de l'entreprise qui l'emploie."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un candidat reçoit son diplôme APS et souhaite prendre immédiatement un poste. Le diplôme établit une aptitude dans le cadre concerné ; il doit encore disposer du droit d'exercer requis. L'employeur vérifie la situation par les moyens officiels. Une copie d'écran ancienne ou l'affirmation « le dossier est envoyé » ne prouve pas que le titre est actif."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Identifiez toujours le document : autorisation de formation, justificatif de qualification, carte de l'agent ou autorisation de l'entreprise. Ils ne sont pas interchangeables."
+                  }
+                ],
+                "course_page": 79,
+                "practice": {
+                  "background": "L’obtention du TFP APS n’entraîne pas automatiquement la délivrance d’une carte. Le CNAPS examine la demande et les conditions d’accès prévues par le code, notamment celles relatives à la moralité et à l’aptitude. Les conditions particulières applicables à certains ressortissants doivent être vérifiées dans les informations officielles. Le futur agent anticipe ses démarches, contrôle les activités inscrites et les dates de validité. Il informe son employeur de toute difficulté affectant son droit d’exercer au lieu de poursuivre sur la base d’une supposition.",
+                  "case": "Vous venez de réussir l’examen. Une entreprise vous propose une vacation dès demain et vous dit que le numéro de votre autorisation préalable suffit en attendant la carte. Quelle vérification est indispensable ? Pourquoi le diplôme et la carte ont-ils des fonctions différentes ?",
+                  "transfer": "Un candidat présente son attestation d’inscription comme autorisation d’exercer. Expliquez l’erreur en une phrase.",
+                  "page": 112
+                }
+              },
+              {
+                "ref": "02.07",
+                "title": "Appliquer la déontologie",
+                "page": 86,
+                "diagram": "media/aps62/repere-02.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Des règles pour les décisions ordinaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Elle concerne l'honnêteté, la dignité, la compétence, le respect des lois, la confidentialité et la relation aux autres. Elle s'applique dans une crise comme dans une tâche simple. Accepter un cadeau pour fermer les yeux sur un contrôle compromet l'impartialité, même en l'absence d'incident immédiat."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Éviter les arrangements personnels"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent ne transforme pas son poste en moyen de pression, de faveur ou de règlement de comptes. Il garde une distance professionnelle avec les personnes qu'il contrôle. Une difficulté réelle peut justifier une adaptation validée, mais elle doit être traçable et accessible selon les mêmes critères aux autres personnes concernées. La neutralité du service consiste à agir selon la mission et les règles, sans prosélytisme ni préférence personnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un habitué propose régulièrement un avantage pour entrer sans contrôle. L'agent refuse cet échange, explique la procédure et informe son responsable. Si l'habitué bénéficie réellement d'un accès particulier, celui-ci doit être prévu dans les droits et vérifiable, sans dépendre d'une relation privée avec l'agent."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une action doit pouvoir être expliquée à votre responsable et à la personne concernée. Le secret d'un arrangement ne doit jamais devenir une condition du service."
+                  }
+                ],
+                "course_page": 87,
+                "practice": {
+                  "background": "Une demande hiérarchique ne dispense pas d’examiner sa légalité. Si une instruction expose à une atteinte aux droits, demandez une clarification et alertez l’échelon approprié. Ne modifiez pas un compte rendu pour protéger une relation ou masquer une erreur. Une posture déontologique se voit dans les détails : parler sans insulter, respecter une personne en difficulté, ne pas accepter un passe-droit et préserver les informations confiées. Le contrôle externe doit être accueilli avec loyauté et coopération.",
+                  "case": "Un fournisseur vous offre un cadeau important et demande que ses livraisons ne soient plus contrôlées. Il ajoute que le responsable « sera forcément d’accord ». Comment répondez-vous sans provoquer inutilement ? Que devez-vous tracer ?",
+                  "transfer": "Un visiteur propose un cadeau pour passer plus vite. Quel risque professionnel identifiez-vous ?",
+                  "page": 116
+                }
+              },
+              {
+                "ref": "02.04",
+                "title": "Suivre votre droit d'exercer",
+                "page": 80,
+                "diagram": "media/aps62/repere-02.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une carte liée à des activités"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La carte professionnelle délivrée par le CNAPS autorise les activités qui y sont mentionnées, sous réserve de sa validité et de la situation de son titulaire. Elle ne donne pas automatiquement accès à toutes les spécialités de sécurité. Le badge visible remis par l'employeur et le numéro d'identification porté sur la tenue remplissent d'autres fonctions. Il faut donc vérifier le titre administratif, pas seulement l'apparence professionnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Anticiper les échéances"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La carte a une durée de validité de cinq ans. Son renouvellement se prépare en amont, avec les justificatifs et le maintien et l'actualisation des compétences applicables. Le CNAPS demande une anticipation d'au moins trois mois. Une formation suivie ou une demande en préparation ne vaut pas automatiquement prolongation du droit d'exercer. Les effets d'un récépissé dépendent des conditions prévues ; sa portée doit être vérifiée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent relève une échéance au mois de décembre. Il ne se contente pas d'attendre le dernier planning de l'année : il vérifie ses formations, réunit les pièces et suit la demande. Son responsable peut ainsi organiser le service sans affecter une personne dont la situation n'est pas établie."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La compétence et l'autorisation se suivent séparément. Conservez les justificatifs, contrôlez les dates et signalez immédiatement une suspension, un retrait ou une difficulté susceptible d'affecter l'exercice."
+                  }
+                ],
+                "course_page": 81,
+                "practice": {
+                  "background": "Le renouvellement exige des démarches anticipées et, selon l’activité, un maintien et une actualisation des compétences. Ne confondez pas le MAC lié à la carte et l’actualisation du certificat SST. Un changement d’employeur ne dispense pas de conserver ses justificatifs. Les délais, modalités et justificatifs sont à vérifier sur le site du CNAPS au moment de la demande. Un récépissé ou un document provisoire ne produit que les effets expressément prévus ; sa simple existence ne doit pas être interprétée sans vérification.",
+                  "case": "Votre carte arrive prochainement à échéance. Vous avez réservé un stage mais n’avez pas encore déposé la demande de renouvellement. Le planning prévoit des vacations après l’échéance. Quelles actions engagez-vous maintenant ? Quelles hypothèses devez-vous éviter ?",
+                  "transfer": "Pourquoi un MAC réalisé ne permet-il pas, à lui seul, de considérer la carte comme renouvelée ?",
+                  "page": 113
+                }
+              }
+            ],
+            "decision": "Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents.",
+            "pitfall": "Retoucher les pièces avant de les présenter.",
+            "objectives": [
+              "Expliquer : recevoir un contrôle avec professionnalisme",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Des contrôleurs se présentent au poste. Votre collègue veut cacher un planning incomplet et modifier une mention avant de leur remettre les documents. Le site doit continuer à être surveillé pendant l’échange."
+              ],
+              [
+                "Décision à justifier",
+                "Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents."
+              ],
+              [
+                "Piège à éviter",
+                "Retoucher les pièces avant de les présenter."
+              ],
+              [
+                "Pourquoi ?",
+                "La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Des contrôleurs se présentent au poste."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site."
+              },
+              {
+                "label": "Décider",
+                "text": "Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Un document contient une erreur matérielle avérée. Comment la corriger de façon traçable au lieu d’effacer l’ancienne information ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Déontologie au quotidien",
+            "sorting": [
+              {
+                "text": "Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents.",
+                "category": "adapte"
+              },
+              {
+                "text": "Retoucher les pièces avant de les présenter.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Des contrôleurs se présentent au poste. Votre collègue veut cacher un planning incomplet et modifier une mention avant de leur remettre les documents. Le site doit continuer à être surveillé pendant l’échange.",
+                "category": "fait"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-06-03-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-06-03-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-06-03-video",
+                "title": "Recevoir un contrôle avec professionnalisme",
+                "required": true,
+                "src": "media/aps62/v2/aps62-06-03.mp4",
+                "poster": "media/aps62/v2/aps62-06-03.jpg",
+                "captions": "media/aps62/v2/aps62-06-03.vtt",
+                "duration_seconds": 75.946667,
+                "transcript": "La situation : Des contrôleurs se présentent au poste. Votre collègue veut cacher un planning incomplet et modifier une mention avant de leur remettre les documents. Le site doit continuer à être surveillé pendant l’échange.\n\nÀ vous de décider : Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents. Ou bien : Retoucher les pièces avant de les présenter. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle.\n\nLe bon relais : L’agent vérifie la qualité des intervenants, informe la hiérarchie, assure un relais de surveillance et met à disposition les documents par la voie appropriée. Il répond sur ce qu’il sait et signale les limites. Les demandes et suites sont tracées sans modifier a posteriori les faits historiques.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "06.03",
+            "title": "Recevoir un contrôle avec professionnalisme",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Un régulateur du secteur",
+                "back": "Le Conseil national des activités privées de sécurité, ou CNAPS, participe à la régulation des professions de sécurité privée. Il instruit des titres et autorisations, réalise des contrôles et dispose d'un pouvoir disciplinaire dans son champ. Il ne constitue pas le service d'urgence auquel demander une intervention sur un vol en cours. Les forces de sécurité et les secours ont des missions différentes."
+              },
+              {
+                "front": "Formation et exercice sont deux étapes",
+                "back": "L'accès à la formation peut nécessiter une autorisation préalable ou le titre adapté à la situation. Après la formation, l'aptitude professionnelle ne suffit pas à elle seule : l'exercice exige les conditions et la carte correspondant à l'activité. L'autorisation d'entrer en formation ne devient pas automatiquement une carte professionnelle. Il faut aussi distinguer les démarches de l'agent et celles de l'entreprise qui l'emploie."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un candidat reçoit son diplôme APS et souhaite prendre immédiatement un poste. Le diplôme établit une aptitude dans le cadre concerné ; il doit encore disposer du droit d'exercer requis. L'employeur vérifie la situation par les moyens officiels. Une copie d'écran ancienne ou l'affirmation « le dossier est envoyé » ne prouve pas que le titre est actif."
+              },
+              {
+                "front": "Des règles pour les décisions ordinaires",
+                "back": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Elle concerne l'honnêteté, la dignité, la compétence, le respect des lois, la confidentialité et la relation aux autres. Elle s'applique dans une crise comme dans une tâche simple. Accepter un cadeau pour fermer les yeux sur un contrôle compromet l'impartialité, même en l'absence d'incident immédiat."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Des contrôleurs se présentent au poste. Votre collègue veut cacher un planning incomplet et modifier une mention avant de leur remettre les documents. Le site doit continuer à être surveillé pendant l’échange.\n\nÀ vous de décider : Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents. Ou bien : Retoucher les pièces avant de les présenter. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle.\n\nLe bon relais : L’agent vérifie la qualité des intervenants, informe la hiérarchie, assure un relais de surveillance et met à disposition les documents par la voie appropriée. Il répond sur ce qu’il sait et signale les limites. Les demandes et suites sont tracées sans modifier a posteriori les faits historiques.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-06-03-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.03",
+            "title": "Recevoir un contrôle avec professionnalisme",
+            "kind": "workshop",
+            "case": "Des contrôleurs se présentent au poste. Votre collègue veut cacher un planning incomplet et modifier une mention avant de leur remettre les documents. Le site doit continuer à être surveillé pendant l’échange.",
+            "choices": [
+              {
+                "text": "Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents.",
+                "feedback": "La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle.",
+                "correct": true
+              },
+              {
+                "text": "Retoucher les pièces avant de les présenter.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle.",
+                "correct": false
+              },
+              {
+                "text": "Abandonner tous les accès pour accompagner les visiteurs.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. L’agent vérifie la qualité des intervenants, informe la hiérarchie, assure un relais de surveillance et met à disposition les documents par la voie appropriée. Il répond sur ce qu’il sait et signale les limites. Les demandes et suites sont tracées sans modifier a posteriori les faits historiques.",
+                "correct": false
+              }
+            ],
+            "task": "Organisez une liste d’actions avant, pendant et après le contrôle, avec un responsable pour la continuité de chaque poste.",
+            "model": "L’agent vérifie la qualité des intervenants, informe la hiérarchie, assure un relais de surveillance et met à disposition les documents par la voie appropriée. Il répond sur ce qu’il sait et signale les limites. Les demandes et suites sont tracées sans modifier a posteriori les faits historiques.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-03-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Des contrôleurs se présentent au poste. Votre collègue veut cacher un planning incomplet et modifier une mention avant de leur remettre les documents. Le site doit continuer à être surveillé pendant l’échange.",
+          "options": [
+            {
+              "id": "aps62-06-03-a0",
+              "text": "Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-06-03-a1",
+              "text": "Retoucher les pièces avant de les présenter.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-06-03-a2",
+              "text": "Abandonner tous les accès pour accompagner les visiteurs.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle."
+        },
+        {
+          "id": "aps62-06-03-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-06-03-pair0",
+              "left": "Un régulateur du secteur",
+              "right": "Le Conseil national des activités privées de sécurité, ou CNAPS, participe à la régulation des professions de sécurité privée."
+            },
+            {
+              "id": "aps62-06-03-pair1",
+              "left": "Formation et exercice sont deux étapes",
+              "right": "L'accès à la formation peut nécessiter une autorisation préalable ou le titre adapté à la situation."
+            },
+            {
+              "id": "aps62-06-03-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un candidat reçoit son diplôme APS et souhaite prendre immédiatement un poste."
+            }
+          ],
+          "explanation": "Un régulateur du secteur : Le Conseil national des activités privées de sécurité, ou CNAPS, participe à la régulation des professions de sécurité privée. Formation et exercice sont deux étapes : L'accès à la formation peut nécessiter une autorisation préalable ou le titre adapté à la situation. EXEMPLE EXPLIQUÉ : Un candidat reçoit son diplôme APS et souhaite prendre immédiatement un poste."
+        },
+        {
+          "id": "aps62-06-03-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.03",
+            "title": "Recevoir un contrôle avec professionnalisme",
+            "kind": "transfer",
+            "case": "Un document contient une erreur matérielle avérée. Comment la corriger de façon traçable au lieu d’effacer l’ancienne information ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle. L’agent vérifie la qualité des intervenants, informe la hiérarchie, assure un relais de surveillance et met à disposition les documents par la voie appropriée. Il répond sur ce qu’il sait et signale les limites. Les demandes et suites sont tracées sans modifier a posteriori les faits historiques.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-03-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.03",
+            "title": "Recevoir un contrôle avec professionnalisme",
+            "kind": "recap",
+            "decision": "Vérifier leur qualité selon la procédure, prévenir le responsable et coopérer sans altérer les documents.",
+            "reason": "La coopération et la loyauté n’impliquent pas de désorganiser la sécurité du site. Vérifiez le cadre de la demande et alertez le responsable, mais n’obstruez pas le contrôle et ne fabriquez pas une conformité documentaire. Distinguez le document disponible, une pièce manquante et une information à rechercher. L’intégrité de la trace est essentielle.",
+            "pitfall": "Retoucher les pièces avant de les présenter.",
+            "cards": [
+              {
+                "front": "Un régulateur du secteur",
+                "back": "Le Conseil national des activités privées de sécurité, ou CNAPS, participe à la régulation des professions de sécurité privée. Il instruit des titres et autorisations, réalise des contrôles et dispose d'un pouvoir disciplinaire dans son champ. Il ne constitue pas le service d'urgence auquel demander une intervention sur un vol en cours. Les forces de sécurité et les secours ont des missions différentes."
+              },
+              {
+                "front": "Formation et exercice sont deux étapes",
+                "back": "L'accès à la formation peut nécessiter une autorisation préalable ou le titre adapté à la situation. Après la formation, l'aptitude professionnelle ne suffit pas à elle seule : l'exercice exige les conditions et la carte correspondant à l'activité. L'autorisation d'entrer en formation ne devient pas automatiquement une carte professionnelle. Il faut aussi distinguer les démarches de l'agent et celles de l'entreprise qui l'emploie."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un candidat reçoit son diplôme APS et souhaite prendre immédiatement un poste. Le diplôme établit une aptitude dans le cadre concerné ; il doit encore disposer du droit d'exercer requis. L'employeur vérifie la situation par les moyens officiels. Une copie d'écran ancienne ou l'affirmation « le dossier est envoyé » ne prouve pas que le titre est actif."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.03",
+                "page": 79
+              },
+              {
+                "ref": "02.07",
+                "page": 87
+              },
+              {
+                "ref": "02.04",
+                "page": 81
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-06-04",
+      "title": "04 · Consignes illicites, loyauté et sous-traitance",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-06-04-comprendre",
+          "title": "Comprendre · Consignes illicites, loyauté et sous-traitance",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.04",
+            "title": "Consignes illicites, loyauté et sous-traitance",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-06.webp",
+            "case": "Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste. Il vous propose de signer aussi la présence d’un remplaçant inconnu, envoyé par une autre société, sans vérification de ses titres.",
+            "reason": "La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet.",
+            "lessons": [
+              {
+                "ref": "02.05",
+                "title": "Comprendre l'organisation de l'employeur",
+                "page": 82,
+                "diagram": "media/aps62/repere-02.05.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Prestataire et service interne"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une entreprise de sécurité peut fournir une prestation à un client. Le donneur d'ordre définit alors son besoin et le prestataire organise la mission dans le respect des textes. Une entreprise peut également disposer d'un service interne de sécurité pour ses propres besoins. Ce choix ne fait pas disparaître les obligations applicables. L'agent doit savoir quelle structure l'emploie, qui le dirige et qui peut modifier sa mission."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Des autorisations à ne pas confondre"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'autorisation d'exercice concerne la structure dans son champ ; l'agrément concerne notamment certains dirigeants ; la carte professionnelle concerne l'agent et ses activités. La régularité d'un niveau ne prouve pas automatiquement celle des autres. Au poste, cette distinction se traduit par une chaîne de responsabilité lisible : employeur, encadrement opérationnel, interlocuteur client et services d'urgence."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un responsable du site demande de supprimer un contrôle parce qu'une réunion est urgente. L'agent peut expliquer la difficulté et contacter sa hiérarchie. Le client exprime un besoin, mais une modification sensible doit être validée par l'organisation compétente. Une instruction orale ponctuelle ne doit pas créer une faille ou imposer un acte illicite."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Savoir « pour qui » vous travaillez ne suffit pas. Sachez aussi qui décide, qui valide une exception et à qui rendre compte d'une instruction contradictoire."
+                  }
+                ],
+                "course_page": 83,
+                "practice": {
+                  "background": "Le service interne protège les intérêts de l’organisation qui l’emploie et reste soumis aux dispositions applicables. Sur un site client, identifiez votre employeur, votre responsable hiérarchique et le représentant habilité du client. Une demande du client peut nécessiter une validation par l’encadrement de sécurité. Les règles d’exclusivité limitent les mélanges d’activités prévus par le code ; elles ne se résument pas à une interdiction de toute tâche accessoire. L’analyse se fait à partir de la mission et du cadre réellement applicable.",
+                  "case": "Le client vous propose de réaliser pour son compte une mission privée, le dimanche, en vous payant directement. Il estime que votre carte professionnelle suffit et vous demande de venir avec votre tenue habituelle. Pourquoi cette proposition sort-elle de la vacation habituelle ? À qui la transmettez-vous ?",
+                  "transfer": "Un agent a une carte valide. Cela prouve-t-il que son futur employeur est autorisé ? Justifiez.",
+                  "page": 114
+                }
+              },
+              {
+                "ref": "02.07",
+                "title": "Appliquer la déontologie",
+                "page": 86,
+                "diagram": "media/aps62/repere-02.07.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Des règles pour les décisions ordinaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Elle concerne l'honnêteté, la dignité, la compétence, le respect des lois, la confidentialité et la relation aux autres. Elle s'applique dans une crise comme dans une tâche simple. Accepter un cadeau pour fermer les yeux sur un contrôle compromet l'impartialité, même en l'absence d'incident immédiat."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Éviter les arrangements personnels"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent ne transforme pas son poste en moyen de pression, de faveur ou de règlement de comptes. Il garde une distance professionnelle avec les personnes qu'il contrôle. Une difficulté réelle peut justifier une adaptation validée, mais elle doit être traçable et accessible selon les mêmes critères aux autres personnes concernées. La neutralité du service consiste à agir selon la mission et les règles, sans prosélytisme ni préférence personnelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un habitué propose régulièrement un avantage pour entrer sans contrôle. L'agent refuse cet échange, explique la procédure et informe son responsable. Si l'habitué bénéficie réellement d'un accès particulier, celui-ci doit être prévu dans les droits et vérifiable, sans dépendre d'une relation privée avec l'agent."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une action doit pouvoir être expliquée à votre responsable et à la personne concernée. Le secret d'un arrangement ne doit jamais devenir une condition du service."
+                  }
+                ],
+                "course_page": 87,
+                "practice": {
+                  "background": "Une demande hiérarchique ne dispense pas d’examiner sa légalité. Si une instruction expose à une atteinte aux droits, demandez une clarification et alertez l’échelon approprié. Ne modifiez pas un compte rendu pour protéger une relation ou masquer une erreur. Une posture déontologique se voit dans les détails : parler sans insulter, respecter une personne en difficulté, ne pas accepter un passe-droit et préserver les informations confiées. Le contrôle externe doit être accueilli avec loyauté et coopération.",
+                  "case": "Un fournisseur vous offre un cadeau important et demande que ses livraisons ne soient plus contrôlées. Il ajoute que le responsable « sera forcément d’accord ». Comment répondez-vous sans provoquer inutilement ? Que devez-vous tracer ?",
+                  "transfer": "Un visiteur propose un cadeau pour passer plus vite. Quel risque professionnel identifiez-vous ?",
+                  "page": 116
+                }
+              },
+              {
+                "ref": "02.15",
+                "title": "Se repérer dans les règles du travail",
+                "page": 102,
+                "diagram": "media/aps62/repere-02.15.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Plusieurs documents organisent la relation"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le contrat de travail, le code du travail, la convention collective applicable et les accords concernés organisent les droits et obligations. Dans les entreprises de prévention et de sécurité, la convention collective porte l'identifiant IDCC 1351. Un service interne peut relever d'un autre cadre collectif selon son employeur. Il faut donc identifier le texte réellement applicable avant de comparer des situations."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Raisonner avec des faits vérifiables"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les horaires, repos, pauses, rémunérations et conditions d'affectation ne se résument pas à une habitude locale. Conservez le planning, les heures réalisées et les demandes de modification. Un problème se formule précisément : date, vacation, durée, consigne et document concerné. Les interlocuteurs peuvent être l'encadrement, les ressources humaines ou les représentants du personnel. Les règles détaillées doivent être vérifiées dans leur version en vigueur."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent constate un écart entre son planning et les heures de relève réellement effectuées. Il relève les dates et transmet les éléments pour clarification. Une affirmation générale « on reste toujours plus tard » est moins exploitable qu'une chronologie documentée. La continuité du poste doit être organisée sans faire disparaître le temps de travail réel."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Connaître ses conditions de travail aide aussi à prévenir la fatigue et les erreurs. Un désaccord doit être traité par les canaux adaptés, avec des éléments précis."
+                  }
+                ],
+                "course_page": 103,
+                "practice": {
+                  "background": "L’agent connaît son contrat, son planning, la chaîne hiérarchique et les procédures de signalement. Il respecte les temps de travail et de repos applicables et alerte en cas d’incompatibilité. Une mise à disposition de personnel peut soulever des risques de prêt illicite de main-d’œuvre ou de marchandage selon ses conditions : le simple fait de travailler chez un client ne suffit pas à conclure. En cas de difficulté, documentez les faits et utilisez les interlocuteurs compétents plutôt qu’une interprétation improvisée.",
+                  "case": "Votre relève n’arrive pas et le responsable du client vous demande de prolonger sans prévenir votre employeur. Vous avez déjà signalé une fatigue importante. À qui adressez-vous la difficulté ? Quelles informations faut-il donner ?",
+                  "transfer": "Vous contestez un horaire porté sur le planning. Quelles pièces permettent de poser une question vérifiable ?",
+                  "page": 126
+                }
+              }
+            ],
+            "decision": "Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement.",
+            "pitfall": "Signer puisque la responsabilité appartiendrait uniquement au chef.",
+            "objectives": [
+              "Expliquer : consignes illicites, loyauté et sous-traitance",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste. Il vous propose de signer aussi la présence d’un remplaçant inconnu, envoyé par une autre société, sans vérification de ses titres."
+              ],
+              [
+                "Décision à justifier",
+                "Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement."
+              ],
+              [
+                "Piège à éviter",
+                "Signer puisque la responsabilité appartiendrait uniquement au chef."
+              ],
+              [
+                "Pourquoi ?",
+                "La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La loyauté professionnelle porte sur la réalité du service."
+              },
+              {
+                "label": "Décider",
+                "text": "Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Le remplaçant arrive avec un badge du site mais sans vérification officielle disponible. Quelle distinction doit guider votre compte rendu ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Déontologie au quotidien",
+            "sorting": [
+              {
+                "text": "Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement.",
+                "category": "adapte"
+              },
+              {
+                "text": "Signer puisque la responsabilité appartiendrait uniquement au chef.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste. Il vous propose de signer aussi la présence d’un remplaçant inconnu, envoyé par une autre société, sans vérification de ses titres.",
+                "category": "fait"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-06-04-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-06-04-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-06-04-video",
+                "title": "Consignes illicites, loyauté et sous-traitance",
+                "required": true,
+                "src": "media/aps62/v2/aps62-06-04.mp4",
+                "poster": "media/aps62/v2/aps62-06-04.jpg",
+                "captions": "media/aps62/v2/aps62-06-04.vtt",
+                "duration_seconds": 82.59,
+                "transcript": "La situation : Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste. Il vous propose de signer aussi la présence d’un remplaçant inconnu, envoyé par une autre société, sans vérification de ses titres.\n\nÀ vous de décider : Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement. Ou bien : Signer puisque la responsabilité appartiendrait uniquement au chef. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet.\n\nLe bon relais : La note indique le nombre effectivement présent, la demande reçue et l’impossibilité d’attester une présence fictive. Le responsable doit revoir la couverture des postes et vérifier l’identité, l’employeur et le droit d’exercice du remplaçant. Une mesure compensatoire doit être explicitée et suivie ; elle ne transforme pas un registre faux en solution.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "06.04",
+            "title": "Consignes illicites, loyauté et sous-traitance",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Prestataire et service interne",
+                "back": "Une entreprise de sécurité peut fournir une prestation à un client. Le donneur d'ordre définit alors son besoin et le prestataire organise la mission dans le respect des textes. Une entreprise peut également disposer d'un service interne de sécurité pour ses propres besoins. Ce choix ne fait pas disparaître les obligations applicables. L'agent doit savoir quelle structure l'emploie, qui le dirige et qui peut modifier sa mission."
+              },
+              {
+                "front": "Des autorisations à ne pas confondre",
+                "back": "L'autorisation d'exercice concerne la structure dans son champ ; l'agrément concerne notamment certains dirigeants ; la carte professionnelle concerne l'agent et ses activités. La régularité d'un niveau ne prouve pas automatiquement celle des autres. Au poste, cette distinction se traduit par une chaîne de responsabilité lisible : employeur, encadrement opérationnel, interlocuteur client et services d'urgence."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un responsable du site demande de supprimer un contrôle parce qu'une réunion est urgente. L'agent peut expliquer la difficulté et contacter sa hiérarchie. Le client exprime un besoin, mais une modification sensible doit être validée par l'organisation compétente. Une instruction orale ponctuelle ne doit pas créer une faille ou imposer un acte illicite."
+              },
+              {
+                "front": "Des règles pour les décisions ordinaires",
+                "back": "La déontologie est l'ensemble des règles professionnelles qui encadrent le comportement. Elle concerne l'honnêteté, la dignité, la compétence, le respect des lois, la confidentialité et la relation aux autres. Elle s'applique dans une crise comme dans une tâche simple. Accepter un cadeau pour fermer les yeux sur un contrôle compromet l'impartialité, même en l'absence d'incident immédiat."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste. Il vous propose de signer aussi la présence d’un remplaçant inconnu, envoyé par une autre société, sans vérification de ses titres.\n\nÀ vous de décider : Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement. Ou bien : Signer puisque la responsabilité appartiendrait uniquement au chef. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet.\n\nLe bon relais : La note indique le nombre effectivement présent, la demande reçue et l’impossibilité d’attester une présence fictive. Le responsable doit revoir la couverture des postes et vérifier l’identité, l’employeur et le droit d’exercice du remplaçant. Une mesure compensatoire doit être explicitée et suivie ; elle ne transforme pas un registre faux en solution.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-06-04-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.04",
+            "title": "Consignes illicites, loyauté et sous-traitance",
+            "kind": "workshop",
+            "case": "Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste. Il vous propose de signer aussi la présence d’un remplaçant inconnu, envoyé par une autre société, sans vérification de ses titres.",
+            "choices": [
+              {
+                "text": "Signer puisque la responsabilité appartiendrait uniquement au chef.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet.",
+                "correct": false
+              },
+              {
+                "text": "Utiliser le nom d’un salarié absent pour compléter le registre.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. La note indique le nombre effectivement présent, la demande reçue et l’impossibilité d’attester une présence fictive. Le responsable doit revoir la couverture des postes et vérifier l’identité, l’employeur et le droit d’exercice du remplaçant. Une mesure compensatoire doit être explicitée et suivie ; elle ne transforme pas un registre faux en solution.",
+                "correct": false
+              },
+              {
+                "text": "Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement.",
+                "feedback": "La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet.",
+                "correct": true
+              }
+            ],
+            "task": "Rédigez une note factuelle et un plan provisoire de continuité à soumettre au responsable. Identifiez les informations à faire vérifier sur le remplaçant.",
+            "model": "La note indique le nombre effectivement présent, la demande reçue et l’impossibilité d’attester une présence fictive. Le responsable doit revoir la couverture des postes et vérifier l’identité, l’employeur et le droit d’exercice du remplaçant. Une mesure compensatoire doit être explicitée et suivie ; elle ne transforme pas un registre faux en solution.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-04-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Un chef d’équipe demande de déclarer deux agents présents alors qu’un seul tient le poste. Il vous propose de signer aussi la présence d’un remplaçant inconnu, envoyé par une autre société, sans vérification de ses titres.",
+          "options": [
+            {
+              "id": "aps62-06-04-a0",
+              "text": "Signer puisque la responsabilité appartiendrait uniquement au chef.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-06-04-a1",
+              "text": "Utiliser le nom d’un salarié absent pour compléter le registre.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-06-04-a2",
+              "text": "Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet."
+        },
+        {
+          "id": "aps62-06-04-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-06-04-pair0",
+              "left": "Prestataire et service interne",
+              "right": "Une entreprise de sécurité peut fournir une prestation à un client."
+            },
+            {
+              "id": "aps62-06-04-pair1",
+              "left": "Des autorisations à ne pas confondre",
+              "right": "L'autorisation d'exercice concerne la structure dans son champ ; l'agrément concerne notamment certains dirigeants ; la carte professionnelle concerne l'agent et ses activités."
+            },
+            {
+              "id": "aps62-06-04-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un responsable du site demande de supprimer un contrôle parce qu'une réunion est urgente."
+            }
+          ],
+          "explanation": "Prestataire et service interne : Une entreprise de sécurité peut fournir une prestation à un client. Des autorisations à ne pas confondre : L'autorisation d'exercice concerne la structure dans son champ ; l'agrément concerne notamment certains dirigeants ; la carte professionnelle concerne l'agent et ses activités. EXEMPLE EXPLIQUÉ : Un responsable du site demande de supprimer un contrôle parce qu'une réunion est urgente."
+        },
+        {
+          "id": "aps62-06-04-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.04",
+            "title": "Consignes illicites, loyauté et sous-traitance",
+            "kind": "transfer",
+            "case": "Le remplaçant arrive avec un badge du site mais sans vérification officielle disponible. Quelle distinction doit guider votre compte rendu ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet. La note indique le nombre effectivement présent, la demande reçue et l’impossibilité d’attester une présence fictive. Le responsable doit revoir la couverture des postes et vérifier l’identité, l’employeur et le droit d’exercice du remplaçant. Une mesure compensatoire doit être explicitée et suivie ; elle ne transforme pas un registre faux en solution.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-06-04-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "06.04",
+            "title": "Consignes illicites, loyauté et sous-traitance",
+            "kind": "recap",
+            "decision": "Refuser la fausse déclaration, signaler l’écart réel et demander la vérification du remplacement.",
+            "reason": "La loyauté professionnelle porte sur la réalité du service. Elle n’autorise ni faux enregistrement ni dissimulation. La sous-traitance et la mise à disposition de personnel s’inscrivent dans des cadres distincts ; la prévention du travail illégal et du marchandage exige des vérifications par les acteurs responsables. L’agent signale l’écart sans prétendre conduire seul un audit juridique complet.",
+            "pitfall": "Signer puisque la responsabilité appartiendrait uniquement au chef.",
+            "cards": [
+              {
+                "front": "Prestataire et service interne",
+                "back": "Une entreprise de sécurité peut fournir une prestation à un client. Le donneur d'ordre définit alors son besoin et le prestataire organise la mission dans le respect des textes. Une entreprise peut également disposer d'un service interne de sécurité pour ses propres besoins. Ce choix ne fait pas disparaître les obligations applicables. L'agent doit savoir quelle structure l'emploie, qui le dirige et qui peut modifier sa mission."
+              },
+              {
+                "front": "Des autorisations à ne pas confondre",
+                "back": "L'autorisation d'exercice concerne la structure dans son champ ; l'agrément concerne notamment certains dirigeants ; la carte professionnelle concerne l'agent et ses activités. La régularité d'un niveau ne prouve pas automatiquement celle des autres. Au poste, cette distinction se traduit par une chaîne de responsabilité lisible : employeur, encadrement opérationnel, interlocuteur client et services d'urgence."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un responsable du site demande de supprimer un contrôle parce qu'une réunion est urgente. L'agent peut expliquer la difficulté et contacter sa hiérarchie. Le client exprime un besoin, mais une modification sensible doit être validée par l'organisation compétente. Une instruction orale ponctuelle ne doit pas créer une faille ou imposer un acte illicite."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.05",
+                "page": 83
+              },
+              {
+                "ref": "02.07",
+                "page": 87
+              },
+              {
+                "ref": "02.15",
+                "page": 103
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-06-01-comprendre",
+    "aps62-06-01-memoriser",
+    "aps62-06-01-atelier",
+    "aps62-06-01-q1",
+    "aps62-06-01-q2",
+    "aps62-06-01-transfert",
+    "aps62-06-01-synthese",
+    "aps62-06-02-comprendre",
+    "aps62-06-02-memoriser",
+    "aps62-06-02-atelier",
+    "aps62-06-02-q1",
+    "aps62-06-02-q2",
+    "aps62-06-02-transfert",
+    "aps62-06-02-synthese",
+    "aps62-06-03-comprendre",
+    "aps62-06-03-memoriser",
+    "aps62-06-03-atelier",
+    "aps62-06-03-q1",
+    "aps62-06-03-q2",
+    "aps62-06-03-transfert",
+    "aps62-06-03-synthese",
+    "aps62-06-04-comprendre",
+    "aps62-06-04-memoriser",
+    "aps62-06-04-atelier",
+    "aps62-06-04-q1",
+    "aps62-06-04-q2",
+    "aps62-06-04-transfert",
+    "aps62-06-04-synthese"
+  ],
+  "counts": {
+    "sections": 4,
+    "activities": 28,
+    "scored_activities": 8,
+    "required_videos": 4,
+    "workbooks": 8,
+    "assets": 21
+  },
+  "assets": [
+    "media/aps62/repere-02.03.webp",
+    "media/aps62/repere-02.04.webp",
+    "media/aps62/repere-02.05.webp",
+    "media/aps62/repere-02.07.webp",
+    "media/aps62/repere-02.13.webp",
+    "media/aps62/repere-02.14.webp",
+    "media/aps62/repere-02.15.webp",
+    "media/aps62/repere-02.16.webp",
+    "media/aps62/v2/aps62-06-01.jpg",
+    "media/aps62/v2/aps62-06-01.mp4",
+    "media/aps62/v2/aps62-06-01.vtt",
+    "media/aps62/v2/aps62-06-02.jpg",
+    "media/aps62/v2/aps62-06-02.mp4",
+    "media/aps62/v2/aps62-06-02.vtt",
+    "media/aps62/v2/aps62-06-03.jpg",
+    "media/aps62/v2/aps62-06-03.mp4",
+    "media/aps62/v2/aps62-06-03.vtt",
+    "media/aps62/v2/aps62-06-04.jpg",
+    "media/aps62/v2/aps62-06-04.mp4",
+    "media/aps62/v2/aps62-06-04.vtt",
+    "media/aps62/v2/module-06.webp"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-06",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-06.webp"
+}

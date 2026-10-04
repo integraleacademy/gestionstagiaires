@@ -1,0 +1,1038 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-03",
+  "version": "20261004-aps62-v2",
+  "title": "APS 03 · Flagrance et article 73",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-04"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 120,
+  "required_minutes": 120,
+  "regulation": "Annexe II · Application de l’article 73",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-03-01",
+      "title": "01 · L’article 73 commence par des faits",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-03-01-comprendre",
+          "title": "Comprendre · L’article 73 commence par des faits",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-03.webp",
+            "case": "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.",
+            "reason": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.",
+            "lessons": [
+              {
+                "ref": "02.12",
+                "title": "Comprendre la flagrance",
+                "page": 96,
+                "diagram": "media/aps62/repere-02.12.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une situation précisément définie"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. L'article 73 du code de procédure pénale permet à toute personne d'appréhender l'auteur d'un crime flagrant ou d'un délit flagrant puni d'emprisonnement pour le conduire devant l'officier de police judiciaire le plus proche. Cette faculté n'est pas réservée aux APS, et ne leur donne pas une mission d'enquête."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Des faits avant une qualification"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un comportement inhabituel n'établit pas à lui seul une infraction. Il faut distinguer ce qui est constaté, ce qui est rapporté et ce qui reste supposé. Même lorsque le cadre paraît réuni, le risque de l'intervention et les moyens disponibles comptent. L'alerte rapide, la protection et la transmission peuvent être déterminantes. Toute contrainte doit rester nécessaire et proportionnée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent voit une personne manipuler une porte. Cela peut avoir plusieurs explications. Il observe et vérifie selon sa mission, sans conclure automatiquement à un cambriolage. En présence de faits caractérisant une infraction flagrante, il sollicite les forces de l'ordre et décrit exactement les éléments, sans transformer un doute en certitude."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · L'appréhension ne sert pas à obtenir des aveux, à contrôler librement une identité ou à sanctionner une personne. Le relais aux autorités est central."
+                  }
+                ],
+                "course_page": 97,
+                "practice": {
+                  "background": "L’agent doit distinguer la base juridique et la faisabilité. Même lorsqu’une faculté existe, une intervention risquée peut céder la place à l’observation et à l’alerte. Toute force doit être nécessaire et proportionnée. Prévenez immédiatement les forces de l’ordre, préservez la dignité et surveillez l’état de la personne. Ne menez pas d’interrogatoire, ne cherchez pas un aveu et ne prolongez pas la retenue pour terminer des formalités commerciales. Les limites opérationnelles sont approfondies dans l’UV 6.",
+                  "case": "Une alarme antivol sonne au passage d’un client. Vous n’avez rien observé d’autre. Il accepte de revenir vers l’accueil mais refuse de vider ses poches. L’alarme suffit-elle à elle seule ? Que pouvez-vous faire sans contrainte injustifiée ?",
+                  "transfer": "« Il a l’air coupable » permet-il de conclure que les conditions de l’article 73 sont réunies ?",
+                  "page": 123
+                }
+              },
+              {
+                "ref": "06.01",
+                "title": "Évaluer une décision d'appréhension",
+                "page": 264,
+                "diagram": "media/aps62/repere-06.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une faculté strictement encadrée"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Distinguer protection et poursuite"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Pouvoir envisager une appréhension ne signifie pas que toute modalité est permise. Le relais rapide aux forces de l'ordre reste au centre du dispositif."
+                  }
+                ],
+                "course_page": 265,
+                "practice": {
+                  "background": "La possibilité juridique ne rend pas toute intervention opportune. Évaluez les personnes exposées, les moyens de communication, le nombre d’intervenants et les possibilités de retrait. Une personne armée ou une situation incontrôlable appelle d’abord la protection et les forces de l’ordre. L’observation à distance, le signalement et la préservation des éléments peuvent être la meilleure réponse. Une action physique éventuelle reste nécessaire, proportionnée et limitée au but légal, sans punition. La formation pratique se déroule exclusivement sous encadrement adapté.",
+                  "case": "Vous voyez une personne casser une vitrine et saisir des objets. Elle tient un outil lourd et se dirige vers la sortie. Vous êtes seul et des clients se trouvent à proximité. Quels faits pouvez-vous transmettre immédiatement ? Pourquoi l’appréhension n’est-elle pas automatique ?",
+                  "transfer": "Un collègue veut intervenir alors que les faits restent incertains. Quelles informations lui demandez-vous ?",
+                  "page": 280
+                }
+              },
+              {
+                "ref": "06.02",
+                "title": "Distinguer soupçon et constat",
+                "page": 266,
+                "diagram": "media/aps62/repere-06.02.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une hypothèse n'est pas un fait établi"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le soupçon peut déclencher une vigilance ou une vérification autorisée ; il ne suffit pas à attribuer une infraction. Une alarme de portique, une attitude nerveuse ou un objet aperçu doivent être replacés dans leur contexte. Un dispositif technique peut être déclenché pour plusieurs raisons. L'agent doit pouvoir dire exactement ce qu'il a vu et ce qu'il ignore."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Conserver la continuité des observations"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une interruption de visibilité peut modifier ce qu'il est raisonnable de conclure. Les témoignages et les images peuvent compléter, mais ne doivent pas être présentés comme des observations personnelles. Une description neutre facilite le relais : lieu, moment, actes, objets et direction de déplacement. Elle évite de faire reposer une décision sur une réputation ou une apparence."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent voit une personne placer un article dans un sac, puis la perd de vue avant son passage en caisse. Il ne peut pas affirmer, sur cette seule observation, que l'article n'a pas été payé. Il suit les vérifications autorisées et transmet cette limite à son responsable. La précision protège la fiabilité de la décision."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une information incomplète doit rester présentée comme incomplète. Ajouter une certitude non observée peut conduire à une atteinte injustifiée aux droits d'une personne."
+                  }
+                ],
+                "course_page": 267,
+                "practice": {
+                  "background": "L’agent ne mène pas une enquête judiciaire. Il ne force pas l’accès à un téléphone, ne fouille pas un corps et ne cherche pas à obtenir un aveu. Les échanges doivent rester dans le cadre de la mission. Ne créez pas une situation de privation de liberté en présentant un entretien comme volontaire alors que la personne ne peut pas partir. Si les faits nécessitent une intervention publique, transmettez rapidement aux forces compétentes. En cas d’incertitude, expliquez-la dans la transmission.",
+                  "case": "Un employé vous dit qu’une personne a « probablement volé » parce qu’elle porte un grand sac. Aucun produit manquant ni geste précis n’est décrit. Que demandez-vous à l’employé ? Quelle surveillance reste possible ?",
+                  "transfer": "Une personne court vers la sortie. Pourquoi ce seul fait ne prouve-t-il pas un vol ?",
+                  "page": 281
+                }
+              }
+            ],
+            "decision": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+            "pitfall": "Retenir automatiquement toute personne qui déclenche un portique.",
+            "objectives": [
+              "Expliquer : l’article 73 commence par des faits",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte."
+              ],
+              [
+                "Décision à justifier",
+                "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée."
+              ],
+              [
+                "Piège à éviter",
+                "Retenir automatiquement toute personne qui déclenche un portique."
+              ],
+              [
+                "Pourquoi ?",
+                "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Le portique d’un magasin sonne."
+              },
+              {
+                "label": "Vérifier",
+                "text": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement."
+              },
+              {
+                "label": "Décider",
+                "text": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Un vendeur affirme maintenant avoir vu une soustraction. Quelles précisions lui demander sans présenter son témoignage comme votre observation ?"
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Flagrance et article 73",
+            "visual_board": {
+              "title": "Article 73 : raisonner avant de contraindre",
+              "steps": [
+                {
+                  "label": "Faits",
+                  "text": "Qu’ai-je réellement vu ? À quel moment ? Avec quelles limites ?"
+                },
+                {
+                  "label": "Conditions",
+                  "text": "Crime flagrant ou délit flagrant puni d’emprisonnement : vérifier le cadre."
+                },
+                {
+                  "label": "Nécessité",
+                  "text": "Adapter les moyens et réévaluer la contrainte ; préserver la dignité."
+                },
+                {
+                  "label": "OPJ",
+                  "text": "Organiser sans retard injustifié le relais vers l’officier de police judiciaire."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "Un témoignage trop rapide",
+              "case": "Une caissière signale un vol. Elle a vu un article placé dans un sac mais n’a pas observé le passage en caisse. Le portique ne sonne pas. La personne accepte de discuter à proximité de l’accueil.",
+              "task": "Séparez les faits connus, le point manquant et les actions possibles sans contrainte injustifiée.",
+              "model": "Le récit partiel ne permet pas d’inventer le non-paiement. Vérifier les éléments disponibles dans le cadre du site, sans interrogatoire coercitif. Si les conditions légales d’une appréhension ne sont pas établies, ne pas les présumer."
+            },
+            "sorting": [
+              {
+                "text": "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.",
+                "category": "fait"
+              },
+              {
+                "text": "Retenir automatiquement toute personne qui déclenche un portique.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+                "category": "adapte"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-03-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-03-01-video",
+                "title": "L’article 73 commence par des faits",
+                "required": true,
+                "src": "media/aps62/v2/aps62-03-01.mp4",
+                "poster": "media/aps62/v2/aps62-03-01.jpg",
+                "captions": "media/aps62/v2/aps62-03-01.vtt",
+                "duration_seconds": 80.986979,
+                "transcript": "La situation : Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.\n\nÀ vous de décider : Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée. Ou bien : Retenir automatiquement toute personne qui déclenche un portique. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.\n\nLe bon relais : Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une situation précisément définie",
+                "back": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. L'article 73 du code de procédure pénale permet à toute personne d'appréhender l'auteur d'un crime flagrant ou d'un délit flagrant puni d'emprisonnement pour le conduire devant l'officier de police judiciaire le plus proche. Cette faculté n'est pas réservée aux APS, et ne leur donne pas une mission d'enquête."
+              },
+              {
+                "front": "Des faits avant une qualification",
+                "back": "Un comportement inhabituel n'établit pas à lui seul une infraction. Il faut distinguer ce qui est constaté, ce qui est rapporté et ce qui reste supposé. Même lorsque le cadre paraît réuni, le risque de l'intervention et les moyens disponibles comptent. L'alerte rapide, la protection et la transmission peuvent être déterminantes. Toute contrainte doit rester nécessaire et proportionnée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent voit une personne manipuler une porte. Cela peut avoir plusieurs explications. Il observe et vérifie selon sa mission, sans conclure automatiquement à un cambriolage. En présence de faits caractérisant une infraction flagrante, il sollicite les forces de l'ordre et décrit exactement les éléments, sans transformer un doute en certitude."
+              },
+              {
+                "front": "Une faculté strictement encadrée",
+                "back": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.\n\nÀ vous de décider : Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée. Ou bien : Retenir automatiquement toute personne qui déclenche un portique. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.\n\nLe bon relais : Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-03-01-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "workshop",
+            "case": "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.",
+            "choices": [
+              {
+                "text": "Retenir automatiquement toute personne qui déclenche un portique.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.",
+                "correct": false
+              },
+              {
+                "text": "Déduire la culpabilité du refus de vider les poches.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+                "correct": false
+              },
+              {
+                "text": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+                "feedback": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.",
+                "correct": true
+              }
+            ],
+            "task": "Séparez dans trois colonnes : faits observés, hypothèses, vérifications licites. Rédigez la première phrase adressée à la cliente.",
+            "model": "Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-03-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.",
+          "options": [
+            {
+              "id": "aps62-03-01-a0",
+              "text": "Retenir automatiquement toute personne qui déclenche un portique.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-03-01-a1",
+              "text": "Déduire la culpabilité du refus de vider les poches.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-03-01-a2",
+              "text": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive."
+        },
+        {
+          "id": "aps62-03-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-03-01-pair0",
+              "left": "Une situation précisément définie",
+              "right": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi."
+            },
+            {
+              "id": "aps62-03-01-pair1",
+              "left": "Des faits avant une qualification",
+              "right": "Un comportement inhabituel n'établit pas à lui seul une infraction."
+            },
+            {
+              "id": "aps62-03-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un agent voit une personne manipuler une porte."
+            }
+          ],
+          "explanation": "Une situation précisément définie : La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. Des faits avant une qualification : Un comportement inhabituel n'établit pas à lui seul une infraction. EXEMPLE EXPLIQUÉ : Un agent voit une personne manipuler une porte."
+        },
+        {
+          "id": "aps62-03-01-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "transfer",
+            "case": "Un vendeur affirme maintenant avoir vu une soustraction. Quelles précisions lui demander sans présenter son témoignage comme votre observation ?",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive. Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-03-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "recap",
+            "decision": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+            "reason": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.",
+            "pitfall": "Retenir automatiquement toute personne qui déclenche un portique.",
+            "cards": [
+              {
+                "front": "Une situation précisément définie",
+                "back": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. L'article 73 du code de procédure pénale permet à toute personne d'appréhender l'auteur d'un crime flagrant ou d'un délit flagrant puni d'emprisonnement pour le conduire devant l'officier de police judiciaire le plus proche. Cette faculté n'est pas réservée aux APS, et ne leur donne pas une mission d'enquête."
+              },
+              {
+                "front": "Des faits avant une qualification",
+                "back": "Un comportement inhabituel n'établit pas à lui seul une infraction. Il faut distinguer ce qui est constaté, ce qui est rapporté et ce qui reste supposé. Même lorsque le cadre paraît réuni, le risque de l'intervention et les moyens disponibles comptent. L'alerte rapide, la protection et la transmission peuvent être déterminantes. Toute contrainte doit rester nécessaire et proportionnée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent voit une personne manipuler une porte. Cela peut avoir plusieurs explications. Il observe et vérifie selon sa mission, sans conclure automatiquement à un cambriolage. En présence de faits caractérisant une infraction flagrante, il sollicite les forces de l'ordre et décrit exactement les éléments, sans transformer un doute en certitude."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.12",
+                "page": 97
+              },
+              {
+                "ref": "06.01",
+                "page": 265
+              },
+              {
+                "ref": "06.02",
+                "page": 267
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-03-02",
+      "title": "02 · Une faculté encadrée, un relais rapide",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-03-02-comprendre",
+          "title": "Comprendre · Une faculté encadrée, un relais rapide",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 18,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-03.webp",
+            "case": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+            "reason": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+            "lessons": [
+              {
+                "ref": "06.01",
+                "title": "Évaluer une décision d'appréhension",
+                "page": 264,
+                "diagram": "media/aps62/repere-06.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une faculté strictement encadrée"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Distinguer protection et poursuite"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Pouvoir envisager une appréhension ne signifie pas que toute modalité est permise. Le relais rapide aux forces de l'ordre reste au centre du dispositif."
+                  }
+                ],
+                "course_page": 265,
+                "practice": {
+                  "background": "La possibilité juridique ne rend pas toute intervention opportune. Évaluez les personnes exposées, les moyens de communication, le nombre d’intervenants et les possibilités de retrait. Une personne armée ou une situation incontrôlable appelle d’abord la protection et les forces de l’ordre. L’observation à distance, le signalement et la préservation des éléments peuvent être la meilleure réponse. Une action physique éventuelle reste nécessaire, proportionnée et limitée au but légal, sans punition. La formation pratique se déroule exclusivement sous encadrement adapté.",
+                  "case": "Vous voyez une personne casser une vitrine et saisir des objets. Elle tient un outil lourd et se dirige vers la sortie. Vous êtes seul et des clients se trouvent à proximité. Quels faits pouvez-vous transmettre immédiatement ? Pourquoi l’appréhension n’est-elle pas automatique ?",
+                  "transfer": "Un collègue veut intervenir alors que les faits restent incertains. Quelles informations lui demandez-vous ?",
+                  "page": 280
+                }
+              },
+              {
+                "ref": "06.03",
+                "title": "Protéger la personne et sa dignité",
+                "page": 268,
+                "diagram": "media/aps62/repere-06.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "La sécurité reste due à tous"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne soupçonnée ou appréhendée conserve ses droits et sa dignité. Une difficulté respiratoire, une blessure ou un malaise doit être prise au sérieux. L'agent ne peut pas considérer un signe de détresse comme de la simulation sans évaluation adaptée. La contrainte n'est jamais une punition, une humiliation ou un moyen d'obtenir des aveux."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Éviter les risques supplémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les pressions sur le cou, le thorax ou une position gênant la respiration peuvent avoir des conséquences graves. La formation pratique encadrée doit porter sur les limites légales et la protection, pas sur des techniques improvisées. L'agent surveille l'état de la personne et demande les secours si nécessaire. Le public est tenu à distance pour préserver la sécurité et éviter les prises d'images ou commentaires humiliants."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Dans l'attente des forces de l'ordre, une personne indique qu'elle respire mal. L'agent transmet immédiatement le signe, fait demander l'aide médicale et adapte la protection. La présence d'un soupçon d'infraction ne justifie pas de différer l'assistance. Les heures, plaintes et actions sont consignées factuellement."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La nécessité d'une mesure doit être réévaluée pendant toute sa durée. L'état de santé et la dignité ne deviennent jamais secondaires du fait du comportement reproché."
+                  }
+                ],
+                "course_page": 269,
+                "practice": {
+                  "background": "Les positions et techniques susceptibles d’entraver la respiration ou de créer une blessure grave sont particulièrement dangereuses. Aucune technique de contrainte ne s’improvise à partir d’un livre. Le menottage n’est jamais une commodité ou une routine : son éventuelle mise en œuvre doit satisfaire les conditions légales et être maîtrisée dans un cadre professionnel validé. Surveillez la réponse et la respiration et prenez au sérieux une plainte de malaise. La présence de collègues ne réduit pas cette obligation de vigilance.",
+                  "case": "Après une intervention, une personne se plaint de difficultés respiratoires. Un collègue répond qu’elle simule et souhaite poursuivre les questions en attendant la police. Quelle priorité s’impose ? Comment transmettre sans poser de diagnostic ?",
+                  "transfer": "Des témoins veulent filmer la personne pour la publier. Quelle attitude professionnelle adoptez-vous dans votre propre mission ?",
+                  "page": 282
+                }
+              },
+              {
+                "ref": "06.04",
+                "title": "Préparer la remise aux forces de l'ordre",
+                "page": 270,
+                "diagram": "media/aps62/repere-06.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Transmettre le fondement et la chronologie"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les forces de l'ordre ont besoin des faits observés, du lieu, de l'heure, de l'identité des témoins disponibles dans le cadre autorisé et des actions déjà réalisées. Expliquez la raison de l'appréhension envisagée ou effectuée et toute difficulté de santé. Ne transformez pas votre rapport en interrogatoire de la personne. L'enquête et les actes de procédure relèvent des autorités compétentes."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Organiser un relais clair"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent doit savoir qui reçoit l'information et quand le relais est effectif. La personne concernée ne reste pas retenue dans le seul but d'attendre un supérieur interne ou d'obtenir une reconnaissance écrite. Les objets et documents éventuels sont présentés selon la procédure, avec leur origine et les manipulations déjà effectuées. Les images ne sont pas copiées sur un téléphone privé pour accélérer l'échange."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« À 17 h 12, j'ai personnellement observé les faits suivants… Mon collègue est arrivé à 17 h 14. L'appel a été effectué à 17 h 15. La personne a signalé une douleur au poignet. » Cette présentation sépare les observations et les actions. Elle permet au service intervenant de reprendre la situation sans récit excessif."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Un relais réussi est rapide, traçable et factuel. Il ne dépend pas de la capacité de l'agent à obtenir des aveux."
+                  }
+                ],
+                "course_page": 271,
+                "practice": {
+                  "background": "Préparez un exposé bref : faits observés, heures, lieu, motifs de l’intervention, actions réalisées, état de la personne et témoins. Signalez les éléments disponibles, notamment les images, sans les manipuler hors procédure. Une transmission doit permettre aux policiers ou gendarmes de distinguer votre observation d’un récit rapporté. Le transport d’une personne n’est pas improvisé ; les modalités doivent rester compatibles avec la sécurité et le cadre légal. L’agent se conforme aux consignes des autorités et de son organisation.",
+                  "case": "La police est prête à prendre en charge une personne. Le responsable du magasin demande de la garder dix minutes de plus pour lui faire signer un document de reconnaissance de dette. Quelle réponse donnez-vous ? Quels documents pouvez-vous préparer séparément ?",
+                  "transfer": "Que répondre à un collègue qui veut « quelques explications avant d’appeler la police » ?",
+                  "page": 285
+                }
+              }
+            ],
+            "decision": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+            "pitfall": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+            "objectives": [
+              "Expliquer : une faculté encadrée, un relais rapide",
+              "Justifier une décision à partir de faits et de limites.",
+              "Produire une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police."
+              ],
+              [
+                "Décision à justifier",
+                "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments."
+              ],
+              [
+                "Piège à éviter",
+                "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre."
+              ],
+              [
+                "Pourquoi ?",
+                "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion."
+              },
+              {
+                "label": "Décider",
+                "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Les forces de l’ordre demandent une précision que vous n’avez pas observée. Formulez une réponse utile sans invention."
+              }
+            ],
+            "edition": "2026-10-04",
+            "image_alt": "Scène professionnelle illustrée : Flagrance et article 73",
+            "sorting": [
+              {
+                "text": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+                "category": "adapte"
+              },
+              {
+                "text": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+                "category": "fait"
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [
+            {
+              "id": "aps62-03-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-03-02-video",
+                "title": "Une faculté encadrée, un relais rapide",
+                "required": true,
+                "src": "media/aps62/v2/aps62-03-02.mp4",
+                "poster": "media/aps62/v2/aps62-03-02.jpg",
+                "captions": "media/aps62/v2/aps62-03-02.vtt",
+                "duration_seconds": 76.767333,
+                "transcript": "La situation : Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.\n\nÀ vous de décider : Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments. Ou bien : Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.\n\nLe bon relais : La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une faculté strictement encadrée",
+                "back": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+              },
+              {
+                "front": "Distinguer protection et poursuite",
+                "back": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+              },
+              {
+                "front": "La sécurité reste due à tous",
+                "back": "Une personne soupçonnée ou appréhendée conserve ses droits et sa dignité. Une difficulté respiratoire, une blessure ou un malaise doit être prise au sérieux. L'agent ne peut pas considérer un signe de détresse comme de la simulation sans évaluation adaptée. La contrainte n'est jamais une punition, une humiliation ou un moyen d'obtenir des aveux."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.\n\nÀ vous de décider : Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments. Ou bien : Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.\n\nLe bon relais : La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-03-02-atelier",
+          "title": "Atelier · prendre position et rédiger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "workshop",
+            "case": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+            "choices": [
+              {
+                "text": "Mener un interrogatoire afin d’obtenir des aveux.",
+                "feedback": "Cette proposition ne répond pas aux faits disponibles. La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+                "correct": false
+              },
+              {
+                "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+                "feedback": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+                "correct": true
+              },
+              {
+                "text": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+                "feedback": "Cette proposition dépasse le cadre ou augmente le risque. Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+                "correct": false
+              }
+            ],
+            "task": "Rédigez une fiche de remise : faits, chronologie, état de la personne, témoins, actions et éléments conservés. Identifiez trois actions qui dépasseraient la mission.",
+            "model": "La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+            "criteria": [
+              "Faits et sources clairement distingués",
+              "Décision et limite expliquées",
+              "Message compréhensible par le destinataire",
+              "Relais, incertitudes et suites explicités"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 180,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-03-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+          "options": [
+            {
+              "id": "aps62-03-02-a0",
+              "text": "Mener un interrogatoire afin d’obtenir des aveux.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-03-02-a1",
+              "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-03-02-a2",
+              "text": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré."
+        },
+        {
+          "id": "aps62-03-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 4,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-03-02-pair0",
+              "left": "Une faculté strictement encadrée",
+              "right": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation."
+            },
+            {
+              "id": "aps62-03-02-pair1",
+              "left": "Distinguer protection et poursuite",
+              "right": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires."
+            },
+            {
+              "id": "aps62-03-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un agent constate un fait potentiellement délictueux dans une zone encombrée."
+            }
+          ],
+          "explanation": "Une faculté strictement encadrée : L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Distinguer protection et poursuite : La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. EXEMPLE EXPLIQUÉ : Un agent constate un fait potentiellement délictueux dans une zone encombrée."
+        },
+        {
+          "id": "aps62-03-02-transfert",
+          "title": "Changer de situation · réutiliser la méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "transfer",
+            "case": "Les forces de l’ordre demandent une précision que vous n’avez pas observée. Formulez une réponse utile sans invention.",
+            "task": "Rédigez une réponse argumentée. Distinguez ce que cette nouvelle information change, ce qu’elle ne permet pas de conclure, les vérifications encore nécessaires et le relais adapté.",
+            "model": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré. La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+            "criteria": [
+              "La nouvelle information est prise en compte",
+              "Les limites restent identifiées",
+              "La décision est justifiée",
+              "Les vérifications et le relais sont précisés"
+            ],
+            "edition": "2026-10-04"
+          },
+          "workbook": {
+            "min_chars": 120,
+            "max_chars": 12000
+          }
+        },
+        {
+          "id": "aps62-03-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "recap",
+            "decision": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+            "reason": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+            "pitfall": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+            "cards": [
+              {
+                "front": "Une faculté strictement encadrée",
+                "back": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+              },
+              {
+                "front": "Distinguer protection et poursuite",
+                "back": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "06.01",
+                "page": 265
+              },
+              {
+                "ref": "06.03",
+                "page": 269
+              },
+              {
+                "ref": "06.04",
+                "page": 271
+              }
+            ],
+            "instruction": "Sans regarder le cours, résumez le raisonnement en trois phrases. Notez la question que vous souhaitez reprendre avec votre formateur. Les exercices écrits sont des productions pédagogiques, pas une validation automatique de compétence pratique.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-03-01-comprendre",
+    "aps62-03-01-memoriser",
+    "aps62-03-01-atelier",
+    "aps62-03-01-q1",
+    "aps62-03-01-q2",
+    "aps62-03-01-transfert",
+    "aps62-03-01-synthese",
+    "aps62-03-02-comprendre",
+    "aps62-03-02-memoriser",
+    "aps62-03-02-atelier",
+    "aps62-03-02-q1",
+    "aps62-03-02-q2",
+    "aps62-03-02-transfert",
+    "aps62-03-02-synthese"
+  ],
+  "counts": {
+    "sections": 2,
+    "activities": 14,
+    "scored_activities": 4,
+    "required_videos": 2,
+    "workbooks": 4,
+    "assets": 12
+  },
+  "assets": [
+    "media/aps62/repere-02.12.webp",
+    "media/aps62/repere-06.01.webp",
+    "media/aps62/repere-06.02.webp",
+    "media/aps62/repere-06.03.webp",
+    "media/aps62/repere-06.04.webp",
+    "media/aps62/v2/aps62-03-01.jpg",
+    "media/aps62/v2/aps62-03-01.mp4",
+    "media/aps62/v2/aps62-03-01.vtt",
+    "media/aps62/v2/aps62-03-02.jpg",
+    "media/aps62/v2/aps62-03-02.mp4",
+    "media/aps62/v2/aps62-03-02.vtt",
+    "media/aps62/v2/module-03.webp"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-03",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-03.webp"
+}

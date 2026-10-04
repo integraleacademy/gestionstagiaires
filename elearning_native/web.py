@@ -39,6 +39,7 @@ from werkzeug.exceptions import Conflict
 
 from .videos import activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
+from .exams import ExamStore, load_exam, public_exam, grade_exam
 
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
@@ -346,6 +347,13 @@ def create_native_elearning_blueprint(
     # or course bodies. Heartbeats must not parse the large data.json every 15s.
     access_checks: OrderedDict[tuple, float] = OrderedDict()
     access_checks_lock = threading.Lock()
+
+    @blueprint.after_request
+    def private_exam_responses(response):
+        if request.endpoint in {'native_elearning.admin_exam', 'native_elearning.admin_exam_submit',
+                                'native_elearning.learner_exam', 'native_elearning.learner_exam_submit'}:
+            response.headers['Cache-Control'] = 'private, no-store'
+        return response
 
     def root() -> Path:
         return Path(get_persist_dir()).resolve() / "native_elearning"
@@ -758,6 +766,94 @@ def create_native_elearning_blueprint(
         except CourseImportError:
             abort(404)
 
+    def exam_for_learner(token, exam_id):
+        if re.fullmatch(r'module-(0[1-9]|1[0-5])', exam_id):
+            session_obj, trainee, course = learner_context(token, 'academy-aps62-' + exam_id[-2:])
+            if course.get('mock_exam_id') != exam_id:
+                abort(404, 'Cet examen n’appartient pas à la version affectée.')
+            exam = load_exam(exam_id, course['version'])
+            back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
+        elif exam_id == 'final':
+            session_obj, trainee = learner_session(token)
+            modules = load_path(session_obj)
+            expected = {m['id'] for m in curriculum_manifest()['modules']}
+            academy = [m for m in modules if m['course'] and m['course']['id'] in expected]
+            if {m['course']['id'] for m in academy} != expected:
+                abort(403, 'L’examen final nécessite l’affectation des 15 modules APS illustrés.')
+            versions = {m['course']['version'] for m in academy}
+            if len(versions) != 1:
+                abort(403, 'Les modules de cet examen doivent appartenir à la même édition.')
+            rows = store().learner_progress(str(session_obj['id']), str(trainee.get('id') or trainee.get('trainee_id')))
+            by_key = {(r['course_id'],r['course_version']): r for r in rows}
+            for m in academy:
+                c = m['course']
+                # A selection of only part of a module does not unlock the final.
+                full = catalog().load_course(c['id'],c['version'])
+                if set(c['activity_order']) != set(full['activity_order']) or not project_progress(by_key.get((c['id'],c['version']),{}),c)['module_complete']:
+                    abort(403, 'Terminez les 15 modules complets et leurs durées obligatoires pour ouvrir l’examen final.')
+            exam = load_exam(exam_id, versions.pop())
+            back_url = url_for('native_elearning.learner_path', token=token)
+        else:
+            abort(404)
+        if not exam:
+            abort(404)
+        return session_obj, trainee, exam, back_url
+
+    def exam_page(exam, back_url, submit_url, history=None, preview=False):
+        return render_template('native_elearning_exam.html', exam=public_exam(exam),
+            back_url=back_url, history=history or [], preview_mode=preview,
+            exam_config={'exam':public_exam(exam), 'submitUrl':submit_url,
+                         'csrfToken':_csrf_token(), 'attemptId':secrets.token_hex(16), 'preview':preview})
+
+    def mark_exam(exam):
+        _require_csrf()
+        if request.content_length and request.content_length > 128_000:
+            abort(413)
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or payload.get('version') != exam['version']:
+            abort(409, 'La version de cet examen a changé. Rechargez la page.')
+        return payload, grade_exam(exam,payload.get('answers'))
+
+    @blueprint.get('/admin/elearning/exams/<exam_id>')
+    @admin_required
+    def admin_exam(exam_id):
+        exam = load_exam(exam_id, request.args.get('version') or curriculum_manifest()['version'])
+        if not exam:
+            abort(404)
+        return exam_page(exam, url_for('native_elearning.admin_catalog'),
+            url_for('native_elearning.admin_exam_submit', exam_id=exam_id, version=exam['version']), preview=True)
+
+    @blueprint.post('/api/admin/elearning/exams/<exam_id>')
+    @admin_required
+    def admin_exam_submit(exam_id):
+        exam = load_exam(exam_id, request.args.get('version') or curriculum_manifest()['version'])
+        if not exam:
+            abort(404)
+        try:
+            _, result = mark_exam(exam)
+            return jsonify(ok=True, result=result)
+        except ValueError as error:
+            return jsonify(ok=False, error=str(error)),400
+
+    @blueprint.get('/espace/<token>/elearning/exams/<exam_id>')
+    def learner_exam(token,exam_id):
+        if not public_is_authed(token):
+            return redirect(url_for('public_trainee_login',token=token))
+        session_obj, trainee, exam, back_url = exam_for_learner(token,exam_id)
+        history = ExamStore(root()/'tracking.sqlite3').history(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam)
+        return exam_page(exam, back_url, url_for('native_elearning.learner_exam_submit',token=token,exam_id=exam_id), history)
+
+    @blueprint.post('/api/espace/<token>/elearning/exams/<exam_id>')
+    def learner_exam_submit(token,exam_id):
+        _require_csrf()
+        session_obj, trainee, exam, _ = exam_for_learner(token,exam_id)
+        try:
+            payload,result = mark_exam(exam)
+            result = ExamStore(root()/'tracking.sqlite3').save(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam,payload.get('attempt_id'),result)
+            return jsonify(ok=True,result=result)
+        except ValueError as error:
+            return jsonify(ok=False,error=str(error)),400
+
     @blueprint.get("/admin/elearning/courses/<course_id>/preview")
     @admin_required
     def admin_preview(course_id: str) -> Any:
@@ -810,6 +906,7 @@ def create_native_elearning_blueprint(
                                      activity_id=requested_id, version=course["version"]),
             },
             preview_can_answer=session.get("admin_role") != "viewer",
+            exam_url=url_for('native_elearning.admin_exam',exam_id=course['mock_exam_id'],version=course['version']) if course.get('mock_exam_id') else '',
         )
 
     @blueprint.post("/api/admin/elearning/courses/<course_id>/preview/activities/<activity_id>/answer")
@@ -1277,6 +1374,7 @@ def create_native_elearning_blueprint(
             progress = project_progress(progress_by_key.get((course["id"], course["version"]), {}), course)
             item["progress"] = progress
             item["url"] = url_for("native_elearning.course_player", token=token, course_id=course["id"])
+            item['exam_url'] = url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if course.get('mock_exam_id') else ''
             item["time_label"] = _format_seconds(progress["active_seconds"])
             item["required_time_label"] = _format_seconds(progress["required_seconds"])
             item["remaining_time_label"] = _format_seconds(progress["remaining_seconds"])
@@ -1291,6 +1389,11 @@ def create_native_elearning_blueprint(
                 blocker = f"Terminez d’abord le module « {course['title']} »."
                 if progress["remaining_seconds"]:
                     blocker += f" Temps actif restant : {item['remaining_time_label']}."
+        exam_modules = [m for m in modules if m['course'] and m['course'].get('mock_exam_id')]
+        final_available = ({m['course']['id'] for m in exam_modules} == {m['id'] for m in curriculum_manifest()['modules']}
+                           and len({m['course']['version'] for m in exam_modules}) == 1)
+        final_ready = final_available and all(m.get('complete') and set(m['course']['activity_order']) ==
+            set(catalog().load_course(m['course']['id'],m['course']['version'])['activity_order']) for m in exam_modules)
         return render_template(
             "native_elearning_path.html", modules=modules,
             path_title=session_obj.get("aps_native_path_title") or "Mon parcours APS",
@@ -1300,6 +1403,8 @@ def create_native_elearning_blueprint(
             progress_percent=round(completed / total * 100) if total else 0,
             active_time_label=_format_seconds(seconds), resume_url=resume_url,
             portal_url=url_for("public_trainee_space", token=token),
+            final_exam_url=url_for('native_elearning.learner_exam',token=token,exam_id='final') if final_available else '',
+            final_exam_unlocked=final_ready,
         )
 
     @blueprint.get("/espace/<token>/elearning/<course_id>")
@@ -1380,6 +1485,7 @@ def create_native_elearning_blueprint(
             heartbeat_seconds=CLIENT_HEARTBEAT_SECONDS,
             idle_seconds=CLIENT_IDLE_SECONDS,
             is_last_activity=index + 1 == len(order),
+            exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if course.get('mock_exam_id') else '',
         )
 
     @blueprint.get("/elearning/assets/<course_id>/<path:asset_name>")

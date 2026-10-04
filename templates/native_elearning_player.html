@@ -7,7 +7,7 @@
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261003-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261004-2') }}">
 </head>
 <body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
@@ -87,6 +87,7 @@
         </section>{% endif %}
       </div>
       {% endif %}
+      {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
           <section>
@@ -251,6 +252,6 @@
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261003-aps62') }}" defer></script>
   {% endif %}
-<script src="{{ url_for('static', filename='js/aps62.js', v='20261003-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/aps62.js', v='20261004-2') }}" defer></script>
 </body>
 </html>

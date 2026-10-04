@@ -33,9 +33,12 @@ def _course(course_id, version):
 
 def load_bundled_course(course_id, version=None):
     item = next((item for item in _manifest()['modules'] if item['id'] == course_id), None)
-    if item is None or (version is not None and version != item['version']):
+    if item is None:
         return None
-    return copy.deepcopy(_course(course_id, item['version']))
+    version = version or item['version']
+    if version not in [item['version'], *item.get('previous_versions', [])]:
+        return None
+    return copy.deepcopy(_course(course_id, version))
 
 
 def bundled_asset(course_id, version, name):

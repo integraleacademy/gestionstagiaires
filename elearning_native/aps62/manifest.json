@@ -1,171 +1,231 @@
 {
-  "version": "20261003-aps62-v1",
+  "version": "20261004-aps62-v2",
   "hours": 62,
   "modules": [
     {
       "id": "academy-aps62-01",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Le cadre de la sécurité privée",
       "number": "01",
       "hours": 4,
       "scene": "02",
       "sections": 4,
       "activities": 28,
-      "regulation": "Annexe II · Livre VI du CSI"
+      "regulation": "Annexe II · Livre VI du CSI",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-02",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Responsabilité et droit pénal",
       "number": "02",
       "hours": 3,
       "scene": "02",
       "sections": 3,
       "activities": 21,
-      "regulation": "Annexe II · Dispositions utiles du code pénal"
+      "regulation": "Annexe II · Dispositions utiles du code pénal",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-03",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Flagrance et article 73",
       "number": "03",
       "hours": 2,
       "scene": "06",
       "sections": 2,
       "activities": 14,
-      "regulation": "Annexe II · Application de l’article 73"
+      "regulation": "Annexe II · Application de l’article 73",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-04",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Libertés et données personnelles",
       "number": "04",
       "hours": 1,
       "scene": "10",
       "sections": 1,
       "activities": 7,
-      "regulation": "Annexe II · Libertés publiques"
+      "regulation": "Annexe II · Libertés publiques",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-05",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "République, égalité et dignité",
       "number": "05",
       "hours": 3,
       "scene": "02",
       "sections": 3,
       "activities": 21,
-      "regulation": "Annexe II · Principes de la République"
+      "regulation": "Annexe II · Principes de la République",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-06",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Déontologie au quotidien",
       "number": "06",
       "hours": 4,
       "scene": "02",
       "sections": 4,
       "activities": 28,
-      "regulation": "Annexe II · Déontologie professionnelle"
+      "regulation": "Annexe II · Déontologie professionnelle",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-07",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Comprendre et apaiser les conflits",
       "number": "07",
       "hours": 5,
       "scene": "03",
       "sections": 5,
       "activities": 35,
-      "regulation": "Annexe II · Analyse et résolution des conflits"
+      "regulation": "Annexe II · Analyse et résolution des conflits",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-08",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Consignes et comptes rendus",
       "number": "08",
       "hours": 5,
       "scene": "04",
       "sections": 5,
       "activities": 35,
-      "regulation": "Annexe II · Transmission des informations"
+      "regulation": "Annexe II · Transmission des informations",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-09",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Justifier ses décisions",
       "number": "09",
       "hours": 3,
       "scene": "02",
       "sections": 3,
       "activities": 21,
-      "regulation": "Annexe III · Compléments pénal et libertés"
+      "regulation": "Annexe III · Compléments pénal et libertés",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-10",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Prévention et risques industriels",
       "number": "10",
       "hours": 7,
       "scene": "14",
       "sections": 7,
       "activities": 49,
-      "regulation": "Annexe III · Risques professionnels et industriels"
+      "regulation": "Annexe III · Risques professionnels et industriels",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-11",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Sensibilisation au risque électrique",
       "number": "11",
       "hours": 2,
       "scene": "11",
       "sections": 2,
       "activities": 14,
-      "regulation": "Annexe III · Risque électrique"
+      "regulation": "Annexe III · Risque électrique",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-12",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Prévenir la menace terroriste",
       "number": "12",
       "hours": 7,
       "scene": "07",
       "sections": 7,
       "activities": 49,
-      "regulation": "Annexe III · Séquences théoriques autorisées à distance"
+      "regulation": "Annexe III · Séquences théoriques autorisées à distance",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-13",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "La main courante numérique",
       "number": "13",
       "hours": 2,
       "scene": "04",
       "sections": 2,
       "activities": 14,
-      "regulation": "Annexe III · Outil informatique et transmission"
+      "regulation": "Annexe III · Outil informatique et transmission",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-14",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Décider face à une infraction",
       "number": "14",
       "hours": 7,
       "scene": "06",
       "sections": 7,
       "activities": 49,
-      "regulation": "Annexe III · Article 73 et filières métiers"
+      "regulation": "Annexe III · Article 73 et filières métiers",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     },
     {
       "id": "academy-aps62-15",
-      "version": "20261003-aps62-v1",
+      "version": "20261004-aps62-v2",
       "title": "Sécuriser un événement",
       "number": "15",
       "hours": 7,
       "scene": "12",
       "sections": 7,
       "activities": 49,
-      "regulation": "Annexe III · Événementiel"
+      "regulation": "Annexe III · Événementiel",
+      "previous_versions": [
+        "20261003-aps62-v1"
+      ],
+      "exam_questions": 30
     }
   ],
   "sources": [
@@ -206,5 +266,11 @@
   "manual_lesson_count": 73,
   "editorial_words": 13192,
   "manual_words": 25214,
-  "source_sha256": "6e0ae6da876091854e1852ba3cc7e0d0a487aef009f180ba049ed10f01d4c670"
+  "source_sha256": "6e0ae6da876091854e1852ba3cc7e0d0a487aef009f180ba049ed10f01d4c670",
+  "exam_versions": [
+    "20261004-aps62-v2"
+  ],
+  "mock_questions": 450,
+  "final_questions": 100,
+  "illustrations": 15
 }

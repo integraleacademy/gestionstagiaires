@@ -1,0 +1,939 @@
+{
+  "id": "module-03",
+  "version": "20261004-aps62-v2",
+  "title": "Flagrance et article 73",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-03-01",
+      "prompt": "L’article 73 du CPP concerne quelle hypothèse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Tout comportement jugé insolent"
+        },
+        {
+          "id": "2",
+          "text": "Toute infraction au règlement du magasin"
+        },
+        {
+          "id": "3",
+          "text": "Un crime flagrant ou un délit flagrant puni d’emprisonnement"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La disposition a des conditions précises ; elle n’autorise pas une rétention générale.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-02",
+      "prompt": "Qui peut agir dans le cadre de l’article 73 ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Toute personne lorsque les conditions sont réunies"
+        },
+        {
+          "id": "2",
+          "text": "Uniquement les agents privés"
+        },
+        {
+          "id": "3",
+          "text": "Uniquement le propriétaire du site"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Il s’agit d’une faculté citoyenne, pas d’un pouvoir général propre à la sécurité privée.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-03",
+      "prompt": "Quelle est la finalité de l’appréhension prévue par l’article 73 ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Conduire l’auteur devant l’OPJ le plus proche"
+        },
+        {
+          "id": "2",
+          "text": "Le punir au nom du magasin"
+        },
+        {
+          "id": "3",
+          "text": "Obtenir des aveux avant de le libérer"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’intervention prépare le relais judiciaire ; elle ne transforme pas l’agent en enquêteur.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-04",
+      "prompt": "Une personne est simplement nerveuse devant une caisse. Cela suffit-il ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, il faut des faits et les conditions légales"
+        },
+        {
+          "id": "2",
+          "text": "Oui si elle porte un grand sac"
+        },
+        {
+          "id": "3",
+          "text": "Oui si elle évite le regard"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un comportement ambigu ne démontre pas à lui seul une infraction flagrante.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-05",
+      "prompt": "Un collègue dit « c’est lui » sans décrire les faits. Que demander ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La sanction qu’il souhaite"
+        },
+        {
+          "id": "2",
+          "text": "Son impression sur le visage"
+        },
+        {
+          "id": "3",
+          "text": "Ce qui a été observé, où et quand"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La décision doit reposer sur des éléments concrets et non une affirmation inexpliquée.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-06",
+      "prompt": "Une personne refuse un contrôle de sac. Est-ce à lui seul un flagrant délit ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si la consigne est affichée"
+        },
+        {
+          "id": "2",
+          "text": "Non"
+        },
+        {
+          "id": "3",
+          "text": "Oui si elle quitte le site"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le refus ne constitue pas automatiquement l’infraction permettant une appréhension.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-07",
+      "prompt": "Quelle force peut être envisagée lors d’une appréhension licite ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement celle nécessaire et proportionnée aux circonstances"
+        },
+        {
+          "id": "2",
+          "text": "Une force destinée à impressionner"
+        },
+        {
+          "id": "3",
+          "text": "Toute force jusqu’à obtenir des aveux"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La licéité initiale ne dispense jamais d’évaluer les moyens utilisés et de cesser l’excès.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-08",
+      "prompt": "Une personne appréhendée doit-elle subir des humiliations ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, sa dignité reste protégée"
+        },
+        {
+          "id": "2",
+          "text": "Oui si les témoins approuvent"
+        },
+        {
+          "id": "3",
+          "text": "Oui pour dissuader les autres"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La dignité vaut indépendamment des faits reprochés et du comportement de la personne.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-09",
+      "prompt": "L’agent peut-il organiser un interrogatoire coercitif ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui avant d’appeler la police"
+        },
+        {
+          "id": "2",
+          "text": "Oui avec l’accord du client"
+        },
+        {
+          "id": "3",
+          "text": "Non"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le relais aux autorités ne doit pas être retardé pour obtenir une reconnaissance forcée.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-10",
+      "prompt": "Pourquoi contacter rapidement la police ou la gendarmerie ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour organiser sans délai le relais compétent"
+        },
+        {
+          "id": "2",
+          "text": "Pour obtenir une punition immédiate"
+        },
+        {
+          "id": "3",
+          "text": "Pour demander le prix de l’objet"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La transmission de la situation et des faits observés permet la prise en charge adaptée.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-11",
+      "prompt": "Une simple contravention permet-elle automatiquement l’article 73 ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui quelle que soit la contravention"
+        },
+        {
+          "id": "2",
+          "text": "Non"
+        },
+        {
+          "id": "3",
+          "text": "Oui si elle se répète"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La condition de crime flagrant ou de délit flagrant puni d’emprisonnement doit être examinée.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-12",
+      "prompt": "Un soupçon de vol datant d’une semaine suffit-il à invoquer cette flagrance ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui avec une photographie"
+        },
+        {
+          "id": "2",
+          "text": "Non, il faut distinguer l’ancien soupçon d’une situation flagrante"
+        },
+        {
+          "id": "3",
+          "text": "Oui si le client reconnaît la personne"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La temporalité et les indices doivent être précisément appréciés, sans transformer un soupçon ancien en flagrance.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-13",
+      "prompt": "Quel message au relais est le plus utile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "« Nous avons un coupable, venez »"
+        },
+        {
+          "id": "2",
+          "text": "Faits constatés, lieu, heure, comportement actuel et risques"
+        },
+        {
+          "id": "3",
+          "text": "« Un problème habituel », sans détail"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’information factuelle permet une décision adaptée sans préjuger d’une condamnation.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-14",
+      "prompt": "Une personne remet spontanément l’objet contesté. Que réévaluer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La nécessité de toute contrainte au regard de la situation"
+        },
+        {
+          "id": "2",
+          "text": "La valeur de sa tenue"
+        },
+        {
+          "id": "3",
+          "text": "La possibilité de la punir plus longtemps"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’action doit évoluer avec le danger et les faits ; elle n’est pas automatique.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-15",
+      "prompt": "Peut-on prolonger une rétention pour attendre le directeur alors que la police est joignable ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, l’objectif est le relais judiciaire sans retard injustifié"
+        },
+        {
+          "id": "2",
+          "text": "Oui jusqu’à la fermeture"
+        },
+        {
+          "id": "3",
+          "text": "Oui par confort commercial"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’organisation interne ne justifie pas une privation de liberté destinée à un autre objectif.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-16",
+      "prompt": "Une fouille forcée est-elle automatiquement autorisée par l’article 73 ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui pour retrouver une facture"
+        },
+        {
+          "id": "2",
+          "text": "Oui si l’agent porte des gants"
+        },
+        {
+          "id": "3",
+          "text": "Non, ce texte ne donne pas un pouvoir général de fouille"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les pouvoirs de l’agent restent limités ; une appréhension ne l’habilite pas à toute recherche.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-17",
+      "prompt": "Un mineur est impliqué. Que faut-il préserver ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le droit du client à l’humilier"
+        },
+        {
+          "id": "2",
+          "text": "La diffusion de son visage"
+        },
+        {
+          "id": "3",
+          "text": "Sa sécurité, sa dignité et le relais compétent"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La vulnérabilité renforce l’attention à la protection sans effacer les limites de l’intervention.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-18",
+      "prompt": "Un agent n’a vu qu’une partie de la scène. Que dit-il ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La version qui facilite l’intervention"
+        },
+        {
+          "id": "2",
+          "text": "Ce qu’il a vu et ce qu’il ignore"
+        },
+        {
+          "id": "3",
+          "text": "Une reconstitution présentée comme certaine"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les limites de l’observation doivent être explicitement signalées.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-19",
+      "prompt": "Une personne blessée pendant l’incident nécessite quoi ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une interdiction de parler"
+        },
+        {
+          "id": "2",
+          "text": "Une attente systématique de l’OPJ avant toute aide"
+        },
+        {
+          "id": "3",
+          "text": "Une évaluation de l’urgence et l’alerte des secours"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La prise en charge d’une urgence vitale ne se suspend pas au motif d’une infraction présumée.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-20",
+      "prompt": "Le fait de porter une tenue APS augmente-t-il les pouvoirs de l’article 73 ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non"
+        },
+        {
+          "id": "2",
+          "text": "Oui dans tous les commerces"
+        },
+        {
+          "id": "3",
+          "text": "Oui, jusqu’à pouvoir placer en garde à vue"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La tenue ne transforme pas une faculté citoyenne en compétence de police judiciaire.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-21",
+      "prompt": "Qui décide d’une mesure de garde à vue dans le cadre légal ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le responsable de caisse"
+        },
+        {
+          "id": "2",
+          "text": "L’agent de sécurité du magasin"
+        },
+        {
+          "id": "3",
+          "text": "L’autorité de police judiciaire compétente"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La garde à vue est une mesure judiciaire ; l’agent privé ne la prononce pas.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-22",
+      "prompt": "Une vidéo présente un angle mort pendant le fait décisif. Que noter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’absence de tout besoin d’analyse"
+        },
+        {
+          "id": "2",
+          "text": "La limite de visibilité et les éléments réellement visibles"
+        },
+        {
+          "id": "3",
+          "text": "La certitude d’un vol dans l’angle mort"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une image incomplète ne doit pas être complétée par une hypothèse présentée comme preuve.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-23",
+      "prompt": "Un témoin veut repartir. Quelle attitude générale adopter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Lui confisquer son téléphone"
+        },
+        {
+          "id": "2",
+          "text": "Le retenir d’office comme l’auteur"
+        },
+        {
+          "id": "3",
+          "text": "Recueillir volontairement les éléments utiles et transmettre"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le rôle de témoin ne crée pas pour l’agent un pouvoir général de contrainte.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-24",
+      "prompt": "Une personne est reconnue innocente par les faits nouvellement établis. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Cesser la contrainte injustifiée et rectifier la transmission"
+        },
+        {
+          "id": "2",
+          "text": "Effacer toute trace de l’événement"
+        },
+        {
+          "id": "3",
+          "text": "Maintenir la contrainte pour éviter d’avouer l’erreur"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une erreur doit être corrigée immédiatement et avec transparence.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-25",
+      "prompt": "Quelles données temporelles conserver ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Heure des faits, de l’alerte et du relais"
+        },
+        {
+          "id": "2",
+          "text": "Uniquement l’heure de fin du poste"
+        },
+        {
+          "id": "3",
+          "text": "Une durée approximative inventée"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La chronologie aide à examiner la nécessité et la durée des actions.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-26",
+      "prompt": "La coopération de la personne dispense-t-elle de respecter sa dignité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si elle signe une feuille"
+        },
+        {
+          "id": "2",
+          "text": "Oui si elle reconnaît les faits"
+        },
+        {
+          "id": "3",
+          "text": "Non, cette obligation demeure"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La dignité ne dépend ni de l’attitude ni d’une signature.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-27",
+      "prompt": "Quel comportement compromet le relais aux enquêteurs ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Réorganiser les objets pour rendre la scène plus lisible"
+        },
+        {
+          "id": "2",
+          "text": "Signaler les manipulations déjà nécessaires"
+        },
+        {
+          "id": "3",
+          "text": "Préserver la scène sans s’exposer"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Modifier une scène peut altérer des éléments utiles ; toute intervention indispensable doit être décrite.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-28",
+      "prompt": "Pourquoi distinguer « vu » et « rapporté » ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour allonger le compte rendu"
+        },
+        {
+          "id": "2",
+          "text": "Pour éviter de citer les heures"
+        },
+        {
+          "id": "3",
+          "text": "Pour que le destinataire évalue l’origine de chaque fait"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La valeur d’une information dépend notamment des conditions de son obtention.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-29",
+      "prompt": "L’appréhension peut-elle servir à obtenir le remboursement d’une dette civile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si le client exige un paiement"
+        },
+        {
+          "id": "2",
+          "text": "Non, ce n’est pas sa finalité"
+        },
+        {
+          "id": "3",
+          "text": "Oui si la dette est ancienne"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La contrainte ne doit pas être détournée en moyen de recouvrement privé.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-03-30",
+      "prompt": "Quel enchaînement résume une décision rigoureuse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Soupçonner, contraindre, chercher ensuite une raison"
+        },
+        {
+          "id": "2",
+          "text": "Attendre des aveux puis alerter"
+        },
+        {
+          "id": "3",
+          "text": "Qualifier les faits, évaluer la nécessité, protéger et transmettre"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les conditions et risques sont examinés avant et pendant l’action, jusqu’au relais.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}
