@@ -2,17 +2,17 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{% block title %}Manuels de formation{% endblock %} · Intégrale Connect</title>
+  <title>{% block title %}Espace organisme{% endblock %} · Intégrale Connect</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css') }}">
   <script src="{{ url_for('static', filename='js/manuals-shop.js') }}" defer></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="logo" href="{{ url_for('manuals_shop.catalogue') if session.get('admin_logged_in') else url_for('admin_login') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
+    <a class="logo" href="{{ url_for('manuals_shop.home') if session.get('admin_logged_in') else url_for('admin_login') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
     <span class="header-label">L’espace des organismes de formation</span>
     <nav aria-label="Navigation principale">
-    {% if staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a>
-    {% elif session.get('admin_logged_in') %}<a href="{{ url_for('manuals_shop.catalogue') }}" class="nav-active">Commande Manuels de formation</a>
+    {% if staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a>
+    {% elif session.get('admin_logged_in') %}<a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Mon espace</a><a href="{{ url_for('manuals_shop.catalogue') }}" {% if request.endpoint == 'manuals_shop.catalogue' %}aria-current="page"{% endif %}>Manuels</a><a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint == 'manuals_shop.elearning_soon' %}aria-current="page"{% endif %}>E-learning <span class="nav-soon">Prochainement</span></a>
     {% else %}<a href="{{ url_for('admin_login') }}">J’ai déjà un compte <span aria-hidden="true">↗</span></a>{% endif %}
     {% if session.get('admin_logged_in') %}<a class="logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>{% endif %}
     </nav>

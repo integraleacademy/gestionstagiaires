@@ -23,8 +23,23 @@
     if (button && form.checkValidity()) { button.disabled = true; button.textContent = 'Enregistrement en cours…'; }
   }));
   window.addEventListener('pageshow', () => document.querySelectorAll('[data-submit]').forEach(button => { button.disabled = false; }));
+  const pending = document.querySelector('[data-order-pending]');
+  if (pending) {
+    const key = 'order-wait-' + pending.dataset.orderPending;
+    const started = Number(sessionStorage.getItem(key)) || Date.now();
+    sessionStorage.setItem(key, String(started));
+    if (Date.now() - started < 120000) setTimeout(() => location.reload(), 12000);
+  }
   const form = document.querySelector('[data-order-form]');
   if (!form) return;
+  const billingToggle = form.querySelector('[data-billing-toggle]');
+  const updateBilling = () => {
+    if (!billingToggle) return;
+    form.querySelector('[data-billing-fields]').hidden = !billingToggle.checked;
+    ['billing_address','billing_postal_code','billing_city'].forEach(name => { form.elements[name].required = billingToggle.checked; });
+  };
+  billingToggle?.addEventListener('change', updateBilling);
+  updateBilling();
   const money = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
   const inputs = [...form.querySelectorAll('[data-product]')];
   const summary = form.querySelector('[data-cart-lines]');

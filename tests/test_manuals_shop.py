@@ -58,7 +58,7 @@ def signup(client, email="centre@example.test", **updates):
 def login(client, email="centre@example.test", next_url="/admin/sessions"):
     response = client.post("/admin/login", data={"username": email, "password": "Une phrase robuste 2026!", "next": next_url})
     assert response.status_code == 302
-    assert response.location == "/admin/manuels"
+    assert response.location == "/admin/organisme"
     return response
 
 
@@ -99,7 +99,7 @@ def test_registration_login_email_and_restricted_navigation(shop):
     for forbidden in ("/admin/sessions", "/admin/partners", "/admin/secretariat", "/admin/commandes-manuels", "/scotia/login", "/admin/e-learning"):
         response = c.get(forbidden)
         assert response.status_code == 302, forbidden
-        assert response.location == "/admin/manuels"
+        assert response.location == "/admin/organisme"
     for path in ("/api/admin/trainees", "/api/new-future-module", "/admin/sessions/new", "/admin/partners/new"):
         assert c.post(path, json={"role": "super_admin"}).status_code == 403, path
 

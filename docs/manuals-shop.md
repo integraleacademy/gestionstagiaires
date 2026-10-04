@@ -1,25 +1,62 @@
-# Espace commandes des organismes de formation
+# Espace des organismes de formation
 
-- Inscription : `/creer-mon-espace`, accessible depuis « Je n’ai pas de compte » sur la connexion commune.
-- Connexion existante : `/admin/login`. Les nouveaux organismes arrivent sur `/admin/manuels`, quel que soit le paramètre `next` fourni.
-- Administration : **Commandes de manuels**, dans la barre latérale, ou `/admin/commandes-manuels`. Seuls les administrateurs plateforme peuvent consulter toutes les commandes et modifier leur statut.
-- Tarifs : brochure Intégrale Academy 2026, 50–99 puis 100 exemplaires et plus **par titre**. Les montants sont en centimes TTC, calculés côté serveur. Clés USB : 199 € par formation, 99 € pour SST. Livraison et personnalisation des manuels incluses.
-- Il s’agit d’une commande enregistrée, sans prélèvement ni facture automatique. L’équipe organise le règlement, la personnalisation et le délai de livraison avec le centre.
+## Accès
 
-## Stockage et sécurité
+- Inscription : `/creer-mon-espace`, depuis « Je n’ai pas de compte ».
+- Accueil après connexion : `/admin/organisme`. Les liens directs autorisés vers une commande sont conservés ; les routes CRM restent interdites aux comptes organismes.
+- Manuels : `/admin/manuels` ; e-learning en présentation uniquement : `/admin/organisme/e-learning` (APS 59 € TTC / stagiaire, A3P 89 € TTC / stagiaire).
+- Gestion des comptes : `/admin/partners`, menu **Organismes de formation**.
+- Commandes : `/admin/commandes-manuels`, menu **Commandes de manuels**.
+- TVA, état de la configuration et connexion de paiement : `/admin/commandes-manuels/reglages`.
 
-Les comptes réutilisent le stockage partenaires existant, en mode JSON ou PostgreSQL. Aucun changement de schéma SQL n’est nécessaire. Le partenaire porte `account_type=manuals_only` et une liste `enabled_modules` vide. Son rôle technique reste `partner_admin`, mais le garde global applique une liste positive de routes autorisées, avant les routes métiers. La restriction est relue depuis le stockage et ne dépend pas uniquement du cookie. Les comptes partenaires existants conservent leur comportement.
+Les anciens comptes `account_type=manuals_only` deviennent des espaces organismes sans migration ni ouverture des modules CRM. Les commandes restent isolées par `partner_id` en JSON et PostgreSQL.
 
-`manual_orders` est une collection explicitement cloisonnée par `partner_id`. Les quantités, prix et destinataires sont validés côté serveur. Les brouillons sont modifiables et accessibles depuis le catalogue ; la confirmation atomique d’un même brouillon ne crée pas deux commandes. Les écritures comportent un jeton CSRF. Les logos sont validés puis réencodés en PNG dans le dossier persistant du partenaire et téléchargés par une route protégée.
+## Tarifs de la brochure 2026
 
-## E-mail de bienvenue
+Prix unitaires TTC, personnalisation des manuels et livraison incluses. Le palier est calculé **par titre**, pas sur le panier cumulé.
 
-L’envoi réutilise Brevo et les variables existantes `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` et l’adresse publique configurée. Le lien de connexion privilégie `MANUALS_BASE_URL` (optionnel), puis `RENDER_EXTERNAL_URL`, puis l’adresse publique existante. Cela maintient le lien sur le bon service, notamment `test-v2`.
+| Manuel | 50–99 exemplaires | 100 exemplaires et plus |
+|---|---:|---:|
+| SSIAP 1 | 17 € | 17 € |
+| APS | 20 € | 18 € |
+| A3P | 22 € | 20 € |
+| DSSP | 22 € | 20 € |
+| VTC | 22 € | 20 € |
+| SST | 12 € | 10 € |
 
-Le compte est enregistré avant l’appel à Brevo. Le mot de passe n’est jamais envoyé par e-mail. Le résultat d’envoi est conservé dans `partner.welcome_email`. En cas d’échec, la page de succès précise que la connexion reste disponible et propose de réessayer après une minute. Aucun message de commande ni de prospection n’est envoyé automatiquement.
+PowerPoint sur clé USB : 199 € par formation, sauf SST à 99 €. Aucun changement des valeurs n’était nécessaire après lecture de la nouvelle brochure ; l’affichage explicite « TTC / exemplaire » a été ajouté et les paliers sont vérifiés contre des valeurs de référence indépendantes.
 
-## Validation
+## Commande, e-mails et facturation
 
-`tests/test_manuals_shop.py` couvre les deux modes de stockage, l’inscription et ses validations, l’échec de livraison du mail, les droits, les seuils tarifaires, la manipulation des montants, les brouillons, la confirmation idempotente, les logos, les comptes suspendus et l’isolation entre centres.
+La confirmation enregistre la commande et sa file de traitement dans une même mutation atomique. Le worker embarqué démarre à la première requête et reprend les travaux enregistrés après redémarrage. Il utilise des réservations persistantes de dix minutes ; les appels réseau ont lieu hors des transactions et hors du contexte HTTP d’un client. Il ne démarre pas dans les tests.
 
-Pour exécuter les tests d’interface existants qui dépendent des routes e-learning, importer `crm_app` avant de lancer pytest (c’est le point d’entrée Gunicorn).
+1. Brevo adresse une confirmation au centre et une notification à **clement@integraleacademy.com**, même si Qonto est indisponible.
+2. La facturation réutilise le client Qonto identifié exactement par SIRET, avec les coordonnées de facturation vérifiées lors de la commande.
+3. Le brouillon Qonto reprend les quantités, la TVA configurée et les prix TTC. Son total, sa devise, son client et sa référence de commande doivent correspondre avant finalisation. La numérotation reste gérée par Qonto.
+4. Une connexion OAuth autorisée à lire cette même facture crée un lien de paiement lié à la facture avec les moyens de paiement activés dans Qonto. Le centre reçoit ensuite un e-mail avec le lien de règlement et le suivi de commande.
+5. Le statut du paiement est vérifié auprès de Qonto toutes les quinze minutes pour les commandes actives. Le bouton d’actualisation est limité à une demande par minute. Une URL de retour du navigateur ne marque jamais une commande comme payée.
+
+Les e-mails acceptés par Brevo ne sont pas renvoyés lors d’une relance. Un échec d’envoi est retenté avec temporisation, au maximum huit tentatives consécutives. Le journal indique l’acceptation par le prestataire, pas une preuve de lecture ou de remise en boîte de réception. Une interruption entre acceptation réseau et sauvegarde locale peut provoquer un second e-mail ; la sécurité des factures est traitée séparément.
+
+Les créations Qonto ont une clé d’idempotence stable, mais leur sûreté ne dépend pas de sa durée de vie de 30 minutes : une création incertaine est recherchée par l’UUID immuable `purchase_order` (ou par `invoice_id` pour un lien) ; aucune nouvelle création automatique n’est tentée si l’incertitude persiste. Un total non conforme laisse la facture en brouillon. Les règlements partiels et liens expirés demandent un contrôle administratif. Annuler le statut logistique ne crée ni avoir ni remboursement dans Qonto.
+
+Les commandes antérieures à cette version ne déclenchent aucun envoi ni aucune facture rétroactive. L’administrateur peut explicitement lancer leur traitement depuis le détail.
+
+## Activation dans chaque environnement
+
+- **Brevo** : la connexion existante de la plateforme est réutilisée.
+- **Factures Qonto** : identifiants API existants et `QONTO_IBAN` sur le service concerné.
+- **TVA** : renseigner les taux applicables aux manuels et clés USB dans les réglages. Aucun taux fiscal n’est déduit de prix TTC ; une exonération exige un motif. Les taux sont figés lorsque la préparation de la facture commence.
+- **Paiement** : `QONTO_OAUTH_CLIENT_ID` et `QONTO_OAUTH_CLIENT_SECRET`, consentement comportant `payment_link.read` et `payment_link.write`, et prestataire de paiement actif dans Qonto. Le compte OAuth doit pouvoir lire la facture du compte marchand.
+- Enregistrer dans l’application OAuth Qonto l’URL de retour propre à l’environnement, affichée dans les réglages : **`https://gestionstagiaires-test-v2.onrender.com/api/commerce/connexion-paiement/retour`** pour test-v2. Ce parcours ne modifie pas le retour OAuth historique du CRM vers la production.
+- Les liens des e-mails utilisent `MANUALS_BASE_URL`, puis `RENDER_EXTERNAL_URL`, puis l’URL publique configurée.
+
+La page d’administration distingue la présence de configuration d’un test de connexion réussi. Aucun test ne doit émettre de facture réelle fictive ou envoyer des messages de démonstration aux utilisateurs.
+
+## Vérification
+
+- Tests du parcours, tarifs, isolation JSON/PG, reprise des factures, paiements et e-mails : `tests/test_manuals*.py`. Vérification finale ciblée (incluant OAuth, sécurité et partenaires) : **200 tests réussis, 14 sous-tests réussis**.
+- Vérification navigateur locale en 1440 px et 390 px, inscription → accueil → e-learning → sélection → facture et lien simulés ; aucun débordement ni erreur JavaScript.
+- Suite élargie effectuée sans réseau : 358 réussites, 10 tests ignorés, 14 sous-tests réussis avant les derniers tests OAuth ciblés. Quatre échecs historiques ont été reproduits sur le commit antérieur `a86c9c2` : facturation CPF externalisée, normalisation de paiement Qonto et deux tests de sessions anciennes. Ils ne sont pas modifiés dans cette évolution.
+
+Références API officielles consultées : [factures](https://docs.qonto.com/api-reference/business-api/expense-management/client-quotes-notes/client-invoices/create-a-client-invoice), [liens de paiement](https://docs.qonto.com/api-reference/business-api/payments-transfers/payment-links/create), [idempotence](https://docs.qonto.com/get-started/general/idempotent-requests).

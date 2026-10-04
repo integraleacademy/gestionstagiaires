@@ -923,7 +923,7 @@ def _contains_invalid_qonto_search_marker(value: Any) -> bool:
     return any(marker.lower() in lowered for marker in INVALID_QONTO_SEARCH_MARKERS)
 
 
-def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None, *, idempotency_key: str = "", use_oauth: bool = False) -> Dict[str, Any]:
     if has_request_context() and (
         _is_external_partner_session()
         or (session.get("assist_partner_id") and _is_super_admin_session())
@@ -934,6 +934,9 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
     endpoint = path if path.startswith("/") else f"/{path}"
     is_webhook_endpoint = endpoint.startswith("/v2/webhook_subscriptions")
     is_sepa_endpoint = endpoint.startswith("/v2/sepa/direct_debit")
+    is_payment_link_endpoint = endpoint.startswith("/v2/payment_links")
+    if use_oauth and not _qonto_oauth_connected():
+        raise QontoConfigurationError("Autorisez la connexion Qonto depuis les réglages des commandes pour activer le paiement en ligne.")
     # Qonto explicitly requires OAuth2 for webhook subscriptions.  Do not let
     # the API-key fallback leak onto these endpoints (it returns HTTP 401).
     if is_webhook_endpoint:
@@ -942,6 +945,10 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         if not _qonto_oauth_has_scope("webhook"):
             raise QontoConfigurationError("La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto.")
         _ensure_qonto_oauth_ready()
+    elif is_payment_link_endpoint:
+        needed_scope = "payment_link.read" if method.upper() == "GET" else "payment_link.write"
+        if not _qonto_oauth_connected() or not _qonto_oauth_has_scope(needed_scope):
+            raise QontoConfigurationError("Autorisez les liens de paiement depuis les réglages des commandes, puis activez le prestataire de paiement dans Qonto.")
     elif not is_sepa_endpoint and not _qonto_is_configured():
         raise QontoConfigurationError("Qonto n’est pas connecté")
     cleaned_payload = cleanQontoPayload(payload) if payload is not None else None
@@ -955,8 +962,10 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         headers = get_qonto_headers()
         if cleaned_payload is not None:
             headers = {**headers, "Content-Type": "application/json"}
-        if is_sepa_endpoint or is_webhook_endpoint:
+        if use_oauth or is_sepa_endpoint or is_webhook_endpoint or is_payment_link_endpoint:
             headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json", "Accept": "application/json"}
+        if idempotency_key:
+            headers["X-Qonto-Idempotency-Key"] = idempotency_key
         # Webhook creation must use a JSON request body.  Keep this explicit so
         # a generic-client argument mismatch cannot silently turn it into query
         # parameters or an empty form body.
@@ -3916,7 +3925,14 @@ def _post_login_redirect_target(value: str, default: str) -> str:
     immediately land on a 403 page.
     """
     if session.get("manuals_only"):
-        return url_for("manuals_shop.catalogue")
+        target = _safe_local_redirect_target(value, url_for("manuals_shop.home"))
+        try:
+            endpoint, _ = app.url_map.bind_to_environ(request.environ).match(urlparse(target).path, method="GET")
+            if endpoint in manuals_shop.CUSTOMER_ENDPOINTS:
+                return target
+        except HTTPException:
+            pass
+        return url_for("manuals_shop.home")
     target = _safe_local_redirect_target(value, default)
     if _is_super_admin_session():
         return target

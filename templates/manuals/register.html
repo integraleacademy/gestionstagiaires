@@ -4,10 +4,10 @@
 <div class="registration-layout">
   <section class="registration-story">
     <span class="eyebrow">BIENVENUE DANS VOTRE ESPACE</span>
-    <h1>Vos formations.<br> Vos manuels.<br> <em>Votre identité.</em></h1>
-    <p>Créez l’espace de votre organisme et offrez à vos stagiaires des manuels illustrés, personnalisés avec votre logo.</p>
+    <h1>Vos formations.<br> Vos ressources.<br> <em>Votre espace.</em></h1>
+    <p>Un espace pour commander vos manuels personnalisés et, prochainement, les accès e-learning de vos stagiaires.</p>
     <div class="book-stack" aria-hidden="true">{% for code in ['ssiap1','aps','a3p'] %}<img src="{{ url_for('static', filename='manuals/' ~ code ~ '.jpg') }}" alt="">{% endfor %}</div>
-    <div class="story-benefits"><span>01 <strong>Un catalogue de six formations</strong></span><span>02 <strong>Votre logo et la livraison inclus</strong></span><span>03 <strong>Vos commandes au même endroit</strong></span></div>
+    <div class="story-benefits"><span>01 <strong>Des manuels à votre image</strong></span><span>02 <strong>E-learning : prochainement</strong></span><span>03 <strong>Vos commandes et vos factures</strong></span></div>
     <p class="small">Création de compte gratuite · Accès immédiat à la commande de manuels</p>
   </section>
   <section class="registration-card">
