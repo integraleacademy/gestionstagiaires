@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-head"><h1>Gérer les partenaires</h1><a class="btn btn-blue" href="{{ url_for('admin_partner_new') }}">+ Nouveau partenaire</a></div>
+<div class="page-head"><h1>Gérer les partenaires</h1><a class="btn" href="{{ url_for('manuals_shop.admin_orders') }}">Commandes de manuels</a><a class="btn btn-blue" href="{{ url_for('admin_partner_new') }}">+ Nouveau partenaire</a></div>
 <form method="get" class="card partners-filter">
   <label>Recherche<br><input name="q" value="{{ q }}" placeholder="Nom, email, ville"></label>
   <label>Statut<br><select name="status"><option value="">Tous</option>{% for key,label in status_labels.items() %}<option value="{{ key }}" {% if status==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>

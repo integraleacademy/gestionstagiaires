@@ -60,6 +60,7 @@ from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
+import manuals_shop
 from akto_bts import (
     AktoApiError,
     AktoBtsStore,
@@ -3093,6 +3094,10 @@ def protect_sensitive_routes():
             return jsonify({"ok": False, "error": "invalid_partner_session"}), 401
         return redirect(url_for("admin_login", error="invalid"))
 
+    shop_response = manuals_shop.guard_request(sys.modules[__name__])
+    if shop_response is not None:
+        return shop_response
+
     if path.startswith("/admin/") and path != "/admin/login":
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
@@ -3148,6 +3153,8 @@ def protect_sensitive_routes():
 
 @app.context_processor
 def inject_read_only():
+    if (request.endpoint or "").startswith("manuals_shop."):
+        return {}
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
     sales_today_notification_count = 0
@@ -3377,6 +3384,7 @@ def admin_login_post():
         session["admin_user_id"] = user.get("id")
         session["admin_role"] = partner_role
         session["partner_id"] = user.get("partner_id")
+        session["manuals_only"] = partner.get("account_type") == "manuals_only"
         _stamp_authenticated_session()
         session.permanent = True
         _clear_partner_login_account_limit(username_normalized)
@@ -3907,6 +3915,8 @@ def _post_login_redirect_target(value: str, default: str) -> str:
     ``/admin/partners/...`` URL would otherwise authenticate successfully and
     immediately land on a 403 page.
     """
+    if session.get("manuals_only"):
+        return url_for("manuals_shop.catalogue")
     target = _safe_local_redirect_target(value, default)
     if _is_super_admin_session():
         return target
@@ -3986,7 +3996,7 @@ def _store_partner_auth_index(
         "id", "partner_id", "email", "role", "active", "password_hash",
         "invitation_activated_at", "last_login_at",
     }
-    partner_fields = {"id", "name", "status"}
+    partner_fields = {"id", "name", "status", "account_type"}
     invitation_fields = {
         "id", "user_id", "partner_id", "token_hash", "token_encrypted",
         "expires_at", "used_at", "cancelled_at",
@@ -4147,6 +4157,7 @@ def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
 
 
 PARTNER_SCOPED_COLLECTION_KEYS = {
+    "manual_orders",
     "sessions",
     "activity_logs",
     "admin_push_subscriptions",
@@ -4178,6 +4189,7 @@ PARTNER_SCOPED_VALUE_KEYS = {
     "cnaps_tracking_deleted_keys",
 }
 PARTNER_VISIBLE_FIELDS = {
+    "account_type",
     "id", "name", "legal_name", "siret", "activity_declaration_number",
     "address", "address_extra", "postal_code", "city", "country",
     "contact_first_name", "contact_last_name", "contact_role", "email",
@@ -53291,6 +53303,8 @@ if _partner_postgres_active():
     # traffic. Never import stale JSON automatically in active mode.
     _verify_partner_postgres_initial_cutover()
 
+
+manuals_shop.register(sys.modules[__name__])
 
 _log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
 _log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")

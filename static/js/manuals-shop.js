@@ -1,0 +1,73 @@
+(() => {
+  'use strict';
+  document.querySelectorAll('[data-toggle-password]').forEach(button => {
+    button.addEventListener('click', () => {
+      const input = document.getElementById(button.dataset.togglePassword);
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      button.textContent = show ? 'Masquer' : 'Afficher';
+      button.setAttribute('aria-pressed', String(show));
+      button.setAttribute('aria-label', `${show ? 'Masquer' : 'Afficher'} le mot de passe`);
+    });
+  });
+  const registration = document.querySelector('[data-register-form]');
+  if (registration) {
+    const password = registration.elements.password;
+    const confirmation = registration.elements.password_confirmation;
+    const validate = () => confirmation.setCustomValidity(confirmation.value && password.value !== confirmation.value ? 'Les mots de passe ne sont pas identiques.' : '');
+    password.addEventListener('input', validate);
+    confirmation.addEventListener('input', validate);
+  }
+  document.querySelectorAll('form').forEach(form => form.addEventListener('submit', () => {
+    const button = form.querySelector('[data-submit]');
+    if (button && form.checkValidity()) { button.disabled = true; button.textContent = 'Enregistrement en cours…'; }
+  }));
+  window.addEventListener('pageshow', () => document.querySelectorAll('[data-submit]').forEach(button => { button.disabled = false; }));
+  const form = document.querySelector('[data-order-form]');
+  if (!form) return;
+  const money = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+  const inputs = [...form.querySelectorAll('[data-product]')];
+  const summary = form.querySelector('[data-cart-lines]');
+  const error = form.querySelector('[data-cart-error]');
+  function update() {
+    let total = 0;
+    let invalid = false;
+    summary.replaceChildren();
+    inputs.forEach(input => {
+      const qty = Number(input.value || 0);
+      const valid = Number.isInteger(qty) && qty >= 0 && qty <= Number(input.max) && (qty === 0 || input.dataset.kind !== 'manual' || qty >= 50);
+      input.setCustomValidity(valid ? '' : 'Choisissez 0 ou au moins 50 exemplaires pour ce manuel.');
+      invalid ||= !valid;
+      const price = Number(qty >= 100 ? input.dataset.bulkPrice : input.dataset.price);
+      const lineTotal = valid ? qty * price : 0;
+      const output = input.closest('.quantity-line')?.querySelector('[data-line-total]');
+      if (output) output.textContent = valid ? money.format(lineTotal / 100) : '50 minimum';
+      if (qty > 0 && valid) {
+        total += lineTotal;
+        const row = document.createElement('div'); row.className = 'cart-line';
+        const label = document.createElement('span'); label.textContent = input.dataset.label;
+        const detail = document.createElement('small'); detail.textContent = `${qty} × ${money.format(price / 100)}`;
+        label.append(detail);
+        const sum = document.createElement('strong'); sum.textContent = money.format(lineTotal / 100);
+        row.append(label, sum); summary.append(row);
+      }
+    });
+    if (!summary.childElementCount) { const empty = document.createElement('p'); empty.className = 'muted'; empty.textContent = 'Choisissez les quantités souhaitées pour commencer.'; summary.append(empty); }
+    form.querySelector('[data-cart-total]').textContent = money.format(total / 100);
+    error.textContent = invalid ? 'Un manuel se commande à partir de 50 exemplaires.' : '';
+  }
+  inputs.forEach(input => input.addEventListener('input', update));
+  form.querySelectorAll('[name=personalization]').forEach(input => input.addEventListener('change', () => {
+    const upload = form.elements.personalization.value === 'upload';
+    form.querySelector('[data-logo-area]').hidden = !upload;
+    form.elements.logo.required = upload && !form.querySelector('[data-existing-logo]') && inputs.some(el => el.dataset.kind === 'manual' && Number(el.value) > 0);
+    if (!upload) form.elements.logo.value = '';
+  }));
+  form.addEventListener('submit', event => {
+    if (!inputs.some(input => Number(input.value) > 0)) {
+      event.preventDefault(); error.textContent = 'Choisissez au moins un article.';
+      inputs[0].focus();
+    }
+  });
+  update();
+})();

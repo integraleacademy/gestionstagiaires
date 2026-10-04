@@ -133,7 +133,7 @@
               </div>
             {% endif %}
             <a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>
-            {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
+            {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a><a href="{{ url_for('manuals_shop.admin_orders') }}" class="btn topbar-slim-link">Commandes de manuels</a>{% endif %}
             <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
           {% else %}
             <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>

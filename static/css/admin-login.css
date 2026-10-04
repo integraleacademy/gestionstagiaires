@@ -1,6 +1,6 @@
 :root{--login-blue:#0B132B;--login-blue-soft:#14213d;--login-orange:#FF7100;--login-orange-dark:#e86100;--login-gray:#f5f7fb;--login-border:#dfe5ef;--login-muted:#64748b;--login-red:#991b1b;--login-red-bg:#fff1f2}
 *{box-sizing:border-box}
-body.admin-login-page{position:relative;margin:0;min-height:100vh;overflow:hidden;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--login-blue);background:linear-gradient(135deg,#ffffff 0%,#f8fafc 48%,#eef3f8 100%)}
+body.admin-login-page{position:relative;margin:0;min-height:100vh;overflow-x:hidden;overflow-y:auto;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--login-blue);background:linear-gradient(135deg,#ffffff 0%,#f8fafc 48%,#eef3f8 100%)}
 body.admin-login-page::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.11;background-image:radial-gradient(rgba(15,23,42,.12) .7px,transparent .7px);background-size:28px 28px;mask-image:linear-gradient(90deg,rgba(0,0,0,.46),rgba(0,0,0,.2) 44%,transparent 72%)}
 body.admin-login-page::after{content:"";position:absolute;right:clamp(20px,8vw,140px);top:clamp(110px,18vh,220px);z-index:0;width:520px;height:520px;border-radius:50%;background:rgba(63,89,130,.08);filter:blur(120px);pointer-events:none}
 .login-shell{position:relative;z-index:1;min-height:100vh;display:grid;grid-template-columns:minmax(0,58%) minmax(420px,42%);overflow:hidden}
@@ -89,3 +89,4 @@ body.admin-login-page::after{display:none}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}
 }
+:root .signup-callout{margin-top:24px;padding:20px;border:1px solid #dce5f3;border-radius:16px;background:#f5f8fe;text-align:center}.signup-callout p{margin:0 0 9px;color:#475569;font-size:14px}.signup-callout a{display:block;font-weight:800;color:#1d4ed8;text-decoration:none;font-size:16px}.signup-callout a:hover{text-decoration:underline}.signup-callout small{display:block;margin-top:9px;color:#64748b;line-height:1.5}

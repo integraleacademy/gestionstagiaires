@@ -1,0 +1,31 @@
+{% extends 'manuals/layout.html' %}
+{% block title %}Créer mon espace{% endblock %}
+{% block content %}
+<div class="registration-layout">
+  <section class="registration-story">
+    <span class="eyebrow">BIENVENUE DANS VOTRE ESPACE</span>
+    <h1>Vos formations.<br> Vos manuels.<br> <em>Votre identité.</em></h1>
+    <p>Créez l’espace de votre organisme et offrez à vos stagiaires des manuels illustrés, personnalisés avec votre logo.</p>
+    <div class="book-stack" aria-hidden="true">{% for code in ['ssiap1','aps','a3p'] %}<img src="{{ url_for('static', filename='manuals/' ~ code ~ '.jpg') }}" alt="">{% endfor %}</div>
+    <div class="story-benefits"><span>01 <strong>Un catalogue de six formations</strong></span><span>02 <strong>Votre logo et la livraison inclus</strong></span><span>03 <strong>Vos commandes au même endroit</strong></span></div>
+    <p class="small">Création de compte gratuite · Accès immédiat à la commande de manuels</p>
+  </section>
+  <section class="registration-card">
+    <span class="eyebrow blue">VOTRE ORGANISME DE FORMATION</span><h2>Créons votre espace.</h2><p class="muted">Quelques informations suffisent pour commencer.</p>
+    {% if errors %}<div class="error-box" role="alert"><strong>Vérifiez les informations suivantes</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+    <form method="post" action="{{ url_for('manuals_shop.register_account') }}" data-register-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="honeypot" aria-hidden="true"><label>Site web<input name="website_url" tabindex="-1" autocomplete="off"></label></div>
+      <label for="centre">Nom du centre de formation <span>*</span></label><input id="centre" name="centre" value="{{ values.centre }}" required minlength="2" maxlength="160" autocomplete="organization" placeholder="Nom de votre organisme">
+      <label for="siret">SIRET <span>*</span></label><input id="siret" name="siret" value="{{ values.siret }}" required maxlength="20" inputmode="numeric" placeholder="Les 14 chiffres de votre SIRET" aria-describedby="siret-help"><small id="siret-help">Le numéro de l’établissement pour lequel vous créez cet espace.</small>
+      <div class="form-grid"><div><label for="last_name">Nom <span>*</span></label><input id="last_name" name="last_name" value="{{ values.last_name }}" required maxlength="100" autocomplete="family-name"></div><div><label for="first_name">Prénom <span>*</span></label><input id="first_name" name="first_name" value="{{ values.first_name }}" required maxlength="100" autocomplete="given-name"></div></div>
+      <label for="email">Adresse e-mail <span>*</span></label><input id="email" type="email" name="email" value="{{ values.email }}" required maxlength="254" autocomplete="email" placeholder="vous@votre-centre.fr"><small>Cette adresse sera votre identifiant de connexion.</small>
+      <label for="password">Mot de passe <span>*</span></label><div class="password-field"><input id="password" type="password" name="password" required minlength="12" maxlength="128" autocomplete="new-password" aria-describedby="password-help"><button type="button" data-toggle-password="password" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></div><small id="password-help">Au moins 12 caractères. Vous pouvez utiliser une phrase facile à retenir.</small>
+      <label for="password_confirmation">Confirmer le mot de passe <span>*</span></label><div class="password-field"><input id="password_confirmation" type="password" name="password_confirmation" required minlength="12" maxlength="128" autocomplete="new-password"><button type="button" data-toggle-password="password_confirmation" aria-label="Afficher la confirmation du mot de passe" aria-pressed="false">Afficher</button></div>
+      <p class="form-note">Vos coordonnées servent à gérer votre espace et vos commandes. Votre mot de passe est protégé et ne vous sera jamais envoyé par e-mail.</p>
+      <button type="submit" class="button primary full" data-submit>Créer mon espace <span aria-hidden="true">→</span></button>
+      <p class="form-bottom">Déjà inscrit ? <a href="{{ url_for('admin_login') }}">Se connecter</a></p>
+    </form>
+  </section>
+</div>
+{% endblock %}
