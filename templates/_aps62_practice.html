@@ -2,7 +2,7 @@
   <header class="aps-practice-intro">
     <span class="aps-label">À vous de jouer · {{ activity.practice.exercises|length }} exercices</span>
     <h2>{{ activity.practice.title or 'Faites vos choix, puis vérifiez' }}</h2>
-    <p>Toutes les réponses se font en cliquant. Lisez la correction, modifiez les choix à revoir et recommencez jusqu’à trouver les bonnes réponses.</p>
+    <p>Choisissez vos réponses, puis cliquez sur « Vérifier mes réponses ». En cas d’erreur, lisez l’explication et essayez à nouveau.</p>
     <div class="aps-practice-chips"><span>Aucune rédaction</span><span>Correction immédiate</span><span>Essais illimités</span></div>
     {% if activity_completed %}<p class="aps-practice-saved">Cette activité est déjà terminée. Vous pouvez vous entraîner à nouveau librement.</p>{% endif %}
   </header>
@@ -20,7 +20,7 @@
         {% for option in exercise.options %}<label><input type="radio" name="aps-{{ exercise.id }}" value="{{ option.id }}"><span>{{ option.text }}</span></label>{% endfor %}
       </div>
       {% else %}
-      <p class="aps-exercise-instruction">{{ 'Attribuez à chaque carte sa place, de l’étape 1 à l’étape 4. Utilisez chaque numéro une seule fois.' if exercise.kind == 'order' else 'Utilisez chaque repère une seule fois.' if exercise.kind == 'matching' else 'Choisissez la catégorie de chaque carte.' }}</p>
+      <p class="aps-exercise-instruction">{{ 'Choisissez le numéro de chaque étape. Utilisez chaque numéro une seule fois.' if exercise.kind == 'order' else 'Pour chaque ligne, choisissez la bonne proposition. Utilisez chaque proposition une seule fois.' if exercise.kind == 'matching' else 'Pour chaque carte, choisissez une catégorie.' }}</p>
       <div class="aps-practice-rows">
         {% for row in exercise.rows %}<label class="aps-practice-row"><span>{{ row.text }}</span><select data-row-id="{{ row.id }}"><option value="">Choisir…</option>{% for option in exercise.options %}<option value="{{ option.id }}">{{ option.text }}</option>{% endfor %}</select></label>{% endfor %}
       </div>

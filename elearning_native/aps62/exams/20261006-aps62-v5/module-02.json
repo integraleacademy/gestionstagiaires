@@ -1,0 +1,939 @@
+{
+  "id": "module-02",
+  "version": "20261006-aps62-v5",
+  "title": "Responsabilité et droit pénal",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-02-01",
+      "prompt": "La responsabilité pénale vise principalement quoi ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La notation du salarié"
+        },
+        {
+          "id": "2",
+          "text": "La seule réparation d’un dommage"
+        },
+        {
+          "id": "3",
+          "text": "La sanction d’une infraction imputable"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La responsabilité pénale se distingue des conséquences civiles ou disciplinaires, qui peuvent aussi exister.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-02",
+      "prompt": "La responsabilité civile vise principalement quoi ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La fixation d’une peine de prison"
+        },
+        {
+          "id": "2",
+          "text": "La réparation d’un dommage"
+        },
+        {
+          "id": "3",
+          "text": "L’attribution d’une carte professionnelle"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Réparer un préjudice et sanctionner une infraction sont deux finalités différentes.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-03",
+      "prompt": "Un ordre du client efface-t-il la responsabilité personnelle de l’agent ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, il faut vérifier la licéité de l’acte"
+        },
+        {
+          "id": "2",
+          "text": "Oui si le client paie l’assurance"
+        },
+        {
+          "id": "3",
+          "text": "Oui si l’ordre est écrit"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La consigne reçue ne suffit pas à justifier un comportement illicite.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-04",
+      "prompt": "Une personne insulte l’agent puis s’éloigne. Peut-il la frapper pour se défendre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, une riposte punitive n’est pas une défense actuelle"
+        },
+        {
+          "id": "2",
+          "text": "Oui si un témoin a entendu l’insulte"
+        },
+        {
+          "id": "3",
+          "text": "Oui, pendant cinq minutes"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La défense répond à une atteinte actuelle ; elle ne sert pas à se venger.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-05",
+      "prompt": "Quel critère compte pour la légitime défense des personnes ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’accord écrit du client"
+        },
+        {
+          "id": "2",
+          "text": "Une réponse nécessaire et proportionnée à une atteinte injustifiée actuelle"
+        },
+        {
+          "id": "3",
+          "text": "La colère ressentie après un conflit"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La réaction doit répondre au danger présent et rester adaptée à sa gravité.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-06",
+      "prompt": "La menace a cessé. Que devient la justification de poursuivre des coups ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Elle subsiste jusqu’à l’arrivée du responsable"
+        },
+        {
+          "id": "2",
+          "text": "Elle dépend du nombre de témoins"
+        },
+        {
+          "id": "3",
+          "text": "Elle ne découle plus de la légitime défense"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La réponse doit cesser quand sa nécessité disparaît.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-07",
+      "prompt": "La défense d’un bien autorise-t-elle un homicide volontaire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si l’auteur refuse de rendre l’objet"
+        },
+        {
+          "id": "2",
+          "text": "Non"
+        },
+        {
+          "id": "3",
+          "text": "Oui pour un objet de grande valeur"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La protection des biens obéit à des limites spécifiques et ne justifie pas un homicide volontaire.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-08",
+      "prompt": "Un agent dégrade volontairement le téléphone d’un visiteur par colère. Quel raisonnement ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’acte peut engager plusieurs formes de responsabilité"
+        },
+        {
+          "id": "2",
+          "text": "La tenue professionnelle protège de toute poursuite"
+        },
+        {
+          "id": "3",
+          "text": "L’absence de plainte rend l’acte licite"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un acte personnel fautif n’est pas rendu licite par la fonction exercée.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-09",
+      "prompt": "Que faut-il décrire pour apprécier une réaction de défense ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement le résultat final"
+        },
+        {
+          "id": "2",
+          "text": "La chronologie, l’atteinte et les moyens employés"
+        },
+        {
+          "id": "3",
+          "text": "Uniquement les émotions de l’agent"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les conditions doivent être appréciées à partir des faits au moment de l’action.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-10",
+      "prompt": "Un danger est seulement imaginé, sans indice concret. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vérifier et adopter une mesure préventive proportionnée"
+        },
+        {
+          "id": "2",
+          "text": "Présumer une agression accomplie"
+        },
+        {
+          "id": "3",
+          "text": "Employer immédiatement une force importante"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’évaluation doit distinguer faits observables et hypothèses.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-11",
+      "prompt": "L’état de nécessité concerne quel type de situation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une difficulté commerciale"
+        },
+        {
+          "id": "2",
+          "text": "Un danger actuel ou imminent avec une réponse nécessaire et proportionnée"
+        },
+        {
+          "id": "3",
+          "text": "La commodité d’un contrôle plus rapide"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une simple préférence ou un gain de temps ne caractérise pas un état de nécessité.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-12",
+      "prompt": "Un visiteur fait un malaise dans une zone sûre. Quel devoir pratique ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attendre la fin du service"
+        },
+        {
+          "id": "2",
+          "text": "Alerter et apporter l’aide adaptée à ses compétences"
+        },
+        {
+          "id": "3",
+          "text": "Ignorer car il n’est pas salarié"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’aide doit être organisée sans exposer inutilement l’intervenant ou des tiers.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-13",
+      "prompt": "Une victime est près d’un câble sous tension. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Verser de l’eau sur le câble"
+        },
+        {
+          "id": "2",
+          "text": "Éviter le suraccident et alerter les secours compétents"
+        },
+        {
+          "id": "3",
+          "text": "La saisir immédiatement à mains nues"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Secourir suppose d’abord une protection adaptée au danger électrique.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-14",
+      "prompt": "Une erreur involontaire exclut-elle toujours une infraction ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, certaines infractions répriment l’imprudence"
+        },
+        {
+          "id": "2",
+          "text": "Oui si l’agent présente des excuses"
+        },
+        {
+          "id": "3",
+          "text": "Oui, seule l’intention compte"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les éléments requis varient selon l’infraction ; l’absence d’intention ne clôt pas l’analyse.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-15",
+      "prompt": "Pourquoi distinguer contravention, délit et crime ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour supprimer le compte rendu"
+        },
+        {
+          "id": "2",
+          "text": "Parce que les qualifications et régimes diffèrent"
+        },
+        {
+          "id": "3",
+          "text": "Pour choisir une punition sur place"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La qualification relève du droit et conditionne notamment certains pouvoirs d’intervention.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-16",
+      "prompt": "Une simple infraction au règlement intérieur est-elle forcément un délit ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si l’agent est témoin"
+        },
+        {
+          "id": "2",
+          "text": "Oui dès que le règlement est affiché"
+        },
+        {
+          "id": "3",
+          "text": "Non"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La règle interne et l’infraction pénale ne se confondent pas.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-17",
+      "prompt": "L’agent constate une blessure après son intervention. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Organiser l’aide et rendre compte précisément"
+        },
+        {
+          "id": "2",
+          "text": "Dissimuler la blessure"
+        },
+        {
+          "id": "3",
+          "text": "Demander de ne pas consulter"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La prise en charge et la traçabilité priment, sans minimiser les conséquences.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-18",
+      "prompt": "Quel écrit est le plus rigoureux ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La personne mérite une condamnation"
+        },
+        {
+          "id": "2",
+          "text": "La personne a poussé l’agent à 14 h 12"
+        },
+        {
+          "id": "3",
+          "text": "La personne est naturellement dangereuse"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le compte rendu expose les faits ; il ne remplace pas une décision judiciaire.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-19",
+      "prompt": "Peut-on utiliser la légitime défense pour justifier une vengeance le lendemain ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non"
+        },
+        {
+          "id": "2",
+          "text": "Oui avec la même personne"
+        },
+        {
+          "id": "3",
+          "text": "Oui si le préjudice persiste"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le lien avec une atteinte actuelle et une réponse nécessaire fait défaut.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-20",
+      "prompt": "Un supérieur demande d’effacer un incident pour protéger l’entreprise. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Remplacer les faits par une version neutre inventée"
+        },
+        {
+          "id": "2",
+          "text": "Effacer si aucun témoin ne s’y oppose"
+        },
+        {
+          "id": "3",
+          "text": "Refuser la falsification et signaler la demande"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La traçabilité doit rester fidèle, même lorsque les faits sont défavorables au service.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-21",
+      "prompt": "L’absence de dommage corporel rend-elle toute contrainte licite ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si aucune marque n’est visible"
+        },
+        {
+          "id": "2",
+          "text": "Oui pour une durée courte"
+        },
+        {
+          "id": "3",
+          "text": "Non"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La licéité dépend aussi de la base juridique, de la nécessité et des libertés atteintes.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-22",
+      "prompt": "Quel élément différencie assistance et mise en danger supplémentaire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’évaluation du risque et des compétences disponibles"
+        },
+        {
+          "id": "2",
+          "text": "La présence d’une caméra"
+        },
+        {
+          "id": "3",
+          "text": "La rapidité sans observation"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une action de secours doit éviter d’ajouter des victimes.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-23",
+      "prompt": "Un agent est sanctionné par son employeur. Cela exclut-il une procédure pénale ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui automatiquement"
+        },
+        {
+          "id": "2",
+          "text": "Non, les procédures peuvent avoir des objets différents"
+        },
+        {
+          "id": "3",
+          "text": "Oui si la sanction est sévère"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une mesure disciplinaire ne remplace pas nécessairement les autres responsabilités.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-24",
+      "prompt": "Pourquoi appeler un renfort avant une situation qui dépasse ses moyens ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour transférer toute responsabilité personnelle"
+        },
+        {
+          "id": "2",
+          "text": "Pour obtenir le droit de punir"
+        },
+        {
+          "id": "3",
+          "text": "Pour réduire les risques et organiser une réponse adaptée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le renfort répond à un besoin opérationnel et ne légalise pas tout comportement.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-25",
+      "prompt": "Une réponse moins dangereuse suffit à faire cesser une atteinte. Que privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La mesure la plus spectaculaire"
+        },
+        {
+          "id": "2",
+          "text": "Une punition destinée à l’exemple"
+        },
+        {
+          "id": "3",
+          "text": "La mesure nécessaire la moins risquée adaptée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La nécessité impose de rechercher une réponse suffisante et proportionnée.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-26",
+      "prompt": "Un témoin rapporte une menace que l’agent n’a pas entendue. Comment écrire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les présenter comme personnellement constatés"
+        },
+        {
+          "id": "2",
+          "text": "Les supprimer systématiquement"
+        },
+        {
+          "id": "3",
+          "text": "Attribuer les propos au témoin"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’origine de l’information aide à apprécier sa portée et sa fiabilité.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-27",
+      "prompt": "Pourquoi préserver les éléments utiles après l’incident ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour permettre une analyse fiable des faits"
+        },
+        {
+          "id": "2",
+          "text": "Pour choisir soi-même une peine"
+        },
+        {
+          "id": "3",
+          "text": "Pour préparer une mise en scène"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les éléments doivent rester intègres et accessibles aux seuls destinataires autorisés.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-28",
+      "prompt": "L’agent peut-il promettre l’absence de poursuites en échange d’aveux ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si le client accepte"
+        },
+        {
+          "id": "2",
+          "text": "Oui pour un premier incident"
+        },
+        {
+          "id": "3",
+          "text": "Non, il ne décide pas des poursuites"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une telle promesse dépasse son rôle et peut altérer le recueil des faits.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-29",
+      "prompt": "Une peur subjective suffit-elle à justifier n’importe quelle violence ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui quand l’agent est seul"
+        },
+        {
+          "id": "2",
+          "text": "Oui dès qu’elle est exprimée"
+        },
+        {
+          "id": "3",
+          "text": "Non, la situation concrète doit être évaluée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le ressenti doit être relié aux circonstances et ne dispense pas de proportionnalité.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-02-30",
+      "prompt": "Quelle question terminerait une analyse d’intervention ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le client a-t-il aimé la méthode ?"
+        },
+        {
+          "id": "2",
+          "text": "L’intervention a-t-elle impressionné le public ?"
+        },
+        {
+          "id": "3",
+          "text": "Le moyen utilisé était-il encore nécessaire à chaque étape ?"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La justification doit être réévaluée au fil de l’évolution du danger.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}

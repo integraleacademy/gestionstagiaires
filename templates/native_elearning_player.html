@@ -7,7 +7,7 @@
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261004-2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261006-5') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261006-3') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-2') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
@@ -28,7 +28,7 @@
         <div class="native-video-followup"{% if not preview_mode %} data-video-followup="{{ block.video.id }}"{% endif %}>
           <div><strong>{{ 'Visionnage obligatoire pour les stagiaires' if preview_mode else 'Vidéo à regarder en entier' }}</strong><span data-video-status role="status" aria-live="polite">{{ 'Lecture libre en mode aperçu' if preview_mode else 'Votre progression est enregistrée au fil de la lecture.' }}</span></div>
           {% if not preview_mode %}<div class="native-video-progress" role="progressbar" aria-label="Progression du visionnage" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
-          <p>Vous pouvez faire une pause ou revoir un passage. La suite se débloquera une fois la vidéo entièrement visionnée.</p>{% endif %}
+          <p>{% if block.video.course_only %}La suite sera disponible à la fin de la vidéo.{% else %}Vous pouvez faire une pause ou revoir un passage. La suite se débloquera une fois la vidéo entièrement visionnée.{% endif %}</p>{% endif %}
         </div>
         {% endif %}
       {% endif %}
@@ -137,6 +137,10 @@
             {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} min de travail guidé</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
+
+          {% if activity.easy_glossary and activity.get('academy', {}).get('kind') != 'memory' %}
+          <details class="aps-word-help"><summary>Besoin d’aide avec les mots du cours ?</summary><dl>{% for entry in activity.easy_glossary %}<dt>{{ entry.term }}</dt><dd>{{ entry.definition }}</dd>{% endfor %}</dl></details>
+          {% endif %}
 
           {% if activity.type == 'content' %}
             <div class="native-content-flow">

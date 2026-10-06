@@ -1,0 +1,2789 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-02",
+  "version": "20261006-aps62-v5",
+  "title": "APS 02 · Responsabilité et droit pénal",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-06"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false,
+    "require_correct_answers": true
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 180,
+  "required_minutes": 180,
+  "regulation": "Annexe II · Dispositions utiles du code pénal",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-02-01",
+      "title": "01 · Comprendre les responsabilités",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-02-01-comprendre",
+          "title": "Le cours · Comprendre les responsabilités",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 26,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.01",
+            "title": "Responsabilité : pénal, civil, disciplinaire",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-02.webp",
+            "case": "Un agent endommage le téléphone d’un visiteur pendant une altercation. Le client propose de rembourser l’appareil et affirme que cela empêchera toute autre conséquence. Un témoin signale aussi des propos humiliants.",
+            "reason": "La responsabilité civile traite notamment la réparation d’un dommage ; la responsabilité pénale porte sur une infraction ; la discipline relève de règles professionnelles et de travail. Ces angles peuvent coexister, selon les faits et les textes. L’agent ne qualifie pas définitivement l’affaire et ne promet pas l’absence de plainte. Un rapport précis aide les personnes compétentes à l’examiner.",
+            "lessons": [
+              {
+                "ref": "02.09",
+                "title": "Distinguer les responsabilités",
+                "page": 90,
+                "diagram": "media/aps62/repere-02.09.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Réparer, sanctionner, discipliner"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La responsabilité civile vise la réparation d'un dommage selon les conditions applicables. La responsabilité pénale concerne la commission d'une infraction et les sanctions prévues par les textes. La discipline professionnelle peut relever de l'employeur ou de l'autorité compétente du secteur."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un même fait peut entraîner plusieurs procédures, car elles ne poursuivent pas toutes le même objectif."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "La mission ne donne pas une immunité"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Agir pendant le travail ne rend pas automatiquement l'acte licite. À l'inverse, tout incident ne prouve pas qu'un agent a commis une faute. Il faut examiner les faits, les obligations, le comportement et le lien avec le dommage."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent conserve donc une trace exacte de ses observations, de ses demandes d'aide et des décisions. Modifier un compte rendu pour cacher une erreur peut créer un problème supplémentaire."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent endommage volontairement le téléphone d'un visiteur lors d'un désaccord. Le contexte de travail n'autorise pas ce geste. Des conséquences civiles, pénales et professionnelles peuvent être examinées. Le responsable ne peut pas effacer l'événement en demandant de l'omettre de la main courante."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La bonne pratique consiste à connaître ses limites, demander une clarification et signaler loyalement un incident. Une trace précise aide à établir ce qui s'est réellement passé."
+                  }
+                ],
+                "course_page": 91,
+                "practice": {
+                  "background": "Les juridictions judiciaires comprennent notamment les juridictions civiles et pénales ; les juridictions administratives contrôlent les actes de l’administration. Une contravention, un délit et un crime correspondent à des catégories d’infractions différentes. L’agent n’a pas à qualifier définitivement chaque fait pour alerter, mais doit savoir que la catégorie et la peine peuvent conditionner certaines facultés, notamment l’article 73. La meilleure protection professionnelle reste une action légale, proportionnée, documentée et cohérente avec les consignes licites.",
+                  "case": "Un agent bloque physiquement un client pour obtenir le paiement d’une facture contestée. Le responsable du site avait demandé de « ne le laisser partir sous aucun prétexte ». Quelles atteintes la situation peut-elle soulever ? Comment aurait-il fallu traiter le désaccord ?",
+                  "transfer": "Un agent endommage volontairement le téléphone d’un visiteur. Pourquoi ne faut-il pas envisager seulement la sanction de l’employeur ?",
+                  "page": 120
+                }
+              },
+              {
+                "ref": "02.16",
+                "title": "Construire une décision professionnelle",
+                "page": 104,
+                "diagram": "media/aps62/repere-02.16.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Relier quatre éléments"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une décision solide relie les faits, la règle, le risque et l'action. Les faits décrivent la situation présente. La règle détermine ce qui est exigé ou permis. Le risque explique l'enjeu. L'action montre la réponse choisie et le relais éventuel."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Cette méthode évite deux pièges : agir uniquement par habitude ou citer une règle sans comprendre la situation."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Expliquer sans créer un débat infini"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'explication au public doit rester simple : ce qui manque, ce qui est possible et qui peut valider la suite. L'agent peut reconnaître une gêne sans abandonner une exigence. En interne, la trace doit permettre de retrouver le raisonnement et les informations disponibles au moment de la décision."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une information obtenue plus tard ne doit pas être présentée comme si elle était connue dès le début."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un prestataire arrive avec une autorisation pour un autre bâtiment. L'agent constate l'écart, maintient l'attente dans la zone prévue et appelle le responsable habilité."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Il explique : « Votre intervention est annoncée au bâtiment A ; je fais confirmer l'accès au bâtiment B avant de vous orienter. » La décision protège le site tout en proposant une issue claire."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une bonne justification ne repose ni sur le ton de la voix ni sur « parce que je le décide ». Elle rend visibles les faits et les limites du rôle."
+                  }
+                ],
+                "course_page": 105,
+                "practice": {
+                  "background": "Les sanctions possibles dépendent du texte enfreint et de la situation. Pour apprendre, il est plus utile de savoir prévenir une atteinte que de réciter une liste de peines détachée du contexte. Le livre VI prévoit des infractions et des conséquences administratives ou disciplinaires propres au secteur. Les atteintes aux personnes, aux biens et aux systèmes numériques relèvent aussi du droit commun. Conservez des faits précis et signalez les erreurs sans les masquer. Une correction rapide et loyale protège mieux qu’un récit arrangé.",
+                  "case": "Un visiteur sans badge insiste pour entrer. Il connaît le nom du directeur mais la personne attendue reste injoignable. Une réunion importante doit commencer dans deux minutes. Quelle décision est défendable ? Comment la formulez-vous au visiteur et dans la trace ?",
+                  "transfer": "Reformulez « j’ai refusé parce que c’est comme ça » en trois éléments professionnels.",
+                  "page": 127
+                }
+              }
+            ],
+            "decision": "Décrire les faits et distinguer les différents régimes de responsabilité.",
+            "pitfall": "Conclure que le remboursement efface toutes les conséquences.",
+            "objectives": [
+              "Expliquer : responsabilité : pénal, civil, disciplinaire",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un agent endommage le téléphone d’un visiteur pendant une altercation. Le client propose de rembourser l’appareil et affirme que cela empêchera toute autre conséquence. Un témoin signale aussi des propos humiliants."
+              ],
+              [
+                "Décision à justifier",
+                "Décrire les faits et distinguer les différents régimes de responsabilité."
+              ],
+              [
+                "Piège à éviter",
+                "Conclure que le remboursement efface toutes les conséquences."
+              ],
+              [
+                "Pourquoi ?",
+                "La responsabilité civile traite notamment la réparation d’un dommage ; la responsabilité pénale porte sur une infraction ; la discipline relève de règles professionnelles et de travail. Ces angles peuvent coexister, selon les faits et les textes. L’agent ne qualifie pas définitivement l’affaire et ne promet pas l’absence de plainte. Un rapport précis aide les personnes compétentes à l’examiner."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un agent endommage le téléphone d’un visiteur pendant une altercation."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La responsabilité civile traite notamment la réparation d’un dommage ; la responsabilité pénale porte sur une infraction ; la discipline relève de règles professionnelles et de travail."
+              },
+              {
+                "label": "Décider",
+                "text": "Décrire les faits et distinguer les différents régimes de responsabilité."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une infraction grave est évoquée dans un message. Expliquez pourquoi le langage courant ne suffit pas à distinguer contravention, délit et crime."
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : Responsabilité et droit pénal",
+            "visual_board": {
+              "title": "Une action, plusieurs responsabilités",
+              "steps": [
+                {
+                  "label": "Pénale",
+                  "text": "Une infraction peut donner lieu à une sanction prévue par la loi."
+                },
+                {
+                  "label": "Civile",
+                  "text": "Un dommage peut engager une obligation de réparation."
+                },
+                {
+                  "label": "Disciplinaire",
+                  "text": "Un manquement peut relever de l’employeur ou du cadre professionnel."
+                },
+                {
+                  "label": "Justification",
+                  "text": "L’ordre reçu et le résultat ne suffisent pas : examiner les faits et les conditions légales."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "La menace cesse, la décision change",
+              "case": "Une personne repousse violemment un visiteur. Après l’alerte, elle recule, pose l’objet qu’elle tenait et cesse l’agression. Un collègue veut continuer une contrainte pour lui donner une leçon.",
+              "task": "Comparez la situation au début et à la fin. Quelle nécessité a changé ?",
+              "model": "Protéger les personnes et faire cesser tout excès. La réaction doit être réévaluée quand l’atteinte cesse ; la punition ne relève pas de l’agent. Vérifier le besoin de secours et transmettre la chronologie."
+            },
+            "sorting": [
+              {
+                "text": "Décrire les faits et distinguer les différents régimes de responsabilité.",
+                "category": "adapte"
+              },
+              {
+                "text": "Un agent endommage le téléphone d’un visiteur pendant une altercation. Le client propose de rembourser l’appareil et affirme que cela empêchera toute autre conséquence. Un témoin signale aussi des propos humiliants.",
+                "category": "fait"
+              },
+              {
+                "text": "Conclure que le remboursement efface toutes les conséquences.",
+                "category": "ecarter"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Le cours · Comprendre les responsabilités",
+                "minutes": 26
+              },
+              {
+                "label": "Le cours en vidéo",
+                "minutes": 4
+              },
+              {
+                "label": "La situation évolue",
+                "minutes": 12
+              },
+              {
+                "label": "Choisir une réponse",
+                "minutes": 3
+              },
+              {
+                "label": "Relier les mots à leur définition",
+                "minutes": 3
+              },
+              {
+                "label": "Une autre situation",
+                "minutes": 6
+              },
+              {
+                "label": "À retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Une même erreur peut avoir plusieurs conséquences",
+                "paragraphs": [
+                  "La responsabilité pénale porte sur une infraction, la responsabilité civile sur la réparation d'un dommage et la discipline sur les obligations professionnelles. Ces analyses peuvent coexister. L'agent rassemble les faits sans se désigner juge : une faute reconnue dans un cadre ne règle pas automatiquement les deux autres.",
+                  "Exemple expliqué. Un agent endommage volontairement le téléphone d'un visiteur pendant un différend. Le dommage matériel, le comportement reproché et les obligations du salarié soulèvent des questions distinctes. Présenter des excuses n'efface pas les faits ; inversement, le compte rendu ne doit pas annoncer une condamnation avant toute décision compétente."
+                ]
+              },
+              {
+                "title": "Qualifier sans rendre soi-même un jugement",
+                "paragraphs": [
+                  "La responsabilité civile vise notamment la réparation d'un dommage ; la responsabilité pénale concerne une infraction ; la discipline traite les obligations professionnelles. Elles peuvent se cumuler. Une plainte ne prouve pas la culpabilité et une sanction interne ne remplace pas la décision d'une juridiction.",
+                  "Les contraventions relèvent du tribunal de police, les délits du tribunal correctionnel ; les crimes relèvent de la juridiction criminelle compétente selon les règles applicables. L'APS transmet des faits utiles sans décider de l'issue d'une procédure.",
+                  "Les atteintes à l'intégrité et à la liberté peuvent résulter d'un geste présenté comme une mesure de sécurité. Maintenir une personne sans cadre, punir une insulte ou imposer une fouille ne deviennent pas licites par la seule bonne intention.",
+                  "L'usurpation de titre ou de fonction et l'appropriation frauduleuse doivent être repérées. Accéder à un système informatique sans droit, s'y maintenir ou modifier des données peut aussi constituer une infraction ; connaître le mot de passe ne vaut pas autorisation."
+                ]
+              },
+              {
+                "title": "Trois raisonnements à ne pas confondre",
+                "paragraphs": [
+                  "La légitime défense suppose une atteinte injustifiée actuelle et une réponse nécessaire et proportionnée. L'analyse porte sur chaque geste et sur la situation au moment du geste. L'état de nécessité concerne une action face à un danger actuel ou imminent, avec les conditions légales de nécessité et de proportion.",
+                  "Dans les deux cas, l'existence d'une alternative efficace et moins dommageable doit être examinée lorsque le temps disponible le permet.",
+                  "L'assistance à une personne en péril peut notamment passer par une alerte utile lorsque l'action directe exposerait l'agent ou des tiers. L'omission d'empêcher certaines infractions et la non-assistance répondent à des conditions propres : il faut éviter les slogans comme « intervenir physiquement dans tous les cas ».",
+                  "Exemple : une odeur inconnue derrière une porte et un appel à l'aide justifient une alerte précise et une protection de la zone ; ils n'établissent pas que l'APS peut entrer sans danger ni compétence."
+                ]
+              },
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « Trois responsabilités », le point de départ est le suivant : À l'accueil d'un entrepôt, un agent ferme brusquement une barrière malgré une consigne de contrôle visuel. Un visiteur signale un dommage à son véhicule et dépose plainte.",
+                  "L'employeur convoque l'agent pour examiner le respect des consignes.",
+                  "Le fait établi est : Un dommage est allégué et plusieurs procédures peuvent examiner des questions différentes. La première réponse à examiner est : Distinguer réparation civile, éventuelle infraction pénale et discipline professionnelle. Les responsabilités ont des finalités différentes.",
+                  "Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables.",
+                  "La situation évolue : La vidéo montre que le visiteur avançait avant l'autorisation, mais ne permet pas de voir le geste exact de l'agent. La décision doit donc être réexaminée : Transmettre les limites de la vidéo sans conclure seul au partage des responsabilités.",
+                  "Une preuve partielle doit être décrite comme telle. Le rôle de l'APS est de conserver et transmettre les éléments, pas de trancher à la place d'une juridiction.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Rapport provisoire : le client est juridiquement coupable, dossier clos. La référence vérifiée est : Consigne : décrire les faits, conserver les éléments et transmettre à l'encadrement."
+                ]
+              }
+            ],
+            "pacing_note": "Répartition indicative du travail : lecture, comparaison, choix et correction. Le rythme réel varie selon les acquis.",
+            "plain_language": true,
+            "plain_course": [
+              {
+                "title": "Comprendre la règle",
+                "paragraphs": [
+                  "Une même action peut avoir plusieurs conséquences. La responsabilité pénale concerne une infraction à la loi. La responsabilité civile concerne la réparation d'un dommage. La responsabilité disciplinaire concerne les règles professionnelles ou celles du travail. Ces responsabilités ne se remplacent pas."
+                ]
+              },
+              {
+                "title": "Un exemple expliqué",
+                "paragraphs": [
+                  "Par exemple, un agent frappe un visiteur sans justification. Des poursuites pénales peuvent être engagées. La personne blessée peut demander réparation de son dommage. Une procédure disciplinaire peut aussi avoir lieu. Le paiement d'une indemnité n'efface pas automatiquement les autres conséquences."
+                ]
+              },
+              {
+                "title": "L’essentiel à retenir",
+                "paragraphs": [
+                  "Pour comprendre une situation, il faut distinguer l'acte interdit, le dommage causé et la règle professionnelle enfreinte. Les autorités compétentes examinent chaque responsabilité. Un agent ne décide pas lui-même de la culpabilité d'une personne."
+                ]
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Responsabilité pénale",
+              "definition": "Conséquence possible d'une infraction, examinée par la justice pénale."
+            },
+            {
+              "term": "Responsabilité civile",
+              "definition": "Obligation possible de réparer un dommage."
+            },
+            {
+              "term": "Responsabilité disciplinaire",
+              "definition": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-01-memoriser",
+          "title": "Le cours en vidéo",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-02-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-02-01-video",
+                "title": "Comprendre les responsabilités",
+                "required": true,
+                "src": "media/aps62/v5/aps62-02-01.mp4",
+                "poster": "media/aps62/v5/aps62-02-01.jpg",
+                "captions": "media/aps62/v5/aps62-02-01.vtt",
+                "duration_seconds": 55.253,
+                "transcript": "Une même action peut avoir plusieurs conséquences. La responsabilité pénale concerne une infraction à la loi. La responsabilité civile concerne la réparation d'un dommage. La responsabilité disciplinaire concerne les règles professionnelles ou celles du travail. Ces responsabilités ne se remplacent pas.\n\nPar exemple, un agent frappe un visiteur sans justification. Des poursuites pénales peuvent être engagées. La personne blessée peut demander réparation de son dommage. Une procédure disciplinaire peut aussi avoir lieu. Le paiement d'une indemnité n'efface pas automatiquement les autres conséquences.\n\nPour comprendre une situation, il faut distinguer l'acte interdit, le dommage causé et la règle professionnelle enfreinte. Les autorités compétentes examinent chaque responsabilité. Un agent ne décide pas lui-même de la culpabilité d'une personne.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 5,
+                "content_sha256": "285f858b7fc28bb90c2215c927fa77b495770cbacd518ab3721463633677973d",
+                "course_only": true
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "02.01",
+            "title": "Responsabilité : pénal, civil, disciplinaire",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Responsabilité pénale",
+                "back": "Conséquence possible d'une infraction, examinée par la justice pénale."
+              },
+              {
+                "front": "Responsabilité civile",
+                "back": "Obligation possible de réparer un dommage."
+              },
+              {
+                "front": "Responsabilité disciplinaire",
+                "back": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+              }
+            ],
+            "instruction": "Cliquez sur un mot pour lire sa définition. Vous pouvez le revoir autant de fois que nécessaire.",
+            "transcript": "Une même action peut avoir plusieurs conséquences. La responsabilité pénale concerne une infraction à la loi. La responsabilité civile concerne la réparation d'un dommage. La responsabilité disciplinaire concerne les règles professionnelles ou celles du travail. Ces responsabilités ne se remplacent pas.\n\nPar exemple, un agent frappe un visiteur sans justification. Des poursuites pénales peuvent être engagées. La personne blessée peut demander réparation de son dommage. Une procédure disciplinaire peut aussi avoir lieu. Le paiement d'une indemnité n'efface pas automatiquement les autres conséquences.\n\nPour comprendre une situation, il faut distinguer l'acte interdit, le dommage causé et la règle professionnelle enfreinte. Les autorités compétentes examinent chaque responsabilité. Un agent ne décide pas lui-même de la culpabilité d'une personne.",
+            "edition": "2026-10-06",
+            "voice": "fr-FR-HenriNeural",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Responsabilité pénale",
+              "definition": "Conséquence possible d'une infraction, examinée par la justice pénale."
+            },
+            {
+              "term": "Responsabilité civile",
+              "definition": "Obligation possible de réparer un dommage."
+            },
+            {
+              "term": "Responsabilité disciplinaire",
+              "definition": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-01-atelier",
+          "title": "La situation évolue",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "02.01",
+            "title": "Trois responsabilités",
+            "case": "À l'accueil d'un entrepôt, un agent ferme brusquement une barrière malgré une consigne de contrôle visuel. Un visiteur signale un dommage à son véhicule et dépose plainte. L'employeur convoque l'agent pour examiner le respect des consignes.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "practice": {
+            "revision": "20261006-aps62-v5",
+            "title": "Trois responsabilités · la situation évolue",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "Quel fait est établi dans cette situation ?",
+                "context": "À l'accueil d'un entrepôt, un agent ferme brusquement une barrière malgré une consigne de contrôle visuel. Un visiteur signale un dommage à son véhicule et dépose plainte. L'employeur convoque l'agent pour examiner le respect des consignes.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Un dommage est allégué et plusieurs procédures peuvent examiner des questions différentes."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le point de départ établi est : Un dommage est allégué et plusieurs procédures peuvent examiner des questions différentes. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Le point de départ établi est : Un dommage est allégué et plusieurs procédures peuvent examiner des questions différentes. Il ne faut pas compléter ce constat par une supposition. Lisez cette explication, puis essayez à nouveau.",
+                  "2": "Le point de départ établi est : Un dommage est allégué et plusieurs procédures peuvent examiner des questions différentes. Il ne faut pas compléter ce constat par une supposition. Lisez maintenant la suite de la situation.",
+                  "3": "Le point de départ établi est : Un dommage est allégué et plusieurs procédures peuvent examiner des questions différentes. Il ne faut pas compléter ce constat par une supposition. Lisez cette explication, puis essayez à nouveau."
+                },
+                "remediation": {
+                  "prompt": "Un salarié accède sans droit au dossier informatique d'un collègue pour aider un client. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Identifier un possible accès frauduleux et alerter sans poursuivre la consultation.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "Quelle action choisir ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Distinguer réparation civile, éventuelle infraction pénale et discipline professionnelle."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Affirmer que la convocation de l'employeur annule la plainte."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables.",
+                "branches": {
+                  "1": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables. Lisez cette explication, puis essayez à nouveau.",
+                  "2": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables. Lisez maintenant la suite de la situation.",
+                  "3": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables. Lisez cette explication, puis essayez à nouveau."
+                },
+                "remediation": {
+                  "prompt": "Un salarié accède sans droit au dossier informatique d'un collègue pour aider un client. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Identifier un possible accès frauduleux et alerter sans poursuivre la consultation."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Considérer l'intention d'aider comme une autorisation d'accès."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables. Dans ce cas : Identifier un possible accès frauduleux et alerter sans poursuivre la consultation.",
+                  "lesson": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "La vidéo montre que le visiteur avançait avant l'autorisation, mais ne permet pas de voir le geste exact de l'agent.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Déclarer que la vidéo prouve entièrement l'innocence de l'agent."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Transmettre les limites de la vidéo sans conclure seul au partage des responsabilités."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Une preuve partielle doit être décrite comme telle. Le rôle de l'APS est de conserver et transmettre les éléments, pas de trancher à la place d'une juridiction.",
+                "branches": {
+                  "1": "Une preuve partielle doit être décrite comme telle. Le rôle de l'APS est de conserver et transmettre les éléments, pas de trancher à la place d'une juridiction. Lisez cette explication, puis essayez à nouveau.",
+                  "2": "Une preuve partielle doit être décrite comme telle. Le rôle de l'APS est de conserver et transmettre les éléments, pas de trancher à la place d'une juridiction. Lisez cette explication, puis essayez à nouveau.",
+                  "3": "Une preuve partielle doit être décrite comme telle. Le rôle de l'APS est de conserver et transmettre les éléments, pas de trancher à la place d'une juridiction. Lisez maintenant la suite de la situation."
+                },
+                "remediation": {
+                  "prompt": "Un salarié accède sans droit au dossier informatique d'un collègue pour aider un client. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Identifier un possible accès frauduleux et alerter sans poursuivre la consultation."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Considérer l'intention d'aider comme une autorisation d'accès."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables. Dans ce cas : Identifier un possible accès frauduleux et alerter sans poursuivre la consultation.",
+                  "lesson": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables."
+                }
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Responsabilité pénale",
+              "definition": "Conséquence possible d'une infraction, examinée par la justice pénale."
+            },
+            {
+              "term": "Responsabilité civile",
+              "definition": "Obligation possible de réparer un dommage."
+            },
+            {
+              "term": "Responsabilité disciplinaire",
+              "definition": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-01-q1",
+          "title": "Choisir une réponse",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Un agent endommage le téléphone d’un visiteur pendant une altercation. Le client propose de rembourser l’appareil et affirme que cela empêchera toute autre conséquence. Un témoin signale aussi des propos humiliants.",
+          "options": [
+            {
+              "id": "aps62-02-01-a0",
+              "text": "Conclure que le remboursement efface toutes les conséquences.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-02-01-a1",
+              "text": "Supprimer le rapport pour éviter une double sanction.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-02-01-a2",
+              "text": "Décrire les faits et distinguer les différents régimes de responsabilité.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Pour comprendre une situation, il faut distinguer l'acte interdit, le dommage causé et la règle professionnelle enfreinte. Les autorités compétentes examinent chaque responsabilité. Un agent ne décide pas lui-même de la culpabilité d'une personne.\n\nLa responsabilité civile traite notamment la réparation d’un dommage ; la responsabilité pénale porte sur une infraction ; la discipline relève de règles professionnelles et de travail. Ces angles peuvent coexister, selon les faits et les textes. L’agent ne qualifie pas définitivement l’affaire et ne promet pas l’absence de plainte. Un rapport précis aide les personnes compétentes à l’examiner.",
+          "easy_glossary": [
+            {
+              "term": "Responsabilité pénale",
+              "definition": "Conséquence possible d'une infraction, examinée par la justice pénale."
+            },
+            {
+              "term": "Responsabilité civile",
+              "definition": "Obligation possible de réparer un dommage."
+            },
+            {
+              "term": "Responsabilité disciplinaire",
+              "definition": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-01-q2",
+          "title": "Relier les mots à leur définition",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Pour chaque mot, choisissez la bonne définition.",
+          "pairs": [
+            {
+              "id": "aps62-02-01-pair0",
+              "left": "Responsabilité pénale",
+              "right": "Conséquence possible d'une infraction, examinée par la justice pénale."
+            },
+            {
+              "id": "aps62-02-01-pair1",
+              "left": "Responsabilité civile",
+              "right": "Obligation possible de réparer un dommage."
+            },
+            {
+              "id": "aps62-02-01-pair2",
+              "left": "Responsabilité disciplinaire",
+              "right": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+            }
+          ],
+          "explanation": "Responsabilité pénale : Conséquence possible d'une infraction, examinée par la justice pénale. Responsabilité civile : Obligation possible de réparer un dommage. Responsabilité disciplinaire : Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+        },
+        {
+          "id": "aps62-02-01-transfert",
+          "title": "Une autre situation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.01",
+            "title": "Responsabilité : pénal, civil, disciplinaire",
+            "kind": "transfer",
+            "case": "Une infraction grave est évoquée dans un message. Expliquez pourquoi le langage courant ne suffit pas à distinguer contravention, délit et crime.",
+            "model": "La responsabilité civile traite notamment la réparation d’un dommage ; la responsabilité pénale porte sur une infraction ; la discipline relève de règles professionnelles et de travail. Ces angles peuvent coexister, selon les faits et les textes. L’agent ne qualifie pas définitivement l’affaire et ne promet pas l’absence de plainte. Un rapport précis aide les personnes compétentes à l’examiner. Civil : qui doit réparer le dommage ? Pénal : les faits constituent-ils une infraction ? Disciplinaire : une obligation professionnelle a-t-elle été méconnue ? Le rapport décrit gestes, paroles attribuées, dommage visible et témoins. Il ne conclut ni « innocent » ni « coupable » à la place des autorités.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "practice": {
+            "revision": "20261006-aps62-v5",
+            "title": "Changer de contexte · Une même erreur peut avoir plusieurs conséquences",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Vérifier la qualification juridique applicable ; le mot « grave » ne classe pas à lui seul une infraction."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Déduire la qualification du nombre de messages reçus."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Classer automatiquement en crime tout fait qualifié de grave."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Vérifier la qualification juridique applicable ; le mot « grave » ne classe pas à lui seul une infraction. La responsabilité civile traite notamment la réparation d’un dommage ; la responsabilité pénale porte sur une infraction ; la discipline relève de règles professionnelles et de travail. Ces angles peuvent coexister, selon les faits et les textes. L’agent ne qualifie pas définitivement l’affaire et ne promet pas l’absence de plainte. Un rapport précis aide les personnes compétentes à l’examiner.",
+                "remediation": {
+                  "prompt": "Un salarié accède sans droit au dossier informatique d'un collègue pour aider un client. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Identifier un possible accès frauduleux et alerter sans poursuivre la consultation."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Considérer l'intention d'aider comme une autorisation d'accès."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables. Dans ce cas : Identifier un possible accès frauduleux et alerter sans poursuivre la consultation.",
+                  "lesson": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables."
+                }
+              },
+              {
+                "id": "application",
+                "kind": "single",
+                "prompt": "Après un incident, un responsable affirme qu'un avertissement interne exclut toute autre conséquence. Quelle analyse choisir ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "L'avertissement remplace automatiquement toute procédure extérieure."
+                  },
+                  {
+                    "id": "2",
+                    "text": "L'absence de licenciement prouve l'absence de dommage."
+                  },
+                  {
+                    "id": "3",
+                    "text": "La mesure interne ne tranche pas à elle seule les éventuelles questions civiles et pénales."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Chaque cadre a son objet. Le dossier factuel doit permettre aux interlocuteurs compétents d'apprécier les conséquences, sans conclure à leur place.",
+                "remediation": {
+                  "prompt": "Un salarié accède sans droit au dossier informatique d'un collègue pour aider un client. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Identifier un possible accès frauduleux et alerter sans poursuivre la consultation."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Considérer l'intention d'aider comme une autorisation d'accès."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables. Dans ce cas : Identifier un possible accès frauduleux et alerter sans poursuivre la consultation.",
+                  "lesson": "Les responsabilités ont des finalités différentes. Réparer un dommage, sanctionner une infraction et traiter un manquement professionnel ne sont pas des procédures interchangeables."
+                }
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Responsabilité pénale",
+              "definition": "Conséquence possible d'une infraction, examinée par la justice pénale."
+            },
+            {
+              "term": "Responsabilité civile",
+              "definition": "Obligation possible de réparer un dommage."
+            },
+            {
+              "term": "Responsabilité disciplinaire",
+              "definition": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-01-synthese",
+          "title": "À retenir",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.01",
+            "title": "Responsabilité : pénal, civil, disciplinaire",
+            "kind": "recap",
+            "decision": "Pour comprendre une situation, il faut distinguer l'acte interdit, le dommage causé et la règle professionnelle enfreinte. Les autorités compétentes examinent chaque responsabilité. Un agent ne décide pas lui-même de la culpabilité d'une personne.",
+            "reason": "",
+            "pitfall": "Conclure que le remboursement efface toutes les conséquences.",
+            "cards": [
+              {
+                "front": "Responsabilité pénale",
+                "back": "Conséquence possible d'une infraction, examinée par la justice pénale."
+              },
+              {
+                "front": "Responsabilité civile",
+                "back": "Obligation possible de réparer un dommage."
+              },
+              {
+                "front": "Responsabilité disciplinaire",
+                "back": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.09",
+                "page": 91
+              },
+              {
+                "ref": "02.16",
+                "page": 105
+              }
+            ],
+            "instruction": "Si un point reste difficile, relisez le cours ou refaites l’exercice concerné.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Responsabilité pénale",
+              "definition": "Conséquence possible d'une infraction, examinée par la justice pénale."
+            },
+            {
+              "term": "Responsabilité civile",
+              "definition": "Obligation possible de réparer un dommage."
+            },
+            {
+              "term": "Responsabilité disciplinaire",
+              "definition": "Conséquence possible d'un manquement aux règles professionnelles ou du travail."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aps62-02-02",
+      "title": "02 · Comprendre la légitime défense",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-02-02-comprendre",
+          "title": "Le cours · Comprendre la légitime défense",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.02",
+            "title": "Légitime défense : une réponse à une attaque actuelle",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-02.webp",
+            "case": "Un visiteur tente de frapper un agent. Il s’arrête ensuite et recule vers la sortie. Un collègue souhaite le poursuivre et le frapper « pour lui apprendre ». Aucun autre élément n’établit une attaque en cours.",
+            "reason": "Pour la défense des personnes, examinez l’atteinte injustifiée, son actualité, la nécessité et la proportion de la réponse. La réaction doit être commandée par la défense, pas par la vengeance. Les conditions se réévaluent pendant l’événement. La défense des biens répond à un régime distinct : on ne transpose pas automatiquement le raisonnement applicable aux personnes.",
+            "lessons": [
+              {
+                "ref": "02.10",
+                "title": "Comprendre la légitime défense",
+                "page": 92,
+                "diagram": "media/aps62/repere-02.10.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une réponse à une atteinte actuelle"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La légitime défense des personnes suppose une atteinte injustifiée et une réponse accomplie dans le même temps, nécessaire et proportionnée. La nécessité signifie que l'acte doit répondre au besoin de défense. La proportionnalité s'apprécie entre les moyens employés et la gravité de l'atteinte."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Il ne s'agit ni de punir une insulte ni de se venger d'un geste déjà terminé."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Réévaluer dès que la situation change"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une réaction peut cesser d'être nécessaire si l'agression s'arrête ou si la personne s'éloigne. L'agent doit donc adapter son action, demander du soutien et protéger les personnes. La défense des biens obéit à des conditions propres et plus restrictives ; elle ne se confond pas avec la défense d'une personne."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une consigne ou un ressenti de colère ne remplace pas l'analyse des conditions légales."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne tente de frapper un agent, puis recule et quitte les lieux. Les gestes nécessaires à la protection pendant l'attaque doivent cesser lorsque leur justification disparaît. La poursuivre pour la « corriger » ne prolonge pas la légitime défense. L'agent met l'équipe en sécurité, alerte et décrit la chronologie."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La question n'est pas « ai-je été provoqué ? », mais « quelle atteinte actuelle exige cette réponse, et cette réponse reste-t-elle nécessaire et proportionnée ? »"
+                  }
+                ],
+                "course_page": 93,
+                "practice": {
+                  "background": "La défense des biens obéit à des conditions spécifiques : l’acte doit interrompre l’exécution d’un crime ou d’un délit contre un bien, être strictement nécessaire et proportionné ; un homicide volontaire n’entre pas dans cette justification. Pour l’agent, le choix professionnel recherche d’abord l’évitement, la protection et l’alerte lorsque cela est possible. Si une action physique est indispensable, elle cesse dès que sa nécessité disparaît. Une insulte, un refus ou une provocation ne justifie pas automatiquement une violence.",
+                  "case": "Une personne vous pousse puis recule, mains visibles, en s’éloignant. Votre collègue veut la poursuivre pour lui donner « une leçon » avant l’arrivée de la police. Quels faits devez-vous distinguer dans le temps ? Quelle décision prenez-vous ?",
+                  "transfer": "Après la fin d’une agression, un agent poursuit la personne pour « lui donner une leçon ». Quel critère pose immédiatement problème ?",
+                  "page": 121
+                }
+              },
+              {
+                "ref": "02.09",
+                "title": "Distinguer les responsabilités",
+                "page": 90,
+                "diagram": "media/aps62/repere-02.09.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Réparer, sanctionner, discipliner"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La responsabilité civile vise la réparation d'un dommage selon les conditions applicables. La responsabilité pénale concerne la commission d'une infraction et les sanctions prévues par les textes. La discipline professionnelle peut relever de l'employeur ou de l'autorité compétente du secteur."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un même fait peut entraîner plusieurs procédures, car elles ne poursuivent pas toutes le même objectif."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "La mission ne donne pas une immunité"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Agir pendant le travail ne rend pas automatiquement l'acte licite. À l'inverse, tout incident ne prouve pas qu'un agent a commis une faute. Il faut examiner les faits, les obligations, le comportement et le lien avec le dommage."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent conserve donc une trace exacte de ses observations, de ses demandes d'aide et des décisions. Modifier un compte rendu pour cacher une erreur peut créer un problème supplémentaire."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent endommage volontairement le téléphone d'un visiteur lors d'un désaccord. Le contexte de travail n'autorise pas ce geste. Des conséquences civiles, pénales et professionnelles peuvent être examinées. Le responsable ne peut pas effacer l'événement en demandant de l'omettre de la main courante."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La bonne pratique consiste à connaître ses limites, demander une clarification et signaler loyalement un incident. Une trace précise aide à établir ce qui s'est réellement passé."
+                  }
+                ],
+                "course_page": 91,
+                "practice": {
+                  "background": "Les juridictions judiciaires comprennent notamment les juridictions civiles et pénales ; les juridictions administratives contrôlent les actes de l’administration. Une contravention, un délit et un crime correspondent à des catégories d’infractions différentes. L’agent n’a pas à qualifier définitivement chaque fait pour alerter, mais doit savoir que la catégorie et la peine peuvent conditionner certaines facultés, notamment l’article 73. La meilleure protection professionnelle reste une action légale, proportionnée, documentée et cohérente avec les consignes licites.",
+                  "case": "Un agent bloque physiquement un client pour obtenir le paiement d’une facture contestée. Le responsable du site avait demandé de « ne le laisser partir sous aucun prétexte ». Quelles atteintes la situation peut-elle soulever ? Comment aurait-il fallu traiter le désaccord ?",
+                  "transfer": "Un agent endommage volontairement le téléphone d’un visiteur. Pourquoi ne faut-il pas envisager seulement la sanction de l’employeur ?",
+                  "page": 120
+                }
+              }
+            ],
+            "decision": "Cesser la riposte lorsque l’attaque cesse, protéger les personnes et alerter.",
+            "pitfall": "Poursuivre la riposte pour dissuader une prochaine agression.",
+            "objectives": [
+              "Expliquer : légitime défense : une réponse à une attaque actuelle",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un visiteur tente de frapper un agent. Il s’arrête ensuite et recule vers la sortie. Un collègue souhaite le poursuivre et le frapper « pour lui apprendre ». Aucun autre élément n’établit une attaque en cours."
+              ],
+              [
+                "Décision à justifier",
+                "Cesser la riposte lorsque l’attaque cesse, protéger les personnes et alerter."
+              ],
+              [
+                "Piège à éviter",
+                "Poursuivre la riposte pour dissuader une prochaine agression."
+              ],
+              [
+                "Pourquoi ?",
+                "Pour la défense des personnes, examinez l’atteinte injustifiée, son actualité, la nécessité et la proportion de la réponse. La réaction doit être commandée par la défense, pas par la vengeance. Les conditions se réévaluent pendant l’événement. La défense des biens répond à un régime distinct : on ne transpose pas automatiquement le raisonnement applicable aux personnes."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un visiteur tente de frapper un agent."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Pour la défense des personnes, examinez l’atteinte injustifiée, son actualité, la nécessité et la proportion de la réponse."
+              },
+              {
+                "label": "Décider",
+                "text": "Cesser la riposte lorsque l’attaque cesse, protéger les personnes et alerter."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "L’agent se souvient imparfaitement de l’ordre des gestes. Quelle formulation choisir pour signaler les souvenirs incertains ?"
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : Responsabilité et droit pénal",
+            "sorting": [
+              {
+                "text": "Un visiteur tente de frapper un agent. Il s’arrête ensuite et recule vers la sortie. Un collègue souhaite le poursuivre et le frapper « pour lui apprendre ». Aucun autre élément n’établit une attaque en cours.",
+                "category": "fait"
+              },
+              {
+                "text": "Cesser la riposte lorsque l’attaque cesse, protéger les personnes et alerter.",
+                "category": "adapte"
+              },
+              {
+                "text": "Poursuivre la riposte pour dissuader une prochaine agression.",
+                "category": "ecarter"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Le cours · Comprendre la légitime défense",
+                "minutes": 25
+              },
+              {
+                "label": "Le cours en vidéo",
+                "minutes": 4
+              },
+              {
+                "label": "La situation évolue",
+                "minutes": 12
+              },
+              {
+                "label": "Choisir une réponse",
+                "minutes": 3
+              },
+              {
+                "label": "Relier les mots à leur définition",
+                "minutes": 3
+              },
+              {
+                "label": "Une autre situation",
+                "minutes": 6
+              },
+              {
+                "label": "À retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Le moment où l'attaque cesse change l'analyse",
+                "paragraphs": [
+                  "La défense d'une personne s'apprécie au moment d'une atteinte injustifiée, avec une réponse nécessaire et proportionnée. Une action ne reste pas justifiée simplement parce qu'elle a commencé pendant une attaque. Reconstituer les changements de comportement permet de distinguer protection, poursuite et punition.",
+                  "Exemple expliqué. Une personne tente de frapper un salarié puis s'éloigne en abandonnant l'agression. Protéger le salarié pendant l'attaque et poursuivre l'auteur pour le frapper après son retrait sont deux décisions différentes. La fin de l'attaque impose de réévaluer la nécessité de la réponse et de privilégier les relais adaptés."
+                ]
+              },
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « L'attaque a cessé », le point de départ est le suivant : Un visiteur tente de frapper un agent au portillon. L'agent se met à distance derrière le dispositif d'accueil. Le visiteur s'éloigne maintenant vers la sortie en criant. Aucun nouveau geste d'attaque n'est observé.",
+                  "Le fait établi est : La tentative initiale a cessé et le visiteur s'éloigne. La première réponse à examiner est : Réévaluer le danger, maintenir la distance et alerter selon la situation. La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée.",
+                  "Elle ne couvre pas une vengeance après la fin de l'attaque.",
+                  "La situation évolue : Le visiteur revient et lève une chaise vers une autre personne. La décision doit donc être réexaminée : Alerter, protéger selon les possibilités réelles et réévaluer la nécessité immédiate de l'action. Le cadre légal s'apprécie au moment de chaque action.",
+                  "Une évolution réelle des faits impose une nouvelle analyse, sans autoriser n'importe quelle force.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Note de relève : toute insulte autorise une riposte physique. La référence vérifiée est : Fiche de raisonnement : actualité de l'attaque, nécessité et proportion de la réponse."
+                ]
+              }
+            ],
+            "pacing_note": "Répartition indicative du travail : lecture, comparaison, choix et correction. Le rythme réel varie selon les acquis.",
+            "plain_language": true,
+            "plain_course": [
+              {
+                "title": "Comprendre la règle",
+                "paragraphs": [
+                  "La légitime défense peut justifier une réaction à une attaque injustifiée. La réaction doit avoir lieu pendant l'attaque. Elle doit être nécessaire pour se défendre et proportionnée à sa gravité. Cela signifie qu'elle ne doit pas être excessive. Une vengeance après les faits n'est pas de la légitime défense."
+                ]
+              },
+              {
+                "title": "Un exemple expliqué",
+                "paragraphs": [
+                  "Par exemple, une personne essaie de frapper l'agent. Celui-ci cherche à se protéger et à faire cesser l'attaque. Si la personne cesse son agression et s'éloigne, la situation a changé. La poursuivre pour lui donner une leçon ne prolonge pas le droit de se défendre."
+                ]
+              },
+              {
+                "title": "L’essentiel à retenir",
+                "paragraphs": [
+                  "L'agent observe le danger réel et adapte sa réaction. Il s'arrête lorsque les conditions de la défense ne sont plus réunies. La défense des biens obéit à des conditions spécifiques : elle ne se confond pas avec la défense d'une personne."
+                ]
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Attaque actuelle",
+              "definition": "Attaque qui est en train de se produire."
+            },
+            {
+              "term": "Nécessité",
+              "definition": "Besoin réel d'agir pour répondre à la situation."
+            },
+            {
+              "term": "Proportionnalité",
+              "definition": "Rapport adapté entre la réaction et la gravité de l'attaque."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-02-memoriser",
+          "title": "Le cours en vidéo",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-02-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-02-02-video",
+                "title": "Comprendre la légitime défense",
+                "required": true,
+                "src": "media/aps62/v5/aps62-02-02.mp4",
+                "poster": "media/aps62/v5/aps62-02-02.jpg",
+                "captions": "media/aps62/v5/aps62-02-02.vtt",
+                "duration_seconds": 51.477,
+                "transcript": "La légitime défense peut justifier une réaction à une attaque injustifiée. La réaction doit avoir lieu pendant l'attaque. Elle doit être nécessaire pour se défendre et proportionnée à sa gravité. Cela signifie qu'elle ne doit pas être excessive. Une vengeance après les faits n'est pas de la légitime défense.\n\nPar exemple, une personne essaie de frapper l'agent. Celui-ci cherche à se protéger et à faire cesser l'attaque. Si la personne cesse son agression et s'éloigne, la situation a changé. La poursuivre pour lui donner une leçon ne prolonge pas le droit de se défendre.\n\nL'agent observe le danger réel et adapte sa réaction. Il s'arrête lorsque les conditions de la défense ne sont plus réunies. La défense des biens obéit à des conditions spécifiques : elle ne se confond pas avec la défense d'une personne.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 5,
+                "content_sha256": "0077961b6e35a5d01b776941ff21ba8415a48b55fde1ca92375e69404eb59799",
+                "course_only": true
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "02.02",
+            "title": "Légitime défense : une réponse à une attaque actuelle",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Attaque actuelle",
+                "back": "Attaque qui est en train de se produire."
+              },
+              {
+                "front": "Nécessité",
+                "back": "Besoin réel d'agir pour répondre à la situation."
+              },
+              {
+                "front": "Proportionnalité",
+                "back": "Rapport adapté entre la réaction et la gravité de l'attaque."
+              }
+            ],
+            "instruction": "Cliquez sur un mot pour lire sa définition. Vous pouvez le revoir autant de fois que nécessaire.",
+            "transcript": "La légitime défense peut justifier une réaction à une attaque injustifiée. La réaction doit avoir lieu pendant l'attaque. Elle doit être nécessaire pour se défendre et proportionnée à sa gravité. Cela signifie qu'elle ne doit pas être excessive. Une vengeance après les faits n'est pas de la légitime défense.\n\nPar exemple, une personne essaie de frapper l'agent. Celui-ci cherche à se protéger et à faire cesser l'attaque. Si la personne cesse son agression et s'éloigne, la situation a changé. La poursuivre pour lui donner une leçon ne prolonge pas le droit de se défendre.\n\nL'agent observe le danger réel et adapte sa réaction. Il s'arrête lorsque les conditions de la défense ne sont plus réunies. La défense des biens obéit à des conditions spécifiques : elle ne se confond pas avec la défense d'une personne.",
+            "edition": "2026-10-06",
+            "voice": "fr-FR-HenriNeural",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Attaque actuelle",
+              "definition": "Attaque qui est en train de se produire."
+            },
+            {
+              "term": "Nécessité",
+              "definition": "Besoin réel d'agir pour répondre à la situation."
+            },
+            {
+              "term": "Proportionnalité",
+              "definition": "Rapport adapté entre la réaction et la gravité de l'attaque."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-02-atelier",
+          "title": "La situation évolue",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "02.02",
+            "title": "L'attaque a cessé",
+            "case": "Un visiteur tente de frapper un agent au portillon. L'agent se met à distance derrière le dispositif d'accueil. Le visiteur s'éloigne maintenant vers la sortie en criant. Aucun nouveau geste d'attaque n'est observé.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "practice": {
+            "revision": "20261006-aps62-v5",
+            "title": "L'attaque a cessé · la situation évolue",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "Quel fait est établi dans cette situation ?",
+                "context": "Un visiteur tente de frapper un agent au portillon. L'agent se met à distance derrière le dispositif d'accueil. Le visiteur s'éloigne maintenant vers la sortie en criant. Aucun nouveau geste d'attaque n'est observé.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "La tentative initiale a cessé et le visiteur s'éloigne."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Le point de départ établi est : La tentative initiale a cessé et le visiteur s'éloigne. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Le point de départ établi est : La tentative initiale a cessé et le visiteur s'éloigne. Il ne faut pas compléter ce constat par une supposition. Lisez maintenant la suite de la situation.",
+                  "2": "Le point de départ établi est : La tentative initiale a cessé et le visiteur s'éloigne. Il ne faut pas compléter ce constat par une supposition. Lisez cette explication, puis essayez à nouveau.",
+                  "3": "Le point de départ établi est : La tentative initiale a cessé et le visiteur s'éloigne. Il ne faut pas compléter ce constat par une supposition. Lisez cette explication, puis essayez à nouveau."
+                },
+                "remediation": {
+                  "prompt": "Après un vol supposé, un collègue propose de frapper la personne pour récupérer un produit. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "Quelle action choisir ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Poursuivre le visiteur pour lui rendre son coup."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Réévaluer le danger, maintenir la distance et alerter selon la situation."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque.",
+                "branches": {
+                  "1": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque. Lisez cette explication, puis essayez à nouveau.",
+                  "2": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque. Lisez cette explication, puis essayez à nouveau.",
+                  "3": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque. Lisez maintenant la suite de la situation."
+                },
+                "remediation": {
+                  "prompt": "Après un vol supposé, un collègue propose de frapper la personne pour récupérer un produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Justifier le coup par la valeur du produit."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque. Dans ce cas : Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension.",
+                  "lesson": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "Le visiteur revient et lève une chaise vers une autre personne.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Rester sur la décision précédente sans tenir compte de la nouvelle menace."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Alerter, protéger selon les possibilités réelles et réévaluer la nécessité immédiate de l'action."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Le cadre légal s'apprécie au moment de chaque action. Une évolution réelle des faits impose une nouvelle analyse, sans autoriser n'importe quelle force.",
+                "branches": {
+                  "1": "Le cadre légal s'apprécie au moment de chaque action. Une évolution réelle des faits impose une nouvelle analyse, sans autoriser n'importe quelle force. Lisez cette explication, puis essayez à nouveau.",
+                  "2": "Le cadre légal s'apprécie au moment de chaque action. Une évolution réelle des faits impose une nouvelle analyse, sans autoriser n'importe quelle force. Lisez cette explication, puis essayez à nouveau.",
+                  "3": "Le cadre légal s'apprécie au moment de chaque action. Une évolution réelle des faits impose une nouvelle analyse, sans autoriser n'importe quelle force. Lisez maintenant la suite de la situation."
+                },
+                "remediation": {
+                  "prompt": "Après un vol supposé, un collègue propose de frapper la personne pour récupérer un produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Justifier le coup par la valeur du produit."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque. Dans ce cas : Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension.",
+                  "lesson": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque."
+                }
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Attaque actuelle",
+              "definition": "Attaque qui est en train de se produire."
+            },
+            {
+              "term": "Nécessité",
+              "definition": "Besoin réel d'agir pour répondre à la situation."
+            },
+            {
+              "term": "Proportionnalité",
+              "definition": "Rapport adapté entre la réaction et la gravité de l'attaque."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-02-q1",
+          "title": "Choisir une réponse",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Un visiteur tente de frapper un agent. Il s’arrête ensuite et recule vers la sortie. Un collègue souhaite le poursuivre et le frapper « pour lui apprendre ». Aucun autre élément n’établit une attaque en cours.",
+          "options": [
+            {
+              "id": "aps62-02-02-a0",
+              "text": "Déduire qu’une insulte autorise toujours un geste violent.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-02-02-a1",
+              "text": "Cesser la riposte lorsque l’attaque cesse, protéger les personnes et alerter.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-02-02-a2",
+              "text": "Poursuivre la riposte pour dissuader une prochaine agression.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "L'agent observe le danger réel et adapte sa réaction. Il s'arrête lorsque les conditions de la défense ne sont plus réunies. La défense des biens obéit à des conditions spécifiques : elle ne se confond pas avec la défense d'une personne.\n\nPour la défense des personnes, examinez l’atteinte injustifiée, son actualité, la nécessité et la proportion de la réponse. La réaction doit être commandée par la défense, pas par la vengeance. Les conditions se réévaluent pendant l’événement. La défense des biens répond à un régime distinct : on ne transpose pas automatiquement le raisonnement applicable aux personnes.",
+          "easy_glossary": [
+            {
+              "term": "Attaque actuelle",
+              "definition": "Attaque qui est en train de se produire."
+            },
+            {
+              "term": "Nécessité",
+              "definition": "Besoin réel d'agir pour répondre à la situation."
+            },
+            {
+              "term": "Proportionnalité",
+              "definition": "Rapport adapté entre la réaction et la gravité de l'attaque."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-02-q2",
+          "title": "Relier les mots à leur définition",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Pour chaque mot, choisissez la bonne définition.",
+          "pairs": [
+            {
+              "id": "aps62-02-02-pair0",
+              "left": "Attaque actuelle",
+              "right": "Attaque qui est en train de se produire."
+            },
+            {
+              "id": "aps62-02-02-pair1",
+              "left": "Nécessité",
+              "right": "Besoin réel d'agir pour répondre à la situation."
+            },
+            {
+              "id": "aps62-02-02-pair2",
+              "left": "Proportionnalité",
+              "right": "Rapport adapté entre la réaction et la gravité de l'attaque."
+            }
+          ],
+          "explanation": "Attaque actuelle : Attaque qui est en train de se produire. Nécessité : Besoin réel d'agir pour répondre à la situation. Proportionnalité : Rapport adapté entre la réaction et la gravité de l'attaque."
+        },
+        {
+          "id": "aps62-02-02-transfert",
+          "title": "Une autre situation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.02",
+            "title": "Légitime défense : une réponse à une attaque actuelle",
+            "kind": "transfer",
+            "case": "L’agent se souvient imparfaitement de l’ordre des gestes. Quelle formulation choisir pour signaler les souvenirs incertains ?",
+            "model": "Pour la défense des personnes, examinez l’atteinte injustifiée, son actualité, la nécessité et la proportion de la réponse. La réaction doit être commandée par la défense, pas par la vengeance. Les conditions se réévaluent pendant l’événement. La défense des biens répond à un régime distinct : on ne transpose pas automatiquement le raisonnement applicable aux personnes. Au début, l’agent cherche une protection nécessaire face à l’attaque. Lorsque celle-ci cesse, la justification d’une riposte doit être réévaluée. Le relais comporte l’alerte adaptée, les secours éventuels, la conservation des éléments et le compte rendu. « Il m’a agressé avant » ne suffit pas à justifier n’importe quelle action après.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "practice": {
+            "revision": "20261006-aps62-v5",
+            "title": "Changer de contexte · Le moment où l'attaque cesse change l'analyse",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Présenter comme certain l’ordre des gestes raconté par un autre agent."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Retenir une formulation distinguant les gestes observés, l’ordre certain et les souvenirs incertains."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Compléter les gestes manquants avec la version la plus logique."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Retenir une formulation distinguant les gestes observés, l’ordre certain et les souvenirs incertains. Pour la défense des personnes, examinez l’atteinte injustifiée, son actualité, la nécessité et la proportion de la réponse. La réaction doit être commandée par la défense, pas par la vengeance. Les conditions se réévaluent pendant l’événement. La défense des biens répond à un régime distinct : on ne transpose pas automatiquement le raisonnement applicable aux personnes.",
+                "remediation": {
+                  "prompt": "Après un vol supposé, un collègue propose de frapper la personne pour récupérer un produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Justifier le coup par la valeur du produit."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque. Dans ce cas : Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension.",
+                  "lesson": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque."
+                }
+              },
+              {
+                "id": "application",
+                "kind": "single",
+                "prompt": "Une menace cesse et la personne recule. Quelle question guide la décision suivante ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Comment lui faire payer la peur provoquée ?"
+                  },
+                  {
+                    "id": "2",
+                    "text": "Comment maintenir la même intensité jusqu'à obtenir des excuses ?"
+                  },
+                  {
+                    "id": "3",
+                    "text": "Existe-t-il encore une atteinte actuelle nécessitant cette réponse ?"
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La réponse doit rester reliée à la situation présente. La légitime défense ne permet pas de prolonger une action pour punir une atteinte terminée.",
+                "remediation": {
+                  "prompt": "Après un vol supposé, un collègue propose de frapper la personne pour récupérer un produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Justifier le coup par la valeur du produit."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque. Dans ce cas : Écarter la punition et examiner séparément les conditions légales d'une éventuelle appréhension.",
+                  "lesson": "La légitime défense répond à une atteinte injustifiée actuelle, avec une réaction nécessaire et proportionnée. Elle ne couvre pas une vengeance après la fin de l'attaque."
+                }
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Attaque actuelle",
+              "definition": "Attaque qui est en train de se produire."
+            },
+            {
+              "term": "Nécessité",
+              "definition": "Besoin réel d'agir pour répondre à la situation."
+            },
+            {
+              "term": "Proportionnalité",
+              "definition": "Rapport adapté entre la réaction et la gravité de l'attaque."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-02-synthese",
+          "title": "À retenir",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.02",
+            "title": "Légitime défense : une réponse à une attaque actuelle",
+            "kind": "recap",
+            "decision": "L'agent observe le danger réel et adapte sa réaction. Il s'arrête lorsque les conditions de la défense ne sont plus réunies. La défense des biens obéit à des conditions spécifiques : elle ne se confond pas avec la défense d'une personne.",
+            "reason": "",
+            "pitfall": "Poursuivre la riposte pour dissuader une prochaine agression.",
+            "cards": [
+              {
+                "front": "Attaque actuelle",
+                "back": "Attaque qui est en train de se produire."
+              },
+              {
+                "front": "Nécessité",
+                "back": "Besoin réel d'agir pour répondre à la situation."
+              },
+              {
+                "front": "Proportionnalité",
+                "back": "Rapport adapté entre la réaction et la gravité de l'attaque."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.10",
+                "page": 93
+              },
+              {
+                "ref": "02.09",
+                "page": 91
+              }
+            ],
+            "instruction": "Si un point reste difficile, relisez le cours ou refaites l’exercice concerné.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Attaque actuelle",
+              "definition": "Attaque qui est en train de se produire."
+            },
+            {
+              "term": "Nécessité",
+              "definition": "Besoin réel d'agir pour répondre à la situation."
+            },
+            {
+              "term": "Proportionnalité",
+              "definition": "Rapport adapté entre la réaction et la gravité de l'attaque."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aps62-02-03",
+      "title": "03 · Aider sans créer un autre danger",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-02-03-comprendre",
+          "title": "Le cours · Aider sans créer un autre danger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.03",
+            "title": "Nécessité, assistance et limites de compétence",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-02.webp",
+            "case": "Vous découvrez une personne blessée derrière une porte endommagée. Une odeur inhabituelle est perceptible dans le local. Un témoin demande d’entrer immédiatement, tandis qu’un autre veut filmer et diffuser la scène.",
+            "reason": "L’assistance suppose d’agir ou de provoquer un secours dans les conditions prévues, sans exposer inutilement soi-même ou autrui. L’état de nécessité concerne un danger actuel ou imminent et une action nécessaire, sans disproportion entre moyens et menace. Il n’autorise pas toutes les initiatives. Prévenir les secours, éloigner les tiers et fournir une localisation exploitable sont déjà des actions concrètes.",
+            "lessons": [
+              {
+                "ref": "02.11",
+                "title": "Nécessité et obligation d'assistance",
+                "page": 94,
+                "diagram": "media/aps62/repere-02.11.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Faire face à un danger"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'état de nécessité concerne une action destinée à sauvegarder une personne ou un bien face à un danger actuel ou imminent, lorsque l'acte est nécessaire et proportionné. Il ne constitue pas une autorisation générale d'ignorer les règles."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Il faut pouvoir expliquer le danger, l'urgence, les options disponibles et pourquoi l'action choisie était adaptée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Porter assistance sans créer une autre victime"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'obligation d'assistance à une personne en péril peut être satisfaite par une action personnelle ou par l'appel aux secours, selon les circonstances et sans risque pour soi ou pour les tiers. Alerter efficacement, empêcher d'autres personnes d'entrer dans une zone dangereuse et guider les secours sont des formes d'action utiles."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent ne doit pas confondre prudence et absence totale de réponse."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent voit une personne inanimée dans un local rempli de fumée. Entrer sans protection respiratoire adaptée l'exposerait gravement. Il donne l'alerte, empêche l'accès, indique la localisation de la victime et facilite l'intervention. Son rôle consiste à rendre le secours possible sans ajouter une victime."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une effraction destinée à sauver une personne se juge, elle aussi, sur ses circonstances exactes."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une urgence ne rend pas toutes les actions équivalentes. Choisissez celle qui protège réellement, dans les limites de vos moyens et des conditions légales."
+                  }
+                ],
+                "course_page": 95,
+                "practice": {
+                  "background": "L’assistance à une personne en péril peut prendre la forme d’un secours direct ou d’un appel aux services compétents, lorsque cela peut être fait sans risque pour soi ou pour autrui. La loi sanctionne aussi certaines abstentions face à un crime ou un délit contre l’intégrité corporelle lorsque l’action est possible sans risque. Dans le métier, appelez, protégez et facilitez les secours. L’obligation d’assistance ne commande pas de se jeter dans un danger incontrôlé ni de dépasser ses compétences techniques.",
+                  "case": "Une personne est enfermée dans un local et appelle à l’aide. De la fumée se répand à proximité. La clé n’est pas immédiatement disponible et les secours sont appelés. Quels éléments guident votre décision ? Que faut-il transmettre et préserver après l’action ?",
+                  "transfer": "Face à un local potentiellement toxique, appeler les secours spécialisés et empêcher l’accès est-il une absence d’aide ?",
+                  "page": 122
+                }
+              },
+              {
+                "ref": "02.14",
+                "title": "Protéger une information numérique",
+                "page": 100,
+                "diagram": "media/aps62/repere-02.14.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Trois qualités complémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Aucune de ces mesures ne remplace les autres."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Les gestes ordinaires sont déterminants"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Utilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification."
+                  }
+                ],
+                "course_page": 101,
+                "practice": {
+                  "background": "Sur les outils numériques, utilisez votre compte, verrouillez la session et ne partagez pas de mot de passe. Une demande urgente de code par téléphone doit être vérifiée par un canal connu. N’accédez pas à un système au-delà des droits attribués ; une session ouverte ne vaut pas autorisation. Une erreur, un courriel suspect ou une perte de matériel doit être signalé rapidement. Préservez les traces sans mener votre propre investigation technique et appliquez le plan de continuité prévu.",
+                  "case": "Une personne se présente au téléphone comme technicien et vous demande votre identifiant, votre mot de passe et un code reçu par SMS. Elle affirme que le système va tomber en panne dans cinq minutes. Quels indices vous alertent ? Quelle méthode permet de vérifier la demande ?",
+                  "transfer": "Un collègue vous demande votre mot de passe pour gagner du temps. Quel principe explique votre refus ?",
+                  "page": 125
+                }
+              }
+            ],
+            "decision": "Évaluer le danger sans s’exposer, alerter les secours et protéger l’accès.",
+            "pitfall": "Entrer sans analyse pour prouver que vous portez assistance.",
+            "objectives": [
+              "Expliquer : nécessité, assistance et limites de compétence",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Vous découvrez une personne blessée derrière une porte endommagée. Une odeur inhabituelle est perceptible dans le local. Un témoin demande d’entrer immédiatement, tandis qu’un autre veut filmer et diffuser la scène."
+              ],
+              [
+                "Décision à justifier",
+                "Évaluer le danger sans s’exposer, alerter les secours et protéger l’accès."
+              ],
+              [
+                "Piège à éviter",
+                "Entrer sans analyse pour prouver que vous portez assistance."
+              ],
+              [
+                "Pourquoi ?",
+                "L’assistance suppose d’agir ou de provoquer un secours dans les conditions prévues, sans exposer inutilement soi-même ou autrui. L’état de nécessité concerne un danger actuel ou imminent et une action nécessaire, sans disproportion entre moyens et menace. Il n’autorise pas toutes les initiatives. Prévenir les secours, éloigner les tiers et fournir une localisation exploitable sont déjà des actions concrètes."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Vous découvrez une personne blessée derrière une porte endommagée."
+              },
+              {
+                "label": "Vérifier",
+                "text": "L’assistance suppose d’agir ou de provoquer un secours dans les conditions prévues, sans exposer inutilement soi-même ou autrui."
+              },
+              {
+                "label": "Décider",
+                "text": "Évaluer le danger sans s’exposer, alerter les secours et protéger l’accès."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Un responsable vous demande de consulter le dossier médical de la personne sur un ordinateur ouvert. Quel autre moyen permet de transmettre les faits utiles ?"
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : Responsabilité et droit pénal",
+            "sorting": [
+              {
+                "text": "Entrer sans analyse pour prouver que vous portez assistance.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Vous découvrez une personne blessée derrière une porte endommagée. Une odeur inhabituelle est perceptible dans le local. Un témoin demande d’entrer immédiatement, tandis qu’un autre veut filmer et diffuser la scène.",
+                "category": "fait"
+              },
+              {
+                "text": "Évaluer le danger sans s’exposer, alerter les secours et protéger l’accès.",
+                "category": "adapte"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Le cours · Aider sans créer un autre danger",
+                "minutes": 25
+              },
+              {
+                "label": "Le cours en vidéo",
+                "minutes": 4
+              },
+              {
+                "label": "La situation évolue",
+                "minutes": 12
+              },
+              {
+                "label": "Choisir une réponse",
+                "minutes": 3
+              },
+              {
+                "label": "Relier les mots à leur définition",
+                "minutes": 3
+              },
+              {
+                "label": "Une autre situation",
+                "minutes": 6
+              },
+              {
+                "label": "Comparer deux chronologies de défense",
+                "minutes": 14
+              },
+              {
+                "label": "À retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Aider sans ajouter un danger évitable",
+                "paragraphs": [
+                  "Une urgence appelle une analyse rapide des personnes menacées, du danger et des moyens d'aide réellement disponibles. L'assistance peut notamment consister à provoquer l'intervention de secours. L'état de nécessité ne constitue pas une dispense générale : le danger, la nécessité et la proportion de l'acte restent à apprécier.",
+                  "Exemple expliqué. Un passant signale une personne en difficulté derrière une porte donnant sur une zone technique dangereuse. L'agent déclenche l'alerte, localise précisément la victime et mobilise les intervenants compétents. S'engager sans protection dans un danger qu'il ne maîtrise pas pourrait créer une seconde victime et ralentir les secours."
+                ]
+              },
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « L'urgence et la compétence », le point de départ est le suivant : Dans une résidence, une personne appelle à l'aide derrière une porte. Une odeur inhabituelle se diffuse dans le couloir. L'agent ne connaît ni l'installation ni l'origine de l'odeur.",
+                  "Deux occupants proposent d'entrer ensemble.",
+                  "Le fait établi est : Un appel à l'aide et une odeur non identifiée sont constatés. La première réponse à examiner est : Alerter les secours, éviter l'exposition et donner une localisation précise. Porter assistance n'impose pas un geste dangereux ou hors compétence.",
+                  "L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes.",
+                  "La situation évolue : Un témoin affirme que la personne a simplement laissé brûler son repas, sans avoir vu l'intérieur. La décision doit donc être réexaminée : Transmettre cette hypothèse comme un propos de témoin et maintenir les mesures adaptées tant que le doute subsiste.",
+                  "Une explication rassurante non vérifiée ne supprime pas les faits préoccupants. La source de l'information doit rester identifiable.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Transmission : simple repas brûlé confirmé par l'agent. La référence vérifiée est : Procédure : distinguer constat direct et information rapportée, ne pas entrer dans une zone dangereuse."
+                ]
+              }
+            ],
+            "pacing_note": "Répartition indicative du travail : lecture, comparaison, choix et correction. Le rythme réel varie selon les acquis.",
+            "plain_language": true,
+            "plain_course": [
+              {
+                "title": "Comprendre la règle",
+                "paragraphs": [
+                  "Lorsqu'une personne est en danger, l'aide peut consister à agir ou à appeler les secours. Il faut tenir compte des risques pour soi et pour les autres. L'état de nécessité concerne une action nécessaire face à un danger actuel ou imminent. Les moyens employés doivent rester proportionnés à la menace."
+                ]
+              },
+              {
+                "title": "Un exemple expliqué",
+                "paragraphs": [
+                  "Par exemple, de la fumée sort d'un local fermé. L'agent alerte les secours et applique les consignes de mise en sécurité. Il ne s'engage pas dans la fumée sans protection ni compétence adaptée. Prévenir rapidement les secours est déjà une action utile."
+                ]
+              },
+              {
+                "title": "L’essentiel à retenir",
+                "paragraphs": [
+                  "Aider ne signifie pas improviser un geste dangereux. L'agent décrit la situation, protège ce qui peut l'être sans risque et sollicite le bon intervenant. L'urgence ne supprime pas toutes les limites."
+                ]
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Danger imminent",
+              "definition": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "term": "Assistance",
+              "definition": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "term": "Limite de compétence",
+              "definition": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-03-memoriser",
+          "title": "Le cours en vidéo",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-02-03-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-02-03-video",
+                "title": "Aider sans créer un autre danger",
+                "required": true,
+                "src": "media/aps62/v5/aps62-02-03.mp4",
+                "poster": "media/aps62/v5/aps62-02-03.jpg",
+                "captions": "media/aps62/v5/aps62-02-03.vtt",
+                "duration_seconds": 47.616,
+                "transcript": "Lorsqu'une personne est en danger, l'aide peut consister à agir ou à appeler les secours. Il faut tenir compte des risques pour soi et pour les autres. L'état de nécessité concerne une action nécessaire face à un danger actuel ou imminent. Les moyens employés doivent rester proportionnés à la menace.\n\nPar exemple, de la fumée sort d'un local fermé. L'agent alerte les secours et applique les consignes de mise en sécurité. Il ne s'engage pas dans la fumée sans protection ni compétence adaptée. Prévenir rapidement les secours est déjà une action utile.\n\nAider ne signifie pas improviser un geste dangereux. L'agent décrit la situation, protège ce qui peut l'être sans risque et sollicite le bon intervenant. L'urgence ne supprime pas toutes les limites.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 5,
+                "content_sha256": "22eed0c5ca19ab275a63337e25ead8e998b4b24d1707237ca7c2c8b93b878517",
+                "course_only": true
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "02.03",
+            "title": "Nécessité, assistance et limites de compétence",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Danger imminent",
+                "back": "Danger qui peut se produire très prochainement."
+              },
+              {
+                "front": "Assistance",
+                "back": "Aide apportée directement ou en faisant intervenir les secours."
+              },
+              {
+                "front": "Limite de compétence",
+                "back": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+              }
+            ],
+            "instruction": "Cliquez sur un mot pour lire sa définition. Vous pouvez le revoir autant de fois que nécessaire.",
+            "transcript": "Lorsqu'une personne est en danger, l'aide peut consister à agir ou à appeler les secours. Il faut tenir compte des risques pour soi et pour les autres. L'état de nécessité concerne une action nécessaire face à un danger actuel ou imminent. Les moyens employés doivent rester proportionnés à la menace.\n\nPar exemple, de la fumée sort d'un local fermé. L'agent alerte les secours et applique les consignes de mise en sécurité. Il ne s'engage pas dans la fumée sans protection ni compétence adaptée. Prévenir rapidement les secours est déjà une action utile.\n\nAider ne signifie pas improviser un geste dangereux. L'agent décrit la situation, protège ce qui peut l'être sans risque et sollicite le bon intervenant. L'urgence ne supprime pas toutes les limites.",
+            "edition": "2026-10-06",
+            "voice": "fr-FR-HenriNeural",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Danger imminent",
+              "definition": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "term": "Assistance",
+              "definition": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "term": "Limite de compétence",
+              "definition": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-03-atelier",
+          "title": "La situation évolue",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "02.03",
+            "title": "L'urgence et la compétence",
+            "case": "Dans une résidence, une personne appelle à l'aide derrière une porte. Une odeur inhabituelle se diffuse dans le couloir. L'agent ne connaît ni l'installation ni l'origine de l'odeur. Deux occupants proposent d'entrer ensemble.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "practice": {
+            "revision": "20261006-aps62-v5",
+            "title": "L'urgence et la compétence · la situation évolue",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "Quel fait est établi dans cette situation ?",
+                "context": "Dans une résidence, une personne appelle à l'aide derrière une porte. Une odeur inhabituelle se diffuse dans le couloir. L'agent ne connaît ni l'installation ni l'origine de l'odeur. Deux occupants proposent d'entrer ensemble.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Un appel à l'aide et une odeur non identifiée sont constatés."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Le point de départ établi est : Un appel à l'aide et une odeur non identifiée sont constatés. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Le point de départ établi est : Un appel à l'aide et une odeur non identifiée sont constatés. Il ne faut pas compléter ce constat par une supposition. Lisez cette explication, puis essayez à nouveau.",
+                  "2": "Le point de départ établi est : Un appel à l'aide et une odeur non identifiée sont constatés. Il ne faut pas compléter ce constat par une supposition. Lisez cette explication, puis essayez à nouveau.",
+                  "3": "Le point de départ établi est : Un appel à l'aide et une odeur non identifiée sont constatés. Il ne faut pas compléter ce constat par une supposition. Lisez maintenant la suite de la situation."
+                },
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "Quelle action choisir ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Alerter les secours, éviter l'exposition et donner une localisation précise."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Entrer immédiatement sans évaluer le risque pour montrer qu'on porte assistance."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes.",
+                "branches": {
+                  "1": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Lisez cette explication, puis essayez à nouveau.",
+                  "2": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Lisez maintenant la suite de la situation.",
+                  "3": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Lisez cette explication, puis essayez à nouveau."
+                },
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "Un témoin affirme que la personne a simplement laissé brûler son repas, sans avoir vu l'intérieur.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Transmettre cette hypothèse comme un propos de témoin et maintenir les mesures adaptées tant que le doute subsiste."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Annoncer aux secours que l'origine est certaine."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Une explication rassurante non vérifiée ne supprime pas les faits préoccupants. La source de l'information doit rester identifiable.",
+                "branches": {
+                  "1": "Une explication rassurante non vérifiée ne supprime pas les faits préoccupants. La source de l'information doit rester identifiable. Lisez maintenant la suite de la situation.",
+                  "2": "Une explication rassurante non vérifiée ne supprime pas les faits préoccupants. La source de l'information doit rester identifiable. Lisez cette explication, puis essayez à nouveau.",
+                  "3": "Une explication rassurante non vérifiée ne supprime pas les faits préoccupants. La source de l'information doit rester identifiable. Lisez cette explication, puis essayez à nouveau."
+                },
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes."
+                }
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Danger imminent",
+              "definition": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "term": "Assistance",
+              "definition": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "term": "Limite de compétence",
+              "definition": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-03-q1",
+          "title": "Choisir une réponse",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Vous découvrez une personne blessée derrière une porte endommagée. Une odeur inhabituelle est perceptible dans le local. Un témoin demande d’entrer immédiatement, tandis qu’un autre veut filmer et diffuser la scène.",
+          "options": [
+            {
+              "id": "aps62-02-03-a0",
+              "text": "Évaluer le danger sans s’exposer, alerter les secours et protéger l’accès.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-02-03-a1",
+              "text": "Entrer sans analyse pour prouver que vous portez assistance.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-02-03-a2",
+              "text": "Diffuser la vidéo pour obtenir rapidement des avis.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Aider ne signifie pas improviser un geste dangereux. L'agent décrit la situation, protège ce qui peut l'être sans risque et sollicite le bon intervenant. L'urgence ne supprime pas toutes les limites.\n\nL’assistance suppose d’agir ou de provoquer un secours dans les conditions prévues, sans exposer inutilement soi-même ou autrui. L’état de nécessité concerne un danger actuel ou imminent et une action nécessaire, sans disproportion entre moyens et menace. Il n’autorise pas toutes les initiatives. Prévenir les secours, éloigner les tiers et fournir une localisation exploitable sont déjà des actions concrètes.",
+          "easy_glossary": [
+            {
+              "term": "Danger imminent",
+              "definition": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "term": "Assistance",
+              "definition": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "term": "Limite de compétence",
+              "definition": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-03-q2",
+          "title": "Relier les mots à leur définition",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Pour chaque mot, choisissez la bonne définition.",
+          "pairs": [
+            {
+              "id": "aps62-02-03-pair0",
+              "left": "Danger imminent",
+              "right": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "id": "aps62-02-03-pair1",
+              "left": "Assistance",
+              "right": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "id": "aps62-02-03-pair2",
+              "left": "Limite de compétence",
+              "right": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ],
+          "explanation": "Danger imminent : Danger qui peut se produire très prochainement. Assistance : Aide apportée directement ou en faisant intervenir les secours. Limite de compétence : Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+        },
+        {
+          "id": "aps62-02-03-transfert",
+          "title": "Une autre situation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.03",
+            "title": "Nécessité, assistance et limites de compétence",
+            "kind": "transfer",
+            "case": "Un responsable vous demande de consulter le dossier médical de la personne sur un ordinateur ouvert. Quel autre moyen permet de transmettre les faits utiles ?",
+            "model": "L’assistance suppose d’agir ou de provoquer un secours dans les conditions prévues, sans exposer inutilement soi-même ou autrui. L’état de nécessité concerne un danger actuel ou imminent et une action nécessaire, sans disproportion entre moyens et menace. Il n’autorise pas toutes les initiatives. Prévenir les secours, éloigner les tiers et fournir une localisation exploitable sont déjà des actions concrètes. Le message donne le site, l’accès, le local, le nombre de personnes visibles, les signes constatés, le danger possible et les mesures prises. L’agent ne pose pas de diagnostic et n’entre pas dans une atmosphère non maîtrisée. Il fait accueillir les secours et limite les prises d’images sans engager une confiscation improvisée.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "practice": {
+            "revision": "20261006-aps62-v5",
+            "title": "Changer de contexte · Aider sans ajouter un danger évitable",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Ouvrir le dossier puisqu’un responsable le demande."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Transmettre aux secours les signes observés et les informations spontanément utiles, sans consulter ce dossier médical."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Copier le dossier sur un téléphone personnel pour l’envoyer."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Transmettre aux secours les signes observés et les informations spontanément utiles, sans consulter ce dossier médical. L’assistance suppose d’agir ou de provoquer un secours dans les conditions prévues, sans exposer inutilement soi-même ou autrui. L’état de nécessité concerne un danger actuel ou imminent et une action nécessaire, sans disproportion entre moyens et menace. Il n’autorise pas toutes les initiatives. Prévenir les secours, éloigner les tiers et fournir une localisation exploitable sont déjà des actions concrètes.",
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes."
+                }
+              },
+              {
+                "id": "application",
+                "kind": "single",
+                "prompt": "Un local dégage des fumées et une personne semble à l'intérieur. Quelle première combinaison est adaptée ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Alerter les secours, transmettre l'emplacement et appliquer la mise en sécurité prévue sans s'exposer aux fumées."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Attendre une preuve certaine de blessure avant de prévenir."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Entrer seul pour vérifier avant tout appel."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "L'incertitude sur l'état de la personne n'impose pas d'attendre pour alerter. L'aide doit être organisée en tenant compte du danger pour la victime et les intervenants.",
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes."
+                }
+              }
+            ]
+          },
+          "easy_glossary": [
+            {
+              "term": "Danger imminent",
+              "definition": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "term": "Assistance",
+              "definition": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "term": "Limite de compétence",
+              "definition": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-03-etude",
+          "title": "Comparer deux chronologies de défense",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 14,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v5",
+            "title": "Comparer deux chronologies de défense",
+            "journal": false,
+            "documents": [
+              {
+                "title": "Éléments concordants",
+                "text": "Les deux récits situent une tentative de coup puis un retrait.",
+                "rows": [
+                  [
+                    "14 h 06",
+                    "Une personne tente de frapper une salariée."
+                  ],
+                  [
+                    "14 h 07",
+                    "La personne recule et s’éloigne ; aucune nouvelle attaque n’est décrite."
+                  ]
+                ]
+              },
+              {
+                "title": "Récit A",
+                "text": "L’agent décrit une action de protection pendant la tentative de coup, puis l’arrêt de cette action lorsque la personne s’éloigne.",
+                "rows": [
+                  [
+                    "À préciser",
+                    "Moyens employés, danger perçu et possibilités au moment de l’action."
+                  ]
+                ]
+              },
+              {
+                "title": "Récit B",
+                "text": "Un témoin décrit une poursuite suivie d’un coup à 14 h 09.",
+                "rows": [
+                  [
+                    "Propos rapporté",
+                    "« Il fallait lui apprendre à respecter le personnel. »"
+                  ],
+                  [
+                    "Limite",
+                    "La contradiction entre les récits reste à examiner."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "choix-1",
+                "kind": "single",
+                "prompt": "Quelle différence est déterminante entre A et B ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le fait que le témoin soit arrivé avant la fin de la vacation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le nombre de phrases dans chaque récit."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Le lien temporel entre l’action et l’attaque, ainsi que son objectif."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Une action pour protéger face à une attaque et une action punitive après le retrait ne s’analysent pas de la même façon.",
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes."
+                }
+              },
+              {
+                "id": "choix-2",
+                "kind": "single",
+                "prompt": "Que peut-on conclure du récit A seul ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucune action de protection n’est possible dans un accueil."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Toute action appelée protection est automatiquement justifiée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Il faut encore examiner nécessité, proportion et circonstances ; le titre « protection » ne suffit pas."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Le récit donne des repères mais ne tranche pas toutes les conditions juridiques.",
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes."
+                }
+              },
+              {
+                "id": "choix-3",
+                "kind": "single",
+                "prompt": "Comment traiter la contradiction ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Supprimer le témoin qui met l’agent en difficulté."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Fusionner les récits pour supprimer le désaccord."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Conserver les deux sources et rechercher les éléments permettant de préciser la chronologie."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La fiabilité du dossier exige de conserver les sources et les incertitudes.",
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Porter assistance n'impose pas un geste dangereux ou hors compétence. L'alerte et la protection des tiers constituent des actions utiles quand une intervention directe créerait d'autres victimes."
+                }
+              },
+              {
+                "prompt": "Rattachez chaque question à son objet principal.",
+                "kind": "matching",
+                "options": [
+                  {
+                    "id": "0",
+                    "text": "Pénal"
+                  },
+                  {
+                    "id": "1",
+                    "text": "Civil"
+                  },
+                  {
+                    "id": "2",
+                    "text": "Disciplinaire"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Une infraction a-t-elle été commise ?",
+                    "answer": "0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Quel dommage doit être réparé ?",
+                    "answer": "1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Les obligations professionnelles ont-elles été respectées ?",
+                    "answer": "2"
+                  }
+                ],
+                "explanation": "Ces cadres peuvent coexister ; les associer ne préjuge pas de leur issue.",
+                "id": "classement",
+                "remediation": {
+                  "prompt": "Un agent apprend qu'une agression grave est sur le point de se produire dans un secteur proche et peut alerter sans danger. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Se taire parce qu'il n'a pas vu lui-même tous les protagonistes."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Prévenir immédiatement les autorités et son responsable avec les faits disponibles."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Prévenir immédiatement les autorités et son responsable avec les faits disponibles.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "02.03",
+            "title": "Comparer deux chronologies de défense",
+            "case": "Deux récits décrivent une altercation à un accueil. Ils diffèrent sur le moment où une action a eu lieu. Comparez-les sans décider vous-même de la qualification judiciaire.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Danger imminent",
+              "definition": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "term": "Assistance",
+              "definition": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "term": "Limite de compétence",
+              "definition": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ]
+        },
+        {
+          "id": "aps62-02-03-synthese",
+          "title": "À retenir",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "02.03",
+            "title": "Nécessité, assistance et limites de compétence",
+            "kind": "recap",
+            "decision": "Aider ne signifie pas improviser un geste dangereux. L'agent décrit la situation, protège ce qui peut l'être sans risque et sollicite le bon intervenant. L'urgence ne supprime pas toutes les limites.",
+            "reason": "",
+            "pitfall": "Entrer sans analyse pour prouver que vous portez assistance.",
+            "cards": [
+              {
+                "front": "Danger imminent",
+                "back": "Danger qui peut se produire très prochainement."
+              },
+              {
+                "front": "Assistance",
+                "back": "Aide apportée directement ou en faisant intervenir les secours."
+              },
+              {
+                "front": "Limite de compétence",
+                "back": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.11",
+                "page": 95
+              },
+              {
+                "ref": "02.14",
+                "page": 101
+              }
+            ],
+            "instruction": "Si un point reste difficile, relisez le cours ou refaites l’exercice concerné.",
+            "edition": "2026-10-06",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Danger imminent",
+              "definition": "Danger qui peut se produire très prochainement."
+            },
+            {
+              "term": "Assistance",
+              "definition": "Aide apportée directement ou en faisant intervenir les secours."
+            },
+            {
+              "term": "Limite de compétence",
+              "definition": "Ce que l'on ne sait pas ou n'est pas autorisé à réaliser."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-02-01-comprendre",
+    "aps62-02-01-memoriser",
+    "aps62-02-01-atelier",
+    "aps62-02-01-q1",
+    "aps62-02-01-q2",
+    "aps62-02-01-transfert",
+    "aps62-02-01-synthese",
+    "aps62-02-02-comprendre",
+    "aps62-02-02-memoriser",
+    "aps62-02-02-atelier",
+    "aps62-02-02-q1",
+    "aps62-02-02-q2",
+    "aps62-02-02-transfert",
+    "aps62-02-02-synthese",
+    "aps62-02-03-comprendre",
+    "aps62-02-03-memoriser",
+    "aps62-02-03-atelier",
+    "aps62-02-03-q1",
+    "aps62-02-03-q2",
+    "aps62-02-03-transfert",
+    "aps62-02-03-etude",
+    "aps62-02-03-synthese"
+  ],
+  "counts": {
+    "sections": 3,
+    "activities": 22,
+    "scored_activities": 6,
+    "required_videos": 3,
+    "workbooks": 0,
+    "assets": 15,
+    "interactive_workshops": 7,
+    "journal_workshops": 0,
+    "document_studies": 1
+  },
+  "assets": [
+    "media/aps62/repere-02.09.webp",
+    "media/aps62/repere-02.10.webp",
+    "media/aps62/repere-02.11.webp",
+    "media/aps62/repere-02.14.webp",
+    "media/aps62/repere-02.16.webp",
+    "media/aps62/v2/module-02.webp",
+    "media/aps62/v5/aps62-02-01.jpg",
+    "media/aps62/v5/aps62-02-01.mp4",
+    "media/aps62/v5/aps62-02-01.vtt",
+    "media/aps62/v5/aps62-02-02.jpg",
+    "media/aps62/v5/aps62-02-02.mp4",
+    "media/aps62/v5/aps62-02-02.vtt",
+    "media/aps62/v5/aps62-02-03.jpg",
+    "media/aps62/v5/aps62-02-03.mp4",
+    "media/aps62/v5/aps62-02-03.vtt"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-02",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-02.webp",
+  "interaction_revision": "20261006-aps62-v5",
+  "reading_revision": "plain-language-v1"
+}
