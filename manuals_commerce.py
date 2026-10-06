@@ -20,6 +20,7 @@ ADMIN_EMAIL = "clement@integraleacademy.com"
 VAT_RATES = {"0", "2.1", "5.5", "10", "20"}
 EXEMPTIONS = {"S293B", "S261", "S262", "S262.1", "S259", "S283"}
 PAYMENT_LABELS = {"unpaid": "À régler", "paid": "Payée", "partially_paid": "Partiellement réglée", "canceled": "Facture annulée", "draft": "Facture en préparation"}
+PAYMENT_SCOPES = ("client_invoices.read", "payment_link.read", "payment_link.write")
 
 
 class SetupRequired(Exception):
@@ -32,6 +33,28 @@ class ReviewRequired(Exception):
 
 def settings_from(data):
     return copy.deepcopy(data.get("manuals_commerce_settings") or {})
+
+
+def configuration_status(host, data, order=None):
+    """Read local prerequisites without contacting Qonto or starting billing."""
+    settings = settings_from(data)
+    taxes = (order or {}).get("commerce", {}).get("taxes") or {}
+    kinds = {line["kind"] for line in order["items"]} if order else {"manual", "usb"}
+    missing_taxes = []
+    for kind in sorted(kinds):
+        tax = taxes.get(kind) or {}
+        rate = tax.get("rate", settings.get(kind + "_vat"))
+        exemption = tax.get("exemption", settings.get(kind + "_exemption"))
+        if rate not in VAT_RATES or (rate == "0" and exemption not in EXEMPTIONS):
+            missing_taxes.append("manuels imprimés" if kind == "manual" else "supports PowerPoint sur clé USB")
+    return {
+        "api_configured": host._qonto_is_configured(),
+        "iban_configured": bool(os.environ.get("QONTO_IBAN", "").strip()),
+        "missing_taxes": missing_taxes,
+        "payment_authorized": host._qonto_oauth_connected(data) and all(
+            host._qonto_oauth_has_scope(scope, data) for scope in PAYMENT_SCOPES
+        ),
+    }
 
 
 def validate_settings(form):
@@ -137,7 +160,14 @@ def _assert_invoice(order, invoice):
     client = invoice.get("client") or {}
     if str(invoice.get("client_id") or client.get("id") or "") != order["commerce"]["client_id"]:
         raise ReviewRequired("Le client de la facture Qonto ne correspond pas.")
-    if invoice.get("currency") != "EUR" or _invoice_total(invoice) != order["total_cents"]:
+    # Qonto's invoice response puts currency in total_amount, unlike the
+    # creation payload. Reject missing or conflicting currencies as before.
+    total_amount = invoice.get("total_amount") or {}
+    currencies = [value for value in (
+        invoice.get("currency"),
+        total_amount.get("currency") if isinstance(total_amount, dict) else None,
+    ) if value]
+    if not currencies or any(value != "EUR" for value in currencies) or _invoice_total(invoice) != order["total_cents"]:
         raise ReviewRequired("Le total calculé par Qonto diffère du total TTC de la commande. Vérifiez le brouillon avant toute émission.")
 
 
@@ -227,6 +257,9 @@ def _ensure_payment_link(host, order, invoice):
     if state.get("payment_status") == "partially_paid":
         _save(host, order, payment_url="")
         raise ReviewRequired("Un règlement partiel a été constaté. Vérifiez le solde et le lien de paiement dans Qonto.")
+    data = host.load_data(run_background_tasks=False)
+    if not host._qonto_oauth_connected(data) or not all(host._qonto_oauth_has_scope(scope, data) for scope in PAYMENT_SCOPES):
+        raise SetupRequired("La facture est créée. Autorisez les liens de paiement Qonto depuis les réglages de facturation pour permettre le règlement en ligne.")
     # Invoice API keys and payment OAuth credentials must belong to the same
     # merchant. Prove the OAuth grant can read this exact issued invoice.
     authorized_invoice = host._qonto_invoice_payload(host._qonto_request("GET", "/v2/client_invoices/" + invoice["id"], use_oauth=True))

@@ -166,6 +166,9 @@ def register(host):
                 return redirect(url_for("admin_login", next=url_for("manuals_shop.home")))
             if not host._is_external_partner_session():
                 if host._is_super_admin_session():
+                    if view.__name__ == "order_detail":
+                        order = find_order(host.load_data(), kwargs["order_id"])
+                        return redirect(url_for("manuals_shop.admin_order", partner_id=order["partner_id"], order_id=order["id"]))
                     return redirect(url_for("manuals_shop.admin_orders"))
                 abort(403)
             if session.get("admin_role") == "viewer" and request.method == "POST":
@@ -480,8 +483,9 @@ def register(host):
     @host.admin_login_required
     @host.require_super_admin
     def admin_orders():
-        orders = sorted((o for o in host.load_data().get("manual_orders", []) if o.get("status") != "draft"), key=lambda o: o.get("submitted_at", ""), reverse=True)
-        return page("admin_orders.html", orders=orders, staff=True, billing_configured=bool(commerce.settings_from(host.load_data())))
+        data = host.load_data()
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("status") != "draft"), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        return page("admin_orders.html", orders=orders, staff=True, configuration=commerce.configuration_status(host, data))
 
     @bp.route("/admin/commandes-manuels/<partner_id>/<order_id>", methods=["GET", "POST"])
     @host.admin_login_required
@@ -515,10 +519,11 @@ def register(host):
             host._atomic_update_data(update, partner_id=partner_id)
             flash("Le statut de la commande a été mis à jour.", "success")
             return redirect(url_for("manuals_shop.admin_order", partner_id=partner_id, order_id=order_id), code=303)
-        order = find_order(host.load_data(), order_id)
+        data = host.load_data()
+        order = find_order(data, order_id)
         if order["partner_id"] != partner_id or order["status"] == "draft":
             abort(404)
-        return page("order.html", order=order, partner=order["centre"], staff=True)
+        return page("order.html", order=order, partner=order["centre"], staff=True, configuration=commerce.configuration_status(host, data, order))
 
     @bp.route("/admin/commandes-manuels/reglages", methods=["GET", "POST"])
     @host.admin_login_required
@@ -546,8 +551,8 @@ def register(host):
                 return redirect(url_for("manuals_shop.commerce_settings"), code=303)
             except ValueError as exc:
                 errors = [str(exc)]
-        scopes_ok = all(host._qonto_oauth_has_scope(s, data) for s in ("payment_link.read", "payment_link.write"))
-        return page("commerce_settings.html", staff=True, settings=settings, errors=errors, api_configured=host._qonto_is_configured(), iban_configured=bool(os.environ.get("QONTO_IBAN")), payment_authorized=host._qonto_oauth_connected(data) and scopes_ok, payment_callback=base_url(host) + url_for("manuals_shop.payment_connection_callback")), (400 if errors else 200)
+        configuration = commerce.configuration_status(host, data)
+        return page("commerce_settings.html", staff=True, settings=settings, errors=errors, **configuration, payment_callback=base_url(host) + url_for("manuals_shop.payment_connection_callback")), (400 if errors else 200)
 
     @bp.get("/admin/commandes-manuels/connexion-paiement")
     @host.admin_login_required
