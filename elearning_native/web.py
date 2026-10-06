@@ -531,6 +531,7 @@ def create_native_elearning_blueprint(
                 "required": bool(video.get("required")),
                 "duration_seconds": video.get("duration_seconds") or 0,
                 "captions": asset_url(asset_token, course_id, str(video['captions'])) if video.get('captions') else '',
+                "course_only": bool(video.get("course_only")),
             }
         return public_block
 
@@ -551,6 +552,11 @@ def create_native_elearning_blueprint(
         }
         if activity.get('practice'):
             public['practice'] = public_practice(activity['practice'])
+        if isinstance(activity.get('easy_glossary'), list):
+            public['easy_glossary'] = [
+                {'term': str(entry.get('term') or ''), 'definition': str(entry.get('definition') or '')}
+                for entry in activity['easy_glossary'] if isinstance(entry, Mapping)
+            ]
         if isinstance(activity.get('vtc'), Mapping):
             def prepare_vtc(value):
                 if isinstance(value, dict): return {k: prepare_vtc(v) for k,v in value.items()}

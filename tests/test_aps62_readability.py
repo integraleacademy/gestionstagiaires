@@ -7,6 +7,7 @@ import unittest
 from scripts.aps62_v5.captions import make_cues, wrap_caption
 from scripts.aps62_v5.content import courses
 from elearning_native.academy import ROOT, curriculum_manifest, load_bundled_course
+from tests import test_native_elearning_web as web_tests
 
 
 class CaptionTests(unittest.TestCase):
@@ -64,6 +65,27 @@ class ReadabilityTests(unittest.TestCase):
                     lines = cue.strip().splitlines()[1:]
                     self.assertLessEqual(len(lines), 2)
                     self.assertTrue(all(len(line) <= 44 for line in lines))
+
+
+class ReadabilityWebTests(unittest.TestCase):
+    setUp = web_tests.NativeElearningWebTests.setUp
+    tearDown = web_tests.NativeElearningWebTests.tearDown
+    _admin_login = web_tests.NativeElearningWebTests._admin_login
+
+    def test_word_help_and_video_label_survive_the_public_view_boundary(self):
+        self._admin_login()
+        url = '/admin/elearning/courses/academy-aps62-01/preview'
+        for activity in ('comprendre', 'q1', 'atelier'):
+            response = self.client.get(url, query_string={'activity': 'aps62-01-01-' + activity})
+            self.assertEqual(response.status_code, 200)
+            page = response.get_data(as_text=True)
+            self.assertIn('class="aps-word-help"', page)
+            self.assertIn('Besoin d’aide avec les mots du cours ?', page)
+            self.assertIn('Travail confié à l&#39;agent, dans des limites précises.', page)
+        video = self.client.get(url, query_string={'activity': 'aps62-01-01-memoriser'}).get_data(as_text=True)
+        self.assertIn('Revoir les mots du cours', video)
+        self.assertIn('Un agent de sécurité protège des personnes et des biens.', video)
+        self.assertNotIn('Mettez la vidéo en pause', video)
 
 
 if __name__ == '__main__':
