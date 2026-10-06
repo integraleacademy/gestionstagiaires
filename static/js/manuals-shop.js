@@ -25,10 +25,13 @@
   window.addEventListener('pageshow', () => document.querySelectorAll('[data-submit]').forEach(button => { button.disabled = false; }));
   const pending = document.querySelector('[data-order-pending]');
   if (pending) {
-    const key = 'order-wait-' + pending.dataset.orderPending;
+    const key = 'order-wait-' + pending.dataset.orderPending + '-' + pending.dataset.orderPhase;
     const started = Number(sessionStorage.getItem(key)) || Date.now();
     sessionStorage.setItem(key, String(started));
-    if (Date.now() - started < 120000) setTimeout(() => location.reload(), 12000);
+    if (Date.now() - started < 120000) setTimeout(() => location.reload(), 5000);
+    document.querySelector('[data-payment-link]')?.addEventListener('click', () => {
+      window.addEventListener('focus', () => { sessionStorage.removeItem(key); location.reload(); }, { once: true });
+    });
   }
   const form = document.querySelector('[data-order-form]');
   if (!form) return;

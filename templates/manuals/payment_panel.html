@@ -1,10 +1,47 @@
-{% set flow = order.get('commerce',{}) %}
-<section class="form-card payment-panel" {% if flow.get('status') in ['pending','processing'] %}data-order-pending="{{ order.id }}"{% endif %}>
-<div class="section-heading"><div><span class="eyebrow blue">FACTURE ET RÈGLEMENT</span><h2>{{ 'Votre commande est réglée.' if flow.get('payment_status') == 'paid' else 'Votre facture et votre règlement' }}</h2></div>{% if flow.get('payment_status') %}<span class="status">{{ payment_labels.get(flow.payment_status,'En cours') }}</span>{% endif %}</div>
-{% if flow.get('invoice_number') %}<p>Facture <strong>{{ flow.invoice_number }}</strong> · {{ order.total_cents|manuals_money }} TTC{% if flow.get('payment_status') == 'partially_paid' %}<br>Reste à régler : <strong>{{ flow.remaining_cents|manuals_money }}</strong>{% endif %}</p>{% endif %}
-{% if staff and configuration is defined %}{% include 'manuals/_billing_activation.html' %}{% endif %}
-{% if flow.get('status') == 'payment_pending' %}<p class="muted">Votre facture est disponible ci-dessous. Le paiement en ligne est en cours d’activation. Vous recevrez un e-mail dès qu’il sera disponible.</p>{% elif flow.get('status') == 'needs_setup' %}<p class="muted">{% if flow.get('invoice_status') in ['unpaid','paid'] %}Votre facture est disponible ci-dessous. Le paiement en ligne attend la fin de sa configuration par notre équipe.{% else %}Votre commande est enregistrée. La facturation et le paiement en ligne sont en attente d’activation par notre équipe. Vous recevrez un e-mail dès que le règlement sera disponible.{% endif %}</p>{% elif flow.get('status') in ['needs_review','retry'] %}<p class="muted">{{ 'Votre commande est enregistrée. La finalisation du règlement nécessite une intervention de notre équipe.' if flow.get('invoice_id') else 'Votre commande est enregistrée. Notre équipe prépare votre facture et vous transmettra le lien de règlement.' }}</p>{% elif flow.get('status') in ['pending','processing'] %}<p class="muted" role="status">Préparation de votre facture et envoi des confirmations… Le suivi s’actualise automatiquement pendant deux minutes.</p>{% elif not flow %}<p class="muted">Cette commande a été enregistrée avant l’activation de la facturation automatique. Contactez notre équipe pour son règlement.</p>{% endif %}
-<div class="action-row">{% if flow.get('payment_url') and flow.get('payment_status') == 'unpaid' and flow.get('payment_link_status') == 'open' and order.status != 'cancelled' %}<a class="button primary" href="{{ flow.payment_url }}" target="_blank" rel="noopener noreferrer">Régler en ligne ↗</a>{% endif %}{% if flow.get('invoice_url') and flow.get('invoice_status') != 'canceled' %}<a class="button secondary" href="{{ flow.invoice_url }}" target="_blank" rel="noopener noreferrer">Consulter ma facture ↗</a>{% endif %}{% if not staff and flow.get('invoice_id') and flow.get('status') == 'ready' %}<form method="post" action="{{ url_for('manuals_shop.refresh_order',order_id=order.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary" type="submit">Actualiser le paiement</button></form>{% endif %}</div>
-{% if flow.get('synced_at') %}<p class="small">Dernière vérification : {{ flow.synced_at|frdatetime }}. Le règlement est confirmé après vérification auprès de Qonto.</p>{% endif %}
-{% if staff %}<hr><h3>Traitement de la commande</h3>{% if flow.get('error') %}<div class="notice warning">{{ flow.error }}</div>{% endif %}<div class="email-status-grid">{% for key,label in [('confirmation_customer','Confirmation au centre'),('notification_admin','Notification à Clément'),('invoice_customer','Facture PDF au centre'),('payment_customer','Lien de paiement au centre')] %}{% set mail = flow.get('emails',{}).get(key,{}) %}<div><strong>{{ label }}</strong><span>{% if key in ['invoice_customer', 'payment_customer'] and flow.get('invoice_status') == 'canceled' and mail.get('status') != 'sent' %}Non envoyé : facture annulée{% elif key == 'payment_customer' and flow.get('emails',{}).get('invoice_customer',{}).get('status') == 'sent' and flow.get('emails',{}).get('invoice_customer',{}).get('payment_link_included') %}Inclus dans l’e-mail de facture{% else %}{{ {'sent':'Envoyé','failed':'Échec — à relancer','sending':'En cours'}.get(mail.get('status'),'En attente') }}{% endif %}</span>{% if mail.get('attachment_name') %}<small>Pièce jointe : {{ mail.attachment_name }}</small>{% endif %}{% if mail.get('attempted_at') %}<small>{{ mail.attempted_at|frdatetime }}</small>{% endif %}</div>{% endfor %}</div><div class="action-row"><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="retry"><button class="button primary" type="submit">Relancer le traitement</button></form><a class="button secondary" href="{{ url_for('manuals_shop.commerce_settings') }}">Réglages de facturation</a></div><p class="small">Les e-mails déjà envoyés et la facture existante sont conservés. En cas de création Qonto incertaine, la relance recherche la facture avant de poursuivre.</p>{% endif %}
+{% set flow = order.get('commerce', {}) %}
+{% set paid = flow.get('payment_status') == 'paid' %}
+<section class="form-card payment-panel" {% if flow.get('status') in ['pending','processing','waiting_payment'] %}data-order-pending="{{ order.id }}" data-order-phase="{{ flow.get('status') }}"{% endif %}>
+  <div class="section-heading"><div><span class="eyebrow blue">PAIEMENT ET FACTURE</span><h2>{{ 'Votre commande est réglée.' if paid else 'Régler ma commande' }}</h2></div>{% if flow.get('payment_status') %}<span class="status">{{ payment_labels.get(flow.payment_status, 'En cours') }}</span>{% endif %}</div>
+  <p><strong>{{ order.total_cents|manuals_money }} TTC</strong>{% if flow.get('invoice_number') %} · Facture <strong>{{ flow.invoice_number }}</strong>{% endif %}{% if flow.get('payment_status') == 'partially_paid' and flow.get('remaining_cents') is not none %}<br>Reste à régler : <strong>{{ flow.remaining_cents|manuals_money }}</strong>{% endif %}</p>
+  {% if staff and configuration is defined %}{% include 'manuals/_billing_activation.html' %}{% endif %}
+  {% if flow.get('invoice_status') == 'canceled' %}
+    <p class="muted">Cette facture a été annulée dans Qonto.</p>
+  {% elif paid %}
+    <p class="muted">{% if flow.get('invoice_status') == 'paid' %}Votre paiement est confirmé. Retrouvez votre facture ci-dessous et par e-mail.{% else %}Votre paiement est confirmé. Votre facture est en préparation ; elle sera disponible ici et envoyée par e-mail.{% endif %}</p>
+  {% elif flow.get('payment_status') == 'processing' %}
+    <p class="muted" role="status">Votre paiement est en cours de confirmation. Votre facture sera créée une fois le règlement confirmé.</p>
+  {% elif flow.get('status') == 'waiting_payment' %}
+    <p class="muted">Réglez votre commande en ligne grâce au bouton ci-dessous. Votre facture sera créée après confirmation du paiement, envoyée par e-mail et disponible dans votre espace.</p>
+  {% elif flow.get('status') in ['payment_pending','needs_setup'] %}
+    <p class="muted">Votre commande est enregistrée. Le paiement en ligne est en cours d’activation ; vous recevrez son lien par e-mail dès qu’il sera disponible. Votre facture sera créée uniquement après le paiement.</p>
+  {% elif flow.get('status') in ['needs_review','retry'] %}
+    <p class="muted">Votre commande est enregistrée. Notre équipe vérifie la disponibilité du paiement en ligne. Votre facture sera créée uniquement après confirmation du règlement.</p>
+  {% elif flow.get('status') in ['pending','processing'] %}
+    <p class="muted" role="status">Préparation de votre paiement sécurisé… Le bouton apparaîtra automatiquement ici. Votre facture sera créée uniquement après le paiement.</p>
+  {% elif not flow %}
+    <p class="muted">Cette commande a été enregistrée avant l’activation du paiement automatique. Contactez notre équipe pour son règlement.</p>
+  {% endif %}
+  <div class="action-row">
+    {% if flow.get('payment_url') and flow.get('payment_status') == 'unpaid' and flow.get('payment_link_status') == 'open' and flow.get('status') in ['ready','waiting_payment'] and order.status != 'cancelled' %}<a class="button primary" href="{{ flow.payment_url }}" target="_blank" rel="noopener noreferrer" data-payment-link>Régler en ligne ↗</a>{% endif %}
+    {% if flow.get('invoice_url') and flow.get('invoice_status') != 'canceled' %}<a class="button secondary" href="{{ flow.invoice_url }}" target="_blank" rel="noopener noreferrer">Consulter ma facture ↗</a>{% endif %}
+    {% if not staff and (flow.get('payment_id') or flow.get('invoice_id')) and flow.get('status') in ['ready','waiting_payment'] %}<form method="post" action="{{ url_for('manuals_shop.refresh_order',order_id=order.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary" type="submit">Actualiser le paiement</button></form>{% endif %}
+  </div>
+  {% if flow.get('synced_at') %}<p class="small">Dernière vérification : {{ flow.synced_at|frdatetime }}. Le règlement est confirmé après vérification auprès de Qonto.</p>{% endif %}
+  {% if staff %}
+    <hr><h3>Traitement de la commande</h3>
+    {% if flow.get('error') %}<div class="notice warning">{{ flow.error }}</div>{% endif %}
+    <div class="email-status-grid">
+      {% for key,label in [('confirmation_customer','Confirmation au centre'),('notification_admin','Notification à Clément'),('payment_customer','Lien de paiement au centre'),('invoice_customer','Facture PDF au centre')] %}
+      {% set mail = flow.get('emails',{}).get(key,{}) %}
+      <div><strong>{{ label }}</strong><span>
+        {% if key in ['invoice_customer','payment_customer'] and flow.get('invoice_status') == 'canceled' and mail.get('status') != 'sent' %}Non envoyé : facture annulée
+        {% elif key == 'invoice_customer' and not paid and not mail.get('status') %}Après confirmation du paiement
+        {% elif key == 'payment_customer' and flow.get('emails',{}).get('invoice_customer',{}).get('status') == 'sent' and flow.get('emails',{}).get('invoice_customer',{}).get('payment_link_included') %}Inclus dans l’e-mail de facture
+        {% else %}{{ {'sent':'Envoyé','failed':'Échec — à relancer','sending':'En cours'}.get(mail.get('status'),'En attente') }}{% endif %}
+      </span>{% if mail.get('attachment_name') %}<small>Pièce jointe : {{ mail.attachment_name }}</small>{% endif %}{% if mail.get('attempted_at') %}<small>{{ mail.attempted_at|frdatetime }}</small>{% endif %}</div>
+      {% endfor %}
+    </div>
+    <div class="action-row"><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="action" value="retry"><button class="button primary" type="submit">Relancer le traitement</button></form><a class="button secondary" href="{{ url_for('manuals_shop.commerce_settings') }}">Réglages de facturation</a></div>
+    <p class="small">La facture est créée uniquement après confirmation du paiement. Une relance conserve les liens, les factures et les e-mails existants.</p>
+  {% endif %}
 </section>
