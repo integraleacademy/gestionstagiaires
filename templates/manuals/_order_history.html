@@ -1,0 +1,20 @@
+<section class="orders-section" id="mes-commandes">
+  <span class="eyebrow blue">VOTRE HISTORIQUE</span>
+  <h2>Mes commandes et factures</h2>
+  <p class="muted">Retrouvez vos factures dès leur émission, même si le paiement en ligne est encore en cours d’activation.</p>
+  {% if orders %}
+  <div class="table-scroll"><table>
+    <thead><tr><th>Commande / date</th><th>Préparation</th><th>Total TTC</th><th>Facture</th><th>Règlement</th><th></th></tr></thead>
+    <tbody>{% for order in orders %}{% set flow = order.get('commerce', {}) %}
+      <tr>
+        <td><strong>{{ order.reference }}</strong><small>{{ order.submitted_at|frdatetime }}</small></td>
+        <td><span class="status status-{{ order.status }}">{{ statuses.get(order.status, order.status) }}</span></td>
+        <td>{{ order.total_cents|manuals_money }}</td>
+        <td>{% if flow.get('invoice_url') %}<a class="text-link" href="{{ flow.invoice_url }}" target="_blank" rel="noopener noreferrer">Facture {{ flow.get('invoice_number', '') }} ↗</a><small>Consulter et télécharger</small>{% else %}<span class="muted">{{ 'En préparation' if flow else 'Sur demande' }}</span>{% endif %}</td>
+        <td>{% if flow.get('payment_url') and flow.get('payment_status') == 'unpaid' and flow.get('payment_link_status') == 'open' and order.status != 'cancelled' %}<a class="text-link" href="{{ flow.payment_url }}" target="_blank" rel="noopener noreferrer">Régler en ligne ↗</a>{% else %}{{ payment_labels.get(flow.get('payment_status'), 'En attente') }}{% if flow.get('invoice_url') and flow.get('payment_status') == 'unpaid' and flow.get('status') in ['needs_setup', 'payment_pending'] %}<small>Paiement en ligne en cours d’activation</small>{% endif %}{% endif %}</td>
+        <td><a class="text-link" href="{{ url_for('manuals_shop.order_detail', order_id=order.id) }}">Voir la commande →</a></td>
+      </tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty-state"><span aria-hidden="true">↗</span><div><h3>Votre première commande commence ici.</h3><p>Vos commandes et vos factures apparaîtront dans cet espace.</p></div></div>{% endif %}
+</section>
