@@ -9,6 +9,7 @@ import copy
 import json
 from functools import lru_cache
 from pathlib import Path
+from .practice import REVISION, adapt_course
 
 ROOT = Path(__file__).parent / 'aps62'
 
@@ -19,7 +20,11 @@ def _manifest():
 
 
 def curriculum_manifest():
-    return copy.deepcopy(_manifest())
+    manifest = copy.deepcopy(_manifest())
+    manifest['workbook_count'] = 0
+    manifest['interactive_workshop_count'] = 124
+    manifest['interaction_revision'] = REVISION
+    return manifest
 
 
 def curriculum_ids():
@@ -28,7 +33,7 @@ def curriculum_ids():
 
 @lru_cache(maxsize=32)
 def _course(course_id, version):
-    return json.loads((ROOT / 'courses' / course_id / (version + '.json')).read_text(encoding='utf-8'))
+    return adapt_course(json.loads((ROOT / 'courses' / course_id / (version + '.json')).read_text(encoding='utf-8')))
 
 
 def load_bundled_course(course_id, version=None):

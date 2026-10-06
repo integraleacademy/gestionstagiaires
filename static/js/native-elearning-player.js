@@ -520,11 +520,16 @@
         actionButton.textContent = config.isLastActivity ? `${config.endLabel || 'Retour au parcours'} →` : "Continuer →";
         questionForm?.querySelectorAll("input,select").forEach((field) => { field.disabled = true; });
       } else {
+        const practice = document.querySelector('[data-aps-practice]');
         const reflection = document.getElementById('apsReflection');
         if (reflection && reflection.value.trim().length < Number(reflection.dataset.minChars)) {
           throw new Error(`Développez votre production : ${reflection.dataset.minChars} caractères minimum.`);
         }
-        const result = await postJson(config.completeUrl, reflection ? {reflection: reflection.value.trim()} : {});
+        if (practice && !window.aps62Practice) throw new Error('L’atelier est en cours de chargement. Réessayez.');
+        const payload = practice ? {practice_answers: window.aps62Practice.collectForCompletion()}
+          : reflection ? {reflection: reflection.value.trim()} : {};
+        const result = await postJson(config.completeUrl, payload);
+        if (practice) window.aps62Practice.clearDraft();
         applyProgress(result.progress);
         if (config.isLastActivity) {
           showCourseResult(result.progress, true);

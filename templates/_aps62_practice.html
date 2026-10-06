@@ -1,0 +1,39 @@
+<section class="aps-practice" data-aps-practice>
+  <header class="aps-practice-intro">
+    <span class="aps-label">À vous de jouer · {{ activity.practice.exercises|length }} exercices</span>
+    <h2>Faites vos choix, puis vérifiez</h2>
+    <p>Toutes les réponses se font en cliquant. Lisez la correction, modifiez les choix à revoir et recommencez jusqu’à trouver les bonnes réponses.</p>
+    <div class="aps-practice-chips"><span>Aucune rédaction</span><span>Correction immédiate</span><span>Essais illimités</span></div>
+    {% if activity_completed %}<p class="aps-practice-saved">Cette activité est déjà terminée. Vous pouvez vous entraîner à nouveau librement.</p>{% endif %}
+  </header>
+  <form id="apsPracticeForm">
+    {% for exercise in activity.practice.exercises %}
+    <fieldset class="aps-exercise" data-exercise-id="{{ exercise.id }}" data-kind="{{ exercise.kind }}">
+      <legend><span class="aps-exercise-number">{{ '%02d'|format(loop.index) }}</span>{{ exercise.prompt }}</legend>
+      {% if exercise.kind == 'single' %}
+      <p class="aps-exercise-instruction">Sélectionnez une réponse.</p>
+      <div class="aps-practice-options">
+        {% for option in exercise.options %}<label><input type="radio" name="aps-{{ exercise.id }}" value="{{ option.id }}"><span>{{ option.text }}</span></label>{% endfor %}
+      </div>
+      {% else %}
+      <p class="aps-exercise-instruction">{{ 'Attribuez à chaque carte sa place, de l’étape 1 à l’étape 4. Utilisez chaque numéro une seule fois.' if exercise.kind == 'order' else 'Utilisez chaque repère une seule fois.' if exercise.kind == 'matching' else 'Choisissez la catégorie de chaque carte.' }}</p>
+      <div class="aps-practice-rows">
+        {% for row in exercise.rows %}<label class="aps-practice-row"><span>{{ row.text }}</span><select data-row-id="{{ row.id }}"><option value="">Choisir…</option>{% for option in exercise.options %}<option value="{{ option.id }}">{{ option.text }}</option>{% endfor %}</select></label>{% endfor %}
+      </div>
+      {% endif %}
+      <div class="aps-exercise-feedback" data-exercise-feedback hidden></div>
+    </fieldset>
+    {% endfor %}
+    <div class="aps-practice-actions"><button type="submit" class="aps-practice-check"{% if preview_mode and not preview_can_answer %} disabled{% endif %}>Vérifier mes réponses</button><button type="button" class="aps-practice-restart">Recommencer l’atelier</button></div>
+  </form>
+  <p class="aps-practice-result" role="status" aria-live="polite" data-practice-result></p>
+  <p class="aps-small" data-practice-draft role="status">{{ 'Aucun résultat stagiaire n’est enregistré en aperçu.' if preview_mode else 'Vos réponses seront enregistrées lorsque vous terminerez l’activité.' }}</p>
+  <noscript>Activez JavaScript pour réaliser cet atelier interactif.</noscript>
+  <script id="apsPracticeConfig" type="application/json">{{ {
+    'practice': activity.practice,
+    'activityId': activity.id,
+    'courseVersion': course.version,
+    'completed': activity_completed,
+    'savedAnswers': progress.answers.get(activity.id, {}).get('practice_answers', {})
+  }|tojson }}</script>
+</section>

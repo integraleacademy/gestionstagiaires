@@ -1,4 +1,4 @@
-"""Bundled curriculum integrity and learner/admin boundaries for written work."""
+"""Bundled curriculum integrity and historical learner/admin boundaries."""
 import copy
 import html
 import json
@@ -37,7 +37,8 @@ class AcademyCatalogueTests(unittest.TestCase):
                 with self.assertRaises(CourseImportError):
                     catalog.load_course(module['id'], 'unknown-version')
             self.assertEqual(len(activities), 434)
-            self.assertEqual(sum(bool(a.get('workbook')) for a in activities), 124)
+            self.assertEqual(sum(bool(a.get('workbook')) for a in activities), 0)
+            self.assertEqual(sum(bool(a.get('practice')) for a in activities), 124)
             self.assertEqual(sum(bool(a['scored']) for a in activities), 124)
             self.assertEqual(len({a['id'] for a in activities}), 434)
         videos = json.loads((ROOT / 'video_manifest.json').read_text())
@@ -66,6 +67,8 @@ class AcademyWebTests(unittest.TestCase):
                         self.assertEqual(response.status_code, 200)
                         page = response.get_data(as_text=True)
                         self.assertNotIn('nativeElearningConfig', page)
+                        self.assertNotIn('<textarea', page)
+                        self.assertNotIn('apsReflection', page)
                         if activity == 'aps62-01-01-memoriser':
                             caption = html.unescape(re.search(r'<track[^>]+src="([^"]+)"', page).group(1))
                             video = html.unescape(re.search(r'<source src="([^"]+)"', page).group(1))
@@ -81,7 +84,9 @@ class AcademyWebTests(unittest.TestCase):
     def test_written_work_validation_persistence_and_private_review(self):
         # Place the real Academy workshop first in the isolated synthetic course,
         # so this test targets writing rather than repeating the video tests.
-        workshop = load_bundled_course('academy-aps62-01')['sections'][0]['activities'][2]
+        # The archived raw edition is used only to verify historical work stays
+        # readable. Learner-facing bundled courses now use click-only practice.
+        workshop = json.loads((ROOT / 'courses/academy-aps62-01/20261004-aps62-v2.json').read_text())['sections'][0]['activities'][2]
         course = copy.deepcopy(self.course)
         activity = course['sections'][0]['activities'][0]
         activity.update({key: workshop[key] for key in ('academy', 'workbook')})

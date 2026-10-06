@@ -40,6 +40,7 @@ from werkzeug.exceptions import Conflict
 from .videos import activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
 from .exams import ExamStore, load_exam, public_exam, grade_exam
+from .practice import public_practice, grade_practice
 
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
@@ -547,6 +548,8 @@ def create_native_elearning_blueprint(
             "prompt": str(activity.get("prompt") or ""),
             "workbook": dict(activity.get("workbook") or {}),
         }
+        if activity.get('practice'):
+            public['practice'] = public_practice(activity['practice'])
         if isinstance(activity.get('academy'), Mapping):
             # Structured content stays autoescaped by Jinja. Only declared media
             # paths are converted to the usual signed, session-bound asset URLs.
@@ -915,6 +918,15 @@ def create_native_elearning_blueprint(
         _require_csrf()
         course = preview_course(course_id)
         activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
+        if activity and activity.get('practice'):
+            payload = request.get_json(silent=True)
+            try:
+                result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None)
+            except ValueError as exc:
+                return jsonify({'ok': False, 'error': str(exc)}), 400
+            response = jsonify({'ok': True, **result})
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
         if activity is None or not activity.get("scored"):
             return jsonify({"ok": False, "error": "Question introuvable."}), 404
         payload = request.get_json(silent=True)
@@ -1458,7 +1470,7 @@ def create_native_elearning_blueprint(
         end_url = url_for("native_elearning.course_player", token=token, course_id=next_module["course_id"]) if next_module else path_url
         return render_template(
             "native_elearning_player.html",
-            course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course)},
+            course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course), "version": course['version']},
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
             section_title=str(section.get("title") or ""),
             activity=activity,
@@ -1588,6 +1600,23 @@ def create_native_elearning_blueprint(
         completed = set(progress.get("completed_activity_ids") or [])
         return all(previous in completed for previous in order[: order.index(activity_id)])
 
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/practice')
+    def activity_practice(activity_id: str) -> Any:
+        access, course, _order, _scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('practice'):
+            return jsonify({'ok': False, 'error': 'Atelier introuvable.'}), 404
+        if not can_complete(course, current_progress(access, course), activity_id):
+            return jsonify({'ok': False, 'error': 'Terminez d’abord l’activité précédente.'}), 409
+        payload = request.get_json(silent=True)
+        try:
+            result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None)
+        except ValueError as exc:
+            return jsonify({'ok': False, 'error': str(exc)}), 400
+        response = jsonify({'ok': True, **result})
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
     @blueprint.post("/api/elearning/v1/activities/<activity_id>/complete")
     def activity_complete(activity_id: str) -> Any:
         access, course, order, scored_ids = api_context()
@@ -1598,7 +1627,22 @@ def create_native_elearning_blueprint(
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
         answer = None
-        if activity.get('workbook'):
+        if activity.get('practice'):
+            if activity_id in current.get('completed_activity_ids', []):
+                # Keep prior written submissions and completed work exactly as stored.
+                answer = current.get('answers', {}).get(activity_id)
+            else:
+                payload = request.get_json(silent=True)
+                try:
+                    result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None)
+                except ValueError as exc:
+                    return jsonify({'ok': False, 'error': str(exc)}), 400
+                if not result['correct']:
+                    return jsonify({'ok': False, 'error': 'Corrigez les exercices indiqués avant de continuer.', 'practice_result': result}), 400
+                answer = {'practice_answers': result['answers'], 'practice_revision': result['revision'],
+                          'review_status': 'auto_corrected', 'practice_correct': True,
+                          'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
+        elif activity.get('workbook'):
             existing = current.get('answers', {}).get(activity_id)
             if isinstance(existing, Mapping):
                 answer = existing

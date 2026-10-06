@@ -2,7 +2,7 @@
 
 La version `20261004-aps62-v2` complète le parcours guidé de 62 h :
 
-- 15 modules, 62 dossiers et 434 activités, dont 124 productions écrites et 124 questions de cours.
+- 15 modules, 62 dossiers et 434 activités, dont 124 ateliers interactifs sans rédaction et 124 questions de cours.
 - 15 illustrations de scènes professionnelles, 15 synthèses visuelles, 15 études de cas complémentaires et 62 jeux de classement.
 - 62 capsules avec la voix de référence `fr-FR-HenriNeural`, débit `-2%`, hauteur `+0Hz`, volume `+0%`. Sous-titres français incrustés, piste WebVTT synchronisée et transcription.
 - 30 questions d’examen blanc par module (450 questions distinctes), plus une synthèse finale de 100 questions sélectionnées dans les 15 banques, à raison de 6 ou 7 par module.
@@ -18,6 +18,16 @@ Les tentatives sont conservées dans une nouvelle table additive `aps_exam_attem
 
 La v1, ses JSON et ses médias restent présents. Les parcours affectés sont liés à leur version ; ouvrir le catalogue ne réaffecte aucun stagiaire. La nouvelle édition est proposée dans le compositeur de parcours.
 
+## Mise à jour du 6 octobre : aucune rédaction demandée
+
+L’adaptation `20261006-sans-redaction` remplace les 124 productions par des ateliers à cliquer : choix de décisions, classement de cartes, associations, ordre des étapes et variantes de situations. La banque contient 434 exercices, regroupés dans ces 124 activités. Les variantes disposent de réponses spécifiques ; leurs textes sources sont dans `scripts/aps62_transfer_choices.txt`.
+
+`practice.adapt_course` applique ce mode de réponse aux deux éditions lors du chargement. Les JSON d’archive restent intacts. Les identifiants de cours, de version et d’activité, les durées, les vidéos et les questions évaluées restent stables : aucune migration de session ni remise à zéro n’est nécessaire. Les productions anciennes restent accessibles dans l’historique privé de l’administrateur et les activités déjà terminées restent acquises.
+
+Le serveur corrige chaque atelier. Une vérification d’entraînement ne crée aucun résultat et ne crédite aucun temps ; le bouton « Terminer et continuer » enregistre les choix une fois tous les exercices réussis. Les erreurs sont expliquées et les essais sont illimités. La vérification côté serveur s’applique également si un client contourne le bouton de correction. Les exercices d’entraînement ne modifient pas le barème des 124 questions du cours ni celui des examens blancs.
+
+Les brouillons de choix sont conservés dans l’onglet et séparés par parcours, activité, version et révision d’atelier. Ils sont effacés après un enregistrement réussi. Aucun champ libre, nombre de caractères minimum ou export de texte n’est proposé dans le parcours APS adapté.
+
 ## Reproduction
 
 Les textes sont dans `scripts/aps62_editorial.py`, `scripts/aps62_visuals.py` et `scripts/aps62_exam_questions*.txt`. Les illustrations fournies servent aux capsules et aux pages.
@@ -25,6 +35,7 @@ Les textes sont dans `scripts/aps62_editorial.py`, `scripts/aps62_visuals.py` et
 ```sh
 APS62_IMAGES=/chemin/illustrations APS62_WORK=/chemin/cache python scripts/render_aps62_henri.py
 python scripts/build_aps62_v2.py
+python scripts/build_aps62_practice.py
 python -m pytest tests/test_native_elearning*.py -q
 NODE_PATH=/chemin/node_modules node --test tests/test_native_elearning_*ui.cjs
 ```
