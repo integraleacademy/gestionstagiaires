@@ -506,6 +506,41 @@ def _ensure_payment_link(host, order, invoice):
         raise ReviewRequired("Le lien de paiement a expiré ou a été désactivé dans Qonto.")
 
 
+def _email_copy(order, key, *, staff=False):
+    """One set of messages for the HTML and plain-text versions of each e-mail."""
+    state = order["commerce"]
+    reference = order["reference"]
+    paid = state.get("payment_status") == "paid"
+    next_step = ""
+    if staff:
+        title = "Nouvelle commande"
+        subject = "Nouvelle commande de supports · " + reference
+        paragraphs = [order["centre"]["name"] + " vient de commander des supports de formation."]
+        preheader = "Paiement confirmé." if paid else "Commande enregistrée, paiement en attente."
+    elif key == "invoice_customer":
+        title = "Paiement confirmé"
+        subject = "Votre facture acquittée " + state.get("invoice_number", "") + " · " + reference
+        preheader = "Votre facture PDF est jointe à cet e-mail."
+        paragraphs = ["Nous avons bien reçu votre paiement.",
+                      "Votre facture acquittée " + state.get("invoice_number", "") + " est jointe à cet e-mail au format PDF. Vous pouvez également la retrouver dans votre espace organisme."]
+    elif key == "payment_customer":
+        title = "Votre commande est à régler"
+        subject = "Commande " + reference + " · paiement à effectuer"
+        preheader = "Réglez votre commande avec le bouton de paiement sécurisé."
+        paragraphs = ["Votre commande est enregistrée. Pour la régler, cliquez sur le bouton ci-dessous."]
+    else:
+        title = "Commande enregistrée"
+        subject = "Confirmation de commande · " + reference
+        preheader = "Retrouvez le récapitulatif de votre commande de supports de formation."
+        paragraphs = ["Nous avons bien enregistré votre commande. Retrouvez votre récapitulatif ci-dessous."]
+        if paid:
+            paragraphs.append("Votre paiement est confirmé. Votre facture vous sera adressée dans un e-mail séparé.")
+    if not staff and key != "invoice_customer" and not paid:
+        next_step = "Après confirmation du paiement, votre facture sera créée, envoyée par e-mail et disponible dans votre espace organisme."
+    return {"title": title, "subject": subject, "preheader": preheader, "paragraphs": paragraphs,
+            "amount_label": "Montant réglé" if paid else "Montant à régler", "next_step": next_step}
+
+
 def _send_email(host, order, key, recipient, staff=False):
     state = order["commerce"]
     emails = copy.deepcopy(state.get("emails") or {})
@@ -517,21 +552,21 @@ def _send_email(host, order, key, recipient, staff=False):
     detail_path = f"/admin/commandes-manuels/{order['partner_id']}/{order['id']}" if staff else f"/admin/manuels/commandes/{order['id']}"
     order_url = base_url(host) + detail_path
     invoice_ready = key == "invoice_customer"
-    payment_ready = key == "payment_customer"
     payment_available = bool(state.get("payment_url") and state.get("payment_status") == "unpaid" and state.get("payment_link_status") == "open")
-    subject = ("Nouvelle commande " if staff else "Votre facture est disponible · " if invoice_ready else "Le paiement en ligne est disponible · " if payment_ready else "Confirmation de commande · ") + order["reference"]
+    message = _email_copy(order, key, staff=staff)
+    subject = message["subject"]
     # Standalone email: avoid request-only CRM context processors in the worker.
-    body = host.app.jinja_env.get_template("manuals/order_email.html").render(order=order, staff=staff, invoice_ready=invoice_ready, payment_ready=payment_ready, payment_available=payment_available, order_url=order_url)
+    body = host.app.jinja_env.get_template("manuals/order_email.html").render(order=order, staff=staff, invoice_ready=invoice_ready, payment_available=payment_available, order_url=order_url, message=message)
     lines = "\n".join(f"{i['quantity']} × {i['label']} : {money(i['total_cents'])}" for i in order["items"])
-    text = f"{subject}\n{order['centre']['name']}\n{lines}\nTotal TTC : {money(order['total_cents'])}\nLivraison et personnalisation incluses.\nConsulter la commande : {order_url}"
+    text = subject + "\n\n" + "\n\n".join(message["paragraphs"])
+    text += f"\n\n{message['amount_label']} : {money(order['total_cents'])} TTC"
     if invoice_ready:
         text += "\nFacture " + state.get("invoice_number", "") + " : " + state.get("invoice_url", "")
-    if invoice_ready:
-        text += "\nVotre facture PDF est jointe à cet e-mail et reste accessible dans votre espace organisme."
-    if payment_available:
-        text += "\nRégler en ligne : " + order["commerce"]["payment_url"]
-    if not staff and not invoice_ready:
-        text += "\nVotre facture sera créée et envoyée uniquement après confirmation du paiement."
+    if payment_available and not staff and not invoice_ready:
+        text += "\nPayer " + money(order["total_cents"]) + " : " + state["payment_url"]
+    if message["next_step"]:
+        text += "\n\n" + message["next_step"]
+    text += f"\n\n{lines}\nTotal TTC : {money(order['total_cents'])}\nLivraison et personnalisation incluses.\nConsulter la commande : {order_url}"
     attachment_name = ""
     try:
         attachments = []
