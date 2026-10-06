@@ -137,7 +137,16 @@ def test_order_emails_invoice_payment_and_no_duplicates(shop, merchant):
     assert merchant["payment"]["potential_payment_methods"] == ["credit_card"]
     assert flow["emails"]["payment_customer"]["status"] == "sent"
     assert "invoice_customer" not in flow["emails"] and not merchant["pdf_downloads"]
-    assert "Régler ma commande" in shop["mails"][-1][0][2]
+    payment_mail, payment_meta = shop["mails"][-1]
+    assert "paiement à effectuer" in payment_mail[1]
+    assert "Votre commande est à régler" in payment_mail[2]
+    for content in (payment_mail[2], payment_meta["text_content"]):
+        assert "Payer 2\u202f599,00 €" in content
+        assert "Après confirmation du paiement, votre facture sera créée" in content
+        assert "paiement est confirmé" not in content
+        assert "facture acquittée" not in content and "pièce jointe" not in content
+    assert payment_mail[2].index("Payer 2\u202f599,00 €") < payment_mail[2].index("Manuel APS")
+    assert "Place à vos prochaines formations" not in payment_mail[2]
     assert not shop["mails"][-1][1]["attachments"]
     for path in ("/admin/organisme", "/admin/manuels", f"/admin/manuels/commandes/{order['id']}"):
         page = shop["client"].get(path)
@@ -155,8 +164,14 @@ def test_order_emails_invoice_payment_and_no_duplicates(shop, merchant):
     assert flow["confirmed_payment"]["link_id"] == "link-1"
     assert flow["emails"]["invoice_customer"]["status"] == "sent"
     assert base64.b64decode(shop["mails"][-1][1]["attachments"][0]["content"]).startswith(b"%PDF")
-    assert "Votre paiement est confirmé" in shop["mails"][-1][0][2] or "votre paiement est confirmé" in shop["mails"][-1][0][2]
-    assert "Régler ma commande" not in shop["mails"][-1][0][2]
+    invoice_mail, invoice_meta = shop["mails"][-1]
+    assert "facture acquittée F-2026-123" in invoice_mail[1]
+    for content in (invoice_mail[2], invoice_meta["text_content"]):
+        assert "Nous avons bien reçu votre paiement." in content
+        assert "facture acquittée F-2026-123" in content
+        assert "Montant réglé" in content
+        assert "Montant à régler" not in content and "Payer " not in content
+        assert "facture sera créée" not in content
     for path in ("/admin/organisme", "/admin/manuels", f"/admin/manuels/commandes/{order['id']}"):
         page = shop["client"].get(path)
         assert "https://pay.qonto.com/invoices/invoice-1" in page.text
@@ -260,7 +275,7 @@ def test_pending_activation_keeps_order_without_invoice_then_sends_payment_link(
     run(order)
     flow = all_data(shop)["manual_orders"][0]["commerce"]
     assert flow["status"] == "waiting_payment" and flow["emails"]["payment_customer"]["status"] == "sent"
-    assert "Régler ma commande" in shop["mails"][-1][0][2]
+    assert "Votre commande est à régler" in shop["mails"][-1][0][2]
     assert merchant["invoice"] is None and not merchant["pdf_downloads"]
     retry(order)
     assert len(shop["mails"]) == 4
