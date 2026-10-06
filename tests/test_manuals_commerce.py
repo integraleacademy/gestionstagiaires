@@ -1,3 +1,4 @@
+import base64
 import copy
 import json
 import time
@@ -43,7 +44,14 @@ def merchant(shop, monkeypatch):
     monkeypatch.setattr(host, "_qonto_oauth_connected", lambda *a: True)
     monkeypatch.setattr(host, "_qonto_oauth_has_scope", lambda *a: True)
     monkeypatch.setattr(host, "get_qonto_invoice_iban", lambda: "FR7612345678901234567890185")
-    state = {"calls": [], "invoice": None, "payment": None, "unknown_invoice": False, "wrong_total": False, "payment_disabled": False}
+    state = {"calls": [], "invoice": None, "payment": None, "unknown_invoice": False, "wrong_total": False, "payment_disabled": False, "payment_pending": False, "pdf_downloads": [], "pdf_unavailable": False}
+    def invoice_pdf(invoice_id):
+        assert not host.has_request_context()
+        state["pdf_downloads"].append(invoice_id)
+        if state["pdf_unavailable"]:
+            raise host.QontoPdfUnavailableError("PDF en cours de génération", 409)
+        return b"%PDF-1.4\ninvoice fixture\n%%EOF", "F-2026-123.pdf"
+    monkeypatch.setattr(host, "fetch_qonto_client_invoice_pdf", invoice_pdf)
     def request(method, path, payload=None, params=None, **kwargs):
         assert not host.has_request_context(), "Merchant Qonto calls must not run in a tenant request"
         state["calls"].append((method, path, copy.deepcopy(payload), copy.deepcopy(params), kwargs))
@@ -74,7 +82,11 @@ def merchant(shop, monkeypatch):
         if path == "/v2/payment_links/payment_methods":
             if state["payment_disabled"]:
                 raise host.QontoConfigurationError("Liens de paiement à activer")
+            if state["payment_pending"]:
+                return {"payment_link_payment_methods": []}
             return {"payment_link_payment_methods": [{"name": "credit_card", "enabled": True}, {"name": "paypal", "enabled": False}]}
+        if path == "/v2/payment_links/connections":
+            return {"status": "pending" if state["payment_pending"] else "enabled"}
         if path == "/v2/payment_links" and method == "POST":
             state["payment"] = {**payload["payment_link"], "id": "link-1", "url": "https://pay.qonto.com/link-1", "status": "open"}
             return {"payment_link": copy.deepcopy(state["payment"])}
@@ -113,6 +125,9 @@ def test_order_emails_invoice_payment_and_no_duplicates(shop, merchant):
         assert flow["emails"][key]["status"] == "sent"
     assert [m[0][0] for m in shop["mails"]] == ["centre@example.test", "centre@example.test", commerce.ADMIN_EMAIL, "centre@example.test"]
     assert "Régler ma commande" in shop["mails"][-1][0][2]
+    assert flow["emails"]["invoice_customer"]["payment_link_included"] is True
+    assert base64.b64decode(shop["mails"][-1][1]["attachments"][0]["content"]).startswith(b"%PDF")
+    assert "https://pay.qonto.com/invoices/invoice-1" in shop["mails"][-1][1]["text_content"]
     retry(order)
     assert len(shop["mails"]) == 4
     assert sum(m == "POST" and p == "/v2/client_invoices" for m,p,*_ in merchant["calls"]) == 1
@@ -177,6 +192,65 @@ def test_wrong_invoice_total_stays_draft(shop, merchant):
     assert merchant["invoice"]["status"] == "draft"
     assert not any("finalize" in call[1] for call in merchant["calls"])
     assert merchant["payment"] is None
+    assert "invoice_customer" not in flow["emails"]
+    assert not merchant["pdf_downloads"]
+
+
+def test_pending_payment_sends_pdf_and_shows_invoice_then_notifies_once(shop, merchant, monkeypatch):
+    order = submitted(shop)
+    merchant["payment_pending"] = True
+    run(order)
+    flow = all_data(shop)["manual_orders"][0]["commerce"]
+    assert flow["status"] == "payment_pending" and flow["queued"]
+    assert flow["attempts"] == 0
+    assert flow["emails"]["invoice_customer"]["status"] == "sent"
+    assert flow["emails"]["invoice_customer"]["payment_link_included"] is False
+    assert flow["emails"]["invoice_customer"]["attachment_name"] == "F-2026-123.pdf"
+    assert not flow.get("payment_url")
+    assert len(shop["mails"]) == 4
+    html = shop["mails"][-1][0][2]
+    assert "pièce jointe" in html and "en cours d’activation" in html
+    assert "Régler ma commande" not in html
+    for path in ("/admin/organisme", "/admin/manuels", f"/admin/manuels/commandes/{order['id']}"):
+        page = shop["client"].get(path)
+        assert page.status_code == 200
+        assert "https://pay.qonto.com/invoices/invoice-1" in page.text
+        assert "Régler en ligne" not in page.text
+    calls_before = len(merchant["calls"])
+    run(order)
+    assert len(merchant["calls"]) == calls_before  # No polling before the due time.
+    monkeypatch.setattr(commerce.time, "time", lambda: flow["next_attempt"] + 1)
+    merchant["payment_pending"] = False
+    run(order)  # The durable queue resumes automatically, without an admin retry.
+    flow = all_data(shop)["manual_orders"][0]["commerce"]
+    assert flow["status"] == "ready"
+    assert flow["emails"]["payment_customer"]["status"] == "sent"
+    assert len(shop["mails"]) == 5
+    assert "Le paiement en ligne est disponible" in shop["mails"][-1][0][1]
+    assert "Régler ma commande" in shop["mails"][-1][0][2]
+    assert not shop["mails"][-1][1]["attachments"]
+    assert "Régler en ligne" in shop["client"].get("/admin/organisme").text
+    assert merchant["pdf_downloads"] == ["invoice-1"]
+    retry(order)
+    assert len(shop["mails"]) == 5
+    assert sum(m == "POST" and p == "/v2/client_invoices" for m, p, *_ in merchant["calls"]) == 1
+
+
+def test_pdf_generation_failure_retries_email_without_duplicate_invoice(shop, merchant, monkeypatch):
+    order = submitted(shop)
+    merchant.update(payment_pending=True, pdf_unavailable=True)
+    run(order)
+    flow = all_data(shop)["manual_orders"][0]["commerce"]
+    assert flow["emails"]["invoice_customer"]["status"] == "failed" and flow["queued"]
+    assert len(shop["mails"]) == 3
+    assert "https://pay.qonto.com/invoices/invoice-1" in shop["client"].get("/admin/organisme").text
+    monkeypatch.setattr(commerce.time, "time", lambda: flow["next_attempt"] + 1)
+    merchant["pdf_unavailable"] = False
+    run(order)
+    flow = all_data(shop)["manual_orders"][0]["commerce"]
+    assert flow["emails"]["invoice_customer"]["status"] == "sent"
+    assert len(shop["mails"]) == 4
+    assert sum(m == "POST" and p == "/v2/client_invoices" for m, p, *_ in merchant["calls"]) == 1
 
 
 def test_payment_setup_recovers_existing_invoice(shop, merchant):
@@ -250,6 +324,7 @@ def test_other_organism_cannot_refresh_or_see_invoice(shop, merchant):
     assert other.get(detail).status_code == 404
     assert other.post(detail + "/actualiser", data={"csrf_token": csrf(other, "/admin/manuels")}).status_code == 404
     assert "invoice-1" not in other.get("/admin/organisme").text
+    assert "invoice-1" not in other.get("/admin/manuels").text
 
 
 @pytest.mark.parametrize("value", ["javascript:alert(1)", "https://pay.qonto.com.evil.test/x", "https://evil.test/x", "//pay.qonto.com/x", "https://user:pass@pay.qonto.com/x"])
@@ -326,6 +401,7 @@ def test_missing_payment_scope_keeps_invoice_and_resumes_without_duplicate(shop,
     flow = all_data(shop)["manual_orders"][0]["commerce"]
     assert flow["status"] == "needs_setup" and flow["invoice_status"] == "unpaid"
     assert "Autorisez les liens de paiement" in flow["error"]
+    assert flow["emails"]["invoice_customer"]["status"] == "sent"
     assert not any(p.startswith("/v2/payment_links") or kw.get("use_oauth") for m, p, body, params, kw in merchant["calls"])
     customer_page = shop["client"].get(f"/admin/manuels/commandes/{order['id']}").text
     assert "Consulter ma facture" in customer_page

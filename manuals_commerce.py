@@ -6,6 +6,7 @@ reconciled by its immutable purchase_order before any further action.
 """
 from __future__ import annotations
 
+import base64
 import copy
 import os
 import threading
@@ -24,6 +25,10 @@ PAYMENT_SCOPES = ("client_invoices.read", "payment_link.read", "payment_link.wri
 
 
 class SetupRequired(Exception):
+    pass
+
+
+class PaymentPending(SetupRequired):
     pass
 
 
@@ -291,6 +296,9 @@ def _ensure_payment_link(host, order, invoice):
             available = host._qonto_request("GET", "/v2/payment_links/payment_methods", params={"amount": f"{Decimal(order['total_cents']) / 100:.2f}", "currency": "EUR"})
             methods = [m["name"] for m in available.get("payment_link_payment_methods", []) if isinstance(m, dict) and m.get("enabled") is True and m.get("name") in {"credit_card", "apple_pay", "paypal", "ideal"}]
             if not methods:
+                connection = host._qonto_request("GET", "/v2/payment_links/connections")
+                if connection.get("status") == "pending":
+                    raise PaymentPending("Qonto valide actuellement l’activation du paiement en ligne. Vérification automatique toutes les quinze minutes ; la facture peut déjà être envoyée.")
                 raise SetupRequired("Activez les liens de paiement Qonto et au moins un moyen de paiement dans votre compte Qonto.")
             payload = {"payment_link": {"invoice_id": invoice["id"], "invoice_number": invoice["number"], "debitor_name": order["centre"]["name"], "amount": {"value": f"{Decimal(order['total_cents']) / 100:.2f}", "currency": "EUR"}, "potential_payment_methods": methods}}
             _save(host, order, payment_creation_started=host._now_iso())
@@ -326,18 +334,33 @@ def _send_email(host, order, key, recipient, staff=False):
     detail_path = f"/admin/commandes-manuels/{order['partner_id']}/{order['id']}" if staff else f"/admin/manuels/commandes/{order['id']}"
     order_url = base_url(host) + detail_path
     invoice_ready = key == "invoice_customer"
-    subject = ("Nouvelle commande " if staff else "Votre facture est disponible · " if invoice_ready else "Confirmation de commande · ") + order["reference"]
+    payment_ready = key == "payment_customer"
+    payment_available = bool(state.get("payment_url") and state.get("payment_status") == "unpaid" and state.get("payment_link_status") == "open")
+    subject = ("Nouvelle commande " if staff else "Votre facture est disponible · " if invoice_ready else "Le paiement en ligne est disponible · " if payment_ready else "Confirmation de commande · ") + order["reference"]
     # Standalone email: avoid request-only CRM context processors in the worker.
-    body = host.app.jinja_env.get_template("manuals/order_email.html").render(order=order, staff=staff, invoice_ready=invoice_ready, order_url=order_url)
+    body = host.app.jinja_env.get_template("manuals/order_email.html").render(order=order, staff=staff, invoice_ready=invoice_ready, payment_ready=payment_ready, payment_available=payment_available, order_url=order_url)
     lines = "\n".join(f"{i['quantity']} × {i['label']} : {money(i['total_cents'])}" for i in order["items"])
     text = f"{subject}\n{order['centre']['name']}\n{lines}\nTotal TTC : {money(order['total_cents'])}\nLivraison et personnalisation incluses.\nConsulter la commande : {order_url}"
-    if order["commerce"].get("payment_url"):
+    if invoice_ready or payment_ready:
+        text += "\nFacture " + state.get("invoice_number", "") + " : " + state.get("invoice_url", "")
+    if invoice_ready:
+        text += "\nVotre facture PDF est jointe à cet e-mail et reste accessible dans votre espace organisme."
+    if payment_available:
         text += "\nRégler en ligne : " + order["commerce"]["payment_url"]
+    elif invoice_ready and state.get("payment_status") != "paid":
+        text += "\nLe paiement en ligne est en cours d’activation. Vous recevrez un e-mail dès qu’il sera disponible."
+    attachment_name = ""
     try:
-        result = host.brevo_send_email(recipient, subject, body, text_content=text, metadata={"partner_id": order["partner_id"], "purpose": "manuals_" + key, "order_id": order["id"]})
+        attachments = []
+        if invoice_ready:
+            pdf, attachment_name = host.fetch_qonto_client_invoice_pdf(state["invoice_id"])
+            attachments.append({"name": attachment_name, "content": base64.b64encode(pdf).decode("ascii")})
+        result = host.brevo_send_email(recipient, subject, body, attachments=attachments, text_content=text, metadata={"partner_id": order["partner_id"], "purpose": "manuals_" + key, "order_id": order["id"]})
     except Exception:
         result = {"ok": False, "error": "Envoi indisponible"}
     emails[key] = {"status": "sent" if result.get("ok") else "failed", "attempted_at": host._now_iso(), "to": recipient, "message_id": result.get("message_id", "")}
+    if invoice_ready:
+        emails[key].update(payment_link_included=payment_available, attachment_name=attachment_name)
     _save(host, order, emails=emails)
     return bool(result.get("ok"))
 
@@ -361,9 +384,15 @@ def process_order(host, pid, oid):
         # Confirmations are independent of invoice setup or provider outages.
         customer_sent = _send_email(host, order, "confirmation_customer", order["centre"]["email"])
         admin_sent = _send_email(host, order, "notification_admin", ADMIN_EMAIL, staff=True)
+        invoice_ready = False
         try:
             invoice = _ensure_invoice(host, order, settings_from(host.load_data(run_background_tasks=False)))
+            # Only send an invoice validated during this run, never a draft or
+            # a stale invoice after a failed amount/client/currency check.
+            invoice_ready = invoice.get("status") in {"unpaid", "paid"} and bool(order["commerce"].get("invoice_url"))
             _ensure_payment_link(host, order, invoice)
+        except PaymentPending as exc:
+            outcome, message = "payment_pending", str(exc)
         except (SetupRequired, host.QontoConfigurationError) as exc:
             outcome, message = "needs_setup", str(exc)
         except ReviewRequired as exc:
@@ -373,18 +402,23 @@ def process_order(host, pid, oid):
             message = host.format_qonto_error_for_front(exc)[:500]
             host.app.logger.warning("manual_order_billing_error order=%s type=%s", oid, type(exc).__name__)
         invoice_sent = True
-        if order["commerce"].get("payment_url") or order["commerce"].get("payment_status") == "paid":
+        if invoice_ready:
             invoice_sent = _send_email(host, order, "invoice_customer", order["centre"]["email"])
-        sent = customer_sent and admin_sent and invoice_sent
+        payment_sent = True
+        state = order["commerce"]
+        invoice_mail = state.get("emails", {}).get("invoice_customer", {})
+        if invoice_ready and invoice_sent and invoice_mail.get("payment_link_included") is False and state.get("payment_url") and state.get("payment_status") == "unpaid" and state.get("payment_link_status") == "open":
+            payment_sent = _send_email(host, order, "payment_customer", order["centre"]["email"])
+        sent = customer_sent and admin_sent and invoice_sent and payment_sent
         if outcome == "ready" and not sent:
             outcome, message = "retry", "Un e-mail n’a pas pu être envoyé. Une nouvelle tentative est programmée."
         state = order["commerce"]
         retry = outcome == "retry" and state["attempts"] < 8
         # Refresh settled status periodically, using only authoritative Qonto data.
-        track = outcome == "ready" and state.get("payment_status") not in {"paid", "canceled"}
+        track = outcome in {"ready", "payment_pending"} and state.get("payment_status") not in {"paid", "canceled"} and (sent or state["attempts"] < 8)
         _save(host, order, status=outcome, error=message, queued=retry or track or (not sent and state["attempts"] < 8),
-              attempts=0 if outcome == "ready" else state["attempts"],
-              next_attempt=now + (900 if track else min(60 * 2 ** min(state["attempts"], 6), 3600)), lease_until=0)
+              attempts=0 if sent and outcome in {"ready", "payment_pending"} else state["attempts"],
+              next_attempt=now + (900 if track and sent else min(60 * 2 ** min(state["attempts"], 6), 3600)), lease_until=0)
     finally:
         def release(current):
             state = current.get("commerce", {})

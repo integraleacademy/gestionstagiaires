@@ -290,8 +290,8 @@ def register(host):
     @customer
     def home():
         data, partner = partner_data()
-        orders = [o for o in data.get("manual_orders", []) if o.get("status") != "draft"]
-        return page("home.html", partner=partner, order_count=len(orders))
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft"), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        return page("home.html", partner=partner, orders=orders, order_count=len(orders))
 
     @bp.get("/admin/organisme/e-learning")
     @customer
