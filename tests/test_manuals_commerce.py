@@ -75,7 +75,7 @@ def merchant(shop, monkeypatch):
         if path == "/v2/client_invoices" and method == "GET":
             return {"client_invoices": [copy.deepcopy(state["invoice"])] if state["invoice"] else [], "meta": {"total_pages": 1}}
         if path == "/v2/client_invoices/invoice-1/finalize":
-            state["invoice"]["status"] = "unpaid"
+            state["invoice"]["status"] = state.get("invoice_status_after_finalize", "unpaid")
             return {"client_invoice": copy.deepcopy(state["invoice"])}
         if path == "/v2/client_invoices/invoice-1":
             return {"client_invoice": copy.deepcopy(state["invoice"])}
@@ -445,3 +445,24 @@ def test_staff_order_link_keeps_order_and_shows_both_setup_blockers(shop, mercha
     assert "Terminer la configuration" in page
     assert "Facture et paiement : activation à terminer" in admin.get("/admin/commandes-manuels").text
     assert admin.get("/admin/manuels/commandes/unknown").status_code == 404
+
+
+def test_canceled_invoice_is_not_emailed_or_recreated(shop, merchant):
+    order = submitted(shop)
+    merchant["invoice_status_after_finalize"] = "canceled"
+    run(order)
+    retry(order)
+    flow = all_data(shop)["manual_orders"][0]["commerce"]
+    assert flow["invoice_status"] == "canceled" and not flow["queued"]
+    assert "invoice_customer" not in flow["emails"]
+    assert "payment_customer" not in flow["emails"]
+    assert not merchant["pdf_downloads"] and merchant["payment"] is None
+    assert len(shop["mails"]) == 3
+    assert sum(m == "POST" and p == "/v2/client_invoices" for m, p, *_ in merchant["calls"]) == 1
+    admin = host.app.test_client()
+    admin.post("/admin/login", data={"username": "admin@example.test", "password": "platform-test-pass"})
+    page = admin.get(f"/admin/commandes-manuels/{order['partner_id']}/{order['id']}")
+    assert "Non envoyé : facture annulée" in page.text
+    assert "Facture annulée" in shop["client"].get("/admin/organisme").text
+    assert "pay.qonto.com" not in page.text
+    assert "pay.qonto.com" not in shop["client"].get("/admin/organisme").text
