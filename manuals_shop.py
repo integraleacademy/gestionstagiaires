@@ -443,7 +443,7 @@ def register(host):
             order = find_order(data, order_id)
             if order["status"] != "draft":
                 return {"created": False, "id": order_id}
-            order.update(status="received", reference="MAN-" + dt.datetime.now().strftime("%Y") + "-" + order_id[:8].upper(), submitted_at=host._now_iso(), commerce={"queued": True, "status": "pending", "attempts": 0, "emails": {}})
+            order.update(status="received", reference="MAN-" + dt.datetime.now().strftime("%Y") + "-" + order_id[:8].upper(), submitted_at=host._now_iso(), commerce={"queued": True, "status": "pending", "flow": "payment_first", "attempts": 0, "emails": {}})
             host._append_activity_log(data, "manual_order_submitted", "manual_order", order_id, order["partner_id"], {"reference": order["reference"], "total_cents": order["total_cents"]})
             return {"created": True, "id": order_id}
         host._atomic_update_data(confirm)
@@ -456,10 +456,10 @@ def register(host):
         check_csrf()
         data, partner = partner_data()
         order = find_order(data, order_id)
-        if order["status"] != "draft" and order.get("commerce", {}).get("invoice_id"):
+        if order["status"] != "draft" and (order.get("commerce", {}).get("payment_id") or order.get("commerce", {}).get("invoice_id")):
             state = order.get("commerce", {})
             # Invoice creation/configuration retries stay under administrator control.
-            if state.get("status") == "ready":
+            if state.get("status") in {"ready", "waiting_payment"}:
                 commerce.queue_again(host, partner["id"], order_id, throttle=True)
                 kick_worker()
         flash("Le suivi sera actualisé dans quelques instants.", "success")

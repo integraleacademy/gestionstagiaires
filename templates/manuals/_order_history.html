@@ -1,7 +1,7 @@
 <section class="orders-section" id="mes-commandes">
   <span class="eyebrow blue">VOTRE HISTORIQUE</span>
   <h2>Mes commandes et factures</h2>
-  <p class="muted">Retrouvez vos factures dès leur émission, même si le paiement en ligne est encore en cours d’activation.</p>
+  <p class="muted">Réglez vos commandes en ligne et retrouvez vos factures après confirmation du paiement.</p>
   {% if orders %}
   <div class="table-scroll"><table>
     <thead><tr><th>Commande / date</th><th>Préparation</th><th>Total TTC</th><th>Facture</th><th>Règlement</th><th></th></tr></thead>
@@ -10,8 +10,8 @@
         <td><strong>{{ order.reference }}</strong><small>{{ order.submitted_at|frdatetime }}</small></td>
         <td><span class="status status-{{ order.status }}">{{ statuses.get(order.status, order.status) }}</span></td>
         <td>{{ order.total_cents|manuals_money }}</td>
-        <td>{% if flow.get('invoice_url') and flow.get('invoice_status') != 'canceled' %}<a class="text-link" href="{{ flow.invoice_url }}" target="_blank" rel="noopener noreferrer">Facture {{ flow.get('invoice_number', '') }} ↗</a><small>Consulter et télécharger</small>{% elif flow.get('invoice_status') == 'canceled' %}{{ flow.get('invoice_number', '') }}<small>Facture annulée</small>{% else %}<span class="muted">{{ 'En préparation' if flow else 'Sur demande' }}</span>{% endif %}</td>
-        <td>{% if flow.get('payment_url') and flow.get('payment_status') == 'unpaid' and flow.get('payment_link_status') == 'open' and order.status != 'cancelled' %}<a class="text-link" href="{{ flow.payment_url }}" target="_blank" rel="noopener noreferrer">Régler en ligne ↗</a>{% else %}{{ payment_labels.get(flow.get('payment_status'), 'En attente') }}{% if flow.get('invoice_url') and flow.get('payment_status') == 'unpaid' and flow.get('status') in ['needs_setup', 'payment_pending'] %}<small>Paiement en ligne en cours d’activation</small>{% endif %}{% endif %}</td>
+        <td>{% if flow.get('invoice_url') and flow.get('invoice_status') != 'canceled' %}<a class="text-link" href="{{ flow.invoice_url }}" target="_blank" rel="noopener noreferrer">Facture {{ flow.get('invoice_number', '') }} ↗</a><small>Consulter et télécharger</small>{% elif flow.get('invoice_status') == 'canceled' %}{{ flow.get('invoice_number', '') }}<small>Facture annulée</small>{% else %}<span class="muted">{{ 'En préparation' if flow.get('payment_status') == 'paid' else 'Disponible après paiement' if flow else 'Sur demande' }}</span>{% endif %}</td>
+        <td>{% if flow.get('payment_url') and flow.get('payment_status') == 'unpaid' and flow.get('payment_link_status') == 'open' and flow.get('status') in ['ready','waiting_payment'] and order.status != 'cancelled' %}<a class="text-link" href="{{ flow.payment_url }}" target="_blank" rel="noopener noreferrer">Régler en ligne ↗</a>{% else %}{{ payment_labels.get(flow.get('payment_status'), 'En attente') }}{% if flow.get('invoice_url') and flow.get('payment_status') == 'unpaid' and flow.get('status') in ['needs_setup', 'payment_pending'] %}<small>Paiement en ligne en cours d’activation</small>{% endif %}{% endif %}</td>
         <td><a class="text-link" href="{{ url_for('manuals_shop.order_detail', order_id=order.id) }}">Voir la commande →</a></td>
       </tr>
     {% endfor %}</tbody>
