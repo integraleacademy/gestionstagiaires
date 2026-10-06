@@ -463,12 +463,13 @@
     throw new Error("Cette question ne peut pas encore être validée.");
   }
 
-  function showAnswerFeedback(correct) {
+  function showAnswerFeedback(correct, retryRequired = false) {
     if (!feedback) return;
     feedback.classList.remove("is-correct", "is-incorrect");
     feedback.classList.add("is-visible", correct ? "is-correct" : "is-incorrect");
     feedback.textContent = correct
       ? "Bonne réponse enregistrée."
+      : retryRequired ? "À reprendre : consultez l’explication et choisissez à nouveau avant de continuer."
       : "Réponse enregistrée. La correction sera reprise avec votre formateur.";
     feedback.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
@@ -509,11 +510,16 @@
       if (mode === "answer") {
         const result = await postJson(config.answerUrl, { answer: collectAnswer() });
         applyProgress(result.progress);
-        showAnswerFeedback(Boolean(result.correct));
+        showAnswerFeedback(Boolean(result.correct), Boolean(result.retry_required));
         if (result.explanation) {
           const detail = document.createElement('p');
           detail.textContent = result.explanation;
           document.getElementById('nativeAnswerFeedback')?.append(detail);
+        }
+        if (result.retry_required) {
+          actionButton.dataset.mode = "answer";
+          actionButton.textContent = "Vérifier à nouveau";
+          return;
         }
         showCourseResult(result.progress, true);
         actionButton.dataset.mode = "navigate";

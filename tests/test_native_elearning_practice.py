@@ -22,7 +22,7 @@ class PracticeContentTests(unittest.TestCase):
     def test_all_versions_keep_progress_identity_and_remove_writing(self):
         manifest = curriculum_manifest()
         self.assertEqual(manifest['workbook_count'], 0)
-        self.assertEqual(manifest['interactive_workshop_count'], 124)
+        self.assertEqual(manifest['interactive_workshop_count'], 248)
         for module in manifest['modules']:
             for version in [module['version'], *module['previous_versions']]:
                 with self.subTest(module=module['id'], version=version):
@@ -38,7 +38,7 @@ class PracticeContentTests(unittest.TestCase):
                         for old, new in zip(before['activities'], after['activities']):
                             self.assertEqual((old['scored'], old['planned_minutes']), (new['scored'], new['planned_minutes']))
                             self.assertNotIn('workbook', new)
-                            if old.get('workbook'):
+                            if old.get('workbook') or old.get('practice'):
                                 self.assertIn('practice', new)
                                 self.assertNotIn('task', new['academy'])
                                 result = grade_practice(new['practice'], correct_answers(new['practice']))
@@ -46,10 +46,10 @@ class PracticeContentTests(unittest.TestCase):
                                 public = json.dumps(public_practice(new['practice']))
                                 self.assertNotIn('"answer"', public)
                                 self.assertNotIn('"explanation"', public)
-                    self.assertEqual(course['counts']['interactive_workshops'], raw['counts']['workbooks'])
+                    self.assertEqual(course['counts']['interactive_workshops'], raw['counts'].get('interactive_workshops', raw['counts']['workbooks']))
 
     def test_incomplete_unknown_duplicate_and_wrong_answers(self):
-        practice = load_bundled_course('academy-aps62-01')['sections'][0]['activities'][2]['practice']
+        practice = load_bundled_course('academy-aps62-01', '20261004-aps62-v2')['sections'][0]['activities'][2]['practice']
         answers = correct_answers(practice)
         for value in [None, [], {}, {**answers, 'extra': 'x'}, {**answers, 'decision': True},
                       {**answers, 'decision': '__unknown__'},

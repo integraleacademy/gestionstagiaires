@@ -6,15 +6,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-player.js"), "utf8");
 
-async function fixture({ lastActivity = false } = {}) {
+async function fixture({ lastActivity = false, question = false } = {}) {
   const initial = lastActivity ? 14398 : 0;
   const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds: 300,
     heartbeatSeconds: 15, startUrl: "/start", heartbeatUrl: "/heartbeat", finishUrl: "/finish",
     initialActiveSeconds: initial, initialRemainingSeconds: 14400 - initial, initialModuleComplete: false,
-    isLastActivity: lastActivity, hasNextModule: true, endLabel: "Module suivant", endUrl: "/next" };
+    isLastActivity: lastActivity, hasNextModule: true, endLabel: "Module suivant", endUrl: "/next",
+    questionType: question ? 'single_choice' : '', answerUrl: '/answer' };
   const dom = new JSDOM(`<!doctype html><strong id="nativeActiveTimer"></strong>
     <div id="nativeTrackingState"><span></span></div><div id="nativeDuplicateNotice"></div>
-    <button id="nativeActionButton" data-mode="navigate">Continuer</button>
+    <button id="nativeActionButton" data-mode="${question ? 'answer' : 'navigate'}">Continuer</button>
+    ${question ? '<form id="nativeQuestionForm"><input type="radio" name="answer" value="bad" checked><input type="radio" name="answer" value="good"></form><div id="nativeAnswerFeedback"></div>' : ''}
     <div id="nativeCourseResult"><strong></strong><span></span></div>
     <strong id="nativeRemainingTime"></strong><span id="nativeDurationStatus"></span>
     <div id="nativeIdleNotice" hidden><button id="nativeResumeTimer">Reprendre</button></div>
@@ -22,6 +24,7 @@ async function fixture({ lastActivity = false } = {}) {
     <script id="nativeElearningConfig" type="application/json">${JSON.stringify(config)}</script>`,
     { runScripts: "outside-only", url: "https://test.invalid/" });
   const { window } = dom;
+  window.HTMLElement.prototype.scrollIntoView = () => {};
   let now = 0, nextTimer = 0, unlocked = false, resumedAt = null, lastSignal;
   const scheduled = new Map(), requests = [];
   window.Date.now = () => now;
@@ -44,6 +47,10 @@ async function fixture({ lastActivity = false } = {}) {
   window.fetch = async (url, options) => {
     const body = JSON.parse(options.body);
     requests.push({ url, body });
+    if (url === '/answer') {
+      const correct = body.answer.selected[0] === 'good';
+      return {ok:true,json:async()=>({ok:true,correct,retry_required:!correct,explanation:'Relire la règle.',progress:progress()})};
+    }
     if (url === "/heartbeat") lastSignal = body;
     return { ok: true, json: async () => ({ ok: true, tracking_session_id: "tracking",
       active: url === "/heartbeat" && body.interaction_age_seconds < 300, progress: progress() }) };
@@ -112,5 +119,18 @@ async function fixture({ lastActivity = false } = {}) {
     assert.equal(document.querySelector("#nativeRemainingTime").textContent, "00:00:00");
     assert.equal(document.querySelector("#nativeCourseResult strong").textContent, "Module terminé");
   } finally { locked.close(); }
-  console.log("PASS: exact 5-minute pause, video inactivity, no idle accrual, resume, server-confirmed module unlock.");
+  const question = await fixture({question:true});
+  try {
+    const document = question.window.document, button = document.getElementById('nativeActionButton');
+    button.click(); await question.settle();
+    assert.equal(button.dataset.mode, 'answer');
+    assert.equal(button.disabled, false);
+    assert.equal(document.querySelector('input[value=good]').disabled, false);
+    assert.match(document.getElementById('nativeAnswerFeedback').textContent, /À reprendre/);
+    document.querySelector('input[value=good]').checked = true;
+    button.click(); await question.settle();
+    assert.equal(button.dataset.mode, 'navigate');
+    assert.equal(document.querySelector('input[value=good]').disabled, true);
+  } finally { question.close(); }
+  console.log("PASS: active-time controls, server-confirmed unlock and retry before question completion.");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

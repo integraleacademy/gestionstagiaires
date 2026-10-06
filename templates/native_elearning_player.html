@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261004-2') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261006-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261006-3') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-2') }}">
 </head>
 <body class="native-elearning-body{{ ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
@@ -254,9 +254,9 @@
     'requiredVideos': required_videos|default({}),
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261006-1') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261006-3') }}" defer></script>
   {% endif %}
-<script src="{{ url_for('static', filename='js/aps62.js', v='20261006-1') }}" defer></script>
-<script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261006-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/aps62.js', v='20261006-3') }}" defer></script>
+<script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261006-3') }}" defer></script>
 </body>
 </html>

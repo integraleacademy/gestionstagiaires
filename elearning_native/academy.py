@@ -22,8 +22,9 @@ def _manifest():
 def curriculum_manifest():
     manifest = copy.deepcopy(_manifest())
     manifest['workbook_count'] = 0
-    manifest['interactive_workshop_count'] = 124
-    manifest['interaction_revision'] = REVISION
+    manifest.setdefault('interactive_workshop_count', 124)
+    manifest.setdefault('interaction_revision', REVISION)
+    manifest['regulatory_review'] = json.loads((ROOT / 'regulatory_review.json').read_text(encoding='utf-8'))
     return manifest
 
 

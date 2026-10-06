@@ -46,7 +46,7 @@ test('preview supports all four interaction kinds, correction, retries and reset
   try{
     f.submit();await f.settle();assert.equal(f.calls.length,0);
     f.fill();f.submit();await f.settle();
-    assert.deepEqual(f.calls[0].body,{practice_answers:f.answers});
+    assert.deepEqual(f.calls[0].body,{practice_answers:f.answers,review_answers:{}});
     assert.equal(f.calls[0].url,'/preview');
     assert.equal(f.calls[0].options.headers['X-Elearning-CSRF'],'csrf');
     assert.match(f.document.querySelector('[data-practice-result]').textContent,/3 exercices/);
@@ -80,4 +80,48 @@ test('learner resumes choices, keeps them after network failure and clears draft
     assert.ok(f.window.sessionStorage.getItem(f.key));
     f.window.aps62Practice.clearDraft();assert.equal(f.window.sessionStorage.getItem(f.key),null);
   }finally{f.close();}
+});
+
+test('v3 reveals decisions successively, displays targeted review and composes a journal without text entry',async()=>{
+  const course=JSON.parse(fs.readFileSync(path.join(__dirname,'../elearning_native/aps62/courses/academy-aps62-01/20261006-aps62-v3.json'),'utf8'));
+  for(const index of [2,7]){
+    const activity=course.sections[0].activities[index];
+    const practice=JSON.parse(JSON.stringify(activity.practice));
+    const config={activityId:activity.id,courseVersion:course.version,completed:false,savedAnswers:{},practice};
+    const fields=practice.exercises.map(ex=>`<fieldset data-exercise-id="${ex.id}" data-kind="single"><legend>${ex.prompt}</legend>${ex.options.map(o=>`<label><input type="radio" name="${ex.id}" value="${o.id}"><span>${o.text}</span></label>`).join('')}<p data-stage-consequence hidden></p><div data-exercise-feedback hidden></div></fieldset>`).join('');
+    const dom=new JSDOM(`<section data-aps-practice><p data-stage-status></p><form>${fields}<button type="submit" class="aps-practice-check">Vérifier</button><button type="button" class="aps-practice-restart">Reset</button></form><dl data-journal-preview></dl><section data-remediation hidden><div data-remediation-items></div><button type="button" class="aps-practice-review">Réviser</button><p data-review-status></p></section><p data-practice-result></p><p data-practice-draft></p><script id="apsPracticeConfig" type="application/json">${JSON.stringify(config)}</script></section><script id="nativePreviewConfig" type="application/json">{"answerUrl":"/preview","csrfToken":"csrf"}</script>`,{url:'https://test.invalid/preview',runScripts:'outside-only'});
+    const {window}=dom,{document}=window,calls=[];
+    const ex=practice.exercises[0],drill=ex.remediation;
+    window.fetch=async(url,options)=>{
+      const body=JSON.parse(options.body);calls.push(body);
+      return {ok:true,json:async()=>({ok:true,correct:false,passed:practice.exercises.length-1,total:practice.exercises.length,
+        feedback:practice.exercises.map((e,i)=>({id:e.id,correct:i>0,explanation:e.explanation,correction:[]})),
+        review:[{id:ex.id,lesson:drill.lesson,prompt:drill.prompt,options:drill.options,...(body.review_answers[ex.id]?{correct:true,explanation:drill.explanation}:{})}]})};
+    };
+    const settle=async()=>{for(let n=0;n<15;n++)await Promise.resolve();};
+    try{
+      window.eval(source);
+      const stages=[...document.querySelectorAll('[data-exercise-id]')];
+      if(practice.sequential){assert.equal(stages[0].hidden,false);assert.ok(stages.slice(1).every(s=>s.hidden));}
+      for(const [i,stage] of stages.entries()){
+        assert.equal(stage.hidden,false);
+        const input=stage.querySelector('input');input.checked=true;input.dispatchEvent(new window.Event('change',{bubbles:true}));
+        if(practice.sequential)assert.ok(stage.querySelector('[data-stage-consequence]').textContent);
+      }
+      assert.equal(document.querySelectorAll('textarea,input[type=text]').length,0);
+      assert.equal(document.querySelectorAll('[data-journal-preview] dd').length,practice.exercises.length);
+      document.querySelector('.aps-practice-check').click();await settle();
+      assert.equal(document.querySelector('[data-remediation]').hidden,false);
+      assert.ok(document.querySelector('[data-remediation]').textContent.includes(drill.prompt));
+      assert.throws(()=>window.aps62Practice.collectForCompletion(),/Vérifiez/);
+      document.querySelector('.aps-practice-review').click();await settle();assert.equal(calls.length,1);
+      document.querySelector('[data-review-id] input').checked=true;
+      document.querySelector('.aps-practice-review').click();await settle();
+      assert.ok(calls[1].review_answers[ex.id]);
+      assert.match(document.querySelector('[data-remediation]').textContent,/Compris/);
+      document.querySelector('.aps-practice-restart').click();
+      assert.equal(document.querySelector('[data-remediation]').hidden,true);
+      if(practice.sequential)assert.ok(stages.slice(1).every(s=>s.hidden));
+    }finally{window.close();}
+  }
 });

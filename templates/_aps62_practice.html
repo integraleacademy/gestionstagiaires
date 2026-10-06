@@ -1,15 +1,19 @@
 <section class="aps-practice" data-aps-practice>
   <header class="aps-practice-intro">
     <span class="aps-label">À vous de jouer · {{ activity.practice.exercises|length }} exercices</span>
-    <h2>Faites vos choix, puis vérifiez</h2>
+    <h2>{{ activity.practice.title or 'Faites vos choix, puis vérifiez' }}</h2>
     <p>Toutes les réponses se font en cliquant. Lisez la correction, modifiez les choix à revoir et recommencez jusqu’à trouver les bonnes réponses.</p>
     <div class="aps-practice-chips"><span>Aucune rédaction</span><span>Correction immédiate</span><span>Essais illimités</span></div>
     {% if activity_completed %}<p class="aps-practice-saved">Cette activité est déjà terminée. Vous pouvez vous entraîner à nouveau librement.</p>{% endif %}
   </header>
+  {% if activity.practice.documents %}<div class="aps-evidence-grid" aria-label="Documents du dossier">
+  {% for document in activity.practice.documents %}<article class="aps-evidence"><span class="aps-label">Pièce {{ loop.index }} · Document pédagogique fictif</span><h3>{{ document.title }}</h3><p>{{ document.text }}</p>{% if document.rows %}<dl>{% for row in document.rows %}<dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd>{% endfor %}</dl>{% endif %}</article>{% endfor %}</div>{% endif %}
+  {% if activity.practice.sequential %}<p class="aps-stage-status" data-stage-status role="status"></p>{% endif %}
   <form id="apsPracticeForm">
     {% for exercise in activity.practice.exercises %}
     <fieldset class="aps-exercise" data-exercise-id="{{ exercise.id }}" data-kind="{{ exercise.kind }}">
       <legend><span class="aps-exercise-number">{{ '%02d'|format(loop.index) }}</span>{{ exercise.prompt }}</legend>
+      {% if exercise.context %}<p class="aps-stage-context">{{ exercise.context }}</p>{% endif %}
       {% if exercise.kind == 'single' %}
       <p class="aps-exercise-instruction">Sélectionnez une réponse.</p>
       <div class="aps-practice-options">
@@ -21,11 +25,14 @@
         {% for row in exercise.rows %}<label class="aps-practice-row"><span>{{ row.text }}</span><select data-row-id="{{ row.id }}"><option value="">Choisir…</option>{% for option in exercise.options %}<option value="{{ option.id }}">{{ option.text }}</option>{% endfor %}</select></label>{% endfor %}
       </div>
       {% endif %}
+      <p class="aps-stage-consequence" data-stage-consequence hidden></p>
       <div class="aps-exercise-feedback" data-exercise-feedback hidden></div>
     </fieldset>
     {% endfor %}
     <div class="aps-practice-actions"><button type="submit" class="aps-practice-check"{% if preview_mode and not preview_can_answer %} disabled{% endif %}>Vérifier mes réponses</button><button type="button" class="aps-practice-restart">Recommencer l’atelier</button></div>
   </form>
+  {% if activity.practice.journal %}<section class="aps-journal"><h3>Votre entrée de main courante</h3><p>Composez l’entrée avec les propositions ci-dessus. Le document se met à jour avec vos choix.</p><dl data-journal-preview></dl></section>{% endif %}
+  <section class="aps-remediation" data-remediation hidden><h3>Réviser les points à reprendre</h3><p>Une autre situation pour chaque difficulté repérée. Répondez, puis vérifiez vos révisions.</p><div data-remediation-items></div><button type="button" class="aps-practice-review">Vérifier mes révisions</button><p data-review-status role="status"></p></section>
   <p class="aps-practice-result" role="status" aria-live="polite" data-practice-result></p>
   <p class="aps-small" data-practice-draft role="status">{{ 'Aucun résultat stagiaire n’est enregistré en aperçu.' if preview_mode else 'Vos réponses seront enregistrées lorsque vous terminerez l’activité.' }}</p>
   <noscript>Activez JavaScript pour réaliser cet atelier interactif.</noscript>

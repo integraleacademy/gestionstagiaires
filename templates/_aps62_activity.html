@@ -5,12 +5,14 @@
     <img src="{{ lesson.image }}" alt="{{ lesson.image_alt|default('Scène professionnelle illustrée du manuel APS') }}" loading="eager">
     <div><span class="aps-label">Dossier {{ lesson.dossier }} · Observer, comprendre, agir</span><h2>Votre situation de départ</h2><p>{{ lesson.case }}</p></div>
   </div>
-  <div class="aps-route" aria-label="Organisation du dossier : 60 minutes de travail guidé">
+  {% if lesson.pacing %}<div class="aps-route" aria-label="Organisation du dossier">{% for item in lesson.pacing %}<span><b>{{ item.minutes }} min</b> {{ item.label }}</span>{% endfor %}</div>{% else %}  <div class="aps-route" aria-label="Organisation du dossier : 60 minutes de travail guidé">
     <span><b>18 min</b> Comprendre</span><span><b>8 min</b> Mémoriser</span><span><b>16 min</b> S’entraîner</span><span><b>8 min</b> Vérifier</span><span><b>10 min</b> Réutiliser et retenir</span>
   </div>
+{% endif %}
   <section class="aps-objectives"><span class="aps-label">À l’issue de ce dossier</span><ul>{% for objective in lesson.objectives %}<li>{{ objective }}</li>{% endfor %}</ul></section>
   {% if lesson.visual_board %}<section class="aps-visual-board"><span class="aps-label">Le module en un regard</span><h2>{{ lesson.visual_board.title }}</h2><div class="aps-board-grid">{% for step in lesson.visual_board.steps %}<article><span class="aps-board-number">{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></article>{% endfor %}</div></section>{% endif %}
   <section class="aps-editorial"><span class="aps-label">Le raisonnement professionnel</span><h2>Comprendre ce qui guide la décision</h2><p>{{ lesson.reason }}</p></section>
+  {% if lesson.deepening %}<section class="aps-deepening"><span class="aps-label">Approfondir et comprendre les nuances</span>{% for part in lesson.deepening %}<h2>{{ part.title }}</h2>{% for paragraph in part.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}{% endfor %}</section>{% endif %}
   {% for reference in lesson.lessons %}
   <section class="aps-manual-lesson">
     <header><span class="aps-label">Le cours illustré · Repère {{ reference.ref }}</span><h2>{{ reference.title }}</h2></header>
@@ -29,8 +31,8 @@
   {% elif lesson.kind == 'memory' %}
   <section class="aps-editorial"><span class="aps-label">Mémoriser en participant</span><h2>Expliquez avant de retourner</h2><p>{{ lesson.instruction }}</p><div class="aps-flashcards">{% for card in lesson.cards %}<details><summary><span>{{ '%02d'|format(loop.index) }}</span><h3>{{ card.front }}</h3><b>Vérifier mon explication +</b></summary><p>{{ card.back }}</p></details>{% endfor %}</div></section>
   {% if lesson.transcript %}<details class="aps-transcript"><summary>Lire la transcription de la capsule</summary>{% for paragraph in lesson.transcript.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}<p class="aps-small">{% if lesson.voice == 'fr-FR-HenriNeural' %}Narration de synthèse Henri · Sous-titres français incrustés et transcription accessible.{% else %}Narration de synthèse Piper · <a href="https://datashare.ed.ac.uk/handle/10283/2353" target="_blank" rel="noopener noreferrer">base vocale SIWIS</a> de J. Yamagishi, P.-E. Honnet, P. Garner et A. Lazaridis (2017), <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>, adaptée en capsules pédagogiques.{% endif %}</p></details>{% endif %}
-  {% elif lesson.kind in ['workshop','transfer'] %}
-  <section class="aps-case"><span class="aps-label">{{ 'À vous de décider' if lesson.kind == 'workshop' else 'Une nouvelle information change la situation' }}</span><h2>{{ 'Le cas professionnel' if lesson.kind == 'workshop' else 'Le défi de transfert' }}</h2><p>{{ lesson.case }}</p></section>
+  {% elif lesson.kind in ['workshop','transfer','documents','journal'] %}
+  <section class="aps-case"><span class="aps-label">{{ {'workshop':'À vous de décider', 'transfer':'Changer de contexte', 'documents':'Lire et croiser les pièces', 'journal':'Transmettre une chronologie fiable'}[lesson.kind] }}</span><h2>{{ {'workshop':'Le cas professionnel', 'transfer':'Le défi de transfert', 'documents':'Le dossier documentaire', 'journal':'La simulation de main courante'}[lesson.kind] }}</h2><p>{{ lesson.case }}</p></section>
   {% if activity.practice %}{% include '_aps62_practice.html' %}{% endif %}
   {% elif lesson.kind == 'recap' %}
   <section class="aps-editorial"><span class="aps-label">Je retiens et je réutilise</span><h2>La décision à savoir expliquer</h2><p class="aps-takeaway">{{ lesson.decision }}</p><p>{{ lesson.reason }}</p><div class="aps-pitfall"><b>Le piège de ce dossier</b><p>{{ lesson.pitfall }}</p></div><p>{{ lesson.instruction }}</p></section>

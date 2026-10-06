@@ -13,6 +13,39 @@
   const exercises = [...root.querySelectorAll('[data-exercise-id]')];
   const key = `aps62-practice:${location.pathname}:${config.courseVersion}:${config.activityId}:${config.practice.revision}`;
   let verified = '', busy = false;
+  const reviewRoot = root.querySelector('[data-remediation]');
+  function reviewAnswers() {
+    return Object.fromEntries([...root.querySelectorAll('[data-review-id]')].flatMap(el => {
+      const selected = el.querySelector('input:checked');
+      return selected ? [[el.dataset.reviewId, selected.value]] : [];
+    }));
+  }
+  function updateStages() {
+    let unlocked = true, done = 0;
+    exercises.forEach((el, i) => {
+      if (config.practice.sequential) el.hidden = !unlocked;
+      const selected = el.querySelector('input:checked');
+      if (selected) done++;
+      const ex = config.practice.exercises[i];
+      const consequence = el.querySelector('[data-stage-consequence]');
+      if (consequence) {
+        consequence.textContent = selected ? (ex.branches?.[selected.value] || '') : '';
+        consequence.hidden = !consequence.textContent;
+      }
+      if (config.practice.sequential && !selected) unlocked = false;
+    });
+    const status = root.querySelector('[data-stage-status]');
+    if (status) status.textContent = `${done} décision${done > 1 ? 's' : ''} sur ${exercises.length} · Chaque choix ouvre la suite de la situation.`;
+    const journal = root.querySelector('[data-journal-preview]');
+    if (journal) {
+      journal.replaceChildren();
+      exercises.forEach(el => {
+        const title = document.createElement('dt'); title.textContent = config.practice.exercises.find(x => x.id === el.dataset.exerciseId).prompt;
+        const text = document.createElement('dd'); text.textContent = el.querySelector('input:checked')?.nextElementSibling?.textContent || 'À compléter';
+        journal.append(title, text);
+      });
+    }
+  }
 
   function collect(requireAll = true) {
     const answers = {};
@@ -58,9 +91,11 @@
       delete element.dataset.correct;
       element.querySelector('[data-exercise-feedback]').hidden = true;
     });
+    if (reviewRoot) { reviewRoot.hidden = true; reviewRoot.querySelector('[data-remediation-items]').replaceChildren(); }
   }
 
   function saveDraft(event) {
+    updateStages();
     verified = '';
     summary.textContent = 'Choix modifié. Vérifiez à nouveau vos réponses.';
     delete summary.dataset.correct;
@@ -99,6 +134,26 @@
       }
       box.hidden = false;
     }
+    if (reviewRoot && result.review) {
+      const old = reviewAnswers();
+      const list = reviewRoot.querySelector('[data-remediation-items]'); list.replaceChildren();
+      reviewRoot.hidden = !result.review.length;
+      result.review.forEach(item => {
+        const field = document.createElement('fieldset'); field.dataset.reviewId = item.id;
+        const legend = document.createElement('legend'); legend.textContent = item.prompt;
+        const lesson = document.createElement('p'); lesson.textContent = item.lesson;
+        field.append(legend, lesson);
+        item.options.forEach(option => {
+          const label = document.createElement('label');
+          const input = document.createElement('input'); input.type = 'radio'; input.name = `review-${item.id}`; input.value = option.id; input.checked = old[item.id] === option.id;
+          label.append(input, document.createTextNode(option.text)); field.append(label);
+        });
+        if (typeof item.correct === 'boolean') {
+          const feedback = document.createElement('p'); feedback.textContent = `${item.correct ? '✓ Compris' : 'À reprendre'} — ${item.explanation}`; field.append(feedback);
+        }
+        list.append(field);
+      });
+    }
     summary.dataset.correct = String(result.correct);
     summary.textContent = `${result.passed} exercice${result.passed > 1 ? 's' : ''} réussi${result.passed > 1 ? 's' : ''} sur ${result.total}. `
       + (result.correct ? (preview ? 'Atelier réussi. Vous pouvez recommencer librement.' : 'Vous pouvez terminer l’activité et continuer.')
@@ -120,7 +175,7 @@
       const response = await fetch(preview ? access.answerUrl : access.practiceUrl, {
         method: 'POST', credentials: 'same-origin',
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Elearning-CSRF': access.csrfToken},
-        body: JSON.stringify({practice_answers: answers, ...(!preview ? {access_token: access.accessToken} : {})}),
+        body: JSON.stringify({practice_answers: answers, review_answers: reviewAnswers(), ...(!preview ? {access_token: access.accessToken} : {})}),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.ok) throw new Error(result.error || 'Impossible de vérifier vos réponses. Réessayez.');
@@ -142,11 +197,19 @@
     try { restore(JSON.parse(sessionStorage.getItem(key) || 'null')); } catch (_) { /* ignore invalid local drafts */ }
   }
   if (config.completed) clearDraft();
+  updateStages();
+  root.querySelector('.aps-practice-review')?.addEventListener('click', event => {
+    const count = root.querySelectorAll('[data-review-id]').length;
+    if (Object.keys(reviewAnswers()).length !== count) { root.querySelector('[data-review-status]').textContent = 'Répondez à chaque situation de révision.'; return; }
+    root.querySelector('[data-review-status]').textContent = '';
+    verify(event);
+  });
   form.addEventListener('submit', verify);
   form.addEventListener('change', saveDraft);
   restart.addEventListener('click', () => {
     if (busy) return;
     form.reset(); clearFeedback(); clearDraft();
+    updateStages();
     summary.textContent = 'À vous de jouer : tous les choix ont été réinitialisés.';
     if (!preview && !config.completed) draft.textContent = 'Vos réponses seront enregistrées lorsque vous terminerez l’activité.';
   });

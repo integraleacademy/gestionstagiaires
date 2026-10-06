@@ -47,6 +47,8 @@ def _learning_text(value):
 def adapt_course(course):
     if course.get('source', {}).get('type') != 'academy-aps62':
         return course
+    if course.get('interaction_revision') == '20261006-aps62-v3':
+        return copy.deepcopy(course)
     course = _learning_text(course)
     total = 0
     for section in course['sections']:
@@ -72,14 +74,19 @@ def adapt_course(course):
 
 def public_practice(practice):
     """Explicit public fields: answer keys and explanations stay server-side."""
-    return {'revision': practice['revision'], 'exercises': [
+    return {'revision': practice['revision'],
+        'title': practice.get('title', ''), 'sequential': bool(practice.get('sequential')),
+        'documents': copy.deepcopy(practice.get('documents', [])),
+        'journal': bool(practice.get('journal')),
+        'exercises': [
         {'id': ex['id'], 'kind': ex['kind'], 'prompt': ex['prompt'],
+         'context': ex.get('context', ''), 'branches': copy.deepcopy(ex.get('branches', {})),
          'options': [{'id': opt['id'], 'text': opt['text']} for opt in ex['options']],
          'rows': [{'id': row['id'], 'text': row['text']} for row in ex.get('rows', [])]}
         for ex in practice['exercises']]}
 
 
-def grade_practice(practice, answers):
+def grade_practice(practice, answers, review_answers=None):
     if not isinstance(answers, dict) or set(answers) != {ex['id'] for ex in practice['exercises']}:
         raise ValueError('Répondez à chaque exercice avant de vérifier.')
     feedback, normalized = [], {}
@@ -102,5 +109,29 @@ def grade_practice(practice, answers):
         feedback.append({'id': ex['id'], 'correct': supplied == expected,
                          'explanation': ex['explanation'], 'correction': correction})
     passed = sum(item['correct'] for item in feedback)
+    review = []
+    review_answers = {} if review_answers is None else review_answers
+    if not isinstance(review_answers, dict):
+        raise ValueError('Réponses de révision invalides.')
+    allowed = {ex['id'] for ex in practice['exercises'] if ex.get('remediation')}
+    if not set(review_answers).issubset(allowed):
+        raise ValueError('Révision inconnue.')
+    review_prompts = set()
+    for ex, result in zip(practice['exercises'], feedback):
+        drill = ex.get('remediation')
+        if not drill or (result['correct'] and ex['id'] not in review_answers):
+            continue
+        if drill['prompt'] in review_prompts:
+            continue
+        review_prompts.add(drill['prompt'])
+        item = {'id': ex['id'], 'lesson': drill['lesson'], 'prompt': drill['prompt'],
+                'options': copy.deepcopy(drill['options'])}
+        if ex['id'] in review_answers:
+            selected = review_answers[ex['id']]
+            if not isinstance(selected, str) or selected not in {o['id'] for o in drill['options']}:
+                raise ValueError('Choix de révision invalide.')
+            item.update(correct=selected == drill['answer'], explanation=drill['explanation'])
+        review.append(item)
     return {'correct': passed == len(feedback), 'passed': passed, 'total': len(feedback),
+            'review': review,
             'feedback': feedback, 'answers': normalized, 'revision': practice['revision']}

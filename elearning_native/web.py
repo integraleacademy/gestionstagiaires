@@ -941,7 +941,7 @@ def create_native_elearning_blueprint(
         if activity and activity.get('practice'):
             payload = request.get_json(silent=True)
             try:
-                result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None)
+                result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
             except ValueError as exc:
                 return jsonify({'ok': False, 'error': str(exc)}), 400
             response = jsonify({'ok': True, **result})
@@ -1635,7 +1635,7 @@ def create_native_elearning_blueprint(
             return jsonify({'ok': False, 'error': 'Terminez d’abord l’activité précédente.'}), 409
         payload = request.get_json(silent=True)
         try:
-            result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None)
+            result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
         except ValueError as exc:
             return jsonify({'ok': False, 'error': str(exc)}), 400
         response = jsonify({'ok': True, **result})
@@ -1659,7 +1659,7 @@ def create_native_elearning_blueprint(
             else:
                 payload = request.get_json(silent=True)
                 try:
-                    result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None)
+                    result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
                 except ValueError as exc:
                     return jsonify({'ok': False, 'error': str(exc)}), 400
                 if not result['correct']:
@@ -1713,6 +1713,12 @@ def create_native_elearning_blueprint(
             correct, response_payload = _evaluate_answer(activity, answer_payload)
         except TrackingError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 400
+        if course.get('settings', {}).get('require_correct_answers') and not correct:
+            response = jsonify({"ok": True, "already_answered": False, "correct": False,
+                "retry_required": True, "explanation": str(activity.get('explanation') or ''),
+                "progress": current, "next_activity_id": activity_id})
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
         answer = {
             **response_payload,
             "correct": correct,

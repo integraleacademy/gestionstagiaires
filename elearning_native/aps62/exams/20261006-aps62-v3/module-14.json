@@ -1,0 +1,939 @@
+{
+  "id": "module-14",
+  "version": "20261006-aps62-v3",
+  "title": "Décider face à une infraction",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-14-01",
+      "prompt": "Une personne sort avec un objet identique à ceux du magasin, sans autre indice. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vérifier les faits sans conclure automatiquement au vol"
+        },
+        {
+          "id": "2",
+          "text": "La retenir d’office"
+        },
+        {
+          "id": "3",
+          "text": "Lui imposer un paiement"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La possession d’un objet semblable ne suffit pas seule à établir une infraction.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-02",
+      "prompt": "Un portique antivol sonne. Quelle première analyse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Il s’agit d’un signal à vérifier selon la procédure"
+        },
+        {
+          "id": "2",
+          "text": "Le vol est juridiquement certain"
+        },
+        {
+          "id": "3",
+          "text": "Une fouille forcée est autorisée"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une alarme peut avoir plusieurs causes ; il faut réunir des faits.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-03",
+      "prompt": "Un agent voit une vitre brisée et une personne à proximité. Que peut-il affirmer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Que toute personne proche est complice"
+        },
+        {
+          "id": "2",
+          "text": "Que cette personne a cassé la vitre"
+        },
+        {
+          "id": "3",
+          "text": "La présence de la vitre brisée et de la personne, pas automatiquement l’auteur"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La proximité ne démontre pas à elle seule la responsabilité.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-04",
+      "prompt": "Un individu frappe actuellement un visiteur. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Poursuivre sa ronde sans relais"
+        },
+        {
+          "id": "2",
+          "text": "Attendre le rapport écrit du client"
+        },
+        {
+          "id": "3",
+          "text": "Protéger, alerter et agir dans les limites de la nécessité et de ses moyens"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La protection immédiate doit être pensée avec les risques et le cadre de l’intervention.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-05",
+      "prompt": "Une personne refuse de donner son identité à l’APS. Quelle limite ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’agent ne dispose pas d’un pouvoir général de contrôle coercitif d’identité"
+        },
+        {
+          "id": "2",
+          "text": "Il peut automatiquement la placer en garde à vue"
+        },
+        {
+          "id": "3",
+          "text": "Il peut confisquer tout document"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les modalités d’accès et les pouvoirs de police doivent être distingués.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-06",
+      "prompt": "Un suspect fuit et la poursuite expose des passants. Que privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le blocage improvisé de la route"
+        },
+        {
+          "id": "2",
+          "text": "Une poursuite à tout prix"
+        },
+        {
+          "id": "3",
+          "text": "La sécurité et la transmission des éléments utiles"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La protection des personnes et la proportionnalité priment sur la seule volonté d’intercepter.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-07",
+      "prompt": "Un objet a été volontairement remis à l’agent après un incident. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "En assurer la traçabilité et le relais prévu"
+        },
+        {
+          "id": "2",
+          "text": "Le nettoyer avant remise aux autorités"
+        },
+        {
+          "id": "3",
+          "text": "Le conserver comme souvenir"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’intégrité et l’attribution des manipulations doivent être préservées.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-08",
+      "prompt": "Deux témoignages se contredisent. Comment rendre compte ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Choisir le témoin le plus convaincant sans le dire"
+        },
+        {
+          "id": "2",
+          "text": "Distinguer les deux versions et les faits vérifiés"
+        },
+        {
+          "id": "3",
+          "text": "Fusionner les récits en une seule certitude"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La contradiction est une information utile à transmettre, pas à masquer.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-09",
+      "prompt": "Une personne reconnaît un fait puis se rétracte. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Forcer une nouvelle reconnaissance"
+        },
+        {
+          "id": "2",
+          "text": "Supprimer la rétractation"
+        },
+        {
+          "id": "3",
+          "text": "Rapporter fidèlement les propos et leur chronologie"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’agent n’a pas à fabriquer une version stable par pression.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-10",
+      "prompt": "Le client exige de garder un suspect jusqu’au remboursement. Quelle réponse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Refuser ce détournement et utiliser le relais légal adapté"
+        },
+        {
+          "id": "2",
+          "text": "Accepter si la somme est faible"
+        },
+        {
+          "id": "3",
+          "text": "Demander une caution personnelle"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une contrainte ne doit pas servir de moyen privé de recouvrement.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-11",
+      "prompt": "Une scène contient des traces utiles. Que privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Ranger pour faciliter la circulation sans trace"
+        },
+        {
+          "id": "2",
+          "text": "Limiter les accès sans s’exposer et signaler les modifications nécessaires"
+        },
+        {
+          "id": "3",
+          "text": "Demander aux visiteurs de manipuler les objets"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La préservation vise à éviter l’altération des éléments, sous réserve des urgences de protection.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-12",
+      "prompt": "Une urgence médicale survient pendant le traitement d’une infraction. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Organiser les secours et prévenir le relais concerné"
+        },
+        {
+          "id": "2",
+          "text": "Refuser l’aide tant que l’identité manque"
+        },
+        {
+          "id": "3",
+          "text": "Attendre les aveux"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le besoin de soins ne disparaît pas avec le soupçon d’infraction.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-13",
+      "prompt": "Un téléphone contient peut-être une preuve. L’agent peut-il l’explorer librement ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui si le téléphone est déverrouillé"
+        },
+        {
+          "id": "2",
+          "text": "Non, il ne dispose pas d’un pouvoir général d’enquête numérique"
+        },
+        {
+          "id": "3",
+          "text": "Oui avec le code donné par un autre visiteur"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La recherche d’éléments doit respecter les droits et les compétences des autorités.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-14",
+      "prompt": "Un mineur est accusé par un commerçant. Quelle posture ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vérifier les faits, protéger sa dignité et saisir le relais compétent"
+        },
+        {
+          "id": "2",
+          "text": "Exiger des excuses publiques"
+        },
+        {
+          "id": "3",
+          "text": "Diffuser immédiatement son identité"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le traitement doit rester factuel et adapté à la vulnérabilité.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-15",
+      "prompt": "Un témoin veut publier l’incident en direct. Que peut faire l’agent ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Rappeler calmement les règles pertinentes et protéger la scène dans son cadre"
+        },
+        {
+          "id": "2",
+          "text": "Donner les noms des personnes impliquées"
+        },
+        {
+          "id": "3",
+          "text": "Saisir automatiquement tous les téléphones"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La communication et les mesures de protection doivent rester dans les limites de la mission.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-16",
+      "prompt": "Un comportement enfreint une consigne interne mais aucun délit n’est établi. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Appliquer la réponse d’accès prévue et proportionnée"
+        },
+        {
+          "id": "2",
+          "text": "Prononcer une peine pénale"
+        },
+        {
+          "id": "3",
+          "text": "Invoquer automatiquement l’article 73"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une règle interne ne crée pas une infraction pénale par elle-même.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-17",
+      "prompt": "Pourquoi noter les conditions de visibilité d’un fait ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour remplacer le fait par une opinion"
+        },
+        {
+          "id": "2",
+          "text": "Pour apprécier ce qui a réellement pu être observé"
+        },
+        {
+          "id": "3",
+          "text": "Pour compliquer l’enquête"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Distance, obstacles et durée peuvent limiter la portée du constat.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-18",
+      "prompt": "Une vidéo montre une action mais pas son début. Que dire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Présumer une agression sans contexte"
+        },
+        {
+          "id": "2",
+          "text": "Affirmer que toute l’histoire est établie"
+        },
+        {
+          "id": "3",
+          "text": "Préciser que le contexte initial n’est pas visible"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’image doit être interprétée avec ses limites, sans extrapolation certaine.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-19",
+      "prompt": "La personne coopère et le risque diminue. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Augmenter la contrainte par principe"
+        },
+        {
+          "id": "2",
+          "text": "Réévaluer les mesures et maintenir seulement ce qui reste justifié"
+        },
+        {
+          "id": "3",
+          "text": "Prolonger l’incident pour l’exemple"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La nécessité s’apprécie tout au long de la situation.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-20",
+      "prompt": "Un collègue emploie une force manifestement excessive. Quelle réaction ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Faire cesser l’excès dans ses moyens, protéger et alerter"
+        },
+        {
+          "id": "2",
+          "text": "Le soutenir sans examen"
+        },
+        {
+          "id": "3",
+          "text": "Cacher les faits dans le rapport"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La solidarité professionnelle ne justifie ni violence illégitime ni falsification.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-21",
+      "prompt": "Une personne est seulement soupçonnée. Quel terme est préférable ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Délinquant de profession"
+        },
+        {
+          "id": "2",
+          "text": "Personne concernée ou suspectée, avec les faits observés"
+        },
+        {
+          "id": "3",
+          "text": "Coupable définitivement établi"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le vocabulaire doit éviter de transformer un soupçon en verdict.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-22",
+      "prompt": "Un objet dangereux est découvert. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le manipuler pour tester son fonctionnement"
+        },
+        {
+          "id": "2",
+          "text": "Prévenir l’exposition et alerter le service compétent"
+        },
+        {
+          "id": "3",
+          "text": "Le montrer à la foule"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’identification ou le traitement technique ne doivent pas être improvisés.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-23",
+      "prompt": "Une personne demande une copie du rapport la concernant. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Détruire le rapport"
+        },
+        {
+          "id": "2",
+          "text": "Lui remettre toute la main courante"
+        },
+        {
+          "id": "3",
+          "text": "L’orienter vers le circuit de demande autorisé"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La demande doit être traitée dans le cadre adapté, notamment pour les données des tiers.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-24",
+      "prompt": "L’agent a dû déplacer un objet pour protéger une victime. Que noter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’objet, sa position initiale, l’action et son motif"
+        },
+        {
+          "id": "2",
+          "text": "Une position initiale inventée"
+        },
+        {
+          "id": "3",
+          "text": "Rien pour préserver l’apparence de la scène"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une modification nécessaire doit rester traçable pour les intervenants suivants.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-25",
+      "prompt": "Un responsable demande de ne pas appeler les secours malgré un danger grave. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Assurer l’alerte nécessaire à la protection des personnes"
+        },
+        {
+          "id": "2",
+          "text": "Attendre pour préserver la réputation du site"
+        },
+        {
+          "id": "3",
+          "text": "Faire signer une décharge à la victime"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La protection urgente ne doit pas être subordonnée à une convenance commerciale.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-26",
+      "prompt": "Un témoin ne veut pas donner de coordonnées. Quelle limite respecter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le retenir jusqu’à ce qu’il cède"
+        },
+        {
+          "id": "2",
+          "text": "Ne pas improviser une contrainte ; transmettre les éléments disponibles"
+        },
+        {
+          "id": "3",
+          "text": "Photographier sa pièce de force"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La coopération volontaire et les pouvoirs des autorités doivent être distingués.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-27",
+      "prompt": "Une accusation se révèle infondée. Quelle suite ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Maintenir l’accusation pour protéger le service"
+        },
+        {
+          "id": "2",
+          "text": "Corriger la situation et le compte rendu avec traçabilité"
+        },
+        {
+          "id": "3",
+          "text": "Effacer les faits favorables à la personne"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’actualisation doit refléter les éléments nouveaux et réparer la décision injustifiée.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-28",
+      "prompt": "Quelle information aide le mieux les forces de l’ordre à l’arrivée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une chronologie concise, les personnes, risques et actions déjà menées"
+        },
+        {
+          "id": "2",
+          "text": "Un récit dramatique"
+        },
+        {
+          "id": "3",
+          "text": "La sanction souhaitée par le client"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le relais doit disposer des faits nécessaires à la prise en charge.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-29",
+      "prompt": "Un agent poursuit l’intervention après le relais sans demande. Quel risque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Obtenir automatiquement des pouvoirs supplémentaires"
+        },
+        {
+          "id": "2",
+          "text": "Améliorer toujours l’efficacité"
+        },
+        {
+          "id": "3",
+          "text": "Désorganiser la prise en charge et dépasser son rôle"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La transmission implique une coordination claire des responsabilités.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-14-30",
+      "prompt": "Quel bilan doit suivre une intervention difficile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une diffusion publique des images"
+        },
+        {
+          "id": "2",
+          "text": "Une version unique imposée à tous les témoins"
+        },
+        {
+          "id": "3",
+          "text": "Un compte rendu fidèle et une analyse des écarts avec le responsable"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La relecture vise l’amélioration, sans modifier les témoignages ni exposer les personnes.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}

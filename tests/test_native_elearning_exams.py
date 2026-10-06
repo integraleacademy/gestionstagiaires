@@ -80,9 +80,10 @@ class ExamWebTests(unittest.TestCase):
         return json.loads(re.search(r'<script type="application/json" id="apsExamConfig">(.*?)</script>',response.get_data(as_text=True),re.S)[1])
 
     def post(self,config,answers=None,**extra):
-        exam=load_exam(config['exam']['id'],VERSION)
+        version=config['exam']['version']
+        exam=load_exam(config['exam']['id'],version)
         answers=answers if answers is not None else {q['id']:q['answer'] for q in exam['questions']}
-        return self.client.post(config['submitUrl'],json={'version':VERSION,'attempt_id':config['attemptId'],'answers':answers,**extra},headers={'X-Elearning-CSRF':config['csrfToken']})
+        return self.client.post(config['submitUrl'],json={'version':version,'attempt_id':config['attemptId'],'answers':answers,**extra},headers={'X-Elearning-CSRF':config['csrfToken']})
 
     def assign_first(self):
         session=self.data['sessions'][0]

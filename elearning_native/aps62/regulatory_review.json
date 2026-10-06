@@ -1,0 +1,477 @@
+{
+  "checked_on": "2026-10-06",
+  "edition": "20261006-aps62-v3",
+  "status": "Correspondance pédagogique documentée ; conformité complète non attestée.",
+  "ministry_minutes": 3720,
+  "adef_minutes": 3030,
+  "adef_ceiling_minutes": 3060,
+  "scope": "La correspondance porte sur les séquences théoriques des annexes II et III. Elle ne vaut ni habilitation de l’organisme ni validation des compétences pratiques.",
+  "sources": [
+    {
+      "label": "Arrêté du 1er septembre 2025 · annexes II et III",
+      "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000052197461/"
+    },
+    {
+      "label": "ADEF · séquences du TFP APS à distance",
+      "url": "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+    },
+    {
+      "label": "Arrêté du 23 octobre 2024 · article 8",
+      "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000050398597/"
+    }
+  ],
+  "operational_checks": [
+    "Vérifier l’autorisation de l’organisme, les formateurs et la déclaration des modalités à distance.",
+    "Organiser la réunion initiale et une assistance technique et pédagogique avec communication sécurisée et individualisée.",
+    "Faire signer le tableau de suivi de chaque module par le stagiaire et le responsable du prestataire pour l’asynchrone.",
+    "Conserver pendant trois ans après la fin de session les identités, numéros de titres ou autorisations, temps, résultats et tableaux de suivi ; informer les stagiaires sur leurs données.",
+    "Version 3 : corriger les questionnaires et ateliers avant progression ; vérifier aussi le paramétrage du parcours réellement affecté.",
+    "Tester le temps actif avec des apprenants représentatifs, analyser les erreurs et ajuster les activités avant de garantir une charge réelle de 62 h.",
+    "Pour le TFP APS, affecter uniquement les fractions autorisées par le certificateur : le total de 62 h ne devient pas automatiquement imputable."
+  ],
+  "modules": [
+    {
+      "id": "academy-aps62-01",
+      "number": "01",
+      "title": "Le cadre de la sécurité privée",
+      "reference": "Annexe II · Livre VI du CSI",
+      "ministry_minutes": 240,
+      "adef_minutes": 240,
+      "objectives": "Livre VI, conditions d’exercice, aptitude et moralité, titres, téléservices, exclusivité, service interne, armes, tenue et distinction avec la puissance publique.",
+      "evidence": [
+        {
+          "section": "aps62-01-01",
+          "label": "01.01"
+        },
+        {
+          "section": "aps62-01-02",
+          "label": "01.02"
+        },
+        {
+          "section": "aps62-01-03",
+          "label": "01.03"
+        },
+        {
+          "section": "aps62-01-04",
+          "label": "01.04"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-02",
+      "number": "02",
+      "title": "Responsabilité et droit pénal",
+      "reference": "Annexe II · Dispositions utiles du code pénal",
+      "ministry_minutes": 180,
+      "adef_minutes": 180,
+      "objectives": "Responsabilités, juridictions pénales, légitime défense, nécessité, assistance, intégrité et liberté, usurpation, appropriation et systèmes informatiques.",
+      "evidence": [
+        {
+          "section": "aps62-02-01",
+          "label": "02.01"
+        },
+        {
+          "section": "aps62-02-02",
+          "label": "02.02"
+        },
+        {
+          "section": "aps62-02-03",
+          "label": "02.03"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-03",
+      "number": "03",
+      "title": "Flagrance et article 73",
+      "reference": "Annexe II · Application de l’article 73",
+      "ministry_minutes": 120,
+      "adef_minutes": 120,
+      "objectives": "Crime ou délit flagrant puni d’emprisonnement, faculté d’appréhension, limites, nécessité des moyens et remise à l’OPJ.",
+      "evidence": [
+        {
+          "section": "aps62-03-01",
+          "label": "03.01"
+        },
+        {
+          "section": "aps62-03-02",
+          "label": "03.02"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-04",
+      "number": "04",
+      "title": "Libertés et données personnelles",
+      "reference": "Annexe II · Libertés publiques",
+      "ministry_minutes": 60,
+      "adef_minutes": 60,
+      "objectives": "Vie privée, propriété, libertés, données personnelles, CNIL, destinataires habilités et juridictions civiles.",
+      "evidence": [
+        {
+          "section": "aps62-04-01",
+          "label": "04.01"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-05",
+      "number": "05",
+      "title": "République, égalité et dignité",
+      "reference": "Annexe II · Principes de la République",
+      "ministry_minutes": 180,
+      "adef_minutes": 180,
+      "objectives": "Liberté, égalité, fraternité, dignité, non-discrimination, laïcité, liberté de conscience, État de droit et symboles.",
+      "evidence": [
+        {
+          "section": "aps62-05-01",
+          "label": "05.01"
+        },
+        {
+          "section": "aps62-05-02",
+          "label": "05.02"
+        },
+        {
+          "section": "aps62-05-03",
+          "label": "05.03"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-06",
+      "number": "06",
+      "title": "Déontologie au quotidien",
+      "reference": "Annexe II · Déontologie professionnelle",
+      "ministry_minutes": 240,
+      "adef_minutes": 240,
+      "objectives": "Intégrité, confidentialité, loyauté, contrôles, ordres illicites, travail dissimulé, marchandage, prêt de main-d’œuvre et sanctions.",
+      "evidence": [
+        {
+          "section": "aps62-06-01",
+          "label": "06.01"
+        },
+        {
+          "section": "aps62-06-02",
+          "label": "06.02"
+        },
+        {
+          "section": "aps62-06-03",
+          "label": "06.03"
+        },
+        {
+          "section": "aps62-06-04",
+          "label": "06.04"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-07",
+      "number": "07",
+      "title": "Comprendre et apaiser les conflits",
+      "reference": "Annexe II · Analyse et résolution des conflits",
+      "ministry_minutes": 300,
+      "adef_minutes": 180,
+      "objectives": "Naissance et évolution d’un conflit, écoute, reformulation, distance, communication non verbale, limites et résolution.",
+      "evidence": [
+        {
+          "section": "aps62-07-01",
+          "label": "07.01"
+        },
+        {
+          "section": "aps62-07-02",
+          "label": "07.02"
+        },
+        {
+          "section": "aps62-07-03",
+          "label": "07.03"
+        },
+        {
+          "section": "aps62-07-04",
+          "label": "07.04"
+        },
+        {
+          "section": "aps62-07-05",
+          "label": "07.05"
+        }
+      ],
+      "review_note": "TFP APS : 2 h du bloc doivent être organisées en présentiel. Observer également la communication en situation.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-08",
+      "number": "08",
+      "title": "Consignes et comptes rendus",
+      "reference": "Annexe II · Transmission des informations",
+      "ministry_minutes": 300,
+      "adef_minutes": 180,
+      "objectives": "Consignes, versions, transmission orale, main courante, rapport circonstancié, sources, corrections et relève.",
+      "evidence": [
+        {
+          "section": "aps62-08-01",
+          "label": "08.01"
+        },
+        {
+          "section": "aps62-08-02",
+          "label": "08.02"
+        },
+        {
+          "section": "aps62-08-03",
+          "label": "08.03"
+        },
+        {
+          "section": "aps62-08-04",
+          "label": "08.04"
+        },
+        {
+          "section": "aps62-08-05",
+          "label": "08.05"
+        }
+      ],
+      "review_note": "TFP APS : 2 h du bloc restent en présentiel. Les choix sur écran ne prouvent pas la capacité à produire seul un rapport.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-09",
+      "number": "09",
+      "title": "Justifier ses décisions",
+      "reference": "Annexe III · Compléments pénal et libertés",
+      "ministry_minutes": 180,
+      "adef_minutes": 180,
+      "objectives": "Application du raisonnement pénal, chronologie, alternatives, assistance, nécessité et articulation des libertés.",
+      "evidence": [
+        {
+          "section": "aps62-09-01",
+          "label": "09.01"
+        },
+        {
+          "section": "aps62-09-02",
+          "label": "09.02"
+        },
+        {
+          "section": "aps62-09-03",
+          "label": "09.03"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-10",
+      "number": "10",
+      "title": "Prévention et risques industriels",
+      "reference": "Annexe III · Risques professionnels et industriels",
+      "ministry_minutes": 420,
+      "adef_minutes": 300,
+      "objectives": "Danger et exposition, obligations, DUERP, principes de prévention, coactivité, plans, ICPE/Seveso, protections, CLP/FDS et ATEX.",
+      "evidence": [
+        {
+          "section": "aps62-10-01",
+          "label": "10.01"
+        },
+        {
+          "section": "aps62-10-02",
+          "label": "10.02"
+        },
+        {
+          "section": "aps62-10-03",
+          "label": "10.03"
+        },
+        {
+          "section": "aps62-10-04",
+          "label": "10.04"
+        },
+        {
+          "section": "aps62-10-05",
+          "label": "10.05"
+        },
+        {
+          "section": "aps62-10-06",
+          "label": "10.06"
+        },
+        {
+          "section": "aps62-10-07",
+          "label": "10.07"
+        }
+      ],
+      "review_note": "TFP APS : 2 h du bloc restent en présentiel. Adapter les exercices aux installations et documents du site.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-11",
+      "number": "11",
+      "title": "Sensibilisation au risque électrique",
+      "reference": "Annexe III · Risque électrique",
+      "ministry_minutes": 120,
+      "adef_minutes": 120,
+      "objectives": "Dangers électriques, limites de compétence, prévention de la seconde victime, protection et alerte.",
+      "evidence": [
+        {
+          "section": "aps62-11-01",
+          "label": "11.01"
+        },
+        {
+          "section": "aps62-11-02",
+          "label": "11.02"
+        }
+      ],
+      "review_note": "Notions et entraînements présents. Relecture du formateur, actualisation et évaluation en situation à confirmer.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-12",
+      "number": "12",
+      "title": "Prévenir la menace terroriste",
+      "reference": "Annexe III · Séquences théoriques autorisées à distance",
+      "ministry_minutes": 420,
+      "adef_minutes": 390,
+      "objectives": "Définition et modes de menace, Vigipirate, vigilance factuelle, détection, alerte, retour d’expérience et bilan de blessures.",
+      "evidence": [
+        {
+          "section": "aps62-12-01",
+          "label": "12.01"
+        },
+        {
+          "section": "aps62-12-02",
+          "label": "12.02"
+        },
+        {
+          "section": "aps62-12-03",
+          "label": "12.03"
+        },
+        {
+          "section": "aps62-12-04",
+          "label": "12.04"
+        },
+        {
+          "section": "aps62-12-05",
+          "label": "12.05"
+        },
+        {
+          "section": "aps62-12-06",
+          "label": "12.06"
+        },
+        {
+          "section": "aps62-12-07",
+          "label": "12.07"
+        }
+      ],
+      "review_note": "Couverture partielle : compléter et valider les supports de reconnaissance du matériel et des modes opératoires du référentiel avec un formateur. TFP APS : 6 h 30 à distance. Les 6 h de pratique du programme ministériel de 13 h ne figurent pas dans ces 7 h.",
+      "coverage": "Complément requis"
+    },
+    {
+      "id": "academy-aps62-13",
+      "number": "13",
+      "title": "La main courante numérique",
+      "reference": "Annexe III · Outil informatique et transmission",
+      "ministry_minutes": 120,
+      "adef_minutes": 60,
+      "objectives": "Comptes individuels, saisie et correction, continuité, recherche, classement, traitement de texte, export et diffusion.",
+      "evidence": [
+        {
+          "section": "aps62-13-01",
+          "label": "13.01"
+        },
+        {
+          "section": "aps62-13-02",
+          "label": "13.02"
+        }
+      ],
+      "review_note": "TFP APS : 1 h à distance. L’autonomie sur traitement de texte et logiciel métier reste à observer sur un outil réel.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-14",
+      "number": "14",
+      "title": "Décider face à une infraction",
+      "reference": "Annexe III · Article 73 et filières métiers",
+      "ministry_minutes": 420,
+      "adef_minutes": 180,
+      "objectives": "Article 73 dans les filières surveillance, distribution et sécurité incendie ; nécessité, proportion, préservation et remise aux autorités.",
+      "evidence": [
+        {
+          "section": "aps62-14-01",
+          "label": "14.01"
+        },
+        {
+          "section": "aps62-14-02",
+          "label": "14.02"
+        },
+        {
+          "section": "aps62-14-03",
+          "label": "14.03"
+        },
+        {
+          "section": "aps62-14-04",
+          "label": "14.04"
+        },
+        {
+          "section": "aps62-14-05",
+          "label": "14.05"
+        },
+        {
+          "section": "aps62-14-06",
+          "label": "14.06"
+        },
+        {
+          "section": "aps62-14-07",
+          "label": "14.07"
+        }
+      ],
+      "review_note": "TFP APS : 3 h à distance ; 4 h du bloc restent en présentiel. Les choix sur écran ne valident pas l’appréhension physique.",
+      "coverage": "Supports et exercices présents"
+    },
+    {
+      "id": "academy-aps62-15",
+      "number": "15",
+      "title": "Sécuriser un événement",
+      "reference": "Annexe III · Événementiel",
+      "ministry_minutes": 420,
+      "adef_minutes": 420,
+      "objectives": "Cadre événementiel, acteurs, responsabilités, zones, flux, foule, mise en sécurité, accréditations, billetterie et litiges.",
+      "evidence": [
+        {
+          "section": "aps62-15-01",
+          "label": "15.01"
+        },
+        {
+          "section": "aps62-15-02",
+          "label": "15.02"
+        },
+        {
+          "section": "aps62-15-03",
+          "label": "15.03"
+        },
+        {
+          "section": "aps62-15-04",
+          "label": "15.04"
+        },
+        {
+          "section": "aps62-15-05",
+          "label": "15.05"
+        },
+        {
+          "section": "aps62-15-06",
+          "label": "15.06"
+        },
+        {
+          "section": "aps62-15-07",
+          "label": "15.07"
+        }
+      ],
+      "review_note": "Faire valider le cadre et les responsabilités pour chaque type d’événement. Les contrôles pratiques relèvent de leurs séquences propres.",
+      "coverage": "Supports et exercices présents"
+    }
+  ]
+}

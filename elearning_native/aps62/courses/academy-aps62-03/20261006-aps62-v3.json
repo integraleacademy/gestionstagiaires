@@ -1,0 +1,3071 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-03",
+  "version": "20261006-aps62-v3",
+  "title": "APS 03 · Flagrance et article 73",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-06"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false,
+    "require_correct_answers": true
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 120,
+  "required_minutes": 120,
+  "regulation": "Annexe II · Application de l’article 73",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-03-01",
+      "title": "01 · L’article 73 commence par des faits",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-03-01-comprendre",
+          "title": "Comprendre · L’article 73 commence par des faits",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-03.webp",
+            "case": "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.",
+            "reason": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.",
+            "lessons": [
+              {
+                "ref": "02.12",
+                "title": "Comprendre la flagrance",
+                "page": 96,
+                "diagram": "media/aps62/repere-02.12.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une situation précisément définie"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. L'article 73 du code de procédure pénale permet à toute personne d'appréhender l'auteur d'un crime flagrant ou d'un délit flagrant puni d'emprisonnement pour le conduire devant l'officier de police judiciaire le plus proche. Cette faculté n'est pas réservée aux APS, et ne leur donne pas une mission d'enquête."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Des faits avant une qualification"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un comportement inhabituel n'établit pas à lui seul une infraction. Il faut distinguer ce qui est constaté, ce qui est rapporté et ce qui reste supposé. Même lorsque le cadre paraît réuni, le risque de l'intervention et les moyens disponibles comptent. L'alerte rapide, la protection et la transmission peuvent être déterminantes. Toute contrainte doit rester nécessaire et proportionnée."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent voit une personne manipuler une porte. Cela peut avoir plusieurs explications. Il observe et vérifie selon sa mission, sans conclure automatiquement à un cambriolage. En présence de faits caractérisant une infraction flagrante, il sollicite les forces de l'ordre et décrit exactement les éléments, sans transformer un doute en certitude."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · L'appréhension ne sert pas à obtenir des aveux, à contrôler librement une identité ou à sanctionner une personne. Le relais aux autorités est central."
+                  }
+                ],
+                "course_page": 97,
+                "practice": {
+                  "background": "L’agent doit distinguer la base juridique et la faisabilité. Même lorsqu’une faculté existe, une intervention risquée peut céder la place à l’observation et à l’alerte. Toute force doit être nécessaire et proportionnée. Prévenez immédiatement les forces de l’ordre, préservez la dignité et surveillez l’état de la personne. Ne menez pas d’interrogatoire, ne cherchez pas un aveu et ne prolongez pas la retenue pour terminer des formalités commerciales. Les limites opérationnelles sont approfondies dans l’UV 6.",
+                  "case": "Une alarme antivol sonne au passage d’un client. Vous n’avez rien observé d’autre. Il accepte de revenir vers l’accueil mais refuse de vider ses poches. L’alarme suffit-elle à elle seule ? Que pouvez-vous faire sans contrainte injustifiée ?",
+                  "transfer": "« Il a l’air coupable » permet-il de conclure que les conditions de l’article 73 sont réunies ?",
+                  "page": 123
+                }
+              },
+              {
+                "ref": "06.01",
+                "title": "Évaluer une décision d'appréhension",
+                "page": 264,
+                "diagram": "media/aps62/repere-06.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une faculté strictement encadrée"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Distinguer protection et poursuite"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Pouvoir envisager une appréhension ne signifie pas que toute modalité est permise. Le relais rapide aux forces de l'ordre reste au centre du dispositif."
+                  }
+                ],
+                "course_page": 265,
+                "practice": {
+                  "background": "La possibilité juridique ne rend pas toute intervention opportune. Évaluez les personnes exposées, les moyens de communication, le nombre d’intervenants et les possibilités de retrait. Une personne armée ou une situation incontrôlable appelle d’abord la protection et les forces de l’ordre. L’observation à distance, le signalement et la préservation des éléments peuvent être la meilleure réponse. Une action physique éventuelle reste nécessaire, proportionnée et limitée au but légal, sans punition. La formation pratique se déroule exclusivement sous encadrement adapté.",
+                  "case": "Vous voyez une personne casser une vitrine et saisir des objets. Elle tient un outil lourd et se dirige vers la sortie. Vous êtes seul et des clients se trouvent à proximité. Quels faits pouvez-vous transmettre immédiatement ? Pourquoi l’appréhension n’est-elle pas automatique ?",
+                  "transfer": "Un collègue veut intervenir alors que les faits restent incertains. Quelles informations lui demandez-vous ?",
+                  "page": 280
+                }
+              },
+              {
+                "ref": "06.02",
+                "title": "Distinguer soupçon et constat",
+                "page": 266,
+                "diagram": "media/aps62/repere-06.02.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une hypothèse n'est pas un fait établi"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Le soupçon peut déclencher une vigilance ou une vérification autorisée ; il ne suffit pas à attribuer une infraction. Une alarme de portique, une attitude nerveuse ou un objet aperçu doivent être replacés dans leur contexte. Un dispositif technique peut être déclenché pour plusieurs raisons. L'agent doit pouvoir dire exactement ce qu'il a vu et ce qu'il ignore."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Conserver la continuité des observations"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une interruption de visibilité peut modifier ce qu'il est raisonnable de conclure. Les témoignages et les images peuvent compléter, mais ne doivent pas être présentés comme des observations personnelles. Une description neutre facilite le relais : lieu, moment, actes, objets et direction de déplacement. Elle évite de faire reposer une décision sur une réputation ou une apparence."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent voit une personne placer un article dans un sac, puis la perd de vue avant son passage en caisse. Il ne peut pas affirmer, sur cette seule observation, que l'article n'a pas été payé. Il suit les vérifications autorisées et transmet cette limite à son responsable. La précision protège la fiabilité de la décision."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une information incomplète doit rester présentée comme incomplète. Ajouter une certitude non observée peut conduire à une atteinte injustifiée aux droits d'une personne."
+                  }
+                ],
+                "course_page": 267,
+                "practice": {
+                  "background": "L’agent ne mène pas une enquête judiciaire. Il ne force pas l’accès à un téléphone, ne fouille pas un corps et ne cherche pas à obtenir un aveu. Les échanges doivent rester dans le cadre de la mission. Ne créez pas une situation de privation de liberté en présentant un entretien comme volontaire alors que la personne ne peut pas partir. Si les faits nécessitent une intervention publique, transmettez rapidement aux forces compétentes. En cas d’incertitude, expliquez-la dans la transmission.",
+                  "case": "Un employé vous dit qu’une personne a « probablement volé » parce qu’elle porte un grand sac. Aucun produit manquant ni geste précis n’est décrit. Que demandez-vous à l’employé ? Quelle surveillance reste possible ?",
+                  "transfer": "Une personne court vers la sortie. Pourquoi ce seul fait ne prouve-t-il pas un vol ?",
+                  "page": 281
+                }
+              }
+            ],
+            "decision": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+            "pitfall": "Retenir automatiquement toute personne qui déclenche un portique.",
+            "objectives": [
+              "Expliquer : l’article 73 commence par des faits",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte."
+              ],
+              [
+                "Décision à justifier",
+                "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée."
+              ],
+              [
+                "Piège à éviter",
+                "Retenir automatiquement toute personne qui déclenche un portique."
+              ],
+              [
+                "Pourquoi ?",
+                "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Le portique d’un magasin sonne."
+              },
+              {
+                "label": "Vérifier",
+                "text": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement."
+              },
+              {
+                "label": "Décider",
+                "text": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Un vendeur affirme maintenant avoir vu une soustraction. Quelles précisions lui demander sans présenter son témoignage comme votre observation ?"
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : Flagrance et article 73",
+            "visual_board": {
+              "title": "Article 73 : raisonner avant de contraindre",
+              "steps": [
+                {
+                  "label": "Faits",
+                  "text": "Qu’ai-je réellement vu ? À quel moment ? Avec quelles limites ?"
+                },
+                {
+                  "label": "Conditions",
+                  "text": "Crime flagrant ou délit flagrant puni d’emprisonnement : vérifier le cadre."
+                },
+                {
+                  "label": "Nécessité",
+                  "text": "Adapter les moyens et réévaluer la contrainte ; préserver la dignité."
+                },
+                {
+                  "label": "OPJ",
+                  "text": "Organiser sans retard injustifié le relais vers l’officier de police judiciaire."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "Un témoignage trop rapide",
+              "case": "Une caissière signale un vol. Elle a vu un article placé dans un sac mais n’a pas observé le passage en caisse. Le portique ne sonne pas. La personne accepte de discuter à proximité de l’accueil.",
+              "task": "Séparez les faits connus, le point manquant et les actions possibles sans contrainte injustifiée.",
+              "model": "Le récit partiel ne permet pas d’inventer le non-paiement. Vérifier les éléments disponibles dans le cadre du site, sans interrogatoire coercitif. Si les conditions légales d’une appréhension ne sont pas établies, ne pas les présumer."
+            },
+            "sorting": [
+              {
+                "text": "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.",
+                "category": "fait"
+              },
+              {
+                "text": "Retenir automatiquement toute personne qui déclenche un portique.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+                "category": "adapte"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Comprendre et comparer",
+                "minutes": 16
+              },
+              {
+                "label": "Mémoriser",
+                "minutes": 4
+              },
+              {
+                "label": "Mission en cinq décisions",
+                "minutes": 12
+              },
+              {
+                "label": "Vérifier les repères",
+                "minutes": 6
+              },
+              {
+                "label": "Transférer",
+                "minutes": 6
+              },
+              {
+                "label": "Analyser les documents",
+                "minutes": 8
+              },
+              {
+                "label": "Composer la main courante",
+                "minutes": 6
+              },
+              {
+                "label": "Retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Le test complet de l'article 73",
+                "paragraphs": [
+                  "La faculté d'appréhension de l'article 73 du code de procédure pénale est ouverte à toute personne dans les conditions du texte : crime flagrant ou délit flagrant puni d'emprisonnement, pour conduire l'auteur devant l'officier de police judiciaire le plus proche. Elle ne donne pas un pouvoir général de contrôle d'identité, d'enquête, de fouille corporelle ou de garde à vue. Un comportement étrange, une rumeur ou une alarme technique ne suffit pas automatiquement à établir toutes ces conditions.",
+                  "L'agent distingue les faits personnellement observés, les déclarations de témoins et les éléments matériels. Il examine ensuite la sécurité, la nécessité des moyens et le relais immédiat aux forces de l'ordre. Même lorsque le cadre est établi, l'appréhension n'est pas une obligation de se mettre en danger. Les mesures doivent rester nécessaires et proportionnées. Leur justification doit pouvoir être reliée à une chronologie précise."
+                ]
+              },
+              {
+                "title": "L'attente et la remise ne sont pas une sanction",
+                "paragraphs": [
+                  "Une direction de magasin ne peut transformer l'appréhension en négociation forcée de remboursement ou en interrogatoire privé. Retarder l'appel pour attendre un directeur détourne la finalité du relais à l'OPJ. Pendant l'attente, la santé, la dignité, les plaintes exprimées et les changements de comportement doivent être pris en compte. Une alerte médicale ne se conditionne pas à une reconnaissance des faits.",
+                  "Dans le dossier du sac, une ressemblance et une accusation sont d'abord des informations à vérifier. Un témoin direct supplémentaire peut modifier l'analyse mais n'autorise pas automatiquement tous les moyens. Dans le dossier de l'attente au local, le bon raisonnement consiste à organiser le relais sans délai, transmettre les éléments utiles et réévaluer toute contrainte. La formulation professionnelle reste factuelle : qui a vu quoi, quand, quelles mesures et quels interlocuteurs ont été avisés ?"
+                ]
+              },
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « Le sac et le témoin », le point de départ est le suivant : Un client accuse une personne d'avoir pris son sac au café d'un centre commercial. L'APS n'a pas vu la prise. La personne désignée porte un sac similaire et affirme que c'est le sien. Aucun autre élément n'est disponible.",
+                  "Le fait établi est : L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol. La première réponse à examiner est : Recueillir les faits utiles, alerter et éviter une contrainte fondée sur la seule ressemblance. L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin.",
+                  "La situation évolue : Un second témoin décrit précisément une prise qu'il vient d'observer et indique l'endroit où se trouve la victime. La décision doit donc être réexaminée : Réévaluer les indices concordants, le cadre légal, la sécurité et le relais immédiat aux forces de l'ordre. De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Fiche ancienne : toute personne suspecte doit être retenue. La référence vérifiée est : Instruction : établir les faits de flagrance et solliciter les forces de l'ordre sans délai."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-01-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-03-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-03-01-video",
+                "title": "L’article 73 commence par des faits",
+                "required": true,
+                "src": "media/aps62/v2/aps62-03-01.mp4",
+                "poster": "media/aps62/v2/aps62-03-01.jpg",
+                "captions": "media/aps62/v2/aps62-03-01.vtt",
+                "duration_seconds": 80.986979,
+                "transcript": "La situation : Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.\n\nÀ vous de décider : Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée. Ou bien : Retenir automatiquement toute personne qui déclenche un portique. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.\n\nLe bon relais : Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une situation précisément définie",
+                "back": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. L'article 73 du code de procédure pénale permet à toute personne d'appréhender l'auteur d'un crime flagrant ou d'un délit flagrant puni d'emprisonnement pour le conduire devant l'officier de police judiciaire le plus proche. Cette faculté n'est pas réservée aux APS, et ne leur donne pas une mission d'enquête."
+              },
+              {
+                "front": "Des faits avant une qualification",
+                "back": "Un comportement inhabituel n'établit pas à lui seul une infraction. Il faut distinguer ce qui est constaté, ce qui est rapporté et ce qui reste supposé. Même lorsque le cadre paraît réuni, le risque de l'intervention et les moyens disponibles comptent. L'alerte rapide, la protection et la transmission peuvent être déterminantes. Toute contrainte doit rester nécessaire et proportionnée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent voit une personne manipuler une porte. Cela peut avoir plusieurs explications. Il observe et vérifie selon sa mission, sans conclure automatiquement à un cambriolage. En présence de faits caractérisant une infraction flagrante, il sollicite les forces de l'ordre et décrit exactement les éléments, sans transformer un doute en certitude."
+              },
+              {
+                "front": "Une faculté strictement encadrée",
+                "back": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.\n\nÀ vous de décider : Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée. Ou bien : Retenir automatiquement toute personne qui déclenche un portique. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.\n\nLe bon relais : Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-03-01-atelier",
+          "title": "Mission · Le sac et le témoin",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "03.01",
+            "title": "Le sac et le témoin",
+            "case": "Un client accuse une personne d'avoir pris son sac au café d'un centre commercial. L'APS n'a pas vu la prise. La personne désignée porte un sac similaire et affirme que c'est le sien. Aucun autre élément n'est disponible.",
+            "edition": "2026-10-06"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Le sac et le témoin · cinq décisions successives",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "1. Sur quel fait fonder votre analyse ?",
+                "context": "Un client accuse une personne d'avoir pris son sac au café d'un centre commercial. L'APS n'a pas vu la prise. La personne désignée porte un sac similaire et affirme que c'est le sien. Aucun autre élément n'est disponible.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Le point de départ établi est : L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le point de départ établi est : L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : Le point de départ établi est : L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "2. Quelle première décision prenez-vous ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Recueillir les faits utiles, alerter et éviter une contrainte fondée sur la seule ressemblance."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Bloquer la personne pour la forcer à prouver sa propriété."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "Un second témoin décrit précisément une prise qu'il vient d'observer et indique l'endroit où se trouve la victime.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Considérer que deux témoins autorisent automatiquement tout moyen de contrainte."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Réévaluer les indices concordants, le cadre légal, la sécurité et le relais immédiat aux forces de l'ordre."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin."
+                }
+              },
+              {
+                "id": "consigne",
+                "kind": "single",
+                "prompt": "4. Quel document doit être écarté ou clarifié avant application ?",
+                "context": "Deux documents sont transmis au poste. Comparez-les avec la situation et la règle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Fiche ancienne : toute personne suspecte doit être retenue."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Trame validée : identifier les faits, les mesures prises et les interlocuteurs avisés."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Instruction : établir les faits de flagrance et solliciter les forces de l'ordre sans délai."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. La note incompatible est : Fiche ancienne : toute personne suspecte doit être retenue.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. La note incompatible est : Fiche ancienne : toute personne suspecte doit être retenue. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. La note incompatible est : Fiche ancienne : toute personne suspecte doit être retenue. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "releve",
+                "kind": "single",
+                "prompt": "5. Quelle transmission permet une relève fiable ?",
+                "context": "Le collègue de relève arrive. Il n’a assisté à aucune des étapes précédentes.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Transmettre seulement la première décision, sans l’évolution reçue ensuite."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Transmettre le constat, l’évolution, les mesures réellement prises et ce qui reste à vérifier."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Annoncer que toutes les vérifications sont terminées pour simplifier la relève."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le relais doit connaître les faits nouveaux et les limites de l’information. De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-01-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Le portique d’un magasin sonne. Une cliente porte un grand sac, mais vous n’avez observé aucune soustraction. Elle accepte de parler à l’accueil et refuse de vider ses poches. Un vendeur vous demande de bloquer la porte.",
+          "options": [
+            {
+              "id": "aps62-03-01-a0",
+              "text": "Retenir automatiquement toute personne qui déclenche un portique.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-03-01-a1",
+              "text": "Déduire la culpabilité du refus de vider les poches.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-03-01-a2",
+              "text": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive."
+        },
+        {
+          "id": "aps62-03-01-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-03-01-pair0",
+              "left": "Une situation précisément définie",
+              "right": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi."
+            },
+            {
+              "id": "aps62-03-01-pair1",
+              "left": "Des faits avant une qualification",
+              "right": "Un comportement inhabituel n'établit pas à lui seul une infraction."
+            },
+            {
+              "id": "aps62-03-01-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un agent voit une personne manipuler une porte."
+            }
+          ],
+          "explanation": "Une situation précisément définie : La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. Des faits avant une qualification : Un comportement inhabituel n'établit pas à lui seul une infraction. EXEMPLE EXPLIQUÉ : Un agent voit une personne manipuler une porte."
+        },
+        {
+          "id": "aps62-03-01-transfert",
+          "title": "Transférer · comparer de nouvelles situations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "transfer",
+            "case": "Un vendeur affirme maintenant avoir vu une soustraction. Quelles précisions lui demander sans présenter son témoignage comme votre observation ?",
+            "model": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive. Faits : sonnerie, présence au passage, accord pour discuter, refus d’une demande. Hypothèse : présence d’un objet non payé. Vérification : solliciter les informations disponibles et appliquer la procédure compatible avec les droits. « Le portique a sonné ; puis-je vous expliquer la vérification proposée ? » ne préjuge pas d’une infraction.",
+            "edition": "2026-10-04"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Transférer le raisonnement et comparer les contextes",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Écrire que vous avez personnellement observé la soustraction."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Demander ce qui a été vu, où, quand et par qui, en attribuant clairement l’information au vendeur."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Considérer que la seule fonction de vendeur rend toutes ses conclusions certaines."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Demander ce qui a été vu, où, quand et par qui, en attribuant clairement l’information au vendeur. L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin."
+                }
+              },
+              {
+                "id": "contre_exemple",
+                "kind": "single",
+                "prompt": "Comparez avec ce cas de référence : quelle conduite lui correspond ?",
+                "context": "Une caissière signale un vol. Elle a vu un article placé dans un sac mais n’a pas observé le passage en caisse. Le portique ne sonne pas. La personne accepte de discuter à proximité de l’accueil.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le récit partiel ne permet pas d’inventer le non-paiement. Vérifier les éléments disponibles dans le cadre du site, sans interrogatoire coercitif. Si les conditions légales d’une appréhension ne sont pas établies, ne pas les présumer."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Appliquer la même réponse quels que soient les faits et les interlocuteurs."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Bloquer la personne pour la forcer à prouver sa propriété."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Le récit partiel ne permet pas d’inventer le non-paiement. Vérifier les éléments disponibles dans le cadre du site, sans interrogatoire coercitif. Si les conditions légales d’une appréhension ne sont pas établies, ne pas les présumer.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin."
+                }
+              },
+              {
+                "id": "methode",
+                "kind": "single",
+                "prompt": "Que faut-il comparer avant de transposer la solution du premier cas ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Les faits, le périmètre, les autorisations, le danger et les relais effectivement disponibles."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Uniquement la première impression laissée par la personne concernée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Seulement le nom du site et l’heure de la vacation."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Un même principe peut conduire à des actions différentes lorsque les conditions changent. Le récit partiel ne permet pas d’inventer le non-paiement. Vérifier les éléments disponibles dans le cadre du site, sans interrogatoire coercitif. Si les conditions légales d’une appréhension ne sont pas établies, ne pas les présumer.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-01-documents",
+          "title": "Documents · repérer les anomalies",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Croiser trois pièces et rechercher les anomalies",
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 03-01",
+                "text": "Un client accuse une personne d'avoir pris son sac au café d'un centre commercial. L'APS n'a pas vu la prise. La personne désignée porte un sac similaire et affirme que c'est le sien. Aucun autre élément n'est disponible.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Recueillir les faits utiles, alerter et éviter une contrainte fondée sur la seule ressemblance."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Un second témoin décrit précisément une prise qu'il vient d'observer et indique l'endroit où se trouve la victime."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Instruction : établir les faits de flagrance et solliciter les forces de l'ordre sans délai.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "C · Brouillon reçu, à contrôler",
+                "text": "Fiche ancienne : toute personne suspecte doit être retenue.",
+                "rows": [
+                  [
+                    "09 h 12 · heure de saisie",
+                    "Entrée saisie au retour au poste."
+                  ],
+                  [
+                    "Heure d’événement indiquée dans le brouillon",
+                    "09 h 12"
+                  ],
+                  [
+                    "Conclusion proposée",
+                    "Toutes les vérifications sont achevées ; aucune suite nécessaire."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "anomalie",
+                "kind": "single",
+                "prompt": "Quelle phrase du document C pose un problème de fond ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Instruction : établir les faits de flagrance et solliciter les forces de l'ordre sans délai."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Fiche ancienne : toute personne suspecte doit être retenue."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’entrée a été saisie à 09 h 12."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "horodatage",
+                "kind": "single",
+                "prompt": "Quelle anomalie chronologique faut-il corriger ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le brouillon utilise l’heure de saisie 09 h 12 comme heure de l’événement signalé à 09 h 02."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le délai entre constat et saisie prouve que l’événement n’a pas eu lieu."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’heure de la nouvelle information doit remplacer toutes les autres heures."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La pièce A distingue le constat à 09 h 02, l’action à 09 h 04 et l’évolution à 09 h 07. La saisie à 09 h 12 n’efface pas cette chronologie.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "cloture",
+                "kind": "single",
+                "prompt": "Quelle conclusion est réellement étayée par la pièce A ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucune action n’a été engagée avant la saisie."
+                  },
+                  {
+                    "id": "2",
+                    "text": "La réévaluation est engagée et l’issue finale n’est pas confirmée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Tout est définitivement résolu puisque le brouillon l’affirme."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La dernière ligne de A décrit un suivi en cours. La conclusion de C n’est pas étayée.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              },
+              {
+                "id": "statut",
+                "kind": "sort",
+                "prompt": "Attribuez un statut à chaque élément du dossier.",
+                "options": [
+                  {
+                    "id": "fait",
+                    "text": "Fait ou action enregistré dans A"
+                  },
+                  {
+                    "id": "regle",
+                    "text": "Instruction validée dans B"
+                  },
+                  {
+                    "id": "ecart",
+                    "text": "Affirmation du brouillon C à corriger"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Instruction : établir les faits de flagrance et solliciter les forces de l'ordre sans délai.",
+                    "answer": "regle"
+                  },
+                  {
+                    "id": "r3",
+                    "text": "Fiche ancienne : toute personne suspecte doit être retenue.",
+                    "answer": "ecart"
+                  },
+                  {
+                    "id": "r4",
+                    "text": "Action à 09 h 04 : Recueillir les faits utiles, alerter et éviter une contrainte fondée sur la seule ressemblance.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r5",
+                    "text": "Toutes les vérifications sont achevées.",
+                    "answer": "ecart"
+                  }
+                ],
+                "explanation": "Le document d’origine et le statut de l’information comptent autant que sa formulation. A constate, B prescrit, C contient des erreurs.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "correction",
+                "kind": "single",
+                "prompt": "Comment corriger ce brouillon avant une transmission autorisée ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Rectifier les horaires, écarter la note incompatible, garder le suivi en cours et tracer la validation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Changer seulement le titre du document, sans contrôler les trois écarts."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Supprimer la fiche A pour ne conserver qu’un récit cohérent avec C."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La correction doit résoudre les écarts de fond, de chronologie et de statut, sans détruire les sources.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "03.01",
+            "title": "Le sac et le témoin",
+            "case": "Dossier fictif « Le sac et le témoin ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-03-01-journal",
+          "title": "Main courante · composer une entrée",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Composer une main courante fiable, sans rédaction",
+            "journal": true,
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 03-01",
+                "text": "Un client accuse une personne d'avoir pris son sac au café d'un centre commercial. L'APS n'a pas vu la prise. La personne désignée porte un sac similaire et affirme que c'est le sien. Aucun autre élément n'est disponible.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Recueillir les faits utiles, alerter et éviter une contrainte fondée sur la seule ressemblance."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "Un second témoin décrit précisément une prise qu'il vient d'observer et indique l'endroit où se trouve la victime."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Instruction : établir les faits de flagrance et solliciter les forces de l'ordre sans délai.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "Moment de la saisie",
+                "text": "Il est 09 h 12 lorsque vous composez cette entrée. L’heure de saisie ne remplace pas les heures de la fiche A."
+              }
+            ],
+            "exercises": [
+              {
+                "id": "heure",
+                "kind": "single",
+                "prompt": "Heures de l’événement et de la saisie",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Constat : 09 h 02 ; action : 09 h 04 ; évolution : 09 h 07 ; saisie : 09 h 12."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Événement et saisie : 09 h 12 ; aucune autre heure utile."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Événement à 09 h 04 ; saisie antidatée à 09 h 02."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La pièce A et le brouillon donnent des heures de nature différente. Conservez chacune avec sa fonction.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "source",
+                "kind": "single",
+                "prompt": "Origine des informations",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Informations certaines, sans source à conserver."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Tous les éléments ont été personnellement observés au même moment."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat et action consignés dans A ; nouvelle information reçue à 09 h 07 ; consigne B identifiée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Ne transformez pas une information reçue en observation personnelle.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "fait",
+                "kind": "single",
+                "prompt": "Constat initial",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucun fait précis à conserver dans le registre."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Intention malveillante certaine des personnes concernées."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La formulation fidèle n’ajoute ni intention ni qualification définitive. L'agent dispose d'une accusation et d'une ressemblance, pas d'une observation directe du vol.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "action",
+                "kind": "single",
+                "prompt": "Action réellement enregistrée à 09 h 04",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucune action effectuée avant la saisie."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Recueillir les faits utiles, alerter et éviter une contrainte fondée sur la seule ressemblance."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Bloquer la personne pour la forcer à prouver sa propriété."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A enregistre cette action à 09 h 04. L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "Évolution à transmettre",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Situation inchangée depuis le constat initial."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Un second témoin décrit précisément une prise qu'il vient d'observer et indique l'endroit où se trouve la victime."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Issue définitivement confirmée à 09 h 07 sans autre démarche."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Cette nouvelle information modifie l’analyse. De nouveaux éléments peuvent modifier l'analyse ; ils ne dispensent jamais d'apprécier la nature de l'infraction et la nécessité des moyens.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Assimiler toute alarme au flagrant délit."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "L'article 73 suppose un crime ou un délit flagrant puni d'emprisonnement. Un soupçon ne devient pas une flagrance par la seule insistance d'un témoin."
+                }
+              },
+              {
+                "id": "suite",
+                "kind": "single",
+                "prompt": "État du suivi et prochaine décision",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Résultat juridique définitif établi par le poste."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Dossier clos ; aucune vérification ni transmission complémentaire."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Réévaluation engagée, issue non confirmée. Décision à mettre en œuvre : Réévaluer les indices concordants, le cadre légal, la sécurité et le relais immédiat aux forces de l'ordre."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Distinguez ce qui est fait, ce qui est décidé et ce qui reste à confirmer.",
+                "remediation": {
+                  "prompt": "Une caisse sonne à la sortie alors que le client montre un ticket correspondant au produit. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "La vérification ou le relais prévu : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Traiter l'alarme comme un indice à vérifier, sans la confondre avec la preuve suffisante d'un vol.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "journal",
+            "dossier": "03.01",
+            "title": "Le sac et le témoin",
+            "case": "Dossier fictif « Le sac et le témoin ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-03-01-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.01",
+            "title": "L’article 73 commence par des faits",
+            "kind": "recap",
+            "decision": "Chercher les éléments disponibles sans transformer le soupçon en contrainte injustifiée.",
+            "reason": "L’article 73 vise un crime flagrant ou un délit flagrant puni d’emprisonnement. Une alarme est une information technique ; elle ne prouve pas à elle seule l’ensemble des conditions. Une discussion consentie ne doit pas devenir une privation de liberté déguisée. N’inventez pas un pouvoir général de vérification coercitive.",
+            "pitfall": "Retenir automatiquement toute personne qui déclenche un portique.",
+            "cards": [
+              {
+                "front": "Une situation précisément définie",
+                "back": "La flagrance renvoie à une infraction en train de se commettre ou qui vient de se commettre, avec les circonstances prévues par la loi. L'article 73 du code de procédure pénale permet à toute personne d'appréhender l'auteur d'un crime flagrant ou d'un délit flagrant puni d'emprisonnement pour le conduire devant l'officier de police judiciaire le plus proche. Cette faculté n'est pas réservée aux APS, et ne leur donne pas une mission d'enquête."
+              },
+              {
+                "front": "Des faits avant une qualification",
+                "back": "Un comportement inhabituel n'établit pas à lui seul une infraction. Il faut distinguer ce qui est constaté, ce qui est rapporté et ce qui reste supposé. Même lorsque le cadre paraît réuni, le risque de l'intervention et les moyens disponibles comptent. L'alerte rapide, la protection et la transmission peuvent être déterminantes. Toute contrainte doit rester nécessaire et proportionnée."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent voit une personne manipuler une porte. Cela peut avoir plusieurs explications. Il observe et vérifie selon sa mission, sans conclure automatiquement à un cambriolage. En présence de faits caractérisant une infraction flagrante, il sollicite les forces de l'ordre et décrit exactement les éléments, sans transformer un doute en certitude."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.12",
+                "page": 97
+              },
+              {
+                "ref": "06.01",
+                "page": 265
+              },
+              {
+                "ref": "06.02",
+                "page": 267
+              }
+            ],
+            "instruction": "Retrouvez mentalement la décision et les limites du dossier, puis consultez les repères pour vérifier. Vous pouvez refaire les ateliers pour réviser.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    },
+    {
+      "id": "aps62-03-02",
+      "title": "02 · Une faculté encadrée, un relais rapide",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-03-02-comprendre",
+          "title": "Comprendre · Une faculté encadrée, un relais rapide",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 16,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-03.webp",
+            "case": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+            "reason": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+            "lessons": [
+              {
+                "ref": "06.01",
+                "title": "Évaluer une décision d'appréhension",
+                "page": 264,
+                "diagram": "media/aps62/repere-06.01.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une faculté strictement encadrée"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Distinguer protection et poursuite"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Pouvoir envisager une appréhension ne signifie pas que toute modalité est permise. Le relais rapide aux forces de l'ordre reste au centre du dispositif."
+                  }
+                ],
+                "course_page": 265,
+                "practice": {
+                  "background": "La possibilité juridique ne rend pas toute intervention opportune. Évaluez les personnes exposées, les moyens de communication, le nombre d’intervenants et les possibilités de retrait. Une personne armée ou une situation incontrôlable appelle d’abord la protection et les forces de l’ordre. L’observation à distance, le signalement et la préservation des éléments peuvent être la meilleure réponse. Une action physique éventuelle reste nécessaire, proportionnée et limitée au but légal, sans punition. La formation pratique se déroule exclusivement sous encadrement adapté.",
+                  "case": "Vous voyez une personne casser une vitrine et saisir des objets. Elle tient un outil lourd et se dirige vers la sortie. Vous êtes seul et des clients se trouvent à proximité. Quels faits pouvez-vous transmettre immédiatement ? Pourquoi l’appréhension n’est-elle pas automatique ?",
+                  "transfer": "Un collègue veut intervenir alors que les faits restent incertains. Quelles informations lui demandez-vous ?",
+                  "page": 280
+                }
+              },
+              {
+                "ref": "06.03",
+                "title": "Protéger la personne et sa dignité",
+                "page": 268,
+                "diagram": "media/aps62/repere-06.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "La sécurité reste due à tous"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une personne soupçonnée ou appréhendée conserve ses droits et sa dignité. Une difficulté respiratoire, une blessure ou un malaise doit être prise au sérieux. L'agent ne peut pas considérer un signe de détresse comme de la simulation sans évaluation adaptée. La contrainte n'est jamais une punition, une humiliation ou un moyen d'obtenir des aveux."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Éviter les risques supplémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les pressions sur le cou, le thorax ou une position gênant la respiration peuvent avoir des conséquences graves. La formation pratique encadrée doit porter sur les limites légales et la protection, pas sur des techniques improvisées. L'agent surveille l'état de la personne et demande les secours si nécessaire. Le public est tenu à distance pour préserver la sécurité et éviter les prises d'images ou commentaires humiliants."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Dans l'attente des forces de l'ordre, une personne indique qu'elle respire mal. L'agent transmet immédiatement le signe, fait demander l'aide médicale et adapte la protection. La présence d'un soupçon d'infraction ne justifie pas de différer l'assistance. Les heures, plaintes et actions sont consignées factuellement."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La nécessité d'une mesure doit être réévaluée pendant toute sa durée. L'état de santé et la dignité ne deviennent jamais secondaires du fait du comportement reproché."
+                  }
+                ],
+                "course_page": 269,
+                "practice": {
+                  "background": "Les positions et techniques susceptibles d’entraver la respiration ou de créer une blessure grave sont particulièrement dangereuses. Aucune technique de contrainte ne s’improvise à partir d’un livre. Le menottage n’est jamais une commodité ou une routine : son éventuelle mise en œuvre doit satisfaire les conditions légales et être maîtrisée dans un cadre professionnel validé. Surveillez la réponse et la respiration et prenez au sérieux une plainte de malaise. La présence de collègues ne réduit pas cette obligation de vigilance.",
+                  "case": "Après une intervention, une personne se plaint de difficultés respiratoires. Un collègue répond qu’elle simule et souhaite poursuivre les questions en attendant la police. Quelle priorité s’impose ? Comment transmettre sans poser de diagnostic ?",
+                  "transfer": "Des témoins veulent filmer la personne pour la publier. Quelle attitude professionnelle adoptez-vous dans votre propre mission ?",
+                  "page": 282
+                }
+              },
+              {
+                "ref": "06.04",
+                "title": "Préparer la remise aux forces de l'ordre",
+                "page": 270,
+                "diagram": "media/aps62/repere-06.04.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Transmettre le fondement et la chronologie"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les forces de l'ordre ont besoin des faits observés, du lieu, de l'heure, de l'identité des témoins disponibles dans le cadre autorisé et des actions déjà réalisées. Expliquez la raison de l'appréhension envisagée ou effectuée et toute difficulté de santé. Ne transformez pas votre rapport en interrogatoire de la personne. L'enquête et les actes de procédure relèvent des autorités compétentes."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Organiser un relais clair"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent doit savoir qui reçoit l'information et quand le relais est effectif. La personne concernée ne reste pas retenue dans le seul but d'attendre un supérieur interne ou d'obtenir une reconnaissance écrite. Les objets et documents éventuels sont présentés selon la procédure, avec leur origine et les manipulations déjà effectuées. Les images ne sont pas copiées sur un téléphone privé pour accélérer l'échange."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "« À 17 h 12, j'ai personnellement observé les faits suivants… Mon collègue est arrivé à 17 h 14. L'appel a été effectué à 17 h 15. La personne a signalé une douleur au poignet. » Cette présentation sépare les observations et les actions. Elle permet au service intervenant de reprendre la situation sans récit excessif."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Un relais réussi est rapide, traçable et factuel. Il ne dépend pas de la capacité de l'agent à obtenir des aveux."
+                  }
+                ],
+                "course_page": 271,
+                "practice": {
+                  "background": "Préparez un exposé bref : faits observés, heures, lieu, motifs de l’intervention, actions réalisées, état de la personne et témoins. Signalez les éléments disponibles, notamment les images, sans les manipuler hors procédure. Une transmission doit permettre aux policiers ou gendarmes de distinguer votre observation d’un récit rapporté. Le transport d’une personne n’est pas improvisé ; les modalités doivent rester compatibles avec la sécurité et le cadre légal. L’agent se conforme aux consignes des autorités et de son organisation.",
+                  "case": "La police est prête à prendre en charge une personne. Le responsable du magasin demande de la garder dix minutes de plus pour lui faire signer un document de reconnaissance de dette. Quelle réponse donnez-vous ? Quels documents pouvez-vous préparer séparément ?",
+                  "transfer": "Que répondre à un collègue qui veut « quelques explications avant d’appeler la police » ?",
+                  "page": 285
+                }
+              }
+            ],
+            "decision": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+            "pitfall": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+            "objectives": [
+              "Expliquer : une faculté encadrée, un relais rapide",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police."
+              ],
+              [
+                "Décision à justifier",
+                "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments."
+              ],
+              [
+                "Piège à éviter",
+                "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre."
+              ],
+              [
+                "Pourquoi ?",
+                "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73."
+              },
+              {
+                "label": "Vérifier",
+                "text": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion."
+              },
+              {
+                "label": "Décider",
+                "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Les forces de l’ordre demandent une précision que vous n’avez pas observée. Formulez une réponse utile sans invention."
+              }
+            ],
+            "edition": "2026-10-06",
+            "image_alt": "Scène professionnelle illustrée : Flagrance et article 73",
+            "sorting": [
+              {
+                "text": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+                "category": "ecarter"
+              },
+              {
+                "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+                "category": "adapte"
+              },
+              {
+                "text": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+                "category": "fait"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Comprendre et comparer",
+                "minutes": 16
+              },
+              {
+                "label": "Mémoriser",
+                "minutes": 4
+              },
+              {
+                "label": "Mission en cinq décisions",
+                "minutes": 12
+              },
+              {
+                "label": "Vérifier les repères",
+                "minutes": 6
+              },
+              {
+                "label": "Transférer",
+                "minutes": 6
+              },
+              {
+                "label": "Analyser les documents",
+                "minutes": 8
+              },
+              {
+                "label": "Composer la main courante",
+                "minutes": 6
+              },
+              {
+                "label": "Retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « L'attente au local », le point de départ est le suivant : Après des faits observés susceptibles de relever de l'article 73, le responsable du magasin demande d'attendre le retour du directeur avant de prévenir la police. La personne concernée demande à quitter le local.",
+                  "Le fait établi est : Le responsable veut retarder l'appel pour une raison commerciale. La première réponse à examiner est : Organiser immédiatement le relais aux forces de l'ordre et limiter strictement toute contrainte au cadre applicable. L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement.",
+                  "La situation évolue : La personne se plaint d'une douleur et devient pâle. La décision doit donc être réexaminée : Alerter les secours si nécessaire, surveiller la situation et informer les forces de l'ordre. La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Procédure commerciale : prévenir la police seulement après refus de payer. La référence vérifiée est : Consigne de sécurité : appel immédiat aux autorités et surveillance de l'état de la personne."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-02-memoriser",
+          "title": "Voir et mémoriser",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 4,
+          "blocks": [
+            {
+              "id": "aps62-03-02-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-03-02-video",
+                "title": "Une faculté encadrée, un relais rapide",
+                "required": true,
+                "src": "media/aps62/v2/aps62-03-02.mp4",
+                "poster": "media/aps62/v2/aps62-03-02.jpg",
+                "captions": "media/aps62/v2/aps62-03-02.vtt",
+                "duration_seconds": 76.767333,
+                "transcript": "La situation : Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.\n\nÀ vous de décider : Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments. Ou bien : Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.\n\nLe bon relais : La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 2
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Une faculté strictement encadrée",
+                "back": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+              },
+              {
+                "front": "Distinguer protection et poursuite",
+                "back": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+              },
+              {
+                "front": "La sécurité reste due à tous",
+                "back": "Une personne soupçonnée ou appréhendée conserve ses droits et sa dignité. Une difficulté respiratoire, une blessure ou un malaise doit être prise au sérieux. L'agent ne peut pas considérer un signe de détresse comme de la simulation sans évaluation adaptée. La contrainte n'est jamais une punition, une humiliation ou un moyen d'obtenir des aveux."
+              }
+            ],
+            "instruction": "Regardez la capsule. Fermez ensuite la correction et expliquez chaque carte à voix haute avant de la retourner. Revenez au cours pour les points hésitants.",
+            "transcript": "La situation : Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.\n\nÀ vous de décider : Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments. Ou bien : Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre. Mettez la vidéo en pause pour justifier votre choix.\n\nLe raisonnement : Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.\n\nLe bon relais : La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+            "edition": "2026-10-04",
+            "voice": "fr-FR-HenriNeural"
+          }
+        },
+        {
+          "id": "aps62-03-02-atelier",
+          "title": "Mission · L'attente au local",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "03.02",
+            "title": "L'attente au local",
+            "case": "Après des faits observés susceptibles de relever de l'article 73, le responsable du magasin demande d'attendre le retour du directeur avant de prévenir la police. La personne concernée demande à quitter le local.",
+            "edition": "2026-10-06"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "L'attente au local · cinq décisions successives",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "1. Sur quel fait fonder votre analyse ?",
+                "context": "Après des faits observés susceptibles de relever de l'article 73, le responsable du magasin demande d'attendre le retour du directeur avant de prévenir la police. La personne concernée demande à quitter le local.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucun fait ne mérite une vérification tant qu’aucun dommage n’est visible."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le responsable veut retarder l'appel pour une raison commerciale."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Le récit prouve à lui seul une intention malveillante de toutes les personnes concernées."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le point de départ établi est : Le responsable veut retarder l'appel pour une raison commerciale. Il ne faut pas compléter ce constat par une supposition.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le point de départ établi est : Le responsable veut retarder l'appel pour une raison commerciale. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le point de départ établi est : Le responsable veut retarder l'appel pour une raison commerciale. Il ne faut pas compléter ce constat par une supposition. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "2. Quelle première décision prenez-vous ?",
+                "context": "Le poste doit maintenant choisir une action à partir du constat.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Attendre la fin de la vacation sans transmettre la situation à un interlocuteur."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Attendre une heure pour laisser au directeur le temps de négocier."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Organiser immédiatement le relais aux forces de l'ordre et limiter strictement toute contrainte au cadre applicable."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix crée une difficulté : L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite."
+                },
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "3. Une nouvelle information arrive. Que décidez-vous ?",
+                "context": "La personne se plaint d'une douleur et devient pâle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Alerter les secours si nécessaire, surveiller la situation et informer les forces de l'ordre."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Conditionner l'appel médical au remboursement du produit."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Garder la première décision sans examiner l’information nouvelle."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement."
+                }
+              },
+              {
+                "id": "consigne",
+                "kind": "single",
+                "prompt": "4. Quel document doit être écarté ou clarifié avant application ?",
+                "context": "Deux documents sont transmis au poste. Comparez-les avec la situation et la règle.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Procédure commerciale : prévenir la police seulement après refus de payer."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Trame validée : identifier les faits, les mesures prises et les interlocuteurs avisés."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Consigne de sécurité : appel immédiat aux autorités et surveillance de l'état de la personne."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. La note incompatible est : Procédure commerciale : prévenir la police seulement après refus de payer.",
+                "branches": {
+                  "1": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "2": "Ce choix crée une difficulté : L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. La note incompatible est : Procédure commerciale : prévenir la police seulement après refus de payer. Réexaminez-le avant de poursuivre.",
+                  "3": "Ce choix crée une difficulté : L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. La note incompatible est : Procédure commerciale : prévenir la police seulement après refus de payer. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "releve",
+                "kind": "single",
+                "prompt": "5. Quelle transmission permet une relève fiable ?",
+                "context": "Le collègue de relève arrive. Il n’a assisté à aucune des étapes précédentes.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Annoncer que toutes les vérifications sont terminées pour simplifier la relève."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Transmettre le constat, l’évolution, les mesures réellement prises et ce qui reste à vérifier."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Transmettre seulement la première décision, sans l’évolution reçue ensuite."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Le relais doit connaître les faits nouveaux et les limites de l’information. La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins.",
+                "branches": {
+                  "1": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins. Réexaminez-le avant de poursuivre.",
+                  "2": "Ce choix permet de poursuivre sur une base vérifiable. Examinez maintenant la suite.",
+                  "3": "Ce choix crée une difficulté : Le relais doit connaître les faits nouveaux et les limites de l’information. La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins. Réexaminez-le avant de poursuivre."
+                },
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    },
+                    {
+                      "id": "3",
+                      "text": "La vérification ou le relais prévu : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-02-q1",
+          "title": "Défi décision · quelle réponse retenir ?",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+          "options": [
+            {
+              "id": "aps62-03-02-a0",
+              "text": "Mener un interrogatoire afin d’obtenir des aveux.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-03-02-a1",
+              "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+              "is_correct": true
+            },
+            {
+              "id": "aps62-03-02-a2",
+              "text": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+              "is_correct": false
+            }
+          ],
+          "explanation": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré."
+        },
+        {
+          "id": "aps62-03-02-q2",
+          "title": "Défi notions · relier et expliquer",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Reliez les notions à leur explication. Avant de valider, expliquez pourquoi les autres associations ne conviennent pas.",
+          "pairs": [
+            {
+              "id": "aps62-03-02-pair0",
+              "left": "Une faculté strictement encadrée",
+              "right": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation."
+            },
+            {
+              "id": "aps62-03-02-pair1",
+              "left": "Distinguer protection et poursuite",
+              "right": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires."
+            },
+            {
+              "id": "aps62-03-02-pair2",
+              "left": "EXEMPLE EXPLIQUÉ",
+              "right": "Un agent constate un fait potentiellement délictueux dans une zone encombrée."
+            }
+          ],
+          "explanation": "Une faculté strictement encadrée : L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Distinguer protection et poursuite : La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. EXEMPLE EXPLIQUÉ : Un agent constate un fait potentiellement délictueux dans une zone encombrée."
+        },
+        {
+          "id": "aps62-03-02-transfert",
+          "title": "Transférer · comparer de nouvelles situations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "transfer",
+            "case": "Les forces de l’ordre demandent une précision que vous n’avez pas observée. Formulez une réponse utile sans invention.",
+            "model": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré. La fiche attribue chaque observation, précise l’heure de l’appel et les instructions reçues, signale la blessure et les secours demandés. Elle indique où se trouvent les éléments conservés. Elle exclut l’aveu forcé, la punition, l’humiliation et l’attente commerciale sans motif lié au relais légal.",
+            "edition": "2026-10-04"
+          },
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Transférer le raisonnement et comparer les contextes",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Répondre au nom de tous les témoins sans les distinguer."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Dire que vous n’avez pas observé ce point et préciser les faits ou la source que vous connaissez."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Inventer une précision cohérente avec le reste du récit."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "Dire que vous n’avez pas observé ce point et préciser les faits ou la source que vous connaissez. Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement."
+                }
+              },
+              {
+                "id": "contre_exemple",
+                "kind": "single",
+                "prompt": "Comparez avec ce cas de référence : quelle conduite lui correspond ?",
+                "context": "Une soustraction vient d’être directement observée et les éléments disponibles permettent d’envisager le cadre de l’article 73. La personne paraît blessée et le responsable veut attendre la fin de son inventaire avant d’appeler la police.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Appliquer la même réponse quels que soient les faits et les interlocuteurs."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Attendre une heure pour laisser au directeur le temps de négocier."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments. Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments. Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement."
+                }
+              },
+              {
+                "id": "methode",
+                "kind": "single",
+                "prompt": "Que faut-il comparer avant de transposer la solution du premier cas ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Seulement le nom du site et l’heure de la vacation."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Uniquement la première impression laissée par la personne concernée."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Les faits, le périmètre, les autorisations, le danger et les relais effectivement disponibles."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Un même principe peut conduire à des actions différentes lorsque les conditions changent. Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments. Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "aps62-03-02-documents",
+          "title": "Documents · repérer les anomalies",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Croiser trois pièces et rechercher les anomalies",
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 03-02",
+                "text": "Après des faits observés susceptibles de relever de l'article 73, le responsable du magasin demande d'attendre le retour du directeur avant de prévenir la police. La personne concernée demande à quitter le local.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Le responsable veut retarder l'appel pour une raison commerciale."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Organiser immédiatement le relais aux forces de l'ordre et limiter strictement toute contrainte au cadre applicable."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "La personne se plaint d'une douleur et devient pâle."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Consigne de sécurité : appel immédiat aux autorités et surveillance de l'état de la personne.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "C · Brouillon reçu, à contrôler",
+                "text": "Procédure commerciale : prévenir la police seulement après refus de payer.",
+                "rows": [
+                  [
+                    "09 h 12 · heure de saisie",
+                    "Entrée saisie au retour au poste."
+                  ],
+                  [
+                    "Heure d’événement indiquée dans le brouillon",
+                    "09 h 12"
+                  ],
+                  [
+                    "Conclusion proposée",
+                    "Toutes les vérifications sont achevées ; aucune suite nécessaire."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "anomalie",
+                "kind": "single",
+                "prompt": "Quelle phrase du document C pose un problème de fond ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "L’entrée a été saisie à 09 h 12."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Consigne de sécurité : appel immédiat aux autorités et surveillance de l'état de la personne."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Procédure commerciale : prévenir la police seulement après refus de payer."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              },
+              {
+                "id": "horodatage",
+                "kind": "single",
+                "prompt": "Quelle anomalie chronologique faut-il corriger ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le délai entre constat et saisie prouve que l’événement n’a pas eu lieu."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le brouillon utilise l’heure de saisie 09 h 12 comme heure de l’événement signalé à 09 h 02."
+                  },
+                  {
+                    "id": "3",
+                    "text": "L’heure de la nouvelle information doit remplacer toutes les autres heures."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A distingue le constat à 09 h 02, l’action à 09 h 04 et l’évolution à 09 h 07. La saisie à 09 h 12 n’efface pas cette chronologie.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "cloture",
+                "kind": "single",
+                "prompt": "Quelle conclusion est réellement étayée par la pièce A ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Aucune action n’a été engagée avant la saisie."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Tout est définitivement résolu puisque le brouillon l’affirme."
+                  },
+                  {
+                    "id": "3",
+                    "text": "La réévaluation est engagée et l’issue finale n’est pas confirmée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La dernière ligne de A décrit un suivi en cours. La conclusion de C n’est pas étayée.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    },
+                    {
+                      "id": "3",
+                      "text": "La vérification ou le relais prévu : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              },
+              {
+                "id": "statut",
+                "kind": "sort",
+                "prompt": "Attribuez un statut à chaque élément du dossier.",
+                "options": [
+                  {
+                    "id": "fait",
+                    "text": "Fait ou action enregistré dans A"
+                  },
+                  {
+                    "id": "regle",
+                    "text": "Instruction validée dans B"
+                  },
+                  {
+                    "id": "ecart",
+                    "text": "Affirmation du brouillon C à corriger"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Le responsable veut retarder l'appel pour une raison commerciale.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Consigne de sécurité : appel immédiat aux autorités et surveillance de l'état de la personne.",
+                    "answer": "regle"
+                  },
+                  {
+                    "id": "r3",
+                    "text": "Procédure commerciale : prévenir la police seulement après refus de payer.",
+                    "answer": "ecart"
+                  },
+                  {
+                    "id": "r4",
+                    "text": "Action à 09 h 04 : Organiser immédiatement le relais aux forces de l'ordre et limiter strictement toute contrainte au cadre applicable.",
+                    "answer": "fait"
+                  },
+                  {
+                    "id": "r5",
+                    "text": "Toutes les vérifications sont achevées.",
+                    "answer": "ecart"
+                  }
+                ],
+                "explanation": "Le document d’origine et le statut de l’information comptent autant que sa formulation. A constate, B prescrit, C contient des erreurs.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "correction",
+                "kind": "single",
+                "prompt": "Comment corriger ce brouillon avant une transmission autorisée ?",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Supprimer la fiche A pour ne conserver qu’un récit cohérent avec C."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Changer seulement le titre du document, sans contrôler les trois écarts."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Rectifier les horaires, écarter la note incompatible, garder le suivi en cours et tracer la validation."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La correction doit résoudre les écarts de fond, de chronologie et de statut, sans détruire les sources.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "03.02",
+            "title": "L'attente au local",
+            "case": "Dossier fictif « L'attente au local ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-03-02-journal",
+          "title": "Main courante · composer une entrée",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "practice": {
+            "revision": "20261006-aps62-v3",
+            "title": "Composer une main courante fiable, sans rédaction",
+            "journal": true,
+            "documents": [
+              {
+                "title": "A · Fiche d’événement 03-02",
+                "text": "Après des faits observés susceptibles de relever de l'article 73, le responsable du magasin demande d'attendre le retour du directeur avant de prévenir la police. La personne concernée demande à quitter le local.",
+                "rows": [
+                  [
+                    "09 h 02 · constat au poste",
+                    "Le responsable veut retarder l'appel pour une raison commerciale."
+                  ],
+                  [
+                    "09 h 04 · action enregistrée par l’agent",
+                    "Organiser immédiatement le relais aux forces de l'ordre et limiter strictement toute contrainte au cadre applicable."
+                  ],
+                  [
+                    "09 h 07 · nouvelle information reçue",
+                    "La personne se plaint d'une douleur et devient pâle."
+                  ],
+                  [
+                    "09 h 10 · état du suivi",
+                    "Réévaluation engagée ; issue finale non confirmée."
+                  ]
+                ]
+              },
+              {
+                "title": "B · Consigne validée pour l’exercice",
+                "text": "Consigne de sécurité : appel immédiat aux autorités et surveillance de l'état de la personne.",
+                "rows": [
+                  [
+                    "Statut",
+                    "Version validée par le responsable pédagogique pour ce cas fictif."
+                  ],
+                  [
+                    "Traçabilité",
+                    "Distinguer les faits, les sources, les horaires, les actions et les suites."
+                  ]
+                ]
+              },
+              {
+                "title": "Moment de la saisie",
+                "text": "Il est 09 h 12 lorsque vous composez cette entrée. L’heure de saisie ne remplace pas les heures de la fiche A."
+              }
+            ],
+            "exercises": [
+              {
+                "id": "heure",
+                "kind": "single",
+                "prompt": "Heures de l’événement et de la saisie",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Événement à 09 h 04 ; saisie antidatée à 09 h 02."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Constat : 09 h 02 ; action : 09 h 04 ; évolution : 09 h 07 ; saisie : 09 h 12."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Événement et saisie : 09 h 12 ; aucune autre heure utile."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A et le brouillon donnent des heures de nature différente. Conservez chacune avec sa fonction.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Le fait est signalé à 11 h 06, puis saisi à 11 h 12. Quelle entrée est fidèle ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Événement à 11 h 12, puisque l’application l’a enregistré à cette heure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Événement signalé à 11 h 06 ; saisie à 11 h 12 ; origine de l’information précisée."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Saisie à 11 h 06, en modifiant l’historique pour faire coïncider les heures."
+                    }
+                  ],
+                  "answer": "2",
+                  "explanation": "Distinguer heure de l’événement et heure de saisie préserve la chronologie. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Distinguer heure de l’événement et heure de saisie préserve la chronologie."
+                }
+              },
+              {
+                "id": "source",
+                "kind": "single",
+                "prompt": "Origine des informations",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Tous les éléments ont été personnellement observés au même moment."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Informations certaines, sans source à conserver."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Constat et action consignés dans A ; nouvelle information reçue à 09 h 07 ; consigne B identifiée."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Ne transformez pas une information reçue en observation personnelle.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "fait",
+                "kind": "single",
+                "prompt": "Constat initial",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Le responsable veut retarder l'appel pour une raison commerciale."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Aucun fait précis à conserver dans le registre."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Intention malveillante certaine des personnes concernées."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La formulation fidèle n’ajoute ni intention ni qualification définitive. Le responsable veut retarder l'appel pour une raison commerciale.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                }
+              },
+              {
+                "id": "action",
+                "kind": "single",
+                "prompt": "Action réellement enregistrée à 09 h 04",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Attendre une heure pour laisser au directeur le temps de négocier."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Organiser immédiatement le relais aux forces de l'ordre et limiter strictement toute contrainte au cadre applicable."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Aucune action effectuée avant la saisie."
+                  }
+                ],
+                "answer": "2",
+                "explanation": "La pièce A enregistre cette action à 09 h 04. L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement."
+                }
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "Évolution à transmettre",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "La personne se plaint d'une douleur et devient pâle."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Situation inchangée depuis le constat initial."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Issue définitivement confirmée à 09 h 07 sans autre démarche."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Cette nouvelle information modifie l’analyse. La protection de la santé et de la dignité demeure pendant l'attente. La finalité de l'appréhension n'autorise ni pression commerciale ni privation de soins.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Négocier sa sortie contre une déclaration imposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "L'appréhension vise la conduite devant l'officier de police judiciaire le plus proche. Elle ne sert pas à organiser une garde à vue privée ou une négociation de paiement."
+                }
+              },
+              {
+                "id": "suite",
+                "kind": "single",
+                "prompt": "État du suivi et prochaine décision",
+                "context": "",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Réévaluation engagée, issue non confirmée. Décision à mettre en œuvre : Alerter les secours si nécessaire, surveiller la situation et informer les forces de l'ordre."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Résultat juridique définitif établi par le poste."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Dossier clos ; aucune vérification ni transmission complémentaire."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Distinguez ce qui est fait, ce qui est décidé et ce qui reste à confirmer.",
+                "remediation": {
+                  "prompt": "Une personne déjà appréhendée propose de signer des aveux pour partir. Quelle suite inscrire sans inventer un résultat ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Responsabilité juridique établie par l’agent, sans autre procédure."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Dossier définitivement clos sans vérification ni confirmation."
+                    },
+                    {
+                      "id": "3",
+                      "text": "La vérification ou le relais prévu : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée. Dans ce cas : Ne pas organiser d'interrogatoire coercitif et transmettre aux autorités les faits observés.",
+                  "lesson": "La main courante indique les démarches et leur état réel, sans conclusion fabriquée."
+                }
+              }
+            ]
+          },
+          "academy": {
+            "kind": "journal",
+            "dossier": "03.02",
+            "title": "L'attente au local",
+            "case": "Dossier fictif « L'attente au local ». Comparez les pièces et justifiez mentalement chaque choix.",
+            "edition": "2026-10-06"
+          }
+        },
+        {
+          "id": "aps62-03-02-synthese",
+          "title": "Synthèse · mes repères de terrain",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "03.02",
+            "title": "Une faculté encadrée, un relais rapide",
+            "kind": "recap",
+            "decision": "Organiser immédiatement le relais compétent, protéger la santé et conserver les éléments.",
+            "reason": "Une faculté juridique ne supprime ni l’analyse de sécurité ni l’exigence de nécessité et de proportion. Le but est la remise à l’officier de police judiciaire, pas la sanction ou la résolution d’un litige commercial. La dignité et les besoins de secours restent à prendre en compte. Les techniques physiques se travaillent en présentiel encadré.",
+            "pitfall": "Attendre l’inventaire pour décider s’il faut prévenir les forces de l’ordre.",
+            "cards": [
+              {
+                "front": "Une faculté strictement encadrée",
+                "back": "L'article 73 ne crée pas une obligation d'intervention physique dans chaque situation. Il ouvre une faculté dans un cadre précis de flagrance. L'agent doit d'abord comprendre les faits et le fondement envisagé. Il doit ensuite évaluer le risque pour la personne, les tiers et lui-même. Une intervention peut aggraver une situation si elle est improvisée, isolée ou effectuée au milieu d'une foule."
+              },
+              {
+                "front": "Distinguer protection et poursuite",
+                "back": "La protection immédiate des personnes, l'alerte et la conservation d'informations utiles peuvent être prioritaires. L'objectif n'est pas de retenir quelqu'un pour obtenir une explication ou récupérer un bien par n'importe quel moyen. Les contraintes, lorsqu'elles sont légalement justifiées, doivent rester nécessaires et proportionnées. Une mission APS ordinaire ne confère pas un pouvoir général de menottage ou de fouille corporelle."
+              },
+              {
+                "front": "EXEMPLE EXPLIQUÉ",
+                "back": "Un agent constate un fait potentiellement délictueux dans une zone encombrée. Avant d'agir, il alerte, décrit les éléments et protège les personnes proches. Si la personne présente un danger important, une tentative de maîtrise isolée peut exposer tout le public. La décision se fonde sur le cadre et la sécurité, pas sur la volonté de montrer son autorité."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "06.01",
+                "page": 265
+              },
+              {
+                "ref": "06.03",
+                "page": 269
+              },
+              {
+                "ref": "06.04",
+                "page": 271
+              }
+            ],
+            "instruction": "Retrouvez mentalement la décision et les limites du dossier, puis consultez les repères pour vérifier. Vous pouvez refaire les ateliers pour réviser.",
+            "edition": "2026-10-04"
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-03-01-comprendre",
+    "aps62-03-01-memoriser",
+    "aps62-03-01-atelier",
+    "aps62-03-01-q1",
+    "aps62-03-01-q2",
+    "aps62-03-01-transfert",
+    "aps62-03-01-documents",
+    "aps62-03-01-journal",
+    "aps62-03-01-synthese",
+    "aps62-03-02-comprendre",
+    "aps62-03-02-memoriser",
+    "aps62-03-02-atelier",
+    "aps62-03-02-q1",
+    "aps62-03-02-q2",
+    "aps62-03-02-transfert",
+    "aps62-03-02-documents",
+    "aps62-03-02-journal",
+    "aps62-03-02-synthese"
+  ],
+  "counts": {
+    "sections": 2,
+    "activities": 18,
+    "scored_activities": 4,
+    "required_videos": 2,
+    "workbooks": 0,
+    "assets": 12,
+    "interactive_workshops": 8
+  },
+  "assets": [
+    "media/aps62/repere-02.12.webp",
+    "media/aps62/repere-06.01.webp",
+    "media/aps62/repere-06.02.webp",
+    "media/aps62/repere-06.03.webp",
+    "media/aps62/repere-06.04.webp",
+    "media/aps62/v2/aps62-03-01.jpg",
+    "media/aps62/v2/aps62-03-01.mp4",
+    "media/aps62/v2/aps62-03-01.vtt",
+    "media/aps62/v2/aps62-03-02.jpg",
+    "media/aps62/v2/aps62-03-02.mp4",
+    "media/aps62/v2/aps62-03-02.vtt",
+    "media/aps62/v2/module-03.webp"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-03",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-03.webp",
+  "interaction_revision": "20261006-aps62-v3"
+}
