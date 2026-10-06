@@ -1005,7 +1005,7 @@
           </svg>
         </div>
         <div class="aps-elearning-content">
-          <h2 id="apsElearningTitle">Espace e-learning APS</h2>
+          <h2 id="apsElearningTitle">Espace e-learning {{ 'VTC' if show_vtc else 'APS' }}</h2>
           <p class="aps-elearning-subtitle">Votre parcours de formation à distance sera activé au démarrage de la formation.</p>
           <div class="aps-elearning-badge">Accès disponible le {{ session.date_start|frdate }}</div>
           <p class="aps-elearning-note">Votre progression restera suivie pendant toute la formation, sans identifiant ni mot de passe à saisir.</p>
@@ -1015,7 +1015,7 @@
           </div>
         {% elif session.aps_native_modules or session.aps_native_course_id %}
           <div class="aps-elearning-actions">
-            <a class="btn" href="{{ url_for('native_elearning.learner_path', token=token_safe) }}">🚀 Accéder à mon parcours APS</a>
+            <a class="btn" href="{{ url_for('native_elearning.learner_path', token=token_safe) }}">🚀 Accéder à mon parcours {{ 'VTC' if show_vtc else 'APS' }}</a>
             <span class="aps-elearning-copy-status">Progression et temps actif enregistrés</span>
           </div>
         {% elif aps_link_is_valid %}
@@ -1032,7 +1032,7 @@
       </section>
     {% endif %}
 
-    {% if is_vtc_training %}
+    {% if is_vtc_training and not (aps_elearning_enabled and (session.aps_native_modules or session.aps_native_course_id)) %}
       {% set elearning_link = (trainee.elearning_link or '')|trim %}
       <div class="card elearning-card">
         <h2>🎓 Accès à votre espace Formation théorique en e-learning</h2>

@@ -10,12 +10,14 @@
 
 <div class="nel-admin">
   <header class="nel-head">
-    <div><span class="nel-eyebrow">Intégrale Academy · APS</span><h1>E-learning APS</h1><p>Explorez les cours illustrés, composez les parcours de vos sessions et suivez le travail de vos stagiaires.</p></div>
+    <div><span class="nel-eyebrow">Intégrale Academy · Formations</span><h1>E-learning</h1><p>Explorez les cours illustrés, composez les parcours de vos sessions et suivez le travail de vos stagiaires.</p></div>
     <a class="nel-button" href="{{ url_for('admin_sessions') }}">← Sessions</a>
   </header>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="nel-flash nel-flash--{{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
-  {% if academy_courses %}{% include '_aps62_catalog.html' %}{% endif %}
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-1') }}">
+  <nav class="curriculum-tabs" aria-label="Choisir une formation"><a href="{{ url_for('native_elearning.admin_catalog') }}"{% if selected_curriculum == 'aps' %} aria-current="page"{% endif %}>Sécurité privée · APS</a><a href="{{ url_for('native_elearning.admin_vtc_catalog') }}"{% if selected_curriculum == 'vtc' %} aria-current="page"{% endif %}>Chauffeur · VTC</a></nav>
+  {% if selected_curriculum == 'vtc' %}{% include '_vtc_catalog.html' %}{% elif academy_courses %}{% include '_aps62_catalog.html' %}{% endif %}
 
   <div class="nel-grid">
     <section class="nel-card">
@@ -60,7 +62,7 @@
   </div>
 
   <section class="nel-card nel-assignments">
-    <h2>Parcours des sessions APS</h2>
+    <h2>Parcours des sessions APS et VTC</h2>
     <p class="nel-muted">Composez chaque parcours avec plusieurs modules, puis choisissez et ordonnez leurs séquences. L’accès stagiaire s’ouvre lorsque le e-learning est activé et que la date de début est atteinte.</p>
     {% if aps_sessions %}
       <div class="nel-assignment-list">

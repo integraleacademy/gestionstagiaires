@@ -1,0 +1,730 @@
+{
+  "id": "vtc-a",
+  "version": "20261006-vtc-v1",
+  "training_label": "VTC",
+  "title": "VTC · Exercer dans le cadre du T3P · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-a-02-q1",
+      "prompt": "Vous voulez vous inscrire à l’examen VTC. Quel interlocuteur recherchez-vous ?",
+      "options": [
+        {
+          "id": "b0330b510167",
+          "text": "L’assureur automobile"
+        },
+        {
+          "id": "a045e2d80f7a",
+          "text": "Le concessionnaire du véhicule"
+        },
+        {
+          "id": "a47a9e5b1d60",
+          "text": "La chambre de métiers et de l’artisanat"
+        }
+      ],
+      "answer": "a47a9e5b1d60",
+      "explanation": "La CMA organise l’examen. La carte professionnelle, le véhicule et les assurances relèvent d’autres démarches.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.02"
+      ]
+    },
+    {
+      "id": "vtc-a-03-q2",
+      "prompt": "Pour une nouvelle demande nationale déposée après le 12 août 2026, un an d’expérience remplace-t-il l’examen ?",
+      "options": [
+        {
+          "id": "f967ffde1623",
+          "text": "Non, cette ancienne voie a été supprimée"
+        },
+        {
+          "id": "311144e1f181",
+          "text": "Oui, après accord d’une plateforme"
+        },
+        {
+          "id": "61a44b55ffeb",
+          "text": "Oui, sur une simple attestation"
+        }
+      ],
+      "answer": "f967ffde1623",
+      "explanation": "La réforme de 2026 supprime cette voie pour les nouvelles demandes nationales ; situations transitoires et qualifications européennes restent distinctes.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.03"
+      ]
+    },
+    {
+      "id": "vtc-a-04-q2",
+      "prompt": "Comment organiser la continuité du droit d’exercer ?",
+      "options": [
+        {
+          "id": "39718fa5ad33",
+          "text": "Tenir un calendrier distinct des titres, contrôles et assurances"
+        },
+        {
+          "id": "1adac228b137",
+          "text": "Attendre un rappel automatique de l’application"
+        },
+        {
+          "id": "9ea74e07edb9",
+          "text": "Conserver seulement une photo du permis"
+        }
+      ],
+      "answer": "39718fa5ad33",
+      "explanation": "Chaque pièce a sa fonction et sa durée. Les démarches doivent être anticipées avant l’expiration.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.04"
+      ]
+    },
+    {
+      "id": "vtc-a-06-q2",
+      "prompt": "Un passager annonce un handicap. Quelle première démarche est adaptée ?",
+      "options": [
+        {
+          "id": "6ed67f92451a",
+          "text": "Refuser automatiquement la réservation"
+        },
+        {
+          "id": "afddd1fcae35",
+          "text": "Demander l’aide souhaitée et vérifier les conditions réelles de transport"
+        },
+        {
+          "id": "6c965fd84f10",
+          "text": "Exiger son diagnostic médical complet"
+        }
+      ],
+      "answer": "afddd1fcae35",
+      "explanation": "L’accueil se fonde sur les besoins et contraintes objectives, sans préjugé ni collecte médicale inutile.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.06"
+      ]
+    },
+    {
+      "id": "vtc-a-11-q2",
+      "prompt": "Comment prévenir une panne de téléphone lors d’un contrôle ?",
+      "options": [
+        {
+          "id": "c5e150a843b5",
+          "text": "Conserver uniquement des documents périmés"
+        },
+        {
+          "id": "9b683b16bdf6",
+          "text": "Prévoir un accès sécurisé aux documents à jour"
+        },
+        {
+          "id": "ca50fc3d5a2f",
+          "text": "Montrer les réservations de tous les clients"
+        }
+      ],
+      "answer": "9b683b16bdf6",
+      "explanation": "Le justificatif utile doit rester accessible sans exposer inutilement les données d’autres personnes.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.11"
+      ]
+    },
+    {
+      "id": "vtc-a-01-q2",
+      "prompt": "Qu’est-ce qui distingue principalement un VTC d’un taxi pour la prise en charge ?",
+      "options": [
+        {
+          "id": "ce7a20ba6d5a",
+          "text": "Le VTC exige une réservation préalable"
+        },
+        {
+          "id": "24045227c97c",
+          "text": "Le VTC peut toujours prendre un client qui le hèle"
+        },
+        {
+          "id": "49e3c899f591",
+          "text": "Le véhicule de luxe dispense de réservation"
+        }
+      ],
+      "answer": "ce7a20ba6d5a",
+      "explanation": "La réservation précède la prise en charge du VTC. Le confort ou l’application utilisée ne change pas ce cadre.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.01"
+      ]
+    },
+    {
+      "id": "vtc-a-09-q1",
+      "prompt": "Une cliente voyage avec son chien d’assistance. Quelle proposition est correcte ?",
+      "options": [
+        {
+          "id": "e2b24a624a0c",
+          "text": "Placer obligatoirement le chien dans le coffre"
+        },
+        {
+          "id": "9351d74cd2ba",
+          "text": "Préparer une installation sûre dans l’habitacle, sans supplément pour le chien"
+        },
+        {
+          "id": "325bb94b6774",
+          "text": "Facturer un supplément automatique"
+        }
+      ],
+      "answer": "9351d74cd2ba",
+      "explanation": "Le chien accompagne sa bénéficiaire. L’organisation respecte la sécurité et l’absence de supplément pour cet accompagnement.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.09"
+      ]
+    },
+    {
+      "id": "vtc-a-06-q1",
+      "prompt": "Un partenaire demande de refuser les clients d’une certaine origine. Quelle réponse retenir ?",
+      "options": [
+        {
+          "id": "9c0f00c7d402",
+          "text": "Refuser cette consigne discriminatoire"
+        },
+        {
+          "id": "2191b880528a",
+          "text": "Appliquer la consigne si elle est écrite"
+        },
+        {
+          "id": "79978f6dd7bb",
+          "text": "L’appliquer uniquement aux nouveaux clients"
+        }
+      ],
+      "answer": "9c0f00c7d402",
+      "explanation": "L’origine est un critère protégé. Une demande commerciale ne légitime pas une discrimination.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.06"
+      ]
+    },
+    {
+      "id": "vtc-a-05-q1",
+      "prompt": "Un contrat porte la mention « tous risques ». Que faut-il encore vérifier avant une course payante ?",
+      "options": [
+        {
+          "id": "422cac51e332",
+          "text": "Seulement la couleur du véhicule"
+        },
+        {
+          "id": "e1a4b20d065b",
+          "text": "La couverture du transport de personnes à titre onéreux"
+        },
+        {
+          "id": "933c51fa95e2",
+          "text": "Rien : tous les usages sont automatiquement couverts"
+        }
+      ],
+      "answer": "e1a4b20d065b",
+      "explanation": "La formule commerciale ne prouve pas que l’usage professionnel exact est assuré ; les garanties doivent être contrôlées.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.05"
+      ]
+    },
+    {
+      "id": "vtc-a-09-q2",
+      "prompt": "Avant d’aider une personne à s’installer, que faire ?",
+      "options": [
+        {
+          "id": "a27e58077aff",
+          "text": "Proposer l’aide et attendre son accord"
+        },
+        {
+          "id": "742c67aed0f4",
+          "text": "Parler uniquement à son accompagnateur"
+        },
+        {
+          "id": "203ead0756ee",
+          "text": "La soulever immédiatement"
+        }
+      ],
+      "answer": "a27e58077aff",
+      "explanation": "La personne reste décisionnaire. Demandez comment aider, sans geste imposé ni présomption sur ses capacités.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.09"
+      ]
+    },
+    {
+      "id": "vtc-a-04-q1",
+      "prompt": "La carte expire dans huit mois mais l’aptitude médicale dans un mois. Quelle échéance traiter en priorité ?",
+      "options": [
+        {
+          "id": "1ab4bbe4baf6",
+          "text": "Uniquement la carte professionnelle"
+        },
+        {
+          "id": "d930bc3334f3",
+          "text": "L’aptitude médicale, sans oublier les autres échéances"
+        },
+        {
+          "id": "0a9a38f9b460",
+          "text": "Aucune avant le prochain contrôle policier"
+        }
+      ],
+      "answer": "d930bc3334f3",
+      "explanation": "Les validités se suivent séparément. Une carte valide ne prolonge pas un avis médical arrivé à échéance.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.04"
+      ]
+    },
+    {
+      "id": "vtc-a-12-q1",
+      "prompt": "Un bagage est endommagé pendant la prestation. Quel sujet traiter d’abord pour la réclamation ?",
+      "options": [
+        {
+          "id": "19d5a2e7a437",
+          "text": "Le renouvellement du permis uniquement"
+        },
+        {
+          "id": "b96510b70c4e",
+          "text": "La responsabilité contractuelle et les garanties d’assurance"
+        },
+        {
+          "id": "20d5dfdb68cd",
+          "text": "La note de l’examen théorique"
+        }
+      ],
+      "answer": "b96510b70c4e",
+      "explanation": "Le dommage doit être documenté et déclaré selon les garanties ; il est distinct d’une éventuelle infraction.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.12"
+      ]
+    },
+    {
+      "id": "vtc-a-01-q1",
+      "prompt": "Un chauffeur effectue un déplacement uniquement pour transporter un client payant. Comment qualifier la situation ?",
+      "options": [
+        {
+          "id": "efa28be3ca23",
+          "text": "Une prestation professionnelle de transport"
+        },
+        {
+          "id": "4a0ada8babe2",
+          "text": "Un covoiturage parce que le véhicule est partagé"
+        },
+        {
+          "id": "293ee6f52d91",
+          "text": "Un trajet privé dès que le paiement est en espèces"
+        }
+      ],
+      "answer": "efa28be3ca23",
+      "explanation": "Le trajet est organisé pour le client et rémunère un service ; ce n’est pas le partage des frais d’un déplacement personnel.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.01"
+      ]
+    },
+    {
+      "id": "vtc-a-07-q2",
+      "prompt": "Un client harcèle le conducteur par messages après la course. Que faire ?",
+      "options": [
+        {
+          "id": "fbcc599351f5",
+          "text": "Conserver les traces utiles et utiliser les canaux de signalement adaptés"
+        },
+        {
+          "id": "c79099f23e2e",
+          "text": "Accepter ses demandes pour éviter une mauvaise note"
+        },
+        {
+          "id": "2a13639aa80b",
+          "text": "Publier ses coordonnées pour le dénoncer"
+        }
+      ],
+      "answer": "fbcc599351f5",
+      "explanation": "Les preuves utiles sont conservées sans diffusion publique. En cas de danger immédiat, appeler les secours ou les forces de l’ordre.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.07"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-02",
+      "prompt": "Une inscription sur une application remplace-t-elle le REVTC ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Oui, si le compte est validé."
+        },
+        {
+          "id": "b",
+          "text": "Non."
+        },
+        {
+          "id": "c",
+          "text": "Seulement pour les petites courses."
+        }
+      ],
+      "answer": "b",
+      "explanation": "La validation commerciale d’un compte ne remplace pas l’inscription réglementaire de l’exploitant.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-a-10-q1",
+      "prompt": "Pour comparer les revenus entre collègues, quelle donnée partager ?",
+      "options": [
+        {
+          "id": "8f7bb3e2bafd",
+          "text": "Les captures complètes des réservations"
+        },
+        {
+          "id": "86ea9c94a8d4",
+          "text": "Un bilan agrégé sans données identifiantes de clients"
+        },
+        {
+          "id": "2a9143aa9499",
+          "text": "La liste des téléphones sans les noms"
+        }
+      ],
+      "answer": "86ea9c94a8d4",
+      "explanation": "Téléphones, adresses et trajets peuvent identifier les personnes. Un bilan agrégé permet la comparaison sans ces données.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.10"
+      ]
+    },
+    {
+      "id": "vtc-a-08-q2",
+      "prompt": "Quelle information transmettre en priorité pour faire venir de l’aide ?",
+      "options": [
+        {
+          "id": "7cdf29ef8a51",
+          "text": "Le prix de la course uniquement"
+        },
+        {
+          "id": "3f5fce8ff378",
+          "text": "Une supposition sur la personnalité de l’auteur"
+        },
+        {
+          "id": "f50f392f6a11",
+          "text": "Le lieu précis et la nature du danger actuel"
+        }
+      ],
+      "answer": "f50f392f6a11",
+      "explanation": "La localisation et les faits observés orientent les secours. Évitez les diagnostics et restez disponible pour l’opérateur.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.08"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-04",
+      "prompt": "Le silence d’une personne vaut-il consentement à un acte sexuel ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Non."
+        },
+        {
+          "id": "b",
+          "text": "Oui, en l’absence de refus oral."
+        },
+        {
+          "id": "c",
+          "text": "Oui, après une conversation amicale."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le consentement ne se déduit pas du seul silence ou de l’absence de réaction.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-a-03-q1",
+      "prompt": "Un candidat a réussi seulement les épreuves théoriques. Peut-il déjà exercer avec cette attestation ?",
+      "options": [
+        {
+          "id": "af73173fb5f4",
+          "text": "Oui, si le passager donne son accord"
+        },
+        {
+          "id": "4ff126cb91bf",
+          "text": "Non, la pratique et les autres démarches restent nécessaires"
+        },
+        {
+          "id": "32bfe98db8d0",
+          "text": "Oui, pendant un an sans carte"
+        }
+      ],
+      "answer": "4ff126cb91bf",
+      "explanation": "L’admissibilité est une étape. Elle ne vaut ni réussite à l’ensemble de l’examen ni carte professionnelle.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.03"
+      ]
+    },
+    {
+      "id": "vtc-a-08-q1",
+      "prompt": "Vous observez une agression en cours. Quel numéro correspond à une alerte urgente ?",
+      "options": [
+        {
+          "id": "df7c2d9c1e39",
+          "text": "17 ou 112"
+        },
+        {
+          "id": "9ce4d3dd69eb",
+          "text": "Le service fiscal"
+        },
+        {
+          "id": "309abb1b90c6",
+          "text": "3919 comme unique numéro d’urgence"
+        }
+      ],
+      "answer": "df7c2d9c1e39",
+      "explanation": "Le 17 et le 112 permettent l’alerte urgente ; le 3919 est un service d’écoute et d’information.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.08"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-01",
+      "prompt": "Qui détient la carte professionnelle ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le conducteur."
+        },
+        {
+          "id": "b",
+          "text": "La plateforme."
+        },
+        {
+          "id": "c",
+          "text": "Le véhicule."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La carte atteste les conditions personnelles du conducteur ; elle ne se prête pas.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-a-07-q1",
+      "prompt": "Le silence d’une personne vaut-il accord à un geste intime ?",
+      "options": [
+        {
+          "id": "645d908bc651",
+          "text": "Oui, si la course est terminée"
+        },
+        {
+          "id": "94448970bb43",
+          "text": "Non"
+        },
+        {
+          "id": "a1139cf998a0",
+          "text": "Oui, si elle sourit"
+        }
+      ],
+      "answer": "94448970bb43",
+      "explanation": "Le consentement ne se présume pas à partir du silence. La relation professionnelle ne donne aucun droit à un contact intime.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.07"
+      ]
+    },
+    {
+      "id": "vtc-a-10-q2",
+      "prompt": "Un client oublie son bagage. Quel usage de ses coordonnées est pertinent ?",
+      "options": [
+        {
+          "id": "605b0bc28100",
+          "text": "Le contacter pour organiser la restitution"
+        },
+        {
+          "id": "2468ddad2af9",
+          "text": "Publier son hôtel sur un réseau social"
+        },
+        {
+          "id": "63c2844b8df3",
+          "text": "Les ajouter à une campagne commerciale sans autre vérification"
+        }
+      ],
+      "answer": "605b0bc28100",
+      "explanation": "La restitution correspond au besoin concret de la prestation ; elle n’autorise pas des usages sans rapport.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.10"
+      ]
+    },
+    {
+      "id": "vtc-a-11-q1",
+      "prompt": "Un justificatif présente une heure de réservation postérieure au départ. Que faire lors du contrôle ?",
+      "options": [
+        {
+          "id": "5e2312a814d3",
+          "text": "Antidater le document à la main"
+        },
+        {
+          "id": "908cb1170f4f",
+          "text": "Supprimer le trajet de l’application"
+        },
+        {
+          "id": "0575ca11270a",
+          "text": "Présenter les faits et documents authentiques sans falsifier l’heure"
+        }
+      ],
+      "answer": "0575ca11270a",
+      "explanation": "Une modification destinée à masquer la chronologie ne rend pas la réservation préalable et peut aggraver la situation.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.11"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-05",
+      "prompt": "Pour une agression en cours, quel contact est adapté ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le 3919 uniquement."
+        },
+        {
+          "id": "b",
+          "text": "Le 17 ou le 112."
+        },
+        {
+          "id": "c",
+          "text": "Le service des impôts."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le 17 et le 112 permettent une alerte urgente ; le 3919 est un service d’écoute et d’information.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-03",
+      "prompt": "Une personne discrimine un client en raison de son origine. Quel est le bon repère ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "C’est une préférence commerciale."
+        },
+        {
+          "id": "b",
+          "text": "C’est admis si le partenaire le demande."
+        },
+        {
+          "id": "c",
+          "text": "Un critère protégé ne justifie pas ce refus."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La consigne d’un partenaire ne légitime pas une discrimination.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-a-05-q2",
+      "prompt": "Quelle différence entre l’assurance automobile professionnelle et la RC professionnelle ?",
+      "options": [
+        {
+          "id": "0341591731c5",
+          "text": "La RC professionnelle remplace toujours l’assurance du véhicule"
+        },
+        {
+          "id": "93de9b521ddd",
+          "text": "Elles couvrent des risques différents et doivent être examinées ensemble"
+        },
+        {
+          "id": "056ca18acdf8",
+          "text": "Une réservation remplace les deux garanties"
+        }
+      ],
+      "answer": "93de9b521ddd",
+      "explanation": "L’usage du véhicule et les responsabilités de l’activité ne se confondent pas. Il faut vérifier les garanties et leurs limites.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.05"
+      ]
+    },
+    {
+      "id": "vtc-a-manual-06",
+      "prompt": "Le numéro de téléphone d’un client peut-il être diffusé dans un groupe public ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Oui, après la course."
+        },
+        {
+          "id": "b",
+          "text": "Oui, pour comparer les recettes."
+        },
+        {
+          "id": "c",
+          "text": "Non, cette diffusion n’est pas justifiée."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Les coordonnées restent des données personnelles ; le partage doit être nécessaire et licite.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-a-12-q2",
+      "prompt": "L’assureur indemnise un dommage. Cela efface-t-il automatiquement une infraction routière ?",
+      "options": [
+        {
+          "id": "a747a7a6c62a",
+          "text": "Oui, dès que le dommage est payé"
+        },
+        {
+          "id": "5ebbfa141aab",
+          "text": "Oui, si le client retire son avis"
+        },
+        {
+          "id": "87fb19f805cc",
+          "text": "Non, les responsabilités sont distinctes"
+        }
+      ],
+      "answer": "87fb19f805cc",
+      "explanation": "La réparation civile n’annule pas une sanction pénale ni une mesure administrative éventuelle.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.12"
+      ]
+    },
+    {
+      "id": "vtc-a-02-q2",
+      "prompt": "À quoi sert principalement le REVTC ?",
+      "options": [
+        {
+          "id": "34d5d7c4583b",
+          "text": "À l’inscription de l’exploitant VTC"
+        },
+        {
+          "id": "36cf06c7f699",
+          "text": "À attribuer les notes de français"
+        },
+        {
+          "id": "30ee51b78a79",
+          "text": "À remplacer le permis de conduire"
+        }
+      ],
+      "answer": "34d5d7c4583b",
+      "explanation": "Le registre concerne l’exploitant ; la carte professionnelle concerne personnellement le conducteur.",
+      "module": "A",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon A.02"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

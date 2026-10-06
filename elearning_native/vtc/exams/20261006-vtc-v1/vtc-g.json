@@ -1,0 +1,730 @@
+{
+  "id": "vtc-g",
+  "version": "20261006-vtc-v1",
+  "training_label": "VTC",
+  "title": "VTC · Appliquer les règles du VTC · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-g-02-q2",
+      "prompt": "Une somme prévue pour garantir l’exploitation est-elle automatiquement du bénéfice disponible ?",
+      "options": [
+        {
+          "id": "48b98e8d0620",
+          "text": "Oui, dès l’inscription au registre"
+        },
+        {
+          "id": "8386a20dd3f6",
+          "text": "Oui, après une première course"
+        },
+        {
+          "id": "b0057fb9dbff",
+          "text": "Non"
+        }
+      ],
+      "answer": "b0057fb9dbff",
+      "explanation": "Garantie, financement et bénéfice ont des fonctions différentes ; la disponibilité d’une somme dépend de son affectation.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.02"
+      ]
+    },
+    {
+      "id": "vtc-g-07-q2",
+      "prompt": "Le vol est retardé. Quelle action limite une attente inadaptée ?",
+      "options": [
+        {
+          "id": "cdcf42998442",
+          "text": "Stationner indéfiniment au même endroit"
+        },
+        {
+          "id": "78eb2e470b8e",
+          "text": "Actualiser l’horaire et vérifier les règles de stationnement applicables"
+        },
+        {
+          "id": "ad8b09534e4c",
+          "text": "Supprimer toute communication avec le client"
+        }
+      ],
+      "answer": "78eb2e470b8e",
+      "explanation": "L’attente et l’accès à l’aéroport obéissent à des conditions ; le suivi du vol aide à adapter l’organisation.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.07"
+      ]
+    },
+    {
+      "id": "vtc-g-09-q2",
+      "prompt": "Un supplément peut être facturé. Quand en clarifier les conditions ?",
+      "options": [
+        {
+          "id": "031f08726f8e",
+          "text": "Uniquement après le paiement"
+        },
+        {
+          "id": "08bd462a20ea",
+          "text": "Jamais si la course est courte"
+        },
+        {
+          "id": "7c1c27cfba4e",
+          "text": "Avant son application et selon ce qui est convenu"
+        }
+      ],
+      "answer": "7c1c27cfba4e",
+      "explanation": "Le client doit comprendre le prix et les conditions ; un supplément ne doit pas surgir sans base annoncée.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.09"
+      ]
+    },
+    {
+      "id": "vtc-g-03-q1",
+      "prompt": "Le nombre réglementaire de places d’un VTC inclut-il le conducteur ?",
+      "options": [
+        {
+          "id": "e04324631be1",
+          "text": "Seulement si le véhicule est loué"
+        },
+        {
+          "id": "cf74d3d7b861",
+          "text": "Oui"
+        },
+        {
+          "id": "bde739240401",
+          "text": "Non, seulement les clients"
+        }
+      ],
+      "answer": "cf74d3d7b861",
+      "explanation": "La capacité se lit conducteur compris. Le nombre maximal de clients est donc inférieur d’une place au total indiqué.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.03"
+      ]
+    },
+    {
+      "id": "vtc-g-11-q2",
+      "prompt": "Comment suivre un véhicule professionnel dans la durée ?",
+      "options": [
+        {
+          "id": "9bff994a19be",
+          "text": "Changer uniquement les accessoires visibles"
+        },
+        {
+          "id": "5c38e5deb71f",
+          "text": "Planifier entretien, contrôles, assurance et mises à jour documentaires"
+        },
+        {
+          "id": "c0b905b8e87f",
+          "text": "Attendre une immobilisation"
+        }
+      ],
+      "answer": "5c38e5deb71f",
+      "explanation": "La continuité d’exploitation dépend de plusieurs échéances et de l’état réel du véhicule.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.11"
+      ]
+    },
+    {
+      "id": "vtc-g-08-q1",
+      "prompt": "Après une course, sans nouvelle réservation, quel repère guide le repositionnement ?",
+      "options": [
+        {
+          "id": "b4832a3cdd02",
+          "text": "Rejoindre la base ou un stationnement autorisé hors chaussée selon les règles"
+        },
+        {
+          "id": "ab7bdf10b513",
+          "text": "Circuler lentement à la recherche de clients à héler"
+        },
+        {
+          "id": "bd0ff3546ee9",
+          "text": "Attendre sur une station de taxis"
+        }
+      ],
+      "answer": "b4832a3cdd02",
+      "explanation": "La fin de course ne donne pas un droit de maraude. Le repositionnement doit respecter le cadre VTC.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.08"
+      ]
+    },
+    {
+      "id": "vtc-g-01-q2",
+      "prompt": "La carte professionnelle remplace-t-elle l’inscription de l’exploitant au REVTC ?",
+      "options": [
+        {
+          "id": "9a63d40fa235",
+          "text": "Non"
+        },
+        {
+          "id": "642eb18c242f",
+          "text": "Oui, dans tous les cas"
+        },
+        {
+          "id": "ccf1591e2aa3",
+          "text": "Oui, si la carte est récente"
+        }
+      ],
+      "answer": "9a63d40fa235",
+      "explanation": "Conducteur et exploitant correspondent à deux niveaux de contrôle distincts.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.01"
+      ]
+    },
+    {
+      "id": "vtc-g-10-q2",
+      "prompt": "Une voiture de location remplace le véhicule habituel. Que contrôler ?",
+      "options": [
+        {
+          "id": "4e0f42731913",
+          "text": "Seulement sa propreté"
+        },
+        {
+          "id": "0ac8219819aa",
+          "text": "Éligibilité, assurance professionnelle et documents correspondant au véhicule"
+        },
+        {
+          "id": "66fcabdaed99",
+          "text": "Uniquement son plein de carburant"
+        }
+      ],
+      "answer": "0ac8219819aa",
+      "explanation": "Louer ne vaut pas autorisation d’exploiter. Les conditions métier, l’assurance et les justificatifs restent à vérifier.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.10"
+      ]
+    },
+    {
+      "id": "vtc-g-01-q1",
+      "prompt": "Qui s’inscrit au registre des exploitants VTC ?",
+      "options": [
+        {
+          "id": "cd6b05a5aaa2",
+          "text": "L’exploitant de l’activité"
+        },
+        {
+          "id": "005ff5443af6",
+          "text": "Le constructeur automobile"
+        },
+        {
+          "id": "45f1bc39aede",
+          "text": "Chaque passager"
+        }
+      ],
+      "answer": "cd6b05a5aaa2",
+      "explanation": "L’inscription au REVTC concerne l’exploitation. Elle ne se confond pas avec la carte personnelle du chauffeur.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.01"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-03",
+      "prompt": "Une location de neuf mois peut-elle justifier la capacité financière selon le cas prévu ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Non, jamais."
+        },
+        {
+          "id": "b",
+          "text": "Oui, la durée atteint au moins six mois."
+        },
+        {
+          "id": "c",
+          "text": "Seulement si elle dure cinq ans."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le texte prévoit notamment un contrat de location d’au moins six mois.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-09-q1",
+      "prompt": "Les tarifs VTC sont-ils identiques aux tarifs réglementés du taxi ?",
+      "options": [
+        {
+          "id": "d46451ed796a",
+          "text": "Oui, seulement en ville"
+        },
+        {
+          "id": "22c15353e774",
+          "text": "Non, les prix VTC sont libres dans leur cadre légal"
+        },
+        {
+          "id": "b04364d151bd",
+          "text": "Oui, obligatoirement"
+        }
+      ],
+      "answer": "22c15353e774",
+      "explanation": "La liberté tarifaire ne dispense pas d’informer le client et de convenir clairement des conditions du service.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.09"
+      ]
+    },
+    {
+      "id": "vtc-g-04-q2",
+      "prompt": "Le véhicule est remplacé. Peut-on réutiliser sans contrôle sa signalétique liée à l’ancien véhicule ?",
+      "options": [
+        {
+          "id": "af53f1d641ae",
+          "text": "Oui, si les voitures ont la même couleur"
+        },
+        {
+          "id": "843b3534d152",
+          "text": "Oui, les immatriculations n’ont aucune importance"
+        },
+        {
+          "id": "688d1c881951",
+          "text": "Non, il faut vérifier et mettre à jour les éléments correspondants"
+        }
+      ],
+      "answer": "688d1c881951",
+      "explanation": "Les justificatifs et la signalétique doivent correspondre au véhicule réellement utilisé.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.04"
+      ]
+    },
+    {
+      "id": "vtc-g-05-q1",
+      "prompt": "La réservation est enregistrée après la prise en charge. Est-elle préalable ?",
+      "options": [
+        {
+          "id": "6e8d98404411",
+          "text": "Oui, si elle existe à la fin de la course"
+        },
+        {
+          "id": "8944c576c963",
+          "text": "Oui, si le client paie par carte"
+        },
+        {
+          "id": "a7856bc96932",
+          "text": "Non"
+        }
+      ],
+      "answer": "a7856bc96932",
+      "explanation": "Préalable signifie avant la prise en charge ; enregistrer ensuite ne régularise pas rétroactivement la chronologie.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.05"
+      ]
+    },
+    {
+      "id": "vtc-g-12-q1",
+      "prompt": "Une ancienne vidéo contredit une règle officielle récente. Quelle source vérifier en priorité ?",
+      "options": [
+        {
+          "id": "dd211534acd0",
+          "text": "La vidéo qui a le plus de vues"
+        },
+        {
+          "id": "844cd2cc00d7",
+          "text": "Le texte officiel en vigueur et son champ d’application"
+        },
+        {
+          "id": "5ef34ecc2c38",
+          "text": "Le commentaire le plus court"
+        }
+      ],
+      "answer": "844cd2cc00d7",
+      "explanation": "La date et les conditions d’application comptent. La popularité d’un support ne le rend pas juridiquement à jour.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.12"
+      ]
+    },
+    {
+      "id": "vtc-g-07-q1",
+      "prompt": "À l’aéroport, où préparer la rencontre avec un client réservé ?",
+      "options": [
+        {
+          "id": "0451bb2a971f",
+          "text": "Sur toute station de taxis"
+        },
+        {
+          "id": "5663ab49a8a9",
+          "text": "Dans une zone autorisée selon les règles locales d’accès"
+        },
+        {
+          "id": "29dfdcb108ad",
+          "text": "Au milieu d’une voie de circulation"
+        }
+      ],
+      "answer": "5663ab49a8a9",
+      "explanation": "La réservation ne donne pas accès à toutes les zones. Il faut vérifier les règles du site et la sécurité de la prise en charge.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.07"
+      ]
+    },
+    {
+      "id": "vtc-g-03-q2",
+      "prompt": "Avant d’acheter un véhicule hybride pour le VTC, que faut-il faire ?",
+      "options": [
+        {
+          "id": "c4f9bbf76a6e",
+          "text": "Supposer que toutes les règles disparaissent"
+        },
+        {
+          "id": "7cb1b0c5145e",
+          "text": "Vérifier uniquement la présence d’un écran"
+        },
+        {
+          "id": "0bad8b3c7263",
+          "text": "Vérifier sa catégorie exacte et les règles qui lui sont applicables"
+        }
+      ],
+      "answer": "0bad8b3c7263",
+      "explanation": "Les dérogations éventuelles portent sur des critères précis ; elles ne dispensent pas des autres obligations de conformité.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.03"
+      ]
+    },
+    {
+      "id": "vtc-g-06-q2",
+      "prompt": "Une application transforme-t-elle automatiquement un VTC en taxi ?",
+      "options": [
+        {
+          "id": "2181786a39bb",
+          "text": "Oui, si elle affiche une carte"
+        },
+        {
+          "id": "94628d6a5856",
+          "text": "Oui, si elle propose un paiement immédiat"
+        },
+        {
+          "id": "45a359fea3c2",
+          "text": "Non"
+        }
+      ],
+      "answer": "45a359fea3c2",
+      "explanation": "L’outil de mise en relation ne change pas le statut ni les règles de l’activité réellement exercée.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.06"
+      ]
+    },
+    {
+      "id": "vtc-g-04-q1",
+      "prompt": "Peut-on installer un lumineux extérieur de taxi sur un VTC ?",
+      "options": [
+        {
+          "id": "58c689af0c98",
+          "text": "Oui, pour améliorer sa visibilité commerciale"
+        },
+        {
+          "id": "2a899032d2d0",
+          "text": "Non"
+        },
+        {
+          "id": "e8ace6282885",
+          "text": "Oui, si le mot taxi est petit"
+        }
+      ],
+      "answer": "2a899032d2d0",
+      "explanation": "La signalétique ne doit pas créer de confusion avec le taxi. Le VTC utilise les éléments prévus pour son activité.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.04"
+      ]
+    },
+    {
+      "id": "vtc-g-06-q1",
+      "prompt": "Un passant vous hèle alors que vous êtes disponible en VTC. Quelle règle retenir ?",
+      "options": [
+        {
+          "id": "498a72778c93",
+          "text": "La disponibilité ne permet pas une prise en charge en maraude"
+        },
+        {
+          "id": "2681914010f3",
+          "text": "La disponibilité vaut réservation"
+        },
+        {
+          "id": "ec39ef3149e1",
+          "text": "La course est permise si elle dure moins de cinq minutes"
+        }
+      ],
+      "answer": "498a72778c93",
+      "explanation": "Le VTC n’a pas le droit de prendre un client à la volée ; la réservation préalable reste nécessaire.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.06"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-06",
+      "prompt": "Après une course, sans nouvelle réservation, le conducteur peut…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Attendre dans une station de taxis."
+        },
+        {
+          "id": "b",
+          "text": "Rejoindre un stationnement autorisé hors chaussée."
+        },
+        {
+          "id": "c",
+          "text": "Circuler pour être hélé."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le texte prévoit base ou lieu hors chaussée autorisé, sauf exception justifiable.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-05-q2",
+      "prompt": "Quelle paire d’horaires doit être distinguée sur une réservation ?",
+      "options": [
+        {
+          "id": "6e81d64d83d7",
+          "text": "L’heure du nettoyage et celle du plein seulement"
+        },
+        {
+          "id": "f70387422db4",
+          "text": "L’heure de réservation et l’heure de prise en charge souhaitée"
+        },
+        {
+          "id": "e12b97f37563",
+          "text": "Les horaires du précédent client uniquement"
+        }
+      ],
+      "answer": "f70387422db4",
+      "explanation": "Ces deux moments établissent des faits différents et participent à la preuve de la réservation préalable.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.05"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-01",
+      "prompt": "Un véhicule VTC comporte au maximum…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Neuf passagers plus le conducteur."
+        },
+        {
+          "id": "b",
+          "text": "Dix places au total."
+        },
+        {
+          "id": "c",
+          "text": "Neuf places conducteur compris."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le Code fixe de quatre à neuf places, y compris le conducteur.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-11-q1",
+      "prompt": "Un contrôle technique valable dispense-t-il de l’entretien et des vérifications quotidiennes ?",
+      "options": [
+        {
+          "id": "0d377f289a30",
+          "text": "Oui, jusqu’à son expiration"
+        },
+        {
+          "id": "8c92f00851d9",
+          "text": "Oui, si le véhicule a peu roulé"
+        },
+        {
+          "id": "ee08c2da759a",
+          "text": "Non"
+        }
+      ],
+      "answer": "ee08c2da759a",
+      "explanation": "Un contrôle périodique n’empêche pas une panne ultérieure. L’état réel doit rester surveillé.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.11"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-02",
+      "prompt": "L’ancienneté ordinaire prévue pour le véhicule concerné est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Moins de sept ans."
+        },
+        {
+          "id": "b",
+          "text": "Moins de dix ans."
+        },
+        {
+          "id": "c",
+          "text": "Sans limite pour tous les véhicules."
+        }
+      ],
+      "answer": "a",
+      "explanation": "L’arrêté prévoit moins de sept ans, sous réserve des exceptions applicables.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-02-q1",
+      "prompt": "Avant de constituer la garantie financière, que faut-il vérifier ?",
+      "options": [
+        {
+          "id": "f8cfbffe918a",
+          "text": "Le nombre d’avis en ligne"
+        },
+        {
+          "id": "b985156b5449",
+          "text": "Seulement le prix du carburant"
+        },
+        {
+          "id": "9aa943514ffb",
+          "text": "Le régime applicable au véhicule et les éventuelles dispenses prévues"
+        }
+      ],
+      "answer": "9aa943514ffb",
+      "explanation": "La capacité financière obéit à des règles et exceptions liées à la situation du véhicule ; une règle isolée peut induire en erreur.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.02"
+      ]
+    },
+    {
+      "id": "vtc-g-08-q2",
+      "prompt": "Pourquoi intégrer le retour à vide dans le calcul de mission ?",
+      "options": [
+        {
+          "id": "eaf248840a13",
+          "text": "Il n’utilise pas le véhicule"
+        },
+        {
+          "id": "af8cd074b0d6",
+          "text": "Il produit toujours un revenu supplémentaire"
+        },
+        {
+          "id": "4d3638989fa0",
+          "text": "Il consomme du temps et des ressources"
+        }
+      ],
+      "answer": "4d3638989fa0",
+      "explanation": "Un trajet sans client crée néanmoins des coûts et mobilise le chauffeur.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.08"
+      ]
+    },
+    {
+      "id": "vtc-g-10-q1",
+      "prompt": "Un collègue vous remplace au volant. Quelle vérification est indispensable ?",
+      "options": [
+        {
+          "id": "2f2b2ccbeb9f",
+          "text": "Vérifier uniquement son expérience personnelle"
+        },
+        {
+          "id": "58745d59d06a",
+          "text": "Ses propres titres, son aptitude et la couverture de l’usage prévu"
+        },
+        {
+          "id": "8039f17608ae",
+          "text": "Lui prêter votre carte professionnelle"
+        }
+      ],
+      "answer": "58745d59d06a",
+      "explanation": "Les autorisations sont personnelles. Le remplacement doit préserver la conformité du conducteur et de la mission.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.10"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-04",
+      "prompt": "Le justificatif de réservation doit comporter notamment…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le diplôme scolaire du client."
+        },
+        {
+          "id": "b",
+          "text": "Le code confidentiel de sa carte bancaire."
+        },
+        {
+          "id": "c",
+          "text": "Le REVTC et le SIREN de l’exploitant."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Ces mentions figurent dans l’arrêté du 6 août 2025.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-manual-05",
+      "prompt": "La réservation doit être établie…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Avant la prise en charge."
+        },
+        {
+          "id": "b",
+          "text": "Après le paiement."
+        },
+        {
+          "id": "c",
+          "text": "À la fin du trajet."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Une trace antidatée ne remplace pas la réalité de la réservation préalable.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-g-12-q2",
+      "prompt": "Une réforme vient d’être publiée. Que faut-il regarder avant de modifier sa pratique ?",
+      "options": [
+        {
+          "id": "8e1c33afc411",
+          "text": "Sa date d’entrée en vigueur et ses éventuelles dispositions transitoires"
+        },
+        {
+          "id": "354fb8046033",
+          "text": "Uniquement la date d’un article de presse"
+        },
+        {
+          "id": "f4d8fb2c4340",
+          "text": "Seulement le titre du texte"
+        }
+      ],
+      "answer": "8e1c33afc411",
+      "explanation": "Publication et application peuvent différer ; certaines situations disposent d’un régime transitoire.",
+      "module": "G",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon G.12"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

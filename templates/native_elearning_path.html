@@ -38,7 +38,7 @@
       {% else %}<section class="np-panel np-empty"><h2>Votre parcours est en préparation</h2><p>Les modules apparaîtront ici dès leur affectation par l’équipe pédagogique.</p></section>{% endfor %}
     </div>
     <p class="np-hint">Terminez les activités et la durée obligatoire d’un module pour ouvrir le suivant. Le compteur fonctionne dans le lecteur, pas sur cette page, et se met en pause après 5 minutes sans interaction. Une seule activité peut être chronométrée à la fois.</p>
-    {% if final_exam_url %}<section class="np-panel"><h2>Examen blanc final · 100 questions</h2><p>Une synthèse des 15 modules, avec correction détaillée et nouvelles tentatives.</p>{% if final_exam_unlocked %}<a class="np-button np-button--primary" href="{{ final_exam_url }}">Commencer l’examen final →</a>{% else %}<p>Terminez les 15 modules et leurs durées obligatoires pour ouvrir cet examen.</p>{% endif %}</section>{% endif %}
+    {% if final_exam_url %}<section class="np-panel"><h2>Examen blanc final · 100 questions</h2><p>{{ final_exam_description }} : correction détaillée et nouvelles tentatives.</p>{% if final_exam_unlocked %}<a class="np-button np-button--primary" href="{{ final_exam_url }}">Commencer l’examen final →</a>{% else %}<p>Terminez les {{ final_module_count }} modules et leurs durées obligatoires pour ouvrir cet examen.</p>{% endif %}</section>{% endif %}
   </main>
 </body>
 </html>

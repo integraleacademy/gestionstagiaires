@@ -980,7 +980,7 @@
         <span class="modern-switch__control" aria-hidden="true"></span>
         <span>Exclure du suivi ventes</span>
       </label>
-      {% if is_aps %}
+      {% if is_aps or is_vtc %}
         <label class="modern-switch modern-switch--elearning">
           <input type="checkbox" data-aps-elearning-toggle="{{ s.id }}" {% if s.aps_elearning_enabled %}checked{% endif %}>
           <span class="modern-switch__control" aria-hidden="true"></span>
@@ -989,7 +989,7 @@
       {% endif %}
     {% else %}
       {% if s.exclude_from_sales_tracking %}<div class="sales-tracking-note">Session exclue du suivi des ventes.</div>{% endif %}
-      {% if is_aps and s.aps_elearning_enabled %}<div class="aps-elearning-note">🎓 E-learning activé</div>{% endif %}
+      {% if (is_aps or is_vtc) and s.aps_elearning_enabled %}<div class="aps-elearning-note">🎓 E-learning activé</div>{% endif %}
     {% endif %}
     </div>
 
@@ -1117,7 +1117,7 @@
             <input id="apsElearningEnabled" type="checkbox" style="width:auto;">
             E-learning
           </span>
-          <span class="hint">Une partie de cette formation APS se déroule en e-learning.</span>
+          <span class="hint">Active le parcours numérique de cette session APS ou VTC.</span>
         </label>
       </div>
     </div>
@@ -1410,7 +1410,7 @@
             <input id="editApsElearningEnabled" type="checkbox" style="width:auto;">
             E-learning
           </span>
-          <span class="hint">Active les identifiants e-learning sur les fiches des stagiaires APS.</span>
+          <span class="hint">Active l’accès e-learning de cette session APS ou VTC.</span>
         </label>
       </div>
     </div>
@@ -2187,9 +2187,9 @@
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
-    if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
+    if(apsElearningField) apsElearningField.style.display = (isAps || isVtc) ? "" : "none";
     refreshApsPeriodPreview("");
-    if(!isAps) document.getElementById("apsElearningEnabled").checked = false;
+    if(!isAps && !isVtc) document.getElementById("apsElearningEnabled").checked = false;
   }
 
   document.getElementById("sessionType")?.addEventListener("change", toggleExamFields);
@@ -2217,7 +2217,7 @@
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
-    if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
+    if(apsElearningField) apsElearningField.style.display = (isAps || isVtc) ? "" : "none";
     refreshApsPeriodPreview("edit");
   }
 

@@ -26083,7 +26083,7 @@ def api_create_session():
     dirigeant_remote_end = (payload.get("dirigeant_remote_end") or "").strip()
     dirigeant_in_person_start = (payload.get("dirigeant_in_person_start") or "").strip()
     dirigeant_in_person_end = (payload.get("dirigeant_in_person_end") or "").strip()
-    aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and training_type.upper().startswith("APS")
+    aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and (training_type.upper().startswith("APS") or "VTC" in training_type.upper())
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
@@ -26185,7 +26185,7 @@ def api_update_session(session_id: str):
         s["exclude_from_sales_tracking"] = bool(payload.get("exclude_from_sales_tracking"))
     if "aps_elearning_enabled" in payload:
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-        s["aps_elearning_enabled"] = bool(payload.get("aps_elearning_enabled")) and training_type.startswith("APS")
+        s["aps_elearning_enabled"] = bool(payload.get("aps_elearning_enabled")) and (training_type.startswith("APS") or "VTC" in training_type)
     if "cash_payment_alert_dismissed_key" in payload:
         s["cash_payment_alert_dismissed_key"] = (payload.get("cash_payment_alert_dismissed_key") or "").strip()
 
@@ -32668,7 +32668,7 @@ def public_trainee_space(token):
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
     is_aps_training = (training_type or "").strip().upper().startswith("APS")
-    aps_elearning_enabled = is_aps_training and bool(s.get("aps_elearning_enabled"))
+    aps_elearning_enabled = (is_aps_training or show_vtc) and bool(s.get("aps_elearning_enabled"))
     aps_elearning_start_date = _session_start_date(s) if aps_elearning_enabled else None
     aps_elearning_available = bool(
         aps_elearning_enabled

@@ -12,6 +12,7 @@ import sqlite3
 from functools import lru_cache
 from pathlib import Path
 from .academy import ROOT, curriculum_manifest
+from . import vtc
 
 
 @lru_cache(maxsize=64)
@@ -25,12 +26,15 @@ def _load(exam_id, version):
 
 
 def load_exam(exam_id, version):
+    if str(exam_id).startswith('vtc-'):
+        return vtc.load_exam(exam_id,version)
     return copy.deepcopy(_load(exam_id, version))
 
 
 def public_exam(exam):
     """Explicit allowlist: never serialize keys, rationales or source hints."""
     return {key: exam[key] for key in ('id', 'version', 'title', 'pass_percent')} | {
+        'training_label': exam.get('training_label','APS'), 'notice': exam.get('notice',''),
         'questions': [{key: q[key] for key in ('id', 'prompt', 'options')} for q in exam['questions']]
     }
 

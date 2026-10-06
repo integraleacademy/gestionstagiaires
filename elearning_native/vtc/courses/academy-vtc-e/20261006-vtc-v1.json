@@ -1,0 +1,2618 @@
+{
+  "format_version": 1,
+  "id": "academy-vtc-e",
+  "version": "20261006-vtc-v1",
+  "title": "VTC E · Accueillir en anglais",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "training_label": "VTC",
+  "source": {
+    "type": "academy-vtc",
+    "reviewed_on": "2026-10-06",
+    "manual_sha256": "dc22c7f98da0700180499c1fba3f15e0c9238f26c4a734da584952eef67ef8ce"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#7045bd",
+    "button_color": "#6534b4",
+    "text_color": "#241a38"
+  },
+  "planned_minutes": 480,
+  "required_minutes": 0,
+  "introduction": [],
+  "illustration": "images/vtc/module-e.webp",
+  "mock_exam_id": "vtc-e",
+  "mock_exam_questions": 30,
+  "regulation": "Épreuve E",
+  "sections": [
+    {
+      "id": "vtc-e-01",
+      "title": "E.01 · Welcome on board",
+      "activities": [
+        {
+          "id": "vtc-e-01-cours",
+          "title": "Welcome on board",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.01",
+            "title": "Welcome on board",
+            "page": 239,
+            "pages": [
+              239,
+              240
+            ],
+            "objective": "Saluer, se présenter et identifier le bon client.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Good morning » s’utilise le matin, « Good afternoon » l’après-midi et « Good evening » le soir. « Good night » sert généralement à prendre congé avant la nuit, pas à accueillir un client. Présentez-vous simplement : « My name is Lina. I’m your driver. »"
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le verbe be se construit ainsi : I am, you are, he/she is, we are, they are. Pour poser une question, inversez : « Are you Mr Green? » La réponse courte reprend l’auxiliaire : « Yes, I am. » Évitez de révéler à voix haute des informations inutiles sur la réservation. Confirmez le nom et la destination avec discrétion."
+              },
+              {
+                "kind": "heading",
+                "text": "Construire une phrase avec be"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour se présenter, utilisez « I am », souvent contracté en « I'm » : « I'm your driver » signifie « Je suis votre chauffeur ». Pour parler au client, « you are » devient « you're ». À la forme interrogative, on inverse l'ordre : « Are you Mr Brown? » La réponse courte est « Yes, I am » ou « No, I'm not ». Il n'est pas nécessaire de construire une phrase longue pour être clair."
+              },
+              {
+                "kind": "heading",
+                "text": "Choisir une salutation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Good morning » s'utilise le matin ; « good afternoon » l'après-midi ; « good evening » le soir. « Good night » sert généralement à prendre congé pour la nuit, pas à accueillir un client qui monte en voiture. « Welcome » exprime la bienvenue. « Please » et « thank you » donnent un ton courtois, mais doivent accompagner une demande compréhensible."
+              },
+              {
+                "kind": "heading",
+                "text": "Confirmer sans réciter"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Présentez-vous puis vérifiez la réservation avec discrétion. Adaptez le nom et l'heure à la mission réelle. Si vous ne comprenez pas, demandez de répéter : « Could you repeat that, please? » Vous pouvez aussi proposer : « Could you speak more slowly, please? » Parler lentement et faire des phrases courtes aide davantage que parler très fort."
+              }
+            ],
+            "cards": [
+              {
+                "label": "ACCUEILLIR",
+                "text": "Good evening. Welcome to Lyon."
+              },
+              {
+                "label": "SE PRÉSENTER",
+                "text": "I’m Lina, your driver."
+              },
+              {
+                "label": "CONFIRMER",
+                "text": "Are you Ms Green?"
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.01.webp",
+            "diagram_text": [
+              "Choisir la salutation",
+              "Matin Good morning",
+              "Après-midi Good afternoon",
+              "Soir Good evening",
+              "Une courte phrase correcte est plus utile qu’une longue phrase hésitante."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-01-atelier",
+          "title": "À vous de jouer · Welcome on board",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.01",
+            "title": "Welcome on board",
+            "objective": "Saluer, se présenter et identifier le bon client.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "A passenger enters at 9 a.m. Which greeting is appropriate?",
+                "options": [
+                  {
+                    "id": "cd03ed45b076",
+                    "text": "Good night. Go away."
+                  },
+                  {
+                    "id": "4db35da3c663",
+                    "text": "Yesterday was morning."
+                  },
+                  {
+                    "id": "0fef2ef8c87e",
+                    "text": "Good morning. Welcome on board."
+                  }
+                ],
+                "answer": "0fef2ef8c87e",
+                "explanation": "« Good morning » accueille le matin ; « good night » sert généralement à prendre congé pour la nuit.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "How do you politely ask a passenger to repeat?",
+                "options": [
+                  {
+                    "id": "1465e9b1fd4a",
+                    "text": "Could you repeat that, please?"
+                  },
+                  {
+                    "id": "d9e63aeebec5",
+                    "text": "I am repeating you tomorrow."
+                  },
+                  {
+                    "id": "99d33636b509",
+                    "text": "You repeat yesterday."
+                  }
+                ],
+                "answer": "1465e9b1fd4a",
+                "explanation": "« Could you… please? » permet de demander poliment. Il vaut mieux faire répéter que prétendre comprendre.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "ACCUEILLIR"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "SE PRÉSENTER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "CONFIRMER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Good evening. Welcome to Lyon.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "I’m Lina, your driver.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Are you Ms Green?",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.01. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-02",
+      "title": "E.02 · Check the booking",
+      "activities": [
+        {
+          "id": "vtc-e-02-cours",
+          "title": "Check the booking",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.02",
+            "title": "Check the booking",
+            "page": 241,
+            "pages": [
+              241,
+              242
+            ],
+            "objective": "Poser les questions essentielles avant le trajet.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les mots interrogatifs orientent la réponse : who = qui, where = où, when = quand, what = quoi/quel, how many = combien d’éléments dénombrables. « Where are you going? » demande une destination. « How many passengers are there? » demande un nombre de voyageurs."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Avec un verbe ordinaire au présent simple, utilisez do ou does dans la question : « Do you have a booking? » ; « Does your colleague need a receipt? » Après does, le verbe reste à sa forme de base. « Booking » signifie réservation ; « book » peut être le verbe réserver. Confirmez l’adresse exacte si plusieurs établissements portent le même nom."
+              },
+              {
+                "kind": "heading",
+                "text": "Les mots interrogatifs"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Who » demande qui ; « where » demande où ; « when » demande quand ; « what » demande quoi ou quel ; « how many » demande combien d'éléments dénombrables. « Where are you going? » permet de vérifier la destination. « How many passengers are there? » concerne le nombre de voyageurs. Une question précise évite une réponse trop générale."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser do et have"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Au présent simple, beaucoup de questions se construisent avec « do » : « Do you have a booking? » signifie « Avez-vous une réservation ? » La réponse courte est « Yes, I do ». Pour demander un nom, vous pouvez dire : « What name is the booking under? » Apprenez ces structures comme des modèles dont vous remplacez les informations."
+              },
+              {
+                "kind": "heading",
+                "text": "Reformuler pour vérifier"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une confirmation reprend ce que vous avez compris : « So, two passengers to Central Station, is that right? » Le client peut corriger immédiatement. Distinguez « departure » (départ), « arrival » (arrivée), « pick-up » (prise en charge) et « destination ». Le point de rendez-vous et l'adresse finale sont deux données différentes."
+              }
+            ],
+            "cards": [
+              {
+                "label": "RÉSERVATION",
+                "text": "Do you have a booking?"
+              },
+              {
+                "label": "DESTINATION",
+                "text": "What is the address, please?"
+              },
+              {
+                "label": "VOYAGEURS",
+                "text": "How many passengers are there?"
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.02.webp",
+            "diagram_text": [
+              "Confirmer une réservation",
+              "Driver Two passengers to the airport, is that right?",
+              "Client Yes, Terminal Two.",
+              "Driver Thank you. Terminal Two.",
+              "Who, where, when et how many permettent de structurer une réservation."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-02-atelier",
+          "title": "À vous de jouer · Check the booking",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.02",
+            "title": "Check the booking",
+            "objective": "Poser les questions essentielles avant le trajet.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "What does « Do you have a booking? » mean?",
+                "options": [
+                  {
+                    "id": "84368c388b7a",
+                    "text": "Avez-vous un livre à vendre ?"
+                  },
+                  {
+                    "id": "b7c10d7e6a41",
+                    "text": "Avez-vous une réservation ?"
+                  },
+                  {
+                    "id": "19faf3feda1c",
+                    "text": "Avez-vous terminé votre trajet ?"
+                  }
+                ],
+                "answer": "b7c10d7e6a41",
+                "explanation": "Dans ce contexte « booking » signifie réservation ; « book » peut aussi être le verbe réserver.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Which question asks for the number of passengers?",
+                "options": [
+                  {
+                    "id": "f402318f3635",
+                    "text": "Where is the passenger going?"
+                  },
+                  {
+                    "id": "62847e6f4866",
+                    "text": "How many passengers are there?"
+                  },
+                  {
+                    "id": "0f1d0c32ae9e",
+                    "text": "When is the passenger leaving?"
+                  }
+                ],
+                "answer": "62847e6f4866",
+                "explanation": "« How many » interroge sur un nombre d’éléments dénombrables.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "DESTINATION"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "RÉSERVATION"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "VOYAGEURS"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "What is the address, please?",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Do you have a booking?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "How many passengers are there?",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.02. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-03",
+      "title": "E.03 · Numbers, dates and times",
+      "activities": [
+        {
+          "id": "vtc-e-03-cours",
+          "title": "Numbers, dates and times",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.03",
+            "title": "Numbers, dates and times",
+            "page": 243,
+            "pages": [
+              243,
+              244
+            ],
+            "objective": "Comprendre une heure et éviter les confusions de nombres.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Half past seven » signifie 7 h 30 ; « a quarter past seven », 7 h 15 ; « a quarter to eight », 7 h 45. Le format numérique « seven thirty » est simple. Précisez morning/evening ou a.m./p.m. lorsque c’est utile. Pour éviter l’ambiguïté des dates numériques, écrivez le mois en lettres : « 12 June ». On dit at pour l’heure et on pour le jour : « at eight on Monday »."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer les nombres proches"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Thirteen » signifie 13 et « thirty » 30 ; « fourteen » 14 et « forty » 40 ; « fifteen » 15 et « fifty » 50. À l'oral, ces nombres se confondent facilement. En cas de doute, répétez ou demandez une confirmation écrite. Une erreur sur un prix ou un horaire a plus de conséquences qu'une petite faute grammaticale."
+              },
+              {
+                "kind": "heading",
+                "text": "Dire une heure clairement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "7:15 peut se dire « seven fifteen » ou « a quarter past seven ». 7:30 se dit « seven thirty » ou « half past seven ». 7:45 peut se dire « seven forty-five » ou « a quarter to eight ». Pour un débutant, la lecture numérique est simple et claire. Précisez « in the morning » ou « in the evening » si le contexte laisse un doute."
+              },
+              {
+                "kind": "heading",
+                "text": "Sécuriser dates et unités"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les formats numériques de date diffèrent selon les pays. Écrire le mois en lettres évite la confusion : « 6 October » est plus clair qu'une suite de chiffres ambiguë. Pour une durée, utilisez « minutes » ou « hours » ; pour une distance, « kilometres ». « In twenty minutes » signifie « dans vingt minutes », alors que « for twenty minutes » exprime une durée."
+              }
+            ],
+            "cards": [
+              {
+                "label": "7:15",
+                "text": "A quarter past seven."
+              },
+              {
+                "label": "7:30",
+                "text": "Half past seven."
+              },
+              {
+                "label": "7:45",
+                "text": "A quarter to eight."
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.03.webp",
+            "diagram_text": [
+              "Des nombres à distinguer",
+              "13 / 30 thirteen / thirty",
+              "14 / 40 fourteen / forty",
+              "15 / 50 fifteen / fifty",
+              "Repeat and confirm : répéter un chiffre évite une erreur coûteuse."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-03-atelier",
+          "title": "À vous de jouer · Numbers, dates and times",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.03",
+            "title": "Numbers, dates and times",
+            "objective": "Comprendre une heure et éviter les confusions de nombres.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "What time is « half past eight »?",
+                "options": [
+                  {
+                    "id": "653cc2c52b3b",
+                    "text": "7:30"
+                  },
+                  {
+                    "id": "c1814fbc230a",
+                    "text": "8:15"
+                  },
+                  {
+                    "id": "b9fdee32fe3d",
+                    "text": "8:30"
+                  }
+                ],
+                "answer": "b9fdee32fe3d",
+                "explanation": "« Half past » signifie une demi-heure après l’heure indiquée.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "What does « a quarter to nine » mean?",
+                "options": [
+                  {
+                    "id": "dc57fe185adf",
+                    "text": "9:15"
+                  },
+                  {
+                    "id": "6a018c795a50",
+                    "text": "8:45"
+                  },
+                  {
+                    "id": "d90059646709",
+                    "text": "9:45"
+                  }
+                ],
+                "answer": "6a018c795a50",
+                "explanation": "« A quarter to nine » signifie neuf heures moins le quart.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "7:45"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "7:30"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "7:15"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Half past seven.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "A quarter to eight.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "A quarter past seven.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.03. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-04",
+      "title": "E.04 · Find the meeting point",
+      "activities": [
+        {
+          "id": "vtc-e-04-cours",
+          "title": "Find the meeting point",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.04",
+            "title": "Find the meeting point",
+            "page": 246,
+            "pages": [
+              246,
+              247
+            ],
+            "objective": "Situer un lieu et guider le client à pied.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les prépositions décrivent une position : in = dans, at = à un point, next to = à côté de, opposite = en face de, between = entre. « In front of » signifie devant ; « behind » signifie derrière. Utilisez un repère simple et visible, sans demander au passager de traverser un espace dangereux."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour guider, l’impératif est direct : « Turn left », « Go straight ahead », « Wait by the entrance ». Ajoutez please pour la courtoisie. « I’m waiting outside the terminal » signifie que vous attendez à l’extérieur du terminal. Donnez le point de rencontre autorisé, pas seulement la position du véhicule sur une carte."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un repère concret est plus clair qu’une suite de directions trop longue."
+              },
+              {
+                "kind": "heading",
+                "text": "Donner un lieu avant le mouvement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Commencez par l'endroit où vous êtes : « I'm outside the main entrance » signifie « Je suis à l'extérieur de l'entrée principale ». « Next to » signifie « à côté de » ; « opposite » signifie « en face de » ; « between » signifie « entre ». Les mots « entrance » et « exit » désignent l'entrée et la sortie."
+              },
+              {
+                "kind": "heading",
+                "text": "Construire des indications courtes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Utilisez « Go straight ahead », « Turn left » et « Turn right » pour aller tout droit, tourner à gauche et tourner à droite. Donnez une étape à la fois si le client est perdu. Ajoutez un repère visible et réel. Ne décrivez pas seulement votre position sur une carte si elle ne correspond pas à un accès piéton possible."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier la compréhension"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Can you see the information desk? » demande si le client voit le comptoir d'information. « I'll meet you there » signifie que vous le rejoindrez à cet endroit. Si le client ne trouve pas, simplifiez et choisissez un point plus facile, en respectant les règles d'accès du site. La bonne indication est celle qu'il peut suivre en sécurité."
+              },
+              {
+                "kind": "heading",
+                "text": "DIALOGUE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Driver: « Please go to Exit B. I'm next to the information desk. » Client: « Is that on the ground floor? » Driver: « Yes, on the ground floor. » « Ground floor » correspond au rez-de-chaussée dans l'usage britannique courant. Les numérotations d'étages peuvent varier selon les usages : dans un lieu réel, reprenez les indications affichées pour éviter une mauvaise interprétation."
+              }
+            ],
+            "cards": [
+              {
+                "label": "NEXT TO",
+                "text": "À côté de."
+              },
+              {
+                "label": "OPPOSITE",
+                "text": "En face de."
+              },
+              {
+                "label": "BETWEEN",
+                "text": "Entre deux repères."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-04-atelier",
+          "title": "À vous de jouer · Find the meeting point",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.04",
+            "title": "Find the meeting point",
+            "objective": "Situer un lieu et guider le client à pied.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "The passenger is « opposite the hotel ». Where are they?",
+                "options": [
+                  {
+                    "id": "9159d2f5b549",
+                    "text": "Derrière l’hôtel"
+                  },
+                  {
+                    "id": "339ba1064d21",
+                    "text": "À l’intérieur de l’hôtel"
+                  },
+                  {
+                    "id": "e30c0917a140",
+                    "text": "En face de l’hôtel"
+                  }
+                ],
+                "answer": "e30c0917a140",
+                "explanation": "« Opposite » indique un emplacement en face ; « inside » signifie à l’intérieur.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "How do you ask for the exact meeting point?",
+                "options": [
+                  {
+                    "id": "283709aa5a57",
+                    "text": "How much is your suitcase?"
+                  },
+                  {
+                    "id": "5cdabdcfb93f",
+                    "text": "Where shall we meet?"
+                  },
+                  {
+                    "id": "8f8cd2ba345d",
+                    "text": "Why did you pay yesterday?"
+                  }
+                ],
+                "answer": "5cdabdcfb93f",
+                "explanation": "« Where » demande un lieu. La phrase sert à préciser le point de rencontre.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "NEXT TO"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "OPPOSITE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "BETWEEN"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "À côté de.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Entre deux repères.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "En face de.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.04. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-05",
+      "title": "E.05 · Luggage and assistance",
+      "activities": [
+        {
+          "id": "vtc-e-05-cours",
+          "title": "Luggage and assistance",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.05",
+            "title": "Luggage and assistance",
+            "page": 249,
+            "pages": [
+              249,
+              250
+            ],
+            "objective": "Proposer de l’aide et demander l’accord du passager.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Luggage » et « baggage » sont généralement indénombrables : on ne dit pas « two luggages ». On compte « two bags », « two suitcases » ou « two pieces of luggage ». « Hand luggage » désigne le bagage à main. « Boot » est le coffre en anglais britannique ; « trunk » est courant en anglais américain."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour proposer de l’aide : « May I help you with your bags? » ou « Would you like some help? » Attendez la réponse avant de prendre un objet ou de toucher un équipement d’assistance. « Can » exprime notamment une capacité ; « may » rend une demande de permission plus formelle. Le langage doit soutenir une aide respectueuse."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Ask before helping : demandez avant d’agir."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser may et can"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« May I help you with your luggage? » et « Can I help you with your bags? » proposent une aide. Le client peut répondre « Yes, please » ou « No, thank you ». Attendez son accord avant de prendre un objet ou de toucher un équipement. « Would you like some help? » constitue une autre formule polie et simple."
+              },
+              {
+                "kind": "heading",
+                "text": "Apprendre le vocabulaire utile"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Luggage » désigne les bagages de façon globale et ne prend pas de s final. Pour compter, dites « two bags » ou « two suitcases ». « Hand luggage » désigne le bagage à main. Le coffre se dit « boot » en anglais britannique et « trunk » en anglais américain. Comprendre les deux facilite l'accueil d'une clientèle internationale."
+              },
+              {
+                "kind": "heading",
+                "text": "Demander comment aider"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« How can I help? » laisse la personne préciser son besoin. « Is this bag fragile? » demande si le bagage est fragile. « Please keep your valuables with you » invite à garder les objets de valeur avec soi. Ne promettez pas un geste technique que vous ne savez pas réaliser. Si une aide à la mobilité est concernée, confirmez les instructions du passager."
+              },
+              {
+                "kind": "heading",
+                "text": "DIALOGUE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Driver: « May I put your suitcase in the boot? » Client: « Yes, please. This bag is fragile. » Driver: « Thank you. I'll place it carefully. Please keep your small bag with you. » La demande porte sur un objet précis. Le chauffeur a compris une contrainte particulière et l'intègre avant de manipuler les bagages."
+              }
+            ],
+            "cards": [
+              {
+                "label": "BAGAGES",
+                "text": "Two suitcases and one small bag."
+              },
+              {
+                "label": "PROPOSITION",
+                "text": "Would you like some help?"
+              },
+              {
+                "label": "ACCORD",
+                "text": "May I put this in the boot?"
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-05-atelier",
+          "title": "À vous de jouer · Luggage and assistance",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.05",
+            "title": "Luggage and assistance",
+            "objective": "Proposer de l’aide et demander l’accord du passager.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Which phrase offers help with luggage?",
+                "options": [
+                  {
+                    "id": "8a250d992e04",
+                    "text": "May I help you with your luggage?"
+                  },
+                  {
+                    "id": "0109ce25be7e",
+                    "text": "Your luggage are tomorrow."
+                  },
+                  {
+                    "id": "f271f0f2e283",
+                    "text": "Give me all your documents now."
+                  }
+                ],
+                "answer": "8a250d992e04",
+                "explanation": "« May I help you…? » propose de l’aide sans l’imposer ; « luggage » est un nom indénombrable.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "The passenger has « two suitcases and one small bag ». What should you expect?",
+                "options": [
+                  {
+                    "id": "4c52e33f2737",
+                    "text": "Trois valises"
+                  },
+                  {
+                    "id": "550b08a77898",
+                    "text": "Une valise et deux sacs"
+                  },
+                  {
+                    "id": "17ec6672f71e",
+                    "text": "Deux valises et un petit sac"
+                  }
+                ],
+                "answer": "17ec6672f71e",
+                "explanation": "Il faut conserver à la fois le nombre et la nature des bagages dans la traduction.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "BAGAGES"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "ACCORD"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "PROPOSITION"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "May I put this in the boot?",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Would you like some help?",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Two suitcases and one small bag.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.05. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-06",
+      "title": "E.06 · Comfort and safety",
+      "activities": [
+        {
+          "id": "vtc-e-06-cours",
+          "title": "Comfort and safety",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.06",
+            "title": "Comfort and safety",
+            "page": 253,
+            "pages": [
+              253,
+              254
+            ],
+            "objective": "Formuler une demande polie et compréhensible.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Please fasten your seat belt » demande de boucler la ceinture. « Is the temperature comfortable? » permet de vérifier le confort sans présumer. « Would you like the air conditioning on? » propose la climatisation. « Too hot » signifie trop chaud ; « too cold », trop froid."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La structure would you like est utile pour proposer quelque chose. Pour une règle, utilisez une phrase simple : « For your safety, please keep your seat belt fastened. » Évitez les formulations agressives. La négation avec be se place après le verbe : « It isn’t safe. » Avec un verbe ordinaire : « Please don’t open the door yet. »"
+              },
+              {
+                "kind": "heading",
+                "text": "Formuler une demande polie"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Please fasten your seat belt » signifie « Veuillez attacher votre ceinture ». « Could you fasten your seat belt, please? » est également poli. La politesse ne rend pas la règle facultative : le départ doit rester sûr. Pour les portes, « Please wait before opening the door » demande au passager d'attendre avant d'ouvrir."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier le confort"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Is the temperature comfortable? » permet de vérifier la température. « Would you like me to turn the air conditioning down? » propose de réduire la climatisation. Si une expression vous semble trop complexe, simplifiez : « Is it too cold? » ou « Is it too warm? » Une phrase simple bien comprise vaut mieux qu'une phrase élaborée et confuse."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre les réponses"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Too cold » signifie trop froid ; « too hot » trop chaud ; « a little » un peu ; « that's fine » indique généralement que cela convient. Le mot « please » peut apparaître dans une demande, tandis que « no, thank you » décline une proposition. Ne déduisez pas l'accord d'un silence si une confirmation de sécurité est nécessaire."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CEINTURE",
+                "text": "Please fasten your seat belt."
+              },
+              {
+                "label": "TEMPÉRATURE",
+                "text": "Is it too warm or too cold?"
+              },
+              {
+                "label": "PORTE",
+                "text": "Please wait until we have stopped."
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.06.webp",
+            "diagram_text": [
+              "Comprendre la réponse",
+              "Too cold Trop froid.",
+              "Too hot Trop chaud.",
+              "That’s fine Cela convient.",
+              "Soyez poli et ferme pour une consigne de sécurité."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-06-atelier",
+          "title": "À vous de jouer · Comfort and safety",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.06",
+            "title": "Comfort and safety",
+            "objective": "Formuler une demande polie et compréhensible.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Which instruction asks the passenger to fasten a seat belt?",
+                "options": [
+                  {
+                    "id": "1a60090f849e",
+                    "text": "Please open your suitcase."
+                  },
+                  {
+                    "id": "901773543507",
+                    "text": "Please fasten your seat belt."
+                  },
+                  {
+                    "id": "22acba7851fd",
+                    "text": "Please cancel your booking."
+                  }
+                ],
+                "answer": "901773543507",
+                "explanation": "« Seat belt » désigne la ceinture et « fasten » signifie l’attacher.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "How do you ask whether the temperature is comfortable?",
+                "options": [
+                  {
+                    "id": "d0b62566af18",
+                    "text": "Is the temperature all right for you?"
+                  },
+                  {
+                    "id": "63e5e6331f0c",
+                    "text": "Where is the temperature going?"
+                  },
+                  {
+                    "id": "a5d34e87fb5f",
+                    "text": "Do you pay the temperature?"
+                  }
+                ],
+                "answer": "d0b62566af18",
+                "explanation": "Cette question vérifie le confort du passager et lui permet d’exprimer son besoin.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "TEMPÉRATURE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "PORTE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "CEINTURE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Please fasten your seat belt.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Please wait until we have stopped.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Is it too warm or too cold?",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.06. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-07",
+      "title": "E.07 · Explain the route",
+      "activities": [
+        {
+          "id": "vtc-e-07-cours",
+          "title": "Explain the route",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.07",
+            "title": "Explain the route",
+            "page": 256,
+            "pages": [
+              256,
+              257
+            ],
+            "objective": "Présenter une durée, une distance et une alternative.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour une durée, utilisez « It takes about thirty minutes » : cela prend environ trente minutes. « About » indique une estimation. « How long does it take? » demande la durée, tandis que « How far is it? » demande la distance. « Traffic » est indénombrable : « There is a lot of traffic. »"
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour comparer : faster = plus rapide, shorter = plus court, more comfortable = plus confortable. Le comparatif utilise than : « This route is faster than the other one. » Donnez l’information utile au choix du client, notamment un péage ou une modification du prix. Ne garantissez pas une durée que la circulation rend incertaine."
+              },
+              {
+                "kind": "heading",
+                "text": "Parler d'une estimation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« The journey takes about thirty minutes » signifie « Le trajet dure environ trente minutes ». « About » ou « approximately » indique une estimation. « Depending on traffic » signifie « selon la circulation ». Ces mots évitent de présenter une durée variable comme une certitude. « We should arrive at ten » exprime une arrivée attendue, à distinguer d'une garantie ferme."
+              },
+              {
+                "kind": "heading",
+                "text": "Comparer deux options"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Faster » signifie plus rapide ; « shorter » plus court ; « cheaper » moins cher. Le comparatif se construit souvent avec « than » : « This route is faster than the other one ». Une route plus courte n'est pas toujours plus rapide. Pour expliquer un péage, utilisez « toll » ; pour une route fermée, « road closed »."
+              },
+              {
+                "kind": "heading",
+                "text": "Garder l'explication utile"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Annoncez l'effet pour le client : durée, coût éventuel et point d'arrivée. Évitez un commentaire continu sur le GPS. Si une décision commerciale doit être prise, expliquez-la lorsque la conduite le permet. « Is that all right with you? » demande si l'option convient, mais ne remplace pas l'information préalable sur une éventuelle modification tarifaire."
+              }
+            ],
+            "cards": [
+              {
+                "label": "DURÉE",
+                "text": "It takes about twenty minutes."
+              },
+              {
+                "label": "DISTANCE",
+                "text": "It’s about ten kilometres away."
+              },
+              {
+                "label": "ALTERNATIVE",
+                "text": "This route is faster, but it has a toll."
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.07.webp",
+            "diagram_text": [
+              "Durée et distance : deux questions",
+              "How long?",
+              "How far?",
+              "It takes about twenty minutes.",
+              "It’s about ten kilometres away.",
+              "Comparer sans promettre une certitude",
+              "Faster Plus rapide.",
+              "Shorter Plus court.",
+              "About Environ : une estimation.",
+              "Use about for an estimate : annoncez une estimation comme une estimation."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-07-atelier",
+          "title": "À vous de jouer · Explain the route",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.07",
+            "title": "Explain the route",
+            "objective": "Présenter une durée, une distance et une alternative.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "How do you explain a detour?",
+                "options": [
+                  {
+                    "id": "b2c6225cb81a",
+                    "text": "We arrived yesterday tomorrow."
+                  },
+                  {
+                    "id": "a51bf6ec50f2",
+                    "text": "The road is closed, so the price is always free."
+                  },
+                  {
+                    "id": "b3a4dd3d8430",
+                    "text": "The road is closed, so we need to take another route."
+                  }
+                ],
+                "answer": "b3a4dd3d8430",
+                "explanation": "« So » introduit la conséquence : une autre route est nécessaire parce que la voie est fermée.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "What does « The journey takes about thirty minutes » mean?",
+                "options": [
+                  {
+                    "id": "36e123630c1c",
+                    "text": "Le trajet coûte exactement trente euros."
+                  },
+                  {
+                    "id": "d1481a38379f",
+                    "text": "Le départ a eu lieu il y a trente minutes."
+                  },
+                  {
+                    "id": "12e75650788e",
+                    "text": "Le trajet dure environ trente minutes."
+                  }
+                ],
+                "answer": "12e75650788e",
+                "explanation": "« Takes » exprime ici la durée et « about » conserve une approximation.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "ALTERNATIVE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "DURÉE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "DISTANCE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "It takes about twenty minutes.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "It’s about ten kilometres away.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "This route is faster, but it has a toll.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.07. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-08",
+      "title": "E.08 · Prices and quotations",
+      "activities": [
+        {
+          "id": "vtc-e-08-cours",
+          "title": "Prices and quotations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.08",
+            "title": "Prices and quotations",
+            "page": 258,
+            "pages": [
+              258,
+              259
+            ],
+            "objective": "Expliquer ce qui est inclus dans le tarif.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Fare » désigne le prix d’un transport ; « price » est plus général. « Quote » ou « quotation » désigne un devis. « Included » signifie inclus ; « extra » indique un supplément. « The fare is sixty euros, including tax » annonce un montant taxes comprises."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« How much » demande un prix ou une quantité indénombrable. « How many » porte sur des éléments que l’on compte. Utilisez des phrases qui précisent les conditions : « Waiting time is included for the first ten minutes. » Il s’agit d’un exemple contractuel, pas d’une règle universelle. Évitez de promettre une gratuité si votre devis prévoit un supplément."
+              },
+              {
+                "kind": "heading",
+                "text": "Les mots à connaître"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Price » désigne le prix ; « fare » s'utilise pour le prix d'un transport ; « quote » ou « quotation » désigne un devis. « Included » signifie inclus et « extra charge » un supplément. « The price includes the transfer and the luggage » explique ce que couvre l'offre. Une information claire évite les discussions à l'arrivée."
+              },
+              {
+                "kind": "heading",
+                "text": "Poser une question de montant"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« How much is the journey? » signifie « Combien coûte le trajet ? ». Répondez avec la monnaie : « It's eighty euros ». Pour préciser un forfait, vous pouvez dire « It's a fixed price ». « Per hour » signifie par heure ; « per journey » par trajet. Une différence d'unité peut changer complètement le sens d'une offre."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer net, taxe et total"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Including VAT » signifie TVA comprise ; « excluding VAT » hors TVA. Pour un client particulier, annoncez clairement le total à payer. Ne traduisez pas « TTC » par une abréviation française incompréhensible à un voyageur. Si votre entreprise ne facture pas la TVA, utilisez une formulation conforme à sa situation et à la pièce remise."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRIX",
+                "text": "The total fare is sixty euros."
+              },
+              {
+                "label": "INCLUS",
+                "text": "The toll is included."
+              },
+              {
+                "label": "SUPPLÉMENT",
+                "text": "Extra waiting time may be charged."
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.08.webp",
+            "diagram_text": [
+              "Exemple contractuel du cours",
+              "Client Does the price include the toll?",
+              "Driver Yes, the toll is included.",
+              "Driver Additional waiting is charged as stated in the quote.",
+              "Included et extra sont deux mots essentiels pour éviter un désaccord sur le prix."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-08-atelier",
+          "title": "À vous de jouer · Prices and quotations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.08",
+            "title": "Prices and quotations",
+            "objective": "Expliquer ce qui est inclus dans le tarif.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "The customer asks « Is parking included? ». What do they want to know?",
+                "options": [
+                  {
+                    "id": "55b6f60330b3",
+                    "text": "Si le chauffeur a son permis"
+                  },
+                  {
+                    "id": "69cfbd0cbfca",
+                    "text": "Où la voiture a été fabriquée"
+                  },
+                  {
+                    "id": "289ec42f37cf",
+                    "text": "Si le stationnement est compris dans le prix"
+                  }
+                ],
+                "answer": "289ec42f37cf",
+                "explanation": "« Included » signifie compris. La réponse doit correspondre aux conditions réelles de l’offre.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Which phrase clearly gives an example of a fixed fare?",
+                "options": [
+                  {
+                    "id": "d82f543b3455",
+                    "text": "The weather is eighty euros."
+                  },
+                  {
+                    "id": "99c892db3626",
+                    "text": "The price has eight passengers."
+                  },
+                  {
+                    "id": "3e7041761ba0",
+                    "text": "The agreed fare is eighty euros."
+                  }
+                ],
+                "answer": "3e7041761ba0",
+                "explanation": "« Fare » désigne le prix du transport ; « agreed » indique qu’il a été convenu.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "SUPPLÉMENT"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "PRIX"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "INCLUS"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "The toll is included.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "The total fare is sixty euros.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Extra waiting time may be charged.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.08. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-09",
+      "title": "E.09 · Delays and changes",
+      "activities": [
+        {
+          "id": "vtc-e-09-cours",
+          "title": "Delays and changes",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.09",
+            "title": "Delays and changes",
+            "page": 261,
+            "pages": [
+              261,
+              262
+            ],
+            "objective": "Annoncer une difficulté avec une solution concrète.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Delayed » signifie retardé ; « cancelled », annulé. « I’m sorry for the delay » présente des excuses. « The flight has been delayed » indique que le vol a été retardé. Une phrase simple au présent peut suffire au niveau A2 : « The flight is late. »"
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour annoncer une action, utilisez will suivi de la base verbale : « I will wait at the meeting point. » La forme courte est I’ll. « I’ll arrive in ten minutes » indique un délai à partir de maintenant ; « at ten » indique dix heures. Si vous ne comprenez pas, demandez de répéter ou d’écrire l’information à l’arrêt : ne faites pas semblant d’avoir compris."
+              },
+              {
+                "kind": "heading",
+                "text": "Trois informations essentielles"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un message utile contient la difficulté, son effet et la solution proposée. « I'm sorry, there is heavy traffic » explique un trafic dense. « I expect to arrive in ten minutes » donne une estimation. « I will keep you informed » annonce un suivi. Une excuse seule ne permet pas au client de s'organiser."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser le futur simplement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Will » suivi du verbe permet d'annoncer une action : « I will call you » ; sa contraction est « I'll ». Après will, le verbe ne prend pas de s : « The driver will arrive », pas « will arrives ». « We need to change the meeting point » signifie qu'un changement de rendez-vous est nécessaire."
+              },
+              {
+                "kind": "heading",
+                "text": "Confirmer la nouvelle information"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Après une modification, répétez le lieu ou l'heure convenus. « Please confirm that you have received this message » demande un accusé de réception. Si vous n'avez pas de certitude, dites-le : « I don't have an exact arrival time yet ». Il vaut mieux actualiser une estimation honnête que promettre plusieurs fois une arrivée immédiate impossible."
+              }
+            ],
+            "cards": [
+              {
+                "label": "EXCUSE",
+                "text": "I’m sorry for the delay."
+              },
+              {
+                "label": "DÉLAI",
+                "text": "I’ll arrive in about ten minutes."
+              },
+              {
+                "label": "VÉRIFICATION",
+                "text": "Could you confirm the new time?"
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.09.webp",
+            "diagram_text": [
+              "Distinguer une heure et un délai",
+              "At ten",
+              "In ten minutes",
+              "About ten minutes",
+              "À dix heures.",
+              "Dans dix minutes.",
+              "Environ dix minutes.",
+              "Vérifier un changement",
+              "Driver Please use the north entrance. I’ll meet you there at 9:20.",
+              "Client The north entrance at 9:20?",
+              "Driver Yes, that’s correct.",
+              "In indique ici un délai ; at indique une heure."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-09-atelier",
+          "title": "À vous de jouer · Delays and changes",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.09",
+            "title": "Delays and changes",
+            "objective": "Annoncer une difficulté avec une solution concrète.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Which phrase announces an estimated delay politely?",
+                "options": [
+                  {
+                    "id": "ac292c1ec982",
+                    "text": "You are late because you are a passenger."
+                  },
+                  {
+                    "id": "cfe818d4ebb5",
+                    "text": "I am ten minutes old."
+                  },
+                  {
+                    "id": "3e7c01b2eae0",
+                    "text": "I’m sorry, we may be ten minutes late."
+                  }
+                ],
+                "answer": "3e7c01b2eae0",
+                "explanation": "« May be » exprime une possibilité ; le message informe sans transformer l’estimation en certitude.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "The flight is delayed. Which question checks the new arrival time?",
+                "options": [
+                  {
+                    "id": "200d466b3e67",
+                    "text": "What is the updated arrival time?"
+                  },
+                  {
+                    "id": "3a983a3b1e77",
+                    "text": "Where did you buy the plane?"
+                  },
+                  {
+                    "id": "25cdc2be89e0",
+                    "text": "How many receipts are blue?"
+                  }
+                ],
+                "answer": "200d466b3e67",
+                "explanation": "« Updated arrival time » signifie l’heure d’arrivée actualisée.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "EXCUSE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "VÉRIFICATION"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "DÉLAI"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Could you confirm the new time?",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "I’ll arrive in about ten minutes.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "I’m sorry for the delay.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.09. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-10",
+      "title": "E.10 · Payment and receipts",
+      "activities": [
+        {
+          "id": "vtc-e-10-cours",
+          "title": "Payment and receipts",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.10",
+            "title": "Payment and receipts",
+            "page": 263,
+            "pages": [
+              263,
+              264
+            ],
+            "objective": "Accompagner le règlement et remettre le bon document.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Pay by card » signifie payer par carte et « pay in cash », payer en espèces. « Receipt » est un reçu ; « invoice » est une facture. « Change » peut désigner la monnaie à rendre. « The payment has gone through » signifie que le paiement a été accepté."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Posez une question précise : « Would you like a receipt? » ou « Which name should I put on the invoice? » Un refus du terminal n’est pas une preuve de mauvaise foi : dites « The payment hasn’t gone through » et proposez une solution conforme. Ne notez pas les données de carte sur un carnet et ne demandez pas le code confidentiel."
+              },
+              {
+                "kind": "heading",
+                "text": "Proposer les moyens disponibles"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« How would you like to pay? » demande le mode de paiement souhaité. « By card » signifie par carte et « in cash » en espèces. « We accept cards » annonce l'acceptation des cartes. Présentez seulement les moyens réellement disponibles et convenus. Le vocabulaire doit correspondre à votre organisation de facturation."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer les documents"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Receipt » désigne un reçu ; « invoice » une facture. Un client professionnel peut demander : « Could you send the invoice to my company? » Vérifiez alors les coordonnées nécessaires à la facturation. « Billing address » signifie adresse de facturation, qui peut être différente de l'adresse de destination."
+              },
+              {
+                "kind": "heading",
+                "text": "Traiter un incident de paiement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« The payment has not gone through » signifie que le paiement n'a pas abouti. Vérifiez le statut avant de demander un nouvel essai pour éviter une double opération. « Please enter your PIN » demande le code confidentiel ; le chauffeur ne doit pas demander au client de lui communiquer ce code. « Contactless » désigne le paiement sans contact."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CARTE",
+                "text": "Would you like to pay by card?"
+              },
+              {
+                "label": "ESPÈCES",
+                "text": "You can pay in cash."
+              },
+              {
+                "label": "DOCUMENT",
+                "text": "Would you like a receipt or an invoice?"
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.10.webp",
+            "diagram_text": [
+              "Paiement et document",
+              "€",
+              "By card",
+              "In cash",
+              "Receipt / invoice",
+              "Par carte.",
+              "En espèces.",
+              "Reçu / facture.",
+              "Une facture au nom de l’entreprise",
+              "Driver Would you like a receipt or an invoice?",
+              "Client An invoice, please, in my company’s name.",
+              "Driver Could you confirm the company name and billing address?",
+              "Une difficulté de paiement se décrit avec calme, sans jugement sur le client."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-10-atelier",
+          "title": "À vous de jouer · Payment and receipts",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.10",
+            "title": "Payment and receipts",
+            "objective": "Accompagner le règlement et remettre le bon document.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "What is a « receipt » in the payment context?",
+                "options": [
+                  {
+                    "id": "163e90c0bb78",
+                    "text": "Une nouvelle réservation"
+                  },
+                  {
+                    "id": "47cf38d5946c",
+                    "text": "Un reçu"
+                  },
+                  {
+                    "id": "ce3746656a7d",
+                    "text": "Une recette de cuisine obligatoirement"
+                  }
+                ],
+                "answer": "47cf38d5946c",
+                "explanation": "Dans le contexte du paiement, « receipt » désigne une preuve de paiement.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Which phrase asks how the client would like to pay?",
+                "options": [
+                  {
+                    "id": "4997cb5e57b2",
+                    "text": "Are you a payment yesterday?"
+                  },
+                  {
+                    "id": "8ca08b5002a3",
+                    "text": "Would you like to pay by card?"
+                  },
+                  {
+                    "id": "16d7a325c7d7",
+                    "text": "Would you like to drive the airport?"
+                  }
+                ],
+                "answer": "8ca08b5002a3",
+                "explanation": "La formulation propose un mode de règlement. Elle doit correspondre aux moyens réellement acceptés.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "DOCUMENT"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "CARTE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "ESPÈCES"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "You can pay in cash.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Would you like to pay by card?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Would you like a receipt or an invoice?",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.10. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-11",
+      "title": "E.11 · Handle a problem",
+      "activities": [
+        {
+          "id": "vtc-e-11-cours",
+          "title": "Handle a problem",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.11",
+            "title": "Handle a problem",
+            "page": 266,
+            "pages": [
+              266,
+              267
+            ],
+            "objective": "Comprendre une demande d’aide et clarifier le besoin.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« I feel sick » signifie que la personne se sent malade ; « I need some help », qu’elle a besoin d’aide. « I’ve lost my phone » signale un téléphone perdu. « I left my bag in the car » signifie qu’un sac a été oublié dans le véhicule. Posez des questions courtes et utiles."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour une difficulté linguistique, dites « Could you speak more slowly, please? » ou « Could you repeat that? » Une urgence exige d’abord un arrêt sûr et une alerte adaptée. Ne retardez pas l’appel aux secours pour construire une phrase parfaite. Vous pouvez indiquer « I’m calling the emergency services » et décrire des faits simples."
+              },
+              {
+                "kind": "heading",
+                "text": "Faire préciser le problème"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« What seems to be the problem? » permet d'ouvrir l'échange. « Could you explain that again, please? » demande une nouvelle explication. Pour vérifier, reformulez simplement : « Your phone is missing, is that right? » « Missing » signifie manquant ; « lost » perdu. Ne concluez pas trop vite à un vol ou à une responsabilité."
+              },
+              {
+                "kind": "heading",
+                "text": "Employer des phrases courtes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Please stay here », « Please wait » et « I will call for help » donnent des indications claires. En cas de problème de santé, « Do you need medical help? » aide à comprendre la demande sans poser un diagnostic. La priorité reste l'arrêt sûr et l'alerte adaptée ; la difficulté linguistique ne justifie pas de retarder les secours."
+              },
+              {
+                "kind": "heading",
+                "text": "Reconnaître sa limite"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« I don't understand » est honnête, mais gagne à être suivi d'une solution : « Could you show me the address? » ou « Could you write it down? » Utilisez un outil de traduction seulement lorsque cela ne détourne pas l'attention de la conduite. Le but est de résoudre le besoin, pas de dissimuler une incompréhension."
+              }
+            ],
+            "cards": [
+              {
+                "label": "COMPRENDRE",
+                "text": "What do you need?"
+              },
+              {
+                "label": "CLARIFIER",
+                "text": "Could you repeat that more slowly?"
+              },
+              {
+                "label": "AGIR",
+                "text": "I’ll stop in a safe place and call for help."
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.11.webp",
+            "diagram_text": [
+              "Si l’on ne comprend pas",
+              "Faire répéter Could you repeat that?",
+              "Ralentir Could you speak more slowly, please?",
+              "Urgence I’m calling the emergency services.",
+              "If you don’t understand, ask : demander de répéter est une compétence professionnelle."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-11-atelier",
+          "title": "À vous de jouer · Handle a problem",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.11",
+            "title": "Handle a problem",
+            "objective": "Comprendre une demande d’aide et clarifier le besoin.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "A passenger says « I’ve lost my phone ». What happened?",
+                "options": [
+                  {
+                    "id": "ca6e2d0cbf3f",
+                    "text": "Le passager a perdu son téléphone"
+                  },
+                  {
+                    "id": "5f196cc7aec6",
+                    "text": "Le téléphone sonne normalement"
+                  },
+                  {
+                    "id": "62b25711a0eb",
+                    "text": "Le passager veut vendre son téléphone"
+                  }
+                ],
+                "answer": "ca6e2d0cbf3f",
+                "explanation": "« I’ve lost » exprime une perte ; il faut ensuite demander des précisions utiles calmement.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Which phrase is suitable when you do not understand a problem?",
+                "options": [
+                  {
+                    "id": "3fdc17a69f90",
+                    "text": "Could you explain the problem, please?"
+                  },
+                  {
+                    "id": "d907e39dce64",
+                    "text": "Your problem is not a word."
+                  },
+                  {
+                    "id": "786db37b0e03",
+                    "text": "There is never a problem, goodbye."
+                  }
+                ],
+                "answer": "3fdc17a69f90",
+                "explanation": "Demander une explication polie permet de vérifier le besoin avant de proposer une solution.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "CLARIFIER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "AGIR"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "COMPRENDRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Could you repeat that more slowly?",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "What do you need?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "I’ll stop in a safe place and call for help.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.11. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-12",
+      "title": "E.12 · Talk about the city",
+      "activities": [
+        {
+          "id": "vtc-e-12-cours",
+          "title": "Talk about the city",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "E.12",
+            "title": "Talk about the city",
+            "page": 268,
+            "pages": [
+              268,
+              269
+            ],
+            "objective": "Donner une information simple sans inventer.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour situer un lieu, utilisez « There is » au singulier et « There are » au pluriel : « There is a museum near the hotel. » Pour décrire une ouverture habituelle : « It opens at ten. » Vérifiez une information qui peut changer avant de l’affirmer, notamment horaires, tarifs et réservation."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vous pouvez proposer : « Would you like some information about the area? » Respectez le souhait de silence. Distinguez « historic », lié à une importance historique, et « historical », relatif à l’histoire, sans chercher des mots compliqués. Si vous ne savez pas, dites « I’m not sure. I can check when we stop. » La précision vaut mieux qu’une réponse inventée."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser there is et there are"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« There is » présente un élément singulier : « There is a museum near the station ». « There are » présente plusieurs éléments : « There are two parks nearby ». « Nearby » signifie à proximité. Ces structures permettent de donner une information simple même avec un vocabulaire limité."
+              },
+              {
+                "kind": "heading",
+                "text": "Décrire avec précision"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« On your left » signifie sur votre gauche ; « on your right » sur votre droite ; « in the city centre » dans le centre-ville. « Famous for » indique ce qui rend un lieu connu. Préparez quelques informations fiables sur les principaux lieux du territoire. Les horaires et fermetures doivent être vérifiés : connaître le nom d'un musée ne suffit pas à garantir son ouverture aujourd'hui."
+              },
+              {
+                "kind": "heading",
+                "text": "Respecter l'envie du passager"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Demandez : « Would you like some information about the city? » Si le client préfère le calme, respectez-le. Pour une information incertaine, dites : « I'm not sure. I can check when we stop. » Une bonne relation repose sur la fiabilité, pas sur la quantité de commentaires."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PROPOSER",
+                "text": "Would you like some information about the city?"
+              },
+              {
+                "label": "SITUER",
+                "text": "The museum is next to the river."
+              },
+              {
+                "label": "VÉRIFIER",
+                "text": "I’m not sure about today’s opening hours."
+              }
+            ],
+            "diagram": "media/vtc/diagram-e.12.webp",
+            "diagram_text": [
+              "Une information à vérifier",
+              "Client Is the museum open today?",
+              "Driver I’m not sure about today’s opening hours.",
+              "Driver I can check when we stop.",
+              "A useful answer can include “I’m not sure” followed by a practical next step."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-e.webp",
+            "module": "E"
+          }
+        },
+        {
+          "id": "vtc-e-12-atelier",
+          "title": "À vous de jouer · Talk about the city",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "E.12",
+            "title": "Talk about the city",
+            "objective": "Donner une information simple sans inventer.",
+            "module": "E"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Which phrase proposes tourist information without imposing it?",
+                "options": [
+                  {
+                    "id": "a772e75872b6",
+                    "text": "Would you like some information about the city?"
+                  },
+                  {
+                    "id": "0a987af69860",
+                    "text": "You must listen to my whole story."
+                  },
+                  {
+                    "id": "9b6f3027f47a",
+                    "text": "The city pays by card."
+                  }
+                ],
+                "answer": "a772e75872b6",
+                "explanation": "« Would you like…? » vérifie l’intérêt du passager et respecte son choix.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "What does « The museum is next to the station » mean?",
+                "options": [
+                  {
+                    "id": "e4fe769de50e",
+                    "text": "Le musée est sous l’aéroport."
+                  },
+                  {
+                    "id": "fe441df96ccb",
+                    "text": "Le musée est fermé demain."
+                  },
+                  {
+                    "id": "0432a7ac2146",
+                    "text": "Le musée est à côté de la gare."
+                  }
+                ],
+                "answer": "0432a7ac2146",
+                "explanation": "« Next to » indique la proximité immédiate ; la phrase ne donne aucun horaire d’ouverture.",
+                "module": "E",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon E.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "VÉRIFIER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "SITUER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "PROPOSER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "The museum is next to the river.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Would you like some information about the city?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "I’m not sure about today’s opening hours.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon E.12. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-e-synthese",
+      "title": "Synthèse · relier les notions",
+      "activities": [
+        {
+          "id": "vtc-e-capsule",
+          "title": "Voir et retenir · les essentiels",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "type": "Video",
+              "video": {
+                "src": "media/vtc/capsule-e.mp4",
+                "poster": "media/vtc/capsule-e.jpg",
+                "captions": "media/vtc/capsule-e.vtt",
+                "duration_seconds": 90.0,
+                "transcript": "A passenger enters at 9 a.m. Which greeting is appropriate? Good morning. Welcome on board.. « Good morning » accueille le matin ; « good night » sert généralement à prendre congé pour la nuit.\n\nThe passenger is « opposite the hotel ». Where are they? En face de l’hôtel. « Opposite » indique un emplacement en face ; « inside » signifie à l’intérieur.\n\nThe customer asks « Is parking included? ». What do they want to know? Si le stationnement est compris dans le prix. « Included » signifie compris. La réponse doit correspondre aux conditions réelles de l’offre.\n\nWhich phrase proposes tourist information without imposing it? Would you like some information about the city?. « Would you like…? » vérifie l’intérêt du passager et respecte son choix.",
+                "voice": null,
+                "audio": false,
+                "burned_captions": true,
+                "id": "vtc-e-capsule",
+                "title": "Les essentiels · Accueillir en anglais",
+                "required": true
+              }
+            }
+          ],
+          "vtc": {
+            "kind": "recap",
+            "module": "E",
+            "title": "Accueillir en anglais",
+            "image": "media/vtc/module-e.webp",
+            "transcript": "A passenger enters at 9 a.m. Which greeting is appropriate? Good morning. Welcome on board.. « Good morning » accueille le matin ; « good night » sert généralement à prendre congé pour la nuit.\n\nThe passenger is « opposite the hotel ». Where are they? En face de l’hôtel. « Opposite » indique un emplacement en face ; « inside » signifie à l’intérieur.\n\nThe customer asks « Is parking included? ». What do they want to know? Si le stationnement est compris dans le prix. « Included » signifie compris. La réponse doit correspondre aux conditions réelles de l’offre.\n\nWhich phrase proposes tourist information without imposing it? Would you like some information about the city?. « Would you like…? » vérifie l’intérêt du passager et respecte son choix.",
+            "cards": [
+              {
+                "label": "E.01",
+                "text": "Welcome on board"
+              },
+              {
+                "label": "E.02",
+                "text": "Check the booking"
+              },
+              {
+                "label": "E.03",
+                "text": "Numbers, dates and times"
+              },
+              {
+                "label": "E.04",
+                "text": "Find the meeting point"
+              },
+              {
+                "label": "E.05",
+                "text": "Luggage and assistance"
+              },
+              {
+                "label": "E.06",
+                "text": "Comfort and safety"
+              },
+              {
+                "label": "E.07",
+                "text": "Explain the route"
+              },
+              {
+                "label": "E.08",
+                "text": "Prices and quotations"
+              },
+              {
+                "label": "E.09",
+                "text": "Delays and changes"
+              },
+              {
+                "label": "E.10",
+                "text": "Payment and receipts"
+              },
+              {
+                "label": "E.11",
+                "text": "Handle a problem"
+              },
+              {
+                "label": "E.12",
+                "text": "Talk about the city"
+              }
+            ]
+          }
+        },
+        {
+          "id": "vtc-e-approfondir",
+          "title": "Approfondir · repères et méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 24,
+          "blocks": [],
+          "vtc": {
+            "kind": "supplements",
+            "module": "E",
+            "title": "Relier le cours à la mission",
+            "supplements": [],
+            "sources": [
+              {
+                "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+              },
+              {
+                "title": "Devenir chauffeur de VTC · Service Public",
+                "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+              },
+              {
+                "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+              }
+            ],
+            "exam": {
+              "minutes": 30,
+              "coefficient": 1,
+              "format": "20 QCM"
+            },
+            "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "vtc-e-01-cours",
+    "vtc-e-01-atelier",
+    "vtc-e-02-cours",
+    "vtc-e-02-atelier",
+    "vtc-e-03-cours",
+    "vtc-e-03-atelier",
+    "vtc-e-04-cours",
+    "vtc-e-04-atelier",
+    "vtc-e-05-cours",
+    "vtc-e-05-atelier",
+    "vtc-e-06-cours",
+    "vtc-e-06-atelier",
+    "vtc-e-07-cours",
+    "vtc-e-07-atelier",
+    "vtc-e-08-cours",
+    "vtc-e-08-atelier",
+    "vtc-e-09-cours",
+    "vtc-e-09-atelier",
+    "vtc-e-10-cours",
+    "vtc-e-10-atelier",
+    "vtc-e-11-cours",
+    "vtc-e-11-atelier",
+    "vtc-e-12-cours",
+    "vtc-e-12-atelier",
+    "vtc-e-capsule",
+    "vtc-e-approfondir"
+  ],
+  "assets": [
+    "media/vtc/capsule-e.jpg",
+    "media/vtc/capsule-e.mp4",
+    "media/vtc/capsule-e.vtt",
+    "media/vtc/diagram-e.01.webp",
+    "media/vtc/diagram-e.02.webp",
+    "media/vtc/diagram-e.03.webp",
+    "media/vtc/diagram-e.06.webp",
+    "media/vtc/diagram-e.07.webp",
+    "media/vtc/diagram-e.08.webp",
+    "media/vtc/diagram-e.09.webp",
+    "media/vtc/diagram-e.10.webp",
+    "media/vtc/diagram-e.11.webp",
+    "media/vtc/diagram-e.12.webp",
+    "media/vtc/module-e.webp"
+  ],
+  "import_warnings": [],
+  "counts": {
+    "sections": 13,
+    "lessons": 12,
+    "activities": 26,
+    "scored_activities": 0,
+    "workbooks": 0,
+    "interactive_workshops": 12,
+    "required_videos": 1,
+    "assets": 14
+  }
+}

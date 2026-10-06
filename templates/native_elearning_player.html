@@ -9,8 +9,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261004-2') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261006-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-1') }}">
 </head>
-<body class="native-elearning-body" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
+<body class="native-elearning-body{{ ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
@@ -44,7 +45,7 @@
       <button class="native-menu-button" id="nativeMenuButton" type="button" aria-label="Afficher le sommaire" aria-controls="nativeSidebar" aria-expanded="false">☰</button>
       <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
       <div>
-        <span>Formation APS</span>
+        <span>Formation {{ course.training_label|default('APS') }}</span>
         <strong>{{ course.title }}</strong>
       </div>
     </div>
@@ -140,6 +141,7 @@
             <div class="native-content-flow">
               {% for block in activity.blocks %}{{ render_block(block) }}{% endfor %}
               {% if activity.academy %}{% include '_aps62_activity.html' %}{% endif %}
+              {% if activity.vtc %}{% include '_vtc_activity.html' %}{% endif %}
             </div>
           {% else %}
             {% set saved_answer = progress.answers.get(activity.id, {}) %}

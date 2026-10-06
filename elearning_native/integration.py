@@ -21,7 +21,8 @@ def register_native_elearning(legacy_app: ModuleType) -> None:
             find_session_and_trainee_by_token=legacy_app.find_session_and_trainee_by_token,
             session_trainees=legacy_app._session_trainees_list,
             public_is_authed=legacy_app._public_is_authed,
-            is_aps_elearning_session=legacy_app._is_aps_elearning_session,
+            is_aps_elearning_session=lambda s: legacy_app._is_aps_elearning_session(s) or (
+                'VTC' in str(s.get('training_type') or '').upper() and bool(s.get('aps_elearning_enabled'))),
             session_start_date=legacy_app._session_start_date,
         )
     )

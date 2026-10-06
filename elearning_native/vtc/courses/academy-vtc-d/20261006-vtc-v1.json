@@ -1,0 +1,2611 @@
+{
+  "format_version": 1,
+  "id": "academy-vtc-d",
+  "version": "20261006-vtc-v1",
+  "title": "VTC D · Comprendre et s’exprimer en français",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "training_label": "VTC",
+  "source": {
+    "type": "academy-vtc",
+    "reviewed_on": "2026-10-06",
+    "manual_sha256": "dc22c7f98da0700180499c1fba3f15e0c9238f26c4a734da584952eef67ef8ce"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#7045bd",
+    "button_color": "#6534b4",
+    "text_color": "#241a38"
+  },
+  "planned_minutes": 420,
+  "required_minutes": 0,
+  "introduction": [],
+  "illustration": "images/vtc/module-d.webp",
+  "mock_exam_id": "vtc-d",
+  "mock_exam_questions": 30,
+  "regulation": "Épreuve D",
+  "sections": [
+    {
+      "id": "vtc-d-01",
+      "title": "D.01 · Lire avec une intention",
+      "activities": [
+        {
+          "id": "vtc-d-01-cours",
+          "title": "Lire avec une intention",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.01",
+            "title": "Lire avec une intention",
+            "page": 191,
+            "pages": [
+              191,
+              192
+            ],
+            "objective": "Adapter sa lecture à la question posée.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une première lecture sert à comprendre le sujet, l’auteur, le contexte et le message principal. La seconde cherche les informations utiles aux questions. Souligner tout le texte ne permet plus de hiérarchiser : repérez seulement les noms, dates, conditions et idées structurantes."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lisez précisément le verbe de la consigne. « Relevez » invite à retrouver un élément ; « expliquez » demande de montrer un sens ou une relation ; « justifiez » exige un appui dans le texte. Ne répondez pas seulement avec vos connaissances du métier si la question porte sur ce que dit l’auteur. Une réponse vraie en général peut ne pas répondre au document."
+              },
+              {
+                "kind": "heading",
+                "text": "Repérer la situation générale"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La première lecture sert à comprendre de quoi parle le document. Cherchez qui écrit, à qui, dans quel but et sur quel sujet. Un courriel de réservation, une réclamation et un article informatif ne se lisent pas de la même manière. Le titre, l'objet du message et la première phrase donnent souvent des repères, mais il faut vérifier que la suite les précise ou les nuance."
+              },
+              {
+                "kind": "heading",
+                "text": "Lire la question avant de répondre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une question peut demander une information, une explication ou une justification. « À quelle heure ? » appelle une heure. « Pourquoi ? » appelle une cause. « Citez deux éléments » impose deux éléments distincts. Répondre avec une information vraie mais différente de celle demandée reste un hors-sujet. Soulignez mentalement le verbe et le nombre d'éléments attendus."
+              },
+              {
+                "kind": "heading",
+                "text": "Revenir au passage utile"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Après la lecture globale, recherchez le passage qui permet de répondre. Lisez aussi la phrase précédente et la suivante : un pronom ou une condition peut modifier le sens. Ne répondez pas uniquement de mémoire. Une seconde lecture ciblée est souvent plus efficace que relire tout le texte sans savoir ce que l'on cherche."
+              }
+            ],
+            "cards": [
+              {
+                "label": "1 · COMPRENDRE",
+                "text": "De quoi parle le document ?"
+              },
+              {
+                "label": "2 · REPÉRER",
+                "text": "Quelle phrase répond à la consigne ?"
+              },
+              {
+                "label": "3 · RÉPONDRE",
+                "text": "Une formulation précise et adaptée."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.01.webp",
+            "diagram_text": [
+              "Partir de la consigne",
+              "Relevez Retrouver un élément.",
+              "Expliquez Montrer le sens ou la relation.",
+              "Justifiez S’appuyer sur le texte.",
+              "Commencez par la consigne : elle indique le travail attendu."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-01-atelier",
+          "title": "À vous de jouer · Lire avec une intention",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.01",
+            "title": "Lire avec une intention",
+            "objective": "Adapter sa lecture à la question posée.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Message : « Départ confirmé à 8 h 15. Rendez-vous entrée latérale, la porte principale est fermée. » Qu’est-ce qui est modifié ?",
+                "options": [
+                  {
+                    "id": "0af07baef3d2",
+                    "text": "L’heure de départ"
+                  },
+                  {
+                    "id": "f833556a1c39",
+                    "text": "Le lieu de rendez-vous"
+                  },
+                  {
+                    "id": "c3c3d30cdfd4",
+                    "text": "Le nombre de passagers"
+                  }
+                ],
+                "answer": "f833556a1c39",
+                "explanation": "Le départ est confirmé ; la précision porte sur l’entrée utilisée. Il faut répondre à l’information réellement donnée.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Avant de répondre à une question sur un texte, quelle méthode est utile ?",
+                "options": [
+                  {
+                    "id": "644e1c7fc084",
+                    "text": "Choisir l’option la plus longue"
+                  },
+                  {
+                    "id": "e4491739cf37",
+                    "text": "Se fier uniquement au titre"
+                  },
+                  {
+                    "id": "4e36c2c2927e",
+                    "text": "Lire la consigne puis chercher les éléments pertinents"
+                  }
+                ],
+                "answer": "4e36c2c2927e",
+                "explanation": "La consigne précise ce qu’il faut rechercher ; la réponse doit être appuyée sur le texte.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "3 · RÉPONDRE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "2 · REPÉRER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "1 · COMPRENDRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "De quoi parle le document ?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Une formulation précise et adaptée.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Quelle phrase répond à la consigne ?",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.01. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-02",
+      "title": "D.02 · Trouver l’information exacte",
+      "activities": [
+        {
+          "id": "vtc-d-02-cours",
+          "title": "Trouver l’information exacte",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.02",
+            "title": "Trouver l’information exacte",
+            "page": 193,
+            "pages": [
+              193,
+              194
+            ],
+            "objective": "Répondre aux questions qui, quoi, où, quand et comment.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les informations explicites figurent directement dans le document. Cherchez le groupe de mots qui répond exactement à la question, puis vérifiez son contexte. Un même texte peut contenir l’heure de réservation, celle de prise en charge et celle d’arrivée : ce sont trois informations différentes."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les tableaux et courriels demandent aussi une lecture des en-têtes et des unités. « 2 adultes + 1 enfant » correspond à trois passagers, sans compter le conducteur. « Départ souhaité » ne signifie pas « arrivée impérative ». Si une information n’est pas indiquée, ne l’inventez pas. À l’examen, l’absence de preuve dans le texte doit vous rendre prudent face à une proposition trop précise."
+              },
+              {
+                "kind": "heading",
+                "text": "Décomposer une demande"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour analyser une réservation, cherchez la personne concernée, le service attendu, le lieu, la date, l'heure et les conditions. Un même texte peut mentionner un organisateur qui réserve, un passager qui voyage et une entreprise qui paie. Ces rôles ne doivent pas être fusionnés. Une réponse précise reprend le bon acteur et la bonne action."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer information et absence d'information"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Si un texte ne donne pas un élément, ne le complétez pas au hasard. Dans la pratique, demandez une précision. Dans un exercice de compréhension, indiquez l'absence d'information lorsque c'est ce qui est demandé. Un nom de gare sans ville peut rester ambigu ; un train à 10 h ne donne pas automatiquement l'heure de rendez-vous avec le chauffeur."
+              },
+              {
+                "kind": "heading",
+                "text": "Reformuler sans déformer"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vous pouvez utiliser vos propres mots si le sens reste identique. Conservez les restrictions, les nombres et les horaires. « Deux valises et un sac » ne devient pas « trois valises ». Une reformulation utile raccourcit le message tout en conservant les données nécessaires à l'action."
+              }
+            ],
+            "cards": [
+              {
+                "label": "QUI ?",
+                "text": "Client, conducteur ou personne qui réserve."
+              },
+              {
+                "label": "QUAND ?",
+                "text": "Commande, départ ou arrivée."
+              },
+              {
+                "label": "OÙ ?",
+                "text": "Adresse, terminal, porte ou point de rencontre."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.02.webp",
+            "diagram_text": [
+              "La fiche de mission extraite du texte",
+              "Quand ? Jeudi à 8 h.",
+              "Où ? Devant l’hôtel Central.",
+              "Qui voyage ? M. Martin.",
+              "Associez chaque valeur à son étiquette avant de la recopier."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-02-atelier",
+          "title": "À vous de jouer · Trouver l’information exacte",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.02",
+            "title": "Trouver l’information exacte",
+            "objective": "Répondre aux questions qui, quoi, où, quand et comment.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Mme Roy réserve pour M. et Mme Diallo. Qui voyage ?",
+                "options": [
+                  {
+                    "id": "f246f8c3bb67",
+                    "text": "Mme Roy seule"
+                  },
+                  {
+                    "id": "4811895329a7",
+                    "text": "M. et Mme Diallo"
+                  },
+                  {
+                    "id": "01356fa5e2ec",
+                    "text": "Les trois personnes nécessairement"
+                  }
+                ],
+                "answer": "4811895329a7",
+                "explanation": "La personne qui réserve et les passagers peuvent être différents. Le texte désigne ici les Diallo comme voyageurs.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Réservation le 12 juin à 18 h pour départ le 13 juin à 7 h 30. Quelle est l’heure de prise en charge ?",
+                "options": [
+                  {
+                    "id": "62e813269a1c",
+                    "text": "7 h 30 le 12 juin"
+                  },
+                  {
+                    "id": "667efa1058e1",
+                    "text": "7 h 30 le 13 juin"
+                  },
+                  {
+                    "id": "77fbd67cd0f8",
+                    "text": "18 h le 12 juin"
+                  }
+                ],
+                "answer": "667efa1058e1",
+                "explanation": "Il faut distinguer le moment de la commande et le moment de la prestation.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "QUI ?"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "QUAND ?"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "OÙ ?"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Commande, départ ou arrivée.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Adresse, terminal, porte ou point de rencontre.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Client, conducteur ou personne qui réserve.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.02. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-03",
+      "title": "D.03 · Distinguer fait et interprétation",
+      "activities": [
+        {
+          "id": "vtc-d-03-cours",
+          "title": "Distinguer fait et interprétation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.03",
+            "title": "Distinguer fait et interprétation",
+            "page": 196,
+            "pages": [
+              196,
+              197
+            ],
+            "objective": "Éviter d’ajouter au texte ce qu’il ne dit pas.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un fait est une information présentée comme observable ou vérifiable. Une opinion exprime un jugement. Une hypothèse envisage une possibilité. Les mots « peut-être », « semble », « probablement » ou le conditionnel signalent souvent une incertitude. Ils ne doivent pas disparaître dans votre réponse."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une inférence est une conclusion raisonnable à partir d’indices ; elle doit rester proportionnée. Si un texte dit que la route est fermée, on peut en déduire qu’il faut chercher un autre itinéraire. On ne peut pas déduire sans autre information que le trajet coûtera exactement dix euros de plus. Repérez aussi qui porte le jugement : auteur, client cité ou conducteur."
+              },
+              {
+                "kind": "heading",
+                "text": "Le fait est vérifiable"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un fait décrit un événement, une parole ou une donnée observable : « Le client est arrivé à 9 h 12. » Une opinion exprime un jugement : « Le client est peu sérieux. » Une interprétation propose une explication : « Il est arrivé tard parce qu'il n'a pas regardé l'heure. » Cette dernière phrase peut être plausible sans être prouvée."
+              },
+              {
+                "kind": "heading",
+                "text": "Repérer les mots de prudence"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les expressions « peut-être », « semble », « selon » ou « d'après » signalent souvent un degré d'incertitude ou une source. Ne les supprimez pas lors de la reformulation. « Selon le client, la facture a été réglée » ne signifie pas que le paiement a été vérifié en banque. La distinction protège la qualité des transmissions professionnelles."
+              },
+              {
+                "kind": "heading",
+                "text": "Justifier une conclusion"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une déduction doit partir d'indices identifiés. Lorsqu'ils ne suffisent pas, la bonne réponse est de chercher l'information manquante. Cette méthode sert en compréhension de texte, mais aussi dans un compte rendu d'incident. Décrire avec précision permet à une autre personne d'analyser la situation sans hériter de vos suppositions."
+              }
+            ],
+            "cards": [
+              {
+                "label": "FAIT",
+                "text": "« La rue est fermée de 8 h à 12 h. »"
+              },
+              {
+                "label": "OPINION",
+                "text": "« Ce détour est désagréable. »"
+              },
+              {
+                "label": "HYPOTHÈSE",
+                "text": "« Le trajet pourrait durer plus longtemps. »"
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.03.webp",
+            "diagram_text": [
+              "Conserver le degré de certitude",
+              "Fait",
+              "Opinion",
+              "Hypothèse",
+              "La rue est fermée de 8 h à 12 h.",
+              "Ce détour est désagréable.",
+              "Le trajet pourrait durer plus longtemps.",
+              "Le client ne répond pas à deux appels",
+              "Ce qui est établi Pas de réponse à ces moments précis.",
+              "Une éventuelle annulation.",
+              "Ce qui reste à vérifier",
+              "Conservez le degré de certitude du document."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-03-atelier",
+          "title": "À vous de jouer · Distinguer fait et interprétation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.03",
+            "title": "Distinguer fait et interprétation",
+            "objective": "Éviter d’ajouter au texte ce qu’il ne dit pas.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "« Le véhicule est arrivé à 9 h 12 » est…",
+                "options": [
+                  {
+                    "id": "0384b59fb2e6",
+                    "text": "Un fait vérifiable"
+                  },
+                  {
+                    "id": "0cdb69940ecb",
+                    "text": "Une intention supposée"
+                  },
+                  {
+                    "id": "0ccfd5bc4edd",
+                    "text": "Un jugement sur le conducteur"
+                  }
+                ],
+                "answer": "0384b59fb2e6",
+                "explanation": "Une heure constatée décrit un fait. Elle ne dit pas à elle seule pourquoi le véhicule est arrivé à cette heure.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "« Le client ne répond pas, donc il annule » contient quelle difficulté ?",
+                "options": [
+                  {
+                    "id": "e13b1ac8c8a8",
+                    "text": "Une annulation explicitement écrite"
+                  },
+                  {
+                    "id": "45fc72246e1f",
+                    "text": "Une conclusion non confirmée"
+                  },
+                  {
+                    "id": "58160477a414",
+                    "text": "Une preuve de paiement"
+                  }
+                ],
+                "answer": "45fc72246e1f",
+                "explanation": "Une absence de réponse ne prouve pas une annulation. Il faut distinguer observation et interprétation.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "OPINION"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "HYPOTHÈSE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "FAIT"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "« Ce détour est désagréable. »",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "« Le trajet pourrait durer plus longtemps. »",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "« La rue est fermée de 8 h à 12 h. »",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.03. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-04",
+      "title": "D.04 · Suivre les pronoms",
+      "activities": [
+        {
+          "id": "vtc-d-04-cours",
+          "title": "Suivre les pronoms",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.04",
+            "title": "Suivre les pronoms",
+            "page": 198,
+            "pages": [
+              198,
+              199
+            ],
+            "objective": "Identifier à qui ou à quoi renvoie un mot.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les pronoms évitent de répéter les mêmes noms. Pour comprendre « il », « elle », « ils », « celui-ci », « leur » ou « y », recherchez l’élément repris et vérifiez le sens de la phrase. Le nom le plus proche n’est pas toujours la bonne réponse."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le genre et le nombre aident, mais le contexte reste décisif. Dans « Le chauffeur présente la facture au client, qui la vérifie », « qui » désigne le client et « la » désigne la facture. Dans un message professionnel, une reprise ambiguë peut créer une erreur. Répétez un nom si cela clarifie la responsabilité ou l’action attendue."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un pronom se comprend par sa fonction et le contexte, pas seulement par sa proximité."
+              },
+              {
+                "kind": "heading",
+                "text": "Le rôle d'un pronom"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un pronom évite de répéter un nom : il, elle, ils, elles, le, la, leur, celui-ci, cette dernière. Pour comprendre, cherchez son antécédent, c'est-à-dire le mot ou le groupe qu'il remplace. Le genre et le nombre aident, mais le sens de la phrase doit aussi être cohérent. Le nom le plus proche n'est pas toujours le bon."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer sujet et complément"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Dans « La cliente appelle le chauffeur. Il lui confirme l'heure », « il » désigne le chauffeur, sujet de la confirmation, et « lui » désigne la cliente qui reçoit l'information. Dans « Elle le remercie », les rôles changent : « elle » est la cliente et « le » le chauffeur. Repérer le verbe aide à comprendre qui réalise l'action."
+              },
+              {
+                "kind": "heading",
+                "text": "Éviter l'ambiguïté à l'écrit"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Dans un message professionnel court, répéter un nom est préférable à une phrase ambiguë. « Le chauffeur transmet le devis à l'hôtel, puis il confirme » ne dit pas clairement qui confirme quoi. Précisez : « L'hôtel confirme la réservation après réception du devis. » La simplicité améliore directement l'organisation du service."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Le responsable remet la réservation au conducteur. Celui-ci vérifie l'adresse avant de la confirmer. » « Celui-ci » renvoie au conducteur ; « la » renvoie à l'adresse dans cette formulation. Si l'auteur voulait parler de la réservation entière, il aurait intérêt à l'écrire explicitement. Pour répondre à une question de compréhension, remplacez le pronom par le nom envisagé et vérifiez que la phrase garde un sens logique."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRONOM",
+                "text": "Repérer le mot de remplacement."
+              },
+              {
+                "label": "RÉFÉRENT",
+                "text": "Retrouver le nom ou le lieu repris."
+              },
+              {
+                "label": "VÉRIFICATION",
+                "text": "Remplacer mentalement et relire."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-04-atelier",
+          "title": "À vous de jouer · Suivre les pronoms",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.04",
+            "title": "Suivre les pronoms",
+            "objective": "Identifier à qui ou à quoi renvoie un mot.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "« Le chauffeur présente la facture au client, qui la vérifie. » Qui vérifie ?",
+                "options": [
+                  {
+                    "id": "7eefca865b6b",
+                    "text": "Le chauffeur uniquement"
+                  },
+                  {
+                    "id": "c19078fd94a0",
+                    "text": "La facture"
+                  },
+                  {
+                    "id": "db7efe1fc129",
+                    "text": "Le client"
+                  }
+                ],
+                "answer": "db7efe1fc129",
+                "explanation": "Le pronom « qui » renvoie ici au client, tandis que « la » reprend la facture.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "« Les passagères prennent leurs valises et les placent près de la porte. » Que remplace « les » ?",
+                "options": [
+                  {
+                    "id": "21137ff27905",
+                    "text": "Les valises"
+                  },
+                  {
+                    "id": "21cccb2c5b48",
+                    "text": "Les portes"
+                  },
+                  {
+                    "id": "d6186d7c99ef",
+                    "text": "Les passagères"
+                  }
+                ],
+                "answer": "21137ff27905",
+                "explanation": "Le pronom complément reprend l’objet placé. La cohérence de l’action aide à retrouver son référent.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "RÉFÉRENT"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "PRONOM"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "VÉRIFICATION"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Retrouver le nom ou le lieu repris.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Repérer le mot de remplacement.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Remplacer mentalement et relire.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.04. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-05",
+      "title": "D.05 · Relier les idées",
+      "activities": [
+        {
+          "id": "vtc-d-05-cours",
+          "title": "Relier les idées",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.05",
+            "title": "Relier les idées",
+            "page": 201,
+            "pages": [
+              201,
+              202
+            ],
+            "objective": "Reconnaître cause, conséquence, opposition et but.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les connecteurs indiquent comment les idées s’articulent. « Parce que » et « en raison de » introduisent une cause. « Donc » et « par conséquent » annoncent une conséquence. « Pourtant » et « cependant » marquent une opposition. « Afin de » exprime un but."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Ne remplacez pas un connecteur au hasard : changer le lien peut renverser le sens. « Le client est arrivé tôt, pourtant la voiture était déjà prête » ne raconte pas exactement la même chose que « Le client est arrivé tôt, donc la voiture était déjà prête ». Dans une réponse courte, un seul connecteur bien choisi suffit souvent à rendre votre raisonnement clair."
+              },
+              {
+                "kind": "heading",
+                "text": "La cause explique"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Parce que », « car » et « en raison de » introduisent une cause. Elle répond à la question « pourquoi ? ». Dans « Le chauffeur change de trajet parce que la rue est fermée », la fermeture explique le changement. Une cause peut être présentée avant ou après son effet ; sa position dans la phrase ne change pas son rôle."
+              },
+              {
+                "kind": "heading",
+                "text": "La conséquence et le but"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Donc », « par conséquent » et « ainsi » peuvent annoncer une conséquence. « Pour » et « afin de » expriment un but recherché. La conséquence est ce qui résulte d'une situation ; le but est ce que l'on cherche à obtenir. « Il part tôt afin d'éviter le retard » décrit une intention, pas la preuve qu'il arrivera à l'heure."
+              },
+              {
+                "kind": "heading",
+                "text": "L'opposition et la concession"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Mais », « pourtant » et « cependant » signalent une opposition ou une nuance. « Bien que » introduit une concession : un fait reste vrai malgré un autre. Ces mots sont essentiels à la compréhension. Lire uniquement la première partie d'une phrase peut conduire à une conclusion opposée à celle de l'auteur."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CAUSE",
+                "text": "La rue est fermée parce qu’il y a des travaux."
+              },
+              {
+                "label": "CONSÉQUENCE",
+                "text": "La rue est fermée, donc nous changeons de trajet."
+              },
+              {
+                "label": "BUT",
+                "text": "Nous partons plus tôt afin d’arriver à l’heure."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.05.webp",
+            "diagram_text": [
+              "Quatre panneaux du raisonnement",
+              "Parce que Cause",
+              "Donc Conséquence",
+              "Afin de But",
+              "Cependant Opposition",
+              "Le connecteur est le panneau indicateur du raisonnement."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-05-atelier",
+          "title": "À vous de jouer · Relier les idées",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.05",
+            "title": "Relier les idées",
+            "objective": "Reconnaître cause, conséquence, opposition et but.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "« La rue est fermée, donc le trajet est modifié. » Quel lien exprime « donc » ?",
+                "options": [
+                  {
+                    "id": "6a2fd6f1b69c",
+                    "text": "Une conséquence"
+                  },
+                  {
+                    "id": "b6a47270de0c",
+                    "text": "Une comparaison"
+                  },
+                  {
+                    "id": "1921f48acd7a",
+                    "text": "Une opposition"
+                  }
+                ],
+                "answer": "6a2fd6f1b69c",
+                "explanation": "La fermeture est la cause ; la modification du trajet en est la conséquence dans cette phrase.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quel mot introduit une opposition ?",
+                "options": [
+                  {
+                    "id": "71bb27296a98",
+                    "text": "Ainsi"
+                  },
+                  {
+                    "id": "1838df94d315",
+                    "text": "Cependant"
+                  },
+                  {
+                    "id": "b1e8afcf6c15",
+                    "text": "Parce que"
+                  }
+                ],
+                "answer": "1838df94d315",
+                "explanation": "« Cependant » oppose ou nuance deux idées ; « parce que » exprime une cause.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "CAUSE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "BUT"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "CONSÉQUENCE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Nous partons plus tôt afin d’arriver à l’heure.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "La rue est fermée, donc nous changeons de trajet.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "La rue est fermée parce qu’il y a des travaux.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.05. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-06",
+      "title": "D.06 · Comprendre les nuances",
+      "activities": [
+        {
+          "id": "vtc-d-06-cours",
+          "title": "Comprendre les nuances",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.06",
+            "title": "Comprendre les nuances",
+            "page": 204,
+            "pages": [
+              204,
+              205
+            ],
+            "objective": "Lire les négations, quantités et conditions.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Des mots très courts changent fortement le sens : « tous », « certains », « aucun », « seulement », « sauf », « au moins », « au plus ». « Au moins deux » signifie deux ou davantage ; « au plus deux » signifie deux ou moins. Une proposition qui transforme « certains » en « tous » exagère le texte."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Repérez aussi les conditions. « Le chauffeur attend si le client confirme son retard » ne signifie pas qu’il attend toujours. « Ne… que » marque une restriction, pas une négation totale : « il ne transporte que des clients réservés » signifie « seulement des clients réservés ». Relisez la phrase entière avant de sélectionner une réponse."
+              },
+              {
+                "kind": "heading",
+                "text": "Les petits mots changent la règle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Tous », « certains », « aucun », « seulement » et « généralement » n'ont pas la même portée. « Tous les clients ont confirmé » ne signifie pas « certains clients ont confirmé ». « Le parking est généralement disponible » ne garantit pas une place à chaque arrivée. Conservez ces nuances lorsque vous résumez un document ou choisissez une réponse."
+              },
+              {
+                "kind": "heading",
+                "text": "Minimum, maximum et intervalle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "« Au moins deux » signifie deux ou davantage. « Au plus deux » signifie deux ou moins. « Moins de deux » exclut deux. « À partir de 8 h » inclut 8 h ; « après 8 h » indique un moment ultérieur. Ces différences jouent un rôle concret dans les horaires, les capacités et les conditions contractuelles."
+              },
+              {
+                "kind": "heading",
+                "text": "Lire une condition entière"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une phrase introduite par « si », « sauf si » ou « à condition que » peut limiter la règle annoncée. Identifiez le cas général et l'exception. Ne retenez pas l'exception comme si elle concernait toutes les situations. Dans un document professionnel, une règle conditionnelle doit être accompagnée du fait qui permet de savoir si elle s'applique."
+              }
+            ],
+            "cards": [
+              {
+                "label": "AU MOINS",
+                "text": "Une borne minimale."
+              },
+              {
+                "label": "AU PLUS",
+                "text": "Une borne maximale."
+              },
+              {
+                "label": "SAUF / SI",
+                "text": "Une exception ou une condition."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.06.webp",
+            "diagram_text": [
+              "Lire aussi la condition",
+              "1 Capacité Au maximum quatre passagers.",
+              "2 Condition Leurs bagages tiennent dans les espaces prévus.",
+              "3 Conclusion Vérifier les personnes ET les bagages.",
+              "Une exception écrite ne permet pas d’en inventer d’autres."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-06-atelier",
+          "title": "À vous de jouer · Comprendre les nuances",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.06",
+            "title": "Comprendre les nuances",
+            "objective": "Lire les négations, quantités et conditions.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "« La prise en charge est possible sous réserve de disponibilité. » Cela signifie…",
+                "options": [
+                  {
+                    "id": "b786520b5305",
+                    "text": "Elle est toujours refusée"
+                  },
+                  {
+                    "id": "7fe37f509551",
+                    "text": "Elle est garantie sans condition"
+                  },
+                  {
+                    "id": "5f4b1f40a29b",
+                    "text": "Elle dépend de la disponibilité"
+                  }
+                ],
+                "answer": "5f4b1f40a29b",
+                "explanation": "La locution « sous réserve » exprime une condition ; l’omettre changerait le sens du message.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "« Le retard ne devrait pas dépasser dix minutes. » Quelle reformulation respecte la nuance ?",
+                "options": [
+                  {
+                    "id": "89200ae4e520",
+                    "text": "Il n’y aura aucun retard"
+                  },
+                  {
+                    "id": "8d9afcc1a330",
+                    "text": "Le retard est estimé à dix minutes au maximum"
+                  },
+                  {
+                    "id": "0767eea703d2",
+                    "text": "Le retard sera obligatoirement de dix minutes"
+                  }
+                ],
+                "answer": "8d9afcc1a330",
+                "explanation": "« Devrait » exprime une estimation, pas une certitude absolue.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "AU MOINS"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SAUF / SI"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "AU PLUS"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Une exception ou une condition.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Une borne maximale.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Une borne minimale.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.06. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-07",
+      "title": "D.07 · Enrichir le vocabulaire utile",
+      "activities": [
+        {
+          "id": "vtc-d-07-cours",
+          "title": "Enrichir le vocabulaire utile",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.07",
+            "title": "Enrichir le vocabulaire utile",
+            "page": 206,
+            "pages": [
+              206,
+              207
+            ],
+            "objective": "Comprendre un mot dans son contexte professionnel.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un mot peut avoir plusieurs sens. Dans le transport, une « prise en charge » peut désigner le début du service ; dans un autre contexte, elle peut évoquer un remboursement ou un accompagnement. Recherchez les mots voisins avant de choisir un synonyme."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Distinguez les termes proches : une réservation prépare une prestation ; un devis présente une offre chiffrée ; une facture constate une somme liée à une prestation ; un reçu atteste un paiement. « Ponctuel » peut signifier à l’heure ou occasionnel selon la phrase. Pour comprendre un mot inconnu, observez sa famille, les exemples et les oppositions, sans supposer qu’un mot familier a toujours le même sens."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser le contexte"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un mot peut avoir plusieurs sens. Une « prise en charge » peut désigner l'accueil d'un passager ou le paiement d'une dépense selon le document. Regardez le verbe, les mots voisins et la situation. N'utilisez pas automatiquement la première définition que vous connaissez. Le sens pertinent est celui qui rend la phrase cohérente."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer les mots proches"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un devis annonce une proposition ; une facture constate une facturation ; un reçu atteste un paiement. Un retard n'est pas une annulation. Une estimation n'est pas nécessairement un engagement ferme. Dans le métier, employer le bon mot permet au client de comprendre ce qui est confirmé et ce qui reste à déterminer."
+              },
+              {
+                "kind": "heading",
+                "text": "Apprendre avec une phrase"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour mémoriser, notez le mot, une définition simple et une phrase d'usage. Ajoutez un mot à ne pas confondre. Relisez ces phrases régulièrement. L'objectif n'est pas de rendre vos messages compliqués, mais de choisir le terme précis. Si un mot technique risque de ne pas être compris par le client, expliquez-le avec un exemple concret."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CONTEXTE",
+                "text": "Lire la phrase avant et après."
+              },
+              {
+                "label": "FAMILLE",
+                "text": "Retard, retarder, retardé."
+              },
+              {
+                "label": "DISTINCTION",
+                "text": "Devis, facture et reçu ont des fonctions différentes."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.07.webp",
+            "diagram_text": [
+              "Une expression, deux contextes",
+              "« Prise en charge à 7 h 30 » Rendez-vous de transport.",
+              "L’entreprise accepte de payer.",
+              "€ « Prise en charge de la facture »",
+              "Choisir le bon mot rend le service plus clair et évite une promesse involontaire."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-07-atelier",
+          "title": "À vous de jouer · Enrichir le vocabulaire utile",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.07",
+            "title": "Enrichir le vocabulaire utile",
+            "objective": "Comprendre un mot dans son contexte professionnel.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Dans une prestation, que désigne un « justificatif » ?",
+                "options": [
+                  {
+                    "id": "5b3168d1ae2c",
+                    "text": "Un document apportant une preuve"
+                  },
+                  {
+                    "id": "ab492e46e4dd",
+                    "text": "Une préférence de confort"
+                  },
+                  {
+                    "id": "474ddb573d3e",
+                    "text": "Une personne qui réserve"
+                  }
+                ],
+                "answer": "5b3168d1ae2c",
+                "explanation": "Le sens professionnel est celui d’une pièce servant à établir une information ou une opération.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quel terme désigne la personne qui effectue la réservation ?",
+                "options": [
+                  {
+                    "id": "6adb118bd468",
+                    "text": "Le destinataire obligatoirement"
+                  },
+                  {
+                    "id": "43a4f4bbe53d",
+                    "text": "Le réservant"
+                  },
+                  {
+                    "id": "4e10c6d80397",
+                    "text": "Le créancier nécessairement"
+                  }
+                ],
+                "answer": "43a4f4bbe53d",
+                "explanation": "Le réservant peut différer du passager et du payeur. Les rôles doivent être identifiés précisément.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "FAMILLE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "DISTINCTION"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "CONTEXTE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Devis, facture et reçu ont des fonctions différentes.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Retard, retarder, retardé.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Lire la phrase avant et après.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.07. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-08",
+      "title": "D.08 · Maîtriser les temps utiles",
+      "activities": [
+        {
+          "id": "vtc-d-08-cours",
+          "title": "Maîtriser les temps utiles",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.08",
+            "title": "Maîtriser les temps utiles",
+            "page": 209,
+            "pages": [
+              209,
+              210
+            ],
+            "objective": "Situer une action dans le passé, le présent ou l’avenir.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le présent décrit notamment une situation actuelle ou une habitude. Le passé composé raconte une action accomplie : « J’ai confirmé la réservation. » L’imparfait décrit un contexte : « La circulation était dense. » Le futur simple annonce une action à venir : « Je vous attendrai à l’entrée. »"
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le conditionnel formule une hypothèse ou une demande polie : « Pourriez-vous préciser l’adresse ? » Il ne faut pas l’utiliser pour rendre floue une information certaine. Distinguez « je serai », futur, et « je serais », conditionnel. Dans un message de retard, précisez l’heure estimée et son caractère prévisionnel plutôt que multiplier les formules vagues."
+              },
+              {
+                "kind": "heading",
+                "text": "Présent, passé et futur"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le présent décrit une situation actuelle, une habitude ou une règle : « Je vérifie la réservation. » Le passé composé présente une action accomplie : « J'ai confirmé l'heure. » L'imparfait décrit souvent un contexte ou une habitude passée : « La route était fermée. » Le futur annonce une action à venir : « Je vous attendrai à l'entrée. »"
+              },
+              {
+                "kind": "heading",
+                "text": "Lire les marqueurs de temps"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Hier, aujourd'hui, demain, avant, après et depuis aident à organiser la chronologie. Attention aux messages transférés plusieurs jours plus tard : « demain » renvoie au lendemain du message initial, pas toujours au lendemain de sa lecture. Pour une réservation, une date complète et une heure précise sont plus fiables qu'une indication relative."
+              },
+              {
+                "kind": "heading",
+                "text": "Employer le conditionnel avec discernement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le conditionnel peut exprimer une demande polie ou une information incertaine : « Pourriez-vous confirmer ? » et « Le train arriverait à 18 h » n'ont pas la même fonction. Une hypothèse ne doit pas devenir un horaire confirmé dans votre planning. Clarifiez ce qui est acquis avant d'organiser la mission."
+              }
+            ],
+            "cards": [
+              {
+                "label": "ACCOMPLI",
+                "text": "J’ai envoyé la confirmation."
+              },
+              {
+                "label": "À VENIR",
+                "text": "Je vous attendrai à 8 h."
+              },
+              {
+                "label": "DEMANDE POLIE",
+                "text": "Pourriez-vous confirmer le terminal ?"
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.08.webp",
+            "diagram_text": [
+              "Choisir la forme utile",
+              "Accompli J’ai envoyé la confirmation.",
+              "À venir Je vous attendrai à 8 h.",
+              "Demande polie Pourriez-vous confirmer le terminal ?",
+              "Cherchez d’abord le repère de temps, puis choisissez le verbe."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-08-atelier",
+          "title": "À vous de jouer · Maîtriser les temps utiles",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.08",
+            "title": "Maîtriser les temps utiles",
+            "objective": "Situer une action dans le passé, le présent ou l’avenir.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quelle phrase annonce une action future ?",
+                "options": [
+                  {
+                    "id": "0b1474dbd5c4",
+                    "text": "Je vous attendais à l’entrée nord."
+                  },
+                  {
+                    "id": "db4024bc5119",
+                    "text": "Je vous ai attendu à l’entrée nord."
+                  },
+                  {
+                    "id": "e1232fc3ab49",
+                    "text": "Je vous attendrai à l’entrée nord."
+                  }
+                ],
+                "answer": "e1232fc3ab49",
+                "explanation": "« Attendrai » est au futur ; « attendais » et « ai attendu » situent l’action dans le passé.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle phrase est la plus adaptée à une demande polie ?",
+                "options": [
+                  {
+                    "id": "ee4f38aa1158",
+                    "text": "Vous confirmer terminal."
+                  },
+                  {
+                    "id": "9dec6833dbdb",
+                    "text": "Pourriez-vous confirmer le terminal ?"
+                  },
+                  {
+                    "id": "1ecf341627ab",
+                    "text": "Tu confirmes maintenant !"
+                  }
+                ],
+                "answer": "9dec6833dbdb",
+                "explanation": "Le conditionnel et une phrase complète rendent la demande claire et courtoise.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "À VENIR"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "ACCOMPLI"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "DEMANDE POLIE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Je vous attendrai à 8 h.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "J’ai envoyé la confirmation.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Pourriez-vous confirmer le terminal ?",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.08. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-09",
+      "title": "D.09 · Soigner accords et homophones",
+      "activities": [
+        {
+          "id": "vtc-d-09-cours",
+          "title": "Soigner accords et homophones",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.09",
+            "title": "Soigner accords et homophones",
+            "page": 211,
+            "pages": [
+              211,
+              212
+            ],
+            "objective": "Éliminer les erreurs fréquentes à la relecture.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le verbe s’accorde avec son sujet : « Les clients arrivent. » L’adjectif s’accorde avec le nom : « Les valises sont lourdes. » Au passé composé avec être, le participe s’accorde généralement avec le sujet : « Les passagères sont arrivées. » Avec avoir, l’accord dépend notamment de la place du complément d’objet direct."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour les homophones, utilisez un test simple. « a » se remplace par « avait » ; « à » ne se remplace pas ainsi. « sont » se remplace par « étaient » ; « son » exprime la possession. Pour « -é » ou « -er », remplacez par « vendu » ou « vendre ». Une relecture ciblée est plus efficace qu’une lecture rapide sans objectif."
+              },
+              {
+                "kind": "heading",
+                "text": "Trouver le sujet du verbe"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Posez la question « qui fait l'action ? ». Dans « Les clients du chauffeur attendent », le sujet est « les clients », même si « chauffeur » est plus proche du verbe. Le verbe s'accorde donc au pluriel. Les groupes de mots placés entre sujet et verbe ne changent pas le sujet."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier le groupe nominal"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le déterminant, le nom et l'adjectif doivent être cohérents : « une réservation confirmée », « des réservations confirmées ». Commencez par le nom principal puis vérifiez les mots qui s'y rapportent. Une relecture consacrée uniquement aux accords est souvent plus efficace qu'une lecture rapide de l'ensemble du message."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser les tests simples"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour distinguer « a » et « à », essayez de remplacer par « avait » : si cela fonctionne, il s'agit du verbe avoir, sans accent. Pour « et » et « est », essayez « était » pour reconnaître le verbe être. Pour « son » et « sont », le remplacement par « étaient » identifie le verbe. Ces tests ne remplacent pas toute la grammaire, mais sécurisent des erreurs fréquentes."
+              }
+            ],
+            "cards": [
+              {
+                "label": "SUJET",
+                "text": "Qui fait l’action ?"
+              },
+              {
+                "label": "ACCORD",
+                "text": "Singulier, pluriel, féminin, masculin."
+              },
+              {
+                "label": "TEST",
+                "text": "Avait / étaient / vendre : vérifier la forme."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.09.webp",
+            "diagram_text": [
+              "Une relecture en deux passages",
+              "1 Verbes Repérer le sujet et vérifier l’accord.",
+              "2 Groupes nominaux Vérifier noms et adjectifs.",
+              "Relisez séparément les verbes, puis les groupes nominaux."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-09-atelier",
+          "title": "À vous de jouer · Soigner accords et homophones",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.09",
+            "title": "Soigner accords et homophones",
+            "objective": "Éliminer les erreurs fréquentes à la relecture.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quelle phrase est correctement accordée ?",
+                "options": [
+                  {
+                    "id": "730c148adbb8",
+                    "text": "Les passagères sont arrivées."
+                  },
+                  {
+                    "id": "261dec1387f5",
+                    "text": "Les passagères sont arrivé."
+                  },
+                  {
+                    "id": "2aef536d2779",
+                    "text": "Les passagères est arrivé."
+                  }
+                ],
+                "answer": "730c148adbb8",
+                "explanation": "Le sujet pluriel commande « sont » et le participe avec être s’accorde ici au féminin pluriel.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle phrase emploie correctement « à » et « a » ?",
+                "options": [
+                  {
+                    "id": "b55ce839134c",
+                    "text": "Le client a rendez-vous à huit heures."
+                  },
+                  {
+                    "id": "043f0bc58756",
+                    "text": "Le client à rendez-vous a huit heures."
+                  },
+                  {
+                    "id": "aaa2966b694d",
+                    "text": "Le client a rendez-vous a huit heures."
+                  }
+                ],
+                "answer": "b55ce839134c",
+                "explanation": "« A » est le verbe avoir ; « à » introduit ici l’heure.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "TEST"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "ACCORD"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "SUJET"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Singulier, pluriel, féminin, masculin.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Qui fait l’action ?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Avait / étaient / vendre : vérifier la forme.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.09. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-10",
+      "title": "D.10 · Répondre à une question courte",
+      "activities": [
+        {
+          "id": "vtc-d-10-cours",
+          "title": "Répondre à une question courte",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.10",
+            "title": "Répondre à une question courte",
+            "page": 214,
+            "pages": [
+              214,
+              215
+            ],
+            "objective": "Construire une réponse complète sans hors-sujet.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une réponse courte n’est pas forcément un mot isolé. Elle reprend le sujet et fournit l’information demandée en une ou deux phrases. Si la consigne demande deux raisons, donnez deux raisons distinctes. Une phrase précise vaut mieux qu’un paragraphe qui ajoute des éléments non présents dans le texte."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour justifier, reliez votre réponse à un fait du document. Vous pouvez reformuler plutôt que copier une longue phrase. Évitez « car oui », les jugements personnels et les abréviations de messagerie. À l’épreuve de français, les fautes d’orthographe sont prises en compte selon le barème : réservez du temps à la relecture des réponses rédigées."
+              },
+              {
+                "kind": "heading",
+                "text": "Commencer par la réponse"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une réponse courte doit annoncer immédiatement l'information demandée. Ajoutez ensuite la justification utile. Une introduction générale sur le métier consomme du temps sans répondre. Si la question demande deux raisons, présentez deux raisons distinctes. Si elle demande une citation, reprenez seulement le passage nécessaire et respectez la consigne."
+              },
+              {
+                "kind": "heading",
+                "text": "Construire une phrase autonome"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La personne qui vous lit doit comprendre sans reconstituer votre raisonnement. « À cause des travaux » peut être insuffisant hors contexte. « Le chauffeur modifie l'itinéraire parce que des travaux ferment la rue » relie la décision à sa cause."
+              },
+              {
+                "kind": "heading",
+                "text": "Construire une phrase autonome (suite)"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une phrase complète ne signifie pas une phrase longue : une idée principale et son explication suffisent souvent."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier le lien avec le texte"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Évitez d'ajouter une information plausible mais absente du document. Une réponse justifiée doit reposer sur un passage identifiable. Relisez les négations, les dates et les noms propres. Si vous avez écrit une conclusion plus forte que le texte, reformulez-la avec le bon degré de certitude."
+              }
+            ],
+            "cards": [
+              {
+                "label": "RÉPONSE",
+                "text": "Donner l’idée demandée."
+              },
+              {
+                "label": "APPUI",
+                "text": "Citer ou reformuler un fait du texte."
+              },
+              {
+                "label": "RELECTURE",
+                "text": "Vérifier sens, accords et ponctuation."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.10.webp",
+            "diagram_text": [
+              "Contrôler avant de rendre",
+              "La consigne Toutes les parties sont traitées.",
+              "Le texte Chaque idée a un appui.",
+              "La langue Sens, accords et ponctuation.",
+              "Répondez à chaque partie de la question, sans ajouter d’hypothèse inutile."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-10-atelier",
+          "title": "À vous de jouer · Répondre à une question courte",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.10",
+            "title": "Répondre à une question courte",
+            "objective": "Construire une réponse complète sans hors-sujet.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Question : « Pourquoi le rendez-vous change-t-il ? » Texte : « La porte est fermée pour travaux. » Quelle réponse est précise ?",
+                "options": [
+                  {
+                    "id": "2018c87cbe88",
+                    "text": "Le rendez-vous est à huit heures."
+                  },
+                  {
+                    "id": "360061b28801",
+                    "text": "Le client a deux bagages."
+                  },
+                  {
+                    "id": "50a1a6397678",
+                    "text": "Parce que la porte est fermée pour travaux."
+                  }
+                ],
+                "answer": "50a1a6397678",
+                "explanation": "Une question commençant par « pourquoi » demande la cause, pas une autre information du document.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle réponse conserve le sens de « deux valises et un petit sac » ?",
+                "options": [
+                  {
+                    "id": "2ff6ef0d21af",
+                    "text": "Deux bagages seulement"
+                  },
+                  {
+                    "id": "21318188b112",
+                    "text": "Deux valises, plus un petit sac"
+                  },
+                  {
+                    "id": "22f9f84815d3",
+                    "text": "Trois grandes valises"
+                  }
+                ],
+                "answer": "21318188b112",
+                "explanation": "Une reformulation doit conserver la nature et le nombre des objets.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "RELECTURE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "RÉPONSE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "APPUI"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Vérifier sens, accords et ponctuation.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Donner l’idée demandée.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Citer ou reformuler un fait du texte.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.10. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-11",
+      "title": "D.11 · Écrire au client",
+      "activities": [
+        {
+          "id": "vtc-d-11-cours",
+          "title": "Écrire au client",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.11",
+            "title": "Écrire au client",
+            "page": 216,
+            "pages": [
+              216,
+              217
+            ],
+            "objective": "Rédiger un message bref qui permet d’agir.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un message professionnel comporte un objet clair, les informations utiles et l’action attendue. Il indique qui écrit, de quelle réservation il s’agit et ce qui doit être confirmé. La politesse facilite la relation, mais ne doit pas masquer une demande imprécise."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour annoncer un retard, donnez un horaire estimé et une solution si nécessaire. Évitez d’accuser le client ou de promettre une heure impossible à garantir. Les montants, dates et adresses doivent être relus séparément. Ne transmettez pas une donnée confidentielle dans un groupe. Quand un échange devient complexe, un appel peut aider ; confirmez ensuite les éléments importants par écrit."
+              },
+              {
+                "kind": "heading",
+                "text": "Définir une seule demande principale"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Avant d'écrire, demandez-vous ce que le destinataire doit savoir ou faire. Confirmer une heure, retrouver un point de rendez-vous et signaler un retard demandent des messages différents. Placez l'information essentielle dès le début. Les détails utiles viennent ensuite, dans un ordre chronologique ou pratique."
+              },
+              {
+                "kind": "heading",
+                "text": "Donner les repères concrets"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Précisez une date, une heure, un lieu identifiable et l'action attendue. « Je suis devant » peut être inutilisable dans un grand aéroport. « Je vous attends à la sortie B, près du panneau d'information » donne un repère exploitable, à condition qu'il soit réel. Évitez les abréviations inconnues du client et les formulations accusatrices."
+              },
+              {
+                "kind": "heading",
+                "text": "Relire avant l'envoi"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifiez le destinataire, les noms, les chiffres et la pièce jointe. Un ton courtois n'empêche pas d'être clair sur une limite ou une condition. Si vous demandez une réponse, dites ce qui doit être confirmé. Ne promettez pas un délai irréaliste pour rassurer : une estimation honnête permet au client de s'organiser."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CONTEXTE",
+                "text": "Votre réservation du 18 juin à 8 h."
+              },
+              {
+                "label": "INFORMATION",
+                "text": "Nouveau lieu ou délai estimé."
+              },
+              {
+                "label": "ACTION",
+                "text": "Merci de confirmer la porte B."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.11.webp",
+            "diagram_text": [
+              "Relire les données séparément",
+              "Date et heure Quel rendez-vous ?",
+              "Adresse et accès Quel point de rencontre ?",
+              "Action attendue Que doit confirmer le client ?",
+              "Un bon message permet au destinataire de savoir quoi faire ensuite."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-11-atelier",
+          "title": "À vous de jouer · Écrire au client",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.11",
+            "title": "Écrire au client",
+            "objective": "Rédiger un message bref qui permet d’agir.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quel message client est le plus clair ?",
+                "options": [
+                  {
+                    "id": "126873dd2ccc",
+                    "text": "OK on verra demain."
+                  },
+                  {
+                    "id": "544d5434f717",
+                    "text": "C’est bon comme prévu là-bas."
+                  },
+                  {
+                    "id": "55cd806477e8",
+                    "text": "Bonjour, votre départ à 8 h 15 est confirmé devant l’entrée nord."
+                  }
+                ],
+                "answer": "55cd806477e8",
+                "explanation": "Le message donne l’horaire et un point de rendez-vous précis dans une formulation professionnelle.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Vous ignorez la porte de sortie du client. Quel message choisir ?",
+                "options": [
+                  {
+                    "id": "da6897184d69",
+                    "text": "Vous deviez me le dire."
+                  },
+                  {
+                    "id": "56671f009802",
+                    "text": "Pouvez-vous préciser la porte de sortie, s’il vous plaît ?"
+                  },
+                  {
+                    "id": "56e0827ea71d",
+                    "text": "Je vous attends forcément porte A."
+                  }
+                ],
+                "answer": "56671f009802",
+                "explanation": "Une demande de précision vaut mieux qu’une information inventée ou un reproche.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "CONTEXTE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "ACTION"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "INFORMATION"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Votre réservation du 18 juin à 8 h.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Nouveau lieu ou délai estimé.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Merci de confirmer la porte B.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.11. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-12",
+      "title": "D.12 · Réussir la lecture d’examen",
+      "activities": [
+        {
+          "id": "vtc-d-12-cours",
+          "title": "Réussir la lecture d’examen",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 20,
+          "blocks": [],
+          "vtc": {
+            "ref": "D.12",
+            "title": "Réussir la lecture d’examen",
+            "page": 219,
+            "pages": [
+              219,
+              220
+            ],
+            "objective": "Utiliser les trente minutes de façon méthodique.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’épreuve s’appuie sur un texte de quinze à vingt lignes, avec sept QCM et trois questions à réponses courtes. Toutes les questions ne demandent pas la même lecture : certaines recherchent un détail, d’autres une idée ou un lien logique. Lisez chaque proposition jusqu’au bout, en surveillant les mots absolus comme « toujours » et « jamais »."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une organisation possible consiste à lire le texte, traiter les questions repérables, rédiger les réponses courtes puis relire. Adaptez ce partage à votre rythme ; il ne s’agit pas d’un barème officiel. Vérifiez que vous avez répondu à toutes les consignes et que vos réponses restent cohérentes avec le texte. Plus de cinq fautes dans l’ensemble des réponses courtes entraîne le retrait prévu d’un point."
+              },
+              {
+                "kind": "heading",
+                "text": "Répartir les trente minutes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lisez d'abord le texte pour en saisir le sujet, puis les questions pour identifier les passages utiles. Gardez du temps pour les réponses courtes et la relecture. Une répartition pédagogique possible est cinq minutes de lecture, vingt minutes de réponse et cinq minutes de contrôle ; adaptez-la à votre rythme d'entraînement et aux consignes données."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser les réponses proposées"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Dans un QCM, éliminez les propositions qui contredisent le texte, changent une date ou ajoutent une condition inexistante. Une phrase grammaticalement correcte peut rester fausse par rapport au document. Ne choisissez pas la réponse qui paraît la plus professionnelle si le texte dit autre chose. L'épreuve vérifie la compréhension du document présenté."
+              },
+              {
+                "kind": "heading",
+                "text": "Relire de façon ciblée"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifiez d'abord que chaque question a reçu une réponse, puis les données et les accords. Pour les questions courtes, surveillez les erreurs d'orthographe : le règlement prévoit une pénalité au-delà du nombre de fautes indiqué dans les modalités de l'épreuve. En entraînement, classez vos erreurs par cause afin de travailler la compétence concernée, au lieu de refaire seulement le même sujet."
+              }
+            ],
+            "cards": [
+              {
+                "label": "COMPRENDRE",
+                "text": "Sujet, contexte et structure du texte."
+              },
+              {
+                "label": "RÉPONDRE",
+                "text": "Repérer une preuve pour chaque choix."
+              },
+              {
+                "label": "VÉRIFIER",
+                "text": "Réponses complètes et orthographe relue."
+              }
+            ],
+            "diagram": "media/vtc/diagram-d.12.webp",
+            "diagram_text": [
+              "Ne pas confondre deux questions",
+              "Cause du retard Pourquoi cela s’est-il produit ?",
+              "Conséquence Quel effet pour le client ?",
+              "La relecture doit contrôler à la fois la langue et la réponse à la consigne."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-d.webp",
+            "module": "D"
+          }
+        },
+        {
+          "id": "vtc-d-12-atelier",
+          "title": "À vous de jouer · Réussir la lecture d’examen",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "D.12",
+            "title": "Réussir la lecture d’examen",
+            "objective": "Utiliser les trente minutes de façon méthodique.",
+            "module": "D"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v1",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une option de réponse ajoute une durée absente du texte. Quel réflexe ?",
+                "options": [
+                  {
+                    "id": "18fd461e21b6",
+                    "text": "Vérifier le texte et écarter l’ajout non justifié"
+                  },
+                  {
+                    "id": "a9581c6a1fa7",
+                    "text": "L’accepter parce qu’elle est détaillée"
+                  },
+                  {
+                    "id": "037bda031ef6",
+                    "text": "L’accepter si le chiffre semble plausible"
+                  }
+                ],
+                "answer": "18fd461e21b6",
+                "explanation": "La compréhension porte sur les informations disponibles ; le caractère plausible ne remplace pas une preuve textuelle.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Pour relire une réponse courte à l’examen officiel, que vérifier ?",
+                "options": [
+                  {
+                    "id": "054b2566ed77",
+                    "text": "Uniquement la longueur du dernier mot"
+                  },
+                  {
+                    "id": "4e191edf8b9c",
+                    "text": "Seulement le nombre de lignes"
+                  },
+                  {
+                    "id": "6b0f16116645",
+                    "text": "La réponse à la consigne, les nombres et la langue"
+                  }
+                ],
+                "answer": "6b0f16116645",
+                "explanation": "Une relecture ciblée permet de repérer erreurs de sens, chiffres mal repris et fautes de langue.",
+                "module": "D",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon D.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "RÉPONDRE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "COMPRENDRE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "VÉRIFIER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Repérer une preuve pour chaque choix.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Sujet, contexte et structure du texte.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Réponses complètes et orthographe relue.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon D.12. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-synthese",
+      "title": "Synthèse · relier les notions",
+      "activities": [
+        {
+          "id": "vtc-d-capsule",
+          "title": "Voir et retenir · les essentiels",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "type": "Video",
+              "video": {
+                "src": "media/vtc/capsule-d.mp4",
+                "poster": "media/vtc/capsule-d.jpg",
+                "captions": "media/vtc/capsule-d.vtt",
+                "duration_seconds": 98.25,
+                "transcript": "Message : « Départ confirmé à 8 h 15. Rendez-vous entrée latérale, la porte principale est fermée. » Qu’est-ce qui est modifié ? Le lieu de rendez-vous. Le départ est confirmé ; la précision porte sur l’entrée utilisée. Il faut répondre à l’information réellement donnée.\n\n« Le chauffeur présente la facture au client, qui la vérifie. » Qui vérifie ? Le client. Le pronom « qui » renvoie ici au client, tandis que « la » reprend la facture.\n\nQuelle phrase annonce une action future ? Je vous attendrai à l’entrée nord.. « Attendrai » est au futur ; « attendais » et « ai attendu » situent l’action dans le passé.\n\nUne option de réponse ajoute une durée absente du texte. Quel réflexe ? Vérifier le texte et écarter l’ajout non justifié. La compréhension porte sur les informations disponibles ; le caractère plausible ne remplace pas une preuve textuelle.",
+                "voice": null,
+                "audio": false,
+                "burned_captions": true,
+                "id": "vtc-d-capsule",
+                "title": "Les essentiels · Comprendre et s’exprimer en français",
+                "required": true
+              }
+            }
+          ],
+          "vtc": {
+            "kind": "recap",
+            "module": "D",
+            "title": "Comprendre et s’exprimer en français",
+            "image": "media/vtc/module-d.webp",
+            "transcript": "Message : « Départ confirmé à 8 h 15. Rendez-vous entrée latérale, la porte principale est fermée. » Qu’est-ce qui est modifié ? Le lieu de rendez-vous. Le départ est confirmé ; la précision porte sur l’entrée utilisée. Il faut répondre à l’information réellement donnée.\n\n« Le chauffeur présente la facture au client, qui la vérifie. » Qui vérifie ? Le client. Le pronom « qui » renvoie ici au client, tandis que « la » reprend la facture.\n\nQuelle phrase annonce une action future ? Je vous attendrai à l’entrée nord.. « Attendrai » est au futur ; « attendais » et « ai attendu » situent l’action dans le passé.\n\nUne option de réponse ajoute une durée absente du texte. Quel réflexe ? Vérifier le texte et écarter l’ajout non justifié. La compréhension porte sur les informations disponibles ; le caractère plausible ne remplace pas une preuve textuelle.",
+            "cards": [
+              {
+                "label": "D.01",
+                "text": "Lire avec une intention"
+              },
+              {
+                "label": "D.02",
+                "text": "Trouver l’information exacte"
+              },
+              {
+                "label": "D.03",
+                "text": "Distinguer fait et interprétation"
+              },
+              {
+                "label": "D.04",
+                "text": "Suivre les pronoms"
+              },
+              {
+                "label": "D.05",
+                "text": "Relier les idées"
+              },
+              {
+                "label": "D.06",
+                "text": "Comprendre les nuances"
+              },
+              {
+                "label": "D.07",
+                "text": "Enrichir le vocabulaire utile"
+              },
+              {
+                "label": "D.08",
+                "text": "Maîtriser les temps utiles"
+              },
+              {
+                "label": "D.09",
+                "text": "Soigner accords et homophones"
+              },
+              {
+                "label": "D.10",
+                "text": "Répondre à une question courte"
+              },
+              {
+                "label": "D.11",
+                "text": "Écrire au client"
+              },
+              {
+                "label": "D.12",
+                "text": "Réussir la lecture d’examen"
+              }
+            ]
+          }
+        },
+        {
+          "id": "vtc-d-approfondir",
+          "title": "Approfondir · repères et méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 24,
+          "blocks": [],
+          "vtc": {
+            "kind": "supplements",
+            "module": "D",
+            "title": "Relier le cours à la mission",
+            "supplements": [],
+            "sources": [
+              {
+                "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+              },
+              {
+                "title": "Devenir chauffeur de VTC · Service Public",
+                "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+              },
+              {
+                "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+              }
+            ],
+            "exam": {
+              "minutes": 30,
+              "coefficient": 2,
+              "format": "7 QCM + 3 QRC"
+            },
+            "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "vtc-d-01-cours",
+    "vtc-d-01-atelier",
+    "vtc-d-02-cours",
+    "vtc-d-02-atelier",
+    "vtc-d-03-cours",
+    "vtc-d-03-atelier",
+    "vtc-d-04-cours",
+    "vtc-d-04-atelier",
+    "vtc-d-05-cours",
+    "vtc-d-05-atelier",
+    "vtc-d-06-cours",
+    "vtc-d-06-atelier",
+    "vtc-d-07-cours",
+    "vtc-d-07-atelier",
+    "vtc-d-08-cours",
+    "vtc-d-08-atelier",
+    "vtc-d-09-cours",
+    "vtc-d-09-atelier",
+    "vtc-d-10-cours",
+    "vtc-d-10-atelier",
+    "vtc-d-11-cours",
+    "vtc-d-11-atelier",
+    "vtc-d-12-cours",
+    "vtc-d-12-atelier",
+    "vtc-d-capsule",
+    "vtc-d-approfondir"
+  ],
+  "assets": [
+    "media/vtc/capsule-d.jpg",
+    "media/vtc/capsule-d.mp4",
+    "media/vtc/capsule-d.vtt",
+    "media/vtc/diagram-d.01.webp",
+    "media/vtc/diagram-d.02.webp",
+    "media/vtc/diagram-d.03.webp",
+    "media/vtc/diagram-d.05.webp",
+    "media/vtc/diagram-d.06.webp",
+    "media/vtc/diagram-d.07.webp",
+    "media/vtc/diagram-d.08.webp",
+    "media/vtc/diagram-d.09.webp",
+    "media/vtc/diagram-d.10.webp",
+    "media/vtc/diagram-d.11.webp",
+    "media/vtc/diagram-d.12.webp",
+    "media/vtc/module-d.webp"
+  ],
+  "import_warnings": [],
+  "counts": {
+    "sections": 13,
+    "lessons": 12,
+    "activities": 26,
+    "scored_activities": 0,
+    "workbooks": 0,
+    "interactive_workshops": 12,
+    "required_videos": 1,
+    "assets": 15
+  }
+}

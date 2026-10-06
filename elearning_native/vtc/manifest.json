@@ -1,0 +1,644 @@
+{
+  "id": "vtc",
+  "version": "20261006-vtc-v1",
+  "title": "VTC · Le parcours illustré",
+  "reviewed_on": "2026-10-06",
+  "planned_minutes": 3600,
+  "lesson_count": 96,
+  "workshop_count": 96,
+  "sources": [
+    {
+      "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+      "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+    },
+    {
+      "title": "Devenir chauffeur de VTC · Service Public",
+      "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+    },
+    {
+      "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+      "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+    }
+  ],
+  "modules": [
+    {
+      "id": "academy-vtc-a",
+      "version": "20261006-vtc-v1",
+      "letter": "A",
+      "title": "VTC A · Exercer dans le cadre du T3P",
+      "planned_minutes": 480,
+      "illustration": "images/vtc/module-a.webp",
+      "mock_exam_id": "vtc-a",
+      "exam": {
+        "minutes": 45,
+        "coefficient": 3,
+        "format": "10 QCM + 5 QRC"
+      },
+      "lessons": [
+        {
+          "ref": "A.01",
+          "title": "Le transport public particulier",
+          "page": 15
+        },
+        {
+          "ref": "A.02",
+          "title": "Qui fait quoi ?",
+          "page": 18
+        },
+        {
+          "ref": "A.03",
+          "title": "Accéder à la profession",
+          "page": 21
+        },
+        {
+          "ref": "A.04",
+          "title": "Entretenir son droit d’exercer",
+          "page": 23
+        },
+        {
+          "ref": "A.05",
+          "title": "Assurer le conducteur et l’activité",
+          "page": 26
+        },
+        {
+          "ref": "A.06",
+          "title": "Accueillir sans discriminer",
+          "page": 28
+        },
+        {
+          "ref": "A.07",
+          "title": "Prévenir les violences sexistes et sexuelles",
+          "page": 31
+        },
+        {
+          "ref": "A.08",
+          "title": "Aider une personne en danger",
+          "page": 33
+        },
+        {
+          "ref": "A.09",
+          "title": "Adapter le service au handicap",
+          "page": 36
+        },
+        {
+          "ref": "A.10",
+          "title": "Protéger les données des passagers",
+          "page": 39
+        },
+        {
+          "ref": "A.11",
+          "title": "Réagir à un contrôle",
+          "page": 41
+        },
+        {
+          "ref": "A.12",
+          "title": "Comprendre les responsabilités",
+          "page": 43
+        }
+      ]
+    },
+    {
+      "id": "academy-vtc-b",
+      "version": "20261006-vtc-v1",
+      "letter": "B",
+      "title": "VTC B · Gérer son entreprise",
+      "planned_minutes": 540,
+      "illustration": "images/vtc/module-b.webp",
+      "mock_exam_id": "vtc-b",
+      "exam": {
+        "minutes": 45,
+        "coefficient": 2,
+        "format": "16 QCM + 2 QRC"
+      },
+      "lessons": [
+        {
+          "ref": "B.01",
+          "title": "Choisir un cadre juridique",
+          "page": 69
+        },
+        {
+          "ref": "B.02",
+          "title": "Créer et organiser l’activité",
+          "page": 71
+        },
+        {
+          "ref": "B.03",
+          "title": "Lire un bilan",
+          "page": 76
+        },
+        {
+          "ref": "B.04",
+          "title": "Lire le résultat",
+          "page": 79
+        },
+        {
+          "ref": "B.05",
+          "title": "Classer les coûts",
+          "page": 81
+        },
+        {
+          "ref": "B.06",
+          "title": "Comprendre la TVA",
+          "page": 85
+        },
+        {
+          "ref": "B.07",
+          "title": "Piloter le régime micro",
+          "page": 88
+        },
+        {
+          "ref": "B.08",
+          "title": "Construire la trésorerie",
+          "page": 91
+        },
+        {
+          "ref": "B.09",
+          "title": "Atteindre le seuil de rentabilité",
+          "page": 93
+        },
+        {
+          "ref": "B.10",
+          "title": "Financer le véhicule",
+          "page": 96
+        },
+        {
+          "ref": "B.11",
+          "title": "Facturer et conserver les preuves",
+          "page": 101
+        },
+        {
+          "ref": "B.12",
+          "title": "Organiser le travail et les obligations",
+          "page": 103
+        }
+      ]
+    },
+    {
+      "id": "academy-vtc-c",
+      "version": "20261006-vtc-v1",
+      "letter": "C",
+      "title": "VTC C · Conduire en sécurité",
+      "planned_minutes": 480,
+      "illustration": "images/vtc/module-c.webp",
+      "mock_exam_id": "vtc-c",
+      "exam": {
+        "minutes": 30,
+        "coefficient": 3,
+        "format": "20 QCM"
+      },
+      "lessons": [
+        {
+          "ref": "C.01",
+          "title": "Préparer le départ",
+          "page": 130
+        },
+        {
+          "ref": "C.02",
+          "title": "Choisir la bonne vitesse",
+          "page": 133
+        },
+        {
+          "ref": "C.03",
+          "title": "Garder une marge de sécurité",
+          "page": 136
+        },
+        {
+          "ref": "C.04",
+          "title": "Observer et partager la route",
+          "page": 139
+        },
+        {
+          "ref": "C.05",
+          "title": "Priorités et signalisation",
+          "page": 142
+        },
+        {
+          "ref": "C.06",
+          "title": "Installer les passagers",
+          "page": 145
+        },
+        {
+          "ref": "C.07",
+          "title": "Prévenir la fatigue",
+          "page": 148
+        },
+        {
+          "ref": "C.08",
+          "title": "Alcool, drogues et médicaments",
+          "page": 151
+        },
+        {
+          "ref": "C.09",
+          "title": "Éviter les distractions",
+          "page": 154
+        },
+        {
+          "ref": "C.10",
+          "title": "Conduire avec souplesse",
+          "page": 157
+        },
+        {
+          "ref": "C.11",
+          "title": "Météo, nuit et adhérence",
+          "page": 161
+        },
+        {
+          "ref": "C.12",
+          "title": "Gérer panne et accident",
+          "page": 164
+        }
+      ]
+    },
+    {
+      "id": "academy-vtc-d",
+      "version": "20261006-vtc-v1",
+      "letter": "D",
+      "title": "VTC D · Comprendre et s’exprimer en français",
+      "planned_minutes": 420,
+      "illustration": "images/vtc/module-d.webp",
+      "mock_exam_id": "vtc-d",
+      "exam": {
+        "minutes": 30,
+        "coefficient": 2,
+        "format": "7 QCM + 3 QRC"
+      },
+      "lessons": [
+        {
+          "ref": "D.01",
+          "title": "Lire avec une intention",
+          "page": 191
+        },
+        {
+          "ref": "D.02",
+          "title": "Trouver l’information exacte",
+          "page": 193
+        },
+        {
+          "ref": "D.03",
+          "title": "Distinguer fait et interprétation",
+          "page": 196
+        },
+        {
+          "ref": "D.04",
+          "title": "Suivre les pronoms",
+          "page": 198
+        },
+        {
+          "ref": "D.05",
+          "title": "Relier les idées",
+          "page": 201
+        },
+        {
+          "ref": "D.06",
+          "title": "Comprendre les nuances",
+          "page": 204
+        },
+        {
+          "ref": "D.07",
+          "title": "Enrichir le vocabulaire utile",
+          "page": 206
+        },
+        {
+          "ref": "D.08",
+          "title": "Maîtriser les temps utiles",
+          "page": 209
+        },
+        {
+          "ref": "D.09",
+          "title": "Soigner accords et homophones",
+          "page": 211
+        },
+        {
+          "ref": "D.10",
+          "title": "Répondre à une question courte",
+          "page": 214
+        },
+        {
+          "ref": "D.11",
+          "title": "Écrire au client",
+          "page": 216
+        },
+        {
+          "ref": "D.12",
+          "title": "Réussir la lecture d’examen",
+          "page": 219
+        }
+      ]
+    },
+    {
+      "id": "academy-vtc-e",
+      "version": "20261006-vtc-v1",
+      "letter": "E",
+      "title": "VTC E · Accueillir en anglais",
+      "planned_minutes": 480,
+      "illustration": "images/vtc/module-e.webp",
+      "mock_exam_id": "vtc-e",
+      "exam": {
+        "minutes": 30,
+        "coefficient": 1,
+        "format": "20 QCM"
+      },
+      "lessons": [
+        {
+          "ref": "E.01",
+          "title": "Welcome on board",
+          "page": 239
+        },
+        {
+          "ref": "E.02",
+          "title": "Check the booking",
+          "page": 241
+        },
+        {
+          "ref": "E.03",
+          "title": "Numbers, dates and times",
+          "page": 243
+        },
+        {
+          "ref": "E.04",
+          "title": "Find the meeting point",
+          "page": 246
+        },
+        {
+          "ref": "E.05",
+          "title": "Luggage and assistance",
+          "page": 249
+        },
+        {
+          "ref": "E.06",
+          "title": "Comfort and safety",
+          "page": 253
+        },
+        {
+          "ref": "E.07",
+          "title": "Explain the route",
+          "page": 256
+        },
+        {
+          "ref": "E.08",
+          "title": "Prices and quotations",
+          "page": 258
+        },
+        {
+          "ref": "E.09",
+          "title": "Delays and changes",
+          "page": 261
+        },
+        {
+          "ref": "E.10",
+          "title": "Payment and receipts",
+          "page": 263
+        },
+        {
+          "ref": "E.11",
+          "title": "Handle a problem",
+          "page": 266
+        },
+        {
+          "ref": "E.12",
+          "title": "Talk about the city",
+          "page": 268
+        }
+      ]
+    },
+    {
+      "id": "academy-vtc-f",
+      "version": "20261006-vtc-v1",
+      "letter": "F",
+      "title": "VTC F · Développer son activité VTC",
+      "planned_minutes": 420,
+      "illustration": "images/vtc/module-f.webp",
+      "mock_exam_id": "vtc-f",
+      "exam": {
+        "minutes": 30,
+        "coefficient": 3,
+        "format": "12 QCM + 4 QRC"
+      },
+      "lessons": [
+        {
+          "ref": "F.01",
+          "title": "Comprendre son marché",
+          "page": 288
+        },
+        {
+          "ref": "F.02",
+          "title": "Construire une offre lisible",
+          "page": 290
+        },
+        {
+          "ref": "F.03",
+          "title": "Fixer un prix soutenable",
+          "page": 293
+        },
+        {
+          "ref": "F.04",
+          "title": "Rédiger un devis clair",
+          "page": 299
+        },
+        {
+          "ref": "F.05",
+          "title": "Travailler avec une plateforme",
+          "page": 302
+        },
+        {
+          "ref": "F.06",
+          "title": "Prospecter avec méthode",
+          "page": 304
+        },
+        {
+          "ref": "F.07",
+          "title": "Créer un partenariat",
+          "page": 307
+        },
+        {
+          "ref": "F.08",
+          "title": "Communiquer en ligne",
+          "page": 310
+        },
+        {
+          "ref": "F.09",
+          "title": "Fidéliser avec discrétion",
+          "page": 312
+        },
+        {
+          "ref": "F.10",
+          "title": "Mesurer la qualité du service",
+          "page": 315
+        },
+        {
+          "ref": "F.11",
+          "title": "Traiter une réclamation",
+          "page": 317
+        },
+        {
+          "ref": "F.12",
+          "title": "Lire son tableau de bord",
+          "page": 319
+        }
+      ]
+    },
+    {
+      "id": "academy-vtc-g",
+      "version": "20261006-vtc-v1",
+      "letter": "G",
+      "title": "VTC G · Appliquer les règles du VTC",
+      "planned_minutes": 420,
+      "illustration": "images/vtc/module-g.webp",
+      "mock_exam_id": "vtc-g",
+      "exam": {
+        "minutes": 20,
+        "coefficient": 3,
+        "format": "6 QCM + 2 QRC"
+      },
+      "lessons": [
+        {
+          "ref": "G.01",
+          "title": "S’inscrire au REVTC",
+          "page": 339
+        },
+        {
+          "ref": "G.02",
+          "title": "Justifier la capacité financière",
+          "page": 341
+        },
+        {
+          "ref": "G.03",
+          "title": "Choisir un véhicule éligible",
+          "page": 344
+        },
+        {
+          "ref": "G.04",
+          "title": "Afficher la bonne signalétique",
+          "page": 347
+        },
+        {
+          "ref": "G.05",
+          "title": "Prouver la réservation préalable",
+          "page": 350
+        },
+        {
+          "ref": "G.06",
+          "title": "Distinguer réservation et maraude",
+          "page": 353
+        },
+        {
+          "ref": "G.07",
+          "title": "Accueillir en gare et à l’aéroport",
+          "page": 355
+        },
+        {
+          "ref": "G.08",
+          "title": "Organiser la fin de course",
+          "page": 359
+        },
+        {
+          "ref": "G.09",
+          "title": "Convenir du prix et du service",
+          "page": 361
+        },
+        {
+          "ref": "G.10",
+          "title": "Remplacer un véhicule ou un conducteur",
+          "page": 364
+        },
+        {
+          "ref": "G.11",
+          "title": "Suivre le véhicule dans le temps",
+          "page": 367
+        },
+        {
+          "ref": "G.12",
+          "title": "Faire une veille utile",
+          "page": 369
+        }
+      ]
+    },
+    {
+      "id": "academy-vtc-h",
+      "version": "20261006-vtc-v1",
+      "letter": "H",
+      "title": "VTC H · Réaliser une mission professionnelle",
+      "planned_minutes": 360,
+      "illustration": "images/vtc/module-h.webp",
+      "mock_exam_id": "vtc-h",
+      "exam": {
+        "minutes": 20,
+        "coefficient": 0,
+        "format": "Mise en situation en circulation"
+      },
+      "lessons": [
+        {
+          "ref": "H.01",
+          "title": "Lire la mission avant de partir",
+          "page": 389
+        },
+        {
+          "ref": "H.02",
+          "title": "Préparer un itinéraire",
+          "page": 391
+        },
+        {
+          "ref": "H.03",
+          "title": "Installer son poste de conduite",
+          "page": 394
+        },
+        {
+          "ref": "H.04",
+          "title": "Réussir l’accueil",
+          "page": 396
+        },
+        {
+          "ref": "H.05",
+          "title": "Conduire avec une attention disponible",
+          "page": 399
+        },
+        {
+          "ref": "H.06",
+          "title": "Manœuvrer et déposer",
+          "page": 401
+        },
+        {
+          "ref": "H.07",
+          "title": "Informer sur le territoire",
+          "page": 405
+        },
+        {
+          "ref": "H.08",
+          "title": "Gérer un imprévu de service",
+          "page": 409
+        },
+        {
+          "ref": "H.09",
+          "title": "Facturer pendant la pratique",
+          "page": 411
+        },
+        {
+          "ref": "H.10",
+          "title": "Terminer la prestation",
+          "page": 414
+        },
+        {
+          "ref": "H.11",
+          "title": "Comprendre l’épreuve pratique",
+          "page": 416
+        },
+        {
+          "ref": "H.12",
+          "title": "S’entraîner et progresser",
+          "page": 419
+        }
+      ]
+    }
+  ],
+  "exam_versions": [
+    "20261006-vtc-v1"
+  ],
+  "final_exam_id": "vtc-final",
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
+  "activity_count": 208,
+  "video_count": 8,
+  "exercise_count": 288,
+  "question_bank_count": 272,
+  "module_exam_questions": 240,
+  "final_exam_questions": 100
+}
