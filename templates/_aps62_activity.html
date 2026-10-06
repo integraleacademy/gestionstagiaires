@@ -9,6 +9,7 @@
     <span><b>18 min</b> Comprendre</span><span><b>8 min</b> Mémoriser</span><span><b>16 min</b> S’entraîner</span><span><b>8 min</b> Vérifier</span><span><b>10 min</b> Réutiliser et retenir</span>
   </div>
 {% endif %}
+  {% if lesson.pacing_note %}<p class="aps-small">{{ lesson.pacing_note }}</p>{% endif %}
   <section class="aps-objectives"><span class="aps-label">À l’issue de ce dossier</span><ul>{% for objective in lesson.objectives %}<li>{{ objective }}</li>{% endfor %}</ul></section>
   {% if lesson.visual_board %}<section class="aps-visual-board"><span class="aps-label">Le module en un regard</span><h2>{{ lesson.visual_board.title }}</h2><div class="aps-board-grid">{% for step in lesson.visual_board.steps %}<article><span class="aps-board-number">{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></article>{% endfor %}</div></section>{% endif %}
   <section class="aps-editorial"><span class="aps-label">Le raisonnement professionnel</span><h2>Comprendre ce qui guide la décision</h2><p>{{ lesson.reason }}</p></section>

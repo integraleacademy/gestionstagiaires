@@ -24,8 +24,9 @@ class AcademyCatalogueTests(unittest.TestCase):
                 course = catalog.load_course(module['id'], module['version'])
                 self.assertEqual(course['planned_minutes'], module['hours'] * 60)
                 self.assertEqual(course['required_minutes'], course['planned_minutes'])
+                self.assertEqual(sum(a['planned_minutes'] for s in course['sections'] for a in s['activities']), course['planned_minutes'])
                 for section in course['sections']:
-                    self.assertEqual(sum(a['planned_minutes'] for a in section['activities']), 60)
+                    self.assertGreater(sum(a['planned_minutes'] for a in section['activities']), 0)
                     activities.extend(section['activities'])
                     lesson = section['activities'][0]['academy']
                     self.assertTrue(all(ref['practice']['case'] for ref in lesson['lessons']))
@@ -36,11 +37,11 @@ class AcademyCatalogueTests(unittest.TestCase):
                     self.assertTrue(catalog.asset_path(course['id'], course['version'], asset).is_file(), asset)
                 with self.assertRaises(CourseImportError):
                     catalog.load_course(module['id'], 'unknown-version')
-            self.assertEqual(len(activities), 558)
+            self.assertEqual(len(activities), 452)
             self.assertEqual(sum(bool(a.get('workbook')) for a in activities), 0)
-            self.assertEqual(sum(bool(a.get('practice')) for a in activities), 248)
+            self.assertEqual(sum(bool(a.get('practice')) for a in activities), 142)
             self.assertEqual(sum(bool(a['scored']) for a in activities), 124)
-            self.assertEqual(len({a['id'] for a in activities}), 558)
+            self.assertEqual(len({a['id'] for a in activities}), 452)
         videos = json.loads((ROOT / 'video_manifest.json').read_text())
         self.assertEqual(len(videos), 62)
         self.assertTrue(all(v['duration_seconds'] > 30 and v['transcript'] for v in videos.values()))

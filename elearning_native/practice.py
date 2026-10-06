@@ -47,7 +47,7 @@ def _learning_text(value):
 def adapt_course(course):
     if course.get('source', {}).get('type') != 'academy-aps62':
         return course
-    if course.get('interaction_revision') == '20261006-aps62-v3':
+    if course.get('interaction_revision') in ('20261006-aps62-v3', '20261006-aps62-v4'):
         return copy.deepcopy(course)
     course = _learning_text(course)
     total = 0

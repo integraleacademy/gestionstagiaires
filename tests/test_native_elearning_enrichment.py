@@ -12,9 +12,9 @@ from tests import test_native_elearning_web as web_tests
 
 
 class EnrichmentTests(unittest.TestCase):
-    def test_all_cases_have_distinct_missions_documents_and_unseen_review(self):
+    def test_rebalanced_cases_have_focused_content_and_only_four_journals(self):
         manifest = curriculum_manifest()
-        missions, drills = set(), set()
+        missions, drills, comparisons, journals, studies = set(), set(), set(), set(), set()
         for module in manifest['modules']:
             current = load_bundled_course(module['id'])
             old = load_bundled_course(module['id'], '20261004-aps62-v2')
@@ -24,16 +24,22 @@ class EnrichmentTests(unittest.TestCase):
             self.assertEqual(current['introduction'], old['introduction'])
             for section in current['sections']:
                 activities = section['activities']
-                self.assertEqual(len(activities), 9)
+                self.assertIn(len(activities), (7, 8))
                 self.assertTrue(activities[0]['academy']['deepening'])
                 mission = activities[2]['practice']
                 missions.add(activities[2]['academy']['case'])
                 self.assertTrue(mission['sequential'])
-                self.assertEqual(len(mission['exercises']), 5)
-                docs, journal = activities[6]['practice'], activities[7]['practice']
-                self.assertEqual(len(docs['documents']), 3)
-                self.assertEqual(len(journal['exercises']), 6)
-                self.assertTrue(journal['journal'])
+                self.assertEqual(len(mission['exercises']), 3)
+                comparisons.add(activities[0]['academy']['deepening'][0]['title'])
+                self.assertEqual(len(activities[5]['practice']['exercises']), 2)
+                for activity in activities:
+                    if activity.get('practice', {}).get('journal'):
+                        journals.add(activity['id'])
+                        self.assertTrue(activity['practice']['documents'])
+                    if activity['id'].endswith('-etude'):
+                        studies.add(activity['id'])
+                        self.assertEqual(len(activity['practice']['exercises']), 4)
+                    self.assertFalse(activity['id'].endswith('-documents'))
                 drills.add(mission['exercises'][1]['remediation']['prompt'])
                 self.assertNotEqual(mission['exercises'][1]['remediation']['prompt'], activities[2]['academy']['case'])
                 self.assertNotIn('repere-1', [e['id'] for e in activities[5]['practice']['exercises']])
@@ -49,6 +55,11 @@ class EnrichmentTests(unittest.TestCase):
                         self.assertEqual(len({o['text'] for o in ex['options']}), len(ex['options']))
         self.assertEqual(len(missions), 62)
         self.assertEqual(len(drills), 62)
+        self.assertEqual(len(comparisons), 62)
+        self.assertEqual(len(studies), 14)
+        self.assertEqual(journals, {'aps62-08-03-journal', 'aps62-08-05-journal', 'aps62-13-01-journal', 'aps62-13-02-journal'})
+        self.assertEqual(manifest['enrichment']['journals'], 4)
+        self.assertEqual(manifest['enrichment']['document_analyses'], 14)
 
     def test_reviews_only_target_errors_and_are_marked_on_the_server(self):
         p = load_bundled_course('academy-aps62-01')['sections'][0]['activities'][2]['practice']
@@ -115,7 +126,9 @@ class EnrichmentWebTests(unittest.TestCase):
         response = self.client.get('/admin/elearning')
         self.assertEqual(response.status_code, 200)
         page = response.get_data(as_text=True)
-        self.assertIn('558 activités', page)
+        self.assertIn('452 activités', page)
+        self.assertIn('<b>4</b>exercices de main courante', page)
+        self.assertNotIn('Chaque dossier comprend une mission en cinq', page)
         self.assertIn('Complément requis', page)
         self.assertIn('50 h 30', page)
         self.assertIsNone(self.saved_data)
