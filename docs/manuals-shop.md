@@ -60,3 +60,14 @@ La page d’administration distingue la présence de configuration d’un test d
 - Suite élargie effectuée sans réseau : 358 réussites, 10 tests ignorés, 14 sous-tests réussis avant les derniers tests OAuth ciblés. Quatre échecs historiques ont été reproduits sur le commit antérieur `a86c9c2` : facturation CPF externalisée, normalisation de paiement Qonto et deux tests de sessions anciennes. Ils ne sont pas modifiés dans cette évolution.
 
 Références API officielles consultées : [factures](https://docs.qonto.com/api-reference/business-api/expense-management/client-quotes-notes/client-invoices/create-a-client-invoice), [liens de paiement](https://docs.qonto.com/api-reference/business-api/payments-transfers/payment-links/create), [idempotence](https://docs.qonto.com/get-started/general/idempotent-requests).
+
+
+## Présentation des manuels (octobre 2026)
+
+Le bouton de l’accueil organisme et l’entrée « Manuels » ouvrent désormais `/admin/manuels/presentation`. Les six fiches `/admin/manuels/presentation/<code>` présentent les avantages, trois aperçus agrandissables, la personnalisation et les prix. Les actions de commande mènent au titre concerné dans le formulaire existant ; les liens de détails depuis ce formulaire s’ouvrent dans un autre onglet pour conserver la sélection.
+
+Les textes et les 19 illustrations de `static/manuals/previews/` proviennent de la brochure « Brochure_Manuels_Tarifs_2026_corrigee.pdf » fournie le 4 octobre. Les images ont été extraites et converties en WebP ; les pages sont chargées à la demande. Les anciens nombres de leçons et la partie SST autrefois incluse dans le SSIAP 1 ne sont pas repris dans les descriptifs. Les prix des manuels restent exclusivement ceux de `CATALOGUE`, identiques au panier (notamment SSIAP 1 à 17 € dans les deux paliers).
+
+Les nouvelles routes sont authentifiées et figurent dans l’allowlist des organismes. Le super administrateur peut consulter la présentation depuis « Commandes reçues » sans prendre l’identité d’un organisme. Cette consultation ne charge aucune commande et ne propose pas de validation d’achat.
+
+Validation : 26 tests existants du parcours de commande réussis ; parcours présentation et six fiches contrôlé avec un organisme isolé, authentification, code inconnu (404), absence de droit d’administration, prix et images, puis consultation administrateur.

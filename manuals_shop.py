@@ -22,6 +22,7 @@ from urllib.parse import urlparse, urlencode
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, UnidentifiedImageError
 import manuals_commerce as commerce
+from manuals_presentation import presentation_books
 
 
 CATALOGUE = (
@@ -34,7 +35,7 @@ CATALOGUE = (
 )
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
-CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo"}
+CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo"}
 SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 
@@ -294,6 +295,30 @@ def register(host):
     def elearning_soon():
         _, partner = partner_data()
         return page("elearning.html", partner=partner)
+
+    def presentation_context():
+        # Staff can inspect the same editorial pages without impersonating a
+        # customer or exposing any customer/order data.
+        staff = host._is_super_admin_session()
+        if not staff:
+            if not host._is_external_partner_session():
+                abort(403)
+            partner_data()
+        return {"staff": staff, "books": presentation_books(CATALOGUE)}
+
+    @bp.get("/admin/manuels/presentation")
+    @host.admin_login_required
+    def presentation():
+        return page("presentation.html", **presentation_context())
+
+    @bp.get("/admin/manuels/presentation/<code>")
+    @host.admin_login_required
+    def manual_detail(code):
+        context = presentation_context()
+        book = next((b for b in context["books"] if b["code"] == code), None)
+        if not book:
+            abort(404)
+        return page("manual_detail.html", book=book, **context)
 
     @bp.get("/admin/manuels")
     @customer
