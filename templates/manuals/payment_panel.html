@@ -22,7 +22,7 @@
     <p class="muted">Cette commande a été enregistrée avant l’activation du paiement automatique. Contactez notre équipe pour son règlement.</p>
   {% endif %}
   <div class="action-row">
-    {% if flow.get('payment_url') and flow.get('payment_status') == 'unpaid' and flow.get('payment_link_status') == 'open' and flow.get('status') in ['ready','waiting_payment'] and order.status != 'cancelled' %}<a class="button primary" href="{{ flow.payment_url }}" target="_blank" rel="noopener noreferrer" data-payment-link>Régler en ligne ↗</a>{% endif %}
+    {% if flow.get('payment_url') and flow.get('payment_status') == 'unpaid' and flow.get('payment_link_status') == 'open' and flow.get('status') in ['ready','waiting_payment'] and order.status != 'cancelled' %}<a class="button primary" href="{{ flow.payment_url }}" rel="noreferrer" data-payment-link>Régler en ligne</a>{% endif %}
     {% if flow.get('invoice_url') and flow.get('invoice_status') != 'canceled' %}<a class="button secondary" href="{{ flow.invoice_url }}" target="_blank" rel="noopener noreferrer">Consulter ma facture ↗</a>{% endif %}
     {% if not staff and (flow.get('payment_id') or flow.get('invoice_id')) and flow.get('status') in ['ready','waiting_payment'] %}<form method="post" action="{{ url_for('manuals_shop.refresh_order',order_id=order.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary" type="submit">Actualiser le paiement</button></form>{% endif %}
   </div>
