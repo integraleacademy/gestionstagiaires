@@ -35,12 +35,12 @@ class VtcContentTests(unittest.TestCase):
     def test_all_lessons_have_accessible_content_and_click_only_practice(self):
         manifest=vtc.curriculum_manifest()
         self.assertEqual(len(manifest['modules']),8)
-        self.assertEqual(sum(m['planned_minutes'] for m in manifest['modules']),3600)
+        self.assertEqual(sum(vtc.load_bundled_course(m['id'],VERSION)['planned_minutes'] for m in manifest['modules']),3600)
         refs=set()
         for module in manifest['modules']:
-            course=vtc.load_bundled_course(module['id'])
+            course=vtc.load_bundled_course(module['id'],VERSION)
             self.assertEqual(len(course['activity_order']),26)
-            self.assertEqual(sum(a['planned_minutes'] for s in course['sections'] for a in s['activities']),module['planned_minutes'])
+            self.assertEqual(sum(a['planned_minutes'] for s in course['sections'] for a in s['activities']),course['planned_minutes'])
             for section in course['sections'][:12]:
                 lesson,workshop=section['activities']
                 data=lesson['vtc'];refs.add(data['ref'])
@@ -101,8 +101,8 @@ class VtcWebTests(unittest.TestCase):
         self.assertIn('96',page.get_data(as_text=True))
         with patch('elearning_native.web.NativeElearningStore',side_effect=AssertionError('Preview must not track')):
             for cid in vtc.curriculum_ids():
-                for aid in vtc.load_bundled_course(cid)['activity_order']:
-                    response=self.client.get(f'/admin/elearning/courses/{cid}/preview?activity={aid}')
+                for aid in vtc.load_bundled_course(cid,VERSION)['activity_order']:
+                    response=self.client.get(f'/admin/elearning/courses/{cid}/preview?activity={aid}&version={VERSION}')
                     self.assertEqual(response.status_code,200,aid)
                     body=response.get_data(as_text=True)
                     self.assertNotIn('<textarea',body,aid)
@@ -138,7 +138,7 @@ class VtcWebTests(unittest.TestCase):
 
     def test_workshop_must_be_correct_before_completion(self):
         self._public_login()
-        course=vtc.load_bundled_course('academy-vtc-a')
+        course=vtc.load_bundled_course('academy-vtc-a',VERSION)
         lesson,workshop=course['sections'][0]['activities']
         url='/espace/public-token/elearning/academy-vtc-a'
         config=self._player_config(self.client.get(url))
@@ -161,7 +161,7 @@ class VtcWebTests(unittest.TestCase):
         self.assertIn('id="vtcAddPath"',body)
         self.assertNotIn('id="aps62AddPath"',body)
         config=json.loads(re.search(r'<script id="nativePathConfig" type="application/json">(.*?)</script>',body,re.S)[1])
-        modules=[{'course_id':m['id'],'course_version':VERSION,'required_minutes':m['planned_minutes']} for m in vtc.curriculum_manifest()['modules']]
+        modules=[{'course_id':m['id'],'course_version':VERSION,'required_minutes':vtc.load_bundled_course(m['id'],VERSION)['planned_minutes']} for m in vtc.curriculum_manifest()['modules']]
         response=self.client.post(config['saveUrl'],json={'revision':config['revision'],'title':'VTC complet','modules':modules},headers={'X-Elearning-CSRF':config['csrfToken']})
         self.assertEqual(response.status_code,200)
         self.assertEqual(len(self.saved_data['sessions'][0]['aps_native_modules']),8)
@@ -178,12 +178,12 @@ class VtcWebTests(unittest.TestCase):
         self.assertEqual(response.json['result']['score'],30)
         self.assertEqual(self.client.get('/espace/public-token/elearning/exams/module-01').status_code,403)
         self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,403)
-        modules=[{'course_id':m['id'],'course_version':VERSION,'required_minutes':m['planned_minutes']} for m in vtc.curriculum_manifest()['modules']]
+        modules=[{'course_id':m['id'],'course_version':VERSION,'required_minutes':vtc.load_bundled_course(m['id'],VERSION)['planned_minutes']} for m in vtc.curriculum_manifest()['modules']]
         self.data['sessions'][0]['aps_native_modules']=modules
         self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,403)
         progress=[]
         for m in modules:
-            c=vtc.load_bundled_course(m['course_id'])
+            c=vtc.load_bundled_course(m['course_id'],VERSION)
             progress.append({'course_id':c['id'],'course_version':VERSION,'completed_activity_ids':c['activity_order'],'active_seconds':m['required_minutes']*60,
               'video_progress':{aid:{vid:{'completed':True,'duration_seconds':duration,'watched_seconds':duration} for vid,duration in videos.items()} for aid,videos in course_videos(c).items()}})
         with patch('elearning_native.web.NativeElearningStore.learner_progress',return_value=progress):
@@ -191,5 +191,5 @@ class VtcWebTests(unittest.TestCase):
             path=self.client.get('/espace/public-token/elearning').get_data(as_text=True)
             self.assertIn('Commencer l’examen final',path)
             self.assertIn('Les sept matières théoriques VTC',path)
-            modules[0]['section_ids']=[vtc.load_bundled_course('academy-vtc-a')['sections'][0]['id']]
+            modules[0]['section_ids']=[vtc.load_bundled_course('academy-vtc-a',VERSION)['sections'][0]['id']]
             self.assertEqual(self.client.get('/espace/public-token/elearning/exams/vtc-final').status_code,403)

@@ -1,11 +1,6 @@
 {
   "id": "vtc",
-  "version": "20261006-vtc-v2",
   "title": "VTC · Le parcours illustré",
-  "reviewed_on": "2026-10-06",
-  "planned_minutes": 3600,
-  "lesson_count": 96,
-  "workshop_count": 96,
   "sources": [
     {
       "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
@@ -18,18 +13,42 @@
     {
       "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
       "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+    },
+    {
+      "title": "Justificatif de réservation préalable · arrêté du 6 août 2025",
+      "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000052153206/"
+    },
+    {
+      "title": "Minimisation des données · CNIL",
+      "url": "https://www.cnil.fr/fr/minimiser-les-donnees-collectees"
+    },
+    {
+      "title": "Durées de conservation · CNIL",
+      "url": "https://www.cnil.fr/fr/passer-laction/les-durees-de-conservation-des-donnees"
+    },
+    {
+      "title": "Fatigue au volant · Sécurité routière",
+      "url": "https://modules.securite-routiere.gouv.fr/jsrt/Fatigue/Fatigue.html"
     }
   ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
+  "final_exam_id": "vtc-final",
+  "version": "20261006-vtc-v3-105h",
+  "reviewed_on": "2026-10-06",
+  "planned_minutes": 6300,
+  "lesson_count": 96,
+  "workshop_count": 96,
   "modules": [
     {
       "id": "academy-vtc-a",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "A",
       "title": "VTC A · Exercer dans le cadre du T3P",
-      "planned_minutes": 480,
+      "planned_minutes": 840,
       "illustration": "images/vtc/module-a.webp",
       "mock_exam_id": "vtc-a",
       "exam": {
@@ -98,17 +117,61 @@
           "title": "Comprendre les responsabilités",
           "page": 43
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 21,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 224,
+        "decisions": 368,
+        "listening_dialogues": 0
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 378
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     },
     {
       "id": "academy-vtc-b",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "B",
       "title": "VTC B · Gérer son entreprise",
-      "planned_minutes": 540,
+      "planned_minutes": 960,
       "illustration": "images/vtc/module-b.webp",
       "mock_exam_id": "vtc-b",
       "exam": {
@@ -177,17 +240,61 @@
           "title": "Organiser le travail et les obligations",
           "page": 103
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 19,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 323,
+        "decisions": 383,
+        "listening_dialogues": 0
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 264
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 474
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     },
     {
       "id": "academy-vtc-c",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "C",
       "title": "VTC C · Conduire en sécurité",
-      "planned_minutes": 480,
+      "planned_minutes": 840,
       "illustration": "images/vtc/module-c.webp",
       "mock_exam_id": "vtc-c",
       "exam": {
@@ -256,17 +363,61 @@
           "title": "Gérer panne et accident",
           "page": 164
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 14,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 292,
+        "decisions": 448,
+        "listening_dialogues": 0
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 378
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     },
     {
       "id": "academy-vtc-d",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "D",
       "title": "VTC D · Comprendre et s’exprimer en français",
-      "planned_minutes": 420,
+      "planned_minutes": 660,
       "illustration": "images/vtc/module-d.webp",
       "mock_exam_id": "vtc-d",
       "exam": {
@@ -335,17 +486,61 @@
           "title": "Réussir la lecture d’examen",
           "page": 219
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 15,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 253,
+        "decisions": 320,
+        "listening_dialogues": 0
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 258
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     },
     {
       "id": "academy-vtc-e",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "E",
       "title": "VTC E · Accueillir en anglais",
-      "planned_minutes": 480,
+      "planned_minutes": 900,
       "illustration": "images/vtc/module-e.webp",
       "mock_exam_id": "vtc-e",
       "exam": {
@@ -414,17 +609,61 @@
           "title": "Talk about the city",
           "page": 268
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 62,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 354,
+        "decisions": 414,
+        "listening_dialogues": 48
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 216
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 462
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     },
     {
       "id": "academy-vtc-f",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "F",
       "title": "VTC F · Développer son activité VTC",
-      "planned_minutes": 420,
+      "planned_minutes": 840,
       "illustration": "images/vtc/module-f.webp",
       "mock_exam_id": "vtc-f",
       "exam": {
@@ -493,17 +732,61 @@
           "title": "Lire son tableau de bord",
           "page": 319
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 19,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 281,
+        "decisions": 341,
+        "listening_dialogues": 0
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 378
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     },
     {
       "id": "academy-vtc-g",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "G",
       "title": "VTC G · Appliquer les règles du VTC",
-      "planned_minutes": 420,
+      "planned_minutes": 660,
       "illustration": "images/vtc/module-g.webp",
       "mock_exam_id": "vtc-g",
       "exam": {
@@ -572,17 +855,61 @@
           "title": "Faire une veille utile",
           "page": 369
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 13,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 309,
+        "decisions": 333,
+        "listening_dialogues": 0
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 258
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     },
     {
       "id": "academy-vtc-h",
-      "version": "20261006-vtc-v2",
+      "version": "20261006-vtc-v3-105h",
       "previous_versions": [
-        "20261006-vtc-v1"
+        "20261006-vtc-v1",
+        "20261006-vtc-v2"
       ],
       "letter": "H",
       "title": "VTC H · Réaliser une mission professionnelle",
-      "planned_minutes": 360,
+      "planned_minutes": 600,
       "illustration": "images/vtc/module-h.webp",
       "mock_exam_id": "vtc-h",
       "exam": {
@@ -651,20 +978,70 @@
           "title": "S’entraîner et progresser",
           "page": 419
         }
+      ],
+      "counts": {
+        "sections": 16,
+        "lessons": 12,
+        "activities": 42,
+        "scored_activities": 0,
+        "workbooks": 0,
+        "interactive_workshops": 12,
+        "required_videos": 1,
+        "assets": 13,
+        "professional_workshops": 12,
+        "interactive_missions": 2,
+        "diagnostics": 1,
+        "adaptive_reviews": 1,
+        "exercises": 324,
+        "decisions": 500,
+        "listening_dialogues": 0
+      },
+      "duration_breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 144
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 234
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
       ]
     }
   ],
   "exam_versions": [
     "20261006-vtc-v1",
-    "20261006-vtc-v2"
+    "20261006-vtc-v2",
+    "20261006-vtc-v3-105h"
   ],
-  "final_exam_id": "vtc-final",
-  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
-  "activity_count": 208,
   "video_count": 8,
   "narrated_video_count": 8,
-  "exercise_count": 288,
-  "question_bank_count": 272,
+  "professional_workshops": 96,
+  "mission_count": 16,
+  "listening_count": 48,
+  "listening_minutes": 30.8,
+  "diagnostic_count": 8,
+  "adaptive_review_count": 8,
+  "duration_status": "programme_previsionnel",
+  "duration_note": "105 h de programme pédagogique prévisionnel. La durée réellement nécessaire dépend des acquis et des reprises. Le suivi distingue le temps actif et l’achèvement ; un groupe pilote permet de calibrer les estimations.",
   "module_exam_questions": 240,
-  "final_exam_questions": 100
+  "final_exam_questions": 100,
+  "activity_count": 336,
+  "exercise_count": 2360,
+  "decision_count": 3107
 }

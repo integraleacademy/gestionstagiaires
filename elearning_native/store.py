@@ -283,6 +283,36 @@ class NativeElearningStore:
             ),
         )
 
+    def record_practice_result(self, access, activity_id, result):
+        """Save server-marked choices and weak concepts; never award time or completion."""
+        now = _utc_iso()
+        with self._transaction() as connection:
+            self._ensure_progress_row(connection, access, now_iso=now)
+            row = self._progress_row(connection, access)
+            if activity_id in _json_list(row['completed_json']):
+                return  # An optional retry must not rewrite completed learner work.
+            answers = _json_dict(row['answers_json'])
+            saved = answers.get(activity_id, {})
+            chosen = saved.setdefault('practice_answers', {})
+            previous_choices = dict(chosen)
+            chosen.update(result['answers'])
+            diagnostics = saved.setdefault('practice_diagnostics', {})
+            for item in result['feedback']:
+                if (item['id'] in diagnostics and previous_choices.get(item['id']) == chosen.get(item['id'])
+                        and diagnostics[item['id']].get('correct') == item['correct']):
+                    continue  # A retry or full confirmation must not inflate attempts.
+                detail = diagnostics.setdefault(item['id'], {'attempts': 0, 'first_correct': item['correct'],
+                                                            'competency': item.get('competency', '')})
+                detail.update(attempts=detail['attempts'] + 1, correct=item['correct'])
+            saved.update(practice_revision=result['revision'], practice_draft=True)
+            answers[activity_id] = saved
+            connection.execute('''UPDATE learner_course_progress SET answers_json=?, updated_at=?
+                WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
+                (json.dumps(answers, ensure_ascii=False), now, *self._key_values(access)))
+            self._event(connection, access, 'practice_checked', activity_id=activity_id, at=now,
+                        details={'passed': result['passed'], 'total': result['total'],
+                                 'exercise_ids': [f['id'] for f in result['feedback']]})
+
     def get_progress(
         self,
         access: Mapping[str, Any],
@@ -780,7 +810,8 @@ class NativeElearningStore:
             already_completed = activity_id in completed
             if not already_completed:
                 completed.append(activity_id)
-            if answer is not None and activity_id not in answers:
+            if answer is not None and (activity_id not in answers or
+                    (not already_completed and answers[activity_id].get('practice_draft') is True)):
                 answers[activity_id] = dict(answer)
 
             completion = self._completion_values(

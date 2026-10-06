@@ -559,6 +559,8 @@ def create_native_elearning_blueprint(
                     return asset_url(asset_token, course_id, value)
                 return value
             public['vtc'] = prepare_vtc(activity['vtc'])
+            if public.get('practice', {}).get('mode') == 'journey':
+                public['practice'] = prepare_vtc(public['practice'])
         if isinstance(activity.get('academy'), Mapping):
             # Structured content stays autoescaped by Jinja. Only declared media
             # paths are converted to the usual signed, session-bound asset URLs.
@@ -941,7 +943,7 @@ def create_native_elearning_blueprint(
         if activity and activity.get('practice'):
             payload = request.get_json(silent=True)
             try:
-                result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
+                result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None, step=payload.get('practice_step') if isinstance(payload, dict) else None)
             except ValueError as exc:
                 return jsonify({'ok': False, 'error': str(exc)}), 400
             response = jsonify({'ok': True, **result})
@@ -1635,9 +1637,11 @@ def create_native_elearning_blueprint(
             return jsonify({'ok': False, 'error': 'Terminez d’abord l’activité précédente.'}), 409
         payload = request.get_json(silent=True)
         try:
-            result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
+            result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None, step=payload.get('practice_step') if isinstance(payload, dict) else None)
         except ValueError as exc:
             return jsonify({'ok': False, 'error': str(exc)}), 400
+        if activity['practice'].get('mode') == 'journey':
+            store().record_practice_result(access, activity_id, result)
         response = jsonify({'ok': True, **result})
         response.headers['Cache-Control'] = 'private, no-store'
         return response
@@ -1664,7 +1668,8 @@ def create_native_elearning_blueprint(
                     return jsonify({'ok': False, 'error': str(exc)}), 400
                 if not result['correct']:
                     return jsonify({'ok': False, 'error': 'Corrigez les exercices indiqués avant de continuer.', 'practice_result': result}), 400
-                answer = {'practice_answers': result['answers'], 'practice_revision': result['revision'],
+                answer = {**current.get('answers', {}).get(activity_id, {}), 'practice_draft': False,
+                          'practice_answers': result['answers'], 'practice_revision': result['revision'],
                           'review_status': 'auto_corrected', 'practice_correct': True,
                           'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
         elif activity.get('workbook'):

@@ -1,0 +1,267 @@
+{
+  "version": "20261006-vtc-v3-105h",
+  "planned_minutes": 6300,
+  "status": "programme_previsionnel",
+  "duration_note": "105 h de programme pédagogique prévisionnel. La durée réellement nécessaire dépend des acquis et des reprises. Le suivi distingue le temps actif et l’achèvement ; un groupe pilote permet de calibrer les estimations.",
+  "modules": [
+    {
+      "letter": "A",
+      "title": "VTC A · Exercer dans le cadre du T3P",
+      "planned_minutes": 840,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 378
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "B",
+      "title": "VTC B · Gérer son entreprise",
+      "planned_minutes": 960,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 264
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 474
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "C",
+      "title": "VTC C · Conduire en sécurité",
+      "planned_minutes": 840,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 378
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "D",
+      "title": "VTC D · Comprendre et s’exprimer en français",
+      "planned_minutes": 660,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 258
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "E",
+      "title": "VTC E · Accueillir en anglais",
+      "planned_minutes": 900,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 216
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 462
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "F",
+      "title": "VTC F · Développer son activité VTC",
+      "planned_minutes": 840,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 240
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 378
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "G",
+      "title": "VTC G · Appliquer les règles du VTC",
+      "planned_minutes": 660,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 180
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 258
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "letter": "H",
+      "title": "VTC H · Réaliser une mission professionnelle",
+      "planned_minutes": 600,
+      "breakdown": [
+        {
+          "label": "Cours, exemples et schémas",
+          "minutes": 144
+        },
+        {
+          "label": "Ateliers de repères",
+          "minutes": 72
+        },
+        {
+          "label": "Dossiers professionnels et corrections",
+          "minutes": 234
+        },
+        {
+          "label": "Deux missions filées",
+          "minutes": 80
+        },
+        {
+          "label": "Bilan et révisions adaptées aux erreurs",
+          "minutes": 50
+        },
+        {
+          "label": "Synthèse, vidéo et approfondissement",
+          "minutes": 20
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "real_learners_tested": 0,
+    "measured_median_minutes": null,
+    "method": "Groupe pilote de profils variés : mesurer les temps actifs par activité et les premières erreurs ; recueillir les difficultés ; comparer la médiane et les écarts au programme ; ajouter, scinder ou redistribuer les séquences avant de déclarer la durée validée."
+  },
+  "rules": [
+    "Aucun temps fictif ajouté par une réponse ou une correction.",
+    "Aucune rédaction libre demandée.",
+    "Les anciennes affectations conservent leur version.",
+    "La pratique en circulation nécessite un entraînement encadré distinct."
+  ]
+}

@@ -1,0 +1,730 @@
+{
+  "id": "vtc-d",
+  "version": "20261006-vtc-v3-105h",
+  "training_label": "VTC",
+  "title": "VTC · Comprendre et s’exprimer en français · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-d-01-q2",
+      "prompt": "Avant de répondre à une question sur un texte, quelle méthode est utile ?",
+      "options": [
+        {
+          "id": "644e1c7fc084",
+          "text": "Choisir l’option la plus longue"
+        },
+        {
+          "id": "e4491739cf37",
+          "text": "Se fier uniquement au titre"
+        },
+        {
+          "id": "4e36c2c2927e",
+          "text": "Lire la consigne puis chercher les éléments pertinents"
+        }
+      ],
+      "answer": "4e36c2c2927e",
+      "explanation": "La consigne précise ce qu’il faut rechercher ; la réponse doit être appuyée sur le texte.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.01"
+      ]
+    },
+    {
+      "id": "vtc-d-07-q2",
+      "prompt": "Quel terme désigne la personne qui effectue la réservation ?",
+      "options": [
+        {
+          "id": "6adb118bd468",
+          "text": "Le destinataire obligatoirement"
+        },
+        {
+          "id": "43a4f4bbe53d",
+          "text": "Le réservant"
+        },
+        {
+          "id": "4e10c6d80397",
+          "text": "Le créancier nécessairement"
+        }
+      ],
+      "answer": "43a4f4bbe53d",
+      "explanation": "Le réservant peut différer du passager et du payeur. Les rôles doivent être identifiés précisément.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.07"
+      ]
+    },
+    {
+      "id": "vtc-d-05-q2",
+      "prompt": "Quel mot introduit une opposition ?",
+      "options": [
+        {
+          "id": "71bb27296a98",
+          "text": "Ainsi"
+        },
+        {
+          "id": "1838df94d315",
+          "text": "Cependant"
+        },
+        {
+          "id": "b1e8afcf6c15",
+          "text": "Parce que"
+        }
+      ],
+      "answer": "1838df94d315",
+      "explanation": "« Cependant » oppose ou nuance deux idées ; « parce que » exprime une cause.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.05"
+      ]
+    },
+    {
+      "id": "vtc-d-07-q1",
+      "prompt": "Dans une prestation, que désigne un « justificatif » ?",
+      "options": [
+        {
+          "id": "5b3168d1ae2c",
+          "text": "Un document apportant une preuve"
+        },
+        {
+          "id": "ab492e46e4dd",
+          "text": "Une préférence de confort"
+        },
+        {
+          "id": "474ddb573d3e",
+          "text": "Une personne qui réserve"
+        }
+      ],
+      "answer": "5b3168d1ae2c",
+      "explanation": "Le sens professionnel est celui d’une pièce servant à établir une information ou une opération.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.07"
+      ]
+    },
+    {
+      "id": "vtc-d-12-q1",
+      "prompt": "Une option de réponse ajoute une durée absente du texte. Quel réflexe ?",
+      "options": [
+        {
+          "id": "18fd461e21b6",
+          "text": "Vérifier le texte et écarter l’ajout non justifié"
+        },
+        {
+          "id": "a9581c6a1fa7",
+          "text": "L’accepter parce qu’elle est détaillée"
+        },
+        {
+          "id": "037bda031ef6",
+          "text": "L’accepter si le chiffre semble plausible"
+        }
+      ],
+      "answer": "18fd461e21b6",
+      "explanation": "La compréhension porte sur les informations disponibles ; le caractère plausible ne remplace pas une preuve textuelle.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.12"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-05",
+      "prompt": "Le mot « donc » introduit…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une conséquence."
+        },
+        {
+          "id": "b",
+          "text": "Une opposition."
+        },
+        {
+          "id": "c",
+          "text": "Un doute."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La fermeture entraîne le choix de l’entrée latérale.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-10-q2",
+      "prompt": "Quelle réponse conserve le sens de « deux valises et un petit sac » ?",
+      "options": [
+        {
+          "id": "2ff6ef0d21af",
+          "text": "Deux bagages seulement"
+        },
+        {
+          "id": "21318188b112",
+          "text": "Deux valises, plus un petit sac"
+        },
+        {
+          "id": "22f9f84815d3",
+          "text": "Trois grandes valises"
+        }
+      ],
+      "answer": "21318188b112",
+      "explanation": "Une reformulation doit conserver la nature et le nombre des objets.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.10"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-04",
+      "prompt": "Pourquoi le rendez-vous est-il déplacé ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le client a changé de train."
+        },
+        {
+          "id": "b",
+          "text": "L’entrée principale est fermée pour travaux."
+        },
+        {
+          "id": "c",
+          "text": "Le prix a augmenté."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Les lignes 6 et 7 établissent la cause et la conséquence.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-11-q2",
+      "prompt": "Vous ignorez la porte de sortie du client. Quel message choisir ?",
+      "options": [
+        {
+          "id": "da6897184d69",
+          "text": "Vous deviez me le dire."
+        },
+        {
+          "id": "56671f009802",
+          "text": "Pouvez-vous préciser la porte de sortie, s’il vous plaît ?"
+        },
+        {
+          "id": "56e0827ea71d",
+          "text": "Je vous attends forcément porte A."
+        }
+      ],
+      "answer": "56671f009802",
+      "explanation": "Une demande de précision vaut mieux qu’une information inventée ou un reproche.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.11"
+      ]
+    },
+    {
+      "id": "vtc-d-09-q1",
+      "prompt": "Quelle phrase est correctement accordée ?",
+      "options": [
+        {
+          "id": "730c148adbb8",
+          "text": "Les passagères sont arrivées."
+        },
+        {
+          "id": "261dec1387f5",
+          "text": "Les passagères sont arrivé."
+        },
+        {
+          "id": "2aef536d2779",
+          "text": "Les passagères est arrivé."
+        }
+      ],
+      "answer": "730c148adbb8",
+      "explanation": "Le sujet pluriel commande « sont » et le participe avec être s’accorde ici au féminin pluriel.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.09"
+      ]
+    },
+    {
+      "id": "vtc-d-11-q1",
+      "prompt": "Quel message client est le plus clair ?",
+      "options": [
+        {
+          "id": "126873dd2ccc",
+          "text": "OK on verra demain."
+        },
+        {
+          "id": "544d5434f717",
+          "text": "C’est bon comme prévu là-bas."
+        },
+        {
+          "id": "55cd806477e8",
+          "text": "Bonjour, votre départ à 8 h 15 est confirmé devant l’entrée nord."
+        }
+      ],
+      "answer": "55cd806477e8",
+      "explanation": "Le message donne l’horaire et un point de rendez-vous précis dans une formulation professionnelle.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.11"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-01",
+      "prompt": "Qui a effectué la réservation ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "L’enfant."
+        },
+        {
+          "id": "b",
+          "text": "La réception."
+        },
+        {
+          "id": "c",
+          "text": "La gare."
+        }
+      ],
+      "answer": "b",
+      "explanation": "La ligne 2 attribue la réservation à la réception.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-03-q2",
+      "prompt": "« Le client ne répond pas, donc il annule » contient quelle difficulté ?",
+      "options": [
+        {
+          "id": "e13b1ac8c8a8",
+          "text": "Une annulation explicitement écrite"
+        },
+        {
+          "id": "45fc72246e1f",
+          "text": "Une conclusion non confirmée"
+        },
+        {
+          "id": "58160477a414",
+          "text": "Une preuve de paiement"
+        }
+      ],
+      "answer": "45fc72246e1f",
+      "explanation": "Une absence de réponse ne prouve pas une annulation. Il faut distinguer observation et interprétation.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.03"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-06",
+      "prompt": "L’heure d’arrivée annoncée est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Garantie."
+        },
+        {
+          "id": "b",
+          "text": "Supprimée."
+        },
+        {
+          "id": "c",
+          "text": "Estimée."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La ligne 16 précise qu’elle est estimée et non garantie.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-08-q2",
+      "prompt": "Quelle phrase est la plus adaptée à une demande polie ?",
+      "options": [
+        {
+          "id": "ee4f38aa1158",
+          "text": "Vous confirmer terminal."
+        },
+        {
+          "id": "9dec6833dbdb",
+          "text": "Pourriez-vous confirmer le terminal ?"
+        },
+        {
+          "id": "1ecf341627ab",
+          "text": "Tu confirmes maintenant !"
+        }
+      ],
+      "answer": "9dec6833dbdb",
+      "explanation": "Le conditionnel et une phrase complète rendent la demande claire et courtoise.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.08"
+      ]
+    },
+    {
+      "id": "vtc-d-03-q1",
+      "prompt": "« Le véhicule est arrivé à 9 h 12 » est…",
+      "options": [
+        {
+          "id": "0384b59fb2e6",
+          "text": "Un fait vérifiable"
+        },
+        {
+          "id": "0cdb69940ecb",
+          "text": "Une intention supposée"
+        },
+        {
+          "id": "0ccfd5bc4edd",
+          "text": "Un jugement sur le conducteur"
+        }
+      ],
+      "answer": "0384b59fb2e6",
+      "explanation": "Une heure constatée décrit un fait. Elle ne dit pas à elle seule pourquoi le véhicule est arrivé à cette heure.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.03"
+      ]
+    },
+    {
+      "id": "vtc-d-04-q1",
+      "prompt": "« Le chauffeur présente la facture au client, qui la vérifie. » Qui vérifie ?",
+      "options": [
+        {
+          "id": "7eefca865b6b",
+          "text": "Le chauffeur uniquement"
+        },
+        {
+          "id": "c19078fd94a0",
+          "text": "La facture"
+        },
+        {
+          "id": "db7efe1fc129",
+          "text": "Le client"
+        }
+      ],
+      "answer": "db7efe1fc129",
+      "explanation": "Le pronom « qui » renvoie ici au client, tandis que « la » reprend la facture.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.04"
+      ]
+    },
+    {
+      "id": "vtc-d-01-q1",
+      "prompt": "Message : « Départ confirmé à 8 h 15. Rendez-vous entrée latérale, la porte principale est fermée. » Qu’est-ce qui est modifié ?",
+      "options": [
+        {
+          "id": "0af07baef3d2",
+          "text": "L’heure de départ"
+        },
+        {
+          "id": "f833556a1c39",
+          "text": "Le lieu de rendez-vous"
+        },
+        {
+          "id": "c3c3d30cdfd4",
+          "text": "Le nombre de passagers"
+        }
+      ],
+      "answer": "f833556a1c39",
+      "explanation": "Le départ est confirmé ; la précision porte sur l’entrée utilisée. Il faut répondre à l’information réellement donnée.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.01"
+      ]
+    },
+    {
+      "id": "vtc-d-08-q1",
+      "prompt": "Quelle phrase annonce une action future ?",
+      "options": [
+        {
+          "id": "0b1474dbd5c4",
+          "text": "Je vous attendais à l’entrée nord."
+        },
+        {
+          "id": "db4024bc5119",
+          "text": "Je vous ai attendu à l’entrée nord."
+        },
+        {
+          "id": "e1232fc3ab49",
+          "text": "Je vous attendrai à l’entrée nord."
+        }
+      ],
+      "answer": "e1232fc3ab49",
+      "explanation": "« Attendrai » est au futur ; « attendais » et « ai attendu » situent l’action dans le passé.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.08"
+      ]
+    },
+    {
+      "id": "vtc-d-05-q1",
+      "prompt": "« La rue est fermée, donc le trajet est modifié. » Quel lien exprime « donc » ?",
+      "options": [
+        {
+          "id": "6a2fd6f1b69c",
+          "text": "Une conséquence"
+        },
+        {
+          "id": "b6a47270de0c",
+          "text": "Une comparaison"
+        },
+        {
+          "id": "1921f48acd7a",
+          "text": "Une opposition"
+        }
+      ],
+      "answer": "6a2fd6f1b69c",
+      "explanation": "La fermeture est la cause ; la modification du trajet en est la conséquence dans cette phrase.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.05"
+      ]
+    },
+    {
+      "id": "vtc-d-09-q2",
+      "prompt": "Quelle phrase emploie correctement « à » et « a » ?",
+      "options": [
+        {
+          "id": "b55ce839134c",
+          "text": "Le client a rendez-vous à huit heures."
+        },
+        {
+          "id": "043f0bc58756",
+          "text": "Le client à rendez-vous a huit heures."
+        },
+        {
+          "id": "aaa2966b694d",
+          "text": "Le client a rendez-vous a huit heures."
+        }
+      ],
+      "answer": "b55ce839134c",
+      "explanation": "« A » est le verbe avoir ; « à » introduit ici l’heure.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.09"
+      ]
+    },
+    {
+      "id": "vtc-d-02-q2",
+      "prompt": "Réservation le 12 juin à 18 h pour départ le 13 juin à 7 h 30. Quelle est l’heure de prise en charge ?",
+      "options": [
+        {
+          "id": "62e813269a1c",
+          "text": "7 h 30 le 12 juin"
+        },
+        {
+          "id": "667efa1058e1",
+          "text": "7 h 30 le 13 juin"
+        },
+        {
+          "id": "77fbd67cd0f8",
+          "text": "18 h le 12 juin"
+        }
+      ],
+      "answer": "667efa1058e1",
+      "explanation": "Il faut distinguer le moment de la commande et le moment de la prestation.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.02"
+      ]
+    },
+    {
+      "id": "vtc-d-04-q2",
+      "prompt": "« Les passagères prennent leurs valises et les placent près de la porte. » Que remplace « les » ?",
+      "options": [
+        {
+          "id": "21137ff27905",
+          "text": "Les valises"
+        },
+        {
+          "id": "21cccb2c5b48",
+          "text": "Les portes"
+        },
+        {
+          "id": "d6186d7c99ef",
+          "text": "Les passagères"
+        }
+      ],
+      "answer": "21137ff27905",
+      "explanation": "Le pronom complément reprend l’objet placé. La cohérence de l’action aide à retrouver son référent.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.04"
+      ]
+    },
+    {
+      "id": "vtc-d-06-q1",
+      "prompt": "« La prise en charge est possible sous réserve de disponibilité. » Cela signifie…",
+      "options": [
+        {
+          "id": "b786520b5305",
+          "text": "Elle est toujours refusée"
+        },
+        {
+          "id": "7fe37f509551",
+          "text": "Elle est garantie sans condition"
+        },
+        {
+          "id": "5f4b1f40a29b",
+          "text": "Elle dépend de la disponibilité"
+        }
+      ],
+      "answer": "5f4b1f40a29b",
+      "explanation": "La locution « sous réserve » exprime une condition ; l’omettre changerait le sens du message.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.06"
+      ]
+    },
+    {
+      "id": "vtc-d-02-q1",
+      "prompt": "Mme Roy réserve pour M. et Mme Diallo. Qui voyage ?",
+      "options": [
+        {
+          "id": "f246f8c3bb67",
+          "text": "Mme Roy seule"
+        },
+        {
+          "id": "4811895329a7",
+          "text": "M. et Mme Diallo"
+        },
+        {
+          "id": "01356fa5e2ec",
+          "text": "Les trois personnes nécessairement"
+        }
+      ],
+      "answer": "4811895329a7",
+      "explanation": "La personne qui réserve et les passagers peuvent être différents. Le texte désigne ici les Diallo comme voyageurs.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.02"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-03",
+      "prompt": "Combien de passagers voyagent ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Deux."
+        },
+        {
+          "id": "b",
+          "text": "Quatre."
+        },
+        {
+          "id": "c",
+          "text": "Trois."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Deux adultes et un enfant font trois passagers, sans compter Lina.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-10-q1",
+      "prompt": "Question : « Pourquoi le rendez-vous change-t-il ? » Texte : « La porte est fermée pour travaux. » Quelle réponse est précise ?",
+      "options": [
+        {
+          "id": "2018c87cbe88",
+          "text": "Le rendez-vous est à huit heures."
+        },
+        {
+          "id": "360061b28801",
+          "text": "Le client a deux bagages."
+        },
+        {
+          "id": "50a1a6397678",
+          "text": "Parce que la porte est fermée pour travaux."
+        }
+      ],
+      "answer": "50a1a6397678",
+      "explanation": "Une question commençant par « pourquoi » demande la cause, pas une autre information du document.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.10"
+      ]
+    },
+    {
+      "id": "vtc-d-06-q2",
+      "prompt": "« Le retard ne devrait pas dépasser dix minutes. » Quelle reformulation respecte la nuance ?",
+      "options": [
+        {
+          "id": "89200ae4e520",
+          "text": "Il n’y aura aucun retard"
+        },
+        {
+          "id": "8d9afcc1a330",
+          "text": "Le retard est estimé à dix minutes au maximum"
+        },
+        {
+          "id": "0767eea703d2",
+          "text": "Le retard sera obligatoirement de dix minutes"
+        }
+      ],
+      "answer": "8d9afcc1a330",
+      "explanation": "« Devrait » exprime une estimation, pas une certitude absolue.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.06"
+      ]
+    },
+    {
+      "id": "vtc-d-manual-02",
+      "prompt": "Quelle est l’heure de départ prévue du véhicule ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "6 h 45."
+        },
+        {
+          "id": "b",
+          "text": "7 h 15."
+        },
+        {
+          "id": "c",
+          "text": "7 h 40."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La ligne 4 distingue le départ de la voiture et l’arrivée souhaitée.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-d-12-q2",
+      "prompt": "Pour relire une réponse courte à l’examen officiel, que vérifier ?",
+      "options": [
+        {
+          "id": "054b2566ed77",
+          "text": "Uniquement la longueur du dernier mot"
+        },
+        {
+          "id": "4e191edf8b9c",
+          "text": "Seulement le nombre de lignes"
+        },
+        {
+          "id": "6b0f16116645",
+          "text": "La réponse à la consigne, les nombres et la langue"
+        }
+      ],
+      "answer": "6b0f16116645",
+      "explanation": "Une relecture ciblée permet de repérer erreurs de sens, chiffres mal repris et fautes de langue.",
+      "module": "D",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon D.12"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}
