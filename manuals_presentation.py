@@ -7,6 +7,7 @@ Prices always come from manuals_shop.CATALOGUE.
 
 PRESENTATIONS = {
     "ssiap1": {
+        "specimen": "specimenssiap.pdf",
         "audience": "Pour vos stagiaires en sécurité incendie",
         "lead": "Rendre la sécurité incendie concrète, page après page.",
         "intro": "Un support illustré pour accompagner les cours de sécurité incendie et d’assistance à personnes. Les scènes métier, les schémas et les repères opérationnels aident vos stagiaires à faire le lien entre les notions abordées en salle et les situations professionnelles.",
@@ -19,6 +20,7 @@ PRESENTATIONS = {
         "preview_labels": ["Scènes métier illustrées", "Schémas pédagogiques", "Repères opérationnels"],
     },
     "aps": {
+        "specimen": "specimenaps.pdf",
         "audience": "Pour vos futurs agents de prévention et de sécurité",
         "lead": "Relier les cours aux missions quotidiennes de l’agent.",
         "intro": "Un manuel qui s’appuie sur des situations professionnelles pour donner du sens aux apprentissages. Les illustrations et les ateliers visuels permettent au formateur d’expliquer, de faire observer et de relier les notions aux missions de prévention et de sécurité.",
@@ -31,6 +33,7 @@ PRESENTATIONS = {
         "preview_labels": ["Situations professionnelles", "Ateliers visuels", "Mises en pratique"],
     },
     "a3p": {
+        "specimen": "specimena3p.pdf",
         "audience": "Pour vos stagiaires en protection physique des personnes",
         "lead": "Visualiser les missions et comprendre les méthodes de protection.",
         "intro": "Les missions illustrées et les schémas de protection donnent des repères visuels aux stagiaires. Ce support accompagne le travail du formateur en reliant les explications aux méthodes de mission et aux exemples professionnels.",
@@ -43,6 +46,7 @@ PRESENTATIONS = {
         "preview_labels": ["Missions illustrées", "Schémas de protection", "Exemples professionnels"],
     },
     "vtc": {
+        "specimen": "specimenvtc.pdf",
         "audience": "Pour vos futurs chauffeurs VTC",
         "lead": "Un fil conducteur pour apprendre, comprendre et réviser.",
         "intro": "Un support structuré qui associe illustrations pleine page, notions expliquées en images et cas pratiques commentés. Il aide à organiser les révisions et à travailler les situations professionnelles liées à l’activité de chauffeur VTC.",
@@ -55,6 +59,7 @@ PRESENTATIONS = {
         "preview_labels": ["Illustrations pleine page", "Notions en images", "Cas pratiques commentés"],
     },
     "dssp": {
+        "specimen": "specimendssp.pdf",
         "audience": "Pour vos stagiaires dirigeants de sociétés de sécurité privée",
         "lead": "Des méthodes et des repères pour aborder la gestion d’une société.",
         "intro": "Un manuel consacré à la gestion d’une société de sécurité privée, avec des méthodes, des calculs expliqués et des fiches professionnelles. Il donne des supports concrets au formateur pour aborder le management et l’organisation.",
@@ -67,6 +72,7 @@ PRESENTATIONS = {
         "preview_labels": ["Management et organisation", "Calculs expliqués", "Fiches professionnelles"],
     },
     "sst": {
+        "specimen": "specimensst.pdf",
         "audience": "Pour vos stagiaires sauveteurs secouristes du travail",
         "lead": "Des repères visuels pour la prévention et les premiers secours.",
         "intro": "Un support dédié à la prévention et aux premiers secours, avec des situations et des repères illustrés. Il accompagne les explications du formateur et permet aux stagiaires de retrouver les notions travaillées pendant la formation.",

@@ -25,6 +25,7 @@
     <div class="manual-tags">{% for tag in book.tags %}<span>{{ tag }}</span>{% endfor %}</div>
     <div class="discovery-price"><span>À partir de <strong>{{ book.bulk_price|manuals_money }}</strong> TTC / ex.</span><small>Dès 100 exemplaires · Logo et livraison inclus</small></div>
     <a class="button secondary full" href="{{ url_for('manuals_shop.manual_detail', code=book.code) }}">Découvrir le manuel {{ book.name }} <span aria-hidden="true">→</span></a>
+    <a class="specimen-card-link" href="{{ url_for('static', filename=book.specimen) }}" target="_blank" rel="noopener" aria-label="Consulter le spécimen {{ book.name }} en PDF (nouvel onglet)">{{ icon('book') }} Consulter le spécimen <span aria-hidden="true">↗</span></a>
   </div>
 </article>
 {%- endmacro %}

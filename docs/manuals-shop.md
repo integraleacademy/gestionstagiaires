@@ -81,3 +81,13 @@ Les textes et les 19 illustrations de `static/manuals/previews/` proviennent de 
 Les nouvelles routes sont authentifiées et figurent dans l’allowlist des organismes. Le super administrateur peut consulter la présentation depuis « Commandes reçues » sans prendre l’identité d’un organisme. Cette consultation ne charge aucune commande et ne propose pas de validation d’achat.
 
 Validation : 26 tests existants du parcours de commande réussis ; parcours présentation et six fiches contrôlé avec un organisme isolé, authentification, code inconnu (404), absence de droit d’administration, prix et images, puis consultation administrateur.
+
+### Spécimens et formations sur mesure
+
+Chaque carte de la collection donne accès au spécimen PDF, et chaque fiche propose la consultation dans un nouvel onglet ainsi que le téléchargement. Les liens du catalogue de commande ouvrent toujours la fiche dans un autre onglet pour conserver les quantités saisies.
+
+Les fichiers `static/specimenaps.pdf`, `specimenssiap.pdf`, `specimensst.pdf`, `specimendssp.pdf` et `specimenvtc.pdf` reprennent sans modification les cinq spécimens fournis sur `main` le 6 octobre. `static/specimena3p.pdf` est une copie de démonstration du manuel A3P du 3 octobre (290 pages), avec filigrane sur chaque page, emplacements de logo et page d’accueil générique reprise du spécimen APS. Le manuel source reste inchangé. Les illustrations de cette copie sont allégées et le texte reste lisible et sélectionnable. L’association titre/fichier est centralisée dans `manuals_presentation.py`.
+
+L’accueil organisme, la présentation et les fiches indiquent la possibilité de proposer des manuels pour tout type de formation. L’encart `/admin/manuels/presentation#sur-mesure` cite MAC APS, SSIAP 2, SSIAP 3 et habilitation électrique, avec un contact pour présenter un projet. Ces exemples ne créent pas de nouveaux articles ni de nouveaux tarifs dans le formulaire de commande.
+
+Validation de cette évolution : six PDF lisibles et servis en `application/pdf`, requêtes partielles HTTP 206, six cartes et six fiches avec leurs liens corrects, téléchargement et rendu organisme/super administrateur. Les 26 tests existants du parcours de commande restent réussis.
