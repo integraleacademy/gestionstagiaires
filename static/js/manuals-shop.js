@@ -23,15 +23,46 @@
     if (button && form.checkValidity()) { button.disabled = true; button.textContent = 'Enregistrement en cours…'; }
   }));
   window.addEventListener('pageshow', () => document.querySelectorAll('[data-submit]').forEach(button => { button.disabled = false; }));
+  const checkout = document.querySelector('[data-checkout]');
+  if (checkout) {
+    const { checkoutStatus, checkoutUrl, orderUrl } = checkout.dataset;
+    // Back from Qonto returns to order tracking, without reopening checkout.
+    history.replaceState(null, '', orderUrl);
+    let stopped = false;
+    let timer;
+    const started = Date.now();
+    const openPayment = url => {
+      const destination = new URL(url);
+      if (destination.protocol !== 'https:' || !['pay.qonto.com', 'pay-sandbox.qonto.com'].includes(destination.hostname) || destination.username || destination.password) throw new Error('Invalid payment URL');
+      stopped = true;
+      window.location.assign(destination.href);
+    };
+    window.addEventListener('pagehide', () => { stopped = true; clearTimeout(timer); });
+    window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
+    const poll = async () => {
+      if (stopped) return;
+      if (Date.now() - started >= 120000) { location.replace(orderUrl); return; }
+      try {
+        const response = await fetch(checkoutStatus, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
+        if (stopped) return;
+        if (!response.ok || response.redirected) { location.replace(orderUrl); return; }
+        const state = await response.json();
+        if (stopped) return;
+        if (state.payment_url) { openPayment(state.payment_url); return; }
+        if (!state.waiting) { location.replace(orderUrl); return; }
+      } catch (_) { /* A transient network failure must not resubmit the order. */ }
+      timer = setTimeout(poll, 2000);
+    };
+    if (checkoutUrl) {
+      try { openPayment(checkoutUrl); } catch (_) { location.replace(orderUrl); }
+    } else poll();
+  }
   const pending = document.querySelector('[data-order-pending]');
   if (pending) {
     const key = 'order-wait-' + pending.dataset.orderPending + '-' + pending.dataset.orderPhase;
     const started = Number(sessionStorage.getItem(key)) || Date.now();
     sessionStorage.setItem(key, String(started));
     if (Date.now() - started < 120000) setTimeout(() => location.reload(), 5000);
-    document.querySelector('[data-payment-link]')?.addEventListener('click', () => {
-      window.addEventListener('focus', () => { sessionStorage.removeItem(key); location.reload(); }, { once: true });
-    });
   }
   const form = document.querySelector('[data-order-form]');
   if (!form) return;

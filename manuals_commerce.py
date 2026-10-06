@@ -564,9 +564,6 @@ def process_order(host, pid, oid):
     order = claimed["order"]
     outcome, message = "ready", ""
     try:
-        # Confirmations are independent of invoice setup or provider outages.
-        customer_sent = _send_email(host, order, "confirmation_customer", order["centre"]["email"])
-        admin_sent = _send_email(host, order, "notification_admin", ADMIN_EMAIL, staff=True)
         invoice_ready = False
         try:
             state = order["commerce"]
@@ -597,6 +594,12 @@ def process_order(host, pid, oid):
             outcome = "retry"
             message = host.format_qonto_error_for_front(exc)[:500]
             host.app.logger.warning("manual_order_billing_error order=%s type=%s", oid, type(exc).__name__)
+        # Publish the verified checkout before waiting on any e-mail delivery.
+        # The lease still prevents another worker from processing this order.
+        _save(host, order, status=outcome, error=message)
+        # Confirmations still go out when Qonto setup or the provider fails.
+        customer_sent = _send_email(host, order, "confirmation_customer", order["centre"]["email"])
+        admin_sent = _send_email(host, order, "notification_admin", ADMIN_EMAIL, staff=True)
         invoice_sent = True
         if invoice_ready:
             invoice_sent = _send_email(host, order, "invoice_customer", order["centre"]["email"])
@@ -608,7 +611,8 @@ def process_order(host, pid, oid):
             payment_sent = _send_email(host, order, "payment_customer", order["centre"]["email"])
         sent = customer_sent and admin_sent and invoice_sent and payment_sent
         if outcome in {"ready", "waiting_payment"} and not sent:
-            outcome, message = "retry", "Un e-mail n’a pas pu être envoyé. Une nouvelle tentative est programmée."
+            # A delivery failure must not hide a valid checkout or paid invoice.
+            message = "Un e-mail n’a pas pu être envoyé. Une nouvelle tentative est programmée."
         state = order["commerce"]
         retry = outcome == "retry" and state["attempts"] < 8
         # Refresh settled status periodically, using only authoritative Qonto data.

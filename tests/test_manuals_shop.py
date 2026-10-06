@@ -143,7 +143,9 @@ def test_prices_tampering_isolation_durable_order_and_idempotency(shop):
     assert orders[0]["total_cents"] == 259900  # 100 APS at 18 + 50 SST at 12 + USB at 199
     assert orders[0]["partner_id"] != "other-centre"
     token = csrf(c, detail)
-    assert c.post(detail + "/confirmer", data={"csrf_token": token, "confirm": "yes"}).status_code == 303
+    confirmation = c.post(detail + "/confirmer", data={"csrf_token": token, "confirm": "yes"})
+    assert confirmation.status_code == 303 and confirmation.location == detail + "/paiement"
+    assert "data-checkout" in c.get(confirmation.location).text
     assert c.post(detail + "/confirmer", data={"csrf_token": token, "confirm": "yes"}).status_code == 303
     persisted = all_data(shop)["manual_orders"]
     assert len(persisted) == 1 and persisted[0]["status"] == "received"
@@ -154,6 +156,8 @@ def test_prices_tampering_isolation_durable_order_and_idempotency(shop):
     login(second, email="autre@example.test")
     assert second.get(detail).status_code == 404
     assert second.get(detail + "/logo").status_code == 404
+    assert second.get(detail + "/paiement").status_code == 404
+    assert second.get(detail + "/paiement/statut").status_code == 404
     assert persisted[0]["reference"] not in second.get("/admin/manuels").text
     assert second.post(detail + "/confirmer", data={"csrf_token": csrf(second, "/admin/manuels"), "confirm": "yes"}).status_code == 404
     c.get("/admin/logout")

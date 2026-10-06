@@ -1,6 +1,7 @@
 import base64
 import copy
 import json
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal, ROUND_HALF_UP
@@ -184,11 +185,17 @@ def test_failed_customer_email_retries_without_admin_duplicate(shop, merchant, m
     original = host.brevo_send_email
     def fail_customer(*args, **kwargs):
         if kwargs["metadata"]["purpose"] == "manuals_confirmation_customer":
+            # Checkout is ready before a slow or failing delivery can block it.
+            flow = all_data(shop)["manual_orders"][0]["commerce"]
+            assert flow["status"] == "waiting_payment" and flow["payment_url"]
+            assert merchant["invoice"] is None
             return {"ok": False}
         return original(*args, **kwargs)
     monkeypatch.setattr(host, "brevo_send_email", fail_customer)
     run(order)
-    assert all_data(shop)["manual_orders"][0]["commerce"]["status"] == "retry"
+    flow = all_data(shop)["manual_orders"][0]["commerce"]
+    assert flow["status"] == "waiting_payment" and flow["queued"]
+    assert shop["client"].get(f"/admin/manuels/commandes/{order['id']}/paiement/statut").json["payment_url"]
     monkeypatch.setattr(host, "brevo_send_email", original)
     retry(order)
     assert [m[0][0] for m in shop["mails"]].count(commerce.ADMIN_EMAIL) == 1
@@ -621,3 +628,59 @@ def test_customer_can_request_payment_refresh_before_invoice_exists(shop, mercha
     assert response.status_code == 303
     flow = all_data(shop)["manual_orders"][0]["commerce"]
     assert flow["queued"] and flow["next_attempt"] == 0 and not flow.get("invoice_id")
+
+
+def test_automatic_checkout_reads_only_owned_verified_payment(shop, merchant):
+    order = submitted(shop)
+    client = shop['client']
+    detail = f"/admin/manuels/commandes/{order['id']}"
+    checkout = detail + '/paiement'
+    status = checkout + '/statut'
+    assert client.get(status).json == {'payment_url': '', 'waiting': True}
+    assert not merchant['calls']
+    run(order)
+    before = list(merchant['calls'])
+    response = client.get(status)
+    assert response.json == {'payment_url': 'https://pay.qonto.com/link-1', 'waiting': False}
+    assert response.cache_control.no_store
+    assert 'data-checkout-url="https://pay.qonto.com/link-1"' in client.get(checkout).text
+    assert 'data-checkout' not in client.get(detail).text  # Back never reopens payment.
+    for path in (detail, '/admin/organisme', '/admin/manuels'):
+        links = re.findall(r'<a\b[^>]*href="https://pay.qonto.com/link-1"[^>]*>', client.get(path).text)
+        assert links and all('target="_blank"' not in link for link in links)
+    assert merchant['calls'] == before  # Browsing/polling cannot call the merchant API.
+    assert merchant['invoice'] is None
+    anonymous = host.app.test_client()
+    assert anonymous.get(status).status_code == 302
+    assert 'pay.qonto.com' not in anonymous.get(status).text
+
+
+def test_automatic_checkout_stops_for_paid_cancelled_unavailable_or_unsafe_link(shop, merchant):
+    order = submitted(shop)
+    run(order)
+    original = all_data(shop)['manual_orders'][0]
+    detail = f"/admin/manuels/commandes/{order['id']}"
+    checkout = detail + '/paiement'
+    cases = [
+        {'status': 'draft'}, {'status': 'cancelled'},
+        {'commerce': {'payment_status': 'paid'}},
+        {'commerce': {'payment_status': 'processing'}},
+        {'commerce': {'invoice_status': 'canceled'}},
+        {'commerce': {'payment_link_status': 'expired'}},
+        {'commerce': {'status': 'needs_review'}},
+        {'commerce': {'status': 'needs_setup'}},
+        {'commerce': {'payment_url': 'https://pay.qonto.com.evil.test/checkout'}},
+    ]
+    for changes in cases:
+        def update(data):
+            current = next(o for o in data['manual_orders'] if o['id'] == order['id'])
+            current.clear()
+            current.update(copy.deepcopy(original))
+            current.update({k: v for k, v in changes.items() if k != 'commerce'})
+            current['commerce'].update(changes.get('commerce', {}))
+            return {}
+        host._atomic_update_data(update, partner_id=order['partner_id'])
+        assert shop['client'].get(checkout + '/statut?paid=true&payment_url=https://evil.test').json == {'payment_url': '', 'waiting': False}
+        response = shop['client'].get(checkout)
+        assert response.status_code == 303 and response.location == detail
+    assert merchant['invoice'] is None

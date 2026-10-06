@@ -35,7 +35,7 @@ CATALOGUE = (
 )
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
-CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo"}
+CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
 SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 
@@ -433,6 +433,34 @@ def register(host):
         data, partner = partner_data()
         return page("order.html", partner=partner, order=find_order(data, order_id), staff=False)
 
+    def payment_state(order):
+        # Read persisted, merchant-verified results only: no Qonto calls or
+        # payment creation in the customer's HTTP/session context.
+        state = order.get("commerce", {})
+        stopped = (order["status"] in {"draft", "cancelled"}
+                   or state.get("invoice_status") == "canceled"
+                   or state.get("payment_status") in {"paid", "processing", "partially_paid", "canceled"})
+        payable = (not stopped and state.get("status") in {"ready", "waiting_payment"}
+                   and state.get("payment_status") == "unpaid" and state.get("payment_link_status") == "open")
+        return {"payment_url": commerce.safe_payment_url(state.get("payment_url")) if payable else "",
+                "waiting": not stopped and state.get("status") in {"pending", "processing"}}
+
+    @bp.get("/admin/manuels/commandes/<order_id>/paiement")
+    @customer
+    def order_payment(order_id):
+        data, partner = partner_data()
+        order = find_order(data, order_id)
+        checkout = payment_state(order)
+        if not checkout["payment_url"] and not checkout["waiting"]:
+            return redirect(url_for("manuals_shop.order_detail", order_id=order_id), code=303)
+        return page("payment.html", partner=partner, order=order, checkout=checkout, staff=False)
+
+    @bp.get("/admin/manuels/commandes/<order_id>/paiement/statut")
+    @customer
+    def order_payment_status(order_id):
+        data, _ = partner_data()
+        return payment_state(find_order(data, order_id))
+
     @bp.post("/admin/manuels/commandes/<order_id>/confirmer")
     @customer
     def confirm_order(order_id):
@@ -448,7 +476,7 @@ def register(host):
             return {"created": True, "id": order_id}
         host._atomic_update_data(confirm)
         kick_worker()
-        return redirect(url_for("manuals_shop.order_detail", order_id=order_id), code=303)
+        return redirect(url_for("manuals_shop.order_payment", order_id=order_id), code=303)
 
     @bp.post("/admin/manuels/commandes/<order_id>/actualiser")
     @customer
