@@ -6,7 +6,7 @@ from manuals_shop import CATALOGUE, quote_items
 
 
 def test_brochure_2026_exact_totals():
-    prices = {'ssiap1': (1700,1700), 'aps': (2000,1800), 'a3p': (2200,2000), 'dssp': (2200,2000), 'vtc': (2200,2000), 'sst': (1200,1000)}
+    prices = {'ssiap1': (1700,1500), 'aps': (2000,1800), 'a3p': (2200,2000), 'dssp': (2200,2000), 'vtc': (2200,2000), 'sst': (1200,1000)}
     for code, (regular, bulk) in prices.items():
         for qty, price in [(50,regular),(99,regular),(100,bulk),(101,bulk)]:
             line = quote_items({'manual_'+code: str(qty)})[0]

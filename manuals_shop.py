@@ -26,7 +26,7 @@ from manuals_presentation import presentation_books
 
 
 CATALOGUE = (
-    {"code": "ssiap1", "name": "SSIAP 1", "title": "Sécurité incendie et assistance à personnes", "description": "Des schémas et des situations illustrées pour rendre la sécurité incendie concrète.", "color": "#c64042", "price": 1700, "bulk_price": 1700},
+    {"code": "ssiap1", "name": "SSIAP 1", "title": "Sécurité incendie et assistance à personnes", "description": "Des schémas et des situations illustrées pour rendre la sécurité incendie concrète.", "color": "#c64042", "price": 1700, "bulk_price": 1500},
     {"code": "aps", "name": "APS", "title": "Agent de prévention et de sécurité", "description": "Des situations professionnelles pour relier les cours aux missions quotidiennes de l’agent.", "color": "#2468b3", "price": 2000, "bulk_price": 1800},
     {"code": "a3p", "name": "A3P", "title": "Protection physique des personnes", "description": "Des missions illustrées et des schémas pour travailler les méthodes de protection.", "color": "#28795f", "price": 2200, "bulk_price": 2000},
     {"code": "vtc", "name": "VTC", "title": "Voiture de transport avec chauffeur", "description": "Un support structuré pour organiser les révisions et travailler les situations professionnelles.", "color": "#7951a8", "price": 2200, "bulk_price": 2000},
