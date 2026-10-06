@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261004-2') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261006-1') }}">
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-2') }}">
 </head>
 <body class="native-elearning-body{{ ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
