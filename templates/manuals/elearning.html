@@ -1,13 +1,150 @@
 {% extends 'manuals/layout.html' %}
-{% block title %}E-learning · Prochainement{% endblock %}
+{% block title %}Parcours e-learning APS & A3P · Prochainement{% endblock %}
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/organism-elearning.css', v='20261006-1') }}">
+{% endblock %}
+{% macro icon(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'book' %}<path d="M12 5C8 2 4 3 2 4v15c3-2 7-1 10 1 3-2 7-3 10-1V4c-2-1-6-2-10 1Z"/><path d="M12 5v15M5 8h4M5 12h4M15 8h4M15 12h4"/>
+{% elif name == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{% elif name == 'check' %}<path d="m5 12 4 4L19 6"/>
+{% elif name == 'chart' %}<path d="M4 3v17h17M8 15v-4M13 15V7M18 15V4"/>
+{% elif name == 'file' %}<path d="M14 3H5v18h14V8l-5-5Z"/><path d="M14 3v5h5M8 12h8M8 16h5"/>
+{% elif name == 'users' %}<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/>
+{% elif name == 'lock' %}<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>
+{% elif name == 'play' %}<rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 8 6 4-6 4Z"/>
+{% elif name == 'arrow' %}<path d="M4 12h16m-6-6 6 6-6 6"/>
+{% endif %}</svg>
+{%- endmacro %}
 {% block content %}
-<div class="shop-wrap portal-wrap"><a class="text-link" href="{{ url_for('manuals_shop.home') }}">← Mon espace organisme</a>
-<section class="learning-hero"><span class="service-badge soon">Prochainement</span><span class="eyebrow">LES PARCOURS E-LEARNING INTÉGRALE ACADEMY</span><h1>Le prochain chapitre<br><em>de vos formations.</em></h1><p>Bientôt, commandez les accès e-learning de vos stagiaires directement depuis votre espace organisme.</p><div class="hero-pills"><span>Cours en ligne</span><span>Évaluations</span><span>Suivi individuel</span></div></section>
-<div class="section-heading"><div><span class="eyebrow blue">DEUX PARCOURS À DÉCOUVRIR</span><h2>À chaque formation, son parcours.</h2><p class="muted">Tarifs de la brochure · Un accès individuel par stagiaire.</p></div></div>
-<div class="service-grid learning-offers">
-<article class="form-card"><span class="learning-code">APS</span><h3>Agent de prévention<br>et de sécurité</h3><p class="learning-price">59 € <span>TTC / stagiaire</span></p><p><strong>62 heures de parcours</strong><br><span class="muted">27 h de tronc commun + 35 h spécifiques APS.</span></p><hr><p class="small">Le programme doit être adapté au cadre du certificateur : la brochure distingue le parcours de 62 h et les 50 h 30 éligibles à distance dans le cadre ADEF.</p><span class="coming-message">Ouverture des commandes prochainement</span></article>
-<article class="form-card"><span class="learning-code green">A3P</span><h3>Agent de protection<br>physique des personnes</h3><p class="learning-price">89 € <span>TTC / stagiaire</span></p><p><strong>157 h 30 de parcours</strong><br><span class="muted">27 h de tronc commun + 130 h 30 spécifiques A3P.</span></p><hr><p class="small">Le volume réalisable à distance et les modalités d’utilisation doivent être validés avec votre certificateur avant l’ouverture d’une session.</p><span class="coming-message">Ouverture des commandes prochainement</span></article>
+<div class="shop-wrap portal-wrap el-page">
+  <a class="el-back" href="{{ url_for('manuals_shop.home') }}">← Mon espace organisme</a>
+
+  <section class="el-hero" aria-labelledby="el-title">
+    <div class="el-hero-copy">
+      <span class="service-badge soon">Prochainement dans votre espace</span>
+      <span class="eyebrow">LES PARCOURS E-LEARNING INTÉGRALE ACADEMY</span>
+      <h1 id="el-title">Votre e-learning.<br><em>Notre exigence<br>de suivi.</em></h1>
+      <p>Nous-mêmes centre de formation, nous avons conçu les parcours e-learning à partir des besoins de nos stagiaires et de nos formateurs.</p>
+      <p class="el-hero-sub">Des cours illustrés, des évaluations et un suivi individuel pour accompagner vos formations APS et A3P.</p>
+      <div class="el-actions">
+        <a class="button el-button-light" href="#parcours">Découvrir les parcours {{ icon('arrow') }}</a>
+        <a class="el-hero-link" href="mailto:clement@integraleacademy.com?subject=Demande%20de%20d%C3%A9monstration%20e-learning">Demander une démonstration</a>
+      </div>
+    </div>
+    <div class="el-hero-visual">
+      <div class="el-screen">
+        <div class="el-screen-bar"><span class="el-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>INTÉGRALE ACADEMY / E-LEARNING</span></div>
+        <img class="el-hero-image" src="{{ url_for('static', filename='images/aps62/module-02.webp') }}" alt="Illustration pédagogique : un agent sécurise une zone et échange avec deux personnes." width="1536" height="1024" fetchpriority="high">
+        <div class="el-screen-copy"><span class="el-mini-label">APPRENDRE À PARTIR DU TERRAIN</span><strong>Des situations concrètes.<br>Des repères pour agir.</strong><div class="el-screen-tags"><span>Cours illustrés</span><span>Activités</span><span>Évaluations</span></div></div>
+      </div>
+      <div class="el-visual-note">{{ icon('chart') }}<div><strong>Chaque progression compte.</strong><span>Temps actif · Résultats · Justificatifs</span></div></div>
+    </div>
+  </section>
+
+  <div class="el-highlights" aria-label="Les points clés de l’offre">
+    <div>{{ icon('book') }}<p><strong>2 parcours métier</strong><span>APS & protection des personnes</span></p></div>
+    <div>{{ icon('users') }}<p><strong>Un accès par stagiaire</strong><span>Un parcours et un suivi individuels</span></p></div>
+    <div>{{ icon('clock') }}<p><strong>Du temps réellement suivi</strong><span>Les périodes d’inactivité sont exclues</span></p></div>
+    <div>{{ icon('file') }}<p><strong>Des preuves de suivi</strong><span>Connexions, résultats et attestations</span></p></div>
+  </div>
+
+  <section class="el-section" id="parcours" aria-labelledby="el-offers-title">
+    <div class="el-section-heading"><div><span class="eyebrow blue">DEUX MÉTIERS, LA MÊME EXIGENCE PÉDAGOGIQUE</span><h2 id="el-offers-title">À chaque formation, son parcours.</h2></div><p>Des contenus organisés par séquence, pour préparer la théorie et faciliter le travail en présentiel.</p></div>
+    <div class="el-offers">
+      <article class="el-offer el-offer-aps">
+        <div class="el-offer-body">
+          <div class="el-offer-top"><span class="el-course-code">APS</span><span class="el-offer-type">ACCÈS INDIVIDUEL</span></div>
+          <h3>Agent de prévention<br>et de sécurité</h3>
+          <p class="el-offer-intro">Structurez la théorie à distance. Préparez vos stagiaires au travail en présentiel.</p>
+          <div class="el-price-row"><p class="el-price">59 € <span>TTC<br>par stagiaire</span></p><div class="el-duration">{{ icon('clock') }}<strong>62 h 00</strong><span>de parcours</span></div></div>
+          <div class="el-hours"><span><strong>27 h</strong> de tronc commun</span><span><strong>35 h</strong> spécifiques APS</span></div>
+          <ul class="el-checklist">
+            <li>{{ icon('check') }}<span><strong>Les connaissances métier</strong>Cadre juridique, déontologie, analyse des conflits, consignes et connaissance des risques.</span></li>
+            <li>{{ icon('check') }}<span><strong>Une progression guidée</strong>Des cours structurés, des situations professionnelles et des évaluations à chaque étape.</span></li>
+            <li>{{ icon('check') }}<span><strong>Des repères pour vos formateurs</strong>La progression et les résultats permettent d’identifier les notions à reprendre avec les stagiaires.</span></li>
+          </ul>
+        </div>
+        <figure class="el-course-preview">
+          <div class="el-preview-caption"><span>APS / APERÇU PÉDAGOGIQUE</span><span>Extrait de la collection</span></div>
+          <div class="el-preview-content"><div class="el-preview-menu"><span>MON PARCOURS</span><strong>Mes cours</strong><span>Mes activités</span><span>Mes évaluations</span><span>Mon suivi</span><div>{{ icon('clock') }}Temps suivi<br>par module</div></div><img src="{{ url_for('static', filename='images/organism-elearning/aps-extrait.webp') }}" alt="Extrait illustré APS : Un accès refusé, un dialogue à maintenir." width="840" height="1191" loading="lazy"></div>
+          <figcaption>Exemple de support pédagogique présenté dans notre brochure.</figcaption>
+        </figure>
+        <div class="el-offer-footer">{{ icon('clock') }} Ouverture des commandes prochainement</div>
+      </article>
+      <article class="el-offer el-offer-a3p">
+        <div class="el-offer-body">
+          <div class="el-offer-top"><span class="el-course-code">A3P</span><span class="el-offer-type">ACCÈS INDIVIDUEL</span></div>
+          <h3>Agent de protection<br>physique des personnes</h3>
+          <p class="el-offer-intro">Un univers pédagogique concret pour préparer les connaissances liées à la protection des personnes.</p>
+          <div class="el-price-row"><p class="el-price">89 € <span>TTC<br>par stagiaire</span></p><div class="el-duration">{{ icon('clock') }}<strong>157 h 30</strong><span>de parcours</span></div></div>
+          <div class="el-hours"><span><strong>27 h</strong> de tronc commun</span><span><strong>130 h 30</strong> spécifiques A3P</span></div>
+          <ul class="el-checklist">
+            <li>{{ icon('check') }}<span><strong>Des contenus liés à la protection</strong>Des situations métier et des cas professionnels pour mettre les connaissances en contexte.</span></li>
+            <li>{{ icon('check') }}<span><strong>Des apprentissages structurés</strong>Cours et évaluations organisés par séquence, avec une progression encadrée tout au long du parcours.</span></li>
+            <li>{{ icon('check') }}<span><strong>Une traçabilité individuelle</strong>Temps de suivi, relevés de connexions et justificatifs associés à chaque stagiaire.</span></li>
+          </ul>
+        </div>
+        <figure class="el-course-preview">
+          <div class="el-preview-caption"><span>A3P / APERÇU PÉDAGOGIQUE</span><span>Extrait de la collection</span></div>
+          <div class="el-preview-content"><div class="el-preview-menu"><span>MON PARCOURS</span><strong>Mes cours</strong><span>Mes activités</span><span>Mes évaluations</span><span>Mon suivi</span><div>{{ icon('clock') }}Temps suivi<br>par module</div></div><img src="{{ url_for('static', filename='images/organism-elearning/a3p-extrait.webp') }}" alt="Extrait illustré A3P : Préparer et conduire une mission." width="840" height="1191" loading="lazy"></div>
+          <figcaption>Exemple de support pédagogique présenté dans notre brochure.</figcaption>
+        </figure>
+        <div class="el-offer-footer">{{ icon('clock') }} Ouverture des commandes prochainement</div>
+      </article>
+    </div>
+  </section>
+
+  <section class="el-section" aria-labelledby="el-content-title">
+    <div class="el-section-heading"><div><span class="eyebrow blue">CE QUE VOS STAGIAIRES VONT RETROUVER</span><h2 id="el-content-title">Comprendre. S’entraîner. Progresser.</h2></div><p>Un environnement pédagogique qui relie les connaissances, les situations de terrain et la vérification des acquis.</p></div>
+    <div class="el-feature-grid">
+      <article><span class="el-icon-box">{{ icon('book') }}</span><h3>Des cours visuels</h3><p>Des séquences structurées et des supports illustrés pour rendre les notions métier plus concrètes et faciliter leur compréhension.</p></article>
+      <article><span class="el-icon-box">{{ icon('play') }}</span><h3>Des situations professionnelles</h3><p>Des exemples et des activités pour mobiliser les connaissances, analyser une situation et identifier les réponses adaptées.</p></article>
+      <article><span class="el-icon-box">{{ icon('check') }}</span><h3>Des acquis vérifiés</h3><p>Des évaluations pour mesurer la compréhension et repérer les points à retravailler avant de poursuivre le parcours.</p></article>
+      <article><span class="el-icon-box">{{ icon('chart') }}</span><h3>Une progression visible</h3><p>Un suivi individuel du temps, des étapes réalisées et des résultats pour accompagner chaque stagiaire au bon moment.</p></article>
+    </div>
+  </section>
+
+  <section class="el-tracking el-section" aria-labelledby="el-tracking-title">
+    <div class="el-section-heading"><div><span class="eyebrow">UN SUIVI QUI VA AU-DELÀ DE LA CONNEXION</span><h2 id="el-tracking-title">Le temps passé est mesuré.<br>La progression est contrôlée.</h2></div><p>La validation d’une séquence repose sur trois conditions complémentaires.</p></div>
+    <ol class="el-tracking-steps">
+      <li><span class="el-step-number">01</span><h3>Le temps actif</h3><p>Les connexions sont horodatées et le temps actif est enregistré par module. Les périodes d’inactivité sont exclues du décompte.</p></li>
+      <li><span class="el-step-number">02</span><h3>Les activités réalisées</h3><p>Le stagiaire suit les contenus et réalise les activités prévues. La progression s’appuie sur le travail réellement effectué.</p></li>
+      <li><span class="el-step-number">03</span><h3>L’évaluation validée</h3><p>Les acquis sont vérifiés. Si la durée requise ou les autres conditions ne sont pas réunies, l’accès à la suite reste bloqué.</p></li>
+    </ol>
+    <div class="el-example-heading"><strong>Une séquence de 4 heures, concrètement</strong><span>Exemple illustratif</span></div>
+    <div class="el-time-examples">
+      <div class="el-time-card el-time-pending"><span class="el-time-status">{{ icon('lock') }} Suite bloquée</span><strong>03 h 12 <span>suivies / 04 h 00</span></strong><div class="el-time-bar" aria-hidden="true"><span></span></div><p>Évaluation validée, mais durée non atteinte : le stagiaire doit poursuivre la séquence.</p></div>
+      <div class="el-time-card el-time-complete"><span class="el-time-status">{{ icon('check') }} Suite ouverte</span><strong>04 h 03 <span>suivies / 04 h 00</span></strong><div class="el-time-bar" aria-hidden="true"><span></span></div><p>Durée atteinte, activités réalisées et évaluation validée : le module suivant devient accessible.</p></div>
+    </div>
+  </section>
+
+  <section class="el-section el-evidence" aria-labelledby="el-evidence-title">
+    <div class="el-evidence-copy"><span class="eyebrow blue">UNE TRAÇABILITÉ POUR VOTRE CENTRE</span><h2 id="el-evidence-title">Des justificatifs précis.<br>Un suivi facile à lire.</h2><p class="muted">Retrouvez les informations utiles pour documenter le parcours de chaque stagiaire et préparer vos dossiers de suivi.</p>
+      <ul class="el-checklist">
+        <li>{{ icon('users') }}<span><strong>Un dossier individuel</strong>Identité du stagiaire, session, parcours et référence d’autorisation CNAPS renseignée au dossier.</span></li>
+        <li>{{ icon('chart') }}<span><strong>Une lecture module par module</strong>Durée requise, temps actif suivi, résultats des évaluations et état d’avancement.</span></li>
+        <li>{{ icon('file') }}<span><strong>Des pièces pour justifier le suivi</strong>Attestation détaillée, relevés de connexions et tableau de suivi avec signature électronique du stagiaire et du responsable.</span></li>
+      </ul>
+    </div>
+    <figure class="el-report">
+      <div class="el-report-heading"><span class="el-icon-box">{{ icon('file') }}</span><div><strong>Attestation & relevé de suivi</strong><span>Exemple de présentation · Données fictives</span></div></div>
+      <dl class="el-report-identity"><div><dt>Stagiaire</dt><dd>DÉMONSTRATION</dd></div><div><dt>Session / parcours</dt><dd>EXEMPLE-001</dd></div><div><dt>Suivi</dt><dd>Séquence de 4 heures</dd></div></dl>
+      <div class="el-report-table"><table><caption>Connexions du 2 octobre 2026</caption><thead><tr><th scope="col">Connexion</th><th scope="col">Plage horaire</th><th scope="col">Temps actif</th></tr></thead><tbody><tr><td>02/10/2026</td><td>09:00 – 10:25</td><td>01 h 15</td></tr><tr><td>02/10/2026</td><td>11:00 – 12:10</td><td>01 h 02</td></tr><tr><td>02/10/2026</td><td>14:00 – 16:00</td><td>01 h 46</td></tr></tbody></table></div>
+      <div class="el-report-total"><span>Durée requise <strong>04 h 00</strong></span><span>Temps actif total <strong>04 h 03</strong></span></div>
+      <figcaption>{{ icon('check') }} Résultats des évaluations & signatures électroniques</figcaption>
+    </figure>
+  </section>
+
+  <section class="el-center-benefits" aria-labelledby="el-benefits-title"><div><span class="eyebrow blue">CONÇU PAR UN CENTRE, POUR LES CENTRES</span><h2 id="el-benefits-title">Gardez la main sur l’accompagnement.</h2><p>Vos formateurs disposent de repères pour préparer leurs interventions, cibler les difficultés et assurer la continuité entre les séquences à distance et le travail en présentiel.</p></div><ul><li>{{ icon('check') }} Identifier les stagiaires à accompagner</li><li>{{ icon('check') }} Repérer les notions à reprendre</li><li>{{ icon('check') }} Consulter une progression individuelle</li><li>{{ icon('check') }} Réunir les éléments de suivi</li></ul></section>
+
+  <section class="el-section el-faq" aria-labelledby="el-faq-title"><div><span class="eyebrow blue">VOS QUESTIONS</span><h2 id="el-faq-title">Tout savoir avant de commencer.</h2><p class="muted">Besoin de découvrir le parcours en détail ? Notre équipe vous accompagne.</p></div><div class="el-faq-items">
+    <details><summary>Que comprend le tarif par stagiaire ?</summary><p>Il correspond à un accès individuel au parcours e-learning choisi : cours, activités, évaluations et suivi du parcours. Le tarif est de 59 € TTC pour l’APS et de 89 € TTC pour l’A3P. Le présentiel, les mises en pratique et les examens restent organisés par votre centre.</p></details>
+    <details><summary>Le temps de connexion suffit-il pour valider un module ?</summary><p>Le suivi prend en compte le temps actif consacré à la séquence. Les périodes d’inactivité sont exclues. La durée requise, les activités et la validation de l’évaluation conditionnent ensemble le passage au module suivant.</p></details>
+    <details><summary>Quels éléments de suivi sont prévus pour le centre ?</summary><p>Le suivi individuel regroupe les connexions horodatées, le temps actif par module, les résultats et l’avancement. Des attestations détaillées, des relevés de connexions et un tableau de suivi signé permettent de documenter le parcours.</p></details>
+    <details><summary>Quand pourrai-je commander les accès ?</summary><p>La commande et l’activation des accès depuis l’espace organismes sont en préparation. Elles seront disponibles prochainement. Vous pouvez dès maintenant nous contacter pour découvrir les parcours et préparer votre prochaine session.</p></details>
+  </div></section>
+
+  <section class="el-contact" aria-labelledby="el-contact-title"><div><span class="service-badge soon">Prochainement</span><h2 id="el-contact-title">Découvrez nos parcours avant<br>votre prochaine session.</h2><p>Échangeons sur vos formations et découvrez concrètement nos modules e-learning.</p><p class="el-availability">La commande et l’activation des accès dans votre espace seront disponibles prochainement.</p></div><div class="el-contact-actions"><a class="button el-button-light" href="mailto:clement@integraleacademy.com?subject=Demande%20de%20d%C3%A9monstration%20e-learning">Demander une démonstration {{ icon('arrow') }}</a><a class="el-phone" href="tel:+33422470768">04 22 47 07 68</a><a class="el-email" href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a></div></section>
 </div>
-<section class="form-card learning-tracking"><span class="eyebrow blue">UN PARCOURS STRUCTURÉ, UN SUIVI INDIVIDUEL</span><h2>Accompagner chaque progression.</h2><div class="tracking-grid"><div><span>01</span><h3>Temps actif</h3><p>Suivi du temps consacré aux modules, avec exclusion des périodes d’inactivité.</p></div><div><span>02</span><h3>Validation des étapes</h3><p>Durée minimale, activités et évaluation conditionnent l’accès au module suivant.</p></div><div><span>03</span><h3>Traçabilité</h3><p>Connexions horodatées, suivi individuel et attestations pour documenter le parcours.</p></div></div></section>
-<div class="notice">Ce service est en préparation. Aucune commande ni activation d’accès e-learning n’est encore disponible.</div>
-</div>{% endblock %}
+{% endblock %}
