@@ -4866,25 +4866,30 @@ function updateDocsRelanceState(status, plannedDateIso){
     if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible');
     return j;
   }
-  async function load(){
-    const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}`,{headers:{'Accept':'application/json'}});
+  let billingLoadPromise = null;
+  function load(){
+    if(billingLoadPromise) return billingLoadPromise;
+    billingLoadPromise = loadLocalBilling().finally(()=>{ billingLoadPromise = null; });
+    return billingLoadPromise;
+  }
+  async function loadLocalBilling(){
+    // The scheduled Qonto job/webhooks update the stored state. Reading an
+    // open tab must not trigger another bank synchronization every 30 seconds.
+    const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}?local=1`,{headers:{'Accept':'application/json'}});
     const j = await parseJsonResponse(r,'Chargement impossible');
     if(!r.ok||!j.ok) throw new Error(j.error||'Chargement impossible');
     currentLines = j.lines || [];
     currentFinancialSummary = j.financial_summary || null;
     currentCpfWedofInvoice = j.cpf_wedof_invoice || null;
-    console.log("FINANCIAL_FRONTEND_DIAGNOSTIC", {
-      financialSummary: currentFinancialSummary,
-      invoiceRows: currentLines.map(l => l.qonto_invoice).filter(Boolean)
-    });
     render(currentLines);
     updateQuickInvoiceAction();
   }
   let localTraineePollTimer;
   function scheduleLocalTraineePoll(immediate=false){
     clearTimeout(localTraineePollTimer);
+    if(document.hidden) return;
     if(immediate) load().catch(()=>{});
-    localTraineePollTimer=setTimeout(async()=>{try{await load();}catch(e){/* retain current finance display */}scheduleLocalTraineePoll();},document.hidden?120000:30000);
+    localTraineePollTimer=setTimeout(async()=>{try{if(!document.hidden) await load();}catch(e){/* retain current finance display */}scheduleLocalTraineePoll();},30000);
   }
   document.addEventListener('visibilitychange',()=>scheduleLocalTraineePoll(!document.hidden));
   window.refreshQontoInvoiceHistory = () => load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });

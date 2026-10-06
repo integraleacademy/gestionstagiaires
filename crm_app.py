@@ -7,6 +7,7 @@ from bts_workspace import register_bts_workspace
 from crm_cnaps_tracking_api import register_crm_cnaps_tracking_api
 from cnaps_notification_recovery import register_cnaps_notification_recovery
 from wedof_invoice_reconciliation import register_wedof_invoice_reconciliation
+from maintenance_jobs import register_maintenance_jobs
 
 
 app = legacy_app.app
@@ -19,3 +20,4 @@ register_crm_cnaps_tracking_api(
     fetch_tracking_requests=legacy_app.fetch_cnapsv3_tracking_requests,
     fetch_public_annuaire=getattr(legacy_app, "fetch_cnaps_public_annuaire", None),
 )
+register_maintenance_jobs(legacy_app)

@@ -2563,7 +2563,7 @@
     if(listEl) listEl.textContent = "Chargement…";
 
     try{
-      const r = await fetch("/api/docs_to_control");
+      const r = await window.adminReadFetch("/api/docs_to_control");
       const res = await r.json();
 
       if(!r.ok || !res.ok){

@@ -5478,7 +5478,9 @@ def _write_json_with_backups(
                 tmp = f"{path}.tmp.{os.getpid()}.{uuid.uuid4().hex}"
                 try:
                     with open(tmp, "w", encoding="utf-8") as f:
-                        json.dump(payload, f, ensure_ascii=False, indent=2)
+                        # Use the C encoder once instead of millions of small
+                        # indented writes while holding the shared storage lock.
+                        f.write(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
                         f.flush()
                         os.fsync(f.fileno())
                     os.replace(tmp, path)
@@ -5536,22 +5538,18 @@ def _iter_corrupt_candidates(path: str) -> Iterable[str]:
 
 
 def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
-    lock = _data_lock if "_data_lock" in globals() and path == globals().get("DATA_FILE") else None
-
-    def _read() -> Optional[Dict[str, Any]]:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                loaded = json.load(f)
-            if isinstance(loaded, dict):
-                return loaded
-        except Exception:
-            return None
+    # Writers fsync a separate file then atomically replace the path. An open
+    # reader therefore sees one complete committed snapshot, even during a save.
+    # Read/modify/write transactions still hold _data_lock in update_data and
+    # _write_json_with_backups; plain reads must not queue behind those writes.
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict):
+            return loaded
+    except Exception:
         return None
-
-    if lock is not None:
-        with lock:
-            return _read()
-    return _read()
+    return None
 
 
 def _recover_data_file(path: str) -> Optional[str]:
@@ -28399,6 +28397,27 @@ def api_cnaps_public_annuaire():
     tracking_id = (request.args.get("tracking_id") or "").strip()
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
+    if request.args.get("cache") != "bypass":
+        cached_data = load_data()
+        statuses = cached_data.get("cnaps_public_annuaire_statuses") or {}
+        saved = statuses.get(_cnaps_public_annuaire_status_key(nom, nub)) if isinstance(statuses, dict) else None
+        cached_result = saved.get("result") if isinstance(saved, dict) else None
+        if isinstance(cached_result, dict) and cached_result.get("check_status") == "success":
+            try:
+                checked_at = datetime.datetime.fromisoformat(str(cached_result.get("checked_at") or "").replace("Z", "+00:00"))
+                if checked_at.tzinfo is None:
+                    checked_at = checked_at.replace(tzinfo=datetime.timezone.utc)
+                age = (datetime.datetime.now(datetime.timezone.utc) - checked_at).total_seconds()
+            except (ValueError, TypeError):
+                age = 301
+            if 0 <= age < 300 and (not tracking_id or saved.get("tracking_id") == tracking_id):
+                # The monitor or another tab already checked this person. Reuse
+                # that successful check without another network call/full save.
+                return jsonify({**cached_result, "ok": True, "cached": True,
+                                "notification_sent": False,
+                                "pending_status_changes_count": _cnaps_pending_status_change_count(cached_data)})
+        del cached_data, statuses, saved, cached_result
+        _invalidate_request_data_cache()
     result = fetch_cnaps_public_annuaire(nom, nub)
     if result.get("check_status") is None:
         result["check_status"] = "success"
@@ -44161,11 +44180,20 @@ def api_admin_billing_generate(line_id: str):
 
 
 def _billing_lines_for_session(data: Dict[str, Any], session_id: str) -> List[Dict[str, Any]]:
-    return [l for l in _billing_lines(data) if str(l.get('sessionId')) == str(session_id)]
+    sessions = [s for s in data.get('sessions', []) if str(s.get('id')) == str(session_id)]
+    # Keep legacy stored lines addressable by their computed ID even when their
+    # older payload omits sessionId/traineeId. Only generated rows are scoped.
+    return buildBillingLinesFromSessions(sessions, _billing_existing_map(data))
 
 
 def _billing_lines_for_trainee_session(data: Dict[str, Any], trainee_id: str, session_id: str) -> List[Dict[str, Any]]:
-    return [l for l in _billing_lines_for_session(data, session_id) if str(l.get('traineeId')) == str(trainee_id)]
+    sessions = []
+    for source in data.get('sessions', []):
+        if str(source.get('id')) == str(session_id):
+            scoped = dict(source)
+            scoped['trainees'] = [t for t in _session_trainees_list(source) if str(t.get('id')) == str(trainee_id)]
+            sessions.append(scoped)
+    return buildBillingLinesFromSessions(sessions, _billing_existing_map(data))
 
 
 def _billing_line_qonto_sync_due(
@@ -44354,6 +44382,7 @@ def api_billing_session(session_id: str):
 @admin_login_required
 def api_billing_trainee_session(trainee_id: str, session_id: str):
     data = load_data()
+    local_only = request.args.get('local') == '1'
     session_obj = next(
         (sess for sess in data.get('sessions', []) if str(sess.get('id')) == str(session_id)),
         None,
@@ -44367,10 +44396,11 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
         None,
     )
     lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
-    _repair_logged_qonto_rejection_retries(data, lines)
+    if not local_only:
+        _repair_logged_qonto_rejection_retries(data, lines)
     sync_attempted = False
     data_changed = False
-    if _qonto_is_configured():
+    if not local_only and _qonto_is_configured():
         has_cpf_invoice = any(
             is_cpf_billing_context(line)
             and bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))

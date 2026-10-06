@@ -6,6 +6,7 @@ import subprocess
 import sys
 
 import requests
+from scheduled_job_client import wait_for_job
 
 
 def run_wedof():
@@ -14,6 +15,7 @@ def run_wedof():
     if not url or not token:
         raise SystemExit("WEDOF_AUTOMATION_URL and CRON_SECRET must be configured")
     response = requests.post(url, headers={"X-Cron-Secret": token, "Accept": "application/json"}, timeout=900)
+    response = wait_for_job(response, url=url, headers={"X-Cron-Secret": token, "Accept": "application/json"})
     if not response.ok:
         raise SystemExit(f"WEDOF automation failed: HTTP {response.status_code}")
     print(response.text, flush=True)
@@ -35,8 +37,8 @@ def main():
             tasks[executor.submit(run_qonto)] = "Qonto"
         if os.environ.get("WEDOF_AUTOMATION_URL", "").strip() or os.environ.get("DOCUMENT_REMINDERS_URL", "").strip():
             tasks[executor.submit(run_documents)] = "Documents"
-        # Start both requests independently: a slow or failed WEDOF call must
-        # not stop the Qonto update (and a Qonto failure must not stop WEDOF).
+        # Submit each job independently. The web service serializes maintenance
+        # work outside HTTP threads; a failed job does not stop the others.
         for future in as_completed(tasks):
             try:
                 future.result()

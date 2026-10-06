@@ -11,6 +11,8 @@ graceful_timeout = 30
 keepalive = int(os.environ.get("GUNICORN_KEEPALIVE") or "2")
 
 accesslog = "-"
+# Expose actual application request time for subsequent performance checks.
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" duration_us=%(D)s'
 errorlog = "-"
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
 capture_output = True

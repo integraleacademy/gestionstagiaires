@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  {% if is_admin_logged_in %}<script src="{{ url_for('static', filename='js/admin-read-requests.js', v='20261006') }}"></script>{% endif %}
   <title>{{ title or ("Intégrale Academy • Espace stagiaire" if is_public_trainee_page else "Intégrale Connect • Gestion stagiaires") }}</title>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260725-admin-trainee-saas')) }}">
@@ -1191,8 +1192,9 @@
     if(!sidebarBadge) return;
 
     async function refreshSidebarDocsToControlBadge(){
+      if(document.hidden) return;
       try{
-        const response = await fetch("/api/docs_to_control", { headers: { "Accept": "application/json" } });
+        const response = await window.adminReadFetch("/api/docs_to_control");
         const payload = await response.json();
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
         const totalDocs = (payload.items || []).reduce((sum, item) => sum + (Number(item.pending_count) || 0), 0);
@@ -1227,8 +1229,9 @@
     }
 
     async function refreshSidebarConventionsSignedBadge(){
+      if(document.hidden) return;
       try{
-        const response = await fetch("/api/conventions_signed_unseen", { headers: { "Accept": "application/json" } });
+        const response = await window.adminReadFetch("/api/conventions_signed_unseen");
         const payload = await response.json();
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
         const conventionsTotal = Number(payload.count || 0);
@@ -1273,8 +1276,9 @@
         setCnapsTrackingBadge(nextCount);
         return;
       }
+      if(document.hidden) return;
       try{
-        const response = await fetch("/api/cnaps_status_changes/pending", { headers: { "Accept": "application/json" } });
+        const response = await window.adminReadFetch("/api/cnaps_status_changes/pending");
         const payload = await response.json();
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
         setCnapsTrackingBadge(payload.count);

@@ -4,6 +4,7 @@ import os
 from urllib.parse import urlsplit, urlunsplit
 
 import requests
+from scheduled_job_client import wait_for_job
 
 
 def reminder_url():
@@ -24,6 +25,7 @@ def main():
     if not url or not token:
         raise SystemExit("Scheduled document URL and CRON_SECRET must be configured")
     response = requests.post(url, headers={"X-Cron-Secret": token, "Accept": "application/json"}, timeout=240)
+    response = wait_for_job(response, url=url, headers={"X-Cron-Secret": token, "Accept": "application/json"})
     if not response.ok:
         raise SystemExit(f"Scheduled documents failed: HTTP {response.status_code}")
     result = response.json()

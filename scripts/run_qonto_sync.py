@@ -1,8 +1,8 @@
 """Call the application's Qonto reconciliation job without a browser session."""
 import json
 import os
-import urllib.error
-import urllib.request
+import requests
+from scheduled_job_client import wait_for_job
 
 
 def main():
@@ -10,16 +10,14 @@ def main():
     token = (os.environ.get('QONTO_SYNC_CRON_SECRET') or os.environ.get('CRON_SECRET') or '').strip()
     if not url or not token:
         raise SystemExit('QONTO_SYNC_URL and a cron secret must be configured')
-    request = urllib.request.Request(
-        url, data=b'{}', method='POST',
-        headers={'X-Cron-Secret': token, 'Content-Type': 'application/json', 'Accept': 'application/json'},
-    )
+    headers = {'X-Cron-Secret': token, 'Accept': 'application/json'}
     try:
-        with urllib.request.urlopen(request, timeout=240) as response:
-            result = json.load(response)
-    except urllib.error.HTTPError as exc:
-        raise SystemExit(f'Qonto background sync failed: HTTP {exc.code}') from None
-    except (urllib.error.URLError, TimeoutError, ValueError):
+        response = requests.post(url, json={}, headers=headers, timeout=240)
+        response = wait_for_job(response, url=url, headers=headers)
+        if not response.ok:
+            raise SystemExit(f'Qonto background sync failed: HTTP {response.status_code}')
+        result = response.json()
+    except (requests.RequestException, TimeoutError, ValueError, RuntimeError):
         raise SystemExit('Qonto background sync unavailable; the next scheduled run will retry') from None
     # Print only operational counters, never banking records or credentials.
     fields = ('ok', 'status', 'started_at', 'finished_at', 'attempted_count',
