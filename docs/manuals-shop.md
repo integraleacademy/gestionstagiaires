@@ -53,6 +53,14 @@ Les commandes antérieures à cette version ne déclenchent aucun envoi ni aucun
 
 La page d’administration distingue la présence de configuration d’un test de connexion réussi. Aucun test ne doit émettre de facture réelle fictive ou envoyer des messages de démonstration aux utilisateurs.
 
+### Diagnostic et reprise des commandes (6 octobre 2026)
+
+La liste et le détail administrateur affichent ensemble les prérequis manquants : TVA, identifiants/IBAN de facturation et autorisation des liens de paiement. Le lien client d’une commande ouvre désormais son détail administratif lorsqu’il est consulté par le super administrateur, au lieu de perdre la référence en revenant à la liste. Les clients voient un état d’attente d’activation explicite, sans accès aux réglages internes.
+
+Le contrôle des factures accepte la devise dans `total_amount.currency`, conformément à la réponse documentée par Qonto ; le champ `currency` du payload de création n’est pas nécessairement renvoyé à la racine. Une devise absente, divergente ou autre qu’EUR bloque toujours la finalisation. Les tests de commerce utilisent ce format de réponse et vérifient qu’une autorisation de paiement manquante conserve la facture et la reprend sans doublon.
+
+Le parcours dédié aux manuels nécessite que son adresse de retour soit enregistrée dans l’application du portail développeur Qonto. Une erreur Qonto `invalid_request` mentionnant `redirect_uri` signifie que cette inscription manque ; un déploiement Render ne peut pas l’ajouter chez Qonto. Ne pas remplacer ce retour par celui de production, qui enregistrerait l’autorisation dans un autre environnement. Les droits nécessaires sont `client_invoices.read`, `payment_link.read` et `payment_link.write`.
+
 ## Vérification
 
 - Tests du parcours, tarifs, isolation JSON/PG, reprise des factures, paiements et e-mails : `tests/test_manuals*.py`. Vérification finale ciblée (incluant OAuth, sécurité et partenaires) : **200 tests réussis, 14 sous-tests réussis**.

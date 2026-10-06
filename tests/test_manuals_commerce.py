@@ -40,6 +40,8 @@ def merchant(shop, monkeypatch):
         return {}
     host._atomic_update_data(configure)
     monkeypatch.setattr(host, "_qonto_is_configured", lambda: True)
+    monkeypatch.setattr(host, "_qonto_oauth_connected", lambda *a: True)
+    monkeypatch.setattr(host, "_qonto_oauth_has_scope", lambda *a: True)
     monkeypatch.setattr(host, "get_qonto_invoice_iban", lambda: "FR7612345678901234567890185")
     state = {"calls": [], "invoice": None, "payment": None, "unknown_invoice": False, "wrong_total": False, "payment_disabled": False}
     def request(method, path, payload=None, params=None, **kwargs):
@@ -54,7 +56,11 @@ def merchant(shop, monkeypatch):
             total = 0
             for item in payload["items"]:
                 total += int((Decimal(item["unit_price"]["value"]) * Decimal(item["quantity"]) * (1 + Decimal(item["vat_rate"])) * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-            state["invoice"] = {**payload, "id": "invoice-1", "number": "F-2026-123", "total_amount_cents": total + (1 if state["wrong_total"] else 0), "invoice_url": "https://pay.qonto.com/invoices/invoice-1"}
+            # Match the documented response, not the request: currency belongs
+            # to total_amount and client_id is returned as a nested client.
+            state["invoice"] = {**payload, "id": "invoice-1", "organization_id": "merchant-1", "number": "F-2026-123", "total_amount_cents": total + (1 if state["wrong_total"] else 0), "total_amount": {"value": str(Decimal(total) / 100), "currency": "EUR"}, "invoice_url": "https://pay.qonto.com/invoices/invoice-1"}
+            state["invoice"].pop("currency")
+            state["invoice"]["client"] = {"id": state["invoice"].pop("client_id")}
             if state["unknown_invoice"]:
                 raise RuntimeError("Read timeout after provider accepted invoice")
             return {"client_invoice": copy.deepcopy(state["invoice"])}
@@ -311,3 +317,55 @@ def test_login_preserves_owned_order_link(shop):
     path='/admin/manuels/commandes/'+order['id']
     response=client.post('/admin/login',data={'username':'centre@example.test','password':'Une phrase robuste 2026!','next':path})
     assert response.location==path
+
+
+def test_missing_payment_scope_keeps_invoice_and_resumes_without_duplicate(shop, merchant, monkeypatch):
+    order = submitted(shop)
+    monkeypatch.setattr(host, "_qonto_oauth_has_scope", lambda scope, *a: scope != "payment_link.write")
+    run(order)
+    flow = all_data(shop)["manual_orders"][0]["commerce"]
+    assert flow["status"] == "needs_setup" and flow["invoice_status"] == "unpaid"
+    assert "Autorisez les liens de paiement" in flow["error"]
+    assert not any(p.startswith("/v2/payment_links") or kw.get("use_oauth") for m, p, body, params, kw in merchant["calls"])
+    customer_page = shop["client"].get(f"/admin/manuels/commandes/{order['id']}").text
+    assert "Consulter ma facture" in customer_page
+    assert "Régler en ligne" not in customer_page
+    assert "Terminer la configuration" not in customer_page
+    monkeypatch.setattr(host, "_qonto_oauth_has_scope", lambda *a: True)
+    retry(order)
+    assert all_data(shop)["manual_orders"][0]["commerce"]["status"] == "ready"
+    assert sum(m == "POST" and p == "/v2/client_invoices" for m, p, *_ in merchant["calls"]) == 1
+
+
+@pytest.mark.parametrize("top_currency,nested_currency", [(None, "USD"), ("EUR", "USD"), ("USD", "EUR"), (None, None)])
+def test_invalid_or_conflicting_invoice_currency_blocks_finalization(shop, merchant, monkeypatch, top_currency, nested_currency):
+    order = submitted(shop)
+    original = host._qonto_request
+    def request(method, path, *args, **kwargs):
+        result = original(method, path, *args, **kwargs)
+        if method == "POST" and path == "/v2/client_invoices":
+            result["client_invoice"]["currency"] = top_currency
+            result["client_invoice"]["total_amount"]["currency"] = nested_currency
+        return result
+    monkeypatch.setattr(host, "_qonto_request", request)
+    run(order)
+    assert all_data(shop)["manual_orders"][0]["commerce"]["status"] == "needs_review"
+    assert not any(p.endswith("/finalize") for m, p, *_ in merchant["calls"])
+
+
+def test_staff_order_link_keeps_order_and_shows_both_setup_blockers(shop, merchant, monkeypatch):
+    order = submitted(shop)
+    host._atomic_update_data(lambda data: data.pop("manuals_commerce_settings", None) and {})
+    monkeypatch.setattr(host, "_qonto_oauth_has_scope", lambda *a: False)
+    run(order)
+    admin = host.app.test_client()
+    admin.post("/admin/login", data={"username": "admin@example.test", "password": "platform-test-pass"})
+    original_path = f"/admin/manuels/commandes/{order['id']}"
+    response = admin.get(original_path)
+    assert response.location == f"/admin/commandes-manuels/{order['partner_id']}/{order['id']}"
+    page = admin.get(response.location).text
+    assert "À renseigner : manuels imprimés, supports PowerPoint sur clé USB" in page
+    assert "Autorisation Qonto manquante" in page
+    assert "Terminer la configuration" in page
+    assert "Facture et paiement : activation à terminer" in admin.get("/admin/commandes-manuels").text
+    assert admin.get("/admin/manuels/commandes/unknown").status_code == 404
