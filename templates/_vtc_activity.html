@@ -11,7 +11,7 @@
   <section class="vtc-objective"><span class="vtc-eyebrow">Leçon {{ lesson.ref }} · Mettre en pratique</span><p>{{ lesson.objective }}</p></section>
   {% include '_aps62_practice.html' %}
 {% elif lesson.kind == 'recap' %}
-  <section class="vtc-objective"><span class="vtc-eyebrow">Retenir et relier</span><p>Retrouvez quatre situations expliquées dans cette capsule visuelle. Faites une pause pour choisir mentalement votre réponse, puis lisez le raisonnement à l’écran. Cette version ne comporte pas de narration audio.</p></section>
+  <section class="vtc-objective"><span class="vtc-eyebrow">Retenir et relier</span><p>{% if lesson.audio %}Retrouvez quatre situations expliquées dans cette capsule narrée et sous-titrée. Faites une pause pour choisir mentalement votre réponse, puis écoutez le raisonnement. Les sous-titres et la transcription vous permettent aussi de réviser sans le son.{% else %}Retrouvez quatre situations expliquées dans cette capsule visuelle. Faites une pause pour choisir mentalement votre réponse, puis lisez le raisonnement à l’écran. Cette version ne comporte pas de narration audio.{% endif %}</p></section>
   <details class="vtc-transcript"><summary>Lire la transcription de la vidéo</summary>{% for paragraph in lesson.transcript.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}</details>
   <h2>Les douze repères du module</h2><div class="vtc-recap-grid">{% for card in lesson.cards %}<div><b>{{ card.label }}</b><span>{{ card.text }}</span></div>{% endfor %}</div>
 {% elif lesson.kind == 'supplements' %}

@@ -3,12 +3,14 @@ from pathlib import Path
 import copy, hashlib, json, random
 ROOT=Path(__file__).resolve().parents[2]
 OUT=ROOT/'elearning_native/vtc'
-VERSION='20261006-vtc-v1'
+VERSION='20261006-vtc-v2'
+PREVIOUS_VERSION='20261006-vtc-v1'
 def save(path,value):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n')
 bank=json.loads((OUT/'manual_bank.json').read_text())
-videos=json.loads((OUT/'video_manifest.json').read_text()) if (OUT/'video_manifest.json').exists() else {}
+videos=json.loads((OUT/'video_manifest_v2.json').read_text())
+assert len(videos)==8 and all(v.get('audio') and v.get('voice')=='fr-FR-HenriNeural' for v in videos.values())
 questions={}
 for row in (ROOT/'scripts/vtc/questions.txt').read_text().splitlines():
     if not row or row.startswith('#'):continue
@@ -29,7 +31,7 @@ SOURCES=[
 EXAM=[(45,3,'10 QCM + 5 QRC'),(45,2,'16 QCM + 2 QRC'),(30,3,'20 QCM'),(30,2,'7 QCM + 3 QRC'),(30,1,'20 QCM'),(30,3,'12 QCM + 4 QRC'),(20,3,'6 QCM + 2 QRC'),(20,0,'Mise en situation en circulation')]
 manifest={'id':'vtc','version':VERSION,'title':'VTC · Le parcours illustré','reviewed_on':'2026-10-06',
  'planned_minutes':3600,'lesson_count':96,'workshop_count':96,'sources':SOURCES,'modules':[],
- 'exam_versions':[VERSION],'final_exam_id':'vtc-final',
+ 'exam_versions':[PREVIOUS_VERSION,VERSION],'final_exam_id':'vtc-final',
  'notice':'Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.'}
 module_exams=[]
 for m,official in zip(bank['modules'],EXAM):
@@ -66,6 +68,7 @@ for m,official in zip(bank['modules'],EXAM):
     sections.append({'id':'vtc-'+letter.lower()+'-synthese','title':'Synthèse · relier les notions','activities':[
        {'id':'vtc-'+letter.lower()+'-capsule','title':'Voir et retenir · les essentiels','type':'content','scored':False,'planned_minutes':12,'blocks':video_blocks,
         'vtc':{'kind':'recap','module':letter,'title':m['title'],'image':m['image'],'transcript':video.get('transcript','') if video else '',
+               'audio':bool(video and video.get('audio')),
                'cards':[{'label':l['ref'],'text':l['title']} for l in lessons]}},
        {'id':'vtc-'+letter.lower()+'-approfondir','title':'Approfondir · repères et méthode','type':'content','scored':False,'planned_minutes':24,'blocks':[],
         'vtc':{'kind':'supplements','module':letter,'title':'Relier le cours à la mission','supplements':supplements,'sources':SOURCES,
@@ -83,7 +86,7 @@ for m,official in zip(bank['modules'],EXAM):
      'assets':sorted(assets),'import_warnings':[],
      'counts':{'sections':13,'lessons':12,'activities':26,'scored_activities':0,'workbooks':0,'interactive_workshops':12,'required_videos':int(bool(video)),'assets':len(assets)}}
     save(OUT/'courses'/cid/(VERSION+'.json'),course)
-    manifest['modules'].append({'id':cid,'version':VERSION,'letter':letter,'title':course['title'],
+    manifest['modules'].append({'id':cid,'version':VERSION,'previous_versions':[PREVIOUS_VERSION],'letter':letter,'title':course['title'],
        'planned_minutes':m['planned_minutes'],'illustration':m['illustration'],'mock_exam_id':course['mock_exam_id'],
        'exam':{'minutes':official[0],'coefficient':official[1],'format':official[2]},'lessons':[{'ref':l['ref'],'title':l['title'],'page':l['page']} for l in lessons]})
     exam_questions=allq+copy.deepcopy(bank['manual_questions'][letter][:6])
@@ -101,7 +104,7 @@ random.Random(VERSION).shuffle(final)
 assert len(final)==100 and len({q['id'] for q in final})==100
 save(OUT/'exams'/VERSION/'vtc-final.json',{'id':'vtc-final','version':VERSION,'training_label':'VTC',
  'title':'VTC · Examen blanc final · Les sept matières','pass_percent':80,'questions':final,'notice':manifest['notice']})
-manifest.update(activity_count=208,video_count=len(videos),exercise_count=288,question_bank_count=272,
+manifest.update(activity_count=208,video_count=len(videos),narrated_video_count=sum(bool(v.get('audio')) for v in videos.values()),exercise_count=288,question_bank_count=272,
                 module_exam_questions=240,final_exam_questions=100)
 save(OUT/'manifest.json',manifest)
 print('Built 8 courses, 96 lessons, 96 workshops / 288 exercises, 8×30 and final 100 questions; videos:',len(videos))

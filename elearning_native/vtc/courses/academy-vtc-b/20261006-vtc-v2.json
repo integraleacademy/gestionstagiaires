@@ -1,0 +1,2796 @@
+{
+  "format_version": 1,
+  "id": "academy-vtc-b",
+  "version": "20261006-vtc-v2",
+  "title": "VTC B · Gérer son entreprise",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "training_label": "VTC",
+  "source": {
+    "type": "academy-vtc",
+    "reviewed_on": "2026-10-06",
+    "manual_sha256": "dc22c7f98da0700180499c1fba3f15e0c9238f26c4a734da584952eef67ef8ce"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#7045bd",
+    "button_color": "#6534b4",
+    "text_color": "#241a38"
+  },
+  "planned_minutes": 540,
+  "required_minutes": 0,
+  "introduction": [],
+  "illustration": "images/vtc/module-b.webp",
+  "mock_exam_id": "vtc-b",
+  "mock_exam_questions": 30,
+  "regulation": "Épreuve B",
+  "sections": [
+    {
+      "id": "vtc-b-01",
+      "title": "B.01 · Choisir un cadre juridique",
+      "activities": [
+        {
+          "id": "vtc-b-01-cours",
+          "title": "Choisir un cadre juridique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.01",
+            "title": "Choisir un cadre juridique",
+            "page": 69,
+            "pages": [
+              69,
+              70
+            ],
+            "objective": "Séparer les choix qui structurent l’entreprise.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’entreprise individuelle permet d’exercer en nom propre. L’EURL et la SASU sont des sociétés à associé unique : elles ont une personnalité juridique distincte et imposent des formalités de constitution et de suivi. La micro-entreprise est un régime simplifié, pas une société supplémentaire."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Comparez quatre dimensions : responsabilités, coût administratif, fiscalité du résultat et protection sociale du dirigeant. Le capital ne constitue pas un revenu et une société ne supprime pas tout risque personnel, notamment en cas de caution ou de faute. Aucun statut n’est « le meilleur pour tous ». Le choix se prépare avec un prévisionnel et, si nécessaire, un professionnel du chiffre ou du droit."
+              },
+              {
+                "kind": "heading",
+                "text": "La forme juridique"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'entreprise individuelle et la société sont deux cadres différents. En entreprise individuelle, la personne exerce en son nom. Une société possède une personnalité juridique distincte ; elle dispose de statuts, d'un capital et d'organes de décision. EURL et SASU désignent des sociétés à un seul associé. La micro-entreprise est un régime simplifié applicable sous conditions, et non une nouvelle forme de société."
+              },
+              {
+                "kind": "heading",
+                "text": "Fiscalité et protection sociale"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le régime fiscal détermine comment le résultat imposable est calculé et imposé. Le régime social détermine notamment la façon dont les cotisations du dirigeant sont calculées. La TVA constitue encore une question distincte. Il est donc possible d'être micro-entrepreneur et de devenir redevable de TVA."
+              },
+              {
+                "kind": "heading",
+                "text": "Fiscalité et protection sociale (suite)"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une appellation commerciale comme « indépendant » ne répond à aucune de ces trois questions à elle seule."
+              },
+              {
+                "kind": "heading",
+                "text": "Comparer avec des hypothèses identiques"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour décider, partez du chiffre d'affaires envisagé, des frais du véhicule, de la rémunération souhaitée et du besoin de trésorerie. Intégrez le coût de la comptabilité et des formalités. La protection d'un patrimoine ou la responsabilité limitée ne doivent pas être interprétées comme une absence de risque, notamment lorsqu'une caution personnelle est signée. Le bon choix dépend du projet, pas du statut choisi par un collègue."
+              }
+            ],
+            "cards": [
+              {
+                "label": "JURIDIQUE",
+                "text": "EI, EURL, SASU : qui exerce ?"
+              },
+              {
+                "label": "FISCAL",
+                "text": "Comment le bénéfice est-il imposé ?"
+              },
+              {
+                "label": "SOCIAL",
+                "text": "Sur quelle base le dirigeant cotise-t-il ?"
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.01.webp",
+            "diagram_text": [
+              "Séparer les choix de l’entreprise",
+              "€",
+              "Forme juridique",
+              "Régime fiscal",
+              "EI, EURL ou SASU : qui exerce ?",
+              "Comment le résultat est-il imposé ?",
+              "€",
+              "Régime social",
+              "TVA",
+              "Comment le dirigeant est-il protégé ?",
+              "Quel régime s’applique aux opérations ?",
+              "Comparer avant de choisir",
+              "1 Recettes prévues Les mêmes ventes ne donnent pas le même revenu.",
+              "2 Charges réelles Véhicule, kilomètres à vide et frais.",
+              "3 Revenu disponible À examiner après les obligations.",
+              "Statut juridique, régime fiscal et régime de TVA répondent à trois questions différentes."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-01-atelier",
+          "title": "À vous de jouer · Choisir un cadre juridique",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.01",
+            "title": "Choisir un cadre juridique",
+            "objective": "Séparer les choix qui structurent l’entreprise.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "La micro-entreprise est-elle une société comme la SASU ?",
+                "options": [
+                  {
+                    "id": "8aeff099d61c",
+                    "text": "Oui, avec obligatoirement deux associés"
+                  },
+                  {
+                    "id": "d5114dcc8d33",
+                    "text": "Non, c’est un régime simplifié sous conditions"
+                  },
+                  {
+                    "id": "98d7c33d1ae5",
+                    "text": "Oui, avec le même capital obligatoire"
+                  }
+                ],
+                "answer": "d5114dcc8d33",
+                "explanation": "La forme juridique, le régime fiscal, le régime social et la TVA répondent à des questions différentes.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Pour comparer EI et SASU, quelle méthode retenir ?",
+                "options": [
+                  {
+                    "id": "4b2f230ad1bf",
+                    "text": "Comparer le nom commercial"
+                  },
+                  {
+                    "id": "c3d32244fe30",
+                    "text": "Choisir seulement le statut d’un collègue"
+                  },
+                  {
+                    "id": "e759881dadef",
+                    "text": "Comparer recettes, charges, protection sociale et formalités sur les mêmes hypothèses"
+                  }
+                ],
+                "answer": "e759881dadef",
+                "explanation": "Le statut se choisit selon le projet et ses coûts réels ; aucun cadre n’est optimal pour tous.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "FISCAL"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "JURIDIQUE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SOCIAL"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Comment le bénéfice est-il imposé ?",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "EI, EURL, SASU : qui exerce ?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Sur quelle base le dirigeant cotise-t-il ?",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.01. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-02",
+      "title": "B.02 · Créer et organiser l’activité",
+      "activities": [
+        {
+          "id": "vtc-b-02-cours",
+          "title": "Créer et organiser l’activité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.02",
+            "title": "Créer et organiser l’activité",
+            "page": 71,
+            "pages": [
+              71,
+              72
+            ],
+            "objective": "Mettre les démarches dans un ordre cohérent.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le projet commence par une estimation réaliste du marché, des coûts et des financements. Les formalités d’entreprise se réalisent par le guichet unique. L’immatriculation et les identifiants ne remplacent pas les autorisations propres au transport. Un dossier VTC comprend donc un volet entreprise et un volet métier."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le SIREN identifie l’entreprise ; le SIRET identifie un établissement. Le code APE décrit l’activité principale à des fins statistiques, sans constituer une autorisation d’exercer. Classez les contrats, attestations, identifiants et accès professionnels. Les organismes ont des rôles différents : INPI pour le guichet, Urssaf pour le social, administration fiscale pour les impôts, CMA pour l’accompagnement artisanal et l’examen."
+              },
+              {
+                "kind": "heading",
+                "text": "Partir du besoin de financement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La création ne commence pas par le seul formulaire d'immatriculation. Listez les dépenses de départ : véhicule ou premier loyer, assurances, matériel, formalités, communication et réserve pour les premières semaines. Distinguez ce qui est payé immédiatement de ce qui sera étalé. Une activité peut trouver des clients et manquer d'argent si les premiers encaissements arrivent après les premières factures."
+              },
+              {
+                "kind": "heading",
+                "text": "Reconnaître les identifiants"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le SIREN comporte neuf chiffres et identifie l'entreprise. Le SIRET ajoute un numéro d'établissement, pour un total de quatorze chiffres. Le code APE classe l'activité principale à des fins statistiques. Ces éléments doivent être cohérents sur les documents, mais aucun ne remplace la carte professionnelle ou les obligations propres au VTC. Une formalité d'entreprise et une autorisation de transport sont deux sujets distincts."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer le suivi quotidien"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Créez un classement simple : documents de l'entreprise, conducteur, véhicule, fournisseurs, ventes et échéances. Séparez les opérations professionnelles des dépenses personnelles pour pouvoir expliquer chaque mouvement. Conservez les originaux utiles et une sauvegarde protégée. Prévoyez un temps régulier de gestion : reporter toute l'administration à la fin de l'année augmente le risque d'oubli et rend les décisions plus difficiles."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRÉPARER",
+                "text": "Étude, budget et financement."
+              },
+              {
+                "label": "DÉCLARER",
+                "text": "Formalités et identifiants de l’entreprise."
+              },
+              {
+                "label": "SÉCURISER",
+                "text": "Autorisations métier, contrats et assurances."
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.02.webp",
+            "diagram_text": [
+              "Le budget de démarrage d’Inès",
+              "Disponible 7 500 €",
+              "Démarrage − 6 000 €",
+              "Réserve 1 500 € avant les prochaines dépenses",
+              "Un identifiant d’entreprise prouve une immatriculation, pas l’ensemble du droit d’exercer."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-02-atelier",
+          "title": "À vous de jouer · Créer et organiser l’activité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.02",
+            "title": "Créer et organiser l’activité",
+            "objective": "Mettre les démarches dans un ordre cohérent.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Que désigne le SIRET ?",
+                "options": [
+                  {
+                    "id": "5a4cf0430242",
+                    "text": "Une carte professionnelle personnelle"
+                  },
+                  {
+                    "id": "8de586c501e2",
+                    "text": "Une garantie d’assurance"
+                  },
+                  {
+                    "id": "7fb7c8755b01",
+                    "text": "Un établissement de l’entreprise"
+                  }
+                ],
+                "answer": "7fb7c8755b01",
+                "explanation": "Le SIREN identifie l’entreprise et le SIRET un établissement. Aucun des deux ne remplace les autorisations métier.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Les formalités de création suffisent-elles pour exploiter immédiatement un VTC ?",
+                "options": [
+                  {
+                    "id": "b33703752aac",
+                    "text": "Oui, dès l’attribution du code APE"
+                  },
+                  {
+                    "id": "512a3ce2ee62",
+                    "text": "Non, les obligations propres au transport restent à remplir"
+                  },
+                  {
+                    "id": "9f8bfa22b4e7",
+                    "text": "Oui, pour les trajets inférieurs à 10 km"
+                  }
+                ],
+                "answer": "512a3ce2ee62",
+                "explanation": "L’immatriculation de l’entreprise est distincte du REVTC, des titres du conducteur et de la conformité du véhicule.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "PRÉPARER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "DÉCLARER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SÉCURISER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Autorisations métier, contrats et assurances.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Formalités et identifiants de l’entreprise.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Étude, budget et financement.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.02. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-03",
+      "title": "B.03 · Lire un bilan",
+      "activities": [
+        {
+          "id": "vtc-b-03-cours",
+          "title": "Lire un bilan",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.03",
+            "title": "Lire un bilan",
+            "page": 76,
+            "pages": [
+              76,
+              77
+            ],
+            "objective": "Reconnaître ce que l’entreprise possède et comment elle le finance.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le bilan est une photographie à une date donnée. L’actif présente les emplois : véhicule immobilisé, créances clients, banque. Le passif explique les ressources : capitaux propres, emprunts et dettes. Le total de l’actif est égal au total du passif ; cette égalité ne prouve pas à elle seule la bonne santé de l’entreprise."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une créance correspond à une somme due par un client. Une dette correspond à une somme que l’entreprise doit payer. Un véhicule acheté durablement est généralement une immobilisation ; sa valeur comptable diminue avec l’amortissement. Le solde bancaire n’est qu’un poste du bilan : il ne résume ni la valeur de l’activité ni son bénéfice."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un encaissement client peut changer la composition de l’actif sans créer un nouveau produit."
+              },
+              {
+                "kind": "heading",
+                "text": "L'actif décrit les emplois"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le bilan présente la situation de l'entreprise à une date. À l'actif figurent notamment les biens utilisés durablement, les sommes dues par les clients et les disponibilités bancaires. Une créance n'est pas encore de l'argent en banque : le client doit toujours payer. Un véhicule est généralement une immobilisation lorsqu'il est acquis pour servir durablement à l'activité, selon le traitement comptable applicable."
+              },
+              {
+                "kind": "heading",
+                "text": "Le passif explique les ressources"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le passif indique comment ces emplois sont financés : apports, résultats accumulés, emprunts et dettes envers les fournisseurs ou organismes. Une dette n'est pas forcément un signe d'échec ; elle représente un engagement à payer. Il faut connaître sa date d'échéance et vérifier que les ressources permettront d'y faire face. L'égalité actif-passif est une logique de construction du bilan, pas un certificat de rentabilité."
+              },
+              {
+                "kind": "heading",
+                "text": "Observer un mouvement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lorsqu'un client règle une facture déjà comptabilisée, la créance diminue et la banque augmente. Le total de l'actif peut rester identique. L'encaissement ne crée pas une deuxième vente. À l'inverse, un emprunt fait entrer de l'argent et crée une dette : ce n'est pas du chiffre d'affaires. Ces distinctions évitent de confondre le solde bancaire avec la richesse produite par les courses."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Dans un bilan simplifié, un véhicule vaut comptablement 24 000 €, les clients doivent 2 000 € et la banque contient 4 000 €. L'actif total est de 30 000 €. Il est financé par 10 000 € de capitaux propres, 18 000 € d'emprunt restant dû et 2 000 € de dettes fournisseurs. Les deux côtés totalisent 30 000 €, mais les échéances restent à analyser."
+              }
+            ],
+            "cards": [
+              {
+                "label": "Actif",
+                "text": "Les biens et les créances de l’entreprise."
+              },
+              {
+                "label": "Passif",
+                "text": "Les capitaux propres et les dettes."
+              },
+              {
+                "label": "Bilan",
+                "text": "Une photographie à une date donnée."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-03-atelier",
+          "title": "À vous de jouer · Lire un bilan",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.03",
+            "title": "Lire un bilan",
+            "objective": "Reconnaître ce que l’entreprise possède et comment elle le finance.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Dans un bilan, où figurent les dettes d’emprunt ?",
+                "options": [
+                  {
+                    "id": "c0ea4d4aa49c",
+                    "text": "Dans les recettes de courses"
+                  },
+                  {
+                    "id": "f7300128cf97",
+                    "text": "Dans les stocks de carburant"
+                  },
+                  {
+                    "id": "00bd940f897b",
+                    "text": "Au passif"
+                  }
+                ],
+                "answer": "00bd940f897b",
+                "explanation": "Le passif présente les ressources et les dettes ; l’actif présente les emplois et les biens de l’entreprise.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Actif : véhicule 24 000 €, créances 2 000 €, banque 4 000 €. Quel total ?",
+                "options": [
+                  {
+                    "id": "fe9d39e84d54",
+                    "text": "26 000 €"
+                  },
+                  {
+                    "id": "7747a44173ca",
+                    "text": "22 000 €"
+                  },
+                  {
+                    "id": "8ddd5130c44b",
+                    "text": "30 000 €"
+                  }
+                ],
+                "answer": "8ddd5130c44b",
+                "explanation": "24 000 + 2 000 + 4 000 = 30 000 €. Le total actif doit correspondre au total passif.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "Passif"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "Actif"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "Bilan"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Les capitaux propres et les dettes.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Les biens et les créances de l’entreprise.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Une photographie à une date donnée.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.03. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-04",
+      "title": "B.04 · Lire le résultat",
+      "activities": [
+        {
+          "id": "vtc-b-04-cours",
+          "title": "Lire le résultat",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.04",
+            "title": "Lire le résultat",
+            "page": 79,
+            "pages": [
+              79,
+              80
+            ],
+            "objective": "Distinguer revenu d’activité, charges et bénéfice.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le compte de résultat décrit une période. Les produits, dont le chiffre d’affaires, sont comparés aux charges pour déterminer un bénéfice ou une perte. Les charges comprennent notamment les consommations, les assurances, les services, certaines cotisations et les amortissements selon le régime."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Au régime réel, un achat de véhicule durable ne se traite pas automatiquement comme une charge intégrale du mois. L’amortissement répartit son coût sur sa durée d’utilisation comptable. Le remboursement du capital d’un emprunt n’est pas une charge du résultat ; les intérêts le sont en principe. Ces différences expliquent pourquoi résultat et trésorerie ne varient pas toujours ensemble."
+              },
+              {
+                "kind": "heading",
+                "text": "Mesurer une période"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le compte de résultat compare les produits et les charges d'une période. Le chiffre d'affaires correspond aux ventes de prestations. Les charges représentent les ressources consommées pour l'activité selon les règles comptables applicables. La différence constitue un bénéfice ou une perte. Un montant encaissé peut provenir d'un emprunt ou d'un apport : il n'appartient donc pas toujours aux produits."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer paiement et charge"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'achat d'un véhicule utilisé plusieurs années n'est généralement pas une charge intégrale du mois au régime réel. L'amortissement répartit sa valeur amortissable sur une durée d'utilisation. Cette charge n'entraîne pas un nouveau paiement chaque année. Inversement, rembourser le capital d'un emprunt consomme de la trésorerie sans être une charge du résultat ; les intérêts ont un traitement différent."
+              },
+              {
+                "kind": "heading",
+                "text": "Lire le résultat avec ses limites"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un bénéfice ne signifie pas que cette somme peut être retirée immédiatement : certains clients n'ont peut-être pas encore payé et des échéances restent à régler. Une trésorerie positive peut aussi masquer une perte si elle provient d'un financement récent. Le dirigeant suit donc deux indicateurs complémentaires, au lieu de regarder uniquement l'application bancaire."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRODUITS",
+                "text": "Ce que l’activité a généré sur la période."
+              },
+              {
+                "label": "CHARGES",
+                "text": "Ce qu’elle a consommé selon les règles comptables."
+              },
+              {
+                "label": "RÉSULTAT",
+                "text": "Produits moins charges."
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.04.webp",
+            "diagram_text": [
+              "Résultat et banque évoluent différemment",
+              "€ Factures impayées Un produit peut ne pas être encore encaissé.",
+              "Prêt versé La banque augmente sans créer un bénéfice.",
+              "Un bénéfice mesure une performance ; la trésorerie mesure de l’argent disponible."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-04-atelier",
+          "title": "À vous de jouer · Lire le résultat",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.04",
+            "title": "Lire le résultat",
+            "objective": "Distinguer revenu d’activité, charges et bénéfice.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Produits de 5 000 € et charges de 3 800 € sur la même période : quel résultat ?",
+                "options": [
+                  {
+                    "id": "2cdd8c33c8c4",
+                    "text": "1 200 €"
+                  },
+                  {
+                    "id": "f817852d2739",
+                    "text": "5 000 €"
+                  },
+                  {
+                    "id": "ad37f3261c65",
+                    "text": "8 800 €"
+                  }
+                ],
+                "answer": "2cdd8c33c8c4",
+                "explanation": "Le résultat est la différence entre produits et charges : 5 000 − 3 800 = 1 200 €.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Une entreprise rentable peut-elle manquer de trésorerie ?",
+                "options": [
+                  {
+                    "id": "7c41d01b3f55",
+                    "text": "Non, bénéfice et banque sont identiques"
+                  },
+                  {
+                    "id": "64cb0d581185",
+                    "text": "Oui, si les encaissements arrivent après les paiements"
+                  },
+                  {
+                    "id": "b5dbc221dbfd",
+                    "text": "Seulement si elle n’a pas de clients"
+                  }
+                ],
+                "answer": "64cb0d581185",
+                "explanation": "Le résultat mesure une performance ; la trésorerie dépend aussi des dates de paiement et des financements.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "PRODUITS"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "RÉSULTAT"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "CHARGES"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Produits moins charges.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Ce qu’elle a consommé selon les règles comptables.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Ce que l’activité a généré sur la période.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.04. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-05",
+      "title": "B.05 · Classer les coûts",
+      "activities": [
+        {
+          "id": "vtc-b-05-cours",
+          "title": "Classer les coûts",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.05",
+            "title": "Classer les coûts",
+            "page": 81,
+            "pages": [
+              81,
+              82
+            ],
+            "objective": "Identifier ce qui dépend du volume de courses.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une charge fixe reste relativement stable dans une plage d’activité : abonnement, assurance ou location mensuelle. Une charge variable augmente avec le volume : énergie, commission proportionnelle, certains frais liés aux trajets. La classification dépend du contrat et de la période étudiée. Un coût peut comporter une partie fixe et une partie variable."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour calculer le coût d’une course, comptez tous les kilomètres nécessaires, y compris l’approche et le retour sans client. Ajoutez le temps d’attente, de préparation et d’administration dans l’analyse de rentabilité. Ne confondez pas une dépense oubliée avec une dépense inexistante : entretien, pneus, nettoyage et renouvellement du véhicule se préparent."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un kilomètre sans client coûte aussi de l’argent."
+              },
+              {
+                "kind": "heading",
+                "text": "Classer les charges"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une charge fixe évolue peu à court terme dans une plage d'activité : assurance annuelle, abonnement ou loyer mensuel. Une charge variable dépend davantage du volume : énergie consommée, commission proportionnelle ou péage lié à un trajet. Certains contrats sont mixtes, avec un forfait et une part supplémentaire. La classification dépend donc du contrat réel, de la période et de la façon dont l'activité évolue."
+              },
+              {
+                "kind": "heading",
+                "text": "Compter les kilomètres et le temps"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le trajet facturé au client ne représente pas toujours tout le travail. Ajoutez l'approche, l'attente, la dépose et le repositionnement. Le temps administratif, le nettoyage et la préparation mobilisent aussi des ressources. Pour calculer un coût horaire, ne divisez pas vos charges par toutes les heures du calendrier : retenez une estimation réaliste des heures productives et du temps réellement vendu."
+              },
+              {
+                "kind": "heading",
+                "text": "Éviter les comparaisons trompeuses"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un prix qui couvre le carburant peut rester insuffisant pour payer le véhicule, les cotisations et la rémunération. À l'inverse, on ne répartit pas mécaniquement une même charge deux fois, dans un coût kilométrique puis dans un forfait horaire. Précisez ce qui est inclus dans chaque indicateur avant d'additionner."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une course de 20 km nécessite 8 km d'approche et 12 km de retour : le véhicule parcourt 40 km. Avec une hypothèse pédagogique de coût variable de 0,25 €/km, cette part coûte 10 €. Une commission éventuelle et la contribution aux charges fixes s'ajoutent selon le modèle. Calculer seulement 20 × 0,25 € aurait oublié la moitié des kilomètres réellement parcourus."
+              }
+            ],
+            "cards": [
+              {
+                "label": "FIXES",
+                "text": "Supportées même avec peu de courses."
+              },
+              {
+                "label": "VARIABLES",
+                "text": "Liées aux kilomètres ou aux ventes."
+              },
+              {
+                "label": "COMPLET",
+                "text": "Trajet chargé + approche + retour + temps."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-05-atelier",
+          "title": "À vous de jouer · Classer les coûts",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.05",
+            "title": "Classer les coûts",
+            "objective": "Identifier ce qui dépend du volume de courses.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Approche 8 km, client 20 km, retour 12 km : quelle distance compte pour les coûts ?",
+                "options": [
+                  {
+                    "id": "80bbdbcdcdca",
+                    "text": "40 km"
+                  },
+                  {
+                    "id": "ef78c334cdbb",
+                    "text": "28 km"
+                  },
+                  {
+                    "id": "7529c0fd351b",
+                    "text": "20 km"
+                  }
+                ],
+                "answer": "80bbdbcdcdca",
+                "explanation": "Le véhicule consomme sur tout le trajet, y compris les kilomètres sans passager : 8 + 20 + 12 = 40 km.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quel exemple correspond généralement à une charge fixe mensuelle ?",
+                "options": [
+                  {
+                    "id": "3dd3401ba168",
+                    "text": "Le carburant consommé par une course"
+                  },
+                  {
+                    "id": "0b1fcc449881",
+                    "text": "Le péage d’une mission précise"
+                  },
+                  {
+                    "id": "aa12d290a430",
+                    "text": "Le loyer contractuel du véhicule"
+                  }
+                ],
+                "answer": "aa12d290a430",
+                "explanation": "Une charge fixe ne varie pas directement avec chaque kilomètre, dans la plage d’activité considérée.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "VARIABLES"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "COMPLET"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "FIXES"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Supportées même avec peu de courses.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Trajet chargé + approche + retour + temps.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Liées aux kilomètres ou aux ventes.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.05. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-06",
+      "title": "B.06 · Comprendre la TVA",
+      "activities": [
+        {
+          "id": "vtc-b-06-cours",
+          "title": "Comprendre la TVA",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.06",
+            "title": "Comprendre la TVA",
+            "page": 85,
+            "pages": [
+              85,
+              86
+            ],
+            "objective": "Passer du prix hors taxe au prix payé.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La TVA collectée sur les ventes n’est pas un revenu appartenant à l’entreprise. La TVA déductible sur certains achats peut réduire le montant à reverser, sous réserve des conditions de déduction. Dans les exemples de ce manuel, le transport intérieur de voyageurs est étudié au taux de 10 % lorsque l’entreprise est redevable ; des prestations accessoires ou particulières peuvent appeler une autre analyse."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour obtenir le TTC : HT × (1 + taux). Pour retrouver le HT : TTC ÷ (1 + taux). Soustraire 10 % du TTC ne revient pas à retirer une TVA de 10 %. En franchise en base, vous ne facturez pas la TVA et ne la déduisez pas. Le régime micro et la franchise sont indépendants."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le taux de TVA porte sur le HT : pour remonter du TTC, on divise."
+              },
+              {
+                "kind": "heading",
+                "text": "Le prix et la taxe"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lorsqu'une entreprise est redevable, le prix payé comprend un montant hors taxe et la TVA applicable. Pour une prestation de transport intérieur de voyageurs relevant du taux de 10 %, 100 € HT donnent 10 € de TVA et 110 € TTC. Le chauffeur ne doit pas confondre la somme encaissée avec la recette hors taxe qui finance son activité. Les prestations d'une autre nature demandent leur propre qualification."
+              },
+              {
+                "kind": "heading",
+                "text": "Retrouver le hors taxe"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le taux s'applique au HT. Pour passer au TTC, on multiplie par 1,10 lorsque le taux est de 10 %. Pour revenir au HT, on divise par 1,10. Retirer 10 % du TTC conduit à une erreur, car on utilise une base différente. Calculez ensuite la taxe par différence et vérifiez que HT + TVA = TTC, en appliquant un arrondi cohérent aux centimes."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre la déduction"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Sous réserve des conditions légales, la TVA sur certains achats peut être déduite de la TVA collectée. Toutes les dépenses ne donnent pas automatiquement droit à déduction ; le justificatif, l'affectation et la nature de l'achat comptent. En franchise en base, l'entreprise ne facture pas la TVA et ne la récupère pas sur ses achats."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une course est vendue 88 € TTC avec une TVA de 10 %. Le HT est de 88 ÷ 1,10 = 80 € et la taxe de 8 €. Pour une période fictive, 600 € de TVA collectée moins 180 € de TVA déductible donnent 420 € à reverser, hors autres corrections. Ce montant doit être anticipé dans la trésorerie."
+              }
+            ],
+            "cards": [
+              {
+                "label": "HT vers TTC",
+                "text": "Multiplier le montant HT par 1 + le taux de TVA."
+              },
+              {
+                "label": "TTC vers HT",
+                "text": "Diviser le montant TTC par 1 + le taux de TVA."
+              },
+              {
+                "label": "TVA",
+                "text": "La différence entre TTC et HT."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-06-atelier",
+          "title": "À vous de jouer · Comprendre la TVA",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.06",
+            "title": "Comprendre la TVA",
+            "objective": "Passer du prix hors taxe au prix payé.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Avec une TVA supposée à 10 %, 80 € HT donnent quel prix TTC ?",
+                "options": [
+                  {
+                    "id": "090877008e55",
+                    "text": "90 €"
+                  },
+                  {
+                    "id": "5e52cea6cf9a",
+                    "text": "72 €"
+                  },
+                  {
+                    "id": "471f801bfa66",
+                    "text": "88 €"
+                  }
+                ],
+                "answer": "471f801bfa66",
+                "explanation": "TVA = 80 × 10 % = 8 € ; TTC = 80 + 8 = 88 €. Le taux est une donnée de cet exercice.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "TVA collectée 600 €, TVA déductible 250 €, toutes conditions remplies : quelle différence à payer ?",
+                "options": [
+                  {
+                    "id": "bf52921d9fa2",
+                    "text": "250 €"
+                  },
+                  {
+                    "id": "4fa9178ec89f",
+                    "text": "350 €"
+                  },
+                  {
+                    "id": "31f7348113ff",
+                    "text": "850 €"
+                  }
+                ],
+                "answer": "4fa9178ec89f",
+                "explanation": "La TVA nette de cet exemple est 600 − 250 = 350 €, sous réserve des règles de déduction.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "TVA"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "HT vers TTC"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "TTC vers HT"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "La différence entre TTC et HT.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Multiplier le montant HT par 1 + le taux de TVA.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Diviser le montant TTC par 1 + le taux de TVA.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.06. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-07",
+      "title": "B.07 · Piloter le régime micro",
+      "activities": [
+        {
+          "id": "vtc-b-07-cours",
+          "title": "Piloter le régime micro",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.07",
+            "title": "Piloter le régime micro",
+            "page": 88,
+            "pages": [
+              88,
+              89
+            ],
+            "objective": "Comprendre le forfait sans oublier les dépenses réelles.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "En micro-BIC, les cotisations sociales se calculent sur le chiffre d’affaires encaissé selon le taux applicable ; le bénéfice imposable à l’impôt sur le revenu est déterminé par un abattement forfaitaire, hors option particulière. Les dépenses réelles restent à payer mais ne sont pas déduites une à une pour ce calcul fiscal."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour les prestations de services, le seuil micro est de 83 600 € pour 2026 à 2028, selon les règles d’appréciation des années précédentes et de prorata. Les seuils de franchise de TVA sont distincts : 37 500 € pour l’année précédente et 41 250 € pour l’année en cours dans le cas général étudié. Anticipez tout franchissement avec le SIE ; ne confondez pas plafond micro et franchise de TVA."
+              },
+              {
+                "kind": "heading",
+                "text": "Le forfait fiscal n'est pas votre coût réel"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour les prestations de services relevant du micro-BIC, le bénéfice imposable est calculé avec un abattement forfaitaire dans le cadre applicable. Les dépenses du véhicule, les commissions et les assurances ne sont pas déduites une par une de cette base. Elles existent pourtant bien dans la trésorerie. Un régime simplifié réduit certaines formalités ; il ne garantit pas une activité rentable."
+              },
+              {
+                "kind": "heading",
+                "text": "Déclarer la bonne base"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les cotisations du micro-entrepreneur se calculent sur le chiffre d'affaires encaissé selon le taux et la situation applicables. Il faut donc comprendre le rôle de la plateforme. Si elle encaisse pour votre compte une course vendue 100 € et retient 20 € de commission, le virement de 80 € ne signifie pas automatiquement que votre chiffre d'affaires est de 80 €. Le contrat et les pièces déterminent les flux à déclarer."
+              },
+              {
+                "kind": "heading",
+                "text": "Surveiller deux familles de seuils"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les seuils du régime micro et de la franchise de TVA sont distincts. Une entreprise peut rester au régime micro tout en devant facturer la TVA. Suivez le chiffre d'affaires cumulé, les règles des années précédentes et les particularités d'une création en cours d'année. Les repères chiffrés datés figurent dans les outils de fin de manuel ; ils doivent être vérifiés lorsqu'une réglementation change."
+              }
+            ],
+            "cards": [
+              {
+                "label": "ENCAISSÉ",
+                "text": "Base des déclarations micro-sociales."
+              },
+              {
+                "label": "FORFAIT",
+                "text": "Abattement fiscal, pas remboursement de frais."
+              },
+              {
+                "label": "TVA",
+                "text": "Seuils suivis séparément du régime micro."
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.07.webp",
+            "diagram_text": [
+              "Trois suivis différents",
+              "Social Chiffre d’affaires encaissé.",
+              "€ Fiscal Abattement forfaitaire.",
+              "€ TVA Seuils suivis séparément.",
+              "Le montant viré par une plateforme n’est pas toujours le chiffre d’affaires à déclarer."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-07-atelier",
+          "title": "À vous de jouer · Piloter le régime micro",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.07",
+            "title": "Piloter le régime micro",
+            "objective": "Comprendre le forfait sans oublier les dépenses réelles.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "En micro-entreprise, les frais réels du véhicule réduisent-ils automatiquement la base du chiffre d’affaires déclaré à l’Urssaf ?",
+                "options": [
+                  {
+                    "id": "194d36a3b113",
+                    "text": "Non"
+                  },
+                  {
+                    "id": "72471c83a164",
+                    "text": "Oui, pour tous les frais"
+                  },
+                  {
+                    "id": "13bcb38d0487",
+                    "text": "Oui, uniquement le carburant"
+                  }
+                ],
+                "answer": "194d36a3b113",
+                "explanation": "Le régime micro-social est calculé sur le chiffre d’affaires selon ses règles ; dépenser ne réduit pas automatiquement cette base.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Peut-on être micro-entrepreneur tout en devenant redevable de TVA ?",
+                "options": [
+                  {
+                    "id": "eeceb86f44ff",
+                    "text": "Non, cela est impossible"
+                  },
+                  {
+                    "id": "2d386600d389",
+                    "text": "Oui, les deux régimes sont distincts"
+                  },
+                  {
+                    "id": "b7f227b861b0",
+                    "text": "Seulement avec trois salariés"
+                  }
+                ],
+                "answer": "2d386600d389",
+                "explanation": "Les seuils et conditions du régime micro et de la franchise de TVA sont à examiner séparément.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "ENCAISSÉ"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "TVA"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "FORFAIT"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Abattement fiscal, pas remboursement de frais.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Seuils suivis séparément du régime micro.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Base des déclarations micro-sociales.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.07. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-08",
+      "title": "B.08 · Construire la trésorerie",
+      "activities": [
+        {
+          "id": "vtc-b-08-cours",
+          "title": "Construire la trésorerie",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.08",
+            "title": "Construire la trésorerie",
+            "page": 91,
+            "pages": [
+              91,
+              92
+            ],
+            "objective": "Prévoir les dates de paiement, pas seulement les ventes.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un plan de trésorerie suit, mois par mois, les encaissements et décaissements prévus. On part du solde initial, on ajoute les entrées puis on retire les sorties pour obtenir le solde final. Le mois suivant reprend ce dernier comme solde de départ. Les montants se raisonnent en flux réellement payés, souvent TTC."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une course facturée aujourd’hui à une entreprise peut être réglée plus tard. Entre-temps, l’énergie, les échéances du véhicule et les cotisations doivent être financées. Le besoin en fonds de roulement traduit notamment ce décalage entre clients, fournisseurs et stocks. En VTC, les créances et délais de paiement comptent même si les stocks sont faibles."
+              },
+              {
+                "kind": "heading",
+                "text": "Utiliser les dates de paiement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le plan de trésorerie enregistre les encaissements et les décaissements au moment où l'argent entre ou sort. Une facture de septembre réglée en octobre appartient aux encaissements d'octobre dans ce tableau. Une cotisation payée trimestriellement doit apparaître au mois réel de paiement, même si l'activité qui l'a générée s'étale sur plusieurs mois."
+              },
+              {
+                "kind": "heading",
+                "text": "Construire le tableau"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour chaque mois, partez du solde initial, ajoutez les entrées prévues puis retirez les sorties. Le solde final devient le solde initial du mois suivant. Les flux incluent les remboursements de prêt, les achats de véhicule, les apports et la TVA lorsque ces éléments donnent lieu à un paiement. Ils ne se limitent donc pas aux produits et charges du compte de résultat."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer un scénario prudent"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un client professionnel peut payer plus tard que prévu ; une panne peut immobiliser le véhicule. Testez un scénario avec moins de courses et un retard de paiement. Une réserve doit être disponible avant l'incident, pas seulement espérée. Relancer une facture, négocier un échéancier et reporter une dépense non essentielle sont des actions différentes : choisissez celle qui traite la cause du décalage."
+              }
+            ],
+            "cards": [
+              {
+                "label": "DÉPART",
+                "text": "Solde disponible au début du mois."
+              },
+              {
+                "label": "MOUVEMENTS",
+                "text": "Encaissements moins décaissements."
+              },
+              {
+                "label": "ARRIVÉE",
+                "text": "Solde final et réserve à préserver."
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.08.webp",
+            "diagram_text": [
+              "Un paiement de 1 000 € est reporté",
+              "Prévision initiale 800 €",
+              "− 1 000 €",
+              "€ Encaissement décalé",
+              "€ Nouveau solde − 200 €",
+              "Une dépense certaine doit être financée même si une recette est seulement espérée."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-08-atelier",
+          "title": "À vous de jouer · Construire la trésorerie",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.08",
+            "title": "Construire la trésorerie",
+            "objective": "Prévoir les dates de paiement, pas seulement les ventes.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Solde initial 1 000 €, encaissements 2 500 €, paiements 2 800 € : solde final ?",
+                "options": [
+                  {
+                    "id": "fbbfddde4bd3",
+                    "text": "1 300 €"
+                  },
+                  {
+                    "id": "bc3439560dd8",
+                    "text": "5 300 €"
+                  },
+                  {
+                    "id": "7e748195d9df",
+                    "text": "700 €"
+                  }
+                ],
+                "answer": "7e748195d9df",
+                "explanation": "1 000 + 2 500 − 2 800 = 700 €. Un plan de trésorerie suit les mouvements aux dates prévues.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un client professionnel paie à 30 jours. Où placer cette recette dans le plan de trésorerie ?",
+                "options": [
+                  {
+                    "id": "5ffd54f7d3a2",
+                    "text": "Toujours au jour du devis"
+                  },
+                  {
+                    "id": "a15c4945b9b1",
+                    "text": "À la date d’achat du véhicule"
+                  },
+                  {
+                    "id": "321966dedfc2",
+                    "text": "À la date d’encaissement prévue"
+                  }
+                ],
+                "answer": "321966dedfc2",
+                "explanation": "Le tableau de trésorerie suit l’argent réellement reçu ou payé, pas seulement la date de la prestation.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "ARRIVÉE"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "DÉPART"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "MOUVEMENTS"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Encaissements moins décaissements.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Solde final et réserve à préserver.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Solde disponible au début du mois.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.08. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-09",
+      "title": "B.09 · Atteindre le seuil de rentabilité",
+      "activities": [
+        {
+          "id": "vtc-b-09-cours",
+          "title": "Atteindre le seuil de rentabilité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.09",
+            "title": "Atteindre le seuil de rentabilité",
+            "page": 93,
+            "pages": [
+              93,
+              94
+            ],
+            "objective": "Calculer le chiffre d’affaires qui couvre les charges.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La marge sur coûts variables est le chiffre d’affaires diminué des charges variables. Son taux est cette marge divisée par le chiffre d’affaires. Le seuil de rentabilité correspond aux charges fixes divisées par ce taux : c’est le niveau de ventes qui couvre les charges retenues dans le modèle."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le point mort exprime le moment où ce seuil est atteint, sous une hypothèse de répartition des ventes. La méthode ne garantit pas un revenu suffisant : il faut vérifier quelles charges, rémunérations et cotisations ont été incluses. Une moyenne trop optimiste de courses ou l’oubli des kilomètres à vide peut rendre le résultat trompeur."
+              },
+              {
+                "kind": "heading",
+                "text": "Calculer la marge sur coûts variables"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La marge sur coûts variables correspond au chiffre d'affaires diminué des charges variables retenues. Elle sert à couvrir les charges fixes puis à former le résultat dans le modèle. Son taux est obtenu en divisant cette marge par le chiffre d'affaires. Tous les montants doivent être cohérents : même période et même traitement de la TVA."
+              },
+              {
+                "kind": "heading",
+                "text": "Trouver le seuil de rentabilité"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le seuil est égal aux charges fixes divisées par le taux de marge sur coûts variables. Attention : 60 % s'écrit 0,60 dans le calcul. Si le taux est nul ou négatif, chaque vente ne contribue pas positivement aux charges fixes et la formule ne fournit pas un objectif commercial viable. Il faut d'abord revoir les prix ou les coûts."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier ce que le seuil couvre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le résultat dépend des hypothèses. Si votre rémunération, les cotisations ou l'usure du véhicule sont oubliées, le seuil est artificiellement bas. Le point mort traduit le seuil en durée sous une hypothèse de ventes régulières. Une activité saisonnière ne suit pas forcément cette répartition : un objectif annuel doit donc être rapproché des mois réellement actifs."
+              }
+            ],
+            "cards": [
+              {
+                "label": "MARGE",
+                "text": "CA - charges variables."
+              },
+              {
+                "label": "TAUX DE MARGE",
+                "text": "Marge ÷ CA."
+              },
+              {
+                "label": "SEUIL",
+                "text": "Charges fixes ÷ taux de marge."
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.09.webp",
+            "diagram_text": [
+              "Du chiffre d’affaires au seuil",
+              "10 000 − 4 000 = 6 000 €",
+              "1 Marge sur coûts variables",
+              "2 Taux de marge 6 000 ÷ 10 000 = 60 %",
+              "3 Seuil mensuel 2 400 ÷ 0,60 = 4 000 €",
+              "Traduire le modèle en courses",
+              "40 €",
+              "€ Prix moyen supposé",
+              "4 000 €",
+              "Chiffre d’affaires à atteindre",
+              "Nombre de courses 100, si les coûts suivent le modèle",
+              "Un seuil est une réponse à des hypothèses : il faut savoir lesquelles."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-09-atelier",
+          "title": "À vous de jouer · Atteindre le seuil de rentabilité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.09",
+            "title": "Atteindre le seuil de rentabilité",
+            "objective": "Calculer le chiffre d’affaires qui couvre les charges.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Charges fixes 1 800 € et marge sur coûts variables de 60 % : seuil de rentabilité ?",
+                "options": [
+                  {
+                    "id": "cac888cb4eb8",
+                    "text": "4 800 € de chiffre d’affaires"
+                  },
+                  {
+                    "id": "84841f39b57d",
+                    "text": "1 080 € de chiffre d’affaires"
+                  },
+                  {
+                    "id": "dabae1c8d605",
+                    "text": "3 000 € de chiffre d’affaires"
+                  }
+                ],
+                "answer": "dabae1c8d605",
+                "explanation": "Le seuil est 1 800 ÷ 0,60 = 3 000 €, avec les hypothèses de taux et de période données.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Que signifie atteindre le seuil de rentabilité ?",
+                "options": [
+                  {
+                    "id": "a59d32661889",
+                    "text": "Couvrir les charges retenues dans le calcul"
+                  },
+                  {
+                    "id": "eb32ece62ac5",
+                    "text": "Obtenir automatiquement un salaire net garanti"
+                  },
+                  {
+                    "id": "3673ebaec6d1",
+                    "text": "Ne plus payer de cotisations"
+                  }
+                ],
+                "answer": "a59d32661889",
+                "explanation": "Au seuil, la marge couvre les charges fixes du modèle ; cela ne garantit ni trésorerie ni rémunération disponible.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "MARGE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "TAUX DE MARGE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SEUIL"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "CA - charges variables.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Marge ÷ CA.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Charges fixes ÷ taux de marge.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.09. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-10",
+      "title": "B.10 · Financer le véhicule",
+      "activities": [
+        {
+          "id": "vtc-b-10-cours",
+          "title": "Financer le véhicule",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.10",
+            "title": "Financer le véhicule",
+            "page": 96,
+            "pages": [
+              96,
+              97
+            ],
+            "objective": "Comparer les engagements sur toute leur durée.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’achat comptant consomme immédiatement la trésorerie. L’emprunt répartit les paiements mais ajoute intérêts et frais. La location peut apporter de la prévisibilité ; ses limites de kilométrage, assurances, entretien, dépôt, restitution et sortie anticipée doivent être examinés. Une mensualité faible ne garantit pas un coût total faible."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Comparez des durées, kilométrages et services identiques. Intégrez la valeur de revente ou l’option d’achat sans les confondre. L’amortissement comptable constate l’utilisation du bien ; il ne correspond pas au remboursement bancaire. Les règles de déduction de TVA sur les véhicules affectés au transport payant dépendent du régime et des conditions d’usage : ne transposez pas automatiquement les règles d’une voiture de tourisme ordinaire."
+              },
+              {
+                "kind": "heading",
+                "text": "Lire au-delà de la mensualité"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une mensualité faible peut s'accompagner d'un premier versement important, d'une longue durée ou d'une option finale élevée. Le crédit finance une acquisition ; une location organise un usage selon un contrat. La location avec option d'achat et la location longue durée n'ont pas les mêmes conséquences à la fin. Il faut identifier le propriétaire, les engagements et les conditions de sortie."
+              },
+              {
+                "kind": "heading",
+                "text": "Comparer un même service"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Retenez une durée et un kilométrage identiques. Ajoutez les frais de dossier, l'entretien non inclus, les assurances spécifiques, les dépassements kilométriques et les frais éventuels de restitution. Pour un achat, une valeur de revente prévisionnelle peut réduire le coût économique, mais elle reste incertaine. Pour une location, un dépôt remboursable n'est pas forcément une charge définitive, tout en immobilisant de l'argent."
+              },
+              {
+                "kind": "heading",
+                "text": "Garder une marge de manœuvre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le véhicule doit répondre à la réglementation VTC, au besoin client et au financement disponible. Anticipez l'immobilisation, le remplacement et le renouvellement. Une solution rentable sur le papier devient fragile si elle consomme toute la réserve financière. Vérifiez aussi que le contrat autorise réellement l'usage professionnel prévu."
+              }
+            ],
+            "cards": [
+              {
+                "label": "ACHAT",
+                "text": "Prix, financement et valeur résiduelle."
+              },
+              {
+                "label": "LOCATION",
+                "text": "Loyers, kilomètres et frais de restitution."
+              },
+              {
+                "label": "COMPARAISON",
+                "text": "Même durée, même usage, même périmètre."
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.10.webp",
+            "diagram_text": [
+              "Comparer sur la même durée",
+              "Offre A",
+              "Offre B",
+              "550 € × 36 mois + 3 000 € de premier loyer distinct = 22 800 €",
+              "650 € × 36 mois Sans premier loyer distinct = 23 400 €",
+              "Avant de conclure",
+              "Même périmètre Durée, kilomètres et services.",
+              "€ Coûts restants Frais non inclus et restitution.",
+              "Écart des loyers 600 € dans l’exemple.",
+              "Comparez le coût complet et le risque contractuel, pas seulement la mensualité."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-10-atelier",
+          "title": "À vous de jouer · Financer le véhicule",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.10",
+            "title": "Financer le véhicule",
+            "objective": "Comparer les engagements sur toute leur durée.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Pour comparer achat et location, que faut-il regarder ?",
+                "options": [
+                  {
+                    "id": "408e013a55b2",
+                    "text": "Uniquement la première mensualité"
+                  },
+                  {
+                    "id": "b42b083db884",
+                    "text": "Uniquement la couleur proposée"
+                  },
+                  {
+                    "id": "5ca719dd7c14",
+                    "text": "Le coût global, les contraintes et la trésorerie"
+                  }
+                ],
+                "answer": "5ca719dd7c14",
+                "explanation": "Apport, intérêts, entretien, kilométrage, durée et valeur finale peuvent modifier le coût réel.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Dans une échéance d’emprunt, le remboursement du capital est-il identique à une charge d’intérêts ?",
+                "options": [
+                  {
+                    "id": "602caf9c5fd5",
+                    "text": "Oui, tout est toujours une charge identique"
+                  },
+                  {
+                    "id": "9a71dfbc988d",
+                    "text": "Non, les traitements sont distincts"
+                  },
+                  {
+                    "id": "d4b81654dc5a",
+                    "text": "Oui, si le paiement est mensuel"
+                  }
+                ],
+                "answer": "9a71dfbc988d",
+                "explanation": "Le capital rembourse une dette ; les intérêts rémunèrent le financement. Le paiement affecte aussi la trésorerie.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "LOCATION"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "ACHAT"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "COMPARAISON"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Même durée, même usage, même périmètre.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Loyers, kilomètres et frais de restitution.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Prix, financement et valeur résiduelle.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.10. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-11",
+      "title": "B.11 · Facturer et conserver les preuves",
+      "activities": [
+        {
+          "id": "vtc-b-11-cours",
+          "title": "Facturer et conserver les preuves",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.11",
+            "title": "Facturer et conserver les preuves",
+            "page": 101,
+            "pages": [
+              101,
+              102
+            ],
+            "objective": "Produire une pièce claire, traçable et cohérente.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La facture identifie le vendeur et le client, porte une date et un numéro unique dans une séquence chronologique, décrit la prestation et présente les montants et taxes applicables. Les mentions varient selon le statut et le client. Pour un professionnel, les conditions de paiement, pénalités et indemnité forfaitaire de recouvrement doivent être traitées conformément aux règles applicables."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une facture ne se supprime pas pour masquer une erreur : un avoir ou une facture rectificative permet une trace cohérente. Depuis septembre 2026, les entreprises concernées doivent pouvoir recevoir les factures électroniques ; l’émission et la transmission de données s’étendent aux PME et micro-entreprises en septembre 2027. Un PDF joint à un courriel ne suffit pas à lui seul à satisfaire cette réforme."
+              },
+              {
+                "kind": "heading",
+                "text": "De la commande à la preuve"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le devis présente la prestation proposée. L'accord du client fixe le cadre commercial selon les conditions applicables. La facture décrit ce qui est facturé et permet le suivi comptable. Le règlement prouve le paiement, mais un ticket de terminal ne remplace pas toujours une facture complète. Chaque document joue donc un rôle dans la chaîne de preuve."
+              },
+              {
+                "kind": "heading",
+                "text": "Rédiger avec précision"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Identifiez les parties, datez la prestation et utilisez une numérotation unique et chronologique. Décrivez suffisamment le service pour comprendre ce qui a été vendu. Présentez les montants, les taxes ou la mention de franchise pertinente. Pour les clients professionnels, ajoutez les mentions de paiement requises. Une erreur se corrige par une procédure traçable, par exemple un avoir lorsque c'est approprié ; on ne réutilise pas discrètement un numéro déjà émis."
+              },
+              {
+                "kind": "heading",
+                "text": "Conserver et rapprocher"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Rapprochez chaque facture de son règlement et chaque dépense de son justificatif. Les pièces comptables doivent être conservées dans les conditions et durées légales. Le calendrier de facturation électronique est distinct d'un simple PDF envoyé par courriel : il dépend du type d'opération et de la catégorie d'entreprise. Vérifiez les échéances et outils applicables à votre structure."
+              }
+            ],
+            "cards": [
+              {
+                "label": "IDENTIFIER",
+                "text": "Qui vend, qui achète, quelle prestation ?"
+              },
+              {
+                "label": "CALCULER",
+                "text": "Base, TVA éventuelle, total et paiement."
+              },
+              {
+                "label": "ARCHIVER",
+                "text": "Une pièce numérotée et une trace conservée."
+              }
+            ],
+            "diagram": "media/vtc/diagram-b.11.webp",
+            "diagram_text": [
+              "Deux traces complémentaires",
+              "Facture Décrit la prestation et les montants.",
+              "€ Paiement Atteste le règlement correspondant.",
+              "La facture doit permettre de comprendre la prestation et de la rapprocher du paiement."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-11-atelier",
+          "title": "À vous de jouer · Facturer et conserver les preuves",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.11",
+            "title": "Facturer et conserver les preuves",
+            "objective": "Produire une pièce claire, traçable et cohérente.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une facture comporte une erreur. Quelle méthode évite de rompre la traçabilité ?",
+                "options": [
+                  {
+                    "id": "11fbdb59e38c",
+                    "text": "Effacer la facture sans trace"
+                  },
+                  {
+                    "id": "15281d0a9f26",
+                    "text": "Réutiliser son numéro pour un autre client"
+                  },
+                  {
+                    "id": "5d8c007310b2",
+                    "text": "Utiliser la procédure de correction ou d’avoir et conserver l’historique"
+                  }
+                ],
+                "answer": "5d8c007310b2",
+                "explanation": "Les factures suivent une numérotation et une traçabilité. La correction doit laisser une preuve compréhensible.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quel document relie une dépense au suivi comptable ?",
+                "options": [
+                  {
+                    "id": "aac0ba7d0659",
+                    "text": "Un avis client"
+                  },
+                  {
+                    "id": "6c42b65c9ef9",
+                    "text": "Une estimation orale sans date"
+                  },
+                  {
+                    "id": "b9f72b9c7fd0",
+                    "text": "Un justificatif authentique conservé et classé"
+                  }
+                ],
+                "answer": "b9f72b9c7fd0",
+                "explanation": "Les justificatifs permettent de vérifier la nature, le montant et le traitement d’une opération.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "CALCULER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "IDENTIFIER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "ARCHIVER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Qui vend, qui achète, quelle prestation ?",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Base, TVA éventuelle, total et paiement.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Une pièce numérotée et une trace conservée.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.11. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-12",
+      "title": "B.12 · Organiser le travail et les obligations",
+      "activities": [
+        {
+          "id": "vtc-b-12-cours",
+          "title": "Organiser le travail et les obligations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 30,
+          "blocks": [],
+          "vtc": {
+            "ref": "B.12",
+            "title": "Organiser le travail et les obligations",
+            "page": 103,
+            "pages": [
+              103,
+              104
+            ],
+            "objective": "Distinguer gestion indépendante et emploi salarié.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un indépendant organise son activité dans les limites de ses contrats et de la réglementation. Un salarié travaille dans un cadre de subordination avec un employeur, un contrat et des obligations sociales. L’étiquette choisie ne suffit pas à qualifier la relation : les conditions réelles d’exécution comptent."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’entreprise qui embauche doit accomplir les formalités, rémunérer conformément aux règles applicables, suivre le temps de travail et prévenir les risques. Le bulletin de paie distingue brut, cotisations et net. Pour l’indépendant, cotisations, impôt, CFE éventuelle et échéances administratives se prévoient. La CMA peut accompagner l’activité ; l’Urssaf, le SIE et les professionnels compétents répondent sur leurs domaines respectifs."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le droit du transport et le droit du travail s’appliquent ensemble."
+              },
+              {
+                "kind": "heading",
+                "text": "Identifier la relation de travail"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un indépendant organise son activité dans le cadre de ses contrats et obligations. Un salarié travaille dans un lien de subordination avec un employeur. Le nom donné au contrat ne suffit pas à déterminer la réalité de la relation. Donner des ordres, contrôler leur exécution et sanctionner relève d'indices à analyser. Le recours à un prestataire ne doit donc pas servir à ignorer les règles réellement applicables."
+              },
+              {
+                "kind": "heading",
+                "text": "Prévoir le coût et le temps"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour un salarié, le coût employeur ne se limite pas au salaire net versé. Il faut intégrer les cotisations, les obligations sociales et le temps de travail selon le cadre applicable. Pour l'indépendant, le temps de nettoyage, de prospection et d'administration fait partie de l'activité, même lorsqu'il n'est pas facturé. Un planning saturé sans marge augmente à la fois les retards et la fatigue."
+              },
+              {
+                "kind": "heading",
+                "text": "Tenir un calendrier professionnel"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Centralisez les échéances fiscales, sociales, contractuelles et réglementaires. Pour chaque obligation, notez la personne responsable et la preuve attendue. Si vous employez des salariés, la prévention des risques et les obligations de santé au travail doivent être organisées. Les règles du salarié ne se copient pas automatiquement sur l'indépendant, mais la nécessité de conduire reposé concerne tous les chauffeurs."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une entreprise prévoit six heures de courses. Elle ajoute une heure d'approche et de retour, trente minutes de nettoyage et trente minutes d'administration : la journée représente huit heures d'activité dans cet exemple. Construire le planning uniquement avec les six heures vendues aurait masqué du travail réel et réduit la marge disponible pour les pauses et les imprévus."
+              }
+            ],
+            "cards": [
+              {
+                "label": "TRAVAIL",
+                "text": "Qui organise et contrôle la mission ?"
+              },
+              {
+                "label": "SOCIAL",
+                "text": "Déclarations, cotisations et protection."
+              },
+              {
+                "label": "PRÉVENTION",
+                "text": "Fatigue, manutention et organisation sûre."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-b.webp",
+            "module": "B"
+          }
+        },
+        {
+          "id": "vtc-b-12-atelier",
+          "title": "À vous de jouer · Organiser le travail et les obligations",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "B.12",
+            "title": "Organiser le travail et les obligations",
+            "objective": "Distinguer gestion indépendante et emploi salarié.",
+            "module": "B"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Six heures de courses, une heure d’approche, trente minutes de nettoyage et trente minutes d’administration représentent combien ?",
+                "options": [
+                  {
+                    "id": "0a66b0b10770",
+                    "text": "6 heures d’activité"
+                  },
+                  {
+                    "id": "3e4d8f3a5b5f",
+                    "text": "8 heures d’activité"
+                  },
+                  {
+                    "id": "37c86f0abd9f",
+                    "text": "7 heures d’activité"
+                  }
+                ],
+                "answer": "3e4d8f3a5b5f",
+                "explanation": "Le temps professionnel inclut les tâches nécessaires hors course : 6 + 1 + 0,5 + 0,5 = 8 heures.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Pourquoi suivre séparément échéances fiscales, sociales et métier ?",
+                "options": [
+                  {
+                    "id": "b01cf153c9f0",
+                    "text": "Une déclaration Urssaf remplace tous les impôts"
+                  },
+                  {
+                    "id": "f2c8b821d0a8",
+                    "text": "Elles ont des objets, destinataires et calendriers différents"
+                  },
+                  {
+                    "id": "6953bcb27c3b",
+                    "text": "Le REVTC encaisse toutes les cotisations"
+                  }
+                ],
+                "answer": "f2c8b821d0a8",
+                "explanation": "Une obligation accomplie n’efface pas les autres ; un calendrier distinct réduit les oublis.",
+                "module": "B",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon B.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "TRAVAIL"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "PRÉVENTION"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "SOCIAL"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Déclarations, cotisations et protection.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Fatigue, manutention et organisation sûre.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Qui organise et contrôle la mission ?",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon B.12. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-b-synthese",
+      "title": "Synthèse · relier les notions",
+      "activities": [
+        {
+          "id": "vtc-b-capsule",
+          "title": "Voir et retenir · les essentiels",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "type": "Video",
+              "video": {
+                "src": "media/vtc/v2/capsule-b.mp4",
+                "poster": "media/vtc/v2/capsule-b.jpg",
+                "captions": "media/vtc/v2/capsule-b.vtt",
+                "duration_seconds": 67.179036,
+                "transcript": "La micro-entreprise est-elle une société comme la SASU ? Non, c’est un régime simplifié sous conditions. La forme juridique, le régime fiscal, le régime social et la TVA répondent à des questions différentes.\n\nProduits de 5 000 € et charges de 3 800 € sur la même période : quel résultat ? 1 200 €. Le résultat est la différence entre produits et charges : 5 000 − 3 800 = 1 200 €.\n\nSolde initial 1 000 €, encaissements 2 500 €, paiements 2 800 € : solde final ? 700 €. 1 000 + 2 500 − 2 800 = 700 €. Un plan de trésorerie suit les mouvements aux dates prévues.\n\nSix heures de courses, une heure d’approche, trente minutes de nettoyage et trente minutes d’administration représentent combien ? 8 heures d’activité. Le temps professionnel inclut les tâches nécessaires hors course : 6 + 1 + 0,5 + 0,5 = 8 heures.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "audio": true,
+                "burned_captions": true,
+                "id": "vtc-b-capsule",
+                "title": "Les essentiels · Gérer son entreprise",
+                "required": true
+              }
+            }
+          ],
+          "vtc": {
+            "kind": "recap",
+            "module": "B",
+            "title": "Gérer son entreprise",
+            "image": "media/vtc/module-b.webp",
+            "transcript": "La micro-entreprise est-elle une société comme la SASU ? Non, c’est un régime simplifié sous conditions. La forme juridique, le régime fiscal, le régime social et la TVA répondent à des questions différentes.\n\nProduits de 5 000 € et charges de 3 800 € sur la même période : quel résultat ? 1 200 €. Le résultat est la différence entre produits et charges : 5 000 − 3 800 = 1 200 €.\n\nSolde initial 1 000 €, encaissements 2 500 €, paiements 2 800 € : solde final ? 700 €. 1 000 + 2 500 − 2 800 = 700 €. Un plan de trésorerie suit les mouvements aux dates prévues.\n\nSix heures de courses, une heure d’approche, trente minutes de nettoyage et trente minutes d’administration représentent combien ? 8 heures d’activité. Le temps professionnel inclut les tâches nécessaires hors course : 6 + 1 + 0,5 + 0,5 = 8 heures.",
+            "audio": true,
+            "cards": [
+              {
+                "label": "B.01",
+                "text": "Choisir un cadre juridique"
+              },
+              {
+                "label": "B.02",
+                "text": "Créer et organiser l’activité"
+              },
+              {
+                "label": "B.03",
+                "text": "Lire un bilan"
+              },
+              {
+                "label": "B.04",
+                "text": "Lire le résultat"
+              },
+              {
+                "label": "B.05",
+                "text": "Classer les coûts"
+              },
+              {
+                "label": "B.06",
+                "text": "Comprendre la TVA"
+              },
+              {
+                "label": "B.07",
+                "text": "Piloter le régime micro"
+              },
+              {
+                "label": "B.08",
+                "text": "Construire la trésorerie"
+              },
+              {
+                "label": "B.09",
+                "text": "Atteindre le seuil de rentabilité"
+              },
+              {
+                "label": "B.10",
+                "text": "Financer le véhicule"
+              },
+              {
+                "label": "B.11",
+                "text": "Facturer et conserver les preuves"
+              },
+              {
+                "label": "B.12",
+                "text": "Organiser le travail et les obligations"
+              }
+            ]
+          }
+        },
+        {
+          "id": "vtc-b-approfondir",
+          "title": "Approfondir · repères et méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 24,
+          "blocks": [],
+          "vtc": {
+            "kind": "supplements",
+            "module": "B",
+            "title": "Relier le cours à la mission",
+            "supplements": [
+              {
+                "title": "Comparer les cadres juridiques",
+                "page": 73,
+                "image": "media/vtc/complement-73.webp",
+                "text": [
+                  "La forme juridique, le régime fiscal et la TVA répondent à trois questions différentes.",
+                  "Cadre Ce qu’il faut comprendre",
+                  "EI Une personne exerce en son nom, sans créer de société. Patrimoines personnel et professionnel séparés selon la loi, avec exceptions. La micro-entreprise est un régime, pas une société.",
+                  "EURL SARL à un associé. Cadre de fonctionnement réglementé. L’associé peut être lui-même gérant ; son régime social dépend de cette situation.",
+                  "SARL De 2 à 100 associés. Gérance organisée par la loi et les statuts. Responsabilité des associés en principe limitée aux apports ; caution et faute de gestion restent à examiner.",
+                  "SASU / SAS Un associé pour la SASU, plusieurs pour la SAS. Statuts souples, à rédiger avec soin. Le président rémunéré est assimilé salarié pour la protection sociale.",
+                  "Scop Société coopérative sous forme SARL, SAS ou SA. Salariés associés : au moins 51 % du capital et 65 % des droits de vote ; gouvernance coopérative.",
+                  "EIRL Ancien régime de patrimoine affecté de l’entrepreneur individuel. Plus de création ni d’option nouvelle depuis 2022 ; des EIRL existantes continuent.",
+                  "Pour comparer : nombre d’associés, financement, pouvoir de décision, protection sociale, imposition et coût administratif. Le véhicule et les autorisations VTC doivent rester conformes quelle que soit la forme choisie.",
+                  "Service Public Entreprendre : choix de la forme juridique • Service Public Entreprendre : Scop · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "La CMA, un interlocuteur utile",
+                "page": 74,
+                "image": "media/vtc/complement-74.webp",
+                "text": [
+                  "Comprendre sa composition et ses missions pour adresser une demande au bon organisme.",
+                  "Un établissement public administré par des artisans",
+                  "Les chambres de métiers et de l’artisanat sont des établissements publics. Leurs élus sont des chefs d’entreprise artisanale, désignés par leurs pairs pour cinq ans. Ils définissent les orientations, votent le budget et les comptes et représentent les intérêts de l’artisanat. Le président et les services de la chambre assurent leurs fonctions respectives de représentation et de mise en œuvre.",
+                  "Votre besoin Rôle de la CMA",
+                  "Passer l’examen taxi / VTC Organisation de l’inscription et des épreuves, publication des informations pratiques et des résultats selon la procédure.",
+                  "Créer ou développer l’activité",
+                  "Accompagnement du projet, formations, diagnostic de gestion et orientation vers les interlocuteurs adaptés.",
+                  "Faire entendre les besoins du métier",
+                  "Représentation des artisans et échanges avec les pouvoirs publics et les partenaires territoriaux.",
+                  "LES DÉMARCHES RESTENT DISTINCTES",
+                  "La CMA ne délivre pas la carte VTC et ne remplace pas le REVTC. Les formalités d’entreprise se font au guichet unique ; l’Urssaf traite le social et le service des impôts des entreprises traite la fiscalité. Gardez les accusés de réception de chaque démarche.",
+                  "Exemple : pour une convocation d’examen, contactez la CMA organisatrice. Pour le renouvellement de votre carte, adressez-vous à l’autorité compétente indiquée par votre préfecture.",
+                  "CMA France : élus et missions du réseau · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Les modes d’exploitation",
+                "page": 98,
+                "image": "media/vtc/complement-98.webp",
+                "text": [
+                  "Acheter ou louer un véhicule ne détermine pas, à lui seul, le mode d’exploitation du fonds.",
+                  "L’exploitation directe",
+                  "L’entrepreneur ou la société exploite son propre fonds : clientèle, missions, ventes et charges relèvent de sa gestion. Le véhicule peut être acheté, financé ou loué. Une location longue durée reste compatible avec l’exploitation directe.",
+                  "La location-gérance",
+                  "Le propriétaire d’un fonds en confie l’exploitation à un locataire-gérant contre une redevance. Ce dernier exploite à ses risques : il supporte les charges et garde le résultat de l’activité. Le contrat précise notamment le fonds confié, sa durée, la redevance, l’entretien et les conditions de restitution. La publicité du contrat intervient dans les quinze jours de la signature.",
+                  "Situation Qualification",
+                  "Vous louez seulement une berline pour travailler avec vos clients.",
+                  "Location d’un véhicule ; pas, à elle seule, location-gérance.",
+                  "Vous exploitez un fonds existant avec sa clientèle et ses moyens contre une redevance.",
+                  "Location-gérance si le contrat et les faits correspondent à ce montage.",
+                  "Vous conduisez pour un employeur sous ses directives.",
+                  "Emploi salarié ; pas une exploitation à votre propre risque.",
+                  "Autorisations personnelles : le contrat ne prête pas une carte professionnelle. Le conducteur, l’exploitant, les véhicules et les assurances restent soumis aux exigences VTC.",
+                  "Service Public Entreprendre : location-gérance · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Identifier son régime social",
+                "page": 107,
+                "image": "media/vtc/complement-107.webp",
+                "text": [
+                  "La protection dépend de la situation réelle du dirigeant et de sa rémunération.",
+                  "Situation Régime / base à retenir",
+                  "Entrepreneur individuel, dont micro-entrepreneur",
+                  "Travailleur indépendant. Micro-social : cotisations sur le chiffre d’affaires encaissé ; hors micro : assiette sociale du revenu professionnel.",
+                  "Gérant associé unique d’EURL ; gérant majoritaire de SARL",
+                  "Travailleur non salarié. Cotisations et régularisation selon le revenu et les règles propres à sa situation.",
+                  "Assimilé salarié au régime général, sur la rémunération du mandat. Ce statut ne crée pas un contrat de travail ni un droit automatique au chômage.",
+                  "Dirigeant rémunéré : président de SAS / SASU, gérant non associé d’EURL, gérant minoritaire ou égalitaire de SARL",
+                  "Chauffeur salarié Régime général au titre du contrat de travail ; cotisations via la paie et déclarations de l’employeur.",
+                  "Comprendre le calendrier des cotisations",
+                  "Hors micro, les appels peuvent être provisionnels, puis ajustés lorsque le revenu réel est connu. La déclaration annuelle fiscale et sociale transmet les données utiles à l’Urssaf. En micro, la déclaration mensuelle ou trimestrielle de chiffre d’affaires reste nécessaire, même en l’absence de recettes.",
+                  "EXEMPLE EXPLIQUÉ",
+                  "Un faible prélèvement Urssaf la première année ne prouve pas un faible coût social définitif. Une régularisation peut suivre : la trésorerie doit la prévoir. Une SASU sans rémunération n’ouvre pas de droits sociaux au titre d’un mandat non rémunéré.",
+                  "Service Public Entreprendre : choix de la forme juridique • Service Public Entreprendre : protection sociale du dirigeant • Urssaf : déclaration sociale et fiscale des indépendants · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Cotisations et prestations",
+                "page": 108,
+                "image": "media/vtc/complement-108.webp",
+                "text": [
+                  "Payer une cotisation, être affilié et remplir les conditions d’une prestation sont trois étapes distinctes.",
+                  "Protection À quoi elle sert",
+                  "Maladie / maternité Prise en charge des soins et prestations selon les conditions d’affiliation, de revenus et d’arrêt d’activité. La CPAM est l’interlocuteur pour les soins.",
+                  "Vieillesse Retraite de base et complémentaire : les droits dépendent des revenus soumis à cotisations et des règles du régime.",
+                  "Invalidité / décès Prestations sous conditions lorsque l’état de santé ou un décès affecte les ressources de la personne ou de ses proches.",
+                  "Famille et solidarité Cotisations d’allocations familiales ; CSG et CRDS participant au financement collectif. La CAF gère les prestations familiales selon la situation.",
+                  "Chômage Le mandat social seul et l’activité indépendante n’ouvrent pas l’assurance chômage des salariés. L’ATI peut être accordée par France Travail après cessation involontaire et définitive, sous conditions.",
+                  "Accident du travail : une distinction utile",
+                  "L’indépendant ne bénéficie pas automatiquement du régime spécifique AT/MP. Une assurance volontaire peut compléter sa couverture ; les soins restent pris en charge selon les règles ordinaires de l’assurance maladie. Une garantie de prévoyance ou de perte d’exploitation répond encore à d’autres besoins.",
+                  "À retenir : assurance du véhicule, responsabilité professionnelle et protection sociale couvrent des risques différents.",
+                  "Service Public Entreprendre : protection sociale du dirigeant • France Travail : allocation des travailleurs indépendants · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Résultat et revenus",
+                "page": 112,
+                "image": "media/vtc/complement-112.webp",
+                "text": [
+                  "Les obligations dépendent du régime de l’entreprise ; une déclaration Urssaf ne remplace pas une déclaration fiscale.",
+                  "Situation Déclaration et rythme",
+                  "Micro-BIC Chiffre d’affaires encaissé déclaré à l’Urssaf chaque mois ou trimestre. Déclaration annuelle des recettes sur 2042-C-PRO, y compris en cas de versement libératoire.",
+                  "BIC au réel, imposé à l’IR Déclaration annuelle 2031 et liasse fiscale ; report du résultat dans la déclaration personnelle. Liasse simplifiée ou normale selon le régime.",
+                  "Entreprise à l’IS Déclaration annuelle 2065 et liasse. Acomptes et solde d’IS suivent leur propre calendrier ; déposer le résultat n’équivaut pas à payer l’impôt.",
+                  "CFE Déclaration initiale 1447-C-SD avant le 31 décembre de l’année de création. Avis à consulter dans l’espace professionnel ; paiement selon l’échéance et les exonérations applicables.",
+                  "Construire son échéancier",
+                  "À l’IR au réel, le dépôt intervient au deuxième jour ouvré suivant le 1er mai. À l’IS : dans les trois mois de la clôture, ou à cette échéance de mai pour une clôture au 31 décembre. Le délai supplémentaire de télétransmission est de quinze jours calendaires. Vérifiez le calendrier fiscal annuel.",
+                  "CHAQUE MOIS",
+                  "Rapprochez ventes, factures de plateforme, banque et justificatifs ; provisionnez les sommes à payer. Notez la période déclarée, les dates de dépôt et de paiement ; conservez la validation.",
+                  "DGFiP : imposition des résultats • Urssaf : déclaration sociale et fiscale des indépendants · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Les déclarations de TVA",
+                "page": 113,
+                "image": "media/vtc/complement-113.webp",
+                "text": [
+                  "Repères pour 2026 et transition annoncée au 1er janvier 2027.",
+                  "Régime en 2026 Fonctionnement courant",
+                  "Franchise en base Pas de TVA facturée ni récupérée sur les opérations couvertes par la franchise. Pas de déclaration périodique courante pour ces opérations ; des opérations particulières peuvent créer une obligation.",
+                  "Réel normal CA3 mensuelle sur la TVA devenue exigible. Possibilité de déclaration trimestrielle si la TVA annuelle due est inférieure à 4 000 €.",
+                  "Réel simplifié Acomptes en juillet et décembre ; déclaration annuelle CA12 / CA12E et régularisation, sous les conditions de ce régime en 2026.",
+                  "Le changement prévu pour 2027",
+                  "Le régime simplifié de TVA est remplacé par des CA3. La périodicité est trimestrielle si le chiffre d’affaires majoré des acquisitions taxables ne dépasse pas 1 000 000 € l’année précédente et 1 100 000 € en cours d’année ; le mensuel s’applique au-delà ou sur option. La franchise en base reste une question distincte.",
+                  "Pour un exercice civil au simplifié : dernière CA12 2026 au plus tard le 4 mai 2027 ; premières CA3 sur janvier ou le premier trimestre 2027. Pour un exercice décalé, le basculement suit la clôture de l’exercice 2026/2027, avec les règles transitoires d’acomptes.",
+                  "Ne pas confondre les bases : TVA à payer = TVA collectée exigible - TVA déductible admise, après régularisations. La TVA encaissée n’est pas un revenu disponible. Une facture de plateforme étrangère peut nécessiter une autoliquidation, même en franchise.",
+                  "DGFiP : régimes de TVA • DGFiP : transition TVA au 1er janvier 2027 · vérifiés le 29.09.2026"
+                ]
+              }
+            ],
+            "sources": [
+              {
+                "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+              },
+              {
+                "title": "Devenir chauffeur de VTC · Service Public",
+                "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+              },
+              {
+                "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+              }
+            ],
+            "exam": {
+              "minutes": 45,
+              "coefficient": 2,
+              "format": "16 QCM + 2 QRC"
+            },
+            "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "vtc-b-01-cours",
+    "vtc-b-01-atelier",
+    "vtc-b-02-cours",
+    "vtc-b-02-atelier",
+    "vtc-b-03-cours",
+    "vtc-b-03-atelier",
+    "vtc-b-04-cours",
+    "vtc-b-04-atelier",
+    "vtc-b-05-cours",
+    "vtc-b-05-atelier",
+    "vtc-b-06-cours",
+    "vtc-b-06-atelier",
+    "vtc-b-07-cours",
+    "vtc-b-07-atelier",
+    "vtc-b-08-cours",
+    "vtc-b-08-atelier",
+    "vtc-b-09-cours",
+    "vtc-b-09-atelier",
+    "vtc-b-10-cours",
+    "vtc-b-10-atelier",
+    "vtc-b-11-cours",
+    "vtc-b-11-atelier",
+    "vtc-b-12-cours",
+    "vtc-b-12-atelier",
+    "vtc-b-capsule",
+    "vtc-b-approfondir"
+  ],
+  "assets": [
+    "media/vtc/complement-107.webp",
+    "media/vtc/complement-108.webp",
+    "media/vtc/complement-112.webp",
+    "media/vtc/complement-113.webp",
+    "media/vtc/complement-73.webp",
+    "media/vtc/complement-74.webp",
+    "media/vtc/complement-98.webp",
+    "media/vtc/diagram-b.01.webp",
+    "media/vtc/diagram-b.02.webp",
+    "media/vtc/diagram-b.04.webp",
+    "media/vtc/diagram-b.07.webp",
+    "media/vtc/diagram-b.08.webp",
+    "media/vtc/diagram-b.09.webp",
+    "media/vtc/diagram-b.10.webp",
+    "media/vtc/diagram-b.11.webp",
+    "media/vtc/module-b.webp",
+    "media/vtc/v2/capsule-b.jpg",
+    "media/vtc/v2/capsule-b.mp4",
+    "media/vtc/v2/capsule-b.vtt"
+  ],
+  "import_warnings": [],
+  "counts": {
+    "sections": 13,
+    "lessons": 12,
+    "activities": 26,
+    "scored_activities": 0,
+    "workbooks": 0,
+    "interactive_workshops": 12,
+    "required_videos": 1,
+    "assets": 19
+  }
+}

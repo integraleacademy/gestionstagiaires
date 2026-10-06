@@ -1,6 +1,6 @@
 {
   "id": "vtc",
-  "version": "20261006-vtc-v1",
+  "version": "20261006-vtc-v2",
   "title": "VTC · Le parcours illustré",
   "reviewed_on": "2026-10-06",
   "planned_minutes": 3600,
@@ -23,7 +23,10 @@
   "modules": [
     {
       "id": "academy-vtc-a",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "A",
       "title": "VTC A · Exercer dans le cadre du T3P",
       "planned_minutes": 480,
@@ -99,7 +102,10 @@
     },
     {
       "id": "academy-vtc-b",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "B",
       "title": "VTC B · Gérer son entreprise",
       "planned_minutes": 540,
@@ -175,7 +181,10 @@
     },
     {
       "id": "academy-vtc-c",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "C",
       "title": "VTC C · Conduire en sécurité",
       "planned_minutes": 480,
@@ -251,7 +260,10 @@
     },
     {
       "id": "academy-vtc-d",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "D",
       "title": "VTC D · Comprendre et s’exprimer en français",
       "planned_minutes": 420,
@@ -327,7 +339,10 @@
     },
     {
       "id": "academy-vtc-e",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "E",
       "title": "VTC E · Accueillir en anglais",
       "planned_minutes": 480,
@@ -403,7 +418,10 @@
     },
     {
       "id": "academy-vtc-f",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "F",
       "title": "VTC F · Développer son activité VTC",
       "planned_minutes": 420,
@@ -479,7 +497,10 @@
     },
     {
       "id": "academy-vtc-g",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "G",
       "title": "VTC G · Appliquer les règles du VTC",
       "planned_minutes": 420,
@@ -555,7 +576,10 @@
     },
     {
       "id": "academy-vtc-h",
-      "version": "20261006-vtc-v1",
+      "version": "20261006-vtc-v2",
+      "previous_versions": [
+        "20261006-vtc-v1"
+      ],
       "letter": "H",
       "title": "VTC H · Réaliser une mission professionnelle",
       "planned_minutes": 360,
@@ -631,12 +655,14 @@
     }
   ],
   "exam_versions": [
-    "20261006-vtc-v1"
+    "20261006-vtc-v1",
+    "20261006-vtc-v2"
   ],
   "final_exam_id": "vtc-final",
   "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
   "activity_count": 208,
   "video_count": 8,
+  "narrated_video_count": 8,
   "exercise_count": 288,
   "question_bank_count": 272,
   "module_exam_questions": 240,

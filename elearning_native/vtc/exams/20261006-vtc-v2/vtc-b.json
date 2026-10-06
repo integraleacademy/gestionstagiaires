@@ -1,0 +1,730 @@
+{
+  "id": "vtc-b",
+  "version": "20261006-vtc-v2",
+  "training_label": "VTC",
+  "title": "VTC · Gérer son entreprise · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-b-11-q2",
+      "prompt": "Quel document relie une dépense au suivi comptable ?",
+      "options": [
+        {
+          "id": "aac0ba7d0659",
+          "text": "Un avis client"
+        },
+        {
+          "id": "6c42b65c9ef9",
+          "text": "Une estimation orale sans date"
+        },
+        {
+          "id": "b9f72b9c7fd0",
+          "text": "Un justificatif authentique conservé et classé"
+        }
+      ],
+      "answer": "b9f72b9c7fd0",
+      "explanation": "Les justificatifs permettent de vérifier la nature, le montant et le traitement d’une opération.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.11"
+      ]
+    },
+    {
+      "id": "vtc-b-06-q1",
+      "prompt": "Avec une TVA supposée à 10 %, 80 € HT donnent quel prix TTC ?",
+      "options": [
+        {
+          "id": "090877008e55",
+          "text": "90 €"
+        },
+        {
+          "id": "5e52cea6cf9a",
+          "text": "72 €"
+        },
+        {
+          "id": "471f801bfa66",
+          "text": "88 €"
+        }
+      ],
+      "answer": "471f801bfa66",
+      "explanation": "TVA = 80 × 10 % = 8 € ; TTC = 80 + 8 = 88 €. Le taux est une donnée de cet exercice.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.06"
+      ]
+    },
+    {
+      "id": "vtc-b-04-q2",
+      "prompt": "Une entreprise rentable peut-elle manquer de trésorerie ?",
+      "options": [
+        {
+          "id": "7c41d01b3f55",
+          "text": "Non, bénéfice et banque sont identiques"
+        },
+        {
+          "id": "64cb0d581185",
+          "text": "Oui, si les encaissements arrivent après les paiements"
+        },
+        {
+          "id": "b5dbc221dbfd",
+          "text": "Seulement si elle n’a pas de clients"
+        }
+      ],
+      "answer": "64cb0d581185",
+      "explanation": "Le résultat mesure une performance ; la trésorerie dépend aussi des dates de paiement et des financements.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.04"
+      ]
+    },
+    {
+      "id": "vtc-b-05-q1",
+      "prompt": "Approche 8 km, client 20 km, retour 12 km : quelle distance compte pour les coûts ?",
+      "options": [
+        {
+          "id": "80bbdbcdcdca",
+          "text": "40 km"
+        },
+        {
+          "id": "ef78c334cdbb",
+          "text": "28 km"
+        },
+        {
+          "id": "7529c0fd351b",
+          "text": "20 km"
+        }
+      ],
+      "answer": "80bbdbcdcdca",
+      "explanation": "Le véhicule consomme sur tout le trajet, y compris les kilomètres sans passager : 8 + 20 + 12 = 40 km.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.05"
+      ]
+    },
+    {
+      "id": "vtc-b-01-q1",
+      "prompt": "La micro-entreprise est-elle une société comme la SASU ?",
+      "options": [
+        {
+          "id": "8aeff099d61c",
+          "text": "Oui, avec obligatoirement deux associés"
+        },
+        {
+          "id": "d5114dcc8d33",
+          "text": "Non, c’est un régime simplifié sous conditions"
+        },
+        {
+          "id": "98d7c33d1ae5",
+          "text": "Oui, avec le même capital obligatoire"
+        }
+      ],
+      "answer": "d5114dcc8d33",
+      "explanation": "La forme juridique, le régime fiscal, le régime social et la TVA répondent à des questions différentes.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.01"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-02",
+      "prompt": "Une créance client figure dans…",
+      "options": [
+        {
+          "id": "a",
+          "text": "L’actif du bilan."
+        },
+        {
+          "id": "b",
+          "text": "Le capital social uniquement."
+        },
+        {
+          "id": "c",
+          "text": "Le seul compte bancaire."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Elle représente une somme due à l’entreprise ; son règlement la transforme en trésorerie.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-03",
+      "prompt": "66 € TTC à 10 % correspondent à…",
+      "options": [
+        {
+          "id": "a",
+          "text": "59,40 € HT."
+        },
+        {
+          "id": "b",
+          "text": "66 € HT."
+        },
+        {
+          "id": "c",
+          "text": "60 € HT."
+        }
+      ],
+      "answer": "c",
+      "explanation": "66 ÷ 1,10 = 60 ; la TVA est de 6 €.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-02-q1",
+      "prompt": "Que désigne le SIRET ?",
+      "options": [
+        {
+          "id": "5a4cf0430242",
+          "text": "Une carte professionnelle personnelle"
+        },
+        {
+          "id": "8de586c501e2",
+          "text": "Une garantie d’assurance"
+        },
+        {
+          "id": "7fb7c8755b01",
+          "text": "Un établissement de l’entreprise"
+        }
+      ],
+      "answer": "7fb7c8755b01",
+      "explanation": "Le SIREN identifie l’entreprise et le SIRET un établissement. Aucun des deux ne remplace les autorisations métier.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.02"
+      ]
+    },
+    {
+      "id": "vtc-b-03-q2",
+      "prompt": "Actif : véhicule 24 000 €, créances 2 000 €, banque 4 000 €. Quel total ?",
+      "options": [
+        {
+          "id": "fe9d39e84d54",
+          "text": "26 000 €"
+        },
+        {
+          "id": "7747a44173ca",
+          "text": "22 000 €"
+        },
+        {
+          "id": "8ddd5130c44b",
+          "text": "30 000 €"
+        }
+      ],
+      "answer": "8ddd5130c44b",
+      "explanation": "24 000 + 2 000 + 4 000 = 30 000 €. Le total actif doit correspondre au total passif.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.03"
+      ]
+    },
+    {
+      "id": "vtc-b-09-q2",
+      "prompt": "Que signifie atteindre le seuil de rentabilité ?",
+      "options": [
+        {
+          "id": "a59d32661889",
+          "text": "Couvrir les charges retenues dans le calcul"
+        },
+        {
+          "id": "eb32ece62ac5",
+          "text": "Obtenir automatiquement un salaire net garanti"
+        },
+        {
+          "id": "3673ebaec6d1",
+          "text": "Ne plus payer de cotisations"
+        }
+      ],
+      "answer": "a59d32661889",
+      "explanation": "Au seuil, la marge couvre les charges fixes du modèle ; cela ne garantit ni trésorerie ni rémunération disponible.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.09"
+      ]
+    },
+    {
+      "id": "vtc-b-06-q2",
+      "prompt": "TVA collectée 600 €, TVA déductible 250 €, toutes conditions remplies : quelle différence à payer ?",
+      "options": [
+        {
+          "id": "bf52921d9fa2",
+          "text": "250 €"
+        },
+        {
+          "id": "4fa9178ec89f",
+          "text": "350 €"
+        },
+        {
+          "id": "31f7348113ff",
+          "text": "850 €"
+        }
+      ],
+      "answer": "4fa9178ec89f",
+      "explanation": "La TVA nette de cet exemple est 600 − 250 = 350 €, sous réserve des règles de déduction.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.06"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-04",
+      "prompt": "Produits 5 000 €, charges 3 800 € : résultat simplifié ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1 200 €."
+        },
+        {
+          "id": "b",
+          "text": "8 800 €."
+        },
+        {
+          "id": "c",
+          "text": "3 800 €."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le résultat correspond à la différence entre produits et charges.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-01-q2",
+      "prompt": "Pour comparer EI et SASU, quelle méthode retenir ?",
+      "options": [
+        {
+          "id": "4b2f230ad1bf",
+          "text": "Comparer le nom commercial"
+        },
+        {
+          "id": "c3d32244fe30",
+          "text": "Choisir seulement le statut d’un collègue"
+        },
+        {
+          "id": "e759881dadef",
+          "text": "Comparer recettes, charges, protection sociale et formalités sur les mêmes hypothèses"
+        }
+      ],
+      "answer": "e759881dadef",
+      "explanation": "Le statut se choisit selon le projet et ses coûts réels ; aucun cadre n’est optimal pour tous.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.01"
+      ]
+    },
+    {
+      "id": "vtc-b-12-q1",
+      "prompt": "Six heures de courses, une heure d’approche, trente minutes de nettoyage et trente minutes d’administration représentent combien ?",
+      "options": [
+        {
+          "id": "0a66b0b10770",
+          "text": "6 heures d’activité"
+        },
+        {
+          "id": "3e4d8f3a5b5f",
+          "text": "8 heures d’activité"
+        },
+        {
+          "id": "37c86f0abd9f",
+          "text": "7 heures d’activité"
+        }
+      ],
+      "answer": "3e4d8f3a5b5f",
+      "explanation": "Le temps professionnel inclut les tâches nécessaires hors course : 6 + 1 + 0,5 + 0,5 = 8 heures.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.12"
+      ]
+    },
+    {
+      "id": "vtc-b-08-q2",
+      "prompt": "Un client professionnel paie à 30 jours. Où placer cette recette dans le plan de trésorerie ?",
+      "options": [
+        {
+          "id": "5ffd54f7d3a2",
+          "text": "Toujours au jour du devis"
+        },
+        {
+          "id": "a15c4945b9b1",
+          "text": "À la date d’achat du véhicule"
+        },
+        {
+          "id": "321966dedfc2",
+          "text": "À la date d’encaissement prévue"
+        }
+      ],
+      "answer": "321966dedfc2",
+      "explanation": "Le tableau de trésorerie suit l’argent réellement reçu ou payé, pas seulement la date de la prestation.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.08"
+      ]
+    },
+    {
+      "id": "vtc-b-02-q2",
+      "prompt": "Les formalités de création suffisent-elles pour exploiter immédiatement un VTC ?",
+      "options": [
+        {
+          "id": "b33703752aac",
+          "text": "Oui, dès l’attribution du code APE"
+        },
+        {
+          "id": "512a3ce2ee62",
+          "text": "Non, les obligations propres au transport restent à remplir"
+        },
+        {
+          "id": "9f8bfa22b4e7",
+          "text": "Oui, pour les trajets inférieurs à 10 km"
+        }
+      ],
+      "answer": "512a3ce2ee62",
+      "explanation": "L’immatriculation de l’entreprise est distincte du REVTC, des titres du conducteur et de la conformité du véhicule.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.02"
+      ]
+    },
+    {
+      "id": "vtc-b-10-q2",
+      "prompt": "Dans une échéance d’emprunt, le remboursement du capital est-il identique à une charge d’intérêts ?",
+      "options": [
+        {
+          "id": "602caf9c5fd5",
+          "text": "Oui, tout est toujours une charge identique"
+        },
+        {
+          "id": "9a71dfbc988d",
+          "text": "Non, les traitements sont distincts"
+        },
+        {
+          "id": "d4b81654dc5a",
+          "text": "Oui, si le paiement est mensuel"
+        }
+      ],
+      "answer": "9a71dfbc988d",
+      "explanation": "Le capital rembourse une dette ; les intérêts rémunèrent le financement. Le paiement affecte aussi la trésorerie.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.10"
+      ]
+    },
+    {
+      "id": "vtc-b-03-q1",
+      "prompt": "Dans un bilan, où figurent les dettes d’emprunt ?",
+      "options": [
+        {
+          "id": "c0ea4d4aa49c",
+          "text": "Dans les recettes de courses"
+        },
+        {
+          "id": "f7300128cf97",
+          "text": "Dans les stocks de carburant"
+        },
+        {
+          "id": "00bd940f897b",
+          "text": "Au passif"
+        }
+      ],
+      "answer": "00bd940f897b",
+      "explanation": "Le passif présente les ressources et les dettes ; l’actif présente les emplois et les biens de l’entreprise.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.03"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-06",
+      "prompt": "En régime micro, une dépense de carburant…",
+      "options": [
+        {
+          "id": "a",
+          "text": "N’existe pas économiquement."
+        },
+        {
+          "id": "b",
+          "text": "Est toujours remboursée par l’État."
+        },
+        {
+          "id": "c",
+          "text": "Reste à payer même si elle n’est pas déduite au réel fiscal."
+        }
+      ],
+      "answer": "c",
+      "explanation": "L’abattement forfaitaire ne rembourse pas les frais réellement supportés.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-01",
+      "prompt": "La micro-entreprise est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une société avec deux associés."
+        },
+        {
+          "id": "b",
+          "text": "Un régime simplifié, pas une forme de société autonome."
+        },
+        {
+          "id": "c",
+          "text": "Un diplôme professionnel."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le régime micro doit être distingué du statut juridique.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-04-q1",
+      "prompt": "Produits de 5 000 € et charges de 3 800 € sur la même période : quel résultat ?",
+      "options": [
+        {
+          "id": "2cdd8c33c8c4",
+          "text": "1 200 €"
+        },
+        {
+          "id": "f817852d2739",
+          "text": "5 000 €"
+        },
+        {
+          "id": "ad37f3261c65",
+          "text": "8 800 €"
+        }
+      ],
+      "answer": "2cdd8c33c8c4",
+      "explanation": "Le résultat est la différence entre produits et charges : 5 000 − 3 800 = 1 200 €.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.04"
+      ]
+    },
+    {
+      "id": "vtc-b-manual-05",
+      "prompt": "Le remboursement du capital d’un emprunt est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Toujours une charge d’exploitation."
+        },
+        {
+          "id": "b",
+          "text": "Un décaissement distinct d’une charge du résultat."
+        },
+        {
+          "id": "c",
+          "text": "Une recette client."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Il diminue la dette et la trésorerie ; les intérêts se distinguent du capital.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-b-07-q1",
+      "prompt": "En micro-entreprise, les frais réels du véhicule réduisent-ils automatiquement la base du chiffre d’affaires déclaré à l’Urssaf ?",
+      "options": [
+        {
+          "id": "194d36a3b113",
+          "text": "Non"
+        },
+        {
+          "id": "72471c83a164",
+          "text": "Oui, pour tous les frais"
+        },
+        {
+          "id": "13bcb38d0487",
+          "text": "Oui, uniquement le carburant"
+        }
+      ],
+      "answer": "194d36a3b113",
+      "explanation": "Le régime micro-social est calculé sur le chiffre d’affaires selon ses règles ; dépenser ne réduit pas automatiquement cette base.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.07"
+      ]
+    },
+    {
+      "id": "vtc-b-12-q2",
+      "prompt": "Pourquoi suivre séparément échéances fiscales, sociales et métier ?",
+      "options": [
+        {
+          "id": "b01cf153c9f0",
+          "text": "Une déclaration Urssaf remplace tous les impôts"
+        },
+        {
+          "id": "f2c8b821d0a8",
+          "text": "Elles ont des objets, destinataires et calendriers différents"
+        },
+        {
+          "id": "6953bcb27c3b",
+          "text": "Le REVTC encaisse toutes les cotisations"
+        }
+      ],
+      "answer": "f2c8b821d0a8",
+      "explanation": "Une obligation accomplie n’efface pas les autres ; un calendrier distinct réduit les oublis.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.12"
+      ]
+    },
+    {
+      "id": "vtc-b-08-q1",
+      "prompt": "Solde initial 1 000 €, encaissements 2 500 €, paiements 2 800 € : solde final ?",
+      "options": [
+        {
+          "id": "fbbfddde4bd3",
+          "text": "1 300 €"
+        },
+        {
+          "id": "bc3439560dd8",
+          "text": "5 300 €"
+        },
+        {
+          "id": "7e748195d9df",
+          "text": "700 €"
+        }
+      ],
+      "answer": "7e748195d9df",
+      "explanation": "1 000 + 2 500 − 2 800 = 700 €. Un plan de trésorerie suit les mouvements aux dates prévues.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.08"
+      ]
+    },
+    {
+      "id": "vtc-b-10-q1",
+      "prompt": "Pour comparer achat et location, que faut-il regarder ?",
+      "options": [
+        {
+          "id": "408e013a55b2",
+          "text": "Uniquement la première mensualité"
+        },
+        {
+          "id": "b42b083db884",
+          "text": "Uniquement la couleur proposée"
+        },
+        {
+          "id": "5ca719dd7c14",
+          "text": "Le coût global, les contraintes et la trésorerie"
+        }
+      ],
+      "answer": "5ca719dd7c14",
+      "explanation": "Apport, intérêts, entretien, kilométrage, durée et valeur finale peuvent modifier le coût réel.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.10"
+      ]
+    },
+    {
+      "id": "vtc-b-05-q2",
+      "prompt": "Quel exemple correspond généralement à une charge fixe mensuelle ?",
+      "options": [
+        {
+          "id": "3dd3401ba168",
+          "text": "Le carburant consommé par une course"
+        },
+        {
+          "id": "0b1fcc449881",
+          "text": "Le péage d’une mission précise"
+        },
+        {
+          "id": "aa12d290a430",
+          "text": "Le loyer contractuel du véhicule"
+        }
+      ],
+      "answer": "aa12d290a430",
+      "explanation": "Une charge fixe ne varie pas directement avec chaque kilomètre, dans la plage d’activité considérée.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.05"
+      ]
+    },
+    {
+      "id": "vtc-b-09-q1",
+      "prompt": "Charges fixes 1 800 € et marge sur coûts variables de 60 % : seuil de rentabilité ?",
+      "options": [
+        {
+          "id": "cac888cb4eb8",
+          "text": "4 800 € de chiffre d’affaires"
+        },
+        {
+          "id": "84841f39b57d",
+          "text": "1 080 € de chiffre d’affaires"
+        },
+        {
+          "id": "dabae1c8d605",
+          "text": "3 000 € de chiffre d’affaires"
+        }
+      ],
+      "answer": "dabae1c8d605",
+      "explanation": "Le seuil est 1 800 ÷ 0,60 = 3 000 €, avec les hypothèses de taux et de période données.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.09"
+      ]
+    },
+    {
+      "id": "vtc-b-11-q1",
+      "prompt": "Une facture comporte une erreur. Quelle méthode évite de rompre la traçabilité ?",
+      "options": [
+        {
+          "id": "11fbdb59e38c",
+          "text": "Effacer la facture sans trace"
+        },
+        {
+          "id": "15281d0a9f26",
+          "text": "Réutiliser son numéro pour un autre client"
+        },
+        {
+          "id": "5d8c007310b2",
+          "text": "Utiliser la procédure de correction ou d’avoir et conserver l’historique"
+        }
+      ],
+      "answer": "5d8c007310b2",
+      "explanation": "Les factures suivent une numérotation et une traçabilité. La correction doit laisser une preuve compréhensible.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.11"
+      ]
+    },
+    {
+      "id": "vtc-b-07-q2",
+      "prompt": "Peut-on être micro-entrepreneur tout en devenant redevable de TVA ?",
+      "options": [
+        {
+          "id": "eeceb86f44ff",
+          "text": "Non, cela est impossible"
+        },
+        {
+          "id": "2d386600d389",
+          "text": "Oui, les deux régimes sont distincts"
+        },
+        {
+          "id": "b7f227b861b0",
+          "text": "Seulement avec trois salariés"
+        }
+      ],
+      "answer": "2d386600d389",
+      "explanation": "Les seuils et conditions du régime micro et de la franchise de TVA sont à examiner séparément.",
+      "module": "B",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon B.07"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

@@ -1,0 +1,730 @@
+{
+  "id": "vtc-c",
+  "version": "20261006-vtc-v2",
+  "training_label": "VTC",
+  "title": "VTC · Conduire en sécurité · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-c-01-q2",
+      "prompt": "Quand régler siège, rétroviseurs et navigation ?",
+      "options": [
+        {
+          "id": "0f17d4c40592",
+          "text": "À l’arrêt avant de rouler"
+        },
+        {
+          "id": "9160a847604a",
+          "text": "Dans le premier carrefour"
+        },
+        {
+          "id": "acddd7eecf42",
+          "text": "Pendant que le passager tient le volant"
+        }
+      ],
+      "answer": "0f17d4c40592",
+      "explanation": "Préparer le poste de conduite préserve l’attention disponible une fois en circulation.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.01"
+      ]
+    },
+    {
+      "id": "vtc-c-04-q1",
+      "prompt": "Avant de tourner à droite, un cycliste peut se trouver près du véhicule. Que faire ?",
+      "options": [
+        {
+          "id": "d81777efd21d",
+          "text": "Se fier uniquement au clignotant"
+        },
+        {
+          "id": "061d8953fc48",
+          "text": "Contrôler les abords et l’angle mort adapté avant la manœuvre"
+        },
+        {
+          "id": "d67a56b08b38",
+          "text": "Accélérer pour passer avant lui"
+        }
+      ],
+      "answer": "061d8953fc48",
+      "explanation": "Le clignotant annonce une intention mais ne vérifie pas que l’espace est libre.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.04"
+      ]
+    },
+    {
+      "id": "vtc-c-02-q1",
+      "prompt": "La limitation autorise 80 km/h mais la visibilité est très réduite. Quelle décision ?",
+      "options": [
+        {
+          "id": "0af7445d4342",
+          "text": "Accélérer pour quitter rapidement la zone"
+        },
+        {
+          "id": "6bffec1a5fe5",
+          "text": "Réduire l’allure selon les conditions"
+        },
+        {
+          "id": "c979003282d9",
+          "text": "Maintenir forcément 80 km/h"
+        }
+      ],
+      "answer": "6bffec1a5fe5",
+      "explanation": "La vitesse maximale autorisée n’est pas une vitesse à atteindre ; les conditions peuvent imposer de ralentir.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.02"
+      ]
+    },
+    {
+      "id": "vtc-c-10-q2",
+      "prompt": "Une conduite économique permet-elle de couper le moteur en roulant ?",
+      "options": [
+        {
+          "id": "52a58d1545e6",
+          "text": "Oui, si le passager accepte"
+        },
+        {
+          "id": "852b022ff4bd",
+          "text": "Oui, dans toutes les descentes"
+        },
+        {
+          "id": "9090dac4c51b",
+          "text": "Non, la sécurité et les consignes du véhicule restent prioritaires"
+        }
+      ],
+      "answer": "9090dac4c51b",
+      "explanation": "L’éco-conduite s’appuie sur l’anticipation et un usage adapté du véhicule, sans supprimer ses fonctions de sécurité.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.10"
+      ]
+    },
+    {
+      "id": "vtc-c-04-q2",
+      "prompt": "Un véhicule masque le trottoir près d’un passage piéton. Quelle attitude ?",
+      "options": [
+        {
+          "id": "23af41af2a07",
+          "text": "Regarder seulement le GPS"
+        },
+        {
+          "id": "e6df511488f7",
+          "text": "Anticiper une apparition et adapter l’allure"
+        },
+        {
+          "id": "fe39b132fafa",
+          "text": "Supposer qu’aucun piéton n’est présent"
+        }
+      ],
+      "answer": "e6df511488f7",
+      "explanation": "Une zone masquée est une source possible de danger ; garder du temps pour réagir.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.04"
+      ]
+    },
+    {
+      "id": "vtc-c-05-q2",
+      "prompt": "Un agent règle la circulation d’une façon différente du feu. Quelle indication suivre ?",
+      "options": [
+        {
+          "id": "a83c8cd497b4",
+          "text": "Toujours celle du feu"
+        },
+        {
+          "id": "de6b3928a3b4",
+          "text": "Toujours celle du GPS"
+        },
+        {
+          "id": "f09ca042c5a5",
+          "text": "Celle de l’agent"
+        }
+      ],
+      "answer": "f09ca042c5a5",
+      "explanation": "Les instructions des agents qui règlent la circulation priment sur les indications ordinaires de signalisation.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.05"
+      ]
+    },
+    {
+      "id": "vtc-c-12-q2",
+      "prompt": "Le constat amiable doit-il décrire des suppositions comme des faits certains ?",
+      "options": [
+        {
+          "id": "ce7182cdcd74",
+          "text": "Oui, pour compléter toutes les cases"
+        },
+        {
+          "id": "d450a2fa6ebf",
+          "text": "Oui, si l’autre conducteur est pressé"
+        },
+        {
+          "id": "22246cfb8078",
+          "text": "Non, il doit rester cohérent avec les faits observés"
+        }
+      ],
+      "answer": "22246cfb8078",
+      "explanation": "Cases, circonstances et croquis doivent correspondre. Ne signez pas un document comportant des faits que vous contestez.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.12"
+      ]
+    },
+    {
+      "id": "vtc-c-08-q1",
+      "prompt": "Un médicament porte un avertissement sur la conduite. Que faire ?",
+      "options": [
+        {
+          "id": "1d48b214b0d0",
+          "text": "Lire la notice et demander un avis médical ou pharmaceutique adapté"
+        },
+        {
+          "id": "6de895c590d7",
+          "text": "L’ignorer s’il est vendu sans ordonnance"
+        },
+        {
+          "id": "3acbea69bcc7",
+          "text": "Tester ses effets avec un client à bord"
+        }
+      ],
+      "answer": "1d48b214b0d0",
+      "explanation": "Un médicament peut diminuer la vigilance. La notice et le professionnel de santé aident à décider avant de conduire.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.08"
+      ]
+    },
+    {
+      "id": "vtc-c-08-q2",
+      "prompt": "Associer alcool et fatigue améliore-t-il la vigilance ?",
+      "options": [
+        {
+          "id": "eaf03d44c2d7",
+          "text": "Non, cela augmente le risque"
+        },
+        {
+          "id": "fcb1544a75d9",
+          "text": "Oui, sur un trajet connu"
+        },
+        {
+          "id": "1b42049e4d17",
+          "text": "Oui, après un repas"
+        }
+      ],
+      "answer": "eaf03d44c2d7",
+      "explanation": "Le cumul de facteurs altère les capacités ; une habitude du trajet ne supprime pas le risque.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.08"
+      ]
+    },
+    {
+      "id": "vtc-c-01-q1",
+      "prompt": "Avant une prise en charge, un pneu semble dégonflé. Que faire ?",
+      "options": [
+        {
+          "id": "d959670da546",
+          "text": "Contrôler et traiter l’anomalie avant de transporter le client"
+        },
+        {
+          "id": "5cd01b044d26",
+          "text": "Partir et vérifier après la course"
+        },
+        {
+          "id": "c5afaea361e1",
+          "text": "Masquer le voyant pour éviter une inquiétude"
+        }
+      ],
+      "answer": "d959670da546",
+      "explanation": "Un problème de sécurité se traite avant le départ ; la pression commerciale ne rend pas le véhicule sûr.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.01"
+      ]
+    },
+    {
+      "id": "vtc-c-06-q1",
+      "prompt": "Une famille réserve avec un jeune enfant. Quand vérifier le dispositif de retenue nécessaire ?",
+      "options": [
+        {
+          "id": "91d8fbb33615",
+          "text": "Dès la réservation et avant le départ"
+        },
+        {
+          "id": "155e57800ff3",
+          "text": "Après être entré sur l’autoroute"
+        },
+        {
+          "id": "843def18be58",
+          "text": "Seulement si le client en parle à la fin"
+        }
+      ],
+      "answer": "91d8fbb33615",
+      "explanation": "Le VTC prépare l’équipement adapté aux règles applicables et à l’enfant ; il ne présume pas une exemption de taxi.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.06"
+      ]
+    },
+    {
+      "id": "vtc-c-07-q2",
+      "prompt": "Comment limiter la fatigue dans l’organisation de la journée ?",
+      "options": [
+        {
+          "id": "2b999774dba1",
+          "text": "Prévoir pauses, repos et marge entre les missions"
+        },
+        {
+          "id": "3e2dc2378dc3",
+          "text": "Additionner les courses sans intervalle"
+        },
+        {
+          "id": "10fe9131a0ef",
+          "text": "Supprimer les repas pour gagner du temps"
+        }
+      ],
+      "answer": "2b999774dba1",
+      "explanation": "La prévention commence dans le planning et tient compte de l’ensemble du travail, y compris hors course.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.07"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-03",
+      "prompt": "L’exemption de siège enfant propre au taxi…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ne s’étend pas au VTC."
+        },
+        {
+          "id": "b",
+          "text": "S’applique à tous les chauffeurs payants."
+        },
+        {
+          "id": "c",
+          "text": "S’applique si le trajet est court."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le VTC doit appliquer les règles générales de retenue avec leurs exceptions propres.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-c-10-q1",
+      "prompt": "Quelle conduite favorise le confort et l’anticipation ?",
+      "options": [
+        {
+          "id": "9ada4d17d98c",
+          "text": "Freiner fort au dernier moment"
+        },
+        {
+          "id": "1177a2bfe95d",
+          "text": "Observer loin et adapter progressivement accélération et freinage"
+        },
+        {
+          "id": "4c5d32c4e3ac",
+          "text": "Multiplier les changements de voie"
+        }
+      ],
+      "answer": "1177a2bfe95d",
+      "explanation": "La souplesse vient de l’anticipation, pas seulement d’un geste doux sur la pédale.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.10"
+      ]
+    },
+    {
+      "id": "vtc-c-09-q2",
+      "prompt": "À 50 km/h, environ quelle distance parcourt-on en trois secondes ?",
+      "options": [
+        {
+          "id": "99936d12742c",
+          "text": "42 mètres"
+        },
+        {
+          "id": "28667405f207",
+          "text": "150 mètres"
+        },
+        {
+          "id": "34a7e18b76ca",
+          "text": "5 mètres"
+        }
+      ],
+      "answer": "99936d12742c",
+      "explanation": "50 ÷ 3,6 × 3 ≈ 41,7 m. Quelques secondes de distraction représentent déjà une grande distance.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.09"
+      ]
+    },
+    {
+      "id": "vtc-c-06-q2",
+      "prompt": "Une valise est posée librement sur la plage arrière. Quel risque traiter ?",
+      "options": [
+        {
+          "id": "4efc26c53807",
+          "text": "Sa projection lors d’un freinage ou d’un choc"
+        },
+        {
+          "id": "51c5a2d8abec",
+          "text": "Uniquement une gêne esthétique"
+        },
+        {
+          "id": "89fe505fa225",
+          "text": "Aucun si la course est courte"
+        }
+      ],
+      "answer": "4efc26c53807",
+      "explanation": "Les bagages doivent être rangés et retenus de façon à ne pas devenir des projectiles ni gêner la visibilité.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.06"
+      ]
+    },
+    {
+      "id": "vtc-c-07-q1",
+      "prompt": "Vous bâillez, avez les paupières lourdes et manquez une sortie. Quelle action ?",
+      "options": [
+        {
+          "id": "7c0e47ecda29",
+          "text": "Vous arrêter dans un lieu sûr et vous reposer"
+        },
+        {
+          "id": "7b1008cf83fe",
+          "text": "Ouvrir la vitre et continuer coûte que coûte"
+        },
+        {
+          "id": "d413893b4cb9",
+          "text": "Monter le volume pour garantir la vigilance"
+        }
+      ],
+      "answer": "7c0e47ecda29",
+      "explanation": "Les signes de somnolence nécessitent l’arrêt et le repos. Les astuces de stimulation ne remplacent pas le sommeil.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.07"
+      ]
+    },
+    {
+      "id": "vtc-c-11-q1",
+      "prompt": "Sous forte pluie, quelle combinaison est adaptée ?",
+      "options": [
+        {
+          "id": "562513624751",
+          "text": "Même vitesse et véhicule précédent suivi de près"
+        },
+        {
+          "id": "9ba6aa5ced47",
+          "text": "Allure réduite, distances accrues et visibilité entretenue"
+        },
+        {
+          "id": "c6c20162b576",
+          "text": "Feux éteints pour éviter les reflets"
+        }
+      ],
+      "answer": "9ba6aa5ced47",
+      "explanation": "La pluie dégrade adhérence et visibilité. Plusieurs adaptations se combinent pour préserver une marge de sécurité.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.11"
+      ]
+    },
+    {
+      "id": "vtc-c-11-q2",
+      "prompt": "Avant une mission nocturne, quelle préparation est utile ?",
+      "options": [
+        {
+          "id": "21a5ff9cd4e8",
+          "text": "Compter uniquement sur les feux des autres véhicules"
+        },
+        {
+          "id": "ca09df26ca03",
+          "text": "Programmer les réglages pendant la conduite"
+        },
+        {
+          "id": "92bf36d300ce",
+          "text": "Vérifier éclairage, vitrages et niveau de fatigue"
+        }
+      ],
+      "answer": "92bf36d300ce",
+      "explanation": "La préparation limite les difficultés ; la vitesse doit ensuite rester adaptée à la portée de la visibilité.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.11"
+      ]
+    },
+    {
+      "id": "vtc-c-05-q1",
+      "prompt": "Un feu devient vert. Peut-on avancer si le carrefour est encombré ?",
+      "options": [
+        {
+          "id": "ddc0e3ab1af3",
+          "text": "Oui, le vert impose toujours d’avancer"
+        },
+        {
+          "id": "a0f56274e8f4",
+          "text": "Oui, en klaxonnant"
+        },
+        {
+          "id": "e712d120b512",
+          "text": "Non, il faut éviter de bloquer le carrefour"
+        }
+      ],
+      "answer": "e712d120b512",
+      "explanation": "L’autorisation donnée par le feu n’efface pas l’obligation de ne pas s’engager dans une intersection bloquée.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.05"
+      ]
+    },
+    {
+      "id": "vtc-c-03-q2",
+      "prompt": "Sur une chaussée glissante, comment adapter la distance avec le véhicule précédent ?",
+      "options": [
+        {
+          "id": "182a9a4d899d",
+          "text": "La conserver obligatoirement à un mètre"
+        },
+        {
+          "id": "3d23a448f6b9",
+          "text": "L’augmenter"
+        },
+        {
+          "id": "c20951ad32fe",
+          "text": "La réduire pour rester dans son sillage"
+        }
+      ],
+      "answer": "3d23a448f6b9",
+      "explanation": "Une marge accrue aide à compenser la baisse d’adhérence et le freinage potentiellement plus long.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.03"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-04",
+      "prompt": "Un feu vert avec une sortie de carrefour bloquée…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Oblige à entrer."
+        },
+        {
+          "id": "b",
+          "text": "Ne permet pas de bloquer l’intersection."
+        },
+        {
+          "id": "c",
+          "text": "Supprime les autres précautions."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Il faut pouvoir dégager le carrefour sans gêner la circulation.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-c-03-q1",
+      "prompt": "Quelles distances composent la distance d’arrêt ?",
+      "options": [
+        {
+          "id": "377e9eec5153",
+          "text": "Distance de stationnement et longueur de la voiture"
+        },
+        {
+          "id": "0379c89357af",
+          "text": "Distance de réaction et distance de freinage"
+        },
+        {
+          "id": "c6f64f95cbd5",
+          "text": "Uniquement la distance de freinage"
+        }
+      ],
+      "answer": "0379c89357af",
+      "explanation": "Pendant la réaction le véhicule avance encore ; le freinage s’ajoute ensuite jusqu’à l’arrêt.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.03"
+      ]
+    },
+    {
+      "id": "vtc-c-02-q2",
+      "prompt": "Le client demande de rouler plus vite pour attraper son train. Que répondre ?",
+      "options": [
+        {
+          "id": "9de19d12e3bc",
+          "text": "Accepter si le client paie le supplément"
+        },
+        {
+          "id": "a18c3c16afcf",
+          "text": "Annoncer une estimation réaliste sans dépasser les règles de sécurité"
+        },
+        {
+          "id": "d4094e47e613",
+          "text": "Demander au client d’assumer les points perdus"
+        }
+      ],
+      "answer": "a18c3c16afcf",
+      "explanation": "Le conducteur reste responsable de sa conduite. Une contrainte commerciale ne justifie pas une infraction.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.02"
+      ]
+    },
+    {
+      "id": "vtc-c-12-q1",
+      "prompt": "Après une panne sur une voie rapide, quelle priorité ?",
+      "options": [
+        {
+          "id": "fd9b131a9014",
+          "text": "Réparer immédiatement au milieu de la circulation"
+        },
+        {
+          "id": "16d297f50ddd",
+          "text": "Mettre les personnes en sécurité et alerter selon la situation"
+        },
+        {
+          "id": "5732ec75e1e6",
+          "text": "Rester derrière le véhicule pour le pousser"
+        }
+      ],
+      "answer": "16d297f50ddd",
+      "explanation": "La protection des personnes précède la mécanique ; ne vous exposez pas à la circulation pour récupérer ou installer un objet.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.12"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-05",
+      "prompt": "En cas de somnolence, la réponse adaptée est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Monter la musique."
+        },
+        {
+          "id": "b",
+          "text": "Ouvrir la fenêtre seulement."
+        },
+        {
+          "id": "c",
+          "text": "S’arrêter dans un lieu sûr et récupérer."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Les astuces ne remplacent pas le repos ; la bande d’arrêt d’urgence n’est pas une aire de pause.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-06",
+      "prompt": "Le GPS demande un sens interdit. Vous…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Poursuivez par une voie autorisée."
+        },
+        {
+          "id": "b",
+          "text": "Suivez le GPS car la mission est réservée."
+        },
+        {
+          "id": "c",
+          "text": "Entrez si aucun véhicule n’est visible."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La signalisation prime sur l’outil de navigation.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-01",
+      "prompt": "La limitation de vitesse est…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un minimum à atteindre."
+        },
+        {
+          "id": "b",
+          "text": "Un plafond à adapter à la situation."
+        },
+        {
+          "id": "c",
+          "text": "Une indication facultative pour un VTC."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Une allure plus faible peut être nécessaire même sous le maximum autorisé.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    },
+    {
+      "id": "vtc-c-09-q1",
+      "prompt": "Une notification de réservation arrive pendant une manœuvre. Quelle priorité ?",
+      "options": [
+        {
+          "id": "e4630721a759",
+          "text": "Lire immédiatement pour ne pas perdre le client"
+        },
+        {
+          "id": "c3b0fd2c0f82",
+          "text": "Taper la réponse en regardant brièvement la route"
+        },
+        {
+          "id": "4705b138f169",
+          "text": "Terminer en sécurité et consulter à l’arrêt approprié"
+        }
+      ],
+      "answer": "4705b138f169",
+      "explanation": "La conduite exige l’attention visuelle, manuelle et cognitive. La demande commerciale attend un arrêt sûr.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy · Leçon C.09"
+      ]
+    },
+    {
+      "id": "vtc-c-manual-02",
+      "prompt": "À 90 km/h, deux secondes représentent environ…",
+      "options": [
+        {
+          "id": "a",
+          "text": "18 m."
+        },
+        {
+          "id": "b",
+          "text": "25 m."
+        },
+        {
+          "id": "c",
+          "text": "50 m."
+        }
+      ],
+      "answer": "c",
+      "explanation": "90 ÷ 3,6 = 25 m/s ; en deux secondes, 50 m.",
+      "module": "C",
+      "sources": [
+        "Manuel VTC Intégrale Academy, édition octobre 2026"
+      ]
+    }
+  ],
+  "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+}

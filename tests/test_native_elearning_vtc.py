@@ -12,9 +12,26 @@ from elearning_native.videos import course_videos
 from tests import test_native_elearning_web as web_tests
 from tests.test_native_elearning_practice import correct_answers
 
-VERSION = '20261006-vtc-v1'
+VERSION = '20261006-vtc-v2'
 
 class VtcContentTests(unittest.TestCase):
+    def test_narrated_edition_keeps_the_original_courses_and_exams_available(self):
+        for cid in vtc.curriculum_ids():
+            old=vtc.load_bundled_course(cid,'20261006-vtc-v1')
+            new=vtc.load_bundled_course(cid,VERSION)
+            self.assertEqual(old['activity_order'],new['activity_order'])
+            self.assertEqual(old['planned_minutes'],new['planned_minutes'])
+            old_video=old['sections'][-1]['activities'][0]['blocks'][0]['video']
+            video=new['sections'][-1]['activities'][0]['blocks'][0]['video']
+            self.assertFalse(old_video['audio'])
+            self.assertTrue(video['audio'])
+            self.assertEqual(video['voice'],'fr-FR-HenriNeural')
+            self.assertTrue(video['burned_captions'])
+            self.assertEqual(old_video['transcript'],video['transcript'])
+            self.assertNotEqual(old_video['src'],video['src'])
+            self.assertIsNotNone(vtc.bundled_asset(cid,'20261006-vtc-v1',old_video['src']))
+            self.assertIsNotNone(load_exam(old['mock_exam_id'],'20261006-vtc-v1'))
+
     def test_all_lessons_have_accessible_content_and_click_only_practice(self):
         manifest=vtc.curriculum_manifest()
         self.assertEqual(len(manifest['modules']),8)
@@ -104,6 +121,20 @@ class VtcWebTests(unittest.TestCase):
         self.assertEqual(self.client.get(first).status_code,403)
         self.data['sessions'][0].update(aps_elearning_enabled=True,date_start='2099-01-01')
         self.assertEqual(self.client.get(first).status_code,403)
+
+    def test_both_editions_keep_their_own_media_and_learner_assignment(self):
+        self._admin_login()
+        base='/admin/elearning/courses/academy-vtc-a/preview?activity=vtc-a-capsule&version='
+        old=self.client.get(base+'20261006-vtc-v1').get_data(as_text=True)
+        new=self.client.get(base+VERSION).get_data(as_text=True)
+        self.assertIn('Cette version ne comporte pas de narration audio.',old)
+        self.assertIn('capsule narrée et sous-titrée',new)
+        self.assertNotIn('Cette version ne comporte pas de narration audio.',new)
+        self._public_login()
+        self.data['sessions'][0]['aps_native_course_version']='20261006-vtc-v1'
+        response=self.client.get('/espace/public-token/elearning/academy-vtc-a')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(self.data['sessions'][0]['aps_native_course_version'],'20261006-vtc-v1')
 
     def test_workshop_must_be_correct_before_completion(self):
         self._public_login()

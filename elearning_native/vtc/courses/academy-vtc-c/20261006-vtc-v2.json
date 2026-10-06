@@ -1,0 +1,2760 @@
+{
+  "format_version": 1,
+  "id": "academy-vtc-c",
+  "version": "20261006-vtc-v2",
+  "title": "VTC C · Conduire en sécurité",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "training_label": "VTC",
+  "source": {
+    "type": "academy-vtc",
+    "reviewed_on": "2026-10-06",
+    "manual_sha256": "dc22c7f98da0700180499c1fba3f15e0c9238f26c4a734da584952eef67ef8ce"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#7045bd",
+    "button_color": "#6534b4",
+    "text_color": "#241a38"
+  },
+  "planned_minutes": 480,
+  "required_minutes": 0,
+  "introduction": [],
+  "illustration": "images/vtc/module-c.webp",
+  "mock_exam_id": "vtc-c",
+  "mock_exam_questions": 30,
+  "regulation": "Épreuve C",
+  "sections": [
+    {
+      "id": "vtc-c-01",
+      "title": "C.01 · Préparer le départ",
+      "activities": [
+        {
+          "id": "vtc-c-01-cours",
+          "title": "Préparer le départ",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.01",
+            "title": "Préparer le départ",
+            "page": 130,
+            "pages": [
+              130,
+              131
+            ],
+            "objective": "Transformer les vérifications en routine professionnelle.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Avant la première course, vérifiez l’état général : pneus, éclairage, vitrages, essuie-glaces, niveaux selon le constructeur, voyants et absence d’anomalie. Le contrôle technique ne remplace pas cette observation quotidienne. Un voyant rouge d’alerte, une fuite ou un pneu endommagé peut imposer de ne pas partir."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Dans l’habitacle, ajustez siège, appuie-tête, volant et rétroviseurs avant de rouler. Rangez les objets qui pourraient passer sous les pédales. Préparez la navigation à l’arrêt et vérifiez les équipements destinés aux passagers. Ne neutralisez pas une alerte pour maintenir une réservation : protégez les personnes, informez le client et organisez une solution conforme."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La pression commerciale ne transforme pas un véhicule défectueux en véhicule sûr."
+              },
+              {
+                "kind": "heading",
+                "text": "Observer avant de s'installer"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le contrôle extérieur vise à repérer une anomalie avant qu'elle ne devienne un incident en circulation. Faites le tour du véhicule dans un endroit sûr : état apparent des pneus, fuite, vitre endommagée, éclairage, obstacle autour de la voiture et accès au coffre. La pression se vérifie avec un appareil adapté et selon les indications du constructeur, notamment en fonction de la charge. Un simple regard ne mesure pas une pression."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre les alertes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le tableau de bord apporte des informations sur le fonctionnement. Identifiez les témoins habituels et les consignes du constructeur. Un voyant inhabituel exige une vérification ; un doute sur un organe de sécurité ne se règle pas en cachant le message. Le contrôle technique périodique ne garantit pas qu'aucune panne ne puisse apparaître entre deux visites. L'entretien et le contrôle avant départ restent nécessaires."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer le service"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifiez l'autonomie, la propreté, les dispositifs de retenue et la place disponible pour les bagages. Réglez le poste de conduite et l'itinéraire avant de démarrer. Les documents utiles doivent être accessibles sans fouille dans l'habitacle. L'objectif est de ne pas découvrir une contrainte au moment où le client attend ou lorsque le véhicule circule déjà."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un pneu paraît affaissé juste avant une prise en charge. Le chauffeur ne se contente pas de remettre de l'air puis de partir sans comprendre la cause. Il contrôle la pression et fait examiner la situation si nécessaire. Il prévient l'exploitant pour organiser une solution conforme. Le retard commercial se traite ; le risque de perte de contrôle ne doit pas être transféré au passager."
+              }
+            ],
+            "cards": [
+              {
+                "label": "EXTÉRIEUR",
+                "text": "Pneus, feux, vitres et dommages."
+              },
+              {
+                "label": "POSTE DE CONDUITE",
+                "text": "Réglages, visibilité et commandes."
+              },
+              {
+                "label": "MISSION",
+                "text": "Documents, trajet et équipements passagers."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-01-atelier",
+          "title": "À vous de jouer · Préparer le départ",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.01",
+            "title": "Préparer le départ",
+            "objective": "Transformer les vérifications en routine professionnelle.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Avant une prise en charge, un pneu semble dégonflé. Que faire ?",
+                "options": [
+                  {
+                    "id": "d959670da546",
+                    "text": "Contrôler et traiter l’anomalie avant de transporter le client"
+                  },
+                  {
+                    "id": "5cd01b044d26",
+                    "text": "Partir et vérifier après la course"
+                  },
+                  {
+                    "id": "c5afaea361e1",
+                    "text": "Masquer le voyant pour éviter une inquiétude"
+                  }
+                ],
+                "answer": "d959670da546",
+                "explanation": "Un problème de sécurité se traite avant le départ ; la pression commerciale ne rend pas le véhicule sûr.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quand régler siège, rétroviseurs et navigation ?",
+                "options": [
+                  {
+                    "id": "0f17d4c40592",
+                    "text": "À l’arrêt avant de rouler"
+                  },
+                  {
+                    "id": "9160a847604a",
+                    "text": "Dans le premier carrefour"
+                  },
+                  {
+                    "id": "acddd7eecf42",
+                    "text": "Pendant que le passager tient le volant"
+                  }
+                ],
+                "answer": "0f17d4c40592",
+                "explanation": "Préparer le poste de conduite préserve l’attention disponible une fois en circulation.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "EXTÉRIEUR"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "MISSION"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "POSTE DE CONDUITE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Documents, trajet et équipements passagers.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Pneus, feux, vitres et dommages.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Réglages, visibilité et commandes.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.01. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-02",
+      "title": "C.02 · Choisir la bonne vitesse",
+      "activities": [
+        {
+          "id": "vtc-c-02-cours",
+          "title": "Choisir la bonne vitesse",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.02",
+            "title": "Choisir la bonne vitesse",
+            "page": 133,
+            "pages": [
+              133,
+              134
+            ],
+            "objective": "Distinguer plafond réglementaire et allure adaptée.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La limitation est un maximum, pas une consigne à atteindre. En règle générale, par temps sec : 130 km/h sur autoroute, 110 sur chaussées séparées par un terre-plein central, 80 sur une route à double sens sans séparateur central ; certains tronçons autorisent 90 selon leur configuration ou une décision locale. En agglomération, la règle générale est 50, avec de nombreuses zones à 30."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Sous la pluie, les plafonds usuels deviennent 110 sur autoroute, 100 sur chaussées séparées et 80 sur les autres routes concernées. Si la visibilité est inférieure à 50 mètres, le plafond est 50 sur tous les réseaux. La signalisation, les restrictions locales et une limitation plus basse restent prioritaires. Réduisez encore l’allure si les circonstances le demandent."
+              },
+              {
+                "kind": "heading",
+                "text": "Un maximum n'est pas une consigne"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La limitation indique une vitesse à ne pas dépasser. Elle ne signifie pas que cette vitesse est toujours adaptée. La visibilité, l'adhérence, la largeur de la chaussée et la présence d'usagers vulnérables peuvent imposer de ralentir davantage. Pouvoir s'arrêter face à un obstacle prévisible compte plus que maintenir exactement le chiffre indiqué sur un panneau."
+              },
+              {
+                "kind": "heading",
+                "text": "Lire les contraintes ensemble"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La catégorie de route, la signalisation locale, les travaux, les conditions météorologiques et le statut du permis peuvent modifier la vitesse applicable. La règle la plus restrictive correspondant à la situation doit être respectée. Sous la pluie, les plafonds usuels changent sur certaines routes ; lorsque la visibilité est inférieure à 50 mètres, le plafond est de 50 km/h sur l'ensemble des réseaux. Une allure encore plus basse peut être nécessaire."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre le gain de temps réel"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une vitesse supérieure augmente la distance parcourue pendant une seconde d'inattention et l'énergie à dissiper lors d'un freinage. Sur un trajet court, le gain de temps théorique est souvent faible et disparaît avec les feux ou la circulation. Un retard se gère par l'information et l'organisation ; il ne crée pas une autorisation de dépasser les limites."
+              }
+            ],
+            "cards": [
+              {
+                "label": "LIRE",
+                "text": "Type de voie et panneaux applicables."
+              },
+              {
+                "label": "ADAPTER",
+                "text": "Météo, visibilité, trafic et adhérence."
+              },
+              {
+                "label": "ANTICIPER",
+                "text": "Pouvoir s’arrêter dans l’espace visible."
+              }
+            ],
+            "diagram": "media/vtc/diagram-c.02.webp",
+            "diagram_text": [
+              "Sur 10 km sans arrêt : calcul théorique",
+              "50 km/h 12 minutes.",
+              "60 km/h 10 minutes.",
+              "Écart 2 minutes ; ce calcul n’autorise aucun dépassement.",
+              "La limite légale ne remplace pas l’évaluation du danger."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-02-atelier",
+          "title": "À vous de jouer · Choisir la bonne vitesse",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.02",
+            "title": "Choisir la bonne vitesse",
+            "objective": "Distinguer plafond réglementaire et allure adaptée.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "La limitation autorise 80 km/h mais la visibilité est très réduite. Quelle décision ?",
+                "options": [
+                  {
+                    "id": "0af7445d4342",
+                    "text": "Accélérer pour quitter rapidement la zone"
+                  },
+                  {
+                    "id": "6bffec1a5fe5",
+                    "text": "Réduire l’allure selon les conditions"
+                  },
+                  {
+                    "id": "c979003282d9",
+                    "text": "Maintenir forcément 80 km/h"
+                  }
+                ],
+                "answer": "6bffec1a5fe5",
+                "explanation": "La vitesse maximale autorisée n’est pas une vitesse à atteindre ; les conditions peuvent imposer de ralentir.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Le client demande de rouler plus vite pour attraper son train. Que répondre ?",
+                "options": [
+                  {
+                    "id": "9de19d12e3bc",
+                    "text": "Accepter si le client paie le supplément"
+                  },
+                  {
+                    "id": "a18c3c16afcf",
+                    "text": "Annoncer une estimation réaliste sans dépasser les règles de sécurité"
+                  },
+                  {
+                    "id": "d4094e47e613",
+                    "text": "Demander au client d’assumer les points perdus"
+                  }
+                ],
+                "answer": "a18c3c16afcf",
+                "explanation": "Le conducteur reste responsable de sa conduite. Une contrainte commerciale ne justifie pas une infraction.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "ANTICIPER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "ADAPTER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "LIRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Pouvoir s’arrêter dans l’espace visible.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Météo, visibilité, trafic et adhérence.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Type de voie et panneaux applicables.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.02. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-03",
+      "title": "C.03 · Garder une marge de sécurité",
+      "activities": [
+        {
+          "id": "vtc-c-03-cours",
+          "title": "Garder une marge de sécurité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.03",
+            "title": "Garder une marge de sécurité",
+            "page": 136,
+            "pages": [
+              136,
+              137
+            ],
+            "objective": "Comprendre temps de réaction, freinage et intervalle.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La distance d’arrêt additionne la distance parcourue pendant la réaction et celle du freinage. La fatigue et la distraction allongent la réaction ; l’état des pneus, la chaussée et la vitesse influencent le freinage. À conditions comparables, doubler la vitesse multiplie approximativement la distance de freinage par quatre."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’intervalle minimal de sécurité correspond à la distance parcourue en au moins deux secondes. Il faut l’augmenter lorsque les conditions se dégradent. Pour l’évaluer, choisissez un repère fixe : quand le véhicule précédent le passe, comptez avant d’y arriver à votre tour. Ce repère temporel est plus utile qu’une estimation visuelle imprécise de quelques mètres."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Deux secondes d’inattention suffisent à parcourir plusieurs dizaines de mètres."
+              },
+              {
+                "kind": "heading",
+                "text": "Trois distances différentes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La distance de réaction est parcourue entre la perception du danger et le début de l'action sur les freins. La distance de freinage est parcourue pendant le ralentissement jusqu'à l'arrêt. Leur somme forme la distance d'arrêt. La distance de sécurité, elle, est l'intervalle laissé avec le véhicule précédent pour disposer d'une marge. Ces notions ne sont pas interchangeables."
+              },
+              {
+                "kind": "heading",
+                "text": "Calculer la réaction"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour convertir une vitesse en kilomètres par heure en mètres par seconde, divisez par 3,6. Multipliez ensuite par le temps de réaction retenu. À 90 km/h, le véhicule parcourt 25 mètres par seconde. Une réaction de deux secondes représente donc 50 mètres avant même le freinage. La distraction et la fatigue peuvent retarder la perception et la réponse ; aucun calcul pédagogique ne garantit un temps réel identique pour tous."
+              },
+              {
+                "kind": "heading",
+                "text": "Conserver une marge évolutive"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La distance minimale réglementaire avec le véhicule précédent correspond au moins à la distance parcourue en deux secondes. Elle doit être augmentée lorsque les conditions l'exigent. Utilisez un repère fixe pour apprécier l'intervalle. À adhérence comparable, le freinage augmente fortement avec la vitesse ; des pneus dégradés ou une chaussée mouillée aggravent la situation."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "À 72 km/h, la vitesse est de 20 m/s. Une seconde de réaction représente 20 mètres ; deux secondes, 40 mètres. Ces 40 mètres ne constituent pas automatiquement la distance d'arrêt : il faut encore freiner. Si vous suivez de trop près, un danger peut devenir inévitable avant même que le freinage soit efficace. La marge se construit avant l'événement."
+              }
+            ],
+            "cards": [
+              {
+                "label": "Réaction",
+                "text": "Le véhicule avance avant le début du freinage."
+              },
+              {
+                "label": "Freinage",
+                "text": "Distance parcourue pendant le ralentissement jusqu’à l’arrêt."
+              },
+              {
+                "label": "Arrêt",
+                "text": "Réaction et freinage réunis."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-03-atelier",
+          "title": "À vous de jouer · Garder une marge de sécurité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.03",
+            "title": "Garder une marge de sécurité",
+            "objective": "Comprendre temps de réaction, freinage et intervalle.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quelles distances composent la distance d’arrêt ?",
+                "options": [
+                  {
+                    "id": "377e9eec5153",
+                    "text": "Distance de stationnement et longueur de la voiture"
+                  },
+                  {
+                    "id": "0379c89357af",
+                    "text": "Distance de réaction et distance de freinage"
+                  },
+                  {
+                    "id": "c6f64f95cbd5",
+                    "text": "Uniquement la distance de freinage"
+                  }
+                ],
+                "answer": "0379c89357af",
+                "explanation": "Pendant la réaction le véhicule avance encore ; le freinage s’ajoute ensuite jusqu’à l’arrêt.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Sur une chaussée glissante, comment adapter la distance avec le véhicule précédent ?",
+                "options": [
+                  {
+                    "id": "182a9a4d899d",
+                    "text": "La conserver obligatoirement à un mètre"
+                  },
+                  {
+                    "id": "3d23a448f6b9",
+                    "text": "L’augmenter"
+                  },
+                  {
+                    "id": "c20951ad32fe",
+                    "text": "La réduire pour rester dans son sillage"
+                  }
+                ],
+                "answer": "3d23a448f6b9",
+                "explanation": "Une marge accrue aide à compenser la baisse d’adhérence et le freinage potentiellement plus long.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "Réaction"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "Freinage"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "Arrêt"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Distance parcourue pendant le ralentissement jusqu’à l’arrêt.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Le véhicule avance avant le début du freinage.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Réaction et freinage réunis.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.03. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-04",
+      "title": "C.04 · Observer et partager la route",
+      "activities": [
+        {
+          "id": "vtc-c-04-cours",
+          "title": "Observer et partager la route",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.04",
+            "title": "Observer et partager la route",
+            "page": 139,
+            "pages": [
+              139,
+              140
+            ],
+            "objective": "Détecter tôt ce que les autres usagers peuvent faire.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Balayez le regard loin devant, sur les côtés et dans les rétroviseurs. Cherchez les indices : roue d’un vélo, porte qui s’entrouvre, piéton masqué, bus à l’arrêt. L’angle mort impose un contrôle adapté avant de se déporter ; le rétroviseur seul ne couvre pas tout. Les aides à la conduite assistent, elles ne remplacent pas l’observation."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Laissez passer le piéton régulièrement engagé ou manifestant clairement son intention de traverser, dans les conditions du Code. Pour dépasser un cycle, respectez au minimum un mètre latéral en agglomération et un mètre cinquante hors agglomération. Si l’espace manque, attendez. Un client qui presse le chauffeur ne réduit pas la vulnérabilité des autres usagers."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Anticiper, c’est agir avant qu’un danger devienne une urgence."
+              },
+              {
+                "kind": "heading",
+                "text": "Organiser le regard"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Regarder loin permet de repérer une file qui ralentit ou un passage piéton. Regarder près permet de contrôler la trajectoire et les obstacles immédiats. Les rétroviseurs renseignent sur l'arrière ; les contrôles directs complètent les zones qu'ils ne montrent pas. Le conducteur déplace son attention entre ces informations sans fixer durablement un seul point."
+              },
+              {
+                "kind": "heading",
+                "text": "Prévoir une évolution possible"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un enfant près du trottoir peut changer de direction. Un véhicule arrêté peut masquer un piéton. Un cycliste peut s'écarter pour éviter un obstacle. Anticiper ne signifie pas deviner avec certitude : cela consiste à conserver assez d'espace et de temps pour réagir à plusieurs évolutions plausibles. Un clignotant indique une intention, pas la garantie que la manœuvre est déjà commencée ou sans danger."
+              },
+              {
+                "kind": "heading",
+                "text": "Communiquer de façon lisible"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Votre allure, votre placement et vos clignotants aident les autres à comprendre vos intentions. Signalez suffisamment tôt, puis contrôlez à nouveau avant de manœuvrer. Ne forcez pas un passage parce qu'un autre usager aurait dû vous voir. La conduite professionnelle recherche une situation prévisible et apaisée, même lorsque les autres commettent une erreur."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une camionnette stationne juste avant un passage piéton. Aucun piéton n'est visible, mais une partie du trottoir est masquée. Le chauffeur réduit son allure et se tient prêt à s'arrêter. Il n'attend pas de voir une personne apparaître devant le capot pour agir : l'absence de visibilité constitue déjà une information utile à sa décision."
+              }
+            ],
+            "cards": [
+              {
+                "label": "VOIR LOIN",
+                "text": "Repérer tôt les situations possibles."
+              },
+              {
+                "label": "CONTRÔLER",
+                "text": "Rétroviseurs puis angle mort selon la manœuvre."
+              },
+              {
+                "label": "GARDER L’ESPACE",
+                "text": "Renoncer au dépassement si la marge manque."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-04-atelier",
+          "title": "À vous de jouer · Observer et partager la route",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.04",
+            "title": "Observer et partager la route",
+            "objective": "Détecter tôt ce que les autres usagers peuvent faire.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Avant de tourner à droite, un cycliste peut se trouver près du véhicule. Que faire ?",
+                "options": [
+                  {
+                    "id": "d81777efd21d",
+                    "text": "Se fier uniquement au clignotant"
+                  },
+                  {
+                    "id": "061d8953fc48",
+                    "text": "Contrôler les abords et l’angle mort adapté avant la manœuvre"
+                  },
+                  {
+                    "id": "d67a56b08b38",
+                    "text": "Accélérer pour passer avant lui"
+                  }
+                ],
+                "answer": "061d8953fc48",
+                "explanation": "Le clignotant annonce une intention mais ne vérifie pas que l’espace est libre.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un véhicule masque le trottoir près d’un passage piéton. Quelle attitude ?",
+                "options": [
+                  {
+                    "id": "23af41af2a07",
+                    "text": "Regarder seulement le GPS"
+                  },
+                  {
+                    "id": "e6df511488f7",
+                    "text": "Anticiper une apparition et adapter l’allure"
+                  },
+                  {
+                    "id": "fe39b132fafa",
+                    "text": "Supposer qu’aucun piéton n’est présent"
+                  }
+                ],
+                "answer": "e6df511488f7",
+                "explanation": "Une zone masquée est une source possible de danger ; garder du temps pour réagir.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "GARDER L’ESPACE"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "CONTRÔLER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "VOIR LOIN"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Rétroviseurs puis angle mort selon la manœuvre.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Renoncer au dépassement si la marge manque.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Repérer tôt les situations possibles.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.04. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-05",
+      "title": "C.05 · Priorités et signalisation",
+      "activities": [
+        {
+          "id": "vtc-c-05-cours",
+          "title": "Priorités et signalisation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.05",
+            "title": "Priorités et signalisation",
+            "page": 142,
+            "pages": [
+              142,
+              143
+            ],
+            "objective": "Lire l’ensemble de la situation avant de s’engager.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les indications des agents, les feux et la signalisation organisent la circulation. Un panneau de priorité ne dispense pas de vérifier que la voie est libre. Au stop, l’arrêt doit être effectif à l’endroit approprié ; au cédez-le-passage, vous laissez passer les usagers prioritaires et vous vous arrêtez si nécessaire."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un carrefour à sens giratoire avec cédez-le-passage donne la priorité aux véhicules circulant sur l’anneau. Un rond-point sans ce régime peut relever de la priorité à droite : observez la signalisation réelle. Une flèche du GPS ne permet pas d’emprunter un sens interdit, une voie réservée non autorisée ou une zone fermée. Lisez aussi les panonceaux, horaires et exceptions."
+              },
+              {
+                "kind": "heading",
+                "text": "Chercher l'information dans l'ordre"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Repérez les indications d'un agent, les feux, les panneaux et le marquage. Observez ensuite les trajectoires possibles et les usagers. Un carrefour familier peut être modifié par des travaux. La mémoire du lieu est donc un repère, mais la signalisation réellement en place commande la décision. Sans indication particulière, les règles générales s'appliquent selon la situation."
+              },
+              {
+                "kind": "heading",
+                "text": "Priorité ne signifie pas protection absolue"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Ê tre prioritaire n'autorise pas à provoquer une collision prévisible. Vérifiez que les autres ont perçu votre présence et que vous pouvez vous engager sans bloquer l'intersection. Au stop, marquez l'arrêt requis puis recherchez la visibilité. Au cédez-le-passage, adaptez l'allure pour pouvoir céder effectivement. Un feu vert n'efface pas les conflits possibles avec un piéton ou un véhicule déjà engagé."
+              },
+              {
+                "kind": "heading",
+                "text": "Lire les giratoires et les changements de voie"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Ne confondez pas tous les carrefours circulaires : leur signalisation détermine le régime de priorité. Préparez la sortie, utilisez les indicateurs de direction et contrôlez les usagers autour de vous. Si une sortie est manquée, poursuivez de façon sûre. Une correction brutale au dernier instant crée davantage de risque qu'un détour maîtrisé."
+              }
+            ],
+            "cards": [
+              {
+                "label": "SIGNAL",
+                "text": "Panneau, feu, agent et marquage."
+              },
+              {
+                "label": "VISIBILITÉ",
+                "text": "Usagers déjà engagés et masques."
+              },
+              {
+                "label": "ENGAGEMENT",
+                "text": "Seulement si la manœuvre reste sûre."
+              }
+            ],
+            "diagram": "media/vtc/diagram-c.05.webp",
+            "diagram_text": [
+              "Le GPS indique une rue interdite",
+              "1 Constat La signalisation interdit l’accès.",
+              "2 Action Continuer par un trajet autorisé.",
+              "3 Suite Recalculer sans distraction.",
+              "La signalisation autorise dans un cadre ; l’observation confirme que l’engagement est possible."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-05-atelier",
+          "title": "À vous de jouer · Priorités et signalisation",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.05",
+            "title": "Priorités et signalisation",
+            "objective": "Lire l’ensemble de la situation avant de s’engager.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un feu devient vert. Peut-on avancer si le carrefour est encombré ?",
+                "options": [
+                  {
+                    "id": "ddc0e3ab1af3",
+                    "text": "Oui, le vert impose toujours d’avancer"
+                  },
+                  {
+                    "id": "a0f56274e8f4",
+                    "text": "Oui, en klaxonnant"
+                  },
+                  {
+                    "id": "e712d120b512",
+                    "text": "Non, il faut éviter de bloquer le carrefour"
+                  }
+                ],
+                "answer": "e712d120b512",
+                "explanation": "L’autorisation donnée par le feu n’efface pas l’obligation de ne pas s’engager dans une intersection bloquée.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un agent règle la circulation d’une façon différente du feu. Quelle indication suivre ?",
+                "options": [
+                  {
+                    "id": "a83c8cd497b4",
+                    "text": "Toujours celle du feu"
+                  },
+                  {
+                    "id": "de6b3928a3b4",
+                    "text": "Toujours celle du GPS"
+                  },
+                  {
+                    "id": "f09ca042c5a5",
+                    "text": "Celle de l’agent"
+                  }
+                ],
+                "answer": "f09ca042c5a5",
+                "explanation": "Les instructions des agents qui règlent la circulation priment sur les indications ordinaires de signalisation.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "ENGAGEMENT"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "VISIBILITÉ"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "SIGNAL"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Usagers déjà engagés et masques.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Seulement si la manœuvre reste sûre.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Panneau, feu, agent et marquage.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.05. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-06",
+      "title": "C.06 · Installer les passagers",
+      "activities": [
+        {
+          "id": "vtc-c-06-cours",
+          "title": "Installer les passagers",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.06",
+            "title": "Installer les passagers",
+            "page": 145,
+            "pages": [
+              145,
+              146
+            ],
+            "objective": "Sécuriser ceintures, enfants et bagages.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Chaque occupant utilise une place autorisée et un dispositif de retenue adapté. Le conducteur doit s’assurer que les passagers mineurs sont attachés. Pour un enfant de moins de dix ans, un système homologué adapté est requis dans les conditions du Code, avec les exceptions prévues. L’exemption propre aux taxis ne s’étend pas aux VTC."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Préparez le dispositif dès la réservation. L’installation doit respecter la notice du siège et celle du véhicule, notamment les règles d’airbag pour un siège dos à la route placé à l’avant dans un cas autorisé. Chargez les bagages sans masquer la visibilité ni laisser d’objet lourd libre dans l’habitacle. Une valise ou une tablette peut devenir dangereuse lors d’un freinage."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les conditions de sécurité se règlent avant de mettre le véhicule en mouvement."
+              },
+              {
+                "kind": "heading",
+                "text": "Installer avant de démarrer"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Chaque occupant doit disposer d'une place autorisée et du dispositif de retenue applicable. Une ceinture doit être correctement positionnée et utilisée selon sa conception. Une sangle passée derrière le dos ne protège pas correctement. Le conducteur vérifie les conditions de départ et rappelle calmement la règle ; la brièveté du trajet n'en réduit pas l'importance."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer le transport d'un enfant"
+              },
+              {
+                "kind": "paragraph",
+                "text": "En VTC, le régime ordinaire de retenue des enfants s'applique : l'exception prévue pour les taxis ne doit pas être transposée. Le dispositif doit être homologué, adapté à l'enfant et installé conformément à sa notice et à celle du véhicule. Recueillez les informations utiles dès la réservation. Les règles de placement à l'avant et les rares exceptions doivent être vérifiées précisément ; elles ne s'improvisent pas devant le client."
+              },
+              {
+                "kind": "heading",
+                "text": "Ranger pour empêcher le déplacement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un bagage non retenu peut se déplacer lors d'un freinage. Placez les objets lourds de façon stable et ne surchargez pas les espaces prévus. Gardez les issues dégagées et protégez la visibilité. Le nombre de passagers et le volume de bagages doivent être compatibles avec le véhicule ; une valise supplémentaire ne justifie pas d'utiliser une place dans des conditions dangereuses."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une famille arrive avec un jeune enfant alors qu'aucun siège adapté n'a été prévu. Le chauffeur ne démarre pas avec l'enfant sur les genoux d'un adulte. Il recherche une solution conforme et explique le besoin. La bonne prévention consiste aussi à avoir posé les questions nécessaires à la réservation, avant que la famille soit pressée de rejoindre son train."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PERSONNES",
+                "text": "Une place et une retenue adaptées."
+              },
+              {
+                "label": "ENFANTS",
+                "text": "Équipement prévu avant la prise en charge."
+              },
+              {
+                "label": "BAGAGES",
+                "text": "Chargement stable, sans gêne ni projectile."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-06-atelier",
+          "title": "À vous de jouer · Installer les passagers",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.06",
+            "title": "Installer les passagers",
+            "objective": "Sécuriser ceintures, enfants et bagages.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une famille réserve avec un jeune enfant. Quand vérifier le dispositif de retenue nécessaire ?",
+                "options": [
+                  {
+                    "id": "91d8fbb33615",
+                    "text": "Dès la réservation et avant le départ"
+                  },
+                  {
+                    "id": "155e57800ff3",
+                    "text": "Après être entré sur l’autoroute"
+                  },
+                  {
+                    "id": "843def18be58",
+                    "text": "Seulement si le client en parle à la fin"
+                  }
+                ],
+                "answer": "91d8fbb33615",
+                "explanation": "Le VTC prépare l’équipement adapté aux règles applicables et à l’enfant ; il ne présume pas une exemption de taxi.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Une valise est posée librement sur la plage arrière. Quel risque traiter ?",
+                "options": [
+                  {
+                    "id": "4efc26c53807",
+                    "text": "Sa projection lors d’un freinage ou d’un choc"
+                  },
+                  {
+                    "id": "51c5a2d8abec",
+                    "text": "Uniquement une gêne esthétique"
+                  },
+                  {
+                    "id": "89fe505fa225",
+                    "text": "Aucun si la course est courte"
+                  }
+                ],
+                "answer": "4efc26c53807",
+                "explanation": "Les bagages doivent être rangés et retenus de façon à ne pas devenir des projectiles ni gêner la visibilité.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "ENFANTS"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "BAGAGES"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "PERSONNES"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Une place et une retenue adaptées.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Équipement prévu avant la prise en charge.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Chargement stable, sans gêne ni projectile.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.06. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-07",
+      "title": "C.07 · Prévenir la fatigue",
+      "activities": [
+        {
+          "id": "vtc-c-07-cours",
+          "title": "Prévenir la fatigue",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.07",
+            "title": "Prévenir la fatigue",
+            "page": 148,
+            "pages": [
+              148,
+              149
+            ],
+            "objective": "Reconnaître quand il faut s’arrêter.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La somnolence peut se manifester par des bâillements, des paupières lourdes, des écarts de trajectoire ou des souvenirs incomplets des derniers kilomètres. Ouvrir la fenêtre, augmenter la musique ou boire un café ne remplace pas le repos. L’habitude du métier ne protège pas contre l’endormissement."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Planifiez les pauses et le sommeil, notamment pour les horaires de nuit, les départs matinaux et les journées fractionnées. Une pause au moins toutes les deux heures est un repère de prévention ; il faut s’arrêter plus tôt si un signe apparaît. En cas de somnolence, cherchez une aire ou un emplacement sûr et reposez-vous. La bande d’arrêt d’urgence n’est pas une aire de repos."
+              },
+              {
+                "kind": "heading",
+                "text": "Identifier ce qui se passe"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La fatigue diminue les capacités ; la somnolence correspond à une difficulté à rester éveillé. Bâillements, paupières lourdes, trajectoire moins stable ou absence de souvenir des derniers kilomètres sont des signaux sérieux. Il ne faut pas attendre de s'endormir pour décider. L'habitude de conduire longtemps ne supprime pas le besoin physiologique de sommeil."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer un rythme réaliste"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le repos se prépare avant le service. Les horaires décalés, une mauvaise nuit et l'accumulation de journées chargées augmentent la difficulté. Prévoyez des pauses régulières et un planning compatible avec le sommeil. La recommandation de faire une pause au moins toutes les deux heures ne signifie pas qu'il faut attendre deux heures si les signes apparaissent plus tôt."
+              },
+              {
+                "kind": "heading",
+                "text": "S'arrêter réellement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Cherchez un lieu autorisé et sûr, informez le client et organisez la suite de la prestation. Ouvrir la vitre, monter la musique ou discuter ne constitue pas un traitement fiable de la somnolence. Une courte sieste peut aider dans une situation adaptée, mais une fatigue persistante impose de revoir l'organisation et, si nécessaire, de demander un avis médical. La promesse d'une heure d'arrivée ne prime pas sur l'aptitude à conduire."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRÉVOIR",
+                "text": "Sommeil, pauses et charge de travail."
+              },
+              {
+                "label": "REPÉRER",
+                "text": "Bâillement, lourdeur, baisse d’attention."
+              },
+              {
+                "label": "S’ARRÊTER",
+                "text": "Un lieu sûr avant l’endormissement."
+              }
+            ],
+            "diagram": "media/vtc/diagram-c.07.webp",
+            "diagram_text": [
+              "Des signes apparaissent en mission",
+              "1 Signes Clignements fréquents et panneaux manqués.",
+              "2 Réponse Arrêt sur une aire adaptée.",
+              "3 Organisation Repos ou remplacement nécessaire.",
+              "La seule bonne réponse à la somnolence est de cesser de conduire et de récupérer."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-07-atelier",
+          "title": "À vous de jouer · Prévenir la fatigue",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.07",
+            "title": "Prévenir la fatigue",
+            "objective": "Reconnaître quand il faut s’arrêter.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Vous bâillez, avez les paupières lourdes et manquez une sortie. Quelle action ?",
+                "options": [
+                  {
+                    "id": "7c0e47ecda29",
+                    "text": "Vous arrêter dans un lieu sûr et vous reposer"
+                  },
+                  {
+                    "id": "7b1008cf83fe",
+                    "text": "Ouvrir la vitre et continuer coûte que coûte"
+                  },
+                  {
+                    "id": "d413893b4cb9",
+                    "text": "Monter le volume pour garantir la vigilance"
+                  }
+                ],
+                "answer": "7c0e47ecda29",
+                "explanation": "Les signes de somnolence nécessitent l’arrêt et le repos. Les astuces de stimulation ne remplacent pas le sommeil.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Comment limiter la fatigue dans l’organisation de la journée ?",
+                "options": [
+                  {
+                    "id": "2b999774dba1",
+                    "text": "Prévoir pauses, repos et marge entre les missions"
+                  },
+                  {
+                    "id": "3e2dc2378dc3",
+                    "text": "Additionner les courses sans intervalle"
+                  },
+                  {
+                    "id": "10fe9131a0ef",
+                    "text": "Supprimer les repas pour gagner du temps"
+                  }
+                ],
+                "answer": "2b999774dba1",
+                "explanation": "La prévention commence dans le planning et tient compte de l’ensemble du travail, y compris hors course.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "PRÉVOIR"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "REPÉRER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "S’ARRÊTER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Un lieu sûr avant l’endormissement.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Sommeil, pauses et charge de travail.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Bâillement, lourdeur, baisse d’attention.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.07. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-08",
+      "title": "C.08 · Alcool, drogues et médicaments",
+      "activities": [
+        {
+          "id": "vtc-c-08-cours",
+          "title": "Alcool, drogues et médicaments",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.08",
+            "title": "Alcool, drogues et médicaments",
+            "page": 151,
+            "pages": [
+              151,
+              152
+            ],
+            "objective": "Protéger sa vigilance avant la prise de service.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’alcool altère jugement, perception et temps de réaction. Le seuil général d’interdiction est de 0,5 g/L de sang, et de 0,2 g/L pour les catégories concernées, notamment le permis probatoire. Le VTC n’est pas à confondre avec le transport en commun pour appliquer automatiquement son régime. La pratique professionnelle la plus sûre est de ne pas boire avant de conduire."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La conduite après usage de stupéfiants est interdite. Certains médicaments provoquent une somnolence ou réduisent les capacités ; les pictogrammes signalent des niveaux de risque et la notice précise la conduite à tenir. Demandez conseil à un professionnel de santé, sans arrêter seul un traitement prescrit. Les mélanges peuvent aggraver les effets. Aucune astuce ne garantit une élimination rapide de l’alcool."
+              },
+              {
+                "kind": "heading",
+                "text": "L'alcool altère avant le sentiment d'ivresse"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'alcool peut modifier l'attention, l'appréciation des distances et la prise de risque avant que la personne ne se sente incapable. Le seuil légal n'est pas un objectif à atteindre. La stratégie professionnelle la plus simple est de ne pas consommer d'alcool avant et pendant le service. Le café, la douche ou un repas ne font pas disparaître rapidement l'alcool déjà absorbé."
+              },
+              {
+                "kind": "heading",
+                "text": "Drogues et médicaments"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La conduite après usage de stupéfiants est interdite. Certains médicaments peuvent également provoquer une somnolence ou ralentir les réactions. Lisez les pictogrammes et la notice ; demandez au médecin ou au pharmacien si le traitement est compatible avec la conduite professionnelle. N'arrêtez pas un traitement prescrit de votre propre initiative : faites évaluer la situation et l'organisation du travail."
+              },
+              {
+                "kind": "heading",
+                "text": "Penser aux effets cumulés"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Fatigue, alcool, médicament et distraction peuvent se cumuler. Une consommation ou un traitement toléré un jour peut s'accompagner d'une vigilance insuffisante dans un autre contexte. La question utile avant une course est : « Suis-je réellement en état de conduire de façon sûre ? » Une difficulté de santé ou un doute sérieux impose de suspendre le départ et de rechercher une solution."
+              }
+            ],
+            "cards": [
+              {
+                "label": "AVANT SERVICE",
+                "text": "Aucun produit qui altère la conduite."
+              },
+              {
+                "label": "TRAITEMENT",
+                "text": "Lire la notice et demander conseil."
+              },
+              {
+                "label": "DOUTE",
+                "text": "Ne pas conduire tant que l’aptitude est incertaine."
+              }
+            ],
+            "diagram": "media/vtc/diagram-c.08.webp",
+            "diagram_text": [
+              "Un nouveau médicament",
+              "1 La veille Prise du traitement.",
+              "2 Au réveil Somnolence encore présente.",
+              "3 Avant la mission Consignes, avis adapté et information de l’exploitant.",
+              "Se sentir capable n’est pas une mesure fiable de l’aptitude à conduire."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-08-atelier",
+          "title": "À vous de jouer · Alcool, drogues et médicaments",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.08",
+            "title": "Alcool, drogues et médicaments",
+            "objective": "Protéger sa vigilance avant la prise de service.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un médicament porte un avertissement sur la conduite. Que faire ?",
+                "options": [
+                  {
+                    "id": "1d48b214b0d0",
+                    "text": "Lire la notice et demander un avis médical ou pharmaceutique adapté"
+                  },
+                  {
+                    "id": "6de895c590d7",
+                    "text": "L’ignorer s’il est vendu sans ordonnance"
+                  },
+                  {
+                    "id": "3acbea69bcc7",
+                    "text": "Tester ses effets avec un client à bord"
+                  }
+                ],
+                "answer": "1d48b214b0d0",
+                "explanation": "Un médicament peut diminuer la vigilance. La notice et le professionnel de santé aident à décider avant de conduire.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Associer alcool et fatigue améliore-t-il la vigilance ?",
+                "options": [
+                  {
+                    "id": "eaf03d44c2d7",
+                    "text": "Non, cela augmente le risque"
+                  },
+                  {
+                    "id": "fcb1544a75d9",
+                    "text": "Oui, sur un trajet connu"
+                  },
+                  {
+                    "id": "1b42049e4d17",
+                    "text": "Oui, après un repas"
+                  }
+                ],
+                "answer": "eaf03d44c2d7",
+                "explanation": "Le cumul de facteurs altère les capacités ; une habitude du trajet ne supprime pas le risque.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "TRAITEMENT"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "AVANT SERVICE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "DOUTE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Aucun produit qui altère la conduite.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Ne pas conduire tant que l’aptitude est incertaine.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Lire la notice et demander conseil.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.08. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-09",
+      "title": "C.09 · Éviter les distractions",
+      "activities": [
+        {
+          "id": "vtc-c-09-cours",
+          "title": "Éviter les distractions",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.09",
+            "title": "Éviter les distractions",
+            "page": 154,
+            "pages": [
+              154,
+              155
+            ],
+            "objective": "Préparer le numérique pour garder les yeux sur la route.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le téléphone tenu en main est interdit au conducteur d’un véhicule en circulation. Le port à l’oreille d’un dispositif émettant du son est également interdit, sauf exceptions prévues. Un système intégré mains libres ne supprime pas la distraction mentale : une conversation complexe réduit la disponibilité pour la route."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Réglez le trajet, la musique et les notifications avant le départ. Une adresse ambiguë, une nouvelle réservation ou un message de plateforme attendent un arrêt autorisé et sûr. Un feu rouge ou un embouteillage ne doit pas être traité comme un stationnement permettant de manipuler librement le téléphone. Expliquez au client que vous vérifierez sa demande au bon moment."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une demande urgente du client ne rend pas sûre une manipulation dangereuse."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre les distractions"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une distraction peut détourner les yeux, les mains ou l'esprit. Lire une notification combine plusieurs de ces effets. Une conversation complexe peut aussi mobiliser l'attention même sans téléphone en main. La qualité du service consiste donc parfois à différer une réponse, plutôt qu'à répondre immédiatement pendant une situation routière exigeante."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer les outils"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Programmez l'itinéraire et les réglages avant de partir. Placez les équipements sans gêner la visibilité et limitez les notifications inutiles. Le téléphone tenu en main et le port à l'oreille de dispositifs sonores concernés par l'interdiction ne deviennent pas autorisés parce que la communication est professionnelle. Un arrêt au feu rouge ne doit pas être traité comme une pause administrative."
+              },
+              {
+                "kind": "heading",
+                "text": "Choisir un vrai arrêt"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Si une modification demande une manipulation ou une lecture attentive, cherchez un emplacement autorisé, immobilisez le véhicule dans de bonnes conditions puis traitez la demande. Expliquez brièvement au passager pourquoi vous différez. Une consigne de plateforme ou une demande urgente d'un client ne supprime pas la priorité de la conduite."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "À 50 km/h, la voiture parcourt environ 13,9 mètres par seconde. En quittant la route des yeux pendant trois secondes, le chauffeur parcourt près de 42 mètres sans observation directe. Ce calcul ne décrit pas tous les risques, mais rend la durée concrète. Une notification peut attendre le prochain arrêt sûr ; un piéton qui s'engage devant la voiture ne le peut pas."
+              }
+            ],
+            "cards": [
+              {
+                "label": "AVANT",
+                "text": "Préparer les outils et couper les notifications inutiles."
+              },
+              {
+                "label": "PENDANT",
+                "text": "Regarder, anticiper et conduire."
+              },
+              {
+                "label": "À L’ARRÊT SÛR",
+                "text": "Lire, répondre et modifier la navigation."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-09-atelier",
+          "title": "À vous de jouer · Éviter les distractions",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.09",
+            "title": "Éviter les distractions",
+            "objective": "Préparer le numérique pour garder les yeux sur la route.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une notification de réservation arrive pendant une manœuvre. Quelle priorité ?",
+                "options": [
+                  {
+                    "id": "e4630721a759",
+                    "text": "Lire immédiatement pour ne pas perdre le client"
+                  },
+                  {
+                    "id": "c3b0fd2c0f82",
+                    "text": "Taper la réponse en regardant brièvement la route"
+                  },
+                  {
+                    "id": "4705b138f169",
+                    "text": "Terminer en sécurité et consulter à l’arrêt approprié"
+                  }
+                ],
+                "answer": "4705b138f169",
+                "explanation": "La conduite exige l’attention visuelle, manuelle et cognitive. La demande commerciale attend un arrêt sûr.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "À 50 km/h, environ quelle distance parcourt-on en trois secondes ?",
+                "options": [
+                  {
+                    "id": "99936d12742c",
+                    "text": "42 mètres"
+                  },
+                  {
+                    "id": "28667405f207",
+                    "text": "150 mètres"
+                  },
+                  {
+                    "id": "34a7e18b76ca",
+                    "text": "5 mètres"
+                  }
+                ],
+                "answer": "99936d12742c",
+                "explanation": "50 ÷ 3,6 × 3 ≈ 41,7 m. Quelques secondes de distraction représentent déjà une grande distance.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "AVANT"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "À L’ARRÊT SÛR"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "PENDANT"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Regarder, anticiper et conduire.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Lire, répondre et modifier la navigation.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Préparer les outils et couper les notifications inutiles.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.09. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-10",
+      "title": "C.10 · Conduire avec souplesse",
+      "activities": [
+        {
+          "id": "vtc-c-10-cours",
+          "title": "Conduire avec souplesse",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.10",
+            "title": "Conduire avec souplesse",
+            "page": 157,
+            "pages": [
+              157,
+              158
+            ],
+            "objective": "Associer confort, sobriété et anticipation.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une conduite souple repose sur l’observation : lever le pied tôt, conserver une allure régulière et éviter les freinages tardifs. La douceur ne signifie pas lenteur excessive ni hésitation. Elle permet de garder de la marge et de réduire les variations ressenties par les passagers."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Adaptez l’accélération, le freinage et les virages au véhicule, à l’adhérence et aux personnes transportées. Ne roulez pas au point mort pour économiser : cela dégrade la maîtrise et n’est pas une méthode recommandée. Vérifiez la pression prescrite, retirez les charges inutiles et gérez la climatisation avec mesure. Sur un véhicule électrique, anticipez l’autonomie réelle, la météo et la recharge, sans laisser le client découvrir un arrêt imprévu."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’écoconduite commence par l’anticipation, pas par une technique qui réduit la maîtrise."
+              },
+              {
+                "kind": "heading",
+                "text": "Anticiper évite les corrections"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La souplesse commence par l'observation. En voyant tôt un ralentissement, vous pouvez relâcher l'accélérateur puis freiner progressivement. Si vous attendez le dernier moment, la même situation exige une action plus forte. Garder une distance suffisante réduit les alternances inutiles entre accélération et freinage et améliore le confort des passagers."
+              },
+              {
+                "kind": "heading",
+                "text": "Maîtriser la trajectoire"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Préparez l'allure avant un virage et gardez des commandes progressives. Regardez la direction à suivre plutôt que l'obstacle que vous souhaitez éviter. Le confort ne signifie pas conduire trop lentement de façon imprévisible : adaptez-vous au trafic tout en respectant les règles et vos marges. En cas de danger, une action de sécurité peut être ferme ; le confort n'interdit pas un freinage nécessaire."
+              },
+              {
+                "kind": "heading",
+                "text": "Relier sobriété et organisation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une conduite anticipée, des pneus correctement entretenus et un itinéraire préparé contribuent à limiter les consommations. Les détours, les attentes moteur tournant et les kilomètres inutiles affectent aussi le coût. Ne coupez pas des équipements nécessaires à la visibilité ou à la sécurité pour économiser. Sur un véhicule électrique, apprenez les effets des modes de récupération et les consignes du constructeur."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un feu passe au rouge au loin. Le chauffeur relâche tôt l'accélérateur et adapte son approche, au lieu d'accélérer puis de freiner fortement à quelques mètres. Le passager ressent moins d'à-coups et le conducteur garde davantage de temps pour observer les piétons. La qualité du geste découle de la détection précoce, pas seulement de la douceur du pied sur la pédale."
+              }
+            ],
+            "cards": [
+              {
+                "label": "REGARD LOIN",
+                "text": "Détecter les ralentissements tôt."
+              },
+              {
+                "label": "ALLURE RÉGULIÈRE",
+                "text": "Limiter accélérations et freinages inutiles."
+              },
+              {
+                "label": "CONFORT",
+                "text": "Adapter la conduite au passager et au trajet."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-10-atelier",
+          "title": "À vous de jouer · Conduire avec souplesse",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.10",
+            "title": "Conduire avec souplesse",
+            "objective": "Associer confort, sobriété et anticipation.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Quelle conduite favorise le confort et l’anticipation ?",
+                "options": [
+                  {
+                    "id": "9ada4d17d98c",
+                    "text": "Freiner fort au dernier moment"
+                  },
+                  {
+                    "id": "1177a2bfe95d",
+                    "text": "Observer loin et adapter progressivement accélération et freinage"
+                  },
+                  {
+                    "id": "4c5d32c4e3ac",
+                    "text": "Multiplier les changements de voie"
+                  }
+                ],
+                "answer": "1177a2bfe95d",
+                "explanation": "La souplesse vient de l’anticipation, pas seulement d’un geste doux sur la pédale.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Une conduite économique permet-elle de couper le moteur en roulant ?",
+                "options": [
+                  {
+                    "id": "52a58d1545e6",
+                    "text": "Oui, si le passager accepte"
+                  },
+                  {
+                    "id": "852b022ff4bd",
+                    "text": "Oui, dans toutes les descentes"
+                  },
+                  {
+                    "id": "9090dac4c51b",
+                    "text": "Non, la sécurité et les consignes du véhicule restent prioritaires"
+                  }
+                ],
+                "answer": "9090dac4c51b",
+                "explanation": "L’éco-conduite s’appuie sur l’anticipation et un usage adapté du véhicule, sans supprimer ses fonctions de sécurité.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "CONFORT"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "REGARD LOIN"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "ALLURE RÉGULIÈRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Détecter les ralentissements tôt.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Limiter accélérations et freinages inutiles.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Adapter la conduite au passager et au trajet.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.10. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-11",
+      "title": "C.11 · Météo, nuit et adhérence",
+      "activities": [
+        {
+          "id": "vtc-c-11-cours",
+          "title": "Météo, nuit et adhérence",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.11",
+            "title": "Météo, nuit et adhérence",
+            "page": 161,
+            "pages": [
+              161,
+              162
+            ],
+            "objective": "Ajuster la mission aux conditions réelles.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La pluie, le brouillard, la neige, le verglas et l’obscurité réduisent les marges. Diminuez l’allure avant la difficulté et augmentez les distances. Utilisez les feux adaptés ; les feux arrière de brouillard ne s’emploient pas sous la pluie seule. Si l’adhérence devient incertaine, évitez les commandes brusques et recherchez une solution sûre."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifiez avant le départ les restrictions locales, équipements hivernaux, fermetures et prévisions. Les obligations peuvent dépendre d’une zone et d’une période. Une transmission intégrale ou une aide électronique ne supprime pas la distance de freinage. Si les conditions ne permettent plus de poursuivre, interrompre ou reporter le trajet peut être la décision professionnelle appropriée."
+              },
+              {
+                "kind": "heading",
+                "text": "À RETENIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le véhicule, l’itinéraire et la météo forment un ensemble à vérifier avant la course."
+              },
+              {
+                "kind": "heading",
+                "text": "Voir et être vu"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La pluie, le brouillard et la nuit diminuent l'information disponible. Nettoyez les vitres, utilisez la ventilation pour éviter la buée et adaptez l'éclairage selon les règles. Une vitre sale peut amplifier l'éblouissement. Les feux ne donnent pas une visibilité illimitée : l'allure doit rester compatible avec ce que vous pouvez réellement distinguer et avec la distance nécessaire pour vous arrêter."
+              },
+              {
+                "kind": "heading",
+                "text": "Préserver l'adhérence"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'eau, le verglas, la neige ou des feuilles peuvent réduire le contact efficace entre les pneus et la chaussée. Augmentez les marges et évitez les actions brusques. Le régulateur et les aides électroniques ne suppriment pas les limites physiques. Si le véhicule réagit anormalement, gardez des commandes mesurées et appliquez les consignes de conduite apprises avec le formateur et celles du constructeur."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer une alternative"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifiez les conditions du trajet, les fermetures et les équipements requis avant de partir. Une route praticable le matin peut ne plus l'être le soir. Il peut être nécessaire de changer d'itinéraire, de retarder le départ ou de renoncer à la mission. Informer tôt permet au client de comprendre la décision et de rechercher une solution sans pression de dernière minute."
+              },
+              {
+                "kind": "heading",
+                "text": "EXEMPLE EXPLIQUÉ"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une route de montagne devient enneigée alors que le véhicule n'est pas équipé pour les conditions rencontrées. Le chauffeur n'essaie pas de passer simplement parce que le GPS affiche encore le trajet. Il s'arrête dans un lieu sûr, vérifie les informations officielles et organise une solution compatible. La durée initialement annoncée était une estimation fondée sur d'autres conditions."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRÉPARER",
+                "text": "Prévision, équipement et itinéraire alternatif."
+              },
+              {
+                "label": "ADAPTER",
+                "text": "Vitesse, éclairage et distances."
+              },
+              {
+                "label": "RENONCER",
+                "text": "S’arrêter ou reporter si la sécurité n’est plus assurée."
+              }
+            ],
+            "diagram": null,
+            "diagram_text": [],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-11-atelier",
+          "title": "À vous de jouer · Météo, nuit et adhérence",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.11",
+            "title": "Météo, nuit et adhérence",
+            "objective": "Ajuster la mission aux conditions réelles.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Sous forte pluie, quelle combinaison est adaptée ?",
+                "options": [
+                  {
+                    "id": "562513624751",
+                    "text": "Même vitesse et véhicule précédent suivi de près"
+                  },
+                  {
+                    "id": "9ba6aa5ced47",
+                    "text": "Allure réduite, distances accrues et visibilité entretenue"
+                  },
+                  {
+                    "id": "c6c20162b576",
+                    "text": "Feux éteints pour éviter les reflets"
+                  }
+                ],
+                "answer": "9ba6aa5ced47",
+                "explanation": "La pluie dégrade adhérence et visibilité. Plusieurs adaptations se combinent pour préserver une marge de sécurité.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Avant une mission nocturne, quelle préparation est utile ?",
+                "options": [
+                  {
+                    "id": "21a5ff9cd4e8",
+                    "text": "Compter uniquement sur les feux des autres véhicules"
+                  },
+                  {
+                    "id": "ca09df26ca03",
+                    "text": "Programmer les réglages pendant la conduite"
+                  },
+                  {
+                    "id": "92bf36d300ce",
+                    "text": "Vérifier éclairage, vitrages et niveau de fatigue"
+                  }
+                ],
+                "answer": "92bf36d300ce",
+                "explanation": "La préparation limite les difficultés ; la vitesse doit ensuite rester adaptée à la portée de la visibilité.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "ADAPTER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "RENONCER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "PRÉPARER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "S’arrêter ou reporter si la sécurité n’est plus assurée.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Prévision, équipement et itinéraire alternatif.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Vitesse, éclairage et distances.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.11. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-12",
+      "title": "C.12 · Gérer panne et accident",
+      "activities": [
+        {
+          "id": "vtc-c-12-cours",
+          "title": "Gérer panne et accident",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "C.12",
+            "title": "Gérer panne et accident",
+            "page": 164,
+            "pages": [
+              164,
+              165
+            ],
+            "objective": "Protéger les personnes et alerter correctement.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "En cas d’incident, évitez le suraccident. Immobilisez le véhicule au mieux selon la situation, allumez les feux de détresse et mettez le gilet avant de sortir si cela peut être fait en sécurité. Sur autoroute, rejoignez un refuge derrière la glissière si accessible, à l’écart de la circulation. Ne vous exposez pas pour poser un triangle ; il n’est pas à installer lorsque cette action met votre vie en danger."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Alertez par le 112 ou les moyens d’urgence disponibles et donnez lieu, sens de circulation, repère, dangers et nombre de victimes. Ne déplacez pas un blessé sauf danger immédiat que vous pouvez éviter sans vous exposer ; suivez les consignes des secours. Le constat amiable décrit les faits d’un accident matériel : lisez avant de signer et ne modifiez pas un document signé unilatéralement."
+              },
+              {
+                "kind": "heading",
+                "text": "Protéger les personnes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Après une panne ou un accident, le premier objectif est d'éviter un second choc. Immobilisez le véhicule aussi sûrement que possible, signalez le danger et appliquez les consignes adaptées au lieu. Sur autoroute, la protection derrière la glissière, lorsque l'évacuation peut se faire sans danger, prime sur la récupération des bagages. N'exposez personne à la circulation pour photographier ou installer un équipement."
+              },
+              {
+                "kind": "heading",
+                "text": "Alerter avec les bonnes informations"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Indiquez le lieu précis, le sens, les repères disponibles, le nombre de véhicules et les blessés apparents. Décrivez un danger persistant, comme une fumée ou un obstacle sur la chaussée. Utilisez les moyens d'alerte adaptés et suivez les instructions reçues. L'assistance commerciale et les secours ont des fonctions distinctes : une urgence humaine demande une alerte appropriée."
+              },
+              {
+                "kind": "heading",
+                "text": "Organiser les suites"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Lorsque les personnes sont protégées, relevez les faits nécessaires, les coordonnées et les éléments d'assurance. Un constat décrit des circonstances ; ne signez pas une version que vous ne comprenez pas ou qui ne correspond pas aux faits. Ne déplacez pas inutilement une victime et ne pratiquez que les gestes adaptés à vos compétences et aux consignes des secours. Prévenez l'exploitant et organisez la continuité de service après la sécurité."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PROTÉGER",
+                "text": "Éviter le suraccident et rejoindre un lieu sûr."
+              },
+              {
+                "label": "ALERTER",
+                "text": "Localisation, circonstances et personnes."
+              },
+              {
+                "label": "ASSISTER",
+                "text": "Suivre les consignes et ses compétences."
+              }
+            ],
+            "diagram": "media/vtc/diagram-c.12.webp",
+            "diagram_text": [
+              "Une crevaison sur voie rapide",
+              "1 Environnement Circulation proche : risque à évaluer.",
+              "2 Priorité Protéger les personnes.",
+              "3 Intervention Demander l’aide adaptée.",
+              "La première aide consiste à ne pas créer une victime supplémentaire."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-c.webp",
+            "module": "C"
+          }
+        },
+        {
+          "id": "vtc-c-12-atelier",
+          "title": "À vous de jouer · Gérer panne et accident",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "C.12",
+            "title": "Gérer panne et accident",
+            "objective": "Protéger les personnes et alerter correctement.",
+            "module": "C"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Après une panne sur une voie rapide, quelle priorité ?",
+                "options": [
+                  {
+                    "id": "fd9b131a9014",
+                    "text": "Réparer immédiatement au milieu de la circulation"
+                  },
+                  {
+                    "id": "16d297f50ddd",
+                    "text": "Mettre les personnes en sécurité et alerter selon la situation"
+                  },
+                  {
+                    "id": "5732ec75e1e6",
+                    "text": "Rester derrière le véhicule pour le pousser"
+                  }
+                ],
+                "answer": "16d297f50ddd",
+                "explanation": "La protection des personnes précède la mécanique ; ne vous exposez pas à la circulation pour récupérer ou installer un objet.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Le constat amiable doit-il décrire des suppositions comme des faits certains ?",
+                "options": [
+                  {
+                    "id": "ce7182cdcd74",
+                    "text": "Oui, pour compléter toutes les cases"
+                  },
+                  {
+                    "id": "d450a2fa6ebf",
+                    "text": "Oui, si l’autre conducteur est pressé"
+                  },
+                  {
+                    "id": "22246cfb8078",
+                    "text": "Non, il doit rester cohérent avec les faits observés"
+                  }
+                ],
+                "answer": "22246cfb8078",
+                "explanation": "Cases, circonstances et croquis doivent correspondre. Ne signez pas un document comportant des faits que vous contestez.",
+                "module": "C",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon C.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "PROTÉGER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "ALERTER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "ASSISTER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Localisation, circonstances et personnes.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Suivre les consignes et ses compétences.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Éviter le suraccident et rejoindre un lieu sûr.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon C.12. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-c-synthese",
+      "title": "Synthèse · relier les notions",
+      "activities": [
+        {
+          "id": "vtc-c-capsule",
+          "title": "Voir et retenir · les essentiels",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "type": "Video",
+              "video": {
+                "src": "media/vtc/v2/capsule-c.mp4",
+                "poster": "media/vtc/v2/capsule-c.jpg",
+                "captions": "media/vtc/v2/capsule-c.vtt",
+                "duration_seconds": 68.592366,
+                "transcript": "Avant une prise en charge, un pneu semble dégonflé. Que faire ? Contrôler et traiter l’anomalie avant de transporter le client. Un problème de sécurité se traite avant le départ ; la pression commerciale ne rend pas le véhicule sûr.\n\nAvant de tourner à droite, un cycliste peut se trouver près du véhicule. Que faire ? Contrôler les abords et l’angle mort adapté avant la manœuvre. Le clignotant annonce une intention mais ne vérifie pas que l’espace est libre.\n\nUn médicament porte un avertissement sur la conduite. Que faire ? Lire la notice et demander un avis médical ou pharmaceutique adapté. Un médicament peut diminuer la vigilance. La notice et le professionnel de santé aident à décider avant de conduire.\n\nAprès une panne sur une voie rapide, quelle priorité ? Mettre les personnes en sécurité et alerter selon la situation. La protection des personnes précède la mécanique ; ne vous exposez pas à la circulation pour récupérer ou installer un objet.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "audio": true,
+                "burned_captions": true,
+                "id": "vtc-c-capsule",
+                "title": "Les essentiels · Conduire en sécurité",
+                "required": true
+              }
+            }
+          ],
+          "vtc": {
+            "kind": "recap",
+            "module": "C",
+            "title": "Conduire en sécurité",
+            "image": "media/vtc/module-c.webp",
+            "transcript": "Avant une prise en charge, un pneu semble dégonflé. Que faire ? Contrôler et traiter l’anomalie avant de transporter le client. Un problème de sécurité se traite avant le départ ; la pression commerciale ne rend pas le véhicule sûr.\n\nAvant de tourner à droite, un cycliste peut se trouver près du véhicule. Que faire ? Contrôler les abords et l’angle mort adapté avant la manœuvre. Le clignotant annonce une intention mais ne vérifie pas que l’espace est libre.\n\nUn médicament porte un avertissement sur la conduite. Que faire ? Lire la notice et demander un avis médical ou pharmaceutique adapté. Un médicament peut diminuer la vigilance. La notice et le professionnel de santé aident à décider avant de conduire.\n\nAprès une panne sur une voie rapide, quelle priorité ? Mettre les personnes en sécurité et alerter selon la situation. La protection des personnes précède la mécanique ; ne vous exposez pas à la circulation pour récupérer ou installer un objet.",
+            "audio": true,
+            "cards": [
+              {
+                "label": "C.01",
+                "text": "Préparer le départ"
+              },
+              {
+                "label": "C.02",
+                "text": "Choisir la bonne vitesse"
+              },
+              {
+                "label": "C.03",
+                "text": "Garder une marge de sécurité"
+              },
+              {
+                "label": "C.04",
+                "text": "Observer et partager la route"
+              },
+              {
+                "label": "C.05",
+                "text": "Priorités et signalisation"
+              },
+              {
+                "label": "C.06",
+                "text": "Installer les passagers"
+              },
+              {
+                "label": "C.07",
+                "text": "Prévenir la fatigue"
+              },
+              {
+                "label": "C.08",
+                "text": "Alcool, drogues et médicaments"
+              },
+              {
+                "label": "C.09",
+                "text": "Éviter les distractions"
+              },
+              {
+                "label": "C.10",
+                "text": "Conduire avec souplesse"
+              },
+              {
+                "label": "C.11",
+                "text": "Météo, nuit et adhérence"
+              },
+              {
+                "label": "C.12",
+                "text": "Gérer panne et accident"
+              }
+            ]
+          }
+        },
+        {
+          "id": "vtc-c-approfondir",
+          "title": "Approfondir · repères et méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 24,
+          "blocks": [],
+          "vtc": {
+            "kind": "supplements",
+            "module": "C",
+            "title": "Relier le cours à la mission",
+            "supplements": [
+              {
+                "title": "Remplir un constat amiable",
+                "page": 167,
+                "image": "media/vtc/complement-167.webp",
+                "text": [
+                  "Après la protection et l’alerte, décrire les faits de façon précise et cohérente.",
+                  "Étape Informations à renseigner",
+                  "1 · Situer Date, heure, lieu exact ; blessés même légers, autres dégâts ; noms et coordonnées des témoins.",
+                  "2 · Identifier A et B Assurés, véhicules, immatriculations, assureurs, contrats, conducteurs et permis. Les lettres A et B ne désignent pas le responsable.",
+                  "3 · Décrire Point de choc initial et dégâts visibles. Cocher seulement les circonstances exactes de sa colonne et inscrire le nombre de cases cochées.",
+                  "4 · Dessiner Voies, sens de circulation, panneaux, marquages, position de A et B, flèches de déplacement et lieu du choc.",
+                  "5 · Relire Vérifier la cohérence entre cases, croquis et observations. Préciser un désaccord ; ne pas signer un récit inexact.",
+                  "6 · Transmettre Chaque conducteur conserve son exemplaire. Le recto commun signé ne se modifie plus ; le verso se complète individuellement.",
+                  "LE DÉLAI À RETENIR",
+                  "Adressez la déclaration à l’assureur selon le contrat, généralement sous cinq jours ouvrés ; le délai contractuel ne peut être inférieur à cinq jours ouvrés. Déclarez aussi l’accident si l’autre conducteur refuse de signer.",
+                  "En présence de blessés, les secours et les autorités passent avant le constat. Sans accord, relevez les éléments disponibles et transmettez votre version avec les preuves, sans vous mettre en danger.",
+                  "Service Public : constat amiable · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Du choc au croquis",
+                "page": 168,
+                "image": "media/vtc/complement-168.webp",
+                "text": [
+                  "Cas fictif : B recule d’une place de parking et heurte le côté droit de A, arrêté dans l’allée.",
+                  "B",
+                  "recul de B",
+                  "A",
+                  "A arrêté",
+                  "Rubrique Exemple de rédaction",
+                  "Lieu / heure Parking de l’hôtel des Pins, allée centrale, 10 h 15. Aucun blessé signalé dans ce cas fictif.",
+                  "Circonstances A : case correspondant à l’arrêt ; B : reculait. Reporter aussi toute autre circonstance réellement applicable.",
+                  "Dégâts visibles A : portière droite enfoncée. B : pare-chocs arrière rayé. Localiser le point de choc avec une flèche sur chaque silhouette.",
+                  "Observations « A était immobile dans l’allée. B reculait depuis sa place. » Ne pas ajouter une vitesse ou une intention non constatée.",
+                  "À vous : sur un vrai formulaire vierge, reportez les identités fictives fournies par le formateur, les cases et le croquis. Corrigé : A doit être immobile sur le dessin ; seule la flèche de B indique un mouvement. L’assureur apprécie les responsabilités.",
+                  "Service Public : constat amiable · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Vitesse : amende et points",
+                "page": 174,
+                "image": "media/vtc/complement-174.webp",
+                "text": [
+                  "Repères au 29 septembre 2026. Le dépassement se calcule avec la vitesse retenue après la marge réglementaire.",
+                  "Dépassement Amende usuelle Points",
+                  "Moins de 5 km/h ; limite > 50 km/h 68 € forfaitaires 0",
+                  "Moins de 5 km/h ; limite ≤ 50 km/h 135 € forfaitaires 0",
+                  "5 à 19 km/h ; limite > 50 km/h 68 € forfaitaires 1",
+                  "5 à 19 km/h ; limite ≤ 50 km/h 135 € forfaitaires 1",
+                  "20 à 29 km/h 135 € forfaitaires 2",
+                  "30 à 39 km/h 135 € forfaitaires 3",
+                  "40 à 49 km/h 135 € forfaitaires 4",
+                  "50 km/h ou plus Délit : jusqu’à 3 750 € et 3 mois de prison",
+                  "6",
+                  "Les montants forfaitaires indiqués sont les montants normaux, avant minoration ou majoration. Des mesures ou peines complémentaires peuvent s’ajouter : suspension, immobilisation, stage, confiscation ou annulation selon l’infraction.",
+                  "EXEMPLE EXPLIQUÉ",
+                  "Vitesse retenue : 94 km/h pour une limite de 80. Le dépassement est de 14 km/h : 68 € au montant normal et 1 point. Si la vitesse retenue est 54 pour une limite de 50 : 135 € et aucun point ; l’infraction existe néanmoins.",
+                  "Service Public : vitesse au volant · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Autres infractions courantes",
+                "page": 175,
+                "image": "media/vtc/complement-175.webp",
+                "text": [
+                  "Les conséquences sur le permis peuvent compromettre immédiatement l’exercice du métier.",
+                  "Infraction Amende normale Points",
+                  "Téléphone tenu en main / écouteurs au volant 135 € 3",
+                  "Conducteur sans ceinture 135 € 3",
+                  "Distance de sécurité insuffisante 135 € 3",
+                  "Franchissement d’une ligne continue 135 € 3",
+                  "Chevauchement d’une ligne continue 135 € 1",
+                  "Feu rouge, stop ou refus de priorité 135 € 4",
+                  "Refus de priorité à un piéton 135 € 6",
+                  "Stationnement dangereux 135 € 3",
+                  "Changement de direction sans avertir 35 € 3",
+                  "Ces cas sont des contraventions ; des peines complémentaires peuvent s’ajouter. Le non-port de ceinture d’un passager ne retire pas de points au conducteur : les responsabilités varient notamment avec l’âge du passager.",
+                  "ALCOOL ET STUPÉFIANTS",
+                  "L’alcool à partir du seuil légal entraîne notamment 6 points. L’usage de stupéfiants au volant est un délit avec 6 points ; associé à l’alcool, le retrait est de 9 points. Les sanctions pénales et les interdictions de conduire s’ajoutent au mécanisme des points.",
+                  "Service Public : barème des points · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Protéger son droit de conduire",
+                "page": 176,
+                "image": "media/vtc/complement-176.webp",
+                "text": [
+                  "Le nombre de points est un indicateur ; il ne prouve pas à lui seul que le permis est utilisable.",
+                  "Mécanisme Conséquence à comprendre",
+                  "Retrait de points Réduction du capital après établissement de l’infraction. Ce n’est pas, à lui seul, une suspension.",
+                  "Suspension Interdiction temporaire de conduire décidée par l’autorité administrative ou judiciaire. Elle s’applique même si des points restent disponibles.",
+                  "Annulation Le juge supprime le permis et fixe une période durant laquelle un nouveau permis ne peut pas être sollicité.",
+                  "Invalidation Le solde nul entraîne la perte de validité du permis. La décision notifiée précise les obligations ; ne pas reprendre le volant sans avoir recouvré le droit de conduire.",
+                  "Permis probatoire et reconstitution",
+                  "Le permis probatoire débute avec six points. Le capital augmente selon les règles du parcours si aucune infraction entraînant retrait n’est commise. La récupération automatique et un stage répondent à des conditions : un stage ne remet pas immédiatement à douze points un permis déjà invalidé.",
+                  "LA MÉTHODE DU PROFESSIONNEL",
+                  "Consultez Mes points permis, lisez les notifications et vérifiez les démarches médicales ou examens demandés. Informez l’exploitant si le droit de conduire cesse. Avant la reprise VTC, vérifiez aussi les conditions de la carte professionnelle et de l’assurance.",
+                  "Cas : Lina a huit points mais son permis est suspendu. Elle ne peut pas conduire, même avec une carte VTC valide.",
+                  "Service Public : barème des points · vérifiés le 29.09.2026"
+                ]
+              }
+            ],
+            "sources": [
+              {
+                "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+              },
+              {
+                "title": "Devenir chauffeur de VTC · Service Public",
+                "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+              },
+              {
+                "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+              }
+            ],
+            "exam": {
+              "minutes": 30,
+              "coefficient": 3,
+              "format": "20 QCM"
+            },
+            "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "vtc-c-01-cours",
+    "vtc-c-01-atelier",
+    "vtc-c-02-cours",
+    "vtc-c-02-atelier",
+    "vtc-c-03-cours",
+    "vtc-c-03-atelier",
+    "vtc-c-04-cours",
+    "vtc-c-04-atelier",
+    "vtc-c-05-cours",
+    "vtc-c-05-atelier",
+    "vtc-c-06-cours",
+    "vtc-c-06-atelier",
+    "vtc-c-07-cours",
+    "vtc-c-07-atelier",
+    "vtc-c-08-cours",
+    "vtc-c-08-atelier",
+    "vtc-c-09-cours",
+    "vtc-c-09-atelier",
+    "vtc-c-10-cours",
+    "vtc-c-10-atelier",
+    "vtc-c-11-cours",
+    "vtc-c-11-atelier",
+    "vtc-c-12-cours",
+    "vtc-c-12-atelier",
+    "vtc-c-capsule",
+    "vtc-c-approfondir"
+  ],
+  "assets": [
+    "media/vtc/complement-167.webp",
+    "media/vtc/complement-168.webp",
+    "media/vtc/complement-174.webp",
+    "media/vtc/complement-175.webp",
+    "media/vtc/complement-176.webp",
+    "media/vtc/diagram-c.02.webp",
+    "media/vtc/diagram-c.05.webp",
+    "media/vtc/diagram-c.07.webp",
+    "media/vtc/diagram-c.08.webp",
+    "media/vtc/diagram-c.12.webp",
+    "media/vtc/module-c.webp",
+    "media/vtc/v2/capsule-c.jpg",
+    "media/vtc/v2/capsule-c.mp4",
+    "media/vtc/v2/capsule-c.vtt"
+  ],
+  "import_warnings": [],
+  "counts": {
+    "sections": 13,
+    "lessons": 12,
+    "activities": 26,
+    "scored_activities": 0,
+    "workbooks": 0,
+    "interactive_workshops": 12,
+    "required_videos": 1,
+    "assets": 14
+  }
+}

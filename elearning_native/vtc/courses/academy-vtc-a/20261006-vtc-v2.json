@@ -1,0 +1,2740 @@
+{
+  "format_version": 1,
+  "id": "academy-vtc-a",
+  "version": "20261006-vtc-v2",
+  "title": "VTC A · Exercer dans le cadre du T3P",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "training_label": "VTC",
+  "source": {
+    "type": "academy-vtc",
+    "reviewed_on": "2026-10-06",
+    "manual_sha256": "dc22c7f98da0700180499c1fba3f15e0c9238f26c4a734da584952eef67ef8ce"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false
+  },
+  "theme": {
+    "main_color": "#7045bd",
+    "button_color": "#6534b4",
+    "text_color": "#241a38"
+  },
+  "planned_minutes": 480,
+  "required_minutes": 0,
+  "introduction": [],
+  "illustration": "images/vtc/module-a.webp",
+  "mock_exam_id": "vtc-a",
+  "mock_exam_questions": 30,
+  "regulation": "Épreuve A",
+  "sections": [
+    {
+      "id": "vtc-a-01",
+      "title": "A.01 · Le transport public particulier",
+      "activities": [
+        {
+          "id": "vtc-a-01-cours",
+          "title": "Le transport public particulier",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.01",
+            "title": "Le transport public particulier",
+            "page": 15,
+            "pages": [
+              15,
+              16
+            ],
+            "objective": "Identifier le régime d’une prestation avant de l’accepter.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le T3P est un transport routier de personnes réalisé contre rémunération, à la demande, dans un véhicule de petite capacité. Il regroupe notamment taxis, voitures de transport avec chauffeur et véhicules motorisés à deux ou trois roues. Le mot « public » ne signifie pas que le véhicule appartient à une collectivité."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un VTC fournit une prestation convenue à l’avance. Il ne devient pas un taxi parce qu’il transporte les mêmes voyageurs ou utilise une application. Le transport collectif, le transport sanitaire et le covoiturage obéissent à d’autres règles. Le partage de frais d’un trajet personnel n’est pas un moyen de déguiser une activité professionnelle lucrative."
+              },
+              {
+                "kind": "heading",
+                "text": "Partir des faits"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le transport public particulier de personnes, ou T3P, consiste à déplacer un client contre rémunération dans un véhicule de moins de dix places, conducteur compris. Le client choisit un déplacement adapté à son besoin. Il ne rejoint pas une ligne régulière avec un horaire et des arrêts identiques pour tous. Le prix rémunère une prestation professionnelle : disponibilité du chauffeur, usage du véhicule et réalisation du transport."
+              },
+              {
+                "kind": "heading",
+                "text": "Trois métiers à distinguer"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le taxi dispose de règles particulières, notamment pour la prise en charge sur la voie publique dans le cadre de son autorisation. Le VTC travaille sur réservation préalable. Le VMDTR utilise un véhicule motorisé à deux ou trois roues. Une application peut transmettre des commandes dans plusieurs de ces métiers ; elle ne change pas le régime juridique du conducteur. Il faut donc identifier l'activité réellement réalisée avant de choisir les documents et les règles correspondantes."
+              },
+              {
+                "kind": "heading",
+                "text": "Le cas du covoiturage"
+              },
+              {
+                "kind": "paragraph",
+                "text": "En covoiturage, le conducteur effectue d'abord un déplacement pour son propre compte et partage les frais avec les passagers. Un chauffeur qui se déplace uniquement pour transporter des clients et dégager un revenu exerce une autre activité. Employer un mot différent sur une annonce ne transforme pas les faits. De même, une voiture de luxe n'est pas, par son apparence, un VTC autorisé."
+              }
+            ],
+            "cards": [
+              {
+                "label": "TAXI",
+                "text": "Réservation ou maraude dans son cadre autorisé."
+              },
+              {
+                "label": "VTC",
+                "text": "Client réservé avant la prise en charge."
+              },
+              {
+                "label": "VMDTR",
+                "text": "Transport payant sur deux ou trois roues."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.01.webp",
+            "diagram_text": [
+              "Identifier la prestation",
+              "Taxi",
+              "VTC",
+              "VMDTR",
+              "Transport payant sur deux ou trois roues.",
+              "Réservation ou maraude dans son cadre autorisé.",
+              "Réservation préalable avant la prise en charge.",
+              "Deux logiques différentes",
+              "Un trajet créé pour répondre au besoin du client.",
+              "Transport professionnel",
+              "Covoiturage Un trajet personnel avec partage des frais.",
+              "La nature réelle du service détermine la réglementation applicable."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-01-atelier",
+          "title": "À vous de jouer · Le transport public particulier",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.01",
+            "title": "Le transport public particulier",
+            "objective": "Identifier le régime d’une prestation avant de l’accepter.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un chauffeur effectue un déplacement uniquement pour transporter un client payant. Comment qualifier la situation ?",
+                "options": [
+                  {
+                    "id": "efa28be3ca23",
+                    "text": "Une prestation professionnelle de transport"
+                  },
+                  {
+                    "id": "4a0ada8babe2",
+                    "text": "Un covoiturage parce que le véhicule est partagé"
+                  },
+                  {
+                    "id": "293ee6f52d91",
+                    "text": "Un trajet privé dès que le paiement est en espèces"
+                  }
+                ],
+                "answer": "efa28be3ca23",
+                "explanation": "Le trajet est organisé pour le client et rémunère un service ; ce n’est pas le partage des frais d’un déplacement personnel.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Qu’est-ce qui distingue principalement un VTC d’un taxi pour la prise en charge ?",
+                "options": [
+                  {
+                    "id": "ce7a20ba6d5a",
+                    "text": "Le VTC exige une réservation préalable"
+                  },
+                  {
+                    "id": "24045227c97c",
+                    "text": "Le VTC peut toujours prendre un client qui le hèle"
+                  },
+                  {
+                    "id": "49e3c899f591",
+                    "text": "Le véhicule de luxe dispense de réservation"
+                  }
+                ],
+                "answer": "ce7a20ba6d5a",
+                "explanation": "La réservation précède la prise en charge du VTC. Le confort ou l’application utilisée ne change pas ce cadre.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.01"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "TAXI"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "VTC"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "VMDTR"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Réservation ou maraude dans son cadre autorisé.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Transport payant sur deux ou trois roues.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Client réservé avant la prise en charge.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.01. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-02",
+      "title": "A.02 · Qui fait quoi ?",
+      "activities": [
+        {
+          "id": "vtc-a-02-cours",
+          "title": "Qui fait quoi ?",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.02",
+            "title": "Qui fait quoi ?",
+            "page": 18,
+            "pages": [
+              18,
+              19
+            ],
+            "objective": "Distinguer conducteur, exploitant et intermédiaire.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le conducteur réalise le transport et doit remplir les conditions personnelles d’exercice. L’exploitant organise l’activité et figure au registre des exploitants VTC. Ces fonctions peuvent être réunies chez un indépendant, mais elles restent juridiquement distinctes."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une plateforme ou une centrale de réservation met en relation, organise ou distribue des courses selon son modèle. Son contrôle documentaire ne remplace pas vos obligations. La préfecture intervient notamment pour la carte professionnelle ; le ministère chargé des transports tient le REVTC. La CMA organise l’examen. Les formalités de création d’entreprise passent par le guichet unique."
+              },
+              {
+                "kind": "heading",
+                "text": "Le conducteur est une personne"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le conducteur tient le volant et prend les décisions de conduite. Son permis, son aptitude médicale, sa carte professionnelle et sa formation continue concernent sa situation personnelle. Un salarié doit lui aussi remplir les conditions du métier. Travailler pour une entreprise déjà inscrite ne lui permet pas d'utiliser la carte d'un collègue ou celle du dirigeant."
+              },
+              {
+                "kind": "heading",
+                "text": "L'exploitant organise l'activité"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'exploitant est l'entreprise qui réalise l'activité de transport. Il organise les moyens, dispose des assurances nécessaires et remplit les obligations du registre des exploitants VTC. Une personne indépendante peut être à la fois exploitante et conductrice. Elle cumule alors les obligations des deux rôles : les démarches ne se remplacent pas. Si elle recrute, elle doit vérifier les conditions d'exercice de chaque conducteur et suivre les véhicules concernés."
+              },
+              {
+                "kind": "heading",
+                "text": "Le partenaire ne prend pas votre place"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une plateforme, une centrale de réservation ou un hôtel peut apporter la commande. Son intervention ne supprime pas vos vérifications. Pour résoudre un problème, cherchez d'abord qui détient l'information : la CMA pour l'examen, la préfecture pour la carte, le gestionnaire du REVTC pour le registre, l'assureur pour une garantie. Cette méthode évite de confondre un compte commercial actif et un droit légal d'exercer."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PERSONNE",
+                "text": "Permis, aptitude, carte professionnelle."
+              },
+              {
+                "label": "ENTREPRISE",
+                "text": "Immatriculation, REVTC, assurances."
+              },
+              {
+                "label": "MISE EN RELATION",
+                "text": "Réservation et contrat à examiner."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.02.webp",
+            "diagram_text": [
+              "Le dossier de Samir",
+              "Carte personnelle Qui conduit ?",
+              "Qui exploite ?",
+              "Inscription de l’entreprise",
+              "Avec quels moyens conformes ?",
+              "Véhicule et assurances",
+              "Une application distribue des courses ; elle ne remplace pas les autorités compétentes."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-02-atelier",
+          "title": "À vous de jouer · Qui fait quoi ?",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.02",
+            "title": "Qui fait quoi ?",
+            "objective": "Distinguer conducteur, exploitant et intermédiaire.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Vous voulez vous inscrire à l’examen VTC. Quel interlocuteur recherchez-vous ?",
+                "options": [
+                  {
+                    "id": "b0330b510167",
+                    "text": "L’assureur automobile"
+                  },
+                  {
+                    "id": "a045e2d80f7a",
+                    "text": "Le concessionnaire du véhicule"
+                  },
+                  {
+                    "id": "a47a9e5b1d60",
+                    "text": "La chambre de métiers et de l’artisanat"
+                  }
+                ],
+                "answer": "a47a9e5b1d60",
+                "explanation": "La CMA organise l’examen. La carte professionnelle, le véhicule et les assurances relèvent d’autres démarches.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "À quoi sert principalement le REVTC ?",
+                "options": [
+                  {
+                    "id": "34d5d7c4583b",
+                    "text": "À l’inscription de l’exploitant VTC"
+                  },
+                  {
+                    "id": "36cf06c7f699",
+                    "text": "À attribuer les notes de français"
+                  },
+                  {
+                    "id": "30ee51b78a79",
+                    "text": "À remplacer le permis de conduire"
+                  }
+                ],
+                "answer": "34d5d7c4583b",
+                "explanation": "Le registre concerne l’exploitant ; la carte professionnelle concerne personnellement le conducteur.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.02"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "ENTREPRISE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "MISE EN RELATION"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "PERSONNE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Permis, aptitude, carte professionnelle.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Immatriculation, REVTC, assurances.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Réservation et contrat à examiner.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.02. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-03",
+      "title": "A.03 · Accéder à la profession",
+      "activities": [
+        {
+          "id": "vtc-a-03-cours",
+          "title": "Accéder à la profession",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.03",
+            "title": "Accéder à la profession",
+            "page": 21,
+            "pages": [
+              21,
+              22
+            ],
+            "objective": "Construire un parcours d’accès conforme à la situation du candidat.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’accès ordinaire suppose un permis adapté dont la période probatoire est terminée, l’aptitude médicale requise, l’honorabilité professionnelle et la réussite à l’examen. Le bulletin n° 2 ne doit pas comporter les condamnations incompatibles prévues par le Code des transports. Il ne s’agit pas d’exiger, dans tous les cas, un casier entièrement vierge."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Depuis le 12 août 2026, la voie nationale fondée sur l’expérience professionnelle antérieure a été supprimée pour les nouvelles demandes. Les dossiers déposés avant cette date conservent leur régime. La reconnaissance de qualifications de certains ressortissants UE/EEE relève d’une procédure distincte. Préparer l’examen ne donne pas encore le droit de transporter des clients."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre les étapes"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'inscription à une formation permet d'apprendre ; la réussite à l'examen atteste des compétences évaluées ; la carte professionnelle permet de justifier le droit personnel d'exercer, sous réserve du maintien des conditions requises. Ces étapes ont des fonctions différentes. L'admissibilité théorique n'est qu'une étape de l'examen : elle ne remplace pas la réussite pratique ni la délivrance de la carte."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer les justificatifs"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Constituez un dossier avec l'identité, le permis, l'avis médical établi par le médecin agréé et les pièces demandées pour votre situation. Contrôlez les noms, les dates, la lisibilité et les éventuelles restrictions. L'honorabilité ne se résume pas à une déclaration orale : certaines condamnations sont incompatibles avec la profession et font l'objet du contrôle prévu. En cas de particularité, utilisez la procédure officielle adaptée plutôt que de supposer une équivalence."
+              },
+              {
+                "kind": "heading",
+                "text": "Situer la réforme de 2026"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour les nouvelles demandes relevant de la voie nationale, l'accès fondé sur l'expérience professionnelle antérieure a été supprimé à compter du 12 août 2026. Les dossiers antérieurs et la reconnaissance de certaines qualifications européennes demandent une lecture de leurs règles propres. Une ancienne vidéo expliquant l'équivalence par l'expérience peut donc être devenue inadaptée à une nouvelle demande."
+              }
+            ],
+            "cards": [
+              {
+                "label": "VÉRIFIER",
+                "text": "Permis, aptitude médicale, honorabilité."
+              },
+              {
+                "label": "RÉUSSIR",
+                "text": "Théorie puis pratique de l’examen."
+              },
+              {
+                "label": "OBTENIR",
+                "text": "Carte professionnelle avant l’exercice."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.03.webp",
+            "diagram_text": [
+              "Du candidat au professionnel",
+              "Permis, aptitude médicale et honorabilité.",
+              "1 Conditions personnelles",
+              "2 Examen Théorie, puis pratique.",
+              "3 Carte professionnelle Justifier le droit personnel d’exercer.",
+              "Ne pas confondre les étapes",
+              "Formation Apprendre.",
+              "Admissibilité Une étape de l’examen.",
+              "Carte Le titre personnel à obtenir avant l’exercice.",
+              "Une attestation de formation ou d’admissibilité n’est pas une carte professionnelle."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-03-atelier",
+          "title": "À vous de jouer · Accéder à la profession",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.03",
+            "title": "Accéder à la profession",
+            "objective": "Construire un parcours d’accès conforme à la situation du candidat.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un candidat a réussi seulement les épreuves théoriques. Peut-il déjà exercer avec cette attestation ?",
+                "options": [
+                  {
+                    "id": "af73173fb5f4",
+                    "text": "Oui, si le passager donne son accord"
+                  },
+                  {
+                    "id": "4ff126cb91bf",
+                    "text": "Non, la pratique et les autres démarches restent nécessaires"
+                  },
+                  {
+                    "id": "32bfe98db8d0",
+                    "text": "Oui, pendant un an sans carte"
+                  }
+                ],
+                "answer": "4ff126cb91bf",
+                "explanation": "L’admissibilité est une étape. Elle ne vaut ni réussite à l’ensemble de l’examen ni carte professionnelle.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Pour une nouvelle demande nationale déposée après le 12 août 2026, un an d’expérience remplace-t-il l’examen ?",
+                "options": [
+                  {
+                    "id": "f967ffde1623",
+                    "text": "Non, cette ancienne voie a été supprimée"
+                  },
+                  {
+                    "id": "311144e1f181",
+                    "text": "Oui, après accord d’une plateforme"
+                  },
+                  {
+                    "id": "61a44b55ffeb",
+                    "text": "Oui, sur une simple attestation"
+                  }
+                ],
+                "answer": "f967ffde1623",
+                "explanation": "La réforme de 2026 supprime cette voie pour les nouvelles demandes nationales ; situations transitoires et qualifications européennes restent distinctes.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.03"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "RÉUSSIR"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "OBTENIR"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "VÉRIFIER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Théorie puis pratique de l’examen.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Carte professionnelle avant l’exercice.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Permis, aptitude médicale, honorabilité.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.03. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-04",
+      "title": "A.04 · Entretenir son droit d’exercer",
+      "activities": [
+        {
+          "id": "vtc-a-04-cours",
+          "title": "Entretenir son droit d’exercer",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.04",
+            "title": "Entretenir son droit d’exercer",
+            "page": 23,
+            "pages": [
+              23,
+              24
+            ],
+            "objective": "Organiser les échéances qui conditionnent l’activité.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les justificatifs n’ont pas tous la même durée de validité. La carte VTC et la formation continue fonctionnent sur un cycle de cinq ans ; la formation continue réglementaire dure quatorze heures. La validité médicale suit les règles du permis professionnel, notamment selon l’âge et la décision médicale. Ne lui attribuez pas automatiquement cinq ans."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une suspension du permis, une carte retirée ou une assurance interrompue peut rendre l’activité impossible avant la date prévue de renouvellement. Utilisez un calendrier avec alerte anticipée, dépôt du dossier puis preuve de réception. Pendant l’activité professionnelle, la carte doit être apposée de façon que la photographie soit facilement visible de l’extérieur."
+              },
+              {
+                "kind": "heading",
+                "text": "Plusieurs calendriers coexistent"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le permis, la carte professionnelle, l'avis médical, la formation continue et les assurances n'obéissent pas à une échéance unique. La carte et la formation continue VTC suivent un cycle de cinq ans ; la formation continue représente quatorze heures. L'aptitude médicale dépend notamment de l'âge, des règles applicables et de la décision médicale. La date imprimée sur une pièce doit être lue avec les éventuelles restrictions ou mesures intervenues depuis."
+              },
+              {
+                "kind": "heading",
+                "text": "Organiser une alerte utile"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un tableau de suivi comporte le document, son titulaire, son échéance, la démarche à effectuer et la preuve de réalisation. Une alerte plusieurs mois avant l'expiration laisse du temps pour obtenir un rendez-vous et compléter un dossier. Ajoutez une seconde vérification avant l'échéance : avoir envoyé une demande ne prouve pas automatiquement que le renouvellement est accordé ou que l'activité peut se poursuivre."
+              },
+              {
+                "kind": "heading",
+                "text": "Réagir à un changement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un vol de documents, une suspension de permis, une modification médicale ou la résiliation d'une assurance doit déclencher une vérification immédiate. On ne continue pas simplement parce que la prochaine course est déjà réservée. Prévenir l'exploitant et organiser une solution conforme protège le passager et l'entreprise. Conservez les échanges utiles dans le dossier professionnel."
+              }
+            ],
+            "cards": [
+              {
+                "label": "AVANT ÉCHÉANCE",
+                "text": "Préparer les pièces et réserver la formation."
+              },
+              {
+                "label": "AU DÉPÔT",
+                "text": "Vérifier la procédure et conserver la preuve."
+              },
+              {
+                "label": "AVANT DÉPART",
+                "text": "Contrôler que le droit d’exercer reste valide."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.04.webp",
+            "diagram_text": [
+              "Un tableau de suivi utile",
+              "Document Titulaire + échéance",
+              "Démarche Interlocuteur + pièces",
+              "Suivi Action datée + état réel du dossier",
+              "Vérifiez une date et la réalité du droit : un document peut être suspendu avant son échéance."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-04-atelier",
+          "title": "À vous de jouer · Entretenir son droit d’exercer",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.04",
+            "title": "Entretenir son droit d’exercer",
+            "objective": "Organiser les échéances qui conditionnent l’activité.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "La carte expire dans huit mois mais l’aptitude médicale dans un mois. Quelle échéance traiter en priorité ?",
+                "options": [
+                  {
+                    "id": "1ab4bbe4baf6",
+                    "text": "Uniquement la carte professionnelle"
+                  },
+                  {
+                    "id": "d930bc3334f3",
+                    "text": "L’aptitude médicale, sans oublier les autres échéances"
+                  },
+                  {
+                    "id": "0a9a38f9b460",
+                    "text": "Aucune avant le prochain contrôle policier"
+                  }
+                ],
+                "answer": "d930bc3334f3",
+                "explanation": "Les validités se suivent séparément. Une carte valide ne prolonge pas un avis médical arrivé à échéance.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Comment organiser la continuité du droit d’exercer ?",
+                "options": [
+                  {
+                    "id": "39718fa5ad33",
+                    "text": "Tenir un calendrier distinct des titres, contrôles et assurances"
+                  },
+                  {
+                    "id": "1adac228b137",
+                    "text": "Attendre un rappel automatique de l’application"
+                  },
+                  {
+                    "id": "9ea74e07edb9",
+                    "text": "Conserver seulement une photo du permis"
+                  }
+                ],
+                "answer": "39718fa5ad33",
+                "explanation": "Chaque pièce a sa fonction et sa durée. Les démarches doivent être anticipées avant l’expiration.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.04"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "AVANT ÉCHÉANCE"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "AVANT DÉPART"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "AU DÉPÔT"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Préparer les pièces et réserver la formation.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Vérifier la procédure et conserver la preuve.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Contrôler que le droit d’exercer reste valide.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.04. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-05",
+      "title": "A.05 · Assurer le conducteur et l’activité",
+      "activities": [
+        {
+          "id": "vtc-a-05-cours",
+          "title": "Assurer le conducteur et l’activité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.05",
+            "title": "Assurer le conducteur et l’activité",
+            "page": 26,
+            "pages": [
+              26,
+              27
+            ],
+            "objective": "Comprendre les deux protections professionnelles essentielles.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L’assurance automobile doit couvrir le transport de personnes à titre onéreux. Une assurance destinée aux déplacements privés ou au trajet domicile-travail ne suffit pas. Le conducteur doit pouvoir présenter le justificatif requis lors d’un contrôle, même après la suppression de la carte verte pour les véhicules concernés."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La responsabilité civile professionnelle d’exploitation couvre, selon le contrat, des dommages liés à l’activité en dehors de la circulation. Franchise, exclusions, personnes autorisées à conduire et territoire doivent être examinés. L’assureur doit connaître l’usage réel du véhicule. Une responsabilité civile indemnise un dommage couvert ; elle n’efface ni une infraction ni une sanction pénale."
+              },
+              {
+                "kind": "heading",
+                "text": "Identifier ce qui est assuré"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un contrat d'assurance définit un risque, un assuré et des conditions. Pour le VTC, l'usage de transport de personnes à titre onéreux doit être déclaré. Vérifiez l'identité de l'entreprise, le véhicule, les conducteurs autorisés, les territoires couverts et la période de garantie. Une attestation pour un autre véhicule ou une ancienne activité ne devient pas valable parce qu'elle figure dans votre dossier."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre les mots du contrat"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La garantie décrit ce que l'assureur prend en charge. L'exclusion désigne une situation qui n'entre pas dans cette protection. La franchise correspond à une part qui peut rester à votre charge. Le plafond limite l'indemnisation contractuelle. L'assistance peut aider en cas de panne, mais ses conditions et celles d'un véhicule de remplacement doivent être lues séparément : un remplacement proposé doit aussi pouvoir être utilisé légalement en VTC."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer les protections"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'assurance de circulation concerne les risques liés à l'usage du véhicule. La responsabilité civile professionnelle d'exploitation répond à d'autres dommages professionnels selon le contrat. Une garantie dommages au véhicule, une protection juridique ou une couverture de perte d'exploitation répondent encore à des besoins différents. Leur nom commercial ne suffit pas : demandez une confirmation écrite lorsqu'un point important reste incertain."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CIRCULATION",
+                "text": "Dommages liés à l’usage du véhicule assuré."
+              },
+              {
+                "label": "EXPLOITATION",
+                "text": "Dommages professionnels hors circulation."
+              },
+              {
+                "label": "CONTRAT",
+                "text": "Garanties, exclusions, franchise et déclaration."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.05.webp",
+            "diagram_text": [
+              "Deux protections à examiner",
+              "Circulation",
+              "Exploitation",
+              "Dommages liés à l’usage du véhicule assuré.",
+              "Dommages professionnels hors circulation, selon le contrat.",
+              "Lire le contrat avec quatre questions",
+              "Garantie Qu’est-ce qui est couvert ?",
+              "Exclusion Qu’est-ce qui ne l’est pas ?",
+              "Franchise Quelle part peut rester à payer ?",
+              "Plafond Quelle limite d’indemnisation ?",
+              "La bonne assurance est celle qui couvre l’usage réel, le véhicule et le conducteur."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-05-atelier",
+          "title": "À vous de jouer · Assurer le conducteur et l’activité",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.05",
+            "title": "Assurer le conducteur et l’activité",
+            "objective": "Comprendre les deux protections professionnelles essentielles.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un contrat porte la mention « tous risques ». Que faut-il encore vérifier avant une course payante ?",
+                "options": [
+                  {
+                    "id": "422cac51e332",
+                    "text": "Seulement la couleur du véhicule"
+                  },
+                  {
+                    "id": "e1a4b20d065b",
+                    "text": "La couverture du transport de personnes à titre onéreux"
+                  },
+                  {
+                    "id": "933c51fa95e2",
+                    "text": "Rien : tous les usages sont automatiquement couverts"
+                  }
+                ],
+                "answer": "e1a4b20d065b",
+                "explanation": "La formule commerciale ne prouve pas que l’usage professionnel exact est assuré ; les garanties doivent être contrôlées.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle différence entre l’assurance automobile professionnelle et la RC professionnelle ?",
+                "options": [
+                  {
+                    "id": "0341591731c5",
+                    "text": "La RC professionnelle remplace toujours l’assurance du véhicule"
+                  },
+                  {
+                    "id": "93de9b521ddd",
+                    "text": "Elles couvrent des risques différents et doivent être examinées ensemble"
+                  },
+                  {
+                    "id": "056ca18acdf8",
+                    "text": "Une réservation remplace les deux garanties"
+                  }
+                ],
+                "answer": "93de9b521ddd",
+                "explanation": "L’usage du véhicule et les responsabilités de l’activité ne se confondent pas. Il faut vérifier les garanties et leurs limites.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.05"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "CIRCULATION"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "CONTRAT"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "EXPLOITATION"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Garanties, exclusions, franchise et déclaration.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Dommages liés à l’usage du véhicule assuré.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Dommages professionnels hors circulation.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.05. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-06",
+      "title": "A.06 · Accueillir sans discriminer",
+      "activities": [
+        {
+          "id": "vtc-a-06-cours",
+          "title": "Accueillir sans discriminer",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.06",
+            "title": "Accueillir sans discriminer",
+            "page": 28,
+            "pages": [
+              28,
+              29
+            ],
+            "objective": "Fonder une décision sur des critères légitimes.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une discrimination consiste notamment à traiter défavorablement une personne dans une situation visée par la loi en raison d’un critère protégé. Refuser un service du fait de l’origine, du handicap, du sexe, de la religion réelle ou supposée ou de l’orientation sexuelle est interdit. Le Code pénal protège aussi de nombreux autres critères : âge, état de santé, grossesse, apparence physique, lieu de résidence, entre autres."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Il faut distinguer un motif discriminatoire d’une impossibilité objective et proportionnée : véhicule matériellement inadapté, capacité dépassée, risque immédiat établi. Expliquer les faits, proposer une solution compatible et tracer la décision réduit les malentendus. Une préférence personnelle ou une demande discriminatoire d’un partenaire n’est pas un motif légitime."
+              },
+              {
+                "kind": "heading",
+                "text": "Reconnaître le mécanisme"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une discrimination peut se produire à la réservation, lors de l'accueil ou pendant la prestation. Elle ne prend pas toujours la forme d'une insulte : appliquer systématiquement une condition moins favorable à des personnes en raison d'un critère protégé peut aussi poser problème. Un préjugé transforme une caractéristique personnelle supposée en décision de service, sans examiner la situation réelle."
+              },
+              {
+                "kind": "heading",
+                "text": "Distinguer une limite matérielle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le nombre de places, un équipement indispensable absent ou un danger concret doivent être évalués à partir de faits. La question est : « Qu'est-ce qui empêche objectivement cette mission et quelle solution sûre existe ? » Elle n'est pas : « À quelle catégorie de personnes le client appartient-il ? » Une contrainte véritable s'explique précisément ; elle ne justifie pas un refus général pour toutes les personnes présentant la même caractéristique."
+              },
+              {
+                "kind": "heading",
+                "text": "Adopter une méthode de réponse"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Écoutez la demande, vérifiez les moyens disponibles, cherchez une adaptation possible et expliquez la décision sans jugement. Une consigne d'hôtel ou de plateforme ne rend pas légitime une discrimination. Conservez seulement les informations utiles à la compréhension de l'incident. Évitez les appréciations sur l'origine, la religion, l'apparence ou la vie privée dans les commentaires internes."
+              }
+            ],
+            "cards": [
+              {
+                "label": "OBSERVATION",
+                "text": "Décrire les faits vérifiables."
+              },
+              {
+                "label": "DÉCISION",
+                "text": "Appliquer le même critère à tous."
+              },
+              {
+                "label": "SOLUTION",
+                "text": "Chercher une alternative adaptée."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.06.webp",
+            "diagram_text": [
+              "Sur quoi repose la décision ?",
+              "Faits objectifs",
+              "Adaptation possible",
+              "Critère protégé",
+              "Capacité, équipement et sécurité à vérifier.",
+              "Chercher une solution sûre et l’expliquer.",
+              "Il ne peut pas justifier un refus discriminatoire.",
+              "Le cas des cinq voyageurs",
+              "1 5 voyageurs Demande reçue.",
+              "2 4 places passagers Capacité matérielle insuffisante.",
+              "3 Autre organisation Proposer une solution conforme.",
+              "Une consigne commerciale ne justifie jamais un refus fondé sur un critère interdit."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-06-atelier",
+          "title": "À vous de jouer · Accueillir sans discriminer",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.06",
+            "title": "Accueillir sans discriminer",
+            "objective": "Fonder une décision sur des critères légitimes.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un partenaire demande de refuser les clients d’une certaine origine. Quelle réponse retenir ?",
+                "options": [
+                  {
+                    "id": "9c0f00c7d402",
+                    "text": "Refuser cette consigne discriminatoire"
+                  },
+                  {
+                    "id": "2191b880528a",
+                    "text": "Appliquer la consigne si elle est écrite"
+                  },
+                  {
+                    "id": "79978f6dd7bb",
+                    "text": "L’appliquer uniquement aux nouveaux clients"
+                  }
+                ],
+                "answer": "9c0f00c7d402",
+                "explanation": "L’origine est un critère protégé. Une demande commerciale ne légitime pas une discrimination.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un passager annonce un handicap. Quelle première démarche est adaptée ?",
+                "options": [
+                  {
+                    "id": "6ed67f92451a",
+                    "text": "Refuser automatiquement la réservation"
+                  },
+                  {
+                    "id": "afddd1fcae35",
+                    "text": "Demander l’aide souhaitée et vérifier les conditions réelles de transport"
+                  },
+                  {
+                    "id": "6c965fd84f10",
+                    "text": "Exiger son diagnostic médical complet"
+                  }
+                ],
+                "answer": "afddd1fcae35",
+                "explanation": "L’accueil se fonde sur les besoins et contraintes objectives, sans préjugé ni collecte médicale inutile.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.06"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "OBSERVATION"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SOLUTION"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "DÉCISION"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Appliquer le même critère à tous.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Chercher une alternative adaptée.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Décrire les faits vérifiables.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.06. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-07",
+      "title": "A.07 · Prévenir les violences sexistes et sexuelles",
+      "activities": [
+        {
+          "id": "vtc-a-07-cours",
+          "title": "Prévenir les violences sexistes et sexuelles",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.07",
+            "title": "Prévenir les violences sexistes et sexuelles",
+            "page": 31,
+            "pages": [
+              31,
+              32
+            ],
+            "objective": "Repérer des comportements inacceptables sans les banaliser.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un propos ou comportement à connotation sexuelle ou sexiste peut porter atteinte à la dignité ou créer une situation intimidante, hostile ou offensante. L’outrage, le harcèlement sexuel, l’agression sexuelle et le viol correspondent à des qualifications distinctes. Le harcèlement peut notamment résulter de propos répétés ou d’une pression grave, même unique, pour obtenir un acte sexuel."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Depuis novembre 2025, l’article 222-22 explicite le consentement : il doit être libre, éclairé, spécifique, préalable et révocable. Le silence ou l’absence de réaction ne suffisent pas. Dans la relation professionnelle, vous gardez une distance respectueuse : aucune remarque sur le corps, aucune sollicitation intime, aucun contact imposé. Une tenue, l’alcool ou la gentillesse d’un passager ne constituent pas un consentement."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre la position du passager"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Dans un véhicule, le passager dépend du conducteur pour le déplacement et peut se sentir isolé. Cette situation impose une grande retenue. Une conversation aimable n'autorise aucune remarque intime, aucun commentaire sur le corps et aucun contact non souhaité. Demander de l'aide avec une ceinture ou un bagage ne donne pas un accord général pour toucher la personne."
+              },
+              {
+                "kind": "heading",
+                "text": "Ne pas banaliser les signaux"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une demande insistante, une plaisanterie sexuelle ou une menace liée à un avis client peut créer une pression. Le consentement ne se déduit ni d'un sourire ni du silence. Une personne peut se figer, être confuse ou craindre une réaction. La conduite professionnelle consiste à respecter les limites, arrêter les comportements déplacés et ne pas réclamer une justification au refus."
+              },
+              {
+                "kind": "heading",
+                "text": "Réagir si la situation dérape"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Gardez une conduite stable, exprimez une limite claire et recherchez une solution sûre. Si le risque augmente, arrêtez-vous dans un lieu adapté et sollicitez les secours selon l'urgence. La protection vaut aussi pour le chauffeur victime de comportements inacceptables. Ne cherchez pas à obtenir un récit détaillé en roulant : cela détourne l'attention et peut mettre tout le monde en danger."
+              }
+            ],
+            "cards": [
+              {
+                "label": "REPÉRER",
+                "text": "Paroles, gestes, pression ou contrainte."
+              },
+              {
+                "label": "FAIRE CESSER",
+                "text": "Poser une limite sans aggraver le danger."
+              },
+              {
+                "label": "PROTÉGER",
+                "text": "Mettre en sécurité et demander de l’aide."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.07.webp",
+            "diagram_text": [
+              "Une limite professionnelle claire",
+              "Le numéro personnel de la conductrice.",
+              "Demande insistante",
+              "Réponse « Pour les réservations, utilisez le contact professionnel. »",
+              "Si menace Privilégier la sécurité et demander de l’aide.",
+              "La courtoisie professionnelle ne crée aucune obligation d’accepter une sollicitation intime."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-07-atelier",
+          "title": "À vous de jouer · Prévenir les violences sexistes et sexuelles",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.07",
+            "title": "Prévenir les violences sexistes et sexuelles",
+            "objective": "Repérer des comportements inacceptables sans les banaliser.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Le silence d’une personne vaut-il accord à un geste intime ?",
+                "options": [
+                  {
+                    "id": "645d908bc651",
+                    "text": "Oui, si la course est terminée"
+                  },
+                  {
+                    "id": "94448970bb43",
+                    "text": "Non"
+                  },
+                  {
+                    "id": "a1139cf998a0",
+                    "text": "Oui, si elle sourit"
+                  }
+                ],
+                "answer": "94448970bb43",
+                "explanation": "Le consentement ne se présume pas à partir du silence. La relation professionnelle ne donne aucun droit à un contact intime.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un client harcèle le conducteur par messages après la course. Que faire ?",
+                "options": [
+                  {
+                    "id": "fbcc599351f5",
+                    "text": "Conserver les traces utiles et utiliser les canaux de signalement adaptés"
+                  },
+                  {
+                    "id": "c79099f23e2e",
+                    "text": "Accepter ses demandes pour éviter une mauvaise note"
+                  },
+                  {
+                    "id": "2a13639aa80b",
+                    "text": "Publier ses coordonnées pour le dénoncer"
+                  }
+                ],
+                "answer": "fbcc599351f5",
+                "explanation": "Les preuves utiles sont conservées sans diffusion publique. En cas de danger immédiat, appeler les secours ou les forces de l’ordre.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.07"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "REPÉRER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "PROTÉGER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "FAIRE CESSER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Mettre en sécurité et demander de l’aide.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Poser une limite sans aggraver le danger.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Paroles, gestes, pression ou contrainte.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.07. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-08",
+      "title": "A.08 · Aider une personne en danger",
+      "activities": [
+        {
+          "id": "vtc-a-08-cours",
+          "title": "Aider une personne en danger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.08",
+            "title": "Aider une personne en danger",
+            "page": 33,
+            "pages": [
+              33,
+              34
+            ],
+            "objective": "Choisir une réponse utile et proportionnée.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Votre priorité est la sécurité, pas l’enquête. Si une personne se dit menacée, écoutez sans la culpabiliser, demandez de quoi elle a besoin et évitez de la laisser dans un lieu dangereux. En circulation, stabilisez d’abord la conduite puis recherchez un arrêt sûr. N’intervenez pas physiquement si cela aggrave le risque."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Pour une urgence : 17 ou 112, et 15 pour une urgence médicale. Le 114 permet notamment aux personnes sourdes ou malentendantes d’alerter ; il peut être utilisé par SMS lorsqu’il est impossible de parler. Le 3919 informe sur les violences faites aux femmes mais n’est pas un service d’intervention urgente. Le 116 006 oriente les victimes. Notez les faits utiles sans diffuser l’identité de la personne."
+              },
+              {
+                "kind": "heading",
+                "text": "Protéger avant de raconter"
+              },
+              {
+                "kind": "paragraph",
+                "text": "En situation d'urgence, une action précipitée peut ajouter un danger. En circulation, gardez le contrôle du véhicule puis recherchez un arrêt sûr. Observez les menaces immédiates : circulation, agresseur, fumée, état de la personne. Ne vous exposez pas inutilement et ne transformez pas le véhicule en moyen d'évacuation médicale improvisée. L'urgence demande une coordination avec les services compétents."
+              },
+              {
+                "kind": "heading",
+                "text": "Construire le message"
+              },
+              {
+                "kind": "paragraph",
+                "text": "L'interlocuteur doit savoir où intervenir, ce qui se passe, combien de personnes sont concernées et quels dangers persistent. Donnez une adresse, le sens de circulation ou un repère précis. Distinguez ce que vous voyez de ce que quelqu'un vous a raconté. Décrivez l'état observable sans annoncer un diagnostic. Répondez aux questions et ne raccrochez pas avant que l'opérateur l'indique."
+              },
+              {
+                "kind": "heading",
+                "text": "Accompagner avec mesure"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une personne victime a besoin d'être écoutée sans jugement. Proposez des choix simples, expliquez les démarches utiles et respectez sa dignité. En cas de danger immédiat, l'appel d'urgence est prioritaire. Les numéros d'information et d'accompagnement ne remplacent pas l'intervention des secours. Après l'alerte, surveillez l'évolution et transmettez toute aggravation à l'opérateur."
+              }
+            ],
+            "cards": [
+              {
+                "label": "SÉCURISER",
+                "text": "Un lieu, une conduite et une distance adaptés."
+              },
+              {
+                "label": "ALERTER",
+                "text": "Lieu exact, faits, victimes, danger."
+              },
+              {
+                "label": "ACCOMPAGNER",
+                "text": "Écouter et suivre les consignes reçues."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.08.webp",
+            "diagram_text": [
+              "Construire un message d’alerte",
+              "Où ? Parking de l’hôtel, entrée côté avenue.",
+              "Quoi ? Une passagère présente un malaise et répond.",
+              "Accès ? Véhicule immobilisé, accès libre.",
+              "Écouter, protéger, alerter : vous n’avez pas à établir vous-même la qualification pénale."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-08-atelier",
+          "title": "À vous de jouer · Aider une personne en danger",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.08",
+            "title": "Aider une personne en danger",
+            "objective": "Choisir une réponse utile et proportionnée.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Vous observez une agression en cours. Quel numéro correspond à une alerte urgente ?",
+                "options": [
+                  {
+                    "id": "df7c2d9c1e39",
+                    "text": "17 ou 112"
+                  },
+                  {
+                    "id": "9ce4d3dd69eb",
+                    "text": "Le service fiscal"
+                  },
+                  {
+                    "id": "309abb1b90c6",
+                    "text": "3919 comme unique numéro d’urgence"
+                  }
+                ],
+                "answer": "df7c2d9c1e39",
+                "explanation": "Le 17 et le 112 permettent l’alerte urgente ; le 3919 est un service d’écoute et d’information.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Quelle information transmettre en priorité pour faire venir de l’aide ?",
+                "options": [
+                  {
+                    "id": "7cdf29ef8a51",
+                    "text": "Le prix de la course uniquement"
+                  },
+                  {
+                    "id": "3f5fce8ff378",
+                    "text": "Une supposition sur la personnalité de l’auteur"
+                  },
+                  {
+                    "id": "f50f392f6a11",
+                    "text": "Le lieu précis et la nature du danger actuel"
+                  }
+                ],
+                "answer": "f50f392f6a11",
+                "explanation": "La localisation et les faits observés orientent les secours. Évitez les diagnostics et restez disponible pour l’opérateur.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.08"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "ACCOMPAGNER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "SÉCURISER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "ALERTER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r2",
+                    "text": "Écouter et suivre les consignes reçues.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Un lieu, une conduite et une distance adaptés.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Lieu exact, faits, victimes, danger.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.08. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-09",
+      "title": "A.09 · Adapter le service au handicap",
+      "activities": [
+        {
+          "id": "vtc-a-09-cours",
+          "title": "Adapter le service au handicap",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.09",
+            "title": "Adapter le service au handicap",
+            "page": 36,
+            "pages": [
+              36,
+              37
+            ],
+            "objective": "Proposer de l’aide en respectant l’autonomie.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un handicap peut être visible ou invisible. Adressez-vous au passager, même s’il est accompagné. Demandez quelle aide lui convient avant de toucher sa personne, son fauteuil ou son matériel. Les besoins de communication, de temps et d’espace sont différents ; une question ouverte vaut mieux qu’une supposition."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Les chiens guides et d’assistance accompagnant les personnes concernées bénéficient d’un droit d’accès aux transports dans les conditions légales, sans supplément lié à leur présence. Un VTC classique n’est pas nécessairement équipé pour transporter une personne restant dans son fauteuil. Vérifiez les possibilités techniques dès la réservation et cherchez une solution adaptée, sans promettre une manœuvre ou un transfert que vous ne maîtrisez pas."
+              },
+              {
+                "kind": "heading",
+                "text": "Commencer par la personne"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le passager connaît souvent très bien ses besoins. Présentez-vous, adressez-vous directement à lui et demandez l'aide souhaitée. Une difficulté de déplacement ne signifie pas une difficulté de compréhension. Une déficience visuelle ne signifie pas qu'il faut parler plus fort. Une difficulté auditive peut demander de se placer face à la personne et d'utiliser un message écrit simple, à l'arrêt."
+              },
+              {
+                "kind": "heading",
+                "text": "Préparer la prestation"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La réservation sert à vérifier le nombre de voyageurs, le volume du matériel, les conditions d'accès et l'équipement nécessaire. Un fauteuil transporté plié dans le coffre et un passager voyageant assis dans son fauteuil sont deux situations techniques différentes. Ne promettez pas une installation que le véhicule ne permet pas. Prévoyez davantage de temps lorsque c'est utile, sans présenter cette adaptation comme un reproche."
+              },
+              {
+                "kind": "heading",
+                "text": "Respecter les aides et les objets"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un fauteuil, une canne et un chien guide participent à l'autonomie. Ne déplacez pas le matériel sans accord. Ne distrayez pas un chien d'assistance au travail. Expliquez les obstacles, l'emplacement de la porte et les étapes de l'installation avec des indications concrètes. Avant de fermer la porte, vérifiez que la personne et son équipement sont dégagés et correctement installés."
+              }
+            ],
+            "cards": [
+              {
+                "label": "DEMANDER",
+                "text": "« Quelle aide vous serait utile ? »"
+              },
+              {
+                "label": "VÉRIFIER",
+                "text": "Espace, équipement et conditions sûres."
+              },
+              {
+                "label": "ACCOMPAGNER",
+                "text": "Respecter le rythme et les choix."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.09.webp",
+            "diagram_text": [
+              "Une cliente malvoyante",
+              "1 Se présenter S’adresser directement à la cliente.",
+              "2 Décrire La marche et la position de la porte.",
+              "3 Accompagner Suivre l’aide qu’elle a choisie.",
+              "L’aide se propose et se confirme ; elle ne s’impose pas."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-09-atelier",
+          "title": "À vous de jouer · Adapter le service au handicap",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.09",
+            "title": "Adapter le service au handicap",
+            "objective": "Proposer de l’aide en respectant l’autonomie.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Une cliente voyage avec son chien d’assistance. Quelle proposition est correcte ?",
+                "options": [
+                  {
+                    "id": "e2b24a624a0c",
+                    "text": "Placer obligatoirement le chien dans le coffre"
+                  },
+                  {
+                    "id": "9351d74cd2ba",
+                    "text": "Préparer une installation sûre dans l’habitacle, sans supplément pour le chien"
+                  },
+                  {
+                    "id": "325bb94b6774",
+                    "text": "Facturer un supplément automatique"
+                  }
+                ],
+                "answer": "9351d74cd2ba",
+                "explanation": "Le chien accompagne sa bénéficiaire. L’organisation respecte la sécurité et l’absence de supplément pour cet accompagnement.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Avant d’aider une personne à s’installer, que faire ?",
+                "options": [
+                  {
+                    "id": "a27e58077aff",
+                    "text": "Proposer l’aide et attendre son accord"
+                  },
+                  {
+                    "id": "742c67aed0f4",
+                    "text": "Parler uniquement à son accompagnateur"
+                  },
+                  {
+                    "id": "203ead0756ee",
+                    "text": "La soulever immédiatement"
+                  }
+                ],
+                "answer": "a27e58077aff",
+                "explanation": "La personne reste décisionnaire. Demandez comment aider, sans geste imposé ni présomption sur ses capacités.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.09"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c2",
+                    "text": "ACCOMPAGNER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "VÉRIFIER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "DEMANDER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "« Quelle aide vous serait utile ? »",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Espace, équipement et conditions sûres.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Respecter le rythme et les choix.",
+                    "answer": "c2"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.09. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-10",
+      "title": "A.10 · Protéger les données des passagers",
+      "activities": [
+        {
+          "id": "vtc-a-10-cours",
+          "title": "Protéger les données des passagers",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.10",
+            "title": "Protéger les données des passagers",
+            "page": 39,
+            "pages": [
+              39,
+              40
+            ],
+            "objective": "Utiliser seulement les informations nécessaires au service.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une réservation contient des données personnelles : nom, téléphone, adresse et horaires. Définissez pourquoi vous en avez besoin, qui peut les voir et combien de temps vous les conservez. Les obligations légales, par exemple comptables, doivent être distinguées d’un carnet de prospection. Collecter une copie de pièce d’identité sans nécessité n’est pas une bonne habitude."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Verrouillez les appareils, limitez les accès et évitez les captures de réservations diffusées dans des groupes. Un incident de confidentialité se documente et se traite rapidement ; selon le risque, une notification à la CNIL et aux personnes peut être nécessaire. Une caméra embarquée ne dispense pas des règles d’information et de protection des données ; n’installez pas une surveillance permanente de l’habitacle par réflexe."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre la donnée personnelle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un nom, un numéro de téléphone ou une adresse permettent d'identifier une personne, directement ou par recoupement. Un historique de trajets peut révéler des habitudes et des lieux sensibles. Le fait d'avoir reçu ces informations pour une réservation ne permet pas de les utiliser pour n'importe quel objectif. La confidentialité participe à la qualité du service, au même titre que la ponctualité."
+              },
+              {
+                "kind": "heading",
+                "text": "Limiter les accès et les usages"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Collectez l'information nécessaire au transport, expliquez son usage et protégez les outils utilisés. Un téléphone doit être verrouillé ; un accès professionnel ne se partage pas sans contrôle. Séparez les pièces à conserver pour une obligation légale du fichier servant à organiser les courses et de la liste de prospection. La durée de conservation doit répondre à une finalité réelle, avec une suppression ou un archivage organisé."
+              },
+              {
+                "kind": "heading",
+                "text": "Traiter une erreur rapidement"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un message envoyé au mauvais destinataire ou un appareil perdu peut exposer des données. Notez ce qui s'est passé, limitez l'accès lorsque c'est possible et informez la personne responsable dans l'entreprise. Elle évalue le risque et les démarches nécessaires. Effacer discrètement un message de votre écran ne garantit pas qu'il a disparu chez son destinataire."
+              }
+            ],
+            "cards": [
+              {
+                "label": "COLLECTER",
+                "text": "Une finalité précise et des données utiles."
+              },
+              {
+                "label": "PROTÉGER",
+                "text": "Accès limité, appareil verrouillé."
+              },
+              {
+                "label": "EFFACER",
+                "text": "Une durée justifiée, puis suppression sûre."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.10.webp",
+            "diagram_text": [
+              "Transmettre une course à un collègue",
+              "Le bon dossier Seulement la mission concernée.",
+              "Le bon destinataire Une personne autorisée.",
+              "Le bon canal Un échange professionnel adapté.",
+              "Une donnée disponible n’est pas une donnée librement partageable."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-10-atelier",
+          "title": "À vous de jouer · Protéger les données des passagers",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.10",
+            "title": "Protéger les données des passagers",
+            "objective": "Utiliser seulement les informations nécessaires au service.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Pour comparer les revenus entre collègues, quelle donnée partager ?",
+                "options": [
+                  {
+                    "id": "8f7bb3e2bafd",
+                    "text": "Les captures complètes des réservations"
+                  },
+                  {
+                    "id": "86ea9c94a8d4",
+                    "text": "Un bilan agrégé sans données identifiantes de clients"
+                  },
+                  {
+                    "id": "2a9143aa9499",
+                    "text": "La liste des téléphones sans les noms"
+                  }
+                ],
+                "answer": "86ea9c94a8d4",
+                "explanation": "Téléphones, adresses et trajets peuvent identifier les personnes. Un bilan agrégé permet la comparaison sans ces données.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Un client oublie son bagage. Quel usage de ses coordonnées est pertinent ?",
+                "options": [
+                  {
+                    "id": "605b0bc28100",
+                    "text": "Le contacter pour organiser la restitution"
+                  },
+                  {
+                    "id": "2468ddad2af9",
+                    "text": "Publier son hôtel sur un réseau social"
+                  },
+                  {
+                    "id": "63c2844b8df3",
+                    "text": "Les ajouter à une campagne commerciale sans autre vérification"
+                  }
+                ],
+                "answer": "605b0bc28100",
+                "explanation": "La restitution correspond au besoin concret de la prestation ; elle n’autorise pas des usages sans rapport.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.10"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "PROTÉGER"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "COLLECTER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "EFFACER"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Une finalité précise et des données utiles.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Une durée justifiée, puis suppression sûre.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Accès limité, appareil verrouillé.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.10. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-11",
+      "title": "A.11 · Réagir à un contrôle",
+      "activities": [
+        {
+          "id": "vtc-a-11-cours",
+          "title": "Réagir à un contrôle",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.11",
+            "title": "Réagir à un contrôle",
+            "page": 41,
+            "pages": [
+              41,
+              42
+            ],
+            "objective": "Présenter des preuves cohérentes et à jour.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Un contrôle peut porter sur le conducteur, le véhicule, l’exploitant et la réservation. Les agents compétents vérifient notamment la carte, les assurances, les documents du véhicule et la preuve de réservation préalable. Un écran d’application ne répond pas forcément à toutes les exigences documentaires. Préparez un dossier accessible même si le réseau tombe."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Restez courtois, immobilisez-vous selon les indications reçues et répondez précisément. Vous ne devez ni fabriquer une réservation après les faits ni modifier une heure pour rendre un document cohérent. Une difficulté technique se signale ; elle ne donne pas le droit d’inventer une preuve. Conservez ensuite les références du contrôle et traitez les suites dans les délais indiqués."
+              },
+              {
+                "kind": "heading",
+                "text": "Classer par question de contrôle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Préparez quatre ensembles : le conducteur, l'exploitant, le véhicule et la mission. Le premier concerne notamment les titres personnels ; le deuxième l'activité de l'entreprise ; le troisième le véhicule effectivement utilisé et ses garanties ; le quatrième la réservation réelle. Cette organisation permet de retrouver rapidement une preuve sans présenter une multitude de documents sans rapport."
+              },
+              {
+                "kind": "paragraph",
+                "text": "Vérifier les concordances Un dossier peut contenir toutes les catégories de pièces et rester incohérent."
+              },
+              {
+                "kind": "heading",
+                "text": "Vérifier les concordances (suite)"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Comparez les identités, la plaque, les dates et le nom de l'exploitant. Vérifiez que le document correspond à la mission actuelle. Préparez les supports avant de rouler, avec une solution accessible en cas de panne de réseau. Protéger les données des autres clients reste nécessaire pendant la présentation d'un justificatif."
+              },
+              {
+                "kind": "heading",
+                "text": "Garder une attitude professionnelle"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Suivez les indications de l'agent, immobilisez le véhicule en sécurité et répondez à la question posée. Si vous ne comprenez pas une demande, faites-la préciser. Une pièce absente se signale honnêtement ; on ne modifie pas une réservation pour créer une apparence de conformité. Après le contrôle, relevez les suites à traiter et les délais communiqués."
+              }
+            ],
+            "cards": [
+              {
+                "label": "PRÉSENTER",
+                "text": "Les justificatifs réellement demandés."
+              },
+              {
+                "label": "EXPLIQUER",
+                "text": "Des faits précis, sans fausse déclaration."
+              },
+              {
+                "label": "SUIVRE",
+                "text": "Conserver les références et respecter les délais."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.11.webp",
+            "diagram_text": [
+              "Quatre volets à préparer",
+              "Conducteur",
+              "Véhicule",
+              "Carte et situation personnelle.",
+              "Documents et assurance cohérents.",
+              "Exploitant",
+              "Réservation",
+              "Inscription et pièces de l’activité.",
+              "Preuve préalable accessible.",
+              "Pendant et après le contrôle",
+              "1 Présenter Les pièces demandées.",
+              "2 Expliquer Des faits précis.",
+              "3 Suivre Références et délais.",
+              "La conformité se prépare avant la course ; elle ne se reconstruit pas après le contrôle."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-11-atelier",
+          "title": "À vous de jouer · Réagir à un contrôle",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.11",
+            "title": "Réagir à un contrôle",
+            "objective": "Présenter des preuves cohérentes et à jour.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un justificatif présente une heure de réservation postérieure au départ. Que faire lors du contrôle ?",
+                "options": [
+                  {
+                    "id": "5e2312a814d3",
+                    "text": "Antidater le document à la main"
+                  },
+                  {
+                    "id": "908cb1170f4f",
+                    "text": "Supprimer le trajet de l’application"
+                  },
+                  {
+                    "id": "0575ca11270a",
+                    "text": "Présenter les faits et documents authentiques sans falsifier l’heure"
+                  }
+                ],
+                "answer": "0575ca11270a",
+                "explanation": "Une modification destinée à masquer la chronologie ne rend pas la réservation préalable et peut aggraver la situation.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "Comment prévenir une panne de téléphone lors d’un contrôle ?",
+                "options": [
+                  {
+                    "id": "c5e150a843b5",
+                    "text": "Conserver uniquement des documents périmés"
+                  },
+                  {
+                    "id": "9b683b16bdf6",
+                    "text": "Prévoir un accès sécurisé aux documents à jour"
+                  },
+                  {
+                    "id": "ca50fc3d5a2f",
+                    "text": "Montrer les réservations de tous les clients"
+                  }
+                ],
+                "answer": "9b683b16bdf6",
+                "explanation": "Le justificatif utile doit rester accessible sans exposer inutilement les données d’autres personnes.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.11"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c0",
+                    "text": "PRÉSENTER"
+                  },
+                  {
+                    "id": "c1",
+                    "text": "EXPLIQUER"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "SUIVRE"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Les justificatifs réellement demandés.",
+                    "answer": "c0"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Conserver les références et respecter les délais.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Des faits précis, sans fausse déclaration.",
+                    "answer": "c1"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.11. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-12",
+      "title": "A.12 · Comprendre les responsabilités",
+      "activities": [
+        {
+          "id": "vtc-a-12-cours",
+          "title": "Comprendre les responsabilités",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 25,
+          "blocks": [],
+          "vtc": {
+            "ref": "A.12",
+            "title": "Comprendre les responsabilités",
+            "page": 43,
+            "pages": [
+              43,
+              44
+            ],
+            "objective": "Distinguer indemnisation, sanction et mesure administrative.",
+            "paragraphs": [
+              {
+                "kind": "heading",
+                "text": "EN CLAIR"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La responsabilité civile concerne la réparation d’un dommage. La responsabilité pénale concerne une infraction et sa sanction. L’autorité administrative peut aussi suspendre ou retirer un titre dans les conditions prévues. Une même situation peut donc avoir plusieurs conséquences, sans qu’une assurance les couvre toutes."
+              },
+              {
+                "kind": "heading",
+                "text": "DANS LA PRATIQUE"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Le non-respect de la réservation préalable est sévèrement sanctionné. Depuis le 27 juin 2026, l’article L3124-12 prévoit, pour les faits qu’il vise, jusqu’à trois ans d’emprisonnement et 45 000 euros d’amende pour une personne physique, ainsi que des peines complémentaires. Il faut consulter la qualification exacte et la version du texte : toutes les irrégularités documentaires ne se confondent pas avec ce délit. Une réclamation client, elle, doit être traitée avec des faits et des preuves."
+              },
+              {
+                "kind": "heading",
+                "text": "Réparer un dommage"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La responsabilité civile vise la réparation d'un préjudice dans le cadre applicable. Un client peut demander une indemnisation pour un dommage qu'il estime lié à la prestation. Il faut analyser les faits, les obligations en jeu, le préjudice et le lien avec l'événement. L'assurance intervient selon ses garanties ; elle n'accorde pas automatiquement toute somme réclamée."
+              },
+              {
+                "kind": "heading",
+                "text": "Répondre d'une infraction"
+              },
+              {
+                "kind": "paragraph",
+                "text": "La responsabilité pénale concerne un comportement interdit par un texte et les sanctions prévues. Une assurance ne fait pas disparaître une infraction. La qualification exacte compte : une erreur dans un document, un défaut d'autorisation et une falsification ne désignent pas le même comportement. On ne déduit pas une sanction d'un simple mot entendu dans une conversation."
+              },
+              {
+                "kind": "heading",
+                "text": "Comprendre la dimension administrative"
+              },
+              {
+                "kind": "paragraph",
+                "text": "Une autorité peut également intervenir sur un titre ou le droit d'exercer dans les conditions prévues. Ces procédures répondent à leurs règles propres. Une même situation peut donc avoir des conséquences civiles, pénales et administratives. Pour un débutant, l'essentiel est d'identifier ces trois logiques, de conserver les pièces et de traiter chaque notification dans son délai."
+              }
+            ],
+            "cards": [
+              {
+                "label": "CIVIL",
+                "text": "Réparer un dommage imputable."
+              },
+              {
+                "label": "PÉNAL",
+                "text": "Répondre d’une infraction."
+              },
+              {
+                "label": "ADMINISTRATIF",
+                "text": "Conserver ou perdre un droit d’exercice."
+              }
+            ],
+            "diagram": "media/vtc/diagram-a.12.webp",
+            "diagram_text": [
+              "Une situation, plusieurs conséquences",
+              "Civil",
+              "Pénal",
+              "Administratif",
+              "Réparer un dommage.",
+              "Répondre d’une infraction.",
+              "Vérifier les conséquences sur les titres.",
+              "Après une manœuvre dangereuse",
+              "Dommage Blessure du passager et indemnisation.",
+              "Qualification et sanction à examiner.",
+              "Infraction éventuelle",
+              "Droit d’exercer Conséquences distinctes à vérifier.",
+              "Réparer un dommage et répondre d’une infraction sont deux démarches différentes."
+            ],
+            "kind": "lesson",
+            "image": "media/vtc/module-a.webp",
+            "module": "A"
+          }
+        },
+        {
+          "id": "vtc-a-12-atelier",
+          "title": "À vous de jouer · Comprendre les responsabilités",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "vtc": {
+            "kind": "workshop",
+            "ref": "A.12",
+            "title": "Comprendre les responsabilités",
+            "objective": "Distinguer indemnisation, sanction et mesure administrative.",
+            "module": "A"
+          },
+          "practice": {
+            "revision": "20261006-vtc-v2",
+            "exercises": [
+              {
+                "id": "q1",
+                "prompt": "Un bagage est endommagé pendant la prestation. Quel sujet traiter d’abord pour la réclamation ?",
+                "options": [
+                  {
+                    "id": "19d5a2e7a437",
+                    "text": "Le renouvellement du permis uniquement"
+                  },
+                  {
+                    "id": "b96510b70c4e",
+                    "text": "La responsabilité contractuelle et les garanties d’assurance"
+                  },
+                  {
+                    "id": "20d5dfdb68cd",
+                    "text": "La note de l’examen théorique"
+                  }
+                ],
+                "answer": "b96510b70c4e",
+                "explanation": "Le dommage doit être documenté et déclaré selon les garanties ; il est distinct d’une éventuelle infraction.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "q2",
+                "prompt": "L’assureur indemnise un dommage. Cela efface-t-il automatiquement une infraction routière ?",
+                "options": [
+                  {
+                    "id": "a747a7a6c62a",
+                    "text": "Oui, dès que le dommage est payé"
+                  },
+                  {
+                    "id": "5ebbfa141aab",
+                    "text": "Oui, si le client retire son avis"
+                  },
+                  {
+                    "id": "87fb19f805cc",
+                    "text": "Non, les responsabilités sont distinctes"
+                  }
+                ],
+                "answer": "87fb19f805cc",
+                "explanation": "La réparation civile n’annule pas une sanction pénale ni une mesure administrative éventuelle.",
+                "module": "A",
+                "sources": [
+                  "Manuel VTC Intégrale Academy · Leçon A.12"
+                ],
+                "kind": "single"
+              },
+              {
+                "id": "reperes",
+                "kind": "matching",
+                "prompt": "Associez chaque explication au bon repère.",
+                "options": [
+                  {
+                    "id": "c1",
+                    "text": "PÉNAL"
+                  },
+                  {
+                    "id": "c2",
+                    "text": "ADMINISTRATIF"
+                  },
+                  {
+                    "id": "c0",
+                    "text": "CIVIL"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r1",
+                    "text": "Répondre d’une infraction.",
+                    "answer": "c1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Conserver ou perdre un droit d’exercice.",
+                    "answer": "c2"
+                  },
+                  {
+                    "id": "r0",
+                    "text": "Réparer un dommage imputable.",
+                    "answer": "c0"
+                  }
+                ],
+                "explanation": "Ces trois repères reprennent le schéma de la leçon A.12. Reprenez le cours si une association reste incertaine."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "vtc-a-synthese",
+      "title": "Synthèse · relier les notions",
+      "activities": [
+        {
+          "id": "vtc-a-capsule",
+          "title": "Voir et retenir · les essentiels",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "type": "Video",
+              "video": {
+                "src": "media/vtc/v2/capsule-a.mp4",
+                "poster": "media/vtc/v2/capsule-a.jpg",
+                "captions": "media/vtc/v2/capsule-a.vtt",
+                "duration_seconds": 73.45166,
+                "transcript": "Un chauffeur effectue un déplacement uniquement pour transporter un client payant. Comment qualifier la situation ? Une prestation professionnelle de transport. Le trajet est organisé pour le client et rémunère un service ; ce n’est pas le partage des frais d’un déplacement personnel.\n\nLa carte expire dans huit mois mais l’aptitude médicale dans un mois. Quelle échéance traiter en priorité ? L’aptitude médicale, sans oublier les autres échéances. Les validités se suivent séparément. Une carte valide ne prolonge pas un avis médical arrivé à échéance.\n\nVous observez une agression en cours. Quel numéro correspond à une alerte urgente ? 17 ou 112. Le 17 et le 112 permettent l’alerte urgente ; le 3919 est un service d’écoute et d’information.\n\nUn bagage est endommagé pendant la prestation. Quel sujet traiter d’abord pour la réclamation ? La responsabilité contractuelle et les garanties d’assurance. Le dommage doit être documenté et déclaré selon les garanties ; il est distinct d’une éventuelle infraction.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "audio": true,
+                "burned_captions": true,
+                "id": "vtc-a-capsule",
+                "title": "Les essentiels · Exercer dans le cadre du T3P",
+                "required": true
+              }
+            }
+          ],
+          "vtc": {
+            "kind": "recap",
+            "module": "A",
+            "title": "Exercer dans le cadre du T3P",
+            "image": "media/vtc/module-a.webp",
+            "transcript": "Un chauffeur effectue un déplacement uniquement pour transporter un client payant. Comment qualifier la situation ? Une prestation professionnelle de transport. Le trajet est organisé pour le client et rémunère un service ; ce n’est pas le partage des frais d’un déplacement personnel.\n\nLa carte expire dans huit mois mais l’aptitude médicale dans un mois. Quelle échéance traiter en priorité ? L’aptitude médicale, sans oublier les autres échéances. Les validités se suivent séparément. Une carte valide ne prolonge pas un avis médical arrivé à échéance.\n\nVous observez une agression en cours. Quel numéro correspond à une alerte urgente ? 17 ou 112. Le 17 et le 112 permettent l’alerte urgente ; le 3919 est un service d’écoute et d’information.\n\nUn bagage est endommagé pendant la prestation. Quel sujet traiter d’abord pour la réclamation ? La responsabilité contractuelle et les garanties d’assurance. Le dommage doit être documenté et déclaré selon les garanties ; il est distinct d’une éventuelle infraction.",
+            "audio": true,
+            "cards": [
+              {
+                "label": "A.01",
+                "text": "Le transport public particulier"
+              },
+              {
+                "label": "A.02",
+                "text": "Qui fait quoi ?"
+              },
+              {
+                "label": "A.03",
+                "text": "Accéder à la profession"
+              },
+              {
+                "label": "A.04",
+                "text": "Entretenir son droit d’exercer"
+              },
+              {
+                "label": "A.05",
+                "text": "Assurer le conducteur et l’activité"
+              },
+              {
+                "label": "A.06",
+                "text": "Accueillir sans discriminer"
+              },
+              {
+                "label": "A.07",
+                "text": "Prévenir les violences sexistes et sexuelles"
+              },
+              {
+                "label": "A.08",
+                "text": "Aider une personne en danger"
+              },
+              {
+                "label": "A.09",
+                "text": "Adapter le service au handicap"
+              },
+              {
+                "label": "A.10",
+                "text": "Protéger les données des passagers"
+              },
+              {
+                "label": "A.11",
+                "text": "Réagir à un contrôle"
+              },
+              {
+                "label": "A.12",
+                "text": "Comprendre les responsabilités"
+              }
+            ]
+          }
+        },
+        {
+          "id": "vtc-a-approfondir",
+          "title": "Approfondir · repères et méthode",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 24,
+          "blocks": [],
+          "vtc": {
+            "kind": "supplements",
+            "module": "A",
+            "title": "Relier le cours à la mission",
+            "supplements": [
+              {
+                "title": "Reconnaître les transports",
+                "page": 17,
+                "image": "media/vtc/complement-17.webp",
+                "text": [
+                  "Le mot « réservation » ne suffit pas à déterminer le régime juridique du service.",
+                  "Service Caractéristique et exemple",
+                  "Régulier Places proposées sur un itinéraire, des arrêts et des horaires définis à l’avance. Exemple : une ligne de bus.",
+                  "À la demande (TAD) Service collectif dont une partie du fonctionnement est déclenchée ou adaptée à la demande, selon des règles fixées par l’organisateur. Exemple : une desserte rurale réservée la veille.",
+                  "Occasionnel collectif Transport d’un groupe constitué à l’initiative d’un donneur d’ordre ou du transporteur, hors service régulier. Exemple : un autocar affrété pour une sortie.",
+                  "T3P Transport particulier : taxi, VTC ou VMDTR. Pour le VTC, réservation préalable et règles propres au conducteur, à l’exploitant et au véhicule.",
+                  "Service privé Transport organisé pour les besoins normaux d’une structure, sous conditions de bénéficiaires, de moyens et de gratuité, avec l’exception prévue pour le personnel.",
+                  "Covoiturage Trajet réalisé par le conducteur pour son propre compte, avec partage des frais. Le déplacement n’est pas créé uniquement pour vendre un transport.",
+                  "VTC ET TAD : NE PAS CONFONDRE",
+                  "Une course VTC commandée par téléphone n’est pas, pour cette seule raison, un service public de transport à la demande. Examinez l’organisation réelle, les voyageurs concernés, le contrat et les autorisations nécessaires.",
+                  "Ministère des Transports : organisation des transports de personnes · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Les acteurs du secteur",
+                "page": 47,
+                "image": "media/vtc/complement-47.webp",
+                "text": [
+                  "Distinguer les organismes qui décident, ceux qui conseillent et ceux qui représentent.",
+                  "Des décisions prises par des autorités",
+                  "Le ministère chargé des transports encadre l’activité et le registre des exploitants. L’autorité préfectorale délivre la carte du conducteur et peut prononcer une sanction administrative. La CMA organise l’examen. Un syndicat professionnel défend des intérêts collectifs ; il ne délivre pas une autorisation d’exercer.",
+                  "La concertation nationale",
+                  "Le Comité national T3P débat des enjeux du secteur et émet des avis. Il comprend au plus 50 membres : représentants de l’État, des professionnels, des collectivités et des associations d’usagers ou d’intérêt général, à parts égales, avec d’éventuelles personnalités qualifiées dans la limite prévue par le texte.",
+                  "La commission locale T3P",
+                  "Présidée par le préfet, elle réunit trois collèges de même effectif : État, professionnels et collectivités. Des représentants des consommateurs, des personnes à mobilité réduite ou d’associations peuvent s’y ajouter. La section disciplinaire VTC réunit à parts égales l’État et les professionnels VTC. Elle donne un avis ; la décision administrative appartient à l’autorité compétente.",
+                  "LE DIALOGUE AVEC LES PLATEFORMES",
+                  "L’ARPE accompagne le dialogue social entre plateformes et représentants des indépendants VTC. Les accords collectifs de secteur concernent leur champ d’application ; ils ne remplacent ni le Code des transports ni la carte professionnelle.",
+                  "Code des transports, D. 3120-16 à D. 3120-20 • Code des transports, D. 3120-21 à D. 3120-39 · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Comprendre un contrôle",
+                "page": 48,
+                "image": "media/vtc/complement-48.webp",
+                "text": [
+                  "La réservation, le conducteur, l’entreprise et le véhicule peuvent être vérifiés ensemble.",
+                  "Intervenant Ce qu’il peut vérifier dans son champ",
+                  "Police et gendarmerie Infractions routières et transport ; identité, permis, carte, assurance, réservation et conditions réelles de prise en charge.",
+                  "Respect des règles du transport ; examen des titres et documents, contrôles sur route et en entreprise.",
+                  "Contrôleurs des transports terrestres",
+                  "Infractions pour lesquelles les textes leur donnent compétence. Toute personne en uniforme n’a pas les mêmes pouvoirs.",
+                  "Douanes et autres agents habilités",
+                  "Information sur les prix, pratiques commerciales, contrats et protection du consommateur.",
+                  "DGCCRF / services de protection des populations",
+                  "Déclarations, emploi, cotisations ou conditions de travail selon leurs compétences respectives.",
+                  "Urssaf et inspection du travail",
+                  "Les agents visés par l’article L. 1451-1 peuvent demander les documents utiles au contrôle. Ils accèdent aux lieux de prise en charge et de dépose à toute heure ; l’accès aux locaux professionnels est prévu de 8 h à 20 h, hors domiciles et locaux d’habitation.",
+                  "CONDUITE À TENIR",
+                  "Arrêtez-vous en sécurité, présentez des justificatifs lisibles et répondez sur les faits. Notez la référence du contrôle et conservez les documents remis. Une validation par une plateforme ne dispense jamais de vos propres obligations.",
+                  "Code des transports, L. 1451-1 · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Sanctions et juridictions",
+                "page": 50,
+                "image": "media/vtc/complement-50.webp",
+                "text": [
+                  "Une même situation peut avoir plusieurs conséquences, prononcées par des autorités différentes.",
+                  "Nature Autorité / juridiction Exemple",
+                  "Administrative Préfet ; recours devant le tribunal administratif",
+                  "Avertissement ou retrait temporaire / définitif de la carte pour un manquement professionnel.",
+                  "Pénale Tribunal de police pour une contravention ; tribunal correctionnel pour un délit",
+                  "Amende, suspension ou autres peines prévues pour une infraction.",
+                  "Civile / commerciale",
+                  "Tribunal judiciaire ou juridiction commerciale selon le litige",
+                  "Indemnisation d’un dommage, facture impayée, désaccord contractuel.",
+                  "Avant une sanction administrative",
+                  "La procédure doit permettre au professionnel de connaître les griefs et de présenter ses observations selon les règles applicables. Classez les pièces : décision, contrôle, réservations, attestations et correspondances. Une sanction de la carte et une suspension du permis concernent deux documents distincts.",
+                  "CAS EXPLIQUÉ",
+                  "Un chauffeur est poursuivi pour une infraction et reçoit aussi un courrier préfectoral concernant sa carte. Répondre au tribunal ne répond pas automatiquement à la procédure préfectorale : il doit suivre les deux dossiers et leurs délais.",
+                  "Code des transports, D. 3120-21 à D. 3120-39 · vérifiés le 29.09.2026"
+                ]
+              },
+              {
+                "title": "Exercer un recours",
+                "page": 51,
+                "image": "media/vtc/complement-51.webp",
+                "text": [
+                  "Identifier d’abord la décision contestée, puis la bonne procédure et le délai.",
+                  "Une décision administrative",
+                  "En métropole, le délai de recours contentieux est en principe de deux mois à compter de la notification. Lisez les voies et délais indiqués. Un recours gracieux s’adresse à l’auteur de la décision ; un recours hiérarchique, à son supérieur ; le recours contentieux, au tribunal administratif.",
+                  "Un recours administratif adressé dans le délai interrompt en principe le délai contentieux. Un nouveau délai commence au rejet, explicite ou implicite. Le silence pendant deux mois vaut généralement rejet du recours. Une procédure spéciale ou un recours préalable obligatoire peut modifier cette règle.",
+                  "UNE CONTESTATION NE SUSPEND PAS LA DÉCISION",
+                  "Un recours ne permet pas, à lui seul, de recommencer à conduire avec un permis suspendu ou une carte retirée. Une suspension de l’exécution relève notamment du juge des référés, sous conditions.",
+                  "Un avis de contravention routière",
+                  "Le délai de contestation est de 45 jours pour l’amende forfaitaire. Pour l’amende majorée : en principe un mois, porté à trois mois pour une contravention routière envoyée en recommandé. Suivez l’avis et la procédure ANTAI ; une consignation, lorsqu’elle est requise, n’est pas le paiement de l’amende.",
+                  "Méthode : conservez la date de réception et l’enveloppe, exposez les faits, joignez vos preuves et gardez une preuve d’envoi. Les délais d’appel d’un jugement sont différents de ceux d’un avis d’amende.",
+                  "Service Public : recours administratifs • ANTAI : désignation et contestation · vérifiés le 29.09.2026"
+                ]
+              }
+            ],
+            "sources": [
+              {
+                "title": "Programme et modalités de l’examen · arrêté du 6 avril 2017 modifié",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034379046/"
+              },
+              {
+                "title": "Devenir chauffeur de VTC · Service Public",
+                "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+              },
+              {
+                "title": "Réforme de l’accès par expérience · décret du 5 août 2026",
+                "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000054658967/"
+              }
+            ],
+            "exam": {
+              "minutes": 45,
+              "coefficient": 3,
+              "format": "10 QCM + 5 QRC"
+            },
+            "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction."
+          }
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "vtc-a-01-cours",
+    "vtc-a-01-atelier",
+    "vtc-a-02-cours",
+    "vtc-a-02-atelier",
+    "vtc-a-03-cours",
+    "vtc-a-03-atelier",
+    "vtc-a-04-cours",
+    "vtc-a-04-atelier",
+    "vtc-a-05-cours",
+    "vtc-a-05-atelier",
+    "vtc-a-06-cours",
+    "vtc-a-06-atelier",
+    "vtc-a-07-cours",
+    "vtc-a-07-atelier",
+    "vtc-a-08-cours",
+    "vtc-a-08-atelier",
+    "vtc-a-09-cours",
+    "vtc-a-09-atelier",
+    "vtc-a-10-cours",
+    "vtc-a-10-atelier",
+    "vtc-a-11-cours",
+    "vtc-a-11-atelier",
+    "vtc-a-12-cours",
+    "vtc-a-12-atelier",
+    "vtc-a-capsule",
+    "vtc-a-approfondir"
+  ],
+  "assets": [
+    "media/vtc/complement-17.webp",
+    "media/vtc/complement-47.webp",
+    "media/vtc/complement-48.webp",
+    "media/vtc/complement-50.webp",
+    "media/vtc/complement-51.webp",
+    "media/vtc/diagram-a.01.webp",
+    "media/vtc/diagram-a.02.webp",
+    "media/vtc/diagram-a.03.webp",
+    "media/vtc/diagram-a.04.webp",
+    "media/vtc/diagram-a.05.webp",
+    "media/vtc/diagram-a.06.webp",
+    "media/vtc/diagram-a.07.webp",
+    "media/vtc/diagram-a.08.webp",
+    "media/vtc/diagram-a.09.webp",
+    "media/vtc/diagram-a.10.webp",
+    "media/vtc/diagram-a.11.webp",
+    "media/vtc/diagram-a.12.webp",
+    "media/vtc/module-a.webp",
+    "media/vtc/v2/capsule-a.jpg",
+    "media/vtc/v2/capsule-a.mp4",
+    "media/vtc/v2/capsule-a.vtt"
+  ],
+  "import_warnings": [],
+  "counts": {
+    "sections": 13,
+    "lessons": 12,
+    "activities": 26,
+    "scored_activities": 0,
+    "workbooks": 0,
+    "interactive_workshops": 12,
+    "required_videos": 1,
+    "assets": 21
+  }
+}
