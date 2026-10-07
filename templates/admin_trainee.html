@@ -2999,6 +2999,17 @@
       <div class="document-file-actions">
         <a class="btn btn-outline document-file-action" href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank" rel="noopener">📎 Voir fichier {{ loop.index }}</a>
         <a class="btn btn-outline document-file-action" href="{{ url_for('admin_download_upload', path=ft) }}">⬇️ Télécharger</a>
+        {% set automatic = (d.auto_checks or {}).get(ft) %}
+        {% if automatic %}
+          {% set combined = d.auto_check_summary if d.auto_check_summary and d.auto_check_summary.files == d.file_tokens else none %}
+          {% set automatic_status = combined.status if combined else automatic.status %}
+          <details class="hint" style="flex-basis:100%;padding:8px 10px;border-radius:10px;background:{{ '#ecfdf5' if automatic_status == 'success' else '#fff7ed' }};">
+            <summary style="cursor:pointer;font-weight:700;">Contrôle automatique : {{ 'critères vérifiés' if automatic_status == 'success' else ('anomalie suspectée' if automatic_status == 'warning' else 'non concluant') }}</summary>
+            <p>{{ automatic.message or automatic.title }}</p>
+            {% if combined and combined.status == 'warning' %}<p>{{ combined.message }}</p>{% endif %}
+            <small>Contrôle indicatif du {{ automatic.checked_at[:10] }}. La décision de conformité reste manuelle.</small>
+          </details>
+        {% endif %}
 
         {% if not is_read_only %}
           <form method="post"

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/professional-experience.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/trainee-document-checks.css') }}">
 {% set token_safe = token or trainee.public_token or '' %}
 
 <style>
@@ -1448,6 +1449,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
     </div>
   </div>
 
+  <p class="tdc-notice"><strong>Vos documents sont vérifiés dès leur sélection.</strong> Format, lisibilité, photo et faces de la pièce d’identité : une alerte vous aide à corriger votre fichier. Les documents sont transmis au service d’analyse OpenAI pour ce contrôle indicatif. Notre équipe confirme ensuite leur conformité.</p>
   <div class="docs-stack">
 
   {% for d in (trainee.documents or []) if not (is_dirigeant_vae and d.key == "livret_2") and d.key != "prerequis_interview_sheet" %}
@@ -1492,12 +1494,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
     {% endif %}
 
     {% set accept = (d.accept or "") %}
-    {% set hint = "Fichier" %}
-    {% if "application/pdf" in accept %}
-      {% set hint = "PDF uniquement" %}
-    {% elif "image/" in accept %}
-      {% set hint = "JPEG ou PNG" %}
-    {% endif %}
+    {% set hint = document_format_label(accept) %}
     {% set format_examples = [] %}
     {% if d.key == "id" %}
       {% set format_examples = [
@@ -1663,7 +1660,14 @@ id="upload_{{ d.key }}"
   action="/espace/{{ token_safe }}/documents/{{ d.key }}/upload"
   method="post"
   enctype="multipart/form-data"
-  data-accept-label="{{ hint }}">
+  data-accept-label="{{ hint }}"
+  data-document-check-url="{{ url_for('public_doc_check', token=token_safe, doc_key=d.key) }}"
+  data-document-key="{{ d.key }}"
+  data-document-label="{{ d.label }}"
+  data-max-bytes="{{ document_upload_max_bytes }}"
+  data-max-files="{{ 0 if d.key in ['livret_2', 'complementary_documents'] else (2 if d.key == 'id' else 1) }}">
+<input type="hidden" name="document_check_token" value="{{ trainee_document_check_token() }}">
+<input type="hidden" name="document_check_receipt" value="">
 
 {% if d.key == "id" %}
   <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
@@ -1695,7 +1699,9 @@ id="upload_{{ d.key }}"
 <button class="btn small upload-cta" type="submit">
   {% if d.key == "livret_2" %}Déposer mon Livret 2{% elif d.key == "complementary_documents" %}Déposer un document complémentaire{% elif can_replace %}Remplacer{% elif d.key == "id" and has_file %}Ajouter un autre{% else %}Déposer{% endif %}
 </button>
-<div class="upload-selection-feedback" aria-live="polite"></div>
+<ul class="tdc-files" aria-label="Fichiers sélectionnés"></ul>
+<div class="tdc-feedback" role="status" aria-live="polite"></div>
+<p class="tdc-hint">Moins de 5 Mo par fichier conseillé pour la vérification visuelle. Maximum {{ document_upload_max_bytes // (1024 * 1024) }} Mo par envoi.</p>
 
 <div class="uploading-msg" style="display:none;margin-top:8px;font-weight:900;">
   ⏳ Envoi en cours…
@@ -1711,6 +1717,10 @@ id="upload_{{ d.key }}"
 
 {% if has_file %}
   <div style="margin-top:10px;">
+    {% if d.auto_check_summary and d.auto_check_summary.files == file_tokens %}
+      {% set check = d.auto_check_summary %}
+      <div class="tdc-saved tdc-{{ check.status }}"><strong>Contrôle automatique : {{ 'critères vérifiés' if check.status == 'success' else ('point à vérifier' if check.status == 'warning' else 'non concluant') }}</strong>{% if check.message %}<p>{{ check.message }}</p>{% endif %}</div>
+    {% endif %}
     <div class="muted" style="font-weight:700;">Fichier(s) déposé(s) : {{ file_tokens|length }}</div>
     <ul style="margin:6px 0 0 18px;">
       {% for ft in file_tokens %}
@@ -1724,36 +1734,6 @@ id="upload_{{ d.key }}"
   </div>
 {% endif %}
 
-{% if d.key == "id" %}
-  <div id="id_hint_id" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
-    <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">
-      Avez-vous bien fourni votre passeport, ou votre carte d'identité
-      <span style="color:#b91c1c;">RECTO / VERSO (2 côtés)</span> ?
-    </div>
-
-    <div style="display:flex;gap:10px;">
-      <button type="button" class="btn outline small" onclick="cancelIdUpload()">Modifier</button>
-      <button type="button" class="btn small" onclick="confirmIdUpload()">Oui, je confirme</button>
-    </div>
-  </div>
-{% endif %}
-
-{% if d.key == "photo" %}
-  <div id="photo_hint_photo" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
-    <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">
-      Avez-vous bien fourni une photo d’identité conforme ? (photo de face, sur fond neutre). Cette photo apparaîtra sur votre diplôme.
-    </div>
-
-    <img src="/static/photo-exemple.png"
-         alt="Exemple photo identité conforme"
-         style="max-width:240px;width:100%;border-radius:10px;border:1px solid #e5e7eb;display:block;margin-bottom:10px;">
-
-    <div style="display:flex;gap:10px;">
-      <button type="button" class="btn outline small" onclick="cancelPhotoUpload()">Modifier</button>
-      <button type="button" class="btn small" onclick="confirmPhotoUpload()">Oui, je confirme</button>
-    </div>
-  </div>
-{% endif %}
       </div>  <!-- ferme .docmeta -->
     </details>    <!-- ferme .docrow -->
   {% endfor %}
@@ -2338,6 +2318,9 @@ id="upload_{{ d.key }}"
   </div>
 </div>
 {% endif %}
+{% include '_trainee_document_check_modal.html' %}
+<script id="documentUploadError" type="application/json">{{ document_upload_error|tojson }}</script>
+<script type="module" src="{{ url_for('static', filename='js/trainee-document-checks.mjs') }}"></script>
 <!-- ✅ Popup chargement dépôt document -->
 <div id="uploadLoadingModal" class="ia-modal-backdrop" aria-live="polite">
   <div class="ia-modal" role="dialog" aria-modal="true" aria-labelledby="uploadLoadingTitle">
@@ -3039,210 +3022,6 @@ function setFieldStateValidated(inputId){
 }
 
  
-
-  // ========= PHOTO confirmation (exemple) =========
-function cancelPhotoUpload(){
-  const hint = document.getElementById("photo_hint_photo");
-  if(hint) hint.style.display = "none";
-  const form = document.getElementById("upload_photo");
-  if(form) form.dataset.confirmed = "";
-}
-
-function triggerUploadSubmit(form){
-  if(!form) return;
-  if(typeof form.requestSubmit === "function"){
-    form.requestSubmit();
-    return;
-  }
-  const fileInput = form.querySelector('input[type="file"]');
-  const btn = form.querySelector('button[type="submit"]');
-  if (fileInput) fileInput.style.display = "none";
-  if (btn) btn.style.display = "none";
-
-  const msg = form.querySelector(".uploading-msg");
-  if (msg) msg.style.display = "block";
-
-  openModal("uploadLoadingModal");
-  form.submit();
-}
-
-function confirmPhotoUpload(){
-  const form = document.getElementById("upload_photo");
-  if(form){
-    form.dataset.confirmed = "1";
-    triggerUploadSubmit(form);
-  }
-}
-
-window.addEventListener("DOMContentLoaded", ()=>{
-  const form = document.getElementById("upload_photo");
-  if(!form) return;
-
-  form.addEventListener("submit", (e)=>{
-    if(form.dataset.confirmed === "1") return;
-
-    const input = form.querySelector('input[type="file"]');
-    if(input && input.files && input.files.length){
-      e.preventDefault();
-      const hint = document.getElementById("photo_hint_photo");
-      if(hint) hint.style.display = "block";
-    }
-  });
-});
-// ========= CARTE D'IDENTITÉ confirmation =========
-function cancelIdUpload(){
-  const hint = document.getElementById("id_hint_id");
-  if(hint) hint.style.display = "none";
-  const form = document.getElementById("upload_id");
-  if(form) form.dataset.confirmed = "";
-}
-
-function confirmIdUpload(){
-  const form = document.getElementById("upload_id");
-  if(form){
-    form.dataset.confirmed = "1";
-    triggerUploadSubmit(form);
-  }
-}
-
-window.addEventListener("DOMContentLoaded", ()=>{
-  const form = document.getElementById("upload_id");
-  if(!form) return;
-
-  const input = form.querySelector('input[type="file"]');
-  const summary = document.getElementById("id_files_summary");
-  const list = document.getElementById("id_files_list");
-  const dataTransfer = new DataTransfer();
-  const maxFiles = 2;
-  const updateSummary = () => {
-    if(!summary) return;
-    const currentFiles = dataTransfer.files?.length ? dataTransfer.files : input?.files;
-    const count = currentFiles?.length || 0;
-    if(list){
-      list.innerHTML = "";
-    }
-    if(!count){
-      summary.textContent = "Aucun fichier sélectionné.";
-      return;
-    }
-    const names = currentFiles ? Array.from(currentFiles).map((f) => f.name) : [];
-    const label = `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`;
-    summary.textContent = names.length ? `${label} : ${names.join(", ")}` : `${label}.`;
-    if(list && currentFiles?.length){
-      for(const f of currentFiles){
-        const li = document.createElement("li");
-        li.textContent = f.name;
-        list.appendChild(li);
-      }
-    }
-  };
-
-  if(input){
-    input.addEventListener("change", () => {
-      if(input.files){
-        for(const f of input.files){
-          if(dataTransfer.files.length >= maxFiles){
-            break;
-          }
-          const exists = Array.from(dataTransfer.files).some((existing) => existing.name == f.name && existing.size == f.size);
-          if(!exists){
-            dataTransfer.items.add(f);
-          }
-        }
-        input.files = dataTransfer.files;
-      }
-      updateSummary();
-    });
-    updateSummary();
-  }
-
-  form.addEventListener("submit", (e)=>{
-    if(form.dataset.confirmed === "1") return;
-
-    // On affiche la confirmation seulement si l'utilisateur a choisi des fichiers
-    if(input && input.files && input.files.length){
-      e.preventDefault();
-      const hint = document.getElementById("id_hint_id");
-      if(hint) hint.style.display = "block";
-    }
-  });
-});
-
-
-  // ====== UX upload : cacher input + bouton dès submit ======
-window.addEventListener("DOMContentLoaded", () => {
-  const getAllowedExtensions = (accept) => {
-    const normalized = (accept || "").toLowerCase();
-    const allowed = new Set();
-    if (normalized.includes("application/pdf")) allowed.add("pdf");
-    if (normalized.includes("image/")) {
-      ["jpg", "jpeg", "png", "webp"].forEach((ext) => allowed.add(ext));
-    }
-    return allowed;
-  };
-
-  const getSelectionError = (form, input) => {
-    if (!input || !input.files || !input.files.length) return "";
-    const allowed = getAllowedExtensions(input.getAttribute("accept") || "");
-    if (!allowed.size) return "";
-    const invalid = Array.from(input.files).filter((file) => {
-      const parts = (file.name || "").toLowerCase().split(".");
-      const ext = parts.length > 1 ? parts.pop() : "";
-      return !allowed.has(ext);
-    });
-    if (!invalid.length) return "";
-
-    const acceptLabel = form.dataset.acceptLabel || "le format demandé";
-    const invalidNames = invalid.map((file) => file.name).join(", ");
-    return `Format refusé : ${invalidNames}. Merci d'envoyer ${acceptLabel.toLowerCase()} pour ce document.`;
-  };
-
-  const setSelectionFeedback = (form, message) => {
-    const feedback = form.querySelector(".upload-selection-feedback");
-    const input = form.querySelector('input[type="file"]');
-    if (feedback) {
-      feedback.textContent = message || "";
-      feedback.classList.toggle("show", !!message);
-    }
-    if (input) {
-      input.setCustomValidity(message || "");
-      input.reportValidity();
-    }
-  };
-
-  document.querySelectorAll("form.upload-form").forEach(form => {
-    const fileInput = form.querySelector('input[type="file"]');
-    if (fileInput) {
-      fileInput.addEventListener("change", () => {
-        setSelectionFeedback(form, getSelectionError(form, fileInput));
-      });
-    }
-
-    form.addEventListener("submit", (e) => {
-      const message = getSelectionError(form, fileInput);
-      if (message) {
-        e.preventDefault();
-        setSelectionFeedback(form, message);
-        return;
-      }
-      setSelectionFeedback(form, "");
-
-      // Si on est sur un form avec confirmation (photo/id) et que pas confirmé, on ne masque rien
-      if ((form.id === "upload_photo" || form.id === "upload_id") && form.dataset.confirmed !== "1") {
-        return;
-      }
-
-      const btn = form.querySelector('button[type="submit"]');
-      if (fileInput) fileInput.style.display = "none";
-      if (btn) btn.style.display = "none";
-
-      const msg = form.querySelector(".uploading-msg");
-      if (msg) msg.style.display = "block";
-
-      openModal("uploadLoadingModal");
-    });
-  });
-});
 
 document.addEventListener("DOMContentLoaded", () => {
   const cb = document.getElementById("no_permis_checkbox");

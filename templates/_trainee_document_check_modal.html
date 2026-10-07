@@ -1,0 +1,20 @@
+<dialog id="traineeDocumentCheck" class="tdc-modal" aria-labelledby="tdcTitle" aria-describedby="tdcMessage">
+  <header class="tdc-header">
+    <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy" width="128">
+    <button type="button" class="tdc-close" data-tdc-close aria-label="Fermer et revenir aux fichiers">×</button>
+  </header>
+  <div class="tdc-body" aria-live="polite" aria-atomic="true">
+    <div id="tdcSymbol" class="tdc-symbol" aria-hidden="true"></div>
+    <p class="tdc-eyebrow">VÉRIFICATION DE VOTRE DOCUMENT</p>
+    <h2 id="tdcTitle" tabindex="-1">Un instant, nous vérifions votre fichier…</h2>
+    <p id="tdcDocument" class="tdc-document"></p>
+    <p id="tdcMessage"></p>
+    <ul id="tdcSteps" class="tdc-steps"></ul>
+    <div id="tdcFileResults" class="tdc-file-results"></div>
+    <p id="tdcNote" class="tdc-note">Votre fichier n’est pas encore déposé.</p>
+  </div>
+  <footer class="tdc-actions">
+    <button type="button" class="tdc-primary" id="tdcPrimary">Modifier la sélection</button>
+    <button type="button" class="tdc-secondary" id="tdcSecondary" hidden>Déposer quand même</button>
+  </footer>
+</dialog>

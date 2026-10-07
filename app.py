@@ -77,6 +77,7 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 import afc_import
 import manuals_shop
+import public_document_checks as trainee_checks
 from akto_bts import (
     AktoApiError,
     AktoBtsStore,
@@ -212,6 +213,9 @@ _install_shutdown_diagnostics()
 
 
 app = Flask(__name__)
+app.jinja_env.globals["trainee_document_check_token"] = trainee_checks.form_token
+app.jinja_env.globals["document_format_label"] = trainee_checks.format_label
+app.logger.warning("trainee_document_checks configured=%s", bool(os.environ.get("OPENAI_API_KEY", "").strip()))
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
@@ -33865,6 +33869,8 @@ def public_trainee_space(token):
         ssiap_medical_from_date=ssiap_medical_from_date,
         public_invoices=public_invoices,
         public_qcus=public_qcus,
+        document_upload_error=session.pop("document_upload_error", None),
+        document_upload_max_bytes=MAX_UPLOAD_BYTES,
     )
 
 
@@ -34439,8 +34445,45 @@ def public_vtc_credentials(token: str):
 
 
 
+@app.post("/espace/<token>/documents/<doc_key>/check")
+def public_doc_check(token: str, doc_key: str):
+    if not _public_is_authed(token):
+        return jsonify({"status": "unauthorized", "message": "Votre session a expiré. Rechargez la page et reconnectez-vous."}), 401
+    if not trainee_checks.valid_request():
+        return jsonify({"status": "unauthorized", "message": "Rechargez la page avant de réessayer."}), 403
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+    training_type = _session_get(s, "training_type", "")
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
+    ensure_documents_schema_for_trainee(t, training_type)
+    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+        _ensure_livret2_document_entry(t)
+        _ensure_complementary_documents_entry(t)
+        _ensure_public_complementary_documents_upload_entry(t)
+    target = next((d for d in t.get("documents", []) if d.get("key") == doc_key), None)
+    if not target or doc_key not in allowed_doc_keys_for_training(training_type, t):
+        abort(404)
+    uploads = [f for f in (request.files.getlist("files") or request.files.getlist("file")) if f and f.filename]
+    files, failure = trainee_checks.validate_batch(uploads, target, MAX_UPLOAD_BYTES)
+    if failure:
+        return jsonify({"summary": failure, "results": [failure]}), 422
+    existing = trainee_checks.existing_files(target)
+    checked = trainee_checks.check_documents(files, doc_key, target.get("label", ""),
+                                             os.path.join(PERSIST_DIR, "document_checks.sqlite3"), token, existing)
+    receipt = trainee_checks.make_receipt(files, doc_key, token, existing, checked)
+    response = jsonify({**checked, "receipt": receipt})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @app.post("/espace/<token>/documents/<doc_key>/upload")
 def public_doc_upload(token: str, doc_key: str):
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+    if not trainee_checks.valid_request():
+        abort(403)
     data = load_data()
     s, t = find_session_and_trainee_by_token(data, token)
     if not s or not t:
@@ -34499,18 +34542,17 @@ def public_doc_upload(token: str, doc_key: str):
                 save_data(data)
         return redirect(url_for("public_trainee_space", token=token))
 
-    accept = (target.get("accept") or "").lower()
-
-    def _accepts_file(ext: str) -> bool:
-        acc = [a.strip().lower() for a in accept.split(",") if a.strip()]
-        allowed_exts = set()
-        if "application/pdf" in acc:
-            allowed_exts.add(".pdf")
-        if any(a.startswith("image/") for a in acc) or ("image/jpeg" in acc) or ("image/png" in acc):
-            allowed_exts.update({".jpg", ".jpeg", ".png", ".webp"})
-        if allowed_exts:
-            return ext in allowed_exts
-        return ext in ALLOWED_EXT
+    file_bytes, failure = trainee_checks.validate_batch(incoming_files, target, MAX_UPLOAD_BYTES)
+    if failure:
+        session["document_upload_error"] = {**failure, "doc_key": doc_key}
+        return redirect(url_for("public_trainee_space", token=token) + "#doc_" + doc_key)
+    previous_files = trainee_checks.existing_files(target)
+    checked = trainee_checks.read_receipt(request.form.get("document_check_receipt", ""), file_bytes,
+                                         doc_key, token, previous_files)
+    if checked is None:
+        # Direct/no-JS uploads receive the same checks; never trust a client status.
+        checked = trainee_checks.check_documents(file_bytes, doc_key, target.get("label", ""),
+                                                 os.path.join(PERSIST_DIR, "document_checks.sqlite3"), token, previous_files)
 
     # ✅ stockage du fichier
     session_id = s.get("id")
@@ -34541,21 +34583,20 @@ def public_doc_upload(token: str, doc_key: str):
             if not files_to_store:
                 return redirect(url_for("public_trainee_space", token=token))
 
-            for f in files_to_store:
-                ext = _safe_ext(f.filename)
-                if not _accepts_file(ext):
-                    return redirect(url_for("public_trainee_space", token=token))
-
-            for f in files_to_store:
+            analyses = {key: value for key, value in (d.get("auto_checks") or {}).items() if key in cur_files}
+            for index, f in enumerate(files_to_store):
                 if not original_name:
                     original_name = secure_filename(f.filename or "document")
                 stored = _store_file(session_id, trainee_id, "public_documents", f)
                 new_token = _tokenize_path(stored)
                 cur_files.append(new_token)
+                analyses[new_token] = {**checked["results"][index], "checked_at": checked["checked_at"]}
 
             # on garde le premier fichier dans "file" (pour compat template/admin)
             d["files"] = cur_files
             d["file"] = cur_files[0] if cur_files else ""
+            d["auto_checks"] = analyses
+            d["auto_check_summary"] = {**checked["summary"], "checked_at": checked["checked_at"], "files": list(cur_files)}
 
             cur = (d.get("status") or "").strip().upper()
             if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE") or cur_status in ("NON CONFORME", "NON_CONFORME"):

@@ -11,3 +11,5 @@ pypdf==5.2.0
 PyMuPDF==1.26.6
 reportlab==4.2.5
 docxtpl
+
+pypdfium2==5.3.0
