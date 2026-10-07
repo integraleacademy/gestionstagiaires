@@ -3,12 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const {JSDOM} = require('jsdom');
+const photoAccept = '.jpg,.jpeg,.png,.webp,.heic,.heif,.tif,.tiff,.bmp,.gif,.avif';
 
 function setup(kind = 'photo', fetcher = async () => ({status: 200, json: async () => ({summary: {status: 'success', title: 'Photo : c’est bon !', message: ''}, receipt: 'signed-receipt'})})) {
   const modal = fs.readFileSync(path.join(__dirname, '../templates/_trainee_document_check_modal.html'), 'utf8');
   const markup = `<form data-document-check-url="/check" data-document-key="${kind}" data-document-label="Document" data-max-bytes="26214400" data-max-files="${kind === 'id' ? 2 : 1}">
     <input name="document_check_token" value="csrf"><input name="document_check_receipt" value="">
-    <input type="file" accept="${kind === 'id' ? 'application/pdf' : 'image/jpeg,image/png'}"><ul class="tdc-files"></ul><div class="tdc-feedback"></div><button type="submit">Déposer</button><div class="uploading-msg" hidden></div></form>${modal}`;
+    <input type="file" accept="${kind === 'photo' ? photoAccept : ''}"><ul class="tdc-files"></ul><div class="tdc-feedback"></div><button type="submit">Déposer</button><div class="uploading-msg" hidden></div></form>${modal}`;
   const dom = new JSDOM(markup, {runScripts: 'outside-only', url: 'https://test.example/'});
   const {window} = dom;
   window.HTMLDialogElement.prototype.showModal = function() { this.open = true; };
@@ -27,11 +28,36 @@ function setup(kind = 'photo', fetcher = async () => ({status: 200, json: async 
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 
-test('wrong extension opens a correction modal without an analysis or an upload', () => {
+test('a PDF identity photo opens a correction modal without an analysis or an upload', () => {
   const ui = setup(); ui.choose('scan.pdf');
   assert.equal(ui.dialog.dataset.status, 'invalid'); assert.equal(ui.dialog.open, true);
   assert.equal(ui.calls, 0); assert.equal(ui.submitted, 0);
   assert.equal(ui.window.document.getElementById('tdcSecondary').hidden, true); ui.close();
+});
+
+test('documents in Word, HEIC and other formats reach the server for conversion', async () => {
+  for (const name of ['attestation.docx', 'recto.HEIC', 'tableau.xlsx', 'scan.tiff', 'document.pages', 'document']) {
+    const ui = setup('id'); ui.choose(name);
+    assert.equal(ui.dialog.dataset.status, 'pending', name);
+    assert.match(ui.window.document.getElementById('tdcMessage').textContent, /convertissons votre fichier en PDF/);
+    assert.equal(ui.calls, 1, name); assert.equal(ui.submitted, 0, name);
+    await settle(); assert.equal(ui.dialog.dataset.status, 'success', name); ui.close();
+  }
+});
+
+test('an HEIC identity photo reaches the server and stays described as an image', async () => {
+  const ui = setup(); ui.choose('portrait.HEIC');
+  assert.equal(ui.dialog.dataset.status, 'pending'); assert.equal(ui.calls, 1);
+  assert.match(ui.window.document.getElementById('tdcMessage').textContent, /restera une image/);
+  await settle(); assert.equal(ui.dialog.dataset.status, 'success'); ui.close();
+});
+
+test('newly accepted document formats keep the empty-file and size checks', () => {
+  const ui = setup('cv');
+  const limit = 26214400;
+  assert.match(ui.window.selectionError([{name: 'vide.docx', size: 0}], '', limit, 1), /vide/);
+  assert.match(ui.window.selectionError([{name: 'trop-grand.heic', size: limit}], '', limit, 1), /inférieur/);
+  ui.close();
 });
 
 test('a successful analysis is sent only after the deposit button is clicked', async () => {

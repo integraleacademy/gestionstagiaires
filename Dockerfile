@@ -9,6 +9,7 @@ WORKDIR /opt/render/project/src
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice \
     libreoffice-writer \
+    libseccomp2 \
     fontconfig \
     fonts-dejavu \
     fonts-crosextra-carlito \
@@ -32,6 +33,9 @@ RUN fc-cache -f && fc-match -f '%{family}\n' Calibri | head -n 1 | grep -q Carli
 RUN which libreoffice || true
 RUN which soffice || true
 RUN libreoffice --version || soffice --version || true
+
+# Exercise real conversion and its isolation before a deployment can go live.
+RUN python scripts/check_document_converter.py
 
 EXPOSE 10000
 

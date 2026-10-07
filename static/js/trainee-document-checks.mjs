@@ -57,14 +57,15 @@ function show(form, result, pending = false) {
   const summary = result?.summary || unavailable();
   dialog.dataset.status = status;
   document.getElementById('tdcSymbol').textContent = {success: '✓', warning: '!', invalid: '!', unknown: '?'}[status] || '';
-  title.textContent = pending ? 'Un instant, nous vérifions votre fichier…' : summary.title || 'Votre document';
-  message.textContent = pending ? 'Cela peut prendre quelques secondes. Vous pouvez revenir à votre sélection à tout moment.' : summary.message || 'Les critères visuels de votre photo sont respectés.';
+  const isPhoto = form?.dataset.documentKey === 'photo';
+  title.textContent = pending ? (isPhoto ? 'Un instant, nous vérifions votre photo…' : 'Un instant, nous préparons votre document…') : summary.title || 'Votre document';
+  message.textContent = pending ? (isPhoto ? 'Cela peut prendre quelques secondes. Votre photo restera une image.' : 'Nous convertissons votre fichier en PDF si nécessaire, puis nous vérifions le document. Cela peut prendre quelques instants.') + ' Vous pouvez revenir à votre sélection à tout moment.' : summary.message || 'Les critères visuels de votre photo sont respectés.';
   document.getElementById('tdcDocument').textContent = form?.dataset.documentLabel || '';
   const steps = document.getElementById('tdcSteps');
   steps.replaceChildren();
   steps.hidden = !pending;
   if (pending) {
-    const items = form.dataset.documentKey === 'photo' ? ['Une seule photo, sans planche ni montage', 'Netteté, fond et éclairage', 'Visage de face, cadrage et expression'] : form.dataset.documentKey === 'id' ? ['Format et ouverture du fichier', 'Lisibilité, reflets et cadrage', 'Recto-verso ou page d’identité du passeport'] : ['Format et ouverture du fichier', 'Type du document demandé', 'Lisibilité et cadrage'];
+    const items = isPhoto ? ['Une seule photo, sans planche ni montage', 'Netteté, fond et éclairage', 'Visage de face, cadrage et expression'] : form.dataset.documentKey === 'id' ? ['Ouverture et conversion en PDF si nécessaire', 'Lisibilité, reflets et cadrage', 'Recto-verso ou page d’identité du passeport'] : ['Ouverture et conversion en PDF si nécessaire', 'Type du document demandé', 'Lisibilité et cadrage'];
     items.forEach(text => { const li = document.createElement('li'); li.textContent = text; steps.append(li); });
   }
   const details = document.getElementById('tdcFileResults');
@@ -144,7 +145,7 @@ async function check(form) {
   state.controller = new AbortController();
   const controller = state.controller;
   const sequence = state.sequence;
-  const timer = setTimeout(() => controller.abort(), 65000);
+  const timer = setTimeout(() => controller.abort(), 180000);
   updateFeedback(form, 'Vérification en cours…'); show(form, null, true);
   const data = new FormData();
   state.files.forEach(file => data.append('files', file));

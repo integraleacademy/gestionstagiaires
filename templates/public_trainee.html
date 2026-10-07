@@ -1493,28 +1493,31 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
       {% endif %}
     {% endif %}
 
-    {% set accept = (d.accept or "") %}
-    {% set hint = document_format_label(accept) %}
+    {% set accept = trainee_document_upload_accept(d.key) %}
+    {% set hint = trainee_document_upload_hint(d.key) %}
     {% set format_examples = [] %}
     {% if d.key == "id" %}
       {% set format_examples = [
-        "Format accepté : PDF uniquement.",
+        "PDF, photos et fichiers bureautiques : la conversion en PDF est automatique.",
         "Carte d’identité ou titre de séjour : recto + verso obligatoires.",
-        "Vous pouvez envoyer 1 PDF complet ou 2 PDF séparés (recto puis verso).",
-        "Passeport : envoyez un PDF lisible de la page d’identité."
+        "Vous pouvez envoyer 1 document complet ou 2 fichiers séparés (recto puis verso), y compris des photos.",
+        "Passeport : envoyez la page d’identité lisible.",
+        "Les fichiers déjà en PDF sont conservés tels quels."
       ] %}
     {% elif d.key == "photo" %}
       {% set format_examples = [
-        "Format accepté : JPEG ou PNG.",
+        "Formats image acceptés : JPEG, PNG, WebP, HEIC, HEIF, TIFF, BMP, GIF fixe et AVIF.",
         "Photo nette, de face, visage bien visible.",
         "Fond uni / neutre, sans filtre, sans capture d’écran.",
+        "La photo reste une image ; elle n’est pas convertie en PDF.",
         "Cette photo pourra apparaître sur votre diplôme."
       ] %}
     {% elif d.key != "candidate_info_sheet" %}
       {% set format_examples = [
-        "Format accepté : " ~ hint ~ ".",
+        "PDF, photos et fichiers bureautiques : la conversion en PDF est automatique.",
         "Le document doit être complet, lisible et non coupé.",
-        "Si besoin, scannez ou exportez votre document dans le bon format avant l’envoi."
+        "Les fichiers déjà en PDF sont conservés tels quels.",
+        "Si un fichier ne peut pas être converti, un message vous invite à choisir une autre copie."
       ] %}
     {% endif %}
 
@@ -1619,7 +1622,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
           <div class="muted">{{ hint }}</div>
           {% if format_examples %}
             <div class="doc-format-box">
-              <div class="doc-format-title">📄 Format à respecter avant de déposer</div>
+              <div class="doc-format-title">📄 Préparer votre document</div>
               <ul class="doc-format-list">
                 {% for item in format_examples %}
                   <li>{{ item }}</li>

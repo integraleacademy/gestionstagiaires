@@ -215,6 +215,8 @@ _install_shutdown_diagnostics()
 app = Flask(__name__)
 app.jinja_env.globals["trainee_document_check_token"] = trainee_checks.form_token
 app.jinja_env.globals["document_format_label"] = trainee_checks.format_label
+app.jinja_env.globals["trainee_document_upload_accept"] = trainee_checks.upload_accept
+app.jinja_env.globals["trainee_document_upload_hint"] = trainee_checks.upload_hint
 app.logger.warning("trainee_document_checks configured=%s", bool(os.environ.get("OPENAI_API_KEY", "").strip()))
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
@@ -30885,8 +30887,13 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     try:
-        stored = _store_file(session_id, trainee_id, "documents", f)
+        prepared = trainee_checks.prepare_upload(f, doc_key, MAX_UPLOAD_BYTES)
+        stored = _store_file(session_id, trainee_id, "documents", prepared)
+    except trainee_checks.ConversionError as error:
+        flash(str(error), "document_conversion_error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
     except Exception:
+        flash("Le document n’a pas pu être enregistré. Réessayez dans quelques instants.", "document_conversion_error")
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     token = _tokenize_path(stored)
@@ -34542,10 +34549,11 @@ def public_doc_upload(token: str, doc_key: str):
                 save_data(data)
         return redirect(url_for("public_trainee_space", token=token))
 
-    file_bytes, failure = trainee_checks.validate_batch(incoming_files, target, MAX_UPLOAD_BYTES)
+    prepared_files, failure = trainee_checks.prepare_batch(incoming_files, target, MAX_UPLOAD_BYTES)
     if failure:
         session["document_upload_error"] = {**failure, "doc_key": doc_key}
         return redirect(url_for("public_trainee_space", token=token) + "#doc_" + doc_key)
+    file_bytes = [trainee_checks.read_upload(f, MAX_UPLOAD_BYTES) for f in prepared_files]
     previous_files = trainee_checks.existing_files(target)
     checked = trainee_checks.read_receipt(request.form.get("document_check_receipt", ""), file_bytes,
                                          doc_key, token, previous_files)
@@ -34576,10 +34584,10 @@ def public_doc_upload(token: str, doc_key: str):
                 cur_files = []
             max_files = 2 if doc_key == "id" else (-1 if doc_key in {"livret_2", "complementary_documents"} else 1)
             if max_files < 0:
-                files_to_store = incoming_files
+                files_to_store = prepared_files
             else:
                 remaining_slots = max(max_files - len(cur_files), 0)
-                files_to_store = incoming_files[:remaining_slots] if remaining_slots else []
+                files_to_store = prepared_files[:remaining_slots] if remaining_slots else []
             if not files_to_store:
                 return redirect(url_for("public_trainee_space", token=token))
 
