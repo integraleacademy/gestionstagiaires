@@ -34,7 +34,7 @@ class GuidedContentTests(unittest.TestCase):
                     if activity['academy']['kind'] == 'workshop':
                         self.assertEqual(len(practice['exercises']), 3)
                         for exercise in practice['exercises']:
-                            self.assertEqual(len(exercise['options']), 2)
+                            self.assertEqual(len(exercise['options']), 3 if course['version'] == '20261007-aps62-v9' else 2)
                             self.assertNotIn('Le poste doit maintenant', exercise['context'])
                             self.assertNotIn('fait établi', exercise['prompt'])
         self.assertEqual(len(seen), 62)

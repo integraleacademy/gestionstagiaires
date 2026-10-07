@@ -144,6 +144,49 @@ def test_network_jitter_does_not_accumulate_lost_viewing_time(lesson):
     assert video_state(result)["completed"] is True
 
 
+def test_api_accepts_advancing_receipts_after_mouse_inactivity_expires(lesson):
+    c = lesson
+    for elapsed in (0, 4, 8):
+        if elapsed:
+            c.clock[0] += 4
+        response = c._api_post(c.config["heartbeatUrl"], c.config,
+            tracking_session_id=c.tracking, activity_id="content-1", visible=True, focused=True,
+            recent_activity=elapsed == 0, media_playing=elapsed < 8,
+            interaction_age_seconds=299 + elapsed,
+            videos=[dict(id="required-video", position=elapsed, playing=elapsed < 8,
+                         ended=elapsed == 8, rate=1)])
+        assert response.status_code == 200
+        if elapsed == 4:
+            assert response.get_json()['media_active'] is True
+            assert response.get_json()['active'] is True
+    assert video_state(response)['completed'] is True
+    assert response.get_json()['progress']['active_seconds'] == 8
+
+
+def test_player_renders_valid_chapters_and_server_completion_for_review(lesson):
+    c = lesson
+    location = c.persist_dir / 'native_elearning/courses' / c.course['id'] / c.course['version'] / 'course.json'
+    course = json.loads(location.read_text())
+    course['sections'][0]['activities'][0]['blocks'][0]['video']['chapters'] = [
+        {'title': 'Début', 'start_seconds': 0},
+        {'title': 'Règle <script>exemple</script>', 'start_seconds': 4},
+        {'title': 'Hors vidéo', 'start_seconds': 8},
+        {'title': 'Négatif', 'start_seconds': -1},
+    ]
+    location.write_text(json.dumps(course))
+    page = c.client.get(c.player_url)
+    body = page.get_data(as_text=True)
+    assert 'data-video-chapters="required-video"' in body
+    assert 'data-chapter-start="4" disabled' in body
+    assert 'Règle &lt;script&gt;exemple&lt;/script&gt;' in body
+    assert 'Hors vidéo' not in body and 'Négatif' not in body
+    assert 'sans bouger la souris' in body
+    heartbeat(c, 0)
+    heartbeat(c, 8, seconds=8, playing=False, ended=True)
+    config = c._player_config(c.client.get(c.player_url))
+    assert config['initialVideoProgress']['content-1']['required-video']['completed'] is True
+
+
 def test_each_sequence_video_must_be_watched_independently(lesson):
     c = lesson
     course = copy.deepcopy(c.course)

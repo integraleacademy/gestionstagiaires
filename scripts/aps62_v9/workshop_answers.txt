@@ -1,0 +1,187 @@
+# Réponses des étapes décision et évolution, resserrées sans changer la décision.
+@01-01
+Rester au poste et faire vérifier le périmètre de la demande.
+Vérifier la porte selon la consigne avec un relais pour le poste.
+@01-02
+Faire vérifier le droit d'exercer avant l'affectation.
+Vérifier identité, activité et validité avant la prise de poste.
+@01-03
+Faire vérifier le cadre avant d'organiser la ronde du voisin.
+Vérifier les moyens et la continuité des autres postes.
+@01-04
+Demander une tenue et des identifiants conformes avant le poste.
+Rectifier : on est agent de sécurité privée, pas policier.
+@02-01
+Distinguer infraction, réparation et obligations professionnelles.
+Présenter la portée et les limites de l'image, sans trancher seul.
+@02-02
+Réévaluer le danger, garder ses distances et alerter si nécessaire.
+Alerter et réévaluer la protection immédiate avec les moyens disponibles.
+@02-03
+Alerter les secours avec le lieu, sans s'exposer.
+Attribuer le témoignage et maintenir les protections adaptées.
+@03-01
+Recueillir les faits et alerter, sans contrainte fondée sur la seule ressemblance.
+Revérifier l'article 73, protéger et organiser immédiatement le relais policier.
+@03-02
+Appeler immédiatement la police et rester dans les limites légales.
+Surveiller l'état, appeler les secours si nécessaire et informer la police.
+@04-01
+Vérifier droits et besoin, puis orienter vers le responsable des données.
+Faire valider la demande par la personne habilitée et la tracer.
+@05-01
+Appliquer les mêmes critères et signaler la discrimination fondée sur le nom.
+Chercher le passage accessible prévu, avec les contrôles nécessaires.
+@05-02
+Appliquer l'accueil habituel et faire vérifier toute restriction.
+Expliquer la règle commune de distribution et l'orientation prévue.
+@05-03
+Examiner paroles, actes et règles avant de décider.
+Protéger les personnes et passages, puis demander le relais prévu.
+@06-01
+Refuser le passe-droit, maintenir le contrôle et signaler.
+Faire vérifier l'acceptation du cadeau, sans modifier le contrôle.
+@06-02
+Ne pas diffuser ; signaler par le seul canal autorisé.
+Signaler rapidement la diffusion sans créer d'autres copies.
+@06-03
+Vérifier la qualité, puis faciliter le contrôle autorisé.
+Conserver les pièces et signaler les erreurs sans les masquer.
+@06-04
+Refuser l'identité d'autrui et demander une solution autorisée.
+Rester professionnel et signaler les faits par le canal prévu.
+@07-01
+Clarifier, reconnaître la difficulté et observer l'évolution.
+Garder un espace sûr, expliquer brièvement et demander l'appui utile.
+@07-02
+Reformuler puis vérifier service, horaire et contact.
+Vérifier identité et autorisation, en expliquant la suite.
+@07-03
+Reprendre distance et retrait, avec une posture calme.
+Parler calmement, une étape à la fois.
+@07-04
+Poser calmement la limite, rappeler la règle et demander l'appui utile.
+Vérifier le nouveau danger. Protéger l’accès et donner l’alerte selon l’urgence.
+@07-05
+Transmettre faits, solution et suivi, sans jugement personnel.
+Signaler les contradictions et demander leur correction au responsable.
+@08-01
+Appliquer la version en vigueur et expliquer le circuit d'exception.
+Faire authentifier la demande avant de modifier la règle.
+@08-02
+Demander lieu, faits, dangers, mesures et besoin.
+Reformuler les faits et confirmer qui réalise l'action.
+@08-03
+Ajouter une correction datée et attribuée, en gardant l'historique.
+Distinguer heures vérifiées et estimées, avec leurs sources.
+@08-04
+Séparer observations, déclarations et hypothèses dans le rapport.
+Signaler l'élément utile au responsable de sa conservation.
+@08-05
+Transmettre état, risque, contact avisé et action attendue.
+Alerter sur les moyens manquants et faire préciser la priorité.
+@09-01
+Arrêter l'action inutile, surveiller et alerter selon l'état.
+Vérifier le danger actuel. Choisir une protection nécessaire et proportionnée à ce danger.
+@09-02
+Indiquer l'accès utilisable et coordonner son ouverture.
+Informer immédiatement les secours et le responsable du changement.
+@09-03
+Expliquer la limite et demander une procédure conforme.
+Vérifier acte autorisé, conditions, consentement et conduite en cas de refus.
+@10-01
+Signaler et protéger selon la consigne, sans s'exposer au trafic.
+Réexaminer l'exposition et demander l'adaptation de la circulation.
+@10-02
+Transmettre les faits aux responsables de l'évaluation.
+Vérifier protections, organisation, communications et moyens prévus.
+@10-03
+Vérifier autorisations et prévention avant l'accès concerné.
+Faire valider le changement par les responsables autorisés avant de l’appliquer.
+@10-04
+Suivre la fiche du signal et le relais prévu.
+Transmettre la nouvelle consigne avec son auteur et son heure.
+@10-05
+Signaler la protection déplacée. Faire rétablir un passage sûr par les personnes responsables du site.
+Obtenir les explications et la formation avant cet usage à risque.
+@10-06
+Ne pas manipuler ; prévenir le responsable prévu.
+Faire confirmer que la fiche correspond au produit.
+@10-07
+Faire vérifier et valider l'usage du matériel dans cette zone.
+Vérifier les conditions d’entrée et le matériel avant tout accès à la zone.
+@11-01
+Éloigner le public et alerter sans toucher au coffret.
+Faire respecter la distance et maintenir une protection adaptée.
+@11-02
+Alerter, empêcher le contact dangereux et faire sécuriser.
+Transmettre les signes et agir selon sa formation et les instructions.
+@12-01
+Faire vérifier et transmettre en précisant l'incertitude.
+Appliquer et diffuser la consigne authentifiée dans sa zone.
+@12-02
+Protéger et alerter sans toucher ni déplacer l'objet.
+Transmettre la déclaration sans lever seul les protections.
+@12-03
+Faire confirmer puis actualiser la version applicable.
+Faire vérifier la proposition en gardant les accès prioritaires libres.
+@12-04
+Décrire actes, contexte et réponses, puis alerter selon la procédure.
+Faire vérifier l'autorisation et réévaluer avec ce nouvel élément.
+@12-05
+Recueillir sans provoquer et alerter selon la procédure.
+Transmettre paroles, contexte et incertitudes sans diagnostic technique.
+@12-06
+Signaler les faits, appliquer les protections et contacter le relais.
+Poursuivre l'observation en attendant la vérification de la zone et des horaires.
+@12-07
+Donner nombre, lieux et signes observés, sans diagnostic.
+Respecter la limite et signaler les informations visibles.
+@13-01
+Utiliser son compte ou le seul secours autorisé.
+Utiliser le secours en conservant heures, sources et auteur.
+@13-02
+Vérifier version, date, auteur, destinataire et pièce jointe.
+Vérifier le moyen d’envoi et le droit du destinataire à recevoir le document avant de le transmettre.
+@14-01
+Observer en sécurité, vérifier et alerter selon la consigne.
+Transmettre les faits nouveaux et réexaminer cadre et moyens avec le relais.
+@14-02
+Vérifier calmement selon la procédure et le cadre applicable.
+Terminer la vérification et faire traiter l'étiquette selon la procédure.
+@14-03
+Alerter le relais sans abandonner la tâche prioritaire.
+Appliquer la procédure d'alarme et transmettre le différend au relais.
+@14-04
+Réévaluer la contrainte en protégeant santé et dignité.
+Prendre en compte le problème médical et appeler les secours si nécessaire.
+@14-05
+Protéger la zone et signaler sans toucher aux traces.
+Recueillir les faits et coordonnées librement donnés, sans interrogatoire imposé.
+@14-06
+Transmettre chronologie, sources, actions, pièces et incertitudes.
+Ajouter l'information avec sa source et son statut non vérifié.
+@14-07
+Protéger, recueillir les faits et alerter sans contrainte injustifiée.
+Vérifier l'explication et tracer ce qui reste incertain.
+@15-01
+Obtenir une consigne commune validée et des rôles clairs.
+Vérifier que les équipes ont reçu la consigne. Contrôler les points sensibles du secteur confié.
+@15-02
+Maintenir la règle et faire confirmer le droit d'accès.
+Respecter toutes les conditions de l’autorisation. Garder une trace de cet accès.
+@15-03
+Alerter et dégager selon la consigne avec les autres postes.
+Signaler le changement et demander l'adaptation du flux en amont.
+@15-04
+Alerter avec le lieu et appliquer les mesures prévues.
+Faire clarifier une consigne commune aux arrivées du public.
+@15-05
+Alerter la coordination et utiliser un itinéraire vérifié et validé.
+Guider clairement et signaler le déplacement et ses difficultés.
+@15-06
+Préserver l'accès secours et orienter les autres vers les relais prévus.
+Faire vérifier par la logistique en gardant l'accès secours libre.
+@15-07
+Orienter vers la billetterie pour vérifier sans accuser.
+Tracer la solution autorisée sans transformer le soupçon en fait.

@@ -3,7 +3,8 @@
   "branch": "test-v2",
   "enabled": true,
   "shards": 4,
-  "publish_enabled": false,
-  "request_revision": 2,
-  "request": "Produire les scènes métier puis publier les améliorations autorisées des points 1, 2 et 3."
+  "publish_enabled": true,
+  "request_revision": 3,
+  "request": "Produire les scènes métier puis publier les améliorations autorisées des points 1, 2 et 3.",
+  "reuse_artifact_run_id": 37646068616
 }

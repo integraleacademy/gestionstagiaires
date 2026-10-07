@@ -8,6 +8,7 @@ import hmac
 import html
 import json
 import io
+import math
 import os
 import re
 import secrets
@@ -532,7 +533,22 @@ def create_native_elearning_blueprint(
                 "duration_seconds": video.get("duration_seconds") or 0,
                 "captions": asset_url(asset_token, course_id, str(video['captions'])) if video.get('captions') else '',
                 "course_only": bool(video.get("course_only")),
+                "chapters": [],
             }
+            duration = video.get("duration_seconds")
+            chapters = video.get("chapters")
+            if isinstance(duration, (int, float)) and math.isfinite(duration) and isinstance(chapters, list):
+                for chapter in chapters[:100]:
+                    if not isinstance(chapter, Mapping):
+                        continue
+                    start = chapter.get("start_seconds")
+                    if isinstance(start, bool) or not isinstance(start, (int, float)) or not math.isfinite(start) or not 0 <= start < duration:
+                        continue
+                    public_block["video"]["chapters"].append({
+                        "title": str(chapter.get("title") or "Chapitre"),
+                        "start_seconds": start,
+                        "time_label": f"{int(start) // 60:02d}:{int(start) % 60:02d}",
+                    })
         return public_block
 
     def prepare_activity(

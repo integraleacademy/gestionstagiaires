@@ -36,6 +36,9 @@
     heartbeatQueued: false,
     stopped: false,
     serverActive: false,
+    serverMediaActive: false,
+    lastReceipt: 0,
+    idlePaused: false,
     baseSeconds: Number(config.initialActiveSeconds || 0),
     displayAnchor: Date.now(),
     lastInteraction: Date.now(),
@@ -74,7 +77,7 @@
   function displayedSeconds() {
     const extra = state.serverActive ? Math.max(0, Math.min(
       Date.now() - state.displayAnchor, 20000,
-      state.lastInteraction + idleMilliseconds - state.displayAnchor
+      confirmedPlayback() ? 20000 : state.lastInteraction + idleMilliseconds - state.displayAnchor
     ) / 1000) : 0;
     return state.baseSeconds + extra;
   }
@@ -167,6 +170,19 @@
     };
   }
 
+  function advancingVideo(video) {
+    const reader = videoReaders.get(video);
+    return Boolean(reader && !reader.waiting && reader.lastAdvance !== null
+      && Date.now() - reader.lastAdvance < 6000 && !video.paused && !video.ended
+      && !video.seeking && video.readyState >= 2 && video.playbackRate === 1
+      && document.visibilityState === "visible" && document.hasFocus());
+  }
+
+  function confirmedPlayback() {
+    return state.serverMediaActive && Date.now() - state.lastReceipt < 10000
+      && requiredVideos.some(advancingVideo);
+  }
+
   function videoProgress(video) {
     return state.progress.video_progress?.[config.activityId]?.[video.dataset.requiredVideo] || {};
   }
@@ -180,15 +196,16 @@
       id: video.dataset.requiredVideo,
       position: Math.max(0, Number(video.currentTime) || 0),
       rate: Number(video.playbackRate) || 1,
-      playing: !video.paused && !video.ended && !video.seeking && video.readyState >= 2,
+      playing: !video.paused && !video.ended && !video.seeking && video.readyState >= 2
+        && !videoReaders.get(video)?.waiting,
       ended: video.ended,
     }));
   }
 
   function pauseRequiredVideos(reset = false) {
     requiredVideos.forEach((video) => {
-      if (videoCompleted(video)) return;
       if (!video.paused) video.pause();
+      if (videoCompleted(video)) return;
       if (reset && video.readyState >= 1) {
         const reader = videoReaders.get(video);
         const position = Number(videoProgress(video).watched_seconds) || 0;
@@ -216,6 +233,15 @@
       bar?.setAttribute("aria-valuenow", String(Math.floor(percent)));
       const fill = bar?.querySelector("i");
       if (fill) fill.style.width = `${percent}%`;
+      document.querySelectorAll("[data-video-chapters]").forEach((chapters) => {
+        if (chapters.dataset.videoChapters !== video.dataset.requiredVideo) return;
+        const unlocked = progress.completed === true;
+        chapters.querySelectorAll("[data-chapter-start]").forEach((button) => { button.disabled = !unlocked; });
+        const hint = chapters.querySelector("[data-chapter-hint]");
+        if (hint) hint.textContent = unlocked
+          ? "Choisissez un chapitre pour revoir un passage."
+          : "Les chapitres deviennent accessibles après le visionnage complet.";
+      });
     });
   }
 
@@ -223,7 +249,7 @@
     const panels = Array.from(document.querySelectorAll("[data-video-followup]"));
     requiredVideos.forEach((video) => {
       const reader = { maximum: Number(videoProgress(video).watched_seconds) || 0,
-        lastPosition: 0, lastTime: Date.now(), restored: false,
+        lastPosition: 0, lastTime: Date.now(), lastAdvance: null, waiting: false, restored: false,
         panel: panels.find((panel) => panel.dataset.videoFollowup === video.dataset.requiredVideo) };
       videoReaders.set(video, reader);
       const anchor = () => { reader.lastPosition = video.currentTime; reader.lastTime = Date.now(); };
@@ -240,14 +266,17 @@
       video.addEventListener("timeupdate", () => {
         const elapsed = Math.max(0, (Date.now() - reader.lastTime) / 1000);
         const delta = video.currentTime - reader.lastPosition;
-        if (!videoCompleted(video) && !video.paused && !video.seeking
+        if (!video.paused && !video.seeking && video.playbackRate === 1 && !reader.waiting
             && document.visibilityState === "visible" && document.hasFocus()
-            && delta >= 0 && delta <= elapsed + .5 && video.currentTime <= reader.maximum + elapsed + .5) {
-          reader.maximum = Math.max(reader.maximum, video.currentTime);
+            && delta > 0 && delta <= elapsed + .5
+            && (videoCompleted(video) || video.currentTime <= reader.maximum + elapsed + .5)) {
+          reader.lastAdvance = Date.now();
+          if (!videoCompleted(video)) reader.maximum = Math.max(reader.maximum, video.currentTime);
         }
         anchor();
       });
       video.addEventListener("seeking", () => {
+        reader.lastAdvance = null;
         if (!videoCompleted(video) && video.currentTime > reader.maximum + .25) {
           video.currentTime = reader.maximum;
           showToast("Regardez ce passage avant d’avancer dans la vidéo.");
@@ -256,6 +285,7 @@
       });
       video.addEventListener("seeked", () => { anchor(); sendHeartbeat(); });
       video.addEventListener("ratechange", () => {
+        reader.lastAdvance = null;
         if (!videoCompleted(video) && video.playbackRate !== 1) video.playbackRate = 1;
         anchor();
       });
@@ -266,16 +296,33 @@
         }
         requiredVideos.forEach((other) => { if (other !== video && !other.paused) other.pause(); });
         if (!videoCompleted(video) && video.playbackRate !== 1) video.playbackRate = 1;
+        reader.waiting = false;
         anchor();
         sendHeartbeat();
       };
       video.addEventListener("play", playing);
       video.addEventListener("playing", playing);
       ["pause", "ended", "waiting"].forEach((eventName) => video.addEventListener(eventName, () => {
-        anchor(); sendHeartbeat();
+        reader.waiting = eventName === "waiting";
+        reader.lastAdvance = null;
+        anchor(); scheduleIdlePause(); sendHeartbeat();
       }));
       video.addEventListener("error", () => {
         showToast("La vidéo ne peut pas être chargée. Vérifiez votre connexion puis rechargez la page.", true);
+      });
+    });
+    document.querySelectorAll("[data-video-chapters]").forEach((chapters) => {
+      const video = requiredVideos.find((item) => item.dataset.requiredVideo === chapters.dataset.videoChapters);
+      chapters.querySelectorAll("[data-chapter-start]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (!video || !videoCompleted(video)) return;
+          const position = Number(button.dataset.chapterStart);
+          if (!Number.isFinite(position) || position < 0 || position >= video.duration) return;
+          video.pause();
+          video.currentTime = position;
+          video.focus();
+          showToast("Chapitre sélectionné. Appuyez sur lecture pour le revoir.");
+        });
       });
     });
     renderVideoProgress();
@@ -322,7 +369,10 @@
           showToast("Reprenez la vidéo à la dernière position enregistrée.");
         }
       }
-      state.serverActive = Boolean(result.active) && activitySignals().recent_activity && document.visibilityState === "visible";
+      state.serverMediaActive = Boolean(result.media_active);
+      state.lastReceipt = Date.now();
+      state.serverActive = Boolean(result.active) && document.visibilityState === "visible" && document.hasFocus()
+        && (activitySignals().recent_activity || confirmedPlayback());
       state.displayAnchor = Date.now();
       if (result.duplicate) {
         pauseRequiredVideos(true);
@@ -335,9 +385,11 @@
           state.serverActive ? "Chrono actif" : (activitySignals().recent_activity ? "Chrono en pause" : "Pause · inactif depuis 5 min")
         );
       }
+      scheduleIdlePause();
     } catch (error) {
       pauseRequiredVideos(true);
       state.serverActive = false;
+      state.serverMediaActive = false;
       state.displayAnchor = Date.now();
       setTrackingState("offline", "Suivi déconnecté");
       if ([401, 403, 409].includes(Number(error.status))) showToast("Votre accès ou le parcours a changé. Rechargez la page.", true);
@@ -383,18 +435,31 @@
   let idleTimeout = 0;
   function scheduleIdlePause() {
     window.clearTimeout(idleTimeout);
+    const remaining = state.lastInteraction + idleMilliseconds - Date.now();
+    if (remaining <= 0 && confirmedPlayback()) {
+      state.idlePaused = false;
+      if (idleNotice) idleNotice.hidden = true;
+      // Watching is evidenced by advancing video and server receipts, never by
+      // manufacturing pointer events or resetting the learner interaction age.
+      idleTimeout = window.setTimeout(scheduleIdlePause, 1000);
+      return;
+    }
     idleTimeout = window.setTimeout(() => {
+      if (confirmedPlayback()) { scheduleIdlePause(); return; }
+      if (state.idlePaused) return;
+      state.idlePaused = true;
       pauseRequiredVideos();
       pauseDisplay();
       setTrackingState("paused", "Pause · inactif depuis 5 min");
       if (idleNotice) idleNotice.hidden = false;
       sendHeartbeat();
-    }, Math.max(0, state.lastInteraction + idleMilliseconds - Date.now()));
+    }, Math.max(0, remaining));
   }
   function markActivity() {
     const wasIdle = Date.now() - state.lastInteraction >= idleMilliseconds;
     if (wasIdle) pauseDisplay();
     state.lastInteraction = Date.now();
+    state.idlePaused = false;
     if (idleNotice) idleNotice.hidden = true;
     scheduleIdlePause();
     if (wasIdle) {

@@ -175,7 +175,7 @@ jobs:
           # Reuse only when narration, rendering code, illustrations and fonts
           # are identical to the source run; publication-only fixes are allowed.
           subprocess.run(['git', 'diff', '--exit-code', run['head_sha'], 'HEAD', '--',
-              'scripts/aps62_v6/', 'scripts/aps62_v5/',
+              'scripts/aps62_v6/', 'scripts/aps62_v5/', 'scripts/aps62_v3/scenarios.txt',
               'scripts/aps62_v9/field_videos.py', 'scripts/aps62_v9/field_visuals.py',
               'scripts/render_aps62_v7.py', 'scripts/render_aps62_v5.py',
               'scripts/academy_videos/reference_settings.json',
@@ -245,11 +245,17 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ffmpeg
-          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip install --disable-pip-version-check -r requirements.txt pytest==9.1.1
       - name: Créer l'édition v9 sans modifier les éditions précédentes
         run: python scripts/build_aps62_v9.py
       - name: Vérifier les 62 médias, sous-titres, durées et parcours
-        run: python -m unittest tests.test_aps62_v9_release tests.test_aps62_v9_questions tests.test_aps62_v9_remediation -v
+        run: python -m unittest tests.test_aps62_v9_release tests.test_aps62_v9_questions tests.test_aps62_v9_remediation tests.test_native_elearning_video_presence tests.test_aps62_guided tests.test_aps62_readability -v
+      - name: Vérifier le suivi vidéo et les accès serveur
+        run: python -m pytest tests/test_native_elearning_video.py tests/test_native_elearning_video_presence.py -q
+      - name: Vérifier les parcours et lecteurs côté navigateur
+        run: |
+          npm install --prefix "$RUNNER_TEMP/aps-ui-checks" --no-audit --no-fund --ignore-scripts jsdom@26.1.0
+          NODE_PATH="$RUNNER_TEMP/aps-ui-checks/node_modules" node --test tests/test_native_elearning_video_ui.cjs tests/test_native_elearning_player_ui.cjs tests/test_aps62_guided_ui.cjs tests/test_native_elearning_exam_ui.cjs
       - name: Vérifier le périmètre exact du commit
         run: |
           git add -- elearning_native/aps62
@@ -297,6 +303,8 @@ jobs:
           protected = (
               'elearning_native/aps62/', 'scripts/aps62', 'scripts/render_aps62',
               'scripts/build_aps62', 'scripts/academy_videos/',
+              'elearning_native/store.py', 'elearning_native/web.py', 'elearning_native/practice.py',
+              'static/js/native-elearning', 'templates/native_elearning_player.html',
               '.github/workflows/aps-improvements.yml', 'tests/test_aps62',
           )
           touched = [p for p in paths if p.startswith(protected)]
@@ -307,7 +315,7 @@ jobs:
             echo '::error::Changements concurrents incompatibles : les vidéos restent dans les artifacts.'
             exit 1
           fi
-          APS62_VERIFY_FULL_DECODE=0 python -m unittest tests.test_aps62_v9_release tests.test_aps62_v9_questions tests.test_aps62_v9_remediation -v
+          APS62_VERIFY_FULL_DECODE=0 python -m unittest tests.test_aps62_v9_release tests.test_aps62_v9_questions tests.test_aps62_v9_remediation tests.test_native_elearning_video_presence tests.test_aps62_guided tests.test_aps62_readability -v
           git push origin HEAD:refs/heads/test-v2
           python - <<'PY'
           import json, os, subprocess

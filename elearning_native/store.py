@@ -440,7 +440,9 @@ class NativeElearningStore:
         age = 0.0 if interaction_age_seconds is None else interaction_age_seconds
         if isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0:
             raise TrackingError("Durée d’inactivité invalide. Rechargez la page.")
-        requested_active = bool(visible and recent_activity and age < IDLE_TIMEOUT_SECONDS and (focused or media_playing))
+        # A media_playing flag alone never establishes presence. Required-video
+        # receipts must advance normally between two server-timed heartbeats.
+        interactive_active = bool(visible and focused and recent_activity and age < IDLE_TIMEOUT_SECONDS)
         key = self._key_values(access)
         with self._transaction() as connection:
             tracking = connection.execute(
@@ -461,6 +463,13 @@ class NativeElearningStore:
                 }
 
             progress = self._progress_row(connection, access)
+            delta = max(0.0, epoch - float(tracking["last_seen_epoch"] or epoch))
+            incoming = self._validated_video_samples(video_samples, video_requirements or {})
+            media_id, media_credit = self._video_activity_evidence(
+                tracking, progress, activity_id, video_requirements or {}, incoming, delta,
+            ) if visible and focused else (None, 0.0)
+            media_active = bool(media_id and incoming[media_id].get("playing") is True)
+            requested_active = interactive_active or media_active
             owner_id = str(progress["active_tracking_session_id"] or "")
             owner_seen = float(progress["active_tracking_seen_epoch"] or 0)
             owner_is_stale = not owner_id or epoch - owner_seen > ACTIVE_SESSION_STALE_SECONDS
@@ -480,13 +489,14 @@ class NativeElearningStore:
 
             previous_active = bool(tracking["was_active"])
             previous_duplicate = bool(tracking["was_duplicate"])
-            delta = max(0.0, epoch - float(tracking["last_seen_epoch"] or epoch))
             credited = 0.0
             if previous_active and owns_slot:
-                # A delayed heartbeat or a return after inactivity cannot earn
-                # time beyond the deadline recorded on the previous heartbeat.
+                # Interactive time stops at the previously recorded deadline.
+                # Continuing video time needs separate advancing-media evidence.
                 until_idle = max(0.0, float(tracking["active_until_epoch"]) - float(tracking["last_seen_epoch"]))
                 credited = min(delta, HEARTBEAT_MAX_CREDIT_SECONDS, until_idle)
+                if not duplicate:
+                    credited = max(credited, media_credit)
 
             accepted_active = bool(requested_active and not duplicate)
             next_owner_id: Optional[str] = owner_id or None
@@ -588,30 +598,23 @@ class NativeElearningStore:
                 requirements=video_requirements or {}, samples=video_samples,
                 credited=credited, delta=delta, accepted_active=accepted_active,
                 visible=visible, focused=focused, now_iso=now_iso,
+                media_time_carry={media_id: min(.5, max(0.0, delta - credited))}
+                    if media_active and accepted_active else {},
             )
             updated = self._progress_row(connection, access)
             return {
                 "ended": False,
                 "duplicate": duplicate,
                 "active": accepted_active,
+                "media_active": bool(accepted_active and media_active),
                 "credited_seconds": round(credited, 2),
                 "server_time": now_iso,
                 "video_resync": video_resync,
                 "progress": self._serialize_progress(updated),
             }
 
-    def _record_video_samples(
-        self, connection: sqlite3.Connection, access: Mapping[str, Any],
-        tracking: sqlite3.Row, progress: sqlite3.Row, *, activity_id: str,
-        requirements: Mapping[str, float], samples: Any, credited: float,
-        delta: float, accepted_active: bool, visible: bool, focused: bool, now_iso: str,
-    ) -> Dict[str, float]:
-        """Credit only a continuous prefix, within the same active-time budget.
-
-        Durations come from reviewed media metadata, never from the browser.
-        The per-tracking-session baseline prevents reloads, duplicate tabs,
-        repeated ended events and replayed requests from manufacturing viewing.
-        """
+    @staticmethod
+    def _validated_video_samples(samples: Any, requirements: Mapping[str, float]) -> Dict[str, Any]:
         if samples is None:
             samples = []
         if not isinstance(samples, list) or len(samples) > 20:
@@ -631,6 +634,43 @@ class NativeElearningStore:
             incoming[video_id] = sample
         if sum(sample.get("playing") is True for sample in incoming.values()) > 1:
             raise TrackingError("Regardez une seule vidéo à la fois.")
+        return incoming
+
+    @staticmethod
+    def _video_activity_evidence(
+        tracking: sqlite3.Row, progress: sqlite3.Row, activity_id: str,
+        requirements: Mapping[str, float], incoming: Mapping[str, Any], delta: float,
+    ) -> tuple[Optional[str], float]:
+        previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
+        saved = _json_dict(progress["video_progress_json"]).get(activity_id, {})
+        for video_id, sample in incoming.items():
+            before = previous.get(video_id) or {}
+            position = float(sample["position"])
+            prior_position = float(before.get("position") or 0)
+            advancement = position - prior_position
+            duration = requirements[video_id]
+            record = saved.get(video_id) or {}
+            completed = videos_complete({video_id: record}, {video_id: duration})
+            frontier = float(record.get("watched_seconds") or 0) if record.get("duration_seconds") == duration else 0
+            if (before.get("playing") is True and sample.get("rate", 1) == 1
+                    and position <= duration + .05 and (completed or prior_position <= frontier + .5)
+                    and delta <= HEARTBEAT_MAX_CREDIT_SECONDS
+                    and 0 < advancement <= min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5):
+                # Only previously uncredited wall time may absorb request jitter;
+                # it is not a new per-request allowance. Buffering earns nothing.
+                carry = min(.5, max(0.0, float(before.get("time_credit_carry") or 0)))
+                return video_id, min(advancement, delta + carry, HEARTBEAT_MAX_CREDIT_SECONDS)
+        return None, 0.0
+
+    def _record_video_samples(
+        self, connection: sqlite3.Connection, access: Mapping[str, Any],
+        tracking: sqlite3.Row, progress: sqlite3.Row, *, activity_id: str,
+        requirements: Mapping[str, float], samples: Any, credited: float,
+        delta: float, accepted_active: bool, visible: bool, focused: bool, now_iso: str,
+        media_time_carry: Optional[Mapping[str, float]] = None,
+    ) -> Dict[str, float]:
+        """Credit a continuous prefix within server-timed, single-tab receipts."""
+        incoming = self._validated_video_samples(samples, requirements)
         saved = _json_dict(progress["video_progress_json"])
         activity_saved = saved.setdefault(activity_id, {})
         previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
@@ -643,6 +683,12 @@ class NativeElearningStore:
             if record.get("duration_seconds") != duration:
                 record = {"duration_seconds": duration, "watched_seconds": 0.0, "completed": False}
             if videos_complete({video_id: record}, {video_id: duration}):
+                next_samples[video_id] = {
+                    "position": min(float(sample["position"]), duration),
+                    "playing": bool(sample.get("playing") is True and sample.get("rate", 1) == 1
+                                    and accepted_active and visible and focused),
+                    "time_credit_carry": (media_time_carry or {}).get(video_id, 0.0),
+                }
                 continue
             frontier = min(duration, max(0.0, float(record.get("watched_seconds") or 0)))
             position = float(sample["position"])
@@ -681,6 +727,7 @@ class NativeElearningStore:
                 "playing": bool(sample.get("playing") is True and normal_rate and accepted_active
                                 and visible and focused and video_id not in resync),
                 "credit_carry": carry if sample.get("playing") is True and video_id not in resync else 0.0,
+                "time_credit_carry": (media_time_carry or {}).get(video_id, 0.0) if video_id not in resync else 0.0,
             }
         connection.execute("UPDATE tracking_sessions SET video_samples_json = ? WHERE id = ?",
                            (json.dumps(next_samples, separators=(",", ":")), tracking["id"]))

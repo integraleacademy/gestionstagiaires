@@ -56,7 +56,7 @@ class LongVideoContinuityTests(unittest.TestCase):
 
     def test_publication_preserves_activity_ids_and_the_3720_minute_budget(self):
         manifest = curriculum_manifest()
-        self.assertIn(manifest['version'], (PREVIOUS_VERSION, LONG_VERSION))
+        self.assertIn(manifest['version'], (PREVIOUS_VERSION, LONG_VERSION, '20261007-aps62-v9'))
         total = 0
         for module in manifest['modules']:
             with self.subTest(module=module['id']):
@@ -81,14 +81,15 @@ class LongVideoContinuityTests(unittest.TestCase):
             self.assertEqual(manifest['version'], PREVIOUS_VERSION,
                              'The long-video edition cannot publish a partial render.')
             self.skipTest('Long-video edition has not been published; no completion is claimed.')
-        self.assertEqual(manifest['version'], LONG_VERSION)
-        videos = read_json(ROOT/'video_manifest_v6.json')
-        scripts = read_json(ROOT/'video_scripts_v6.json')
+        self.assertIn(manifest['version'], (LONG_VERSION, '20261007-aps62-v9'))
+        revision = 'v7' if manifest['version'] == '20261007-aps62-v9' else 'v6'
+        videos = read_json(ROOT/f'video_manifest_{revision}.json')
+        scripts = read_json(ROOT/f'video_scripts_{revision}.json')
         self.assertEqual(len(videos), 62)
         self.assertEqual(set(videos), set(scripts))
         observed = []
         for module in manifest['modules']:
-            self.assertEqual(module['version'], LONG_VERSION)
+            self.assertEqual(module['version'], manifest['version'])
             self.assertIn(PREVIOUS_VERSION, module['previous_versions'])
             course = load_bundled_course(module['id'])
             for sid, video in video_blocks(course):

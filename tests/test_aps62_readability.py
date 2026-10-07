@@ -35,11 +35,11 @@ class ReadabilityTests(unittest.TestCase):
     def test_all_modules_use_the_course_videos_and_defined_words(self):
         authored = courses()
         manifest = curriculum_manifest()
-        self.assertIn(manifest['version'], ('20261007-aps62-v7', '20261007-aps62-v8'))
+        self.assertIn(manifest['version'], ('20261007-aps62-v7', '20261007-aps62-v8', '20261007-aps62-v9'))
         # Keep testing the published short-video edition after the long-video
         # edition becomes current. Existing assignments must remain readable.
         for version in dict.fromkeys(('20261007-aps62-v7', manifest['version'])):
-            video_revision = 'v5' if version == '20261007-aps62-v7' else 'v6'
+            video_revision = {'20261007-aps62-v7':'v5', '20261007-aps62-v8':'v6', '20261007-aps62-v9':'v7'}[version]
             videos = json.loads((ROOT/f'video_manifest_{video_revision}.json').read_text())
             self.assertEqual(set(videos), set(authored))
             for module in manifest['modules']:
