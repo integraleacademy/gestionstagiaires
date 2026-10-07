@@ -27,7 +27,7 @@ jobs:
       matrix:
         shard: [0, 1, 2, 3]
     env:
-      APS62_WORK: ${{ runner.temp }}/aps62-v6
+      APS62_WORK: /tmp/aps62-v6
       APS62_SHARD_INDEX: ${{ matrix.shard }}
       APS62_SHARD_COUNT: '4'
       APS62_SPEECH_WORKERS: '2'
@@ -100,7 +100,7 @@ jobs:
       contents: write
     env:
       APS62_VERIFY_FULL_DECODE: '1'
-      PERSIST_DIR: ${{ runner.temp }}/aps62-test-data
+      PERSIST_DIR: /tmp/aps62-test-data
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
