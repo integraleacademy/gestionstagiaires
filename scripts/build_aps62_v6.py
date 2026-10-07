@@ -21,7 +21,9 @@ ROOT = REPO/'elearning_native/aps62'
 OLD = '20261006-aps62-v5'
 
 
-def build(version='20261007-aps62-v7', replace_videos=False):
+def build(version='20261007-aps62-v8', replace_videos=False):
+    if any((ROOT/'courses').glob('*/'+version+'.json')) or (ROOT/'exams'/version).exists():
+        raise ValueError('Choose a new edition: existing course versions are immutable: '+version)
     simple = simple_courses()
     authored = video_courses()
     observations = {}
@@ -162,7 +164,7 @@ def build(version='20261007-aps62-v7', replace_videos=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--version', default='20261007-aps62-v7')
+    parser.add_argument('--version', default='20261007-aps62-v8')
     parser.add_argument('--videos-v6', action='store_true')
     args = parser.parse_args()
     build(args.version, args.videos_v6)

@@ -1,0 +1,8 @@
+{
+  "version": "20261007-aps62-v8",
+  "branch": "test-v2",
+  "enabled": true,
+  "shards": 4,
+  "requested_on": "2026-10-07",
+  "request": "Publier les 62 vidéos APS longues, avec narration, sous-titres et contrôle des durées."
+}

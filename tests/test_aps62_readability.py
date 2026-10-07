@@ -34,37 +34,50 @@ class CaptionTests(unittest.TestCase):
 class ReadabilityTests(unittest.TestCase):
     def test_all_modules_use_the_course_videos_and_defined_words(self):
         authored = courses()
-        videos = json.loads((ROOT/'video_manifest_v5.json').read_text())
-        self.assertEqual(set(videos), set(authored))
-        self.assertEqual(curriculum_manifest()['version'], '20261007-aps62-v7')
-        for module in curriculum_manifest()['modules']:
-            course = load_bundled_course(module['id'])
-            old = load_bundled_course(module['id'], '20261006-aps62-v4')
-            self.assertEqual(course['planned_minutes'], old['planned_minutes'])
-            self.assertEqual(course['activity_order'], old['activity_order'])
-            for section, old_section in zip(course['sections'], old['sections']):
-                acts = section['activities']
-                self.assertEqual(len(acts[0]['academy']['plain_course']), 3)
-                # Reference lessons remain complete, including the legal caveats.
-                for ref, previous in zip(acts[0]['academy']['lessons'], old_section['activities'][0]['academy']['lessons']):
-                    self.assertEqual(' '.join(p['text'] for p in ref['paragraphs']),
-                                     ' '.join(p['text'] for p in previous['paragraphs']))
-                self.assertNotIn('EXEMPLE EXPLIQUÉ', [p['left'] for p in acts[4]['pairs']])
-                self.assertEqual(len(acts[1]['academy']['cards']), 3)
-                self.assertTrue(all(len(c['back'].split()) < 24 for c in acts[1]['academy']['cards']))
-                video = acts[1]['blocks'][0]['video']
-                self.assertTrue(video['course_only'])
-                self.assertEqual(video['voice'], 'fr-FR-HenriNeural')
-                self.assertEqual(video['rate'], '-2%')
-                self.assertEqual(video['transcript'], videos[section['id']]['transcript'])
-                self.assertNotRegex(video['transcript'].lower(), r'pause|à vous de décider|ou bien :|choisissez|répondez')
-                caption = (ROOT/'assets'/video['captions']).read_text()
-                for cue in caption.split('\n\n')[1:]:
-                    if not cue.strip():
-                        continue
-                    lines = cue.strip().splitlines()[1:]
-                    self.assertLessEqual(len(lines), 2)
-                    self.assertTrue(all(len(line) <= 44 for line in lines))
+        manifest = curriculum_manifest()
+        self.assertIn(manifest['version'], ('20261007-aps62-v7', '20261007-aps62-v8'))
+        # Keep testing the published short-video edition after the long-video
+        # edition becomes current. Existing assignments must remain readable.
+        for version in dict.fromkeys(('20261007-aps62-v7', manifest['version'])):
+            video_revision = 'v5' if version == '20261007-aps62-v7' else 'v6'
+            videos = json.loads((ROOT/f'video_manifest_{video_revision}.json').read_text())
+            self.assertEqual(set(videos), set(authored))
+            for module in manifest['modules']:
+                with self.subTest(version=version, module=module['id']):
+                    course = load_bundled_course(module['id'], version)
+                    old = load_bundled_course(module['id'], '20261006-aps62-v4')
+                    self.assertIsNotNone(course)
+                    self._assert_readable_course(course, old, videos)
+
+    def _assert_readable_course(self, course, old, videos):
+        self.assertEqual(course['planned_minutes'], old['planned_minutes'])
+        self.assertEqual(course['activity_order'], old['activity_order'])
+        for section, old_section in zip(course['sections'], old['sections']):
+            acts = section['activities']
+            self.assertEqual(len(acts[0]['academy']['plain_course']), 3)
+            # Reference lessons remain complete, including the legal caveats.
+            for ref, previous in zip(acts[0]['academy']['lessons'], old_section['activities'][0]['academy']['lessons']):
+                self.assertEqual(' '.join(p['text'] for p in ref['paragraphs']),
+                                 ' '.join(p['text'] for p in previous['paragraphs']))
+            self.assertNotIn('EXEMPLE EXPLIQUÉ', [p['left'] for p in acts[4]['pairs']])
+            self.assertEqual(len(acts[1]['academy']['cards']), 3)
+            self.assertTrue(all(len(c['back'].split()) < 24 for c in acts[1]['academy']['cards']))
+            video = acts[1]['blocks'][0]['video']
+            self.assertTrue(video['course_only'])
+            self.assertEqual(video['voice'], 'fr-FR-HenriNeural')
+            self.assertEqual(video['rate'], '-2%')
+            self.assertEqual(video['transcript'], videos[section['id']]['transcript'])
+            # References to workers' breaks are course material, not a request
+            # to interrupt playback. Only forbid learner-facing instructions.
+            self.assertNotRegex(video['transcript'].lower(),
+                                r'mettez[^.!?]*pause|à vous de décider|ou bien :|choisissez|répondez')
+            caption = (ROOT/'assets'/video['captions']).read_text()
+            for cue in caption.split('\n\n')[1:]:
+                if not cue.strip():
+                    continue
+                lines = cue.strip().splitlines()[1:]
+                self.assertLessEqual(len(lines), 2)
+                self.assertTrue(all(len(line) <= 44 for line in lines))
 
 
 class ReadabilityWebTests(unittest.TestCase):

@@ -12,7 +12,6 @@ from pathlib import Path
 import re
 import sys
 
-import edge_tts.communicate as communication
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -151,19 +150,29 @@ def render(sid, row, audio, cues, signature):
 
 
 async def main():
-    communication._SSL_CTX.load_verify_locations(cafile='/etc/ssl/certs/ca-certificates.crt')
+    # edge-tts verifies TLS using its bundled CA store on macOS and Linux.
+    # Do not depend on a Linux-only path or change the library's private context.
     ASSETS.mkdir(parents=True, exist_ok=True)
     WORK.mkdir(parents=True, exist_ok=True)
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
-    speech_slots, video_slots = asyncio.Semaphore(4), asyncio.Semaphore(5)
+    workers = max(1, int(os.environ.get('APS62_RENDER_WORKERS', '3')))
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+    speech_slots = asyncio.Semaphore(max(1, int(os.environ.get('APS62_SPEECH_WORKERS', '3'))))
+    video_slots = asyncio.Semaphore(workers)
     path = OUT/'video_manifest_v6.json'
     manifest = json.loads(path.read_text()) if path.exists() else {}
     only = os.environ.get('APS62_ONLY')
+    shard_count = int(os.environ.get('APS62_SHARD_COUNT', '1'))
+    shard_index = int(os.environ.get('APS62_SHARD_INDEX', '0'))
+    assert shard_count > 0 and 0 <= shard_index < shard_count
+    dependencies = b''.join(p.read_bytes() for p in (
+        Path(__file__), ROOT/'scripts/render_aps62_v5.py',
+        ROOT/'scripts/aps62_v5/captions.py',
+        ROOT/'scripts/academy_videos/reference_settings.json', FONT, TITLE_FONT))
     async def one(sid, row):
         async with video_slots:
             folder = WORK/sid
             folder.mkdir(exist_ok=True)
-            signature = hashlib.sha256(json.dumps(row,ensure_ascii=False,sort_keys=True).encode()+Path(__file__).read_bytes()).hexdigest()
+            signature = hashlib.sha256(json.dumps(row,ensure_ascii=False,sort_keys=True).encode()+dependencies).hexdigest()
             cached = json.loads((folder/'result.json').read_text()) if (folder/'result.json').exists() else {}
             if cached.get('content_sha256') == signature and (ASSETS/f'{sid}.mp4').exists():
                 result = cached
@@ -172,7 +181,10 @@ async def main():
                 result = await asyncio.get_running_loop().run_in_executor(pool, render, sid, row, audio, cues, signature)
             manifest[sid] = result
             path.write_text(json.dumps(dict(sorted(manifest.items())),ensure_ascii=False,indent=2)+'\n')
-    await asyncio.gather(*(one(sid,row) for sid,row in courses().items() if not only or sid == only))
+    selected = [(sid, row) for index, (sid, row) in enumerate(sorted(courses().items()))
+                if index % shard_count == shard_index and (not only or sid == only)]
+    assert selected, 'No matching APS video to render'
+    await asyncio.gather(*(one(sid,row) for sid,row in selected))
     print('DONE',len(manifest),'continuous course videos',flush=True)
 
 
