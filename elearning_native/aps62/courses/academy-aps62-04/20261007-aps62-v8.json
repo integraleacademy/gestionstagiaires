@@ -1,0 +1,1452 @@
+{
+  "format_version": 1,
+  "id": "academy-aps62-04",
+  "version": "20261007-aps62-v8",
+  "title": "APS 04 · Libertés et données personnelles",
+  "locale": "fr",
+  "author_name": "Intégrale Academy",
+  "source": {
+    "type": "academy-aps62",
+    "reviewed_on": "2026-10-06"
+  },
+  "settings": {
+    "mastery_score": 80,
+    "force_navigation": true,
+    "attempts_limited": false,
+    "require_correct_answers": true
+  },
+  "theme": {
+    "main_color": "#2860e8",
+    "button_color": "#245bdb",
+    "text_color": "#172b4d"
+  },
+  "planned_minutes": 60,
+  "required_minutes": 60,
+  "regulation": "Annexe II · Libertés publiques",
+  "introduction": [],
+  "sections": [
+    {
+      "id": "aps62-04-01",
+      "title": "01 · Protéger les informations personnelles",
+      "planned_minutes": 60,
+      "activities": [
+        {
+          "id": "aps62-04-01-comprendre",
+          "title": "Le cours · Protéger les informations personnelles",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 8,
+          "blocks": [],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "lesson",
+            "image": "media/aps62/v2/module-04.webp",
+            "case": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.",
+            "reason": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.",
+            "lessons": [
+              {
+                "ref": "02.13",
+                "title": "Comprendre une donnée personnelle",
+                "page": 98,
+                "diagram": "media/aps62/repere-02.13.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Une personne peut être identifiable indirectement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Ne collecter que ce qui est utile"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Avant une utilisation, posez trois questions : pour quelle mission, par quelle personne autorisée et pendant quelle durée ?"
+                  }
+                ],
+                "course_page": 99,
+                "practice": {
+                  "background": "Recueillez seulement les données utiles, exactes et nécessaires à la mission. Ne recopiez pas une pièce d’identité sur un téléphone personnel. Un registre visiteurs se consulte à l’abri du regard des autres visiteurs. Les durées de conservation sont fixées et justifiées par le responsable du traitement ; elles ne se choisissent pas selon la capacité de stockage. Une demande d’accès, d’effacement ou une erreur de destinataire doit être transmise à l’interlocuteur prévu, notamment au délégué à la protection des données lorsqu’il existe.",
+                  "case": "Un salarié vous demande l’heure de départ d’une collègue pour « vérifier quelque chose de personnel ». Vous pouvez la retrouver dans l’historique des badges en quelques secondes. Avez-vous une raison professionnelle de consulter ? Comment répondez-vous ?",
+                  "transfer": "Pourquoi photographier une pièce d’identité « au cas où » ne constitue-t-il pas une bonne pratique par défaut ?",
+                  "page": 124
+                }
+              },
+              {
+                "ref": "02.14",
+                "title": "Protéger une information numérique",
+                "page": 100,
+                "diagram": "media/aps62/repere-02.14.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Trois qualités complémentaires"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Aucune de ces mesures ne remplace les autres."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Les gestes ordinaires sont déterminants"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Utilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification."
+                  }
+                ],
+                "course_page": 101,
+                "practice": {
+                  "background": "Sur les outils numériques, utilisez votre compte, verrouillez la session et ne partagez pas de mot de passe. Une demande urgente de code par téléphone doit être vérifiée par un canal connu. N’accédez pas à un système au-delà des droits attribués ; une session ouverte ne vaut pas autorisation. Une erreur, un courriel suspect ou une perte de matériel doit être signalé rapidement. Préservez les traces sans mener votre propre investigation technique et appliquez le plan de continuité prévu.",
+                  "case": "Une personne se présente au téléphone comme technicien et vous demande votre identifiant, votre mot de passe et un code reçu par SMS. Elle affirme que le système va tomber en panne dans cinq minutes. Quels indices vous alertent ? Quelle méthode permet de vérifier la demande ?",
+                  "transfer": "Un collègue vous demande votre mot de passe pour gagner du temps. Quel principe explique votre refus ?",
+                  "page": 125
+                }
+              },
+              {
+                "ref": "10.03",
+                "title": "Respecter les libertés avec la vidéo",
+                "page": 485,
+                "diagram": "media/aps62/repere-10.03.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Un système a une finalité déterminée"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La vidéosurveillance et la vidéoprotection répondent à des cadres qui dépendent notamment des lieux filmés. Leur mise en place doit respecter les autorisations et obligations applicables. La protection des personnes et des biens n'autorise pas une surveillance de curiosité ou une utilisation privée."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'agent consulte seulement les images nécessaires à sa mission et selon ses habilitations."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Limiter l'accès et la conservation"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les personnes concernées doivent être informées dans le cadre prévu. La conservation doit correspondre à la finalité et aux règles applicables ; il n'existe pas une durée universelle à choisir librement au poste. Une extraction liée à un événement suit un circuit distinct et documenté."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Les demandes d'accès ou de copie sont adressées à l'interlocuteur habilité, pas satisfaites sur une simple demande informelle."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un collègue souhaite voir qui accompagne un salarié sur le parking. Cette curiosité ne correspond pas à une mission de sécurité justifiée. L'opérateur refuse l'usage détourné et rappelle le circuit de demande. Il ne photographie pas l'écran pour « rendre service »."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · La possibilité technique de voir ou de copier ne vaut pas autorisation. Chaque consultation doit rester liée à la mission et aux droits accordés."
+                  }
+                ],
+                "course_page": 486,
+                "practice": {
+                  "background": "L’agent ne consulte pas les images pour surveiller une relation personnelle, commenter l’apparence ou contrôler librement les salariés. Les zones d’intimité ne doivent pas être filmées. La durée de conservation est définie et justifiée ; pour la vidéoprotection relevant de l’autorisation préfectorale, elle ne dépasse pas le plafond légal applicable, généralement un mois hors conservation pour une procédure. Ce plafond n’est pas une durée systématique à choisir. Toute extraction, transmission ou demande d’accès suit la procédure du responsable de traitement.",
+                  "case": "Un manager vous demande de suivre pendant toute la journée les pauses d’un salarié depuis les caméras de sécurité. La consigne du dispositif concerne la protection des accès et des biens. Pourquoi la demande doit-elle être examinée ? À qui l’adressez-vous ?",
+                  "transfer": "Pourquoi « garder systématiquement un mois » n’est-il pas une règle suffisante de conservation ?",
+                  "page": 499
+                }
+              },
+              {
+                "ref": "10.05",
+                "title": "Préserver une séquence vidéo",
+                "page": 489,
+                "diagram": "media/aps62/repere-10.05.webp",
+                "paragraphs": [
+                  {
+                    "kind": "heading",
+                    "text": "Identifier le bon événement"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Une conservation utile nécessite la caméra, la date, la plage horaire et le contexte. Si l'horloge présente un décalage, il doit être documenté avec l'heure de référence. Une séquence trop courte peut supprimer le début ou la suite utiles à la compréhension."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La sélection et l'extraction doivent être réalisées par une personne autorisée, selon la procédure et les demandes compétentes."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "Conserver l'origine et les accès"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "L'objectif est de maintenir l'intégrité et la traçabilité. Notez qui a demandé, extrait et reçu la séquence, avec quel support autorisé. Évitez les montages, conversions ou captures privées non prévus. Un fichier partagé dans une messagerie personnelle devient difficile à maîtriser et peut perdre des informations utiles."
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "La conservation courante et la préservation liée à un incident doivent être distinguées."
+                  },
+                  {
+                    "kind": "heading",
+                    "text": "EXEMPLE EXPLIQUÉ"
+                  },
+                  {
+                    "kind": "paragraph",
+                    "text": "Un incident est signalé à 11 h 05, mais la caméra affiche quatre minutes de retard. L'opérateur identifie la plage correspondant à 11 h 01 sur le système et documente l'écart. Il ne modifie pas simplement le nom du fichier pour faire disparaître la différence."
+                  },
+                  {
+                    "kind": "takeaway",
+                    "text": "À RETENIR · Une image doit rester reliée à son origine, à son horaire et au circuit de transmission. La qualité de la trace est aussi importante que son contenu visible."
+                  }
+                ],
+                "course_page": 490,
+                "practice": {
+                  "background": "Ne modifiez pas l’original pour accentuer un détail ou supprimer une partie gênante. Une copie de travail éventuelle reste identifiée et contrôlée. La transmission aux autorités, au responsable ou à une autre personne suit le cadre applicable ; une demande informelle ne suffit pas. Les images ne se partagent pas entre collègues pour commenter l’événement. Une extraction liée à une procédure peut suivre des règles de conservation distinctes du cycle automatique, sous la responsabilité du service compétent.",
+                  "case": "Un client vous demande immédiatement une vidéo montrant un incident qui le concerne. Il propose une clé USB personnelle et insiste pour repartir avec la copie. Pouvez-vous lui remettre directement ? Quelle réponse est adaptée ?",
+                  "transfer": "Pourquoi transmettre seulement un court extrait sans identifier la caméra ni l’heure peut-il rendre l’information difficile à exploiter ?",
+                  "page": 503
+                }
+              }
+            ],
+            "decision": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+            "pitfall": "Envoyer une photo de l’écran depuis votre téléphone.",
+            "objectives": [
+              "Expliquer : une information personnelle reste protégée",
+              "Justifier une décision à partir de faits et de limites.",
+              "Choisir une réponse professionnelle et analyser une variante."
+            ],
+            "table": [
+              [
+                "Faits disponibles",
+                "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles."
+              ],
+              [
+                "Décision à justifier",
+                "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure."
+              ],
+              [
+                "Piège à éviter",
+                "Envoyer une photo de l’écran depuis votre téléphone."
+              ],
+              [
+                "Pourquoi ?",
+                "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste."
+              ]
+            ],
+            "flow": [
+              {
+                "label": "Observer",
+                "text": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine."
+              },
+              {
+                "label": "Vérifier",
+                "text": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès."
+              },
+              {
+                "label": "Décider",
+                "text": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure."
+              },
+              {
+                "label": "Réévaluer",
+                "text": "Une personne filmée demande ses propres images. Expliquez vers qui l’orienter et pourquoi il faut aussi protéger les tiers visibles."
+              }
+            ],
+            "edition": "2026-10-07",
+            "image_alt": "Scène professionnelle illustrée : Libertés et données personnelles",
+            "visual_board": {
+              "title": "Le parcours d’une donnée",
+              "steps": [
+                {
+                  "label": "Collecter",
+                  "text": "Seulement ce qui est nécessaire à une finalité définie."
+                },
+                {
+                  "label": "Consulter",
+                  "text": "Réserver l’accès aux personnes habilitées et au besoin professionnel."
+                },
+                {
+                  "label": "Transmettre",
+                  "text": "Vérifier destinataire, périmètre et canal autorisé."
+                },
+                {
+                  "label": "Conserver",
+                  "text": "Respecter la durée prévue et tracer les exceptions encadrées."
+                }
+              ]
+            },
+            "extra_case": {
+              "title": "La bonne pièce jointe, le mauvais destinataire",
+              "case": "Un agent prépare un rapport pour le responsable sécurité. La capture jointe montre aussi une fiche médicale ouverte sur un autre écran. Le logiciel suggère une liste de diffusion générale.",
+              "task": "Quels contrôles effectuer avant d’envoyer ? Que faire si le message est déjà parti ?",
+              "model": "Retirer les données non nécessaires et vérifier le destinataire autorisé. Si l’envoi a eu lieu, signaler rapidement l’incident au responsable selon la procédure, sans multiplier les copies ni improviser une notification externe."
+            },
+            "sorting": [
+              {
+                "text": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.",
+                "category": "fait"
+              },
+              {
+                "text": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+                "category": "adapte"
+              },
+              {
+                "text": "Envoyer une photo de l’écran depuis votre téléphone.",
+                "category": "ecarter"
+              }
+            ],
+            "pacing": [
+              {
+                "label": "Le cours · Protéger les informations personnelles",
+                "minutes": 8
+              },
+              {
+                "label": "Le cours en vidéo",
+                "minutes": 12
+              },
+              {
+                "label": "Que faites-vous ? · pas à pas",
+                "minutes": 12
+              },
+              {
+                "label": "Choisir une réponse",
+                "minutes": 3
+              },
+              {
+                "label": "Relier les mots à leur définition",
+                "minutes": 3
+              },
+              {
+                "label": "Un nouvel exemple · pas à pas",
+                "minutes": 6
+              },
+              {
+                "label": "Préparer une transmission de données utile",
+                "minutes": 14
+              },
+              {
+                "label": "À retenir",
+                "minutes": 2
+              }
+            ],
+            "deepening": [
+              {
+                "title": "Une donnée utile à un poste ne l'est pas à tout destinataire",
+                "paragraphs": [
+                  "La protection des données commence dès la collecte : pourquoi noter cette information, qui en a besoin et par quel canal la transmettre ? Une donnée liée à une personne reste protégée même si elle figure dans un registre professionnel.",
+                  "Les durées de conservation et les droits d'accès se déterminent selon le traitement concerné, pas par une règle improvisée au poste.",
+                  "Exemple expliqué. Pour préparer une relève, un identifiant d'événement et les mesures encore attendues peuvent suffire. Envoyer la photographie complète d'un registre sur une messagerie personnelle expose aussi les visiteurs sans rapport avec l'incident. Le bon document est celui qui fournit les informations nécessaires au destinataire autorisé."
+                ]
+              },
+              {
+                "title": "Libertés, propriété et données : trois limites simultanées",
+                "paragraphs": [
+                  "La vie privée, la liberté d'aller et venir, le droit de propriété et les règles de protection des données doivent être articulés avec la mission. Le propriétaire d'un site fixe des conditions d'accès dans le cadre légal ; il ne transmet pas à son prestataire un pouvoir général de contrainte.",
+                  "Une contestation civile relève des interlocuteurs et juridictions compétents, notamment du tribunal judiciaire selon la matière. L'agent n'est pas chargé de trancher un litige de propriété sur la seule insistance d'un client.",
+                  "Le traitement de données personnelles suppose une finalité déterminée, des données pertinentes et limitées, des destinataires habilités, une durée de conservation adaptée et une sécurité appropriée. Une liste de visiteurs, un numéro de téléphone, une image ou un journal d'accès permettent d'identifier des personnes.",
+                  "Leur disponibilité à l'écran ne signifie pas qu'ils peuvent être transmis. La CNIL est l'autorité française de contrôle ; le responsable du traitement organise le dispositif et le DPO, lorsqu'il existe, conseille sur sa conformité."
+                ]
+              },
+              {
+                "title": "Le contrôle avant communication",
+                "paragraphs": [
+                  "Avant d'envoyer un registre, vérifier la personne qui demande, sa mission, les données réellement nécessaires et le canal autorisé. Une adresse professionnelle ne prouve pas l'habilitation. Si la finalité annoncée est personnelle, l'agent ne doit pas inventer une justification professionnelle.",
+                  "Il conserve une trace adaptée de la demande et la transmet au responsable prévu.",
+                  "Exemple : une personne filmée demande une copie immédiate. Le droit d'accès doit être traité selon la procédure, avec vérification de l'identité et prise en compte des droits des tiers. L'APS ne copie pas spontanément l'enregistrement sur une clé personnelle.",
+                  "De même, masquer un nom dans une image ne garantit pas l'anonymat si le visage, le contexte ou d'autres éléments identifient encore la personne."
+                ]
+              },
+              {
+                "title": "Comparer deux moments de la décision",
+                "paragraphs": [
+                  "Dans le nouveau dossier « La liste des visiteurs », le point de départ est le suivant : Une responsable demande au poste d'accueil la liste nominative des visiteurs d'un autre service, leurs téléphones et les horaires de passage, pour résoudre un conflit personnel.",
+                  "Son adresse professionnelle est connue de l'agent.",
+                  "Le fait établi est : La demande porte sur des données nominatives pour une finalité personnelle annoncée. La première réponse à examiner est : Vérifier l'habilitation et la finalité, puis orienter vers le responsable du traitement ou le DPO. L'appartenance à l'entreprise ne donne pas accès à toutes les données.",
+                  "La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication.",
+                  "La situation évolue : La responsable reformule sa demande comme une enquête interne, sans fournir de référence ni d'instruction validée. La décision doit donc être réexaminée : Demander une validation par le circuit autorisé et conserver une trace de la demande. Une reformulation n'est pas une habilitation.",
+                  "L'agent n'a pas à instruire seul une demande litigieuse et doit préserver la confidentialité.",
+                  "Comparez les deux moments avant de lancer la mission. Le document à contrôler contient cet écart : Courriel : transférer le registre complet vers une boîte personnelle. La référence vérifiée est : Procédure RGPD : accès limité aux personnes habilitées et transmission par canal approuvé."
+                ]
+              }
+            ],
+            "pacing_note": "Répartition indicative du travail : lecture, comparaison, choix et correction. Le rythme réel varie selon les acquis.",
+            "plain_language": true,
+            "plain_course": [
+              {
+                "title": "Comprendre la règle",
+                "paragraphs": [
+                  "Une donnée personnelle est une information qui permet de reconnaître une personne. Un nom, une photo ou un numéro de badge peuvent en être. L'agent utilise seulement les informations nécessaires à sa mission. Il les transmet uniquement aux personnes autorisées, par les moyens prévus."
+                ]
+              },
+              {
+                "title": "Un exemple expliqué",
+                "paragraphs": [
+                  "Par exemple, un collègue demande une photo de visiteur sur une messagerie personnelle. La demande doit être vérifiée. Le fait de connaître le collègue ne suffit pas à autoriser cet envoi. L'agent utilise le canal professionnel prévu si le partage est justifié."
+                ]
+              },
+              {
+                "title": "L’essentiel à retenir",
+                "paragraphs": [
+                  "Avant de transmettre une information, l'agent vérifie pourquoi elle est utile et qui peut la recevoir. Il respecte les règles de conservation du site. Il ne garde pas une copie personnelle pour un usage futur."
+                ]
+              }
+            ],
+            "visual_guide": {
+              "title": "Protéger les informations personnelles",
+              "situation": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.",
+              "action": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+              "why": "Une donnée personnelle est une information qui permet de reconnaître une personne. Un nom, une photo ou un numéro de badge peuvent en être. L'agent utilise seulement les informations nécessaires à sa mission. Il les transmet uniquement aux personnes autorisées, par les moyens prévus.",
+              "mistake": "Envoyer une photo de l’écran depuis votre téléphone.",
+              "terms": [
+                {
+                  "term": "Donnée personnelle",
+                  "definition": "Information permettant d'identifier directement ou indirectement une personne."
+                },
+                {
+                  "term": "Finalité",
+                  "definition": "But précis pour lequel une information est utilisée."
+                },
+                {
+                  "term": "Confidentialité",
+                  "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+                }
+              ]
+            }
+          },
+          "easy_glossary": [
+            {
+              "term": "Donnée personnelle",
+              "definition": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "term": "Finalité",
+              "definition": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "term": "Confidentialité",
+              "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ]
+        },
+        {
+          "id": "aps62-04-01-memoriser",
+          "title": "Le cours en vidéo",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [
+            {
+              "id": "aps62-04-01-video",
+              "type": "video",
+              "html": "",
+              "children": [],
+              "video": {
+                "id": "aps62-04-01-video",
+                "title": "Protéger les informations personnelles",
+                "required": true,
+                "src": "media/aps62/v6/aps62-04-01.mp4",
+                "poster": "media/aps62/v6/aps62-04-01.jpg",
+                "captions": "media/aps62/v6/aps62-04-01.vtt",
+                "duration_seconds": 655.583333,
+                "transcript": "Une donnée personnelle est une information qui permet de reconnaître une personne. Un nom, une photo ou un numéro de badge peuvent en être. L'agent utilise seulement les informations nécessaires à sa mission. Il les transmet uniquement aux personnes autorisées, par les moyens prévus.\n\nPour comprendre ce cours, voici trois mots utiles. Donnée personnelle : Information permettant d'identifier directement ou indirectement une personne. Finalité : But précis pour lequel une information est utilisée. Confidentialité : Protection d'une information contre l'accès de personnes non autorisées.\n\nPar exemple, un collègue demande une photo de visiteur sur une messagerie personnelle. La demande doit être vérifiée. Le fait de connaître le collègue ne suffit pas à autoriser cet envoi. L'agent utilise le canal professionnel prévu si le partage est justifié.\n\nUn nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif.\n\nLa finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent.\n\nUn visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève. Avant une utilisation, posez trois questions : pour quelle mission, par quelle personne autorisée et pendant quelle durée ?\n\nLa confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres.\n\nUtilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu. Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent.\n\nUn courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié. La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification.\n\nLa vidéosurveillance et la vidéoprotection répondent à des cadres qui dépendent notamment des lieux filmés. Leur mise en place doit respecter les autorisations et obligations applicables. La protection des personnes et des biens n'autorise pas une surveillance de curiosité ou une utilisation privée. L'agent consulte seulement les images nécessaires à sa mission et selon ses habilitations.\n\nLes personnes concernées doivent être informées dans le cadre prévu. La conservation doit correspondre à la finalité et aux règles applicables ; il n'existe pas une durée universelle à choisir librement au poste. Une extraction liée à un événement suit un circuit distinct et documenté. Les demandes d'accès ou de copie sont adressées à l'interlocuteur habilité, pas satisfaites sur une simple demande informelle.\n\nUn collègue souhaite voir qui accompagne un salarié sur le parking. Cette curiosité ne correspond pas à une mission de sécurité justifiée. L'opérateur refuse l'usage détourné et rappelle le circuit de demande. Il ne photographie pas l'écran pour « rendre service ». La possibilité technique de voir ou de copier ne vaut pas autorisation. Chaque consultation doit rester liée à la mission et aux droits accordés.\n\nUne conservation utile nécessite la caméra, la date, la plage horaire et le contexte. Si l'horloge présente un décalage, il doit être documenté avec l'heure de référence. Une séquence trop courte peut supprimer le début ou la suite utiles à la compréhension. La sélection et l'extraction doivent être réalisées par une personne autorisée, selon la procédure et les demandes compétentes.\n\nL'objectif est de maintenir l'intégrité et la traçabilité. Notez qui a demandé, extrait et reçu la séquence, avec quel support autorisé. Évitez les montages, conversions ou captures privées non prévus. Un fichier partagé dans une messagerie personnelle devient difficile à maîtriser et peut perdre des informations utiles. La conservation courante et la préservation liée à un incident doivent être distinguées.\n\nUn incident est signalé à 11 h 05, mais la caméra affiche quatre minutes de retard. L'opérateur identifie la plage correspondant à 11 h 01 sur le système et documente l'écart. Il ne modifie pas simplement le nom du fichier pour faire disparaître la différence. Une image doit rester reliée à son origine, à son horaire et au circuit de transmission. La qualité de la trace est aussi importante que son contenu visible.\n\nLa protection des données commence dès la collecte : pourquoi noter cette information, qui en a besoin et par quel canal la transmettre ? Une donnée liée à une personne reste protégée même si elle figure dans un registre professionnel. Les durées de conservation et les droits d'accès se déterminent selon le traitement concerné, pas par une règle improvisée au poste.\n\nPar exemple, Pour préparer une relève, un identifiant d'événement et les mesures encore attendues peuvent suffire. Envoyer la photographie complète d'un registre sur une messagerie personnelle expose aussi les visiteurs sans rapport avec l'incident. Le bon document est celui qui fournit les informations nécessaires au destinataire autorisé.\n\nLa vie privée, la liberté d'aller et venir, le droit de propriété et les règles de protection des données doivent être articulés avec la mission. Le propriétaire d'un site fixe des conditions d'accès dans le cadre légal ; il ne transmet pas à son prestataire un pouvoir général de contrainte. Une contestation civile relève des interlocuteurs et juridictions compétents, notamment du tribunal judiciaire selon la matière. L'agent n'est pas chargé de trancher un litige de propriété sur la seule insistance d'un client.\n\nLe traitement de données personnelles suppose une finalité déterminée, des données pertinentes et limitées, des destinataires habilités, une durée de conservation adaptée et une sécurité appropriée. Une liste de visiteurs, un numéro de téléphone, une image ou un journal d'accès permettent d'identifier des personnes. Leur disponibilité à l'écran ne signifie pas qu'ils peuvent être transmis. La CNIL est l'autorité française de contrôle ; le responsable du traitement organise le dispositif et le DPO, lorsqu'il existe, conseille sur sa conformité.\n\nAvant d'envoyer un registre, vérifier la personne qui demande, sa mission, les données réellement nécessaires et le canal autorisé. Une adresse professionnelle ne prouve pas l'habilitation. Si la finalité annoncée est personnelle, l'agent ne doit pas inventer une justification professionnelle. Il conserve une trace adaptée de la demande et la transmet au responsable prévu. Exemple : une personne filmée demande une copie immédiate. Le droit d'accès doit être traité selon la procédure, avec vérification de l'identité et prise en compte des droits des tiers. L'APS ne copie pas spontanément l'enregistrement sur une clé personnelle.\n\nDe même, masquer un nom dans une image ne garantit pas l'anonymat si le visage, le contexte ou d'autres éléments identifient encore la personne.\n\nDans cet exemple, « La liste des visiteurs », le point de départ est le suivant : Une responsable demande au poste d'accueil la liste nominative des visiteurs d'un autre service, leurs téléphones et les horaires de passage, pour résoudre un conflit personnel. Son adresse professionnelle est connue de l'agent.\n\nVoici ce que l’on sait : La demande porte sur des données nominatives pour une finalité personnelle annoncée. L’action adaptée est la suivante : Vérifier qui a le droit d’accéder à ces données et dans quel but. Orienter la demande vers le responsable des données. L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication.\n\nUn nouvel événement se produit : La responsable reformule sa demande comme une enquête interne, sans fournir de référence ni d'instruction validée. L’agent adapte alors son action : Faire valider la demande par la personne autorisée, selon la procédure. Garder une trace de cette demande. Une reformulation n'est pas une habilitation. L'agent n'a pas à instruire seul une demande litigieuse et doit préserver la confidentialité. Le document à contrôler contient cet écart : Courriel : transférer le registre complet vers une boîte personnelle. La référence vérifiée est : Procédure RGPD : accès limité aux personnes habilitées et transmission par canal approuvé.\n\nUn commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles. Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.\n\nLa finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.\n\nUn agent prépare un rapport pour le responsable sécurité. La capture jointe montre aussi une fiche médicale ouverte sur un autre écran. Le logiciel suggère une liste de diffusion générale. Dans ce cas, la réponse adaptée est la suivante. Retirer les données non nécessaires et vérifier le destinataire autorisé. Si l’envoi a eu lieu, signaler rapidement l’incident au responsable selon la procédure, sans multiplier les copies ni improviser une notification externe.\n\nAvant de transmettre une information, l'agent vérifie pourquoi elle est utile et qui peut la recevoir. Il respecte les règles de conservation du site. Il ne garde pas une copie personnelle pour un usage futur.",
+                "voice": "fr-FR-HenriNeural",
+                "rate": "-2%",
+                "burned_captions": true,
+                "render_revision": 6,
+                "content_sha256": "1858a7311a63f07de24760b2a7b8fc133f8e2867c346936efe3393a32db66227",
+                "course_only": true,
+                "narration_seconds": 655.32,
+                "chapters": [
+                  {
+                    "title": "Protéger les informations personnelles",
+                    "start_seconds": 0.0,
+                    "end_seconds": 16.757
+                  },
+                  {
+                    "title": "Trois mots pour comprendre",
+                    "start_seconds": 16.757,
+                    "end_seconds": 35.647
+                  },
+                  {
+                    "title": "Un premier exemple",
+                    "start_seconds": 35.647,
+                    "end_seconds": 51.948
+                  },
+                  {
+                    "title": "Une personne peut être identifiable indirectement",
+                    "start_seconds": 51.948,
+                    "end_seconds": 76.795
+                  },
+                  {
+                    "title": "Ne collecter que ce qui est utile",
+                    "start_seconds": 76.795,
+                    "end_seconds": 101.323
+                  },
+                  {
+                    "title": "Comprendre une donnée personnelle",
+                    "start_seconds": 101.323,
+                    "end_seconds": 127.624
+                  },
+                  {
+                    "title": "Trois qualités complémentaires",
+                    "start_seconds": 127.624,
+                    "end_seconds": 151.106
+                  },
+                  {
+                    "title": "Les gestes ordinaires sont déterminants",
+                    "start_seconds": 151.106,
+                    "end_seconds": 175.099
+                  },
+                  {
+                    "title": "Protéger une information numérique",
+                    "start_seconds": 175.099,
+                    "end_seconds": 203.007
+                  },
+                  {
+                    "title": "Un système a une finalité déterminée",
+                    "start_seconds": 203.007,
+                    "end_seconds": 224.205
+                  },
+                  {
+                    "title": "Limiter l'accès et la conservation",
+                    "start_seconds": 224.205,
+                    "end_seconds": 246.923
+                  },
+                  {
+                    "title": "Respecter les libertés avec la vidéo",
+                    "start_seconds": 246.923,
+                    "end_seconds": 272.152
+                  },
+                  {
+                    "title": "Identifier le bon événement",
+                    "start_seconds": 272.152,
+                    "end_seconds": 295.099
+                  },
+                  {
+                    "title": "Conserver l'origine et les accès",
+                    "start_seconds": 295.099,
+                    "end_seconds": 320.214
+                  },
+                  {
+                    "title": "Préserver une séquence vidéo",
+                    "start_seconds": 320.214,
+                    "end_seconds": 345.52
+                  },
+                  {
+                    "title": "Une donnée utile à un poste ne l'est pas à tout destinataire",
+                    "start_seconds": 345.52,
+                    "end_seconds": 365.29
+                  },
+                  {
+                    "title": "Une donnée utile à un poste ne l'est pas à tout destinataire",
+                    "start_seconds": 365.29,
+                    "end_seconds": 383.887
+                  },
+                  {
+                    "title": "Libertés, propriété et données : trois limites simultanées",
+                    "start_seconds": 383.887,
+                    "end_seconds": 412.446
+                  },
+                  {
+                    "title": "Libertés, propriété et données : trois limites simultanées",
+                    "start_seconds": 412.446,
+                    "end_seconds": 444.357
+                  },
+                  {
+                    "title": "Le contrôle avant communication",
+                    "start_seconds": 444.357,
+                    "end_seconds": 481.743
+                  },
+                  {
+                    "title": "Le contrôle avant communication",
+                    "start_seconds": 481.743,
+                    "end_seconds": 490.034
+                  },
+                  {
+                    "title": "Comparer deux moments de la décision",
+                    "start_seconds": 490.034,
+                    "end_seconds": 506.807
+                  },
+                  {
+                    "title": "Comparer deux moments de la décision",
+                    "start_seconds": 506.807,
+                    "end_seconds": 532.088
+                  },
+                  {
+                    "title": "Comparer deux moments de la décision",
+                    "start_seconds": 532.088,
+                    "end_seconds": 571.322
+                  },
+                  {
+                    "title": "Comprendre la bonne décision",
+                    "start_seconds": 571.322,
+                    "end_seconds": 590.417
+                  },
+                  {
+                    "title": "Comprendre la bonne décision",
+                    "start_seconds": 590.417,
+                    "end_seconds": 613.338
+                  },
+                  {
+                    "title": "La bonne pièce jointe, le mauvais destinataire",
+                    "start_seconds": 613.338,
+                    "end_seconds": 642.164
+                  },
+                  {
+                    "title": "L’essentiel à retenir",
+                    "start_seconds": 642.164,
+                    "end_seconds": 655.57
+                  }
+                ],
+                "animated": true
+              }
+            }
+          ],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "memory",
+            "cards": [
+              {
+                "front": "Donnée personnelle",
+                "back": "Information permettant d'identifier directement ou indirectement une personne."
+              },
+              {
+                "front": "Finalité",
+                "back": "But précis pour lequel une information est utilisée."
+              },
+              {
+                "front": "Confidentialité",
+                "back": "Protection d'une information contre l'accès de personnes non autorisées."
+              }
+            ],
+            "instruction": "Cliquez sur un mot pour lire sa définition. Vous pouvez le revoir autant de fois que nécessaire.",
+            "transcript": "Une donnée personnelle est une information qui permet de reconnaître une personne. Un nom, une photo ou un numéro de badge peuvent en être. L'agent utilise seulement les informations nécessaires à sa mission. Il les transmet uniquement aux personnes autorisées, par les moyens prévus.\n\nPour comprendre ce cours, voici trois mots utiles. Donnée personnelle : Information permettant d'identifier directement ou indirectement une personne. Finalité : But précis pour lequel une information est utilisée. Confidentialité : Protection d'une information contre l'accès de personnes non autorisées.\n\nPar exemple, un collègue demande une photo de visiteur sur une messagerie personnelle. La demande doit être vérifiée. Le fait de connaître le collègue ne suffit pas à autoriser cet envoi. L'agent utilise le canal professionnel prévu si le partage est justifié.\n\nUn nom, une photographie, une plaque d'immatriculation ou un numéro de badge peut constituer une donnée personnelle lorsqu'il permet d'identifier une personne directement ou indirectement. Collecter, consulter, transmettre et supprimer sont des traitements. Un registre papier peut donc poser les mêmes questions de protection qu'un logiciel. Une information disponible au poste n'est pas librement utilisable pour n'importe quel objectif.\n\nLa finalité explique pourquoi l'information est nécessaire. Pour gérer une visite, il faut les données prévues par la procédure, sans ajouter des renseignements privés par curiosité. Les accès doivent être limités aux personnes habilitées, la conservation adaptée et l'information des personnes assurée dans le cadre prévu. L'agent applique les règles du responsable du traitement et signale les demandes ou incidents à l'interlocuteur compétent.\n\nUn visiteur laisse son numéro pour être joint par l'accueil. L'agent ne l'utilise pas ensuite pour un contact personnel. La donnée a été fournie pour organiser la visite. De même, photographier le registre avec un téléphone privé crée une copie non maîtrisée, même si l'intention est seulement de faciliter la relève. Avant une utilisation, posez trois questions : pour quelle mission, par quelle personne autorisée et pendant quelle durée ?\n\nLa confidentialité limite l'accès aux personnes autorisées. L'intégrité signifie que l'information reste exacte et n'a pas été modifiée sans contrôle. La disponibilité permet de la retrouver au moment nécessaire. Un mot de passe protège l'accès ; une sauvegarde contribue à la disponibilité ; une correction tracée préserve l'historique. Aucune de ces mesures ne remplace les autres.\n\nUtilisez votre compte, verrouillez la session lorsque vous vous éloignez et évitez les supports personnels non autorisés. Vérifiez le destinataire avant un envoi. Une demande urgente de code ou de document peut relever d'une tentative de manipulation : confirmez-la par un canal connu. Si une erreur est découverte, prévenez rapidement selon la procédure ; la supprimer silencieusement ne garantit pas que ses effets disparaissent.\n\nUn courriel prétend provenir du directeur et réclame la liste des badges actifs. L'agent vérifie la demande par le numéro habituel du responsable, sans utiliser celui indiqué dans le message suspect. Cette démarche protège la confidentialité tout en permettant de traiter une demande légitime par le circuit approprié. La sécurité numérique est une continuité de la sécurité du poste. Une porte contrôlée perd de son intérêt si les codes d'accès sont transmis sans vérification.\n\nLa vidéosurveillance et la vidéoprotection répondent à des cadres qui dépendent notamment des lieux filmés. Leur mise en place doit respecter les autorisations et obligations applicables. La protection des personnes et des biens n'autorise pas une surveillance de curiosité ou une utilisation privée. L'agent consulte seulement les images nécessaires à sa mission et selon ses habilitations.\n\nLes personnes concernées doivent être informées dans le cadre prévu. La conservation doit correspondre à la finalité et aux règles applicables ; il n'existe pas une durée universelle à choisir librement au poste. Une extraction liée à un événement suit un circuit distinct et documenté. Les demandes d'accès ou de copie sont adressées à l'interlocuteur habilité, pas satisfaites sur une simple demande informelle.\n\nUn collègue souhaite voir qui accompagne un salarié sur le parking. Cette curiosité ne correspond pas à une mission de sécurité justifiée. L'opérateur refuse l'usage détourné et rappelle le circuit de demande. Il ne photographie pas l'écran pour « rendre service ». La possibilité technique de voir ou de copier ne vaut pas autorisation. Chaque consultation doit rester liée à la mission et aux droits accordés.\n\nUne conservation utile nécessite la caméra, la date, la plage horaire et le contexte. Si l'horloge présente un décalage, il doit être documenté avec l'heure de référence. Une séquence trop courte peut supprimer le début ou la suite utiles à la compréhension. La sélection et l'extraction doivent être réalisées par une personne autorisée, selon la procédure et les demandes compétentes.\n\nL'objectif est de maintenir l'intégrité et la traçabilité. Notez qui a demandé, extrait et reçu la séquence, avec quel support autorisé. Évitez les montages, conversions ou captures privées non prévus. Un fichier partagé dans une messagerie personnelle devient difficile à maîtriser et peut perdre des informations utiles. La conservation courante et la préservation liée à un incident doivent être distinguées.\n\nUn incident est signalé à 11 h 05, mais la caméra affiche quatre minutes de retard. L'opérateur identifie la plage correspondant à 11 h 01 sur le système et documente l'écart. Il ne modifie pas simplement le nom du fichier pour faire disparaître la différence. Une image doit rester reliée à son origine, à son horaire et au circuit de transmission. La qualité de la trace est aussi importante que son contenu visible.\n\nLa protection des données commence dès la collecte : pourquoi noter cette information, qui en a besoin et par quel canal la transmettre ? Une donnée liée à une personne reste protégée même si elle figure dans un registre professionnel. Les durées de conservation et les droits d'accès se déterminent selon le traitement concerné, pas par une règle improvisée au poste.\n\nPar exemple, Pour préparer une relève, un identifiant d'événement et les mesures encore attendues peuvent suffire. Envoyer la photographie complète d'un registre sur une messagerie personnelle expose aussi les visiteurs sans rapport avec l'incident. Le bon document est celui qui fournit les informations nécessaires au destinataire autorisé.\n\nLa vie privée, la liberté d'aller et venir, le droit de propriété et les règles de protection des données doivent être articulés avec la mission. Le propriétaire d'un site fixe des conditions d'accès dans le cadre légal ; il ne transmet pas à son prestataire un pouvoir général de contrainte. Une contestation civile relève des interlocuteurs et juridictions compétents, notamment du tribunal judiciaire selon la matière. L'agent n'est pas chargé de trancher un litige de propriété sur la seule insistance d'un client.\n\nLe traitement de données personnelles suppose une finalité déterminée, des données pertinentes et limitées, des destinataires habilités, une durée de conservation adaptée et une sécurité appropriée. Une liste de visiteurs, un numéro de téléphone, une image ou un journal d'accès permettent d'identifier des personnes. Leur disponibilité à l'écran ne signifie pas qu'ils peuvent être transmis. La CNIL est l'autorité française de contrôle ; le responsable du traitement organise le dispositif et le DPO, lorsqu'il existe, conseille sur sa conformité.\n\nAvant d'envoyer un registre, vérifier la personne qui demande, sa mission, les données réellement nécessaires et le canal autorisé. Une adresse professionnelle ne prouve pas l'habilitation. Si la finalité annoncée est personnelle, l'agent ne doit pas inventer une justification professionnelle. Il conserve une trace adaptée de la demande et la transmet au responsable prévu. Exemple : une personne filmée demande une copie immédiate. Le droit d'accès doit être traité selon la procédure, avec vérification de l'identité et prise en compte des droits des tiers. L'APS ne copie pas spontanément l'enregistrement sur une clé personnelle.\n\nDe même, masquer un nom dans une image ne garantit pas l'anonymat si le visage, le contexte ou d'autres éléments identifient encore la personne.\n\nDans cet exemple, « La liste des visiteurs », le point de départ est le suivant : Une responsable demande au poste d'accueil la liste nominative des visiteurs d'un autre service, leurs téléphones et les horaires de passage, pour résoudre un conflit personnel. Son adresse professionnelle est connue de l'agent.\n\nVoici ce que l’on sait : La demande porte sur des données nominatives pour une finalité personnelle annoncée. L’action adaptée est la suivante : Vérifier qui a le droit d’accéder à ces données et dans quel but. Orienter la demande vers le responsable des données. L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication.\n\nUn nouvel événement se produit : La responsable reformule sa demande comme une enquête interne, sans fournir de référence ni d'instruction validée. L’agent adapte alors son action : Faire valider la demande par la personne autorisée, selon la procédure. Garder une trace de cette demande. Une reformulation n'est pas une habilitation. L'agent n'a pas à instruire seul une demande litigieuse et doit préserver la confidentialité. Le document à contrôler contient cet écart : Courriel : transférer le registre complet vers une boîte personnelle. La référence vérifiée est : Procédure RGPD : accès limité aux personnes habilitées et transmission par canal approuvé.\n\nUn commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles. Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.\n\nLa finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.\n\nUn agent prépare un rapport pour le responsable sécurité. La capture jointe montre aussi une fiche médicale ouverte sur un autre écran. Le logiciel suggère une liste de diffusion générale. Dans ce cas, la réponse adaptée est la suivante. Retirer les données non nécessaires et vérifier le destinataire autorisé. Si l’envoi a eu lieu, signaler rapidement l’incident au responsable selon la procédure, sans multiplier les copies ni improviser une notification externe.\n\nAvant de transmettre une information, l'agent vérifie pourquoi elle est utile et qui peut la recevoir. Il respecte les règles de conservation du site. Il ne garde pas une copie personnelle pour un usage futur.",
+            "edition": "2026-10-07",
+            "voice": "fr-FR-HenriNeural",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Donnée personnelle",
+              "definition": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "term": "Finalité",
+              "definition": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "term": "Confidentialité",
+              "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ]
+        },
+        {
+          "id": "aps62-04-01-atelier",
+          "title": "Que faites-vous ? · pas à pas",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 12,
+          "blocks": [],
+          "academy": {
+            "kind": "workshop",
+            "dossier": "04.01",
+            "title": "La liste des visiteurs",
+            "case": "Une responsable demande au poste d'accueil la liste nominative des visiteurs d'un autre service, leurs téléphones et les horaires de passage, pour résoudre un conflit personnel. Son adresse professionnelle est connue de l'agent.",
+            "edition": "2026-10-07",
+            "plain_language": true,
+            "image": "media/aps62/v2/module-04.webp"
+          },
+          "practice": {
+            "revision": "20261007-aps62-v8",
+            "title": "La liste des visiteurs",
+            "sequential": true,
+            "exercises": [
+              {
+                "id": "constat",
+                "kind": "single",
+                "prompt": "Pourquoi cette liste est-elle demandée ?",
+                "context": "Une responsable demande au poste d'accueil la liste nominative des visiteurs d'un autre service, leurs téléphones et les horaires de passage, pour résoudre un conflit personnel.\n\nSon adresse professionnelle est connue de l'agent.",
+                "options": [
+                  {
+                    "id": "b",
+                    "text": "Pour traiter un incident de sécurité identifié."
+                  },
+                  {
+                    "id": "a",
+                    "text": "Pour un usage personnel annoncé par le demandeur."
+                  }
+                ],
+                "answer": "a",
+                "explanation": "Pour un usage personnel annoncé par le demandeur. Une donnée personnelle est une information qui permet de reconnaître une personne. Un nom, une photo ou un numéro de badge peuvent en être. L'agent utilise seulement les informations nécessaires à sa mission. Il les transmet uniquement aux personnes autorisées, par les moyens prévus.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quel statut donner à cette information dans le compte rendu ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Décrire les faits du nouveau cas avec leur source, sans ajouter une intention supposée."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Présenter une intention malveillante comme certaine sans élément supplémentaire."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Ne conserver aucune trace tant que toutes les causes ne sont pas connues."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une observation, une déclaration et une interprétation ne sont pas interchangeables. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "Une observation, une déclaration et une interprétation ne sont pas interchangeables."
+                },
+                "stage": "Comprendre la situation"
+              },
+              {
+                "id": "decision",
+                "kind": "single",
+                "prompt": "Que faites-vous ?",
+                "context": "Une responsable demande au poste d'accueil la liste nominative des visiteurs d'un autre service, leurs téléphones et les horaires de passage, pour résoudre un conflit personnel.\n\nSon adresse professionnelle est connue de l'agent.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Vérifier qui a le droit d’accéder à ces données et dans quel but. Orienter la demande vers le responsable des données."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Envoyer le fichier parce que l'adresse appartient à l'entreprise."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication."
+                },
+                "stage": "Choisir une action"
+              },
+              {
+                "id": "evolution",
+                "kind": "single",
+                "prompt": "Que faites-vous maintenant ?",
+                "context": "La responsable reformule sa demande comme une enquête interne, sans fournir de référence ni d'instruction validée.",
+                "options": [
+                  {
+                    "id": "2",
+                    "text": "Considérer la nouvelle formulation comme suffisante."
+                  },
+                  {
+                    "id": "1",
+                    "text": "Faire valider la demande par la personne autorisée, selon la procédure. Garder une trace de cette demande."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Une reformulation n'est pas une habilitation. L'agent n'a pas à instruire seul une demande litigieuse et doit préserver la confidentialité.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication."
+                },
+                "stage": "La suite de l’histoire"
+              }
+            ],
+            "mode": "guided"
+          },
+          "easy_glossary": [
+            {
+              "term": "Donnée personnelle",
+              "definition": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "term": "Finalité",
+              "definition": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "term": "Confidentialité",
+              "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ]
+        },
+        {
+          "id": "aps62-04-01-q1",
+          "title": "Choisir une réponse",
+          "type": "question",
+          "question_type": "single_choice",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Un commerçant voisin demande une copie des images d’une cliente qui aurait abîmé sa vitrine. Il souhaite les publier sur un réseau social. Vous avez accès au système pour la sécurité de votre site, pas pour des recherches personnelles.",
+          "options": [
+            {
+              "id": "aps62-04-01-a0",
+              "text": "Envoyer une photo de l’écran depuis votre téléphone.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-04-01-a1",
+              "text": "Diffuser les images en masquant seulement le nom de la cliente.",
+              "is_correct": false
+            },
+            {
+              "id": "aps62-04-01-a2",
+              "text": "Transmettre la demande à la personne habilitée et préserver les éléments selon la procédure.",
+              "is_correct": true
+            }
+          ],
+          "explanation": "Avant de transmettre une information, l'agent vérifie pourquoi elle est utile et qui peut la recevoir. Il respecte les règles de conservation du site. Il ne garde pas une copie personnelle pour un usage futur.\n\nLa finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.",
+          "easy_glossary": [
+            {
+              "term": "Donnée personnelle",
+              "definition": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "term": "Finalité",
+              "definition": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "term": "Confidentialité",
+              "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ]
+        },
+        {
+          "id": "aps62-04-01-q2",
+          "title": "Relier les mots à leur définition",
+          "type": "question",
+          "question_type": "matching",
+          "scored": true,
+          "planned_minutes": 3,
+          "prompt": "Pour chaque mot, choisissez la bonne définition.",
+          "pairs": [
+            {
+              "id": "aps62-04-01-pair0",
+              "left": "Donnée personnelle",
+              "right": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "id": "aps62-04-01-pair1",
+              "left": "Finalité",
+              "right": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "id": "aps62-04-01-pair2",
+              "left": "Confidentialité",
+              "right": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ],
+          "explanation": "Donnée personnelle : Information permettant d'identifier directement ou indirectement une personne. Finalité : But précis pour lequel une information est utilisée. Confidentialité : Protection d'une information contre l'accès de personnes non autorisées."
+        },
+        {
+          "id": "aps62-04-01-transfert",
+          "title": "Un nouvel exemple · pas à pas",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 6,
+          "blocks": [],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "transfer",
+            "case": "Une personne filmée demande ses propres images. Expliquez vers qui l’orienter et pourquoi il faut aussi protéger les tiers visibles.",
+            "model": "La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste. Le registre contient uniquement les données nécessaires, reste à l’abri des autres visiteurs et est accessible aux personnes autorisées. Une extraction vidéo se fait par l’acteur habilité et se trace. La durée pertinente dépend du dispositif et de sa finalité ; un délai maximal n’est pas une durée à appliquer automatiquement dans tous les cas.",
+            "edition": "2026-10-07",
+            "plain_language": true,
+            "image": "media/aps62/v2/module-04.webp"
+          },
+          "practice": {
+            "revision": "20261007-aps62-v8",
+            "title": "Une information personnelle reste protégée",
+            "exercises": [
+              {
+                "id": "variante",
+                "kind": "single",
+                "prompt": "Quelle réponse retenir dans cette nouvelle situation ?",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Refuser toute demande d’accès sans transmettre au responsable."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Envoyer directement la séquence entière sur la messagerie de la personne."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Orienter la demande vers le responsable habilité, qui vérifie le droit d’accès et la protection des tiers."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Orienter la demande vers le responsable habilité, qui vérifie le droit d’accès et la protection des tiers. La finalité du dispositif, les personnes habilitées, la durée de conservation et la procédure d’extraction encadrent l’accès. Pouvoir voir techniquement une image ne donne pas le droit de la communiquer. Une demande d’un tiers, une réquisition et l’exercice d’un droit d’accès sont des situations distinctes. La confidentialité concerne aussi les registres papier et les conversations au poste.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication."
+                },
+                "stage": "Votre choix",
+                "context": "Une personne filmée demande ses propres images.\n\nExpliquez vers qui l’orienter et pourquoi il faut aussi protéger les tiers visibles."
+              },
+              {
+                "id": "application",
+                "kind": "single",
+                "prompt": "Un prestataire demande l'intégralité du registre visiteurs pour retrouver son propre rendez-vous. Que faire ?",
+                "context": "Une personne filmée demande ses propres images.\n\nExpliquez vers qui l’orienter et pourquoi il faut aussi protéger les tiers visibles.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Orienter la demande vers le canal autorisé et limiter la communication aux données nécessaires après vérification."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Supprimer immédiatement le registre pour éviter toute difficulté."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Transmettre tout le registre puisque le prestataire figure dedans."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "La présence d'une personne dans un fichier ne lui donne pas accès aux données des autres. Vérifier le destinataire et le besoin protège la confidentialité sans détruire arbitrairement le dossier.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication."
+                },
+                "stage": "La question suivante"
+              }
+            ],
+            "mode": "guided",
+            "sequential": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Donnée personnelle",
+              "definition": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "term": "Finalité",
+              "definition": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "term": "Confidentialité",
+              "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ]
+        },
+        {
+          "id": "aps62-04-01-etude",
+          "title": "Préparer une transmission de données utile",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 14,
+          "blocks": [],
+          "practice": {
+            "revision": "20261007-aps62-v8",
+            "title": "Préparer une transmission de données utile",
+            "journal": false,
+            "documents": [
+              {
+                "title": "Demande validée",
+                "text": "Le responsable du site doit connaître l’événement AC-24, le point d’accès et la mesure encore attendue.",
+                "rows": [
+                  [
+                    "Destinataire",
+                    "Responsable habilité via le canal professionnel prévu."
+                  ],
+                  [
+                    "Besoin",
+                    "Organiser la vérification de l’autorisation d’accès."
+                  ]
+                ]
+              },
+              {
+                "title": "Projet d’export",
+                "text": "Le fichier rassemble davantage d’informations que le seul événement.",
+                "rows": [
+                  [
+                    "Ligne 1",
+                    "AC-24 ; entrée B ; autorisation à confirmer."
+                  ],
+                  [
+                    "Ligne 2",
+                    "Liste complète des visiteurs du mois."
+                  ],
+                  [
+                    "Ligne 3",
+                    "Commentaire sans lien sur la vie familiale du visiteur."
+                  ]
+                ]
+              },
+              {
+                "title": "Message de transfert proposé",
+                "text": "« Je vous envoie tout depuis mon adresse personnelle ; vous trierez ensuite. »",
+                "rows": [
+                  [
+                    "Point de contrôle",
+                    "Le destinataire et le canal doivent correspondre au circuit autorisé."
+                  ]
+                ]
+              }
+            ],
+            "exercises": [
+              {
+                "id": "choix-1",
+                "kind": "single",
+                "prompt": "Quelle ligne répond directement au besoin décrit ?",
+                "context": "Un incident d’accès doit être suivi par le responsable habilité.\n\nComparez le besoin annoncé et les informations d’un projet d’export.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "La liste complète du mois, par précaution."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Le commentaire familial, pour mieux connaître la personne."
+                  },
+                  {
+                    "id": "3",
+                    "text": "La ligne AC-24 avec l’accès et l’action attendue."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "La sélection part du besoin professionnel défini, pas de tout ce qui est disponible.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication."
+                },
+                "stage": "Votre choix"
+              },
+              {
+                "id": "choix-2",
+                "kind": "single",
+                "prompt": "Quel problème pose le canal proposé ?",
+                "context": "Un incident d’accès doit être suivi par le responsable habilité.\n\nComparez le besoin annoncé et les informations d’un projet d’export.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "L’adresse personnelle sort du circuit professionnel prévu pour cette transmission."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Un canal n’a aucune importance si le destinataire connaît l’agent."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Tout document peut être envoyé à tout responsable."
+                  }
+                ],
+                "answer": "1",
+                "explanation": "Le destinataire autorisé et le canal sécurisé sont deux vérifications distinctes.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication."
+                },
+                "stage": "La question suivante"
+              },
+              {
+                "id": "choix-3",
+                "kind": "single",
+                "prompt": "Que faire de la demande si le destinataire change ?",
+                "context": "Un incident d’accès doit être suivi par le responsable habilité.\n\nComparez le besoin annoncé et les informations d’un projet d’export.",
+                "options": [
+                  {
+                    "id": "1",
+                    "text": "Transmettre automatiquement puisqu’un premier destinataire était autorisé."
+                  },
+                  {
+                    "id": "2",
+                    "text": "Publier le fichier pour que chacun puisse y accéder."
+                  },
+                  {
+                    "id": "3",
+                    "text": "Vérifier ses droits et son besoin avant de réutiliser le même export."
+                  }
+                ],
+                "answer": "3",
+                "explanation": "Une autorisation de communication ne se propage pas à tous les destinataires.",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle décision retenir ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Reporter toute décision et toute alerte jusqu’à la prochaine relève."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "3",
+                  "explanation": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "L'appartenance à l'entreprise ne donne pas accès à toutes les données. La finalité, la nécessité, l'habilitation et le canal doivent être vérifiés avant une communication."
+                },
+                "stage": "La question suivante"
+              },
+              {
+                "prompt": "Triez les éléments du projet.",
+                "kind": "sort",
+                "options": [
+                  {
+                    "id": "0",
+                    "text": "Utile au besoin décrit"
+                  },
+                  {
+                    "id": "1",
+                    "text": "Excédentaire ou sans lien"
+                  },
+                  {
+                    "id": "2",
+                    "text": "Circuit à corriger"
+                  }
+                ],
+                "rows": [
+                  {
+                    "id": "r0",
+                    "text": "Référence AC-24 et mesure attendue",
+                    "answer": "0"
+                  },
+                  {
+                    "id": "r1",
+                    "text": "Tous les visiteurs du mois",
+                    "answer": "1"
+                  },
+                  {
+                    "id": "r2",
+                    "text": "Commentaire sur la vie familiale",
+                    "answer": "1"
+                  },
+                  {
+                    "id": "r3",
+                    "text": "Envoi depuis une adresse personnelle",
+                    "answer": "2"
+                  }
+                ],
+                "explanation": "La minimisation concerne le contenu ; la confidentialité concerne aussi le circuit de communication.",
+                "id": "classement",
+                "remediation": {
+                  "prompt": "Un visiteur veut obtenir l'enregistrement vidéo d'une altercation où figurent d'autres personnes. Quelle consigne complémentaire écarter dans ce nouveau cas ?",
+                  "options": [
+                    {
+                      "id": "1",
+                      "text": "Copier la vidéo sur sa clé USB au poste."
+                    },
+                    {
+                      "id": "2",
+                      "text": "Vérifier la version et le champ de la consigne auprès de l’interlocuteur habilité."
+                    },
+                    {
+                      "id": "3",
+                      "text": "Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers."
+                    }
+                  ],
+                  "answer": "1",
+                  "explanation": "Une instruction doit être compatible avec les faits et le cadre de la mission. Dans ce cas : Orienter la demande vers le responsable habilité à traiter le droit d'accès et les droits des tiers.",
+                  "lesson": "Une instruction doit être compatible avec les faits et le cadre de la mission."
+                },
+                "stage": "La question suivante",
+                "context": "Un incident d’accès doit être suivi par le responsable habilité.\n\nComparez le besoin annoncé et les informations d’un projet d’export."
+              }
+            ],
+            "mode": "guided",
+            "sequential": true
+          },
+          "academy": {
+            "kind": "documents",
+            "dossier": "04.01",
+            "title": "Préparer une transmission de données utile",
+            "case": "Un incident d’accès doit être suivi par le responsable habilité. Comparez le besoin annoncé et les informations d’un projet d’export.",
+            "edition": "2026-10-07",
+            "plain_language": true,
+            "image": "media/aps62/v2/module-04.webp"
+          },
+          "easy_glossary": [
+            {
+              "term": "Donnée personnelle",
+              "definition": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "term": "Finalité",
+              "definition": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "term": "Confidentialité",
+              "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ]
+        },
+        {
+          "id": "aps62-04-01-synthese",
+          "title": "À retenir",
+          "type": "content",
+          "scored": false,
+          "planned_minutes": 2,
+          "blocks": [],
+          "academy": {
+            "dossier": "04.01",
+            "title": "Une information personnelle reste protégée",
+            "kind": "recap",
+            "decision": "Avant de transmettre une information, l'agent vérifie pourquoi elle est utile et qui peut la recevoir. Il respecte les règles de conservation du site. Il ne garde pas une copie personnelle pour un usage futur.",
+            "reason": "",
+            "pitfall": "Envoyer une photo de l’écran depuis votre téléphone.",
+            "cards": [
+              {
+                "front": "Donnée personnelle",
+                "back": "Information permettant d'identifier directement ou indirectement une personne."
+              },
+              {
+                "front": "Finalité",
+                "back": "But précis pour lequel une information est utilisée."
+              },
+              {
+                "front": "Confidentialité",
+                "back": "Protection d'une information contre l'accès de personnes non autorisées."
+              }
+            ],
+            "sources": [
+              [
+                "Programme et modalités de formation",
+                "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000052197461"
+              ],
+              [
+                "TFP APS : répartition du distanciel par l’ADEF",
+                "https://adef-securite.fr/tfp-aps-quelles-sequences-peuvent-etre-dispensees-a-distance-et-lesquelles-doivent-rester-en-presentiel/"
+              ],
+              [
+                "Code de la sécurité intérieure, livre VI",
+                "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+              ],
+              [
+                "CNAPS : tenue des agents",
+                "https://cnaps.interieur.gouv.fr/Publications/Fiches-thematiques/Tenue-des-agents-prives-de-securite"
+              ],
+              [
+                "CNIL : vidéoprotection au travail",
+                "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+              ],
+              [
+                "INRS : prévention du risque électrique",
+                "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+              ],
+              [
+                "SGDSN : plan Vigipirate actualisé",
+                "https://www.sgdsn.gouv.fr/vigipirate"
+              ]
+            ],
+            "manual_refs": [
+              {
+                "ref": "02.13",
+                "page": 99
+              },
+              {
+                "ref": "02.14",
+                "page": 101
+              },
+              {
+                "ref": "10.03",
+                "page": 486
+              },
+              {
+                "ref": "10.05",
+                "page": 490
+              }
+            ],
+            "instruction": "Si un point reste difficile, relisez le cours ou refaites l’exercice concerné.",
+            "edition": "2026-10-07",
+            "plain_language": true
+          },
+          "easy_glossary": [
+            {
+              "term": "Donnée personnelle",
+              "definition": "Information permettant d'identifier directement ou indirectement une personne."
+            },
+            {
+              "term": "Finalité",
+              "definition": "But précis pour lequel une information est utilisée."
+            },
+            {
+              "term": "Confidentialité",
+              "definition": "Protection d'une information contre l'accès de personnes non autorisées."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "activity_order": [
+    "aps62-04-01-comprendre",
+    "aps62-04-01-memoriser",
+    "aps62-04-01-atelier",
+    "aps62-04-01-q1",
+    "aps62-04-01-q2",
+    "aps62-04-01-transfert",
+    "aps62-04-01-etude",
+    "aps62-04-01-synthese"
+  ],
+  "counts": {
+    "sections": 1,
+    "activities": 8,
+    "scored_activities": 2,
+    "required_videos": 1,
+    "workbooks": 0,
+    "assets": 8,
+    "interactive_workshops": 3,
+    "journal_workshops": 0,
+    "document_studies": 1
+  },
+  "assets": [
+    "media/aps62/repere-02.13.webp",
+    "media/aps62/repere-02.14.webp",
+    "media/aps62/repere-10.03.webp",
+    "media/aps62/repere-10.05.webp",
+    "media/aps62/v2/module-04.webp",
+    "media/aps62/v6/aps62-04-01.jpg",
+    "media/aps62/v6/aps62-04-01.mp4",
+    "media/aps62/v6/aps62-04-01.vtt"
+  ],
+  "import_warnings": [],
+  "mock_exam_id": "module-04",
+  "mock_exam_questions": 30,
+  "voice": "fr-FR-HenriNeural",
+  "illustration": "images/aps62/module-04.webp",
+  "interaction_revision": "20261007-aps62-v8",
+  "reading_revision": "visual-guided-v2"
+}

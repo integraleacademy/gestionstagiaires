@@ -1,0 +1,939 @@
+{
+  "id": "module-11",
+  "version": "20261007-aps62-v8",
+  "title": "Sensibilisation au risque électrique",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-11-01",
+      "prompt": "Un câble électrique endommagé est visible au sol. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le déplacer à mains nues"
+        },
+        {
+          "id": "2",
+          "text": "Le recouvrir avec un vêtement humide"
+        },
+        {
+          "id": "3",
+          "text": "Empêcher l’approche sans toucher et alerter"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un câble détérioré peut présenter un danger même si aucun arc n’est visible.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-02",
+      "prompt": "Qui délivre l’habilitation électrique à un salarié ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le stagiaire lui-même"
+        },
+        {
+          "id": "2",
+          "text": "L’employeur après vérification des conditions requises"
+        },
+        {
+          "id": "3",
+          "text": "Le vendeur du matériel"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La formation contribue à la décision, mais ne se confond pas avec le titre délivré par l’employeur.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-03",
+      "prompt": "Une attestation de formation équivaut-elle automatiquement à une habilitation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui sans limite de durée ni de mission"
+        },
+        {
+          "id": "2",
+          "text": "Oui pour toute opération"
+        },
+        {
+          "id": "3",
+          "text": "Non"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Il faut vérifier le titre, son périmètre et les opérations autorisées.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-04",
+      "prompt": "Une habilitation B0 autorise-t-elle tous travaux électriques ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, elle concerne des opérations d’ordre non électrique dans son cadre"
+        },
+        {
+          "id": "2",
+          "text": "Oui en basse tension sans restriction"
+        },
+        {
+          "id": "3",
+          "text": "Oui sous la surveillance d’un visiteur"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le symbole et les limites de l’habilitation définissent le champ d’action.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-05",
+      "prompt": "L’absence d’étincelles prouve-t-elle l’absence de tension ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui sur un câble sec"
+        },
+        {
+          "id": "2",
+          "text": "Non"
+        },
+        {
+          "id": "3",
+          "text": "Oui si la lumière est éteinte"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’apparence extérieure ne permet pas de conclure à une mise hors tension sûre.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-06",
+      "prompt": "Une armoire électrique est ouverte sans surveillance. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Toucher les composants pour identifier la panne"
+        },
+        {
+          "id": "2",
+          "text": "La réparer avec un outil disponible"
+        },
+        {
+          "id": "3",
+          "text": "Sécuriser les abords et prévenir le service compétent"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’agent doit éviter l’exposition et faire intervenir la personne habilitée.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-07",
+      "prompt": "Un disjoncteur déclenche plusieurs fois. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le bloquer en position marche"
+        },
+        {
+          "id": "2",
+          "text": "Signaler l’anomalie et suivre la procédure adaptée"
+        },
+        {
+          "id": "3",
+          "text": "Le réarmer indéfiniment"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le déclenchement peut traduire un défaut ; le contourner peut aggraver le risque.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-08",
+      "prompt": "Une opération simple sur un appareil intact est-elle identique à une intervention dans un tableau ouvert ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, l’exposition et les conditions d’autorisation diffèrent"
+        },
+        {
+          "id": "2",
+          "text": "Oui si l’agent porte des chaussures"
+        },
+        {
+          "id": "3",
+          "text": "Oui, seul le voltage compte"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Il faut examiner l’opération réelle, l’état du matériel et l’environnement.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-09",
+      "prompt": "Pourquoi l’humidité augmente-t-elle la vigilance ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Elle autorise une intervention sans habilitation"
+        },
+        {
+          "id": "2",
+          "text": "Elle peut aggraver les conditions d’exposition électrique"
+        },
+        {
+          "id": "3",
+          "text": "Elle rend toujours le courant inoffensif"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’environnement fait partie de l’évaluation du risque.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-10",
+      "prompt": "Une personne semble en contact avec une source électrique. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Éviter tout contact dangereux, alerter et faire supprimer le risque selon les moyens sûrs prévus"
+        },
+        {
+          "id": "2",
+          "text": "Verser de l’eau sur elle"
+        },
+        {
+          "id": "3",
+          "text": "La tirer immédiatement à mains nues"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La protection doit précéder un contact avec la victime pour éviter une seconde électrisation.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-11",
+      "prompt": "Un agent non habilité peut-il improviser une consignation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui avec un cadenas"
+        },
+        {
+          "id": "2",
+          "text": "Oui après avoir coupé un interrupteur"
+        },
+        {
+          "id": "3",
+          "text": "Non"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La consignation est une procédure technique réalisée par les personnes compétentes et habilitées.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-12",
+      "prompt": "Un interrupteur est sur arrêt. Cela suffit-il à autoriser des travaux électriques ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non"
+        },
+        {
+          "id": "2",
+          "text": "Oui si l’éclairage est éteint"
+        },
+        {
+          "id": "3",
+          "text": "Oui si un témoin l’a vu"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une position d’interrupteur ne remplace pas les vérifications et procédures de sécurité requises.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-13",
+      "prompt": "Que signifie électrisation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une coupure d’électricité du bâtiment"
+        },
+        {
+          "id": "2",
+          "text": "Uniquement un décès par courant"
+        },
+        {
+          "id": "3",
+          "text": "Le passage de courant électrique dans le corps"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le terme décrit l’accident de contact électrique, dont les conséquences peuvent être graves.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-14",
+      "prompt": "Que désigne l’électrocution ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une panne de prise sans blessure"
+        },
+        {
+          "id": "2",
+          "text": "Une habilitation haute tension"
+        },
+        {
+          "id": "3",
+          "text": "Une électrisation mortelle"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Il faut employer les termes correctement dans les transmissions.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-15",
+      "prompt": "Un arc électrique nécessite-t-il un contact direct pour être dangereux ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non"
+        },
+        {
+          "id": "2",
+          "text": "Oui toujours"
+        },
+        {
+          "id": "3",
+          "text": "Oui uniquement avec un outil métallique"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’énergie thermique et les projections peuvent causer un dommage à distance.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-16",
+      "prompt": "Une rallonge présente des conducteurs apparents. Quel choix ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La mettre hors usage selon la procédure sans exposition et la signaler"
+        },
+        {
+          "id": "2",
+          "text": "La réserver aux appareils de faible puissance"
+        },
+        {
+          "id": "3",
+          "text": "Ajouter du ruban puis poursuivre sans avis"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un bricolage improvisé ne garantit pas une protection fiable.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-17",
+      "prompt": "Un local électrique porte un accès réglementé. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Y attendre la fin de sa ronde"
+        },
+        {
+          "id": "2",
+          "text": "Vérifier l’autorisation et le cadre de la mission avant entrée"
+        },
+        {
+          "id": "3",
+          "text": "Entrer parce que l’on détient la clé"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Posséder une clé n’équivaut pas à être autorisé pour toute opération.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-18",
+      "prompt": "Le client demande une réparation électrique urgente. Que répondre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Expliquer sa limite et appeler le service compétent"
+        },
+        {
+          "id": "2",
+          "text": "Accepter parce que la demande est urgente"
+        },
+        {
+          "id": "3",
+          "text": "Essayer en regardant une vidéo"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’urgence ne remplace ni compétence ni habilitation.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-19",
+      "prompt": "Une odeur de brûlé provient d’un équipement électrique. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Continuer son usage jusqu’à la fumée"
+        },
+        {
+          "id": "2",
+          "text": "Ouvrir l’appareil pour vérifier"
+        },
+        {
+          "id": "3",
+          "text": "Alerter et appliquer les mesures prévues sans contact dangereux"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un signe anormal appelle une prise en charge adaptée avant aggravation.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-20",
+      "prompt": "Un équipement à batterie est-il forcément sans danger électrique ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non"
+        },
+        {
+          "id": "2",
+          "text": "Oui sous vingt kilos"
+        },
+        {
+          "id": "3",
+          "text": "Oui car il n’est pas branché"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Des sources autonomes peuvent conserver de l’énergie et présenter d’autres dangers associés.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-21",
+      "prompt": "Pourquoi ne pas improviser une distance de sécurité chiffrée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Elle dépend du contexte et des règles techniques applicables"
+        },
+        {
+          "id": "2",
+          "text": "Parce que la tension est toujours faible"
+        },
+        {
+          "id": "3",
+          "text": "Parce que toute distance suffit"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Sans évaluation fiable, il faut rester à distance et solliciter le relais compétent.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-22",
+      "prompt": "Une installation paraît hors service depuis longtemps. Que présumer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Qu’elle est forcément hors tension"
+        },
+        {
+          "id": "2",
+          "text": "Qu’elle peut rester dangereuse jusqu’à vérification compétente"
+        },
+        {
+          "id": "3",
+          "text": "Qu’une peinture protège du courant"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’ancienneté ou l’apparence ne remplace pas une vérification de sécurité.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-23",
+      "prompt": "L’habilitation est-elle valable pour toutes les tâches électriques d’un site ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui quelle que soit sa mention"
+        },
+        {
+          "id": "2",
+          "text": "Non, elle a un domaine et des limites"
+        },
+        {
+          "id": "3",
+          "text": "Oui si le titulaire est ancien"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le titre doit correspondre à l’opération et aux conditions effectives.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-24",
+      "prompt": "Un changement de poste peut-il nécessiter une réévaluation de l’habilitation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui"
+        },
+        {
+          "id": "2",
+          "text": "Non, jamais"
+        },
+        {
+          "id": "3",
+          "text": "Seulement à la demande d’un visiteur"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’adéquation entre activité réelle et autorisation doit être maintenue.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-25",
+      "prompt": "Une multiprise chauffe anormalement. Quel réflexe ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Signaler et faire cesser l’usage selon les conditions sûres prévues"
+        },
+        {
+          "id": "2",
+          "text": "La couvrir pour éviter qu’on la touche"
+        },
+        {
+          "id": "3",
+          "text": "Ajouter une autre multiprise"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un échauffement anormal peut annoncer un défaut ou une surcharge.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-26",
+      "prompt": "Pourquoi éviter les objets métalliques près de pièces nues sous tension ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Ils absorbent toujours l’électricité"
+        },
+        {
+          "id": "2",
+          "text": "Ils valent protection individuelle"
+        },
+        {
+          "id": "3",
+          "text": "Ils peuvent conduire le courant ou provoquer un arc"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’environnement matériel peut augmenter le risque d’accident.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-27",
+      "prompt": "Un balisage électrique a été déplacé. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Traverser rapidement"
+        },
+        {
+          "id": "2",
+          "text": "Signaler et empêcher l’exposition dans ses moyens"
+        },
+        {
+          "id": "3",
+          "text": "Considérer le danger terminé"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La disparition d’une limite visible ne prouve pas la disparition du danger.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-28",
+      "prompt": "Une personne victime d’un choc se sent mieux. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Lui faire reprendre immédiatement son poste"
+        },
+        {
+          "id": "2",
+          "text": "Conclure seule à l’absence de risque"
+        },
+        {
+          "id": "3",
+          "text": "Prendre un avis urgent des secours et suivre leurs instructions"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’absence de signe visible ne suffit pas à apprécier les conséquences d’un accident électrique.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-29",
+      "prompt": "Quel message technique est utile au relais ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le seul nom de la marque"
+        },
+        {
+          "id": "2",
+          "text": "Une cause de panne inventée"
+        },
+        {
+          "id": "3",
+          "text": "Localisation, signes observés, personnes exposées et mesures prises"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’agent transmet les faits disponibles sans se substituer au diagnostic spécialisé.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-11-30",
+      "prompt": "Quand considérer une zone électrique à nouveau accessible ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Après confirmation par le circuit compétent et selon les consignes"
+        },
+        {
+          "id": "2",
+          "text": "Dès qu’un visiteur la traverse"
+        },
+        {
+          "id": "3",
+          "text": "Dès que le bruit cesse"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La levée des mesures de protection doit reposer sur une vérification adaptée.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}
