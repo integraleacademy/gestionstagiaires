@@ -5,7 +5,8 @@ const title = document.getElementById('tdcTitle');
 const message = document.getElementById('tdcMessage');
 const primary = document.getElementById('tdcPrimary');
 const secondary = document.getElementById('tdcSecondary');
-const unavailable = () => ({status: 'unknown', title: 'Vérification à confirmer', message: 'La vérification automatique n’a pas pu aboutir. Vous pouvez réessayer ou déposer le fichier : notre équipe le vérifiera.'});
+const replacement = document.getElementById('tdcReplace');
+const unavailable = () => ({status: 'unknown', title: 'Vérification automatique indisponible', message: 'Le service de vérification est momentanément inaccessible ou n’a pas renvoyé de résultat exploitable. Cela ne signifie pas que votre document est illisible. Vous pouvez réessayer, choisir un autre fichier ou le déposer pour vérification par notre équipe.'});
 const fileKey = file => `${file.name}:${file.size}:${file.lastModified}`;
 
 export function selectionError(files, accept, maxBytes, maxFiles) {
@@ -23,6 +24,8 @@ export function selectionError(files, accept, maxBytes, maxFiles) {
 
 function invalidate(form) {
   const state = states.get(form);
+  state.replacementPicker?.remove();
+  state.replacementPicker = null;
   state.sequence++;
   state.controller?.abort();
   state.pending = false;
@@ -42,6 +45,48 @@ function modify(form) {
   if (form) updateFeedback(form, 'Vous pouvez retirer un fichier ci-dessous, puis en sélectionner un autre.');
 }
 
+function chooseReplacement(form) {
+  if (!form) return;
+  const state = states.get(form);
+  const input = form.querySelector('input[type=file]');
+  invalidate(form);
+  close();
+  updateFeedback(form, 'Choisissez un autre document. Votre sélection actuelle sera conservée si vous annulez.');
+  // A separate picker keeps the original FileList intact on cancellation and
+  // lets identity replacements differ from the usual "add the other side" flow.
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = input.accept;
+  picker.multiple = input.multiple;
+  picker.hidden = true;
+  picker.dataset.tdcReplacementPicker = '';
+  state.replacementPicker = picker;
+  const sequence = state.sequence;
+  const cleanup = () => {
+    picker.remove();
+    if (state.replacementPicker === picker) state.replacementPicker = null;
+  };
+  const cancel = () => {
+    cleanup();
+    if (sequence !== state.sequence) return;
+    renderFiles(form);
+    updateFeedback(form, 'Sélection conservée. Vous pouvez vérifier les fichiers ou en choisir d’autres.');
+  };
+  picker.addEventListener('cancel', cancel, {once: true});
+  picker.addEventListener('change', () => {
+    const picked = Array.from(picker.files || []);
+    if (!picked.length) { cancel(); return; }
+    cleanup();
+    if (sequence !== state.sequence) return;
+    invalidate(form);
+    state.files = picked;
+    renderFiles(form);
+    check(form);
+  }, {once: true});
+  document.body.append(picker);
+  picker.click();
+}
+
 function send(form) {
   const state = states.get(form);
   if (!state?.files.length || state.pending || state.result?.summary.status === 'invalid') return;
@@ -58,8 +103,8 @@ function show(form, result, pending = false) {
   dialog.dataset.status = status;
   document.getElementById('tdcSymbol').textContent = {success: '✓', warning: '!', invalid: '!', unknown: '?'}[status] || '';
   const isPhoto = form?.dataset.documentKey === 'photo';
-  title.textContent = pending ? (isPhoto ? 'Un instant, nous vérifions votre photo…' : 'Un instant, nous préparons votre document…') : summary.title || 'Votre document';
-  message.textContent = pending ? (isPhoto ? 'Cela peut prendre quelques secondes. Votre photo restera une image.' : 'Nous convertissons votre fichier en PDF si nécessaire, puis nous vérifions le document. Cela peut prendre quelques instants.') + ' Vous pouvez revenir à votre sélection à tout moment.' : summary.message || 'Les critères visuels de votre photo sont respectés.';
+  title.textContent = pending ? (isPhoto ? 'Un instant, nous vérifions votre photo…' : 'Un instant, nous préparons votre document…') : summary.title || (status === 'unknown' ? unavailable().title : 'Votre document');
+  message.textContent = pending ? (isPhoto ? 'Cela peut prendre quelques secondes. Votre photo restera une image.' : 'Nous convertissons votre fichier en PDF si nécessaire, puis nous vérifions le document. Cela peut prendre quelques instants.') + ' Vous pouvez revenir à votre sélection à tout moment.' : summary.message || (status === 'unknown' ? unavailable().message : 'Notre équipe confirmera la conformité du document.');
   document.getElementById('tdcDocument').textContent = form?.dataset.documentLabel || '';
   const steps = document.getElementById('tdcSteps');
   steps.replaceChildren();
@@ -76,17 +121,21 @@ function show(form, result, pending = false) {
     details.append(line);
   });
   document.getElementById('tdcNote').textContent = status === 'invalid' ? 'Le fichier n’a pas été déposé. Corrigez-le pour poursuivre.' : 'Votre fichier n’est pas encore déposé. Ce contrôle est indicatif ; notre équipe confirme la conformité.';
+  const replaceLabel = isPhoto ? 'Choisir une autre photo' : 'Choisir un autre document';
+  replacement.hidden = status !== 'unknown' || !form;
+  replacement.textContent = replaceLabel;
+  replacement.onclick = () => chooseReplacement(form);
   secondary.hidden = pending || status === 'invalid' || !form;
   if (pending || status === 'invalid') {
-    primary.textContent = 'Modifier la sélection'; primary.onclick = () => modify(form);
+    primary.textContent = replaceLabel; primary.onclick = () => chooseReplacement(form);
   } else if (status === 'success') {
     primary.textContent = 'Déposer le document'; primary.onclick = () => send(form);
-    secondary.textContent = 'Modifier les fichiers'; secondary.onclick = () => modify(form);
+    secondary.textContent = replaceLabel; secondary.onclick = () => chooseReplacement(form);
   } else if (status === 'unknown') {
     primary.textContent = 'Réessayer la vérification'; primary.onclick = () => check(form);
     secondary.textContent = 'Déposer pour vérification par l’équipe'; secondary.onclick = () => send(form);
   } else {
-    primary.textContent = 'Remplacer le fichier'; primary.onclick = () => modify(form);
+    primary.textContent = replaceLabel; primary.onclick = () => chooseReplacement(form);
     secondary.textContent = 'Conserver et déposer quand même'; secondary.onclick = () => send(form);
   }
   if (!form) { primary.textContent = 'J’ai compris'; primary.onclick = close; }
@@ -183,7 +232,7 @@ if (dialog) {
   dialog.addEventListener('cancel', event => { event.preventDefault(); modify(activeForm); });
   document.querySelectorAll('form[data-document-check-url]').forEach(form => {
     const input = form.querySelector('input[type=file]');
-    states.set(form, {files: [], sequence: 0, pending: false, approved: false, result: null});
+    states.set(form, {files: [], sequence: 0, pending: false, approved: false, result: null, replacementPicker: null});
     input.addEventListener('change', () => {
       const state = states.get(form);
       const picked = Array.from(input.files || []);
