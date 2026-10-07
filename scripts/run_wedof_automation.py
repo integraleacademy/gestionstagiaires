@@ -1,12 +1,53 @@
-"""Appelle le endpoint interne WEDOF dans le mode configuré sur le Web Service."""
+"""Run independent WEDOF, Qonto and document jobs from the existing Render cron."""
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
-import requests
+from pathlib import Path
+import subprocess
+import sys
 
-url = os.environ.get("WEDOF_AUTOMATION_URL", "").strip()
-token = os.environ.get("CRON_SECRET", "").strip()
-if not url or not token:
-    raise SystemExit("WEDOF_AUTOMATION_URL and CRON_SECRET must be configured")
-response = requests.post(url, headers={"X-Cron-Secret": token, "Accept": "application/json"}, timeout=900)
-if not response.ok:
-    raise SystemExit(f"WEDOF automation dry-run failed: HTTP {response.status_code}: {response.text[:300]}")
-print(response.text)
+import requests
+from scheduled_job_client import wait_for_job
+
+
+def run_wedof():
+    url = os.environ.get("WEDOF_AUTOMATION_URL", "").strip()
+    token = os.environ.get("CRON_SECRET", "").strip()
+    if not url or not token:
+        raise SystemExit("WEDOF_AUTOMATION_URL and CRON_SECRET must be configured")
+    response = requests.post(url, headers={"X-Cron-Secret": token, "Accept": "application/json"}, timeout=900)
+    response = wait_for_job(response, url=url, headers={"X-Cron-Secret": token, "Accept": "application/json"})
+    if not response.ok:
+        raise SystemExit(f"WEDOF automation failed: HTTP {response.status_code}")
+    print(response.text, flush=True)
+
+
+def run_qonto():
+    subprocess.run([sys.executable, str(Path(__file__).with_name("run_qonto_sync.py"))], check=True)
+
+
+def run_documents():
+    subprocess.run([sys.executable, str(Path(__file__).with_name("run_document_reminders.py"))], check=True)
+
+
+def main():
+    failed = False
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        tasks = {executor.submit(run_wedof): "WEDOF"}
+        if os.environ.get("QONTO_SYNC_URL", "").strip():
+            tasks[executor.submit(run_qonto)] = "Qonto"
+        if os.environ.get("WEDOF_AUTOMATION_URL", "").strip() or os.environ.get("DOCUMENT_REMINDERS_URL", "").strip():
+            tasks[executor.submit(run_documents)] = "Documents"
+        # Submit each job independently. The web service serializes maintenance
+        # work outside HTTP threads; a failed job does not stop the others.
+        for future in as_completed(tasks):
+            try:
+                future.result()
+            except (Exception, SystemExit):
+                failed = True
+                print(f"{tasks[future]} scheduled synchronization failed", file=sys.stderr, flush=True)
+    if failed:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

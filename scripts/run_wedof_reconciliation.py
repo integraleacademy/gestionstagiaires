@@ -2,6 +2,7 @@
 import os
 
 import requests
+from scheduled_job_client import wait_for_job
 
 
 url = os.environ.get("WEDOF_RECONCILIATION_URL", "").strip()
@@ -13,6 +14,7 @@ response = requests.post(
     headers={"X-Cron-Secret": token, "Accept": "application/json"},
     timeout=900,
 )
+response = wait_for_job(response, url=url, headers={"X-Cron-Secret": token, "Accept": "application/json"})
 if not response.ok:
     raise SystemExit(
         f"WEDOF reconciliation failed: HTTP {response.status_code}: "

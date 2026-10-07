@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feuille de présence ICOP — {{ icop_date }}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif;font-size:12px;line-height:1.4}
+    .toolbar{max-width:210mm;margin:20px auto;display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:0 12px}
+    .toolbar button,.toolbar a{border:1px solid #cbd5e1;border-radius:8px;padding:10px 16px;background:white;color:#172033;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
+    .toolbar button{background:#172033;color:white;border-color:#172033}
+    .toolbar p{width:100%;margin:0;color:#475569}
+    .sheet{width:210mm;max-width:100%;margin:0 auto 24px;padding:12mm;background:white;box-shadow:0 4px 20px #0f172a12}
+    .heading{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:2px solid #172033;padding-bottom:12px}
+    .heading img{width:46mm;max-height:18mm;object-fit:contain}
+    .heading div{text-align:right}
+    h1{font-size:22px;line-height:1.2;margin:0 0 5px}
+    .subtitle{margin:0;font-size:13px}
+    .details{display:flex;flex-wrap:wrap;gap:10px 25px;margin:16px 0}
+    .details .fill{flex:1;min-width:65mm}
+    .line{display:inline-block;min-width:42mm;border-bottom:1px solid #94a3b8;height:16px;vertical-align:bottom}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;margin:0 0 16px}
+    th,td{border:1px solid #64748b;padding:7px 8px;text-align:left;overflow-wrap:anywhere}
+    th{font-size:11px;background:#f1f5f9}
+    td{height:14mm;vertical-align:middle;font-size:12px}
+    .number{width:6%;text-align:center}.last-name{width:24%}.first-name{width:22%}.ft{width:21%}.signature{width:27%}
+    .organizer{border:1px solid #94a3b8;padding:10px 12px;min-height:26mm;break-inside:avoid}
+    .organizer p{margin:0 0 8px}
+    .footer{display:flex;justify-content:space-between;gap:12px;margin-top:12px;font-size:10px;color:#475569}
+    @page{size:A4 portrait;margin:12mm}
+    @media print{
+      body{background:white;color:black}
+      .toolbar{display:none}
+      .sheet{width:auto;max-width:none;margin:0;padding:0;box-shadow:none;break-after:page}
+      .sheet:last-child{break-after:auto}
+      thead{display:table-header-group}
+      tr{break-inside:avoid;page-break-inside:avoid}
+    }
+  </style>
+</head>
+<body>
+  <nav class="toolbar" aria-label="Impression de la feuille de présence">
+    <button type="button" onclick="window.print()">Imprimer</button>
+    <a href="{{ url_for('admin_afc', archives=1) if show_archived else url_for('admin_afc') }}">Retour aux candidats</a>
+    <p>Format A4 · Vous pouvez aussi choisir « Enregistrer au format PDF » dans la fenêtre d’impression.</p>
+  </nav>
+  {% set pages = candidates|batch(12)|list %}
+  {% for page in pages %}
+  {% set page_number = loop.index %}
+  <main class="sheet">
+    <header class="heading">
+      <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+      <div>
+        <h1>Feuille de présence</h1>
+        <p class="subtitle">ICOP · Gestion AFC</p>
+      </div>
+    </header>
+    <div class="details">
+      <div><strong>Date ICOP : {{ icop_date }}</strong></div>
+      <div><strong>Candidats inscrits :</strong> {{ candidates|length }}</div>
+      <div class="fill"><strong>Lieu :</strong> <span class="line"></span></div>
+      <div class="fill"><strong>Horaires :</strong> <span class="line"></span></div>
+    </div>
+    <table aria-label="Candidats à l’ICOP du {{ icop_date }}">
+      <thead>
+        <tr>
+          <th class="number" scope="col">N°</th>
+          <th class="last-name" scope="col">Nom</th>
+          <th class="first-name" scope="col">Prénom</th>
+          <th class="ft" scope="col">Identifiant France Travail</th>
+          <th class="signature" scope="col">Signature du candidat</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for candidate in page %}
+        <tr>
+          <td class="number">{{ (page_number - 1) * 12 + loop.index }}</td>
+          <td>{{ candidate.nom or '' }}</td>
+          <td>{{ candidate.prenom or '' }}</td>
+          <td>{{ candidate.identifiant_ft or '' }}</td>
+          <td></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <section class="organizer" aria-label="Émargement de l’intervenant">
+      <p><strong>Nom de l’intervenant :</strong> <span class="line"></span></p>
+      <strong>Signature de l’intervenant :</strong>
+    </section>
+    <footer class="footer">
+      <span>Intégrale Academy · ICOP du {{ icop_date }}</span>
+      <span>Page {{ page_number }} / {{ pages|length }}</span>
+    </footer>
+  </main>
+  {% endfor %}
+</body>
+</html>

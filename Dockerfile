@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Reject invalid Python sources before Render tries to start this image.
+RUN python -m compileall -q app.py crm_app.py
+
 COPY fontconfig/99-msoffice-substitutions.conf /etc/fonts/conf.d/99-msoffice-substitutions.conf
 RUN fc-cache -f && fc-match -f '%{family}\n' Calibri | head -n 1 | grep -q Carlito
 

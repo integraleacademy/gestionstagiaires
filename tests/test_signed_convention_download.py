@@ -96,6 +96,8 @@ class SignedConventionDownloadTests(unittest.TestCase):
                  patch.object(gestion_app, "load_data", return_value=data), \
                  patch.object(gestion_app, "save_data") as save_data, \
                  patch.object(gestion_app, "_yousign_is_configured", return_value=True), \
+                 patch.object(gestion_app, "_yousign_json", return_value={"status": "done"}), \
+                 patch.object(gestion_app, "_schedule_convocation_after_convention_signed") as schedule, \
                  patch.object(
                      gestion_app,
                      "_download_yousign_signed_pdf",
@@ -110,6 +112,7 @@ class SignedConventionDownloadTests(unittest.TestCase):
                 self.assertTrue(response.data.startswith(b"%PDF-1.4"))
                 self.assertIn("convention_formation_aps_t-signed_signee.pdf", response.headers["Content-Disposition"])
                 download_signed_pdf.assert_called_once_with("request-completed-1", "T-SIGNED")
+                schedule.assert_not_called()
                 save_data.assert_called_once_with(data)
                 self.assertEqual(
                     trainee["convention_signature"]["signed_pdf_path"],
@@ -317,7 +320,124 @@ class SignedConventionDownloadTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("ancien logiciel", trainee["convention_signature"]["signed_pdf_recovery_error"])
+        self.assertNotIn("n’est pas présent dans Yousign", trainee["convention_signature"]["signed_pdf_recovery_error"])
         save_data.assert_called_once_with(data)
+
+    def test_saved_request_is_checked_even_when_only_legacy_status_is_signed(self):
+        trainee = {
+            "id": "T-RECOVERY",
+            "convention_legacy_signed": True,
+            "convention_aps_signed_at": "2026-07-21T08:26:00Z",
+            "convention_signature": {
+                "signature_request_id": "saved-request",
+                "status": "ongoing",
+                "signed_at": "",
+            },
+        }
+        data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [trainee]}]}
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(gestion_app, "PERSIST_DIR", directory), \
+             patch.object(gestion_app, "YOUSIGN_SIGNED_DIR", directory), \
+             patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_yousign_is_configured", return_value=True), \
+             patch.object(gestion_app, "_yousign_json", return_value={
+                 "id": "saved-request", "status": "done", "completed_at": "2026-07-29T10:00:00Z",
+             }) as fetch_request, \
+             patch.object(gestion_app, "_yousign_request", return_value=SimpleNamespace(content=b"%PDF-1.4\nsigned")) as download, \
+             patch.object(gestion_app, "_find_completed_yousign_convention_request") as search, \
+             patch.object(gestion_app, "_schedule_convocation_after_convention_signed") as schedule:
+            response = self.client.get("/admin/sessions/S-APS/stagiaires/T-RECOVERY/convention/signed-pdf?download=1")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.mimetype, "application/pdf")
+            self.assertTrue(response.data.startswith(b"%PDF-"))
+            fetch_request.assert_called_once_with("GET", "/signature_requests/saved-request")
+            self.assertEqual(download.call_args.kwargs["params"]["version"], "completed")
+            search.assert_not_called()
+            schedule.assert_not_called()
+            self.assertEqual(trainee["convention_signature"]["signed_at"], "2026-07-29T10:00:00Z")
+            self.assertEqual(trainee["convention_signature"]["signed_pdf_request_id"], "saved-request")
+
+    def test_legacy_mark_does_not_make_an_unfinished_yousign_request_downloadable(self):
+        trainee = self._signed_trainee()
+        trainee["convention_legacy_signed"] = True
+        data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [trainee]}]}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_yousign_is_configured", return_value=True), \
+             patch.object(gestion_app, "_yousign_json", return_value={"status": "ongoing"}), \
+             patch.object(gestion_app, "_find_completed_yousign_convention_request", return_value={}) as search, \
+             patch.object(gestion_app, "_download_yousign_signed_pdf") as download:
+            response = self.client.get("/admin/sessions/S-APS/stagiaires/T-SIGNED/convention/signed-pdf")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("en attente de signature", trainee["convention_signature"]["signed_pdf_recovery_error"])
+        self.assertNotIn("n’est pas présent dans Yousign", trainee["convention_signature"]["signed_pdf_recovery_error"])
+        search.assert_called_once()
+        download.assert_not_called()
+
+    def test_inaccessible_saved_request_falls_back_to_search(self):
+        trainee = self._signed_trainee()
+        data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [trainee]}]}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_yousign_is_configured", return_value=True), \
+             patch.object(gestion_app, "_yousign_json", side_effect=gestion_app.YousignAPIError(404, "not found")), \
+             patch.object(gestion_app, "_find_completed_yousign_convention_request", return_value={}) as search:
+            response = self.client.get("/admin/sessions/S-APS/stagiaires/T-SIGNED/convention/signed-pdf")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("n’est pas accessible", trainee["convention_signature"]["signed_pdf_recovery_error"])
+        search.assert_called_once()
+
+    def test_access_error_does_not_become_a_missing_pdf_or_trigger_search(self):
+        trainee = self._signed_trainee()
+        data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [trainee]}]}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_yousign_is_configured", return_value=True), \
+             patch.object(gestion_app, "_yousign_json", side_effect=gestion_app.YousignAPIError(403, "forbidden")), \
+             patch.object(gestion_app, "_find_completed_yousign_convention_request") as search, \
+             patch.object(gestion_app, "_download_yousign_signed_pdf") as download:
+            response = self.client.get("/admin/sessions/S-APS/stagiaires/T-SIGNED/convention/signed-pdf")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("accès au compte", trainee["convention_signature"]["signed_pdf_recovery_error"])
+        search.assert_not_called()
+        download.assert_not_called()
+
+    def test_yousign_http_errors_preserve_the_status_for_recovery(self):
+        response = SimpleNamespace(status_code=404, json=lambda: {"type": "signature_request.not_found"})
+        with patch.object(gestion_app, "_yousign_base_url", return_value="https://api.yousign.app/v3"), \
+             patch.object(gestion_app, "_yousign_headers", return_value={}), \
+             patch.object(gestion_app.requests, "request", return_value=response):
+            with self.assertRaises(gestion_app.YousignAPIError) as error:
+                gestion_app._yousign_request("GET", "/signature_requests/missing")
+        self.assertEqual(error.exception.status_code, 404)
+        self.assertIsInstance(error.exception, RuntimeError)
+
+    def test_history_recovery_preserves_newer_request_and_does_not_schedule_email(self):
+        trainee = self._signed_trainee()
+        state = trainee["convention_signature"]
+        state.update({"signature_request_id": "new-request", "status": "ongoing", "signed_at": ""})
+        trainee["convention_signature_history"] = [
+            {"signature_request_id": "old-request", "status": "ongoing"},
+        ]
+        data = {"sessions": [{"id": "S-APS", "training_type": "APS", "trainees": [trainee]}]}
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(gestion_app, "PERSIST_DIR", directory), \
+             patch.object(gestion_app, "YOUSIGN_SIGNED_DIR", directory), \
+             patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_yousign_is_configured", return_value=True), \
+             patch.object(gestion_app, "_yousign_json", side_effect=[
+                 {"status": "ongoing"}, {"status": "done", "completed_at": "2026-07-21T08:26:00Z"},
+             ]), \
+             patch.object(gestion_app, "_yousign_request", return_value=SimpleNamespace(content=b"%PDF-1.4\nsigned")), \
+             patch.object(gestion_app, "_schedule_convocation_after_convention_signed") as schedule:
+            response = self.client.get("/admin/sessions/S-APS/stagiaires/T-SIGNED/convention/signed-pdf")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(state["signature_request_id"], "new-request")
+        self.assertEqual(state["status"], "ongoing")
+        self.assertEqual(state["signed_pdf_request_id"], "old-request")
+        schedule.assert_not_called()
 
     def test_admin_can_import_and_then_download_a_legacy_signed_pdf(self):
         trainee = {

@@ -2,6 +2,7 @@
 import os
 
 import requests
+from scheduled_job_client import wait_for_job
 
 
 def run_monitor_once() -> str:
@@ -15,6 +16,7 @@ def run_monitor_once() -> str:
         headers={"X-CNAPS-Monitor-Token": token, "Accept": "application/json"},
         timeout=900,
     )
+    response = wait_for_job(response, url=url, headers={"X-CNAPS-Monitor-Token": token, "Accept": "application/json"})
     if not response.ok:
         raise RuntimeError(f"CNAPS monitor failed: HTTP {response.status_code}: {response.text[:300]}")
     return response.text

@@ -1,0 +1,18 @@
+<section class="ws-card ws-pad ws-candidate-search" aria-label="Rechercher dans les inscriptions BTS">
+  <span class="ws-eyebrow">Depuis les inscriptions BTS</span>
+  <h2>Retrouver un apprenti</h2>
+  <p class="ws-muted">Tapez son nom, son prénom ou son e-mail, puis sélectionnez la bonne préinscription. Ses informations et ses pièces seront accessibles dans le dossier.</p>
+  <form method="post" action="{{ url_for('bts_candidates_search') }}" data-candidate-search>
+    {{ token() }}
+    <div class="ws-filters"><label class="ws-search">{{ icon('search',18) }}<span class="ws-sr-only">Nom de l’apprenti à importer</span><input type="search" name="q" minlength="2" maxlength="100" placeholder="Nom, prénom, e-mail…" autocomplete="off" aria-controls="candidate-results"></label><button class="ws-button">Rechercher</button></div>
+    <p class="ws-note" role="status" data-candidate-message>La recherche démarre à partir de deux caractères.</p>
+  </form>
+  <div id="candidate-results" class="ws-candidate-results"></div>
+  <template data-candidate-template>
+    <form method="post" action="{{ url_for('bts_candidate_import') }}" class="ws-candidate-row">
+      {{ token() }}<input type="hidden" name="candidate_id">
+      <div><strong data-candidate-name></strong><p class="ws-note" data-candidate-detail></p></div>
+      <button class="ws-button ws-button--primary">Ajouter ce dossier {{ icon('plus',16) }}</button>
+    </form>
+  </template>
+</section>

@@ -36,41 +36,14 @@ class ApsElearningTests(unittest.TestCase):
         effective_duration="62 heures",
         completed_paths=8,
         completed_evaluations=8,
+        connection_total="62 heures et 1 seconde",
     ):
-        output = io.BytesIO()
-        pdf = canvas.Canvas(output)
-        pdf.drawString(72, 790, "Attestation d'assiduité")
-        pdf.drawString(72, 765, f"atteste que : {trainee_name}")
-        pdf.drawString(72, 740, "a suivi la formation : TFP APS SEPTEMBRE 2026")
-        pdf.drawString(72, 715, "Dates de la formation : du 23 juillet 2026 au 3 septembre 2026.")
-        pdf.drawString(72, 690, "Durée de la formation : 62 heures")
-        if complete:
-            pdf.drawString(72, 665, "Suivi détaillé de l'assiduité e-learning")
-            pdf.drawString(72, 640, f"Durée effectivement suivie sur la plateforme : {effective_duration}")
-            pdf.drawString(72, 615, f"taux de réalisation de {completion_rate} %")
-            pdf.drawString(72, 590, "Durée totale de connexion à l'extranet : 62h")
-            pdf.drawString(72, 565, "Nombre de jour(s) d'accès à l'extranet : 8")
-            y = 535
-            for index in range(1, 9):
-                status = "Statut Terminé Progression 100 %" if index <= completed_paths else "Statut En cours Progression 0 %"
-                pdf.drawString(72, y, f"Parcours {index} — Bloc {index} {status}")
-                y -= 22
-        pdf.showPage()
-        pdf.drawString(72, 790, "Adresse email utilisée : alice.martin@example.test")
-        if complete:
-            pdf.drawString(72, 765, "Relevé de connexions à l'extranet")
-            y = 735
-            for index in range(1, 9):
-                result = "100% 1 passage" if index <= completed_evaluations else "0% 0 passage"
-                pdf.drawString(72, y, f"Evaluation Parcours {index}")
-                pdf.drawString(90, y - 14, result)
-                pdf.drawString(72, y - 28, "Total 7 heures 45 minutes")
-                y -= 50
-            pdf.drawString(72, 315, "P1M1 P2M1 P3M1 P4M1 P5M1 P6M1 P7M1 P8M1")
-            pdf.drawString(72, 290, "Total 62 heures")
-        pdf.drawString(72, 255, "Fait à Puget-sur-Argens, le 31 août 2026")
-        pdf.save()
-        return output.getvalue()
+        from digiforma_fixtures import attendance_pdf
+        return attendance_pdf(
+            trainee_name=trainee_name, complete=complete, completion_rate=completion_rate,
+            effective_duration=effective_duration, completed_paths=completed_paths,
+            completed_evaluations=completed_evaluations, connection_total=connection_total,
+        )
 
     @staticmethod
     def _complete_tracking(**overrides):
@@ -84,7 +57,7 @@ class ApsElearningTests(unittest.TestCase):
             "effective_duration": "62 heures",
             "completion_rate": 100,
             "connection_duration": "62h",
-            "connection_log_total": "62 heures",
+            "connection_log_total": "62 heures et 1 seconde",
             "access_days": 8,
             "paths_total": 8,
             "paths_completed": 8,
@@ -125,7 +98,7 @@ class ApsElearningTests(unittest.TestCase):
             ]
         }
 
-    def test_session_api_persists_option_only_for_aps(self):
+    def test_session_api_persists_option_for_aps_and_vtc(self):
         self._admin_login()
         aps_data = {"sessions": []}
 
@@ -152,8 +125,8 @@ class ApsElearningTests(unittest.TestCase):
             response = self.client.post(
                 "/api/sessions/create",
                 json={
-                    "name": "VTC juin",
-                    "training_type": "VTC",
+                    "name": "SSIAP juin",
+                    "training_type": "SSIAP 1",
                     "aps_elearning_enabled": True,
                 },
             )
@@ -161,7 +134,17 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.saved_data["sessions"][0]["aps_elearning_enabled"])
 
-    def test_admin_sessions_cards_show_direct_elearning_checkbox_only_for_aps(self):
+        with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
+            gestion_app, "save_data", side_effect=lambda data: setattr(self, "saved_data", data)
+        ):
+            response = self.client.post(
+                "/api/sessions/create",
+                json={"name": "VTC juin", "training_type": "VTC", "aps_elearning_enabled": True},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved_data["sessions"][0]["aps_elearning_enabled"])
+
+    def test_admin_sessions_cards_show_elearning_checkbox_for_aps_and_vtc(self):
         self._admin_login()
         future_start = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
         future_end = (datetime.date.today() + datetime.timedelta(days=14)).isoformat()
@@ -189,7 +172,7 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         self.assertIn('data-aps-elearning-toggle="S-APS"', html)
-        self.assertNotIn('data-aps-elearning-toggle="S-VTC"', html)
+        self.assertIn('data-aps-elearning-toggle="S-VTC"', html)
         self.assertRegex(
             html,
             r'data-aps-elearning-toggle="S-APS"\s+checked',
@@ -228,6 +211,205 @@ class ApsElearningTests(unittest.TestCase):
         self.assertNotIn("Lien e-learning APS", response.get_data(as_text=True))
         self.assertNotIn("Suivi du e-learning", response.get_data(as_text=True))
 
+    def test_admin_trainee_elearning_uses_closed_summary_and_loading_modals(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+
+        def render_page():
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "save_data"
+            ), patch.object(gestion_app, "_yousign_is_configured", return_value=False):
+                response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+            self.assertEqual(response.status_code, 200)
+            return response.get_data(as_text=True)
+
+        html = render_page()
+        section = html.split('id="apsElearningTrackingSection"', 1)[1].split("</section>", 1)[0]
+        details_tag = section.split('<details class="aps-elearning-tracking"', 1)[1].split(">", 1)[0]
+        summary = section.split('<summary class="aps-elearning-tracking__summary', 1)[1].split("</summary>", 1)[0]
+
+        self.assertNotIn(" open", details_tag)
+        self.assertIn("Durée totale de connexion", summary)
+        self.assertIn("62 h 00", summary)
+        self.assertIn("Suivi global du e-learning", summary)
+        self.assertIn("100 %", summary)
+        self.assertIn('class="aps-elearning-tracking__summary-progress"', summary)
+        self.assertNotIn("data-aps-elearning-complete-badge", summary)
+        self.assertIn('id="apsElearningSignatureForm"', section)
+        self.assertIn('id="apsDigiformaUploadProgress"', section)
+        self.assertIn("Relevé en cours de transmission", section)
+        self.assertIn('id="apsElearningSignatureProgress"', section)
+        self.assertIn("Envoi en signature", section)
+        self.assertIn("aps-elearning-tracking__journal--complete", section)
+        self.assertNotIn("aps-elearning-tracking__download--complete", section)
+
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "provider_status": "done",
+            "signed_at": "2026-09-17T12:06:00Z",
+            "signed_pdf_path": "uploads/S-APS/T-APS/aps_elearning_tracking/signed.pdf",
+        }
+        signed_html = render_page()
+        signed_summary = signed_html.split('<summary class="aps-elearning-tracking__summary', 1)[1].split("</summary>", 1)[0]
+        self.assertIn("data-aps-elearning-complete-badge", signed_summary)
+        signed_section = signed_html.split('id="apsElearningTrackingSection"', 1)[1].split("</section>", 1)[0]
+        self.assertIn("aps-elearning-tracking__download--complete", signed_section)
+
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            connection_duration="54h",
+            connection_log_total="54 heures",
+            effective_duration="54 heures",
+        )
+        trainee["aps_elearning_signature"] = {}
+        incomplete_section = render_page().split('id="apsElearningTrackingSection"', 1)[1].split("</section>", 1)[0]
+        self.assertNotIn("aps-elearning-tracking__journal--complete", incomplete_section)
+        self.assertNotIn("aps-elearning-tracking__download--complete", incomplete_section)
+
+    def test_admin_list_compacts_progress_and_requires_completion_and_signature_for_badge(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+
+        def render_attendance_cell():
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "save_data"
+            ):
+                response = self.client.get("/admin/sessions/S-APS/trainees")
+            self.assertEqual(response.status_code, 200)
+            html = response.get_data(as_text=True)
+            return html.split('<td class="col-aps-attendance">', 1)[1].split("</td>", 1)[0]
+
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "signed_at": "2026-09-17T12:06:00Z",
+        }
+        cell = render_attendance_cell()
+        self.assertIn("100 %", cell)
+        self.assertIn('<progress class="aps-followup-bar"', cell)
+        self.assertIn("data-aps-elearning-complete-badge", cell)
+        self.assertNotIn("Parcours :", cell)
+        self.assertNotIn("Évaluations :", cell)
+        self.assertNotIn("Connexion :", cell)
+        self.assertNotIn('class="aps-followup-status"', cell)
+        self.assertNotIn("Dernier import :", cell)
+
+        trainee["aps_elearning_signature"]["status"] = "ongoing"
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_cell())
+
+        trainee["aps_elearning_signature"]["status"] = "done"
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            connection_duration="54h",
+            connection_log_total="54 heures",
+            effective_duration="54 heures",
+        )
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_cell())
+
+    def test_public_space_requires_completion_and_signature_for_blue_badge(self):
+        self._public_login()
+        data = self._data(datetime.date.today().isoformat())
+        trainee = data["sessions"][0]["trainees"][0]
+
+        def render_attendance_section():
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "save_data"
+            ):
+                response = self.client.get("/espace/PUBLIC-TOKEN")
+            self.assertEqual(response.status_code, 200)
+            html = response.get_data(as_text=True)
+            return html.split('id="apsElearningAttendance"', 1)[1].split("</section>", 1)[0]
+
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "signed_at": "2026-09-17T12:06:00Z",
+        }
+        section = render_attendance_section()
+        self.assertIn("data-aps-elearning-complete-badge", section)
+        self.assertIn(
+            'aria-label="E-learning terminé et tableau de suivi FOAD signé par le stagiaire"',
+            section,
+        )
+
+        trainee["aps_elearning_signature"]["status"] = "ongoing"
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_section())
+
+        trainee["aps_elearning_signature"]["status"] = "done"
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            connection_duration="54h",
+            connection_log_total="54 heures",
+            effective_duration="54 heures",
+        )
+        self.assertNotIn("data-aps-elearning-complete-badge", render_attendance_section())
+
+    def test_rebuild_uses_the_preserved_original_and_updates_the_annex(self):
+        from digiforma_attendance import prepare_digiforma_attendance
+        self._admin_login()
+        data = self._data("2026-07-23")
+        pdf_bytes = self._digiforma_pdf_bytes()
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            gestion_app, "PERSIST_DIR", directory
+        ), patch.object(gestion_app, "UPLOADS_DIR", os.path.join(directory, "uploads")), patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data"):
+            self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/upload",
+                             data={"digiforma_pdf": (io.BytesIO(pdf_bytes), "original.pdf")})
+            trainee = data["sessions"][0]["trainees"][0]
+            before = dict(trainee["aps_elearning_tracking"])
+            with patch("digiforma_attendance.prepare_digiforma_attendance", wraps=prepare_digiforma_attendance) as prepare:
+                response = self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/rebuild")
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(prepare.call_args.args[0], pdf_bytes)
+            after = trainee["aps_elearning_tracking"]
+            for key in ("source_file", "source_sha256", "uploaded_at", "completion_rate", "evaluations_completed"):
+                self.assertEqual(after[key], before[key])
+            self.assertNotEqual(after["file"], before["file"])
+            self.assertEqual(after["processing_version"], 5)
+            self.assertTrue(after["rebuilt_at"])
+            prepared_path = gestion_app._require_aps_elearning_report_file(after)
+            with open(prepared_path, "rb") as prepared:
+                self.assertEqual(hashlib.sha256(prepared.read()).hexdigest(), after["file_sha256"])
+
+    def test_rebuild_rejects_changed_source_without_replacing_the_previous_document(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        with tempfile.TemporaryDirectory() as directory:
+            source_path = os.path.join(directory, "original.pdf")
+            with open(source_path, "wb") as source:
+                source.write(self._digiforma_pdf_bytes())
+            tracking = self._complete_tracking(source_file=source_path, source_sha256="0" * 64)
+            trainee["aps_elearning_tracking"] = tracking
+            with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                gestion_app, "_detokenize_path", side_effect=lambda value: value
+            ), patch.object(gestion_app, "save_data") as save, patch(
+                "digiforma_attendance.prepare_digiforma_attendance"
+            ) as prepare:
+                response = self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/rebuild")
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(trainee["aps_elearning_tracking"]["file"], tracking["file"])
+                save.assert_not_called()
+                prepare.assert_not_called()
+
+    def test_rebuild_does_not_change_a_signed_or_pending_dossier(self):
+        self._admin_login()
+        for status in ("ongoing", "done"):
+            with self.subTest(status=status):
+                data = self._data("2026-07-23")
+                trainee = data["sessions"][0]["trainees"][0]
+                trainee["aps_elearning_tracking"] = self._complete_tracking()
+                trainee["aps_elearning_signature"] = {"status": status, "signature_request_id": "REQUEST"}
+                with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+                    gestion_app, "save_data"
+                ) as save, patch.object(gestion_app, "_invalidate_aps_elearning_signature_for_new_report") as invalidate:
+                    response = self.client.post("/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/rebuild")
+                    self.assertEqual(response.status_code, 302)
+                    self.assertEqual(trainee["aps_elearning_signature"]["status"], status)
+                    save.assert_not_called()
+                    invalidate.assert_not_called()
+
     def test_complete_digiforma_pdf_is_imported_and_downloadable(self):
         self._admin_login()
         data = self._data("2026-07-23")
@@ -252,21 +434,28 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(response.status_code, 302)
             self.assertTrue(response.location.endswith("#apsElearningTrackingSection"))
             tracking = data["sessions"][0]["trainees"][0]["aps_elearning_tracking"]
-            self.assertEqual(tracking["page_count"], 2)
+            self.assertGreaterEqual(tracking["page_count"], 10)
             self.assertEqual(tracking["report_issued_date"], "2026-08-31")
             self.assertEqual(tracking["digiforma_identifier"], "alice.martin@example.test")
             self.assertEqual(tracking["planned_duration"], "62 heures")
             self.assertEqual(tracking["effective_duration"], "62 heures")
             self.assertEqual(tracking["completion_rate"], 100)
             self.assertEqual(tracking["connection_duration"], "62h")
-            self.assertEqual(tracking["connection_log_total"], "62 heures")
+            self.assertEqual(tracking["connection_log_total"], "62 heures et 1 seconde")
             self.assertEqual(tracking["access_days"], 8)
             self.assertEqual(tracking["paths_completed"], 8)
             self.assertEqual(tracking["paths_total"], 8)
             self.assertEqual(tracking["evaluations_completed"], 8)
             self.assertEqual(tracking["evaluations_total"], 8)
             self.assertEqual(tracking["module_fraction_count"], 8)
-            self.assertEqual(tracking["file_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
+            self.assertEqual(tracking["source_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
+            with open(gestion_app._detokenize_path(tracking["source_file"]), "rb") as source:
+                self.assertEqual(source.read(), pdf_bytes)
+            with open(gestion_app._require_aps_elearning_report_file(tracking), "rb") as prepared:
+                prepared_bytes = prepared.read()
+            self.assertEqual(tracking["file_sha256"], hashlib.sha256(prepared_bytes).hexdigest())
+            self.assertTrue(tracking["provider_signed"])
+            self.assertIn("Clément VAILLANT", PdfReader(io.BytesIO(prepared_bytes)).pages[-1].extract_text())
             self.assertEqual(tracking["remote_start"], "2026-07-23")
             self.assertEqual(tracking["remote_end"], "2026-09-03")
             self.assertTrue(os.path.isfile(gestion_app._detokenize_path(tracking["file"])))
@@ -275,7 +464,7 @@ class ApsElearningTests(unittest.TestCase):
             self.assertEqual(page.status_code, 200)
             html = page.get_data(as_text=True)
             self.assertIn("Dossier contrôlé et signable", html)
-            self.assertIn("Télécharger l’attestation Digiforma", html)
+            self.assertIn("Télécharger l’attestation remise en page", html)
             self.assertIn("Tout remettre à zéro", html)
             self.assertIn(
                 "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/reset",
@@ -291,8 +480,57 @@ class ApsElearningTests(unittest.TestCase):
                 "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma"
             )
             self.assertEqual(download.status_code, 200)
-            self.assertEqual(download.data, pdf_bytes)
+            self.assertEqual(download.data, prepared_bytes)
             self.assertIn("attachment", download.headers.get("Content-Disposition", ""))
+            original = self.client.get(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma?original=1"
+            )
+            self.assertEqual(original.status_code, 200)
+            self.assertEqual(original.data, pdf_bytes)
+            self.assertNotEqual(original.data, prepared_bytes)
+
+            cover_path = os.path.join(directory, "cover.pdf")
+            cover = canvas.Canvas(cover_path)
+            cover.drawString(36, 790, "Bordereau de suivi")
+            cover.save()
+            package_path = os.path.join(directory, "package.pdf")
+            gestion_app._combine_aps_elearning_tracking_pdf(
+                cover_path, gestion_app._require_aps_elearning_report_file(tracking), package_path,
+            )
+            self.assertIn("Clément VAILLANT", PdfReader(package_path).pages[-1].extract_text())
+
+    def test_failed_pdf_preparation_preserves_existing_report_and_signature(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        tracking = self._complete_tracking()
+        signature = {"status": "done", "signature_request_id": "existing-signature"}
+        trainee["aps_elearning_tracking"] = tracking
+        trainee["aps_elearning_signature"] = signature
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save, patch("digiforma_attendance.prepare_digiforma_attendance", side_effect=ValueError("Tableau non reconnu")):
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/digiforma/upload",
+                data={"digiforma_pdf": (io.BytesIO(self._digiforma_pdf_bytes()), "attestation.pdf")},
+                content_type="multipart/form-data",
+            )
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(trainee["aps_elearning_tracking"], tracking)
+            self.assertEqual(trainee["aps_elearning_signature"], signature)
+            save.assert_not_called()
+
+            page = self.client.get(response.location)
+            self.assertEqual(page.status_code, 200)
+            html = page.get_data(as_text=True)
+            section = html.split('id="apsElearningTrackingSection"', 1)[1].split('</section>', 1)[0]
+            self.assertIn('role="alert"', section)
+            self.assertIn("L’opération n’a pas abouti", section)
+            self.assertIn("Tableau non reconnu", section)
+            self.assertIn('id="apsDigiformaUploadProgress"', section)
+
+            # Acknowledged feedback is not shown again after another page load.
+            self.assertNotIn("Tableau non reconnu", self.client.get(response.location).get_data(as_text=True))
 
     def test_admin_can_reset_all_aps_elearning_data_and_files(self):
         self._admin_login()
@@ -327,6 +565,7 @@ class ApsElearningTests(unittest.TestCase):
             outside_path = os.path.join(directory, "ne-pas-supprimer.pdf")
             managed_paths = (
                 report_path,
+                os.path.join(tracking_dir, "original.pdf"),
                 source_pdf_path,
                 source_docx_path,
                 clean_pdf_path,
@@ -341,6 +580,7 @@ class ApsElearningTests(unittest.TestCase):
 
             trainee["aps_elearning_tracking"] = self._complete_tracking(
                 file="uploads/S-APS/T-APS/aps_elearning_tracking/report.pdf",
+                source_file="uploads/S-APS/T-APS/aps_elearning_tracking/original.pdf",
             )
             trainee["aps_elearning_signature"] = {
                 "status": "done",
@@ -391,7 +631,7 @@ class ApsElearningTests(unittest.TestCase):
                 trainee["activity_history"][0]["label"],
                 "Suivi e-learning APS remis à zéro",
             )
-            self.assertIn("8 fichier(s) local(aux) supprimé(s)", trainee["activity_history"][0]["details"])
+            self.assertIn("9 fichier(s) local(aux) supprimé(s)", trainee["activity_history"][0]["details"])
             save_data.assert_called_once_with(data)
 
     def test_reset_cancels_pending_yousign_request_before_clearing(self):
@@ -492,7 +732,7 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(metadata["paths_completed"], 1)
         self.assertEqual(metadata["evaluations_completed"], 1)
         self.assertTrue(any("progression Digiforma incomplète" in issue for issue in issues))
-        self.assertTrue(any("durée effectivement suivie inférieure" in issue for issue in issues))
+        self.assertTrue(any("durée pédagogique inférieure" in issue for issue in issues))
         self.assertTrue(any("parcours Digiforma non terminés" in issue for issue in issues))
         self.assertTrue(any("questionnaires non validés" in issue for issue in issues))
 
@@ -523,7 +763,7 @@ class ApsElearningTests(unittest.TestCase):
             blocked_page = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
             blocked_html = blocked_page.get_data(as_text=True)
             self.assertIn(">⚠ Forcer</button>", blocked_html)
-            self.assertIn("Signature et téléchargement du dossier CNAPS bloqués", blocked_html)
+            self.assertIn("Signature du dossier CNAPS bloquée", blocked_html)
 
             force = self.client.post(
                 "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/force",
@@ -536,7 +776,8 @@ class ApsElearningTests(unittest.TestCase):
             override = trainee["aps_elearning_force_override"]
             self.assertTrue(override["active"])
             self.assertEqual(override["forced_by"], "admin@integraleacademy.com")
-            self.assertEqual(override["report_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
+            self.assertEqual(override["report_sha256"], tracking["file_sha256"])
+            self.assertEqual(tracking["source_sha256"], hashlib.sha256(pdf_bytes).hexdigest())
             self.assertGreaterEqual(len(override["issues"]), 4)
             self.assertEqual(
                 gestion_app._require_aps_elearning_signature_ready(trainee)["file_sha256"],
@@ -762,13 +1003,63 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(context["birth_date"], "12/03/1994")
         self.assertEqual(context["cnaps_number"], "PRE-083-2026-09-01-12345678901")
         self.assertEqual(context["digiforma_identifier"], "alice.martin@example.test")
-        self.assertEqual(context["report_page_range"], "pages 3 à 9 du dossier signé")
+        self.assertEqual(context["report_page_range"], "pages 3 à 9 du dossier")
         self.assertEqual(context["report_page_count_label"], "7 pages")
-        self.assertEqual(context["effective_duration"], "62 heures")
+        self.assertEqual(context["effective_duration"], "62 h 00 min 01 s")
         self.assertEqual(context["completion_rate"], "100 %")
         self.assertEqual(context["paths_status"], "8 / 8 terminés")
         self.assertEqual(context["evaluations_status"], "8 / 8 validées")
         self.assertNotIn("{{", " ".join(context.values()))
+
+    def test_journal_is_the_shared_attendance_measure_for_admin_cover_and_signature(self):
+        session_obj = self._data("2026-07-23")["sessions"][0]
+        trainee = session_obj["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking(
+            effective_duration="67 heures et 19 minutes", connection_duration="80 heures",
+            connection_log_total="50 heures, 13 minutes et 31 secondes",
+        )
+        tracking = gestion_app._aps_elearning_tracking(trainee)
+        self.assertEqual(tracking["attendance_rate"], 81)
+        self.assertEqual(tracking["completion_rate"], 100)  # Source pedagogy is preserved.
+        context = gestion_app._aps_elearning_tracking_context(session_obj, trainee)
+        self.assertEqual(context["effective_duration"], context["connection_log_total"])
+        self.assertEqual(context["completion_rate"], "81 %")
+        self.assertEqual(context["pedagogical_duration"], "67 heures et 19 minutes")
+        self.assertIn("RELEVÉ INCOMPLET", context["dossier_status"])
+        self.assertTrue(any("journal insuffisante" in v for v in gestion_app._aps_elearning_signature_issues(trainee)))
+        with self.assertRaises(ValueError):
+            gestion_app._require_aps_elearning_signature_ready(trainee)
+
+    def test_signature_gate_never_uses_summary_time_or_rounds_at_62_hours(self):
+        for journal, blocked in [("", True), ("61h59m59s", True), ("62h", True), ("62h00m01s", False)]:
+            with self.subTest(journal=journal):
+                tracking = self._complete_tracking(connection_log_total=journal, connection_duration="80 heures")
+                issues = gestion_app._aps_elearning_report_completion_issues(tracking)
+                self.assertEqual(any("journal" in issue for issue in issues), blocked)
+
+    def test_incomplete_pdf_is_readable_without_enabling_a_signature_override(self):
+        session_obj = self._data("2026-07-23")["sessions"][0]
+        trainee = session_obj["trainees"][0]
+        with tempfile.TemporaryDirectory() as directory, patch.object(gestion_app, "PERSIST_DIR", directory):
+            annex = os.path.join(directory, "annex.pdf")
+            cover = os.path.join(directory, "cover.pdf")
+            for path, count in [(annex, 1), (cover, 2)]:
+                pdf = canvas.Canvas(path)
+                for _ in range(count):
+                    pdf.drawString(40, 750, "RELEVE INCOMPLET")
+                    pdf.showPage()
+                pdf.save()
+            with open(annex, "rb") as source:
+                digest = hashlib.sha256(source.read()).hexdigest()
+            trainee["aps_elearning_tracking"] = self._complete_tracking(
+                file=gestion_app._tokenize_path(annex), file_sha256=digest, connection_log_total="50 heures",
+            )
+            with patch.object(gestion_app, "_generate_aps_elearning_tracking_table_files", return_value=("", cover)):
+                pdf = gestion_app._build_aps_elearning_tracking_table_pdf(session_obj, trainee)
+            self.assertEqual(len(PdfReader(pdf).pages), 3)
+            self.assertFalse(gestion_app._aps_elearning_force_is_active(trainee))
+            with self.assertRaises(ValueError):
+                gestion_app._require_aps_elearning_signature_ready(trainee)
 
     def test_tracking_table_pdf_download_uses_generated_file(self):
         self._admin_login()
@@ -950,6 +1241,71 @@ class ApsElearningTests(unittest.TestCase):
         )
         save_data.assert_called_once()
 
+    def test_admin_never_resends_after_live_yousign_completion(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "foad-request-1",
+            "signature_link": "https://example.test/foad-sign",
+        }
+
+        def complete_live_status(_data, _session, _trainees, target):
+            target["aps_elearning_signature"].update({
+                "status": "done",
+                "provider_status": "done",
+                "signed_at": "2026-09-17T12:06:00Z",
+            })
+            return True
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ) as save_data, patch.object(
+            gestion_app,
+            "_refresh_yousign_aps_elearning_status_if_pending",
+            side_effect=complete_live_status,
+        ), patch.object(
+            gestion_app, "create_yousign_aps_elearning_tracking_signature"
+        ) as create_signature, patch.object(
+            gestion_app, "send_yousign_aps_elearning_signature_email"
+        ) as send_email:
+            response = self.client.post(
+                "/admin/sessions/S-APS/stagiaires/T-APS/aps-elearning/tableau-suivi/yousign"
+            )
+
+        self.assertEqual(response.status_code, 302)
+        create_signature.assert_not_called()
+        send_email.assert_not_called()
+        save_data.assert_called_once()
+
+    def test_completed_signature_without_local_pdf_hides_send_button(self):
+        self._admin_login()
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_tracking"] = self._complete_tracking()
+        trainee["aps_elearning_signature"] = {
+            "status": "done",
+            "provider_status": "done",
+            "signature_request_id": "foad-request-1",
+            "signed_at": "2026-09-17T12:06:00Z",
+            "signed_pdf_path": "",
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ), patch.object(gestion_app, "_yousign_is_configured", return_value=False):
+            response = self.client.get("/admin/sessions/S-APS/stagiaires/T-APS")
+
+        self.assertEqual(response.status_code, 200)
+        section = response.get_data(as_text=True).split(
+            'id="apsElearningTrackingSection"', 1
+        )[1].split("</section>", 1)[0]
+        self.assertIn("Déjà signé · PDF en récupération", section)
+        self.assertNotIn("Envoyer à signer avec Yousign", section)
+        self.assertNotIn("Renvoyer le lien Yousign", section)
+
     def test_signed_tracking_table_is_downloadable(self):
         self._admin_login()
         data = self._data("2026-07-23")
@@ -1001,6 +1357,78 @@ class ApsElearningTests(unittest.TestCase):
         mark_tracking.assert_called_once()
         mark_convention.assert_not_called()
         save_data.assert_called_once()
+
+    def test_yousign_webhook_accepts_direct_signature_request_data(self):
+        data = self._data("2026-07-23")
+        trainee = data["sessions"][0]["trainees"][0]
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "foad-request-direct",
+        }
+        payload = {
+            "event_name": "signature_request.done",
+            "event_id": "event-direct",
+            "data": {
+                "id": "foad-request-direct",
+                "status": "done",
+                "external_id": "aps_foad_S-APS_T-APS",
+            },
+        }
+
+        with patch.object(gestion_app, "_verify_yousign_webhook_signature", return_value=True), patch.object(
+            gestion_app, "load_data", return_value=data
+        ), patch.object(gestion_app, "save_data") as save_data, patch.object(
+            gestion_app, "_mark_yousign_aps_elearning_tracking_signed"
+        ) as mark_tracking:
+            response = self.client.post("/webhooks/yousign", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        mark_tracking.assert_called_once()
+        save_data.assert_called_once()
+
+    def test_pending_status_recovers_completed_request_with_same_external_id(self):
+        data = self._data("2026-07-23")
+        session_obj = data["sessions"][0]
+        trainees = session_obj["trainees"]
+        trainee = trainees[0]
+        trainee["aps_elearning_signature"] = {
+            "status": "ongoing",
+            "signature_request_id": "stale-request",
+            "external_id": "aps_foad_S-APS_T-APS",
+            "activated_at": "2026-09-17T11:32:00Z",
+        }
+        completed = {
+            "id": "completed-request",
+            "status": "done",
+            "external_id": "aps_foad_S-APS_T-APS",
+            "completed_at": "2026-09-17T12:06:00Z",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            signed_path = os.path.join(directory, "tableau-signe.pdf")
+            with open(signed_path, "wb") as signed_pdf:
+                signed_pdf.write(b"%PDF-signed-foad")
+            with patch.object(gestion_app, "_yousign_is_configured", return_value=True), patch.object(
+                gestion_app,
+                "_yousign_json",
+                return_value={"id": "stale-request", "status": "ongoing"},
+            ), patch.object(
+                gestion_app, "_list_yousign_signature_requests", return_value=[completed]
+            ), patch.object(
+                gestion_app, "_download_yousign_aps_elearning_signed_pdf", return_value=signed_path
+            ):
+                changed = gestion_app._refresh_yousign_aps_elearning_status_if_pending(
+                    data,
+                    session_obj,
+                    trainees,
+                    trainee,
+                )
+
+        state = trainee["aps_elearning_signature"]
+        self.assertTrue(changed)
+        self.assertEqual(state["status"], "done")
+        self.assertEqual(state["signature_request_id"], "completed-request")
+        self.assertEqual(state["signed_pdf_path"], signed_path)
 
     def test_trainee_api_saves_link_only_when_aps_elearning_is_enabled(self):
         self._admin_login()

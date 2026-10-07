@@ -167,6 +167,16 @@
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
+    <button class="btn btn-outline" id="btnImportDigiforma" type="button">Importer les relevés Digiforma</button>
+    {% endif %}
+    {% if not is_read_only and not is_all_vtc %}
+    <button class="btn btn-outline" type="button" data-manual-docs-reminder
+            data-preview-url="{{ url_for('admin_manual_docs_preview', session_id=session.id) }}"
+            title="Relancer par e-mail et SMS les stagiaires de cette session ayant des éléments à fournir">
+      RELANCE MANUELLE
+    </button>
+    {% endif %}
     {% if not is_all_vtc %}
     <a class="btn btn-primary" id="btnFinancialReport" href="{{ url_for('admin_session_financial_report', session_id=session.id) }}">💶 Financier</a>
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
@@ -180,12 +190,15 @@
     <a class="btn btn-outline" id="btnPreviewDespKickoffAttendance"
        href="{{ url_for('admin_desp_kickoff_attendance_preview', session_id=session.id) }}"
        target="_blank" rel="noopener"
-       title="Prévisualiser la feuille de présence de la réunion DESP sur Zoom">👁️ Aperçu présence Zoom</a>
-      {% if desp_kickoff_attendance.is_done and desp_kickoff_attendance.has_signed_pdf %}
+       title="Modèle de la feuille de présence, sans les signatures des stagiaires">👁️ Aperçu vierge présence Zoom</a>
+      {% if desp_kickoff_attendance.can_download_pdf %}
       <a class="btn btn-primary" id="btnSignedDespKickoffAttendance"
          href="{{ url_for('admin_view_signed_desp_kickoff_attendance', session_id=session.id) }}"
-         target="_blank" rel="noopener">✅ Présence Zoom signée</a>
-      {% elif not is_read_only %}
+         title="Télécharger le PDF original Yousign avec les signatures déjà apposées, sans attendre les autres signataires">
+        {% if desp_kickoff_attendance.is_done %}📥 Télécharger présence Zoom signée{% else %}📥 Télécharger avec les signatures reçues{% endif %}
+      </a>
+      {% endif %}
+      {% if not desp_kickoff_attendance.is_done and not is_read_only %}
       <form method="post"
             action="{{ url_for('admin_send_desp_kickoff_attendance_yousign', session_id=session.id) }}"
             style="display:inline;"
@@ -196,9 +209,10 @@
       </form>
       {% endif %}
       {% if desp_kickoff_attendance.is_pending %}
-      <span class="pill" title="Signatures électroniques reçues">Yousign : {{ desp_kickoff_attendance.signed_count }}/{{ desp_kickoff_attendance.signer_count }} signature(s)</span>
-      {% elif desp_kickoff_attendance.last_error %}
-      <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur</span>
+      <span class="pill" title="Version en cours : le téléchargement contient uniquement les signatures déjà apposées.">Yousign : {{ desp_kickoff_attendance.signed_count }}/{{ desp_kickoff_attendance.signer_count }} signature(s)</span>
+      {% endif %}
+      {% if desp_kickoff_attendance.last_error %}
+      <span class="pill" title="{{ desp_kickoff_attendance.last_error }}">Yousign : erreur de synchronisation</span>
       {% endif %}
     {% endif %}
     {% if is_ssiap_session and not is_read_only and registered_trainees|selectattr('ssiap_exam_status', 'equalto', 'certified')|list %}
@@ -419,6 +433,7 @@
         {% if not is_vtc %}<th class="col-dossier-complete">Dossier complet</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}<th>CNAPS</th>{% endif %}
         {% if is_aps_or_a3p_session and not show_vae and not is_vtc %}<th class="col-card-pro-followup">Suivi carte pro</th>{% endif %}
+        {% if is_aps_training %}<th class="col-aps-attendance" scope="col">Suivi global du e-learning</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -631,6 +646,41 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             </div>
           {% else %}
             <span class="muted">NUB manquant{% if t.cnaps_tracking_nub %} (Suivi CNAPS indisponible){% endif %}</span>
+          {% endif %}
+        </td>
+        {% endif %}
+
+        {% if is_aps_training %}
+        {% set attendance = (aps_attendance_by_id or {}).get(t.id|string) %}
+        {% set tracking = t.aps_elearning_tracking if t.aps_elearning_tracking is mapping else {} %}
+        {% set signature = t.aps_elearning_signature if t.aps_elearning_signature is mapping else {} %}
+        {% set signature_status = (signature.status or '')|trim|lower %}
+        {% set show_completion_badge = attendance and attendance.is_complete and tracking.file and signature_status in ['done', 'signed'] %}
+        <td class="col-aps-attendance">
+          {% if attendance %}
+            <div class="aps-followup{% if attendance.is_complete %} aps-followup--complete{% endif %}">
+              <div class="aps-followup-heading">
+                <strong class="aps-followup-rate">{{ attendance.overall_rate_label }}</strong>
+                {% if show_completion_badge %}
+                <span class="aps-followup-badge"
+                      data-aps-elearning-complete-badge
+                      role="img"
+                      aria-label="E-learning terminé et tableau de suivi FOAD signé par le stagiaire"
+                      title="E-learning terminé et tableau de suivi FOAD signé par le stagiaire">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path class="aps-followup-badge-seal" d="M23 12l-2.44-2.79.34-3.69-3.61-.82L15.4 1.52 12 2.97 8.6 1.52 6.71 4.7l-3.61.81.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.81 1.89 3.18 3.4-1.46 3.4 1.45 1.89-3.18 3.61-.82-.34-3.69L23 12z"/>
+                    <path class="aps-followup-badge-check" d="M10.09 16.2 6.7 12.81l1.41-1.42 1.98 1.98 5.8-5.8 1.41 1.42-7.21 7.21z"/>
+                  </svg>
+                </span>
+                {% endif %}
+              </div>
+              {% if attendance.overall_rate is not none %}
+              <progress class="aps-followup-bar" max="100" value="{{ attendance.overall_rate }}"
+                        aria-label="Suivi global du e-learning de {{ t.first_name }} {{ t.last_name }}">{{ attendance.overall_rate_label }}</progress>
+              {% endif %}
+            </div>
+          {% else %}
+            <span class="aps-followup-empty">Aucun relevé importé</span>
           {% endif %}
         </td>
         {% endif %}
@@ -1077,10 +1127,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input id="tVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
         {% endif %}
+        {% if not is_vtc %}
         <label class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
-  <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
-  <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
-</label>
+          <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
+          <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
+        </label>
+        {% endif %}
 
       </div>
     </div>
@@ -1200,6 +1252,21 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </div>
 
 <style>
+
+#traineesTable .col-aps-attendance{min-width:150px;width:165px;vertical-align:middle;}
+.aps-followup{--followup-color:#2563eb;display:flex;flex-direction:column;gap:7px;padding:5px 0;}
+.aps-followup--complete{--followup-color:#15803d;}
+.aps-followup-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;}
+.aps-followup-rate{color:var(--followup-color);font-size:16px;font-variant-numeric:tabular-nums;}
+.aps-followup-badge{display:inline-flex;flex:0 0 32px;width:32px;height:32px;color:#48b4f4;filter:drop-shadow(0 2px 3px rgba(37,99,235,.18));}
+.aps-followup-badge svg{display:block;width:100%;height:100%;}
+.aps-followup-badge-seal{fill:currentColor;}
+.aps-followup-badge-check{fill:#fff;}
+.aps-followup-bar{display:block;appearance:none;width:100%;height:8px;border:0;border-radius:999px;overflow:hidden;background:#e2e8f0;accent-color:var(--followup-color);}
+.aps-followup-bar::-webkit-progress-bar{background:#e2e8f0;border-radius:999px;}
+.aps-followup-bar::-webkit-progress-value{background:var(--followup-color);border-radius:999px;}
+.aps-followup-bar::-moz-progress-bar{background:var(--followup-color);border-radius:999px;}
+.aps-followup-empty{font-size:12px;color:#64748b;line-height:1.4;}
 
 #traineesTable .col-card-pro-followup{
   width:210px;
@@ -4379,5 +4446,9 @@ applyRowFilters();
   });
 })();
 </script>
+{% endif %}
+{% include '_manual_docs_reminder.html' %}
+{% if is_aps_training and session.aps_elearning_enabled and not is_read_only %}
+{% include '_aps_digiforma_bulk_import.html' %}
 {% endif %}
 {% endblock %}

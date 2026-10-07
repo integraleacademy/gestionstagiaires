@@ -26,3 +26,4 @@ def register_native_elearning(legacy_app: ModuleType) -> None:
             session_start_date=legacy_app._session_start_date,
         )
     )
+    flask_app.config["NATIVE_ELEARNING_ENABLED"] = True

@@ -1,0 +1,64 @@
+{% set cancellations = wedof_cancellations|default({}) %}
+<div
+  id="wedof-page-panel-cancellations"
+  class="wedof-page-section"
+  data-wedof-page-panel="cancellations"
+  {% if not cancellations.loaded %}data-wedof-load-url="{{ url_for('admin_wedof_requests', section='cancellations') }}"{% endif %}
+  role="tabpanel"
+  aria-labelledby="wedof-page-tab-cancellations"
+  {% if active_section != 'cancellations' %}hidden{% endif %}
+>
+  <section class="wedof-panel wedof-content-panel" aria-labelledby="wedof-cancellations-title">
+    <div class="wedof-panel-header">
+      <div>
+        <span class="wedof-section-label">Dossiers CPF</span>
+        <h2 id="wedof-cancellations-title">Annulations</h2>
+        <p>Dossiers au statut « Non réalisée annulation titulaire ».</p>
+      </div>
+      <a class="btn btn-outline" href="{{ url_for('admin_wedof_requests', section='cancellations', cancellation_page=cancellations.page or 1) }}">Actualiser</a>
+    </div>
+    <div class="wedof-content-body">
+      {% if not cancellations.loaded %}
+        <p role="status">Chargement des annulations…</p>
+        <noscript><a href="{{ url_for('admin_wedof_requests', section='cancellations') }}">Voir les annulations</a></noscript>
+      {% elif cancellations.error %}
+        <div class="wedof-flash is-error" role="alert"><strong>Impossible de charger les annulations.</strong> {{ cancellations.error }}</div>
+      {% else %}
+        {% if cancellations.total is not none %}<p>{{ cancellations.total }} dossier{{ 's' if cancellations.total != 1 else '' }}</p>{% endif %}
+        <div class="wedof-subtable-wrap">
+          <table class="table wedof-requests-table">
+            <thead><tr><th>Nom</th><th>Prénom</th><th>E-mail</th><th>Téléphone</th><th>Formation</th><th>Dates de formation</th><th>Statut</th></tr></thead>
+            <tbody>
+              {% for row in cancellations.rows %}
+                <tr data-wedof-cancellation="{{ row.external_id }}">
+                  <td>{{ row.last_name or 'À compléter' }}<div class="hint">Dossier {{ row.external_id }}</div></td>
+                  <td>{{ row.first_name or '—' }}</td>
+                  <td>{{ row.email or '—' }}</td>
+                  <td>{{ row.phone or '—' }}</td>
+                  <td>{{ row.training_title or '—' }}</td>
+                  <td>
+                    {% if row.start_date and row.end_date %}
+                      Du <strong>{{ row.start_date|frdate }}</strong><br>au <strong>{{ row.end_date|frdate }}</strong>
+                    {% elif row.start_date %}<strong>{{ row.start_date|frdate }}</strong>
+                    {% elif row.end_date %}Jusqu’au <strong>{{ row.end_date|frdate }}</strong>
+                    {% else %}<span class="muted">Non renseignées</span>{% endif %}
+                  </td>
+                  <td>Non réalisée annulation titulaire</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="7" class="wedof-empty-row">Aucun dossier « Non réalisée annulation titulaire » sur cette page.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if cancellations.page > 1 or cancellations.has_next %}
+          <nav aria-label="Pages des annulations CPF">
+            {% if cancellations.page > 1 %}<a class="btn btn-outline" href="{{ url_for('admin_wedof_requests', section='cancellations', cancellation_page=cancellations.page-1) }}">Précédent</a>{% endif %}
+            <span>Page {{ cancellations.page }}</span>
+            {% if cancellations.has_next %}<a class="btn btn-outline" href="{{ url_for('admin_wedof_requests', section='cancellations', cancellation_page=cancellations.page+1) }}">Suivant</a>{% endif %}
+          </nav>
+        {% endif %}
+      {% endif %}
+    </div>
+  </section>
+</div>
