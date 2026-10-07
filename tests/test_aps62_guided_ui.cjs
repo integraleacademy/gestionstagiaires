@@ -4,14 +4,18 @@ const {JSDOM} = require('jsdom');
 const fs = require('node:fs');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname,'../static/js/aps62-guided.js'),'utf8');
-const course = JSON.parse(fs.readFileSync(path.join(__dirname,'../elearning_native/aps62/courses/academy-aps62-01/20261007-aps62-v6.json'),'utf8'));
+const course = JSON.parse(fs.readFileSync(path.join(__dirname,'../elearning_native/aps62/courses/academy-aps62-01/20261007-aps62-v7.json'),'utf8'));
 
-function fixture() {
-  const activity = course.sections[0].activities[2], practice = activity.practice;
+function fixture(selectedActivity) {
+  const activity = selectedActivity || course.sections[0].activities[2], practice = activity.practice;
   const publicPractice = {...practice, exercises:practice.exercises.map(({answer, explanation, remediation, ...rest})=>rest)};
   const fields = practice.exercises.map(ex=>`<fieldset data-exercise-id="${ex.id}" data-kind="single"><legend tabindex="-1">${ex.prompt}</legend>${ex.options.map(o=>`<label><input type="radio" name="${ex.id}" value="${o.id}"><span>${o.text}</span></label>`).join('')}<div data-exercise-feedback hidden></div></fieldset>`).join('');
   const dom = new JSDOM(`<section data-aps-practice><p data-stage-status></p><form>${fields}<button type="submit" class="aps-practice-check">Vérifier</button><button type="button" class="aps-guided-next" hidden>Suite</button><button type="button" class="aps-practice-restart">Recommencer</button></form><section data-remediation hidden><h3>Réviser</h3><p>Révision</p><div data-remediation-items></div><button type="button" class="aps-practice-review">Réviser</button></section><p data-practice-result></p><p data-practice-draft></p><script id="apsPracticeConfig" type="application/json">${JSON.stringify({activityId:activity.id,courseVersion:course.version,practice:publicPractice,completed:false,savedAnswers:{}})}</script></section><script id="nativePreviewConfig" type="application/json">{"answerUrl":"/preview","csrfToken":"csrf"}</script>`,{url:'https://test.invalid/preview',runScripts:'outside-only'});
   const {window}=dom, {document}=window, calls=[];
+  if (practice.journal) {
+    const journal = document.createElement('dl'); journal.setAttribute('data-journal-preview','');
+    document.querySelector('[data-aps-practice]').append(journal);
+  }
   window.fetch=async(url,opts)=>{
     const body=JSON.parse(opts.body);calls.push(body);
     const selected=body.practice_step?practice.exercises.filter(e=>e.id===body.practice_step):practice.exercises;
@@ -66,4 +70,24 @@ test('a failed request preserves the answer and permits a retry',async()=>{
     assert.match(f.document.querySelector('[data-practice-result]').textContent,/Connexion interrompue/);
     assert.equal(f.document.querySelector('.aps-guided-next').hidden,true);
   } finally {f.close();}
+});
+
+test('the four guided journals still assemble their entry without typing',()=>{
+  let count = 0;
+  for(const module of ['08','13']) {
+    const data=JSON.parse(fs.readFileSync(path.join(__dirname,`../elearning_native/aps62/courses/academy-aps62-${module}/20261007-aps62-v7.json`),'utf8'));
+    for(const activity of data.sections.flatMap(section=>section.activities).filter(a=>a.practice?.journal)) {
+      const f=fixture(activity);
+      try {
+        assert.equal(f.document.querySelectorAll('[data-journal-preview] dd').length,activity.practice.exercises.length);
+        f.choose(0);
+        const ex=activity.practice.exercises[0];
+        assert.equal(f.document.querySelector('[data-journal-preview] dd').textContent,ex.options.find(o=>o.id===ex.answer).text);
+        f.document.querySelector('.aps-practice-restart').click();
+        assert.equal(f.document.querySelector('[data-journal-preview] dd').textContent,'À compléter');
+        count++;
+      } finally {f.close();}
+    }
+  }
+  assert.equal(count,4);
 });

@@ -6,6 +6,7 @@ explains the rules and walks through examples; it never asks for an interruption
 import json
 from pathlib import Path
 import re
+from functools import lru_cache
 
 from scripts.aps62_v5.content import courses as plain_courses
 
@@ -13,7 +14,24 @@ ROOT = Path(__file__).resolve().parents[2] / 'elearning_native/aps62'
 SOURCE = '20261006-aps62-v5'
 
 
+@lru_cache(maxsize=1)
+def action_wording():
+    simple = {}
+    for line in Path(__file__).with_name('actions.txt').read_text().splitlines():
+        if line and not line.startswith('#'):
+            sid, first, second = line.split('|')
+            simple[sid] = (first, second)
+    replacements = {}
+    for line in (Path(__file__).parents[1]/'aps62_v3/scenarios.txt').read_text().splitlines():
+        if line and not line.startswith('#'):
+            cells = line.split('|')
+            replacements[cells[4]], replacements[cells[8]] = simple[cells[0]]
+    return replacements
+
+
 def spoken(text):
+    for original, easy in action_wording().items():
+        text = text.replace(original, easy)
     text = text.replace('À RETENIR · ', '').replace('EXEMPLE EXPLIQUÉ', 'Un exemple expliqué')
     text = text.replace('Comparez les deux moments avant de lancer la mission. ', '')
     text = text.replace('Le fait établi est :', 'Voici ce que l’on sait :')

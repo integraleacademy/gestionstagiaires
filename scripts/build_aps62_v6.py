@@ -21,10 +21,15 @@ ROOT = REPO/'elearning_native/aps62'
 OLD = '20261006-aps62-v5'
 
 
-def build(version='20261007-aps62-v6', replace_videos=False):
+def build(version='20261007-aps62-v7', replace_videos=False):
     simple = simple_courses()
     authored = video_courses()
     observations = {}
+    actions = {}
+    for line in (REPO/'scripts/aps62_v6/actions.txt').read_text().splitlines():
+        if line and not line.startswith('#'):
+            sid, first, second = line.split('|')
+            actions['aps62-'+sid] = (first, second)
     scenarios = {}
     for line in (REPO/'scripts/aps62_v3/scenarios.txt').read_text().splitlines():
         if line and not line.startswith('#'):
@@ -34,7 +39,7 @@ def build(version='20261007-aps62-v6', replace_videos=False):
         if line and not line.startswith('#'):
             sid, question, correct, wrong = line.split('|')
             observations['aps62-'+sid] = (question, correct, wrong)
-    assert set(observations) == set(authored)
+    assert set(observations) == set(actions) == set(authored)
     videos = json.loads((ROOT/'video_manifest_v6.json').read_text()) if replace_videos else {}
     if replace_videos:
         assert set(videos) == set(authored), 'All 62 rendered videos are required'
@@ -84,6 +89,7 @@ def build(version='20261007-aps62-v6', replace_videos=False):
                                 # The original case has one authored alternative;
                                 # remove the third, generic distractor.
                                 correct = next(o for o in ex['options'] if o['id'] == ex['answer'])
+                                correct['text'] = actions[sid][i-1]
                                 wrong_text = scenarios[sid][5 if i == 1 else 9]
                                 wrong = next(o for o in ex['options'] if o['id'] != ex['answer'])
                                 wrong = dict(wrong, text=wrong_text)
@@ -125,7 +131,8 @@ def build(version='20261007-aps62-v6', replace_videos=False):
         assert all((ROOT/'assets'/p).is_file() for p in used)
         assert sum(a['planned_minutes'] for s in course['sections'] for a in s['activities']) == course['planned_minutes']
         write(ROOT/'courses'/module['id']/(version+'.json'), course)
-        module['previous_versions'] = list(dict.fromkeys([*module.get('previous_versions', []), OLD]))
+        module['previous_versions'] = list(dict.fromkeys([*module.get('previous_versions', []), OLD,
+            *([module['version']] if module['version'] != version else [])]))
         module['version'] = version
         entry = next(m for m in allocation['modules'] if m['module'] == module['number'])
         for target, section in zip(entry['sections'], course['sections']):
@@ -155,7 +162,7 @@ def build(version='20261007-aps62-v6', replace_videos=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--version', default='20261007-aps62-v6')
+    parser.add_argument('--version', default='20261007-aps62-v7')
     parser.add_argument('--videos-v6', action='store_true')
     args = parser.parse_args()
     build(args.version, args.videos_v6)

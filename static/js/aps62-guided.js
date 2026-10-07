@@ -27,6 +27,17 @@
   function complete(value) {
     return typeof value === 'string' ? Boolean(value) : Object.values(value).every(Boolean);
   }
+  function updateJournal() {
+    const journal = root.querySelector('[data-journal-preview]');
+    if (!journal) return;
+    journal.replaceChildren();
+    fields.forEach((field, n) => {
+      const title = document.createElement('dt'); title.textContent = config.practice.exercises[n].prompt;
+      const text = document.createElement('dd');
+      text.textContent = field.querySelector('input:checked')?.nextElementSibling?.textContent || 'À compléter';
+      journal.append(title, text);
+    });
+  }
   function show(focus = false) {
     fields.forEach((field, n) => { field.hidden = n !== index; });
     status.textContent = `Question ${index + 1} sur ${fields.length}`;
@@ -149,6 +160,7 @@
     review.querySelector('.aps-practice-review').hidden = true;
   }
   form.addEventListener('change', () => {
+    updateJournal();
     stepVerified = false; verified = '';
     fields[index].querySelector('[data-exercise-feedback]').hidden = true;
     delete fields[index].dataset.correct;
@@ -162,12 +174,12 @@
     form.reset(); index = 0; stepVerified = false; verified = ''; drills.clear(); clearDraft();
     fields.forEach(field => { delete field.dataset.correct; field.querySelector('[data-exercise-feedback]').hidden = true; });
     root.querySelector('[data-remediation]').hidden = true;
-    summary.textContent = ''; show(true);
+    summary.textContent = ''; updateJournal(); show(true);
   });
   restore(config.savedAnswers);
   if (!preview && !config.completed) { try { restore(JSON.parse(sessionStorage.getItem(cacheKey) || 'null')); } catch (_) {} }
   if (config.completed) clearDraft();
-  show();
+  updateJournal(); show();
   window.aps62Practice = {clearDraft, collectForCompletion() {
     const all = answers();
     if (busy || !verified || verified !== JSON.stringify(all)) throw new Error('Terminez les questions, puis cliquez sur « Valider l’exercice ».');

@@ -1,0 +1,939 @@
+{
+  "id": "module-12",
+  "version": "20261007-aps62-v7",
+  "title": "Prévenir la menace terroriste",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-12-01",
+      "prompt": "La vigilance face au terrorisme doit se fonder sur quoi ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une tenue inhabituelle seule"
+        },
+        {
+          "id": "2",
+          "text": "Une origine ou religion supposée"
+        },
+        {
+          "id": "3",
+          "text": "Des faits et comportements contextualisés"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La prévention recherche des indices pertinents sans profilage discriminatoire.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-02",
+      "prompt": "Un sac est abandonné dans une zone fréquentée. Quel réflexe ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Ne pas le manipuler et appliquer la procédure de signalement"
+        },
+        {
+          "id": "2",
+          "text": "Le déplacer vers la sortie"
+        },
+        {
+          "id": "3",
+          "text": "L’ouvrir pour identifier le propriétaire"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La manipulation peut exposer les personnes et altérer la situation.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-03",
+      "prompt": "Pourquoi connaître les itinéraires de repli avant un incident ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour éviter d’écouter les consignes"
+        },
+        {
+          "id": "2",
+          "text": "Pour choisir toujours la sortie la plus proche"
+        },
+        {
+          "id": "3",
+          "text": "Pour disposer d’options sûres adaptées à la situation"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’itinéraire doit être connu puis apprécié au regard du danger réel.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-04",
+      "prompt": "Une attaque est en cours et une sortie sûre est accessible. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "S’échapper sans s’exposer davantage"
+        },
+        {
+          "id": "2",
+          "text": "Revenir chercher ses affaires"
+        },
+        {
+          "id": "3",
+          "text": "Rester filmer la scène"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La protection des personnes prime sur les biens et les images.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-05",
+      "prompt": "La fuite est impossible mais un local permet de se protéger. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Faire des appels bruyants répétés"
+        },
+        {
+          "id": "2",
+          "text": "Se placer devant une fenêtre"
+        },
+        {
+          "id": "3",
+          "text": "Se cacher, se protéger et rester discret selon la situation"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La mise à l’abri vise à réduire l’exposition en attendant le relais.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-06",
+      "prompt": "Quand transmettre une alerte lors d’une attaque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "En se rapprochant de l’assaillant"
+        },
+        {
+          "id": "2",
+          "text": "Uniquement après avoir filmé"
+        },
+        {
+          "id": "3",
+          "text": "Dès que cela est possible depuis une situation protégée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’alerte doit être utile sans augmenter inutilement l’exposition.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-07",
+      "prompt": "Quel contenu d’alerte est prioritaire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Lieu précis, nature du danger, informations observées et accès utiles"
+        },
+        {
+          "id": "2",
+          "text": "Un commentaire politique"
+        },
+        {
+          "id": "3",
+          "text": "Des hypothèses sur les convictions de l’auteur"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les forces intervenantes ont besoin d’éléments opérationnels et fiables.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-08",
+      "prompt": "Comment accueillir les forces de l’ordre pendant une attaque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Courir vers elles en tenant un objet"
+        },
+        {
+          "id": "2",
+          "text": "Contester leur dispositif"
+        },
+        {
+          "id": "3",
+          "text": "Suivre leurs instructions et garder les mains visibles"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une attitude lisible et conforme aux ordres réduit les risques de confusion.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-09",
+      "prompt": "Un appel menaçant arrive au poste. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Diffuser l’appel sur un réseau personnel"
+        },
+        {
+          "id": "2",
+          "text": "Noter les propos utiles et alerter selon la procédure"
+        },
+        {
+          "id": "3",
+          "text": "Promettre de satisfaire toutes les demandes"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les éléments recueillis doivent être transmis au relais compétent sans prise de risque inutile.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-10",
+      "prompt": "Une rumeur d’attaque circule sur les réseaux. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Fermer tous les accès sans coordination"
+        },
+        {
+          "id": "2",
+          "text": "Vérifier via les canaux officiels et le dispositif du site"
+        },
+        {
+          "id": "3",
+          "text": "La relayer immédiatement comme certaine"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une information non vérifiée peut créer une panique ou perturber la réponse.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-11",
+      "prompt": "Pourquoi ne pas utiliser automatiquement l’alarme incendie lors d’une attaque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Elle pourrait orienter le public vers le danger"
+        },
+        {
+          "id": "2",
+          "text": "Parce qu’elle arrête les téléphones"
+        },
+        {
+          "id": "3",
+          "text": "Parce que toute alerte est interdite"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La conduite à tenir dépend de la menace et du plan prévu, pas d’un réflexe identique à tous les événements.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-12",
+      "prompt": "Un objet suspect doit-il être photographié de près pour mieux alerter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui, c’est obligatoire"
+        },
+        {
+          "id": "2",
+          "text": "Oui si le téléphone est silencieux"
+        },
+        {
+          "id": "3",
+          "text": "Non, ne pas se rapprocher pour obtenir une image"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La recherche de détails ne doit pas créer une exposition supplémentaire.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-13",
+      "prompt": "Quel rôle joue le plan Vigipirate ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Remplacer toutes les consignes du site"
+        },
+        {
+          "id": "2",
+          "text": "Organiser la vigilance, la prévention et la protection face à la menace"
+        },
+        {
+          "id": "3",
+          "text": "Autoriser tout agent à fouiller de force"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les mesures sont déclinées selon le contexte et n’effacent pas le cadre juridique.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-14",
+      "prompt": "Quelle information Vigipirate faut-il vérifier au moment de la mission ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’avis d’un groupe informel"
+        },
+        {
+          "id": "2",
+          "text": "La posture officielle et les consignes applicables au site"
+        },
+        {
+          "id": "3",
+          "text": "Un niveau mémorisé plusieurs années auparavant"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La doctrine et la posture peuvent évoluer ; la source officielle doit être consultée.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-15",
+      "prompt": "Quel trio correspond aux stades du plan Vigipirate 2026 ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vert, orange, rouge"
+        },
+        {
+          "id": "2",
+          "text": "Vigilance, vigilance renforcée, alerte attentat"
+        },
+        {
+          "id": "3",
+          "text": "Prévention, sanction, détention"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le vocabulaire a évolué en 2026 ; il faut utiliser l’édition et les consignes actuelles du SGDSN.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-16",
+      "prompt": "Le stade Vigipirate autorise-t-il une palpation hors de tout cadre légal ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui automatiquement pour tous"
+        },
+        {
+          "id": "2",
+          "text": "Non"
+        },
+        {
+          "id": "3",
+          "text": "Oui si l’agent est volontaire"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le niveau d’alerte ne dispense pas de vérifier les conditions juridiques du contrôle.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-17",
+      "prompt": "Un véhicule force un accès. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Se placer physiquement devant le véhicule"
+        },
+        {
+          "id": "2",
+          "text": "Se protéger, alerter et éloigner les personnes exposées si possible"
+        },
+        {
+          "id": "3",
+          "text": "Le poursuivre à pied sur la chaussée"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’agent doit éviter une exposition directe et transmettre les informations utiles.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-18",
+      "prompt": "Une porte de secours peut-elle être condamnée pour renforcer la sûreté sans étude ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui en période de menace"
+        },
+        {
+          "id": "2",
+          "text": "Non, sûreté et sécurité d’évacuation doivent être conciliées"
+        },
+        {
+          "id": "3",
+          "text": "Oui si le public n’en est pas informé"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une protection contre l’intrusion ne doit pas créer un piège pour l’évacuation.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-19",
+      "prompt": "Pourquoi contrôler les accès de service selon les consignes ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour éviter toute livraison"
+        },
+        {
+          "id": "2",
+          "text": "Parce que les livreurs sont présumés malveillants"
+        },
+        {
+          "id": "3",
+          "text": "Ils peuvent constituer une vulnérabilité au même titre que l’entrée principale"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’analyse porte sur le dispositif et les autorisations, pas sur une catégorie de personnes.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-20",
+      "prompt": "Un comportement de repérage est suspecté. Que transmettre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’origine supposée de la personne"
+        },
+        {
+          "id": "2",
+          "text": "Une conclusion certaine sur l’intention"
+        },
+        {
+          "id": "3",
+          "text": "Les observations précises et leur contexte"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La qualification d’une menace nécessite un relais compétent et des faits exploitables.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-21",
+      "prompt": "Une personne laissée à l’arrière demande de l’aide. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Ignorer toute demande"
+        },
+        {
+          "id": "2",
+          "text": "Revenir systématiquement dans la zone d’attaque"
+        },
+        {
+          "id": "3",
+          "text": "Évaluer l’aide possible sans exposer davantage les personnes"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’entraide doit rester compatible avec la protection et les consignes reçues.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-22",
+      "prompt": "Quel usage des réseaux sociaux pendant un incident ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Relayer tous les mouvements des forces"
+        },
+        {
+          "id": "2",
+          "text": "Publier la position des personnes cachées"
+        },
+        {
+          "id": "3",
+          "text": "Suivre les consignes officielles et éviter les diffusions sensibles"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Certaines publications peuvent compromettre la sécurité de personnes ou l’intervention.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-23",
+      "prompt": "Un drone inconnu survole une zone sensible. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Tenter de l’abattre avec un objet"
+        },
+        {
+          "id": "2",
+          "text": "Abandonner tous les postes pour le suivre"
+        },
+        {
+          "id": "3",
+          "text": "Observer sans s’exposer et signaler selon le dispositif du site"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La réponse relève d’une coordination et de compétences spécifiques.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-24",
+      "prompt": "Une personne entend des détonations sans voir leur origine. Comment alerter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Décrire les sons et le lieu en précisant ce qui n’est pas confirmé"
+        },
+        {
+          "id": "2",
+          "text": "Annoncer un nombre d’assaillants inventé"
+        },
+        {
+          "id": "3",
+          "text": "Attendre de voir de près"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une incertitude clairement formulée permet d’alerter sans fausse précision.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-25",
+      "prompt": "Pourquoi préparer des exercices de mise à l’abri ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour vérifier la compréhension des rôles et des itinéraires"
+        },
+        {
+          "id": "2",
+          "text": "Pour supprimer les besoins de formation"
+        },
+        {
+          "id": "3",
+          "text": "Pour garantir qu’aucun incident ne surviendra"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’exercice révèle des difficultés pratiques et permet d’ajuster l’organisation.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-26",
+      "prompt": "La fin d’un bruit ou d’un mouvement signifie-t-elle la fin de la menace ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui après une minute"
+        },
+        {
+          "id": "2",
+          "text": "Oui automatiquement"
+        },
+        {
+          "id": "3",
+          "text": "Non, attendre les informations et consignes fiables"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une accalmie ne constitue pas à elle seule une autorisation de retour.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-27",
+      "prompt": "Qui autorise le retour dans une zone après un événement grave ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le premier visiteur impatient"
+        },
+        {
+          "id": "2",
+          "text": "Chaque agent pour son groupe"
+        },
+        {
+          "id": "3",
+          "text": "Le circuit de commandement et les autorités compétentes selon le cas"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La réouverture doit être coordonnée pour éviter une réexposition.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-28",
+      "prompt": "Pourquoi identifier les personnes ayant besoin d’aide à l’évacuation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour prévoir une assistance adaptée sans improvisation dangereuse"
+        },
+        {
+          "id": "2",
+          "text": "Pour leur interdire tout accès"
+        },
+        {
+          "id": "3",
+          "text": "Pour publier leurs données personnelles"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La préparation doit concilier protection et confidentialité.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-29",
+      "prompt": "La résistance à un assaillant est présentée dans les consignes publiques comme quoi ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La mission prioritaire de tout agent non armé"
+        },
+        {
+          "id": "2",
+          "text": "Un exercice à improviser devant le public"
+        },
+        {
+          "id": "3",
+          "text": "Un dernier recours lorsque fuir ou se cacher est impossible et que la vie est menacée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les recommandations privilégient d’abord les possibilités de protection ; elles ne constituent pas une mission d’assaut.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-12-30",
+      "prompt": "Après une alerte levée, quel travail reste utile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Tracer, débriefer et corriger les difficultés du dispositif"
+        },
+        {
+          "id": "2",
+          "text": "Effacer les messages pour oublier"
+        },
+        {
+          "id": "3",
+          "text": "Diffuser des images non autorisées"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le retour d’expérience transforme les observations en améliorations concrètes.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}
