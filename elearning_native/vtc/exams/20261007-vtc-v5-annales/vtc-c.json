@@ -1,0 +1,1039 @@
+{
+  "id": "vtc-c",
+  "version": "20261007-vtc-v5-annales",
+  "training_label": "VTC",
+  "title": "VTC · Conduire en sécurité · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "exam-annales-2023-c-04",
+      "prompt": "Dans quel cas un conducteur circulant à allure fortement réduite dans une file de voitures est-il obligé de faire usage de ses feux de détresse ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ce n'est pas obligatoire"
+        },
+        {
+          "id": "b",
+          "text": "Lorsque son véhicule est le premier d'une file de circulation ininterrompue"
+        },
+        {
+          "id": "c",
+          "text": "Lorsque son véhicule est le dernier d'une file de circulation ininterrompue"
+        },
+        {
+          "id": "d",
+          "text": "Lorsque son véhicule circule sur une bande d'arrêt d'urgence"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Un véhicule contraint de circuler à une allure fortement réduite avertit les autres avec ses feux de détresse. Dans une file ininterrompue, cette obligation concerne le dernier véhicule. Allumer les feux de détresse n’autorise pas à circuler sur la bande d’arrêt d’urgence.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.03",
+        "C.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-04",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-05",
+      "prompt": "Les témoins sur le tableau de bord du véhicule qui alertent le conducteur d'une urgence mécanique sont de couleur :",
+      "options": [
+        {
+          "id": "a",
+          "text": "orange"
+        },
+        {
+          "id": "b",
+          "text": "rouge"
+        },
+        {
+          "id": "c",
+          "text": "bleue"
+        },
+        {
+          "id": "d",
+          "text": "verte"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Un témoin rouge signale généralement une alerte majeure imposant une réaction immédiate adaptée : se mettre en sécurité et consulter la notice. Orange signale le plus souvent une anomalie ou une vigilance ; bleu et vert renseignent habituellement sur un équipement en service.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-05",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-07",
+      "prompt": "Dans quel cas l'arrêt est-il autorisé sur la bande d'arrêt d'urgence de l'autoroute ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "en cas de panne ou d'accident"
+        },
+        {
+          "id": "b",
+          "text": "jamais"
+        },
+        {
+          "id": "c",
+          "text": "dans tous les cas"
+        },
+        {
+          "id": "d",
+          "text": "pour téléphoner"
+        }
+      ],
+      "answer": "a",
+      "explanation": "La bande d’arrêt d’urgence sert aux situations d’urgence, notamment panne ou accident. Un appel téléphonique ou une pause de confort ne justifie pas de s’y arrêter. Recherchez un emplacement sécurisé et suivez les consignes de protection.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-07",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-08",
+      "prompt": "Quand le croisement s'avère difficile, le conducteur d'une voiture, en agglomération doit au besoin s'arrêter pour laisser passer :",
+      "options": [
+        {
+          "id": "a",
+          "text": "un tracteur"
+        },
+        {
+          "id": "b",
+          "text": "un véhicule de transport de marchandises"
+        },
+        {
+          "id": "c",
+          "text": "un véhicule de transport en commun"
+        }
+      ],
+      "answer": "c",
+      "explanation": "En agglomération, lorsque le croisement avec un véhicule de transport en commun est difficile, le conducteur de la voiture facilite son passage et s’arrête si nécessaire. Anticiper l’encombrement évite de bloquer les deux véhicules.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-08",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-09",
+      "prompt": "Dans quel délai un chauffeur doit-il transmettre un constat amiable à son assureur après un accident matériel ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1 mois"
+        },
+        {
+          "id": "b",
+          "text": "5 jours"
+        },
+        {
+          "id": "c",
+          "text": "2 jours"
+        },
+        {
+          "id": "d",
+          "text": "7 jours"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Après un accident matériel, transmettez rapidement le constat à l’assureur et respectez le délai de déclaration prévu par le contrat, qui ne peut en principe être inférieur à cinq jours ouvrés. Le sujet abrège cette précision en « 5 jours » : il ne s’agit pas de cinq jours calendaires.",
+      "module": "C",
+      "sources": [
+        [
+          "Déclaration des dégâts matériels · Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F2152"
+        ]
+      ],
+      "lesson_refs": [
+        "C.12",
+        "A.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-09",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-10",
+      "prompt": "Un permis B, permet de transporter au maximum :",
+      "options": [
+        {
+          "id": "a",
+          "text": "6 passagers"
+        },
+        {
+          "id": "b",
+          "text": "7 passagers"
+        },
+        {
+          "id": "c",
+          "text": "8 passagers"
+        },
+        {
+          "id": "d",
+          "text": "9 passagers"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le permis B permet au maximum huit passagers, soit neuf places conducteur compris, dans les limites de la catégorie du véhicule. Le nombre inscrit sur la carte grise et les conditions propres à l’activité peuvent réduire la capacité réellement utilisable.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-10",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-11",
+      "prompt": "Par temps de pluie, l'utilisation des feux de brouillard arrière est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "conseillée"
+        },
+        {
+          "id": "b",
+          "text": "obligatoire"
+        },
+        {
+          "id": "c",
+          "text": "interdite"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Les feux de brouillard arrière s’utilisent en cas de brouillard ou de chute de neige ; la pluie seule ne les justifie pas et leur forte lumière peut éblouir les conducteurs suiveurs. Ne confondez pas leurs règles avec celles des feux avant.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-11",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-12",
+      "prompt": "Sur une route à forte déclivité :",
+      "options": [
+        {
+          "id": "a",
+          "text": "il n'y a pas de priorité, au bon vouloir des deux conducteurs"
+        },
+        {
+          "id": "b",
+          "text": "le véhicule descendant est prioritaire"
+        },
+        {
+          "id": "c",
+          "text": "le véhicule montant est prioritaire"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Sur une route de montagne ou à forte déclivité, le véhicule descendant facilite le passage au véhicule montant et s’arrête d’abord lorsque le croisement est difficile. Si une marche arrière devient nécessaire, les règles dépendent aussi de la catégorie des véhicules et de la position des refuges : la priorité ne doit pas être appliquée aveuglément.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-12",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-13",
+      "prompt": "Dans un tunnel éclairé, hors agglomération, je circule :",
+      "options": [
+        {
+          "id": "a",
+          "text": "en feux de croisement"
+        },
+        {
+          "id": "b",
+          "text": "en feux de brouillard"
+        },
+        {
+          "id": "c",
+          "text": "en feux de route"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Dans un tunnel, même éclairé, utilisez les feux de croisement. Les feux de route peuvent éblouir et les feux de brouillard ne remplacent pas l’éclairage adapté au tunnel.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-13",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-14",
+      "prompt": "Lorsque le permis a été invalidé en raison d'une perte totale de points, le nouveau permis obtenu est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "un permis probatoire doté d'un capital de 6 points"
+        },
+        {
+          "id": "b",
+          "text": "un permis non probatoire doté d'un capital de 12 points"
+        },
+        {
+          "id": "c",
+          "text": "un permis probatoire doté d'un capital de 12 points"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Après une invalidation pour solde de points nul, le nouveau permis est probatoire avec six points. Ne confondez pas la récupération progressive des points et le droit de reprendre immédiatement une activité professionnelle soumise à conditions.",
+      "module": "C",
+      "sources": [
+        [
+          "Permis probatoire · Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F2390"
+        ]
+      ],
+      "lesson_refs": [
+        "A.03",
+        "C.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-14",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-15",
+      "prompt": "Dans le cas où plusieurs infractions entrainant un retrait de points seraient commises simultanément, la perte maximale de points est de :",
+      "options": [
+        {
+          "id": "a",
+          "text": "6 points"
+        },
+        {
+          "id": "b",
+          "text": "12 points"
+        },
+        {
+          "id": "c",
+          "text": "8 points"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Pour plusieurs infractions commises simultanément, le retrait est plafonné à huit points. Un permis probatoire disposant de six points peut néanmoins perdre tout son solde. Le plafond ne signifie pas qu’un conducteur conserve forcément son droit de conduire.",
+      "module": "C",
+      "sources": [
+        [
+          "Retrait simultané de points · Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F11863"
+        ]
+      ],
+      "lesson_refs": [
+        "C.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-15",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-16",
+      "prompt": "Pourquoi faut-il rédiger un constat amiable?",
+      "options": [
+        {
+          "id": "a",
+          "text": "pour calculer les indemnisations de chacune des personnes impliquées"
+        },
+        {
+          "id": "b",
+          "text": "pour déterminer les responsabilité de chacune des personnes impliquées"
+        },
+        {
+          "id": "c",
+          "text": "pour que le garagiste puisse établir un devis des réparations"
+        },
+        {
+          "id": "d",
+          "text": "pour déterminer la sanction encourue par l'auteur"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le constat décrit les circonstances, positions et dommages de l’accident. L’assureur s’appuie sur ces faits pour déterminer les responsabilités et appliquer les garanties. Le document n’est ni un devis de réparation ni une décision de sanction pénale.",
+      "module": "C",
+      "sources": [
+        [
+          "Constat amiable · Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F2149"
+        ]
+      ],
+      "lesson_refs": [
+        "C.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-16",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-c-01",
+      "prompt": "Je peux suivre un stage de sensibilisation à la sécurité routière :",
+      "options": [
+        {
+          "id": "a",
+          "text": "une fois tous les 2 ans"
+        },
+        {
+          "id": "b",
+          "text": "trois fois par an"
+        },
+        {
+          "id": "c",
+          "text": "une fois par an"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Pour récupérer des points par un stage volontaire, le permis doit rester valide et le délai minimal entre deux stages donnant récupération est d’un an. Le stage peut rendre jusqu’à quatre points dans la limite du plafond applicable. « Une fois par an » ne signifie pas un nouveau droit dès chaque 1er janvier.",
+      "module": "C",
+      "sources": [
+        [
+          "Service Public · Stage de sensibilisation à la sécurité routière",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F14208?edit=1"
+        ]
+      ],
+      "lesson_refs": [
+        "A.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-c-04",
+      "prompt": "Par temps de brouillard, lorsque la visibilité est inférieure à 50 mètres, je roule à :",
+      "options": [
+        {
+          "id": "a",
+          "text": "30 km à l'heure"
+        },
+        {
+          "id": "b",
+          "text": "50 km à l'heure"
+        },
+        {
+          "id": "c",
+          "text": "70 km à l'heure"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Si la visibilité est inférieure à 50 m, le plafond est de 50 km/h sur l’ensemble des réseaux routier et autoroutier. C’est une vitesse maximale : si la visibilité ou l’adhérence l’exigent, il faut rouler moins vite.",
+      "module": "C",
+      "sources": [
+        [
+          "Code de la route · article R413-4, visibilité inférieure à 50 m",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006842181"
+        ]
+      ],
+      "lesson_refs": [
+        "C.02",
+        "C.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-04",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-c-05",
+      "prompt": "Sur les routes à sens unique, à deux voies ou lors d'un accès sur un rond point, vous pouvez circuler sur la voie de gauche :",
+      "options": [
+        {
+          "id": "a",
+          "text": "pour préparer un changement de direction à gauche"
+        },
+        {
+          "id": "b",
+          "text": "il n'y a pas de règle le précisant"
+        },
+        {
+          "id": "c",
+          "text": "lorsque vous êtes seul (e) sur la route et que vous ne gênez personne"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Préparer un changement de direction vers la gauche peut justifier le placement sur la voie de gauche dans la configuration décrite. Il faut respecter flèches, signalisation, priorités et contrôles ; être seul ne donne pas une liberté générale d’utiliser n’importe quelle voie.",
+      "module": "C",
+      "sources": [
+        [
+          "Code de la route · Usage des voies",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074228/LEGISCTA000006129092/"
+        ]
+      ],
+      "lesson_refs": [
+        "C.04",
+        "C.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-05",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-c-07",
+      "prompt": "Puis-je rajouter moi-même du liquide de refroidissement?",
+      "options": [
+        {
+          "id": "a",
+          "text": "non, cela doit attendre la prochaine révision"
+        },
+        {
+          "id": "b",
+          "text": "non, il faut aller chez le garagiste"
+        },
+        {
+          "id": "c",
+          "text": "oui, mais avec le moteur chaud"
+        },
+        {
+          "id": "d",
+          "text": "oui, mais avec le moteur froid"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Le contrôle et l’appoint du liquide de refroidissement se font moteur froid, en suivant la notice. Un circuit chaud peut être sous pression et provoquer des brûlures ; ouvrir le bouchon immédiatement après avoir roulé n’est pas la bonne procédure.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-07",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-c-13",
+      "prompt": "Sur les routes à 2x2 voies séparées par une ligne continue, la vitesse est limitée à :",
+      "options": [
+        {
+          "id": "a",
+          "text": "110 km/h"
+        },
+        {
+          "id": "b",
+          "text": "130 km/h"
+        },
+        {
+          "id": "c",
+          "text": "90 km/h"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Hors agglomération, une section comportant au moins deux voies dans un même sens peut être limitée à 90 km/h sur ces voies. Une simple ligne continue entre les sens n’est pas un terre-plein central : elle ne suffit pas à autoriser 110 km/h. La signalisation et les conditions particulières restent prioritaires.",
+      "module": "C",
+      "sources": [
+        [
+          "Code de la route · article R413-2, vitesses hors agglomération",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042240048/"
+        ]
+      ],
+      "lesson_refs": [
+        "C.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-13",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 8,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-c-15",
+      "prompt": "Dans quel cas exceptionnel devez-vous dépasser un véhicule par la droite ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "lorsque le conducteur du véhicule qui me précède a signalé qu'il allait changer de direction vers la droite"
+        },
+        {
+          "id": "b",
+          "text": "lorsque le conducteur du véhicule qui me précède a signalé qu'il allait changer de direction vers la gauche"
+        },
+        {
+          "id": "c",
+          "text": "lorsque le conducteur du véhicule qui me suit a signalé qu'il allait changer de direction vers la gauche"
+        },
+        {
+          "id": "d",
+          "text": "il est toujours autorisé de dépasser un véhicule par la droite"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le dépassement se fait normalement à gauche. Lorsqu’un véhicule annonce son changement de direction vers la gauche, le dépassement par la droite est l’exception prévue, à condition de pouvoir l’effectuer sans danger. Le clignotant du véhicule qui suit ne donne pas cette autorisation.",
+      "module": "C",
+      "sources": [
+        [
+          "Code de la route · Usage des voies",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074228/LEGISCTA000006129092/"
+        ]
+      ],
+      "lesson_refs": [
+        "C.04",
+        "C.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-15",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 8,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-01",
+      "prompt": "Sur un trajet de 100 km sur autoroute, si je roule à 130 km/h au lieu de 120 km/h, je « gagne » environ :",
+      "options": [
+        {
+          "id": "a",
+          "text": "4 minutes"
+        },
+        {
+          "id": "b",
+          "text": "10 minutes"
+        },
+        {
+          "id": "c",
+          "text": "15 minutes"
+        },
+        {
+          "id": "d",
+          "text": "8 minutes"
+        }
+      ],
+      "answer": "a",
+      "explanation": "À vitesse constante, 100 km à 120 km/h prennent 50 minutes. À 130 km/h, le temps est 100 ÷ 130 × 60 = 46,15 minutes. Le gain théorique n'est que d'environ 3 min 51 s, donc quatre minutes, sans tenir compte du trafic.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-01",
+      "source_title": "Annales VTC 2021",
+      "source_page": 6,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-03",
+      "prompt": "Vous êtes au volant de votre véhicule et recevez un appel sur votre téléphone portable. Vous prenez le téléphone en main, vous encourez :",
+      "options": [
+        {
+          "id": "a",
+          "text": "un retrait d'un point"
+        },
+        {
+          "id": "b",
+          "text": "un retrait de deux points"
+        },
+        {
+          "id": "c",
+          "text": "un retrait de trois points"
+        }
+      ],
+      "answer": "c",
+      "explanation": "L'usage d'un téléphone tenu en main au volant est sanctionné par le retrait de trois points, en plus de l'amende applicable. La bonne méthode consiste à préparer les communications avant de partir et à s'arrêter dans un endroit autorisé pour manipuler le téléphone.",
+      "module": "C",
+      "sources": [
+        [
+          "Barème des retraits de points — Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F31551"
+        ]
+      ],
+      "lesson_refs": [
+        "C.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 6,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-08",
+      "prompt": "Le décret n° 2016-448 du 13 avril 2016 modifiant certaines dispositions du code de la route relatives aux véhicules interdit les « vitres surteintées ». A cette fin, il impose :",
+      "options": [
+        {
+          "id": "a",
+          "text": "un taux minimal de transparence de 70% sur les vitres avant et le pare-prise"
+        },
+        {
+          "id": "b",
+          "text": "un taux minimal de transparence de 80% sur les vitres arrières et lunettes-arrières"
+        },
+        {
+          "id": "c",
+          "text": "un taux minimal de transparence de 70% sur les vitres avant, le pare-prise et les vitres arrières"
+        },
+        {
+          "id": "d",
+          "text": "un taux minimal de transparence de 80% sur les vitres avant, le pare-prise et les vitres arrières"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le pare-brise et les vitres latérales avant doivent transmettre au moins 70 % de la lumière, sous réserve des exceptions prévues. La règle de transparence ne se résume pas à la teinte visible : il faut considérer l'ensemble vitre et film.",
+      "module": "C",
+      "sources": [
+        [
+          "Équipements obligatoires — Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F19459"
+        ]
+      ],
+      "lesson_refs": [
+        "C.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-08",
+      "source_title": "Annales VTC 2021",
+      "source_page": 6,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-09",
+      "prompt": "En cas de panne de votre véhicule, à quelle distance placez-vous le triangle de pré signalisation ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "50 mètres au moins de votre véhicule"
+        },
+        {
+          "id": "b",
+          "text": "10 mètres au moins de votre véhicule"
+        },
+        {
+          "id": "c",
+          "text": "30 mètres au moins de votre véhicule"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Un triangle de présignalisation se place à au moins 30 mètres de l'obstacle, et peut devoir être placé plus loin pour être visible. Il ne faut pas l'installer si cette action met manifestement la vie du conducteur en danger, notamment selon la situation sur autoroute.",
+      "module": "C",
+      "sources": [
+        [
+          "Équipements obligatoires — Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F19459"
+        ]
+      ],
+      "lesson_refs": [
+        "C.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-09",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-10",
+      "prompt": "En agglomération, l'usage de l'avertisseur sonore est autorisé :",
+      "options": [
+        {
+          "id": "a",
+          "text": "pour donner les avertissements nécessaires aux autres usagers de la route"
+        },
+        {
+          "id": "b",
+          "text": "en cas de danger immédiat"
+        },
+        {
+          "id": "c",
+          "text": "pour saluer un collègue conducteur"
+        }
+      ],
+      "answer": "b",
+      "explanation": "En agglomération, l'avertisseur sonore est réservé au danger immédiat. Saluer un collègue ou demander au client de descendre ne constitue pas un usage autorisé du klaxon.",
+      "module": "C",
+      "sources": [
+        [
+          "Code de la route — usage des voies",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074228/LEGISCTA000006129092/"
+        ]
+      ],
+      "lesson_refs": [
+        "C.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-10",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-14",
+      "prompt": "La durée du temps de réaction est d'environ:",
+      "options": [
+        {
+          "id": "a",
+          "text": "1/2 seconde"
+        },
+        {
+          "id": "b",
+          "text": "1/10 ième de seconde"
+        },
+        {
+          "id": "c",
+          "text": "1 seconde"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Une seconde est un repère courant pour le temps de réaction d'un conducteur attentif. Pendant ce délai, le véhicule continue à avancer avant le début du freinage. Fatigue, alcool, stupéfiants et distraction peuvent allonger ce temps.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.03",
+        "C.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-14",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-16",
+      "prompt": "Combien de points perdez-vous en cas de chevauchement d'une ligne continue ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "3 points"
+        },
+        {
+          "id": "b",
+          "text": "2 points"
+        },
+        {
+          "id": "c",
+          "text": "1 point"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le chevauchement d'une ligne continue entraîne le retrait d'un point ; son franchissement est une infraction distincte qui entraîne trois points, hors dérogations prévues. Il faut donc identifier précisément le comportement décrit.",
+      "module": "C",
+      "sources": [
+        [
+          "Barème des retraits de points — Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F31551"
+        ]
+      ],
+      "lesson_refs": [
+        "C.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-16",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-17",
+      "prompt": "Les feux de route éclairent à une distance minimale de :",
+      "options": [
+        {
+          "id": "a",
+          "text": "100 mètres"
+        },
+        {
+          "id": "b",
+          "text": "50 mètres"
+        },
+        {
+          "id": "c",
+          "text": "150 mètres"
+        },
+        {
+          "id": "d",
+          "text": "200 mètres"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les feux de route doivent éclairer efficacement la route, par temps clair et de nuit, sur au moins 100 mètres. Leur portée ne dispense pas d'adapter la vitesse et de repasser en feux de croisement pour éviter d'éblouir.",
+      "module": "C",
+      "sources": [
+        [
+          "Feux de route — article R313-2",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042266184/2025-11-16"
+        ]
+      ],
+      "lesson_refs": [
+        "C.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-17",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-c-19",
+      "prompt": "En agglomération, lorsque vous dépassez latéralement, un piéton ou un cycliste, vous devez laisser un espace d'au moins :",
+      "options": [
+        {
+          "id": "a",
+          "text": "3 mètres"
+        },
+        {
+          "id": "b",
+          "text": "1 mètre"
+        },
+        {
+          "id": "c",
+          "text": "0,50 mètre"
+        },
+        {
+          "id": "d",
+          "text": "1,50 mètres"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Pour dépasser un piéton ou un cycliste, la distance latérale minimale est d'un mètre en agglomération et d'un mètre cinquante hors agglomération. Si les conditions ne permettent pas cette marge, il faut attendre pour dépasser.",
+      "module": "C",
+      "sources": [
+        [
+          "Code de la route — usage des voies",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074228/LEGISCTA000006129092/"
+        ]
+      ],
+      "lesson_refs": [
+        "C.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-19",
+      "source_title": "Annales VTC 2021",
+      "source_page": 8,
+      "correction_origin": "source"
+    },
+    {
+      "id": "independent-c-01",
+      "prompt": "À 72 km/h, un véhicule parcourt 20 mètres par seconde. Quelle distance parcourt-il pendant deux secondes avant tout freinage ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "40 mètres."
+        },
+        {
+          "id": "b",
+          "text": "20 mètres."
+        },
+        {
+          "id": "c",
+          "text": "72 mètres."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Distance = vitesse en mètres par seconde × durée. Ici 20 × 2 = 40 m. Ce calcul porte seulement sur le temps avant freinage, pas sur la distance totale d’arrêt.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.03"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-c-02",
+      "prompt": "Pendant une mission longue, le conducteur bâille et peine à garder une trajectoire régulière. Quelle action traite le risque immédiat ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Rejoindre un endroit sûr pour interrompre la conduite et se reposer."
+        },
+        {
+          "id": "b",
+          "text": "Augmenter le volume sonore tout en poursuivant jusqu’à destination."
+        },
+        {
+          "id": "c",
+          "text": "Réduire légèrement la vitesse et compter sur la conversation avec le client."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les signes de somnolence imposent une interruption dans un lieu sûr. La musique ou la conversation peuvent masquer la fatigue sans restaurer la vigilance.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.07"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-c-03",
+      "prompt": "Le téléphone demande de confirmer une nouvelle destination pendant que le véhicule roule. Quelle organisation évite la manipulation dangereuse ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "S’arrêter dans un endroit autorisé et sûr avant de modifier la destination."
+        },
+        {
+          "id": "b",
+          "text": "Saisir seulement le numéro de rue en gardant le téléphone sous le volant."
+        },
+        {
+          "id": "c",
+          "text": "Confirmer rapidement au prochain ralentissement sans s’arrêter."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La saisie détourne l’attention visuelle et mentale. Une modification de destination se prépare à l’arrêt dans des conditions sûres, même si elle paraît brève.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.09"
+      ],
+      "origin": "pedagogical-independent"
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 27,
+    "original_questions": 3
+  }
+}

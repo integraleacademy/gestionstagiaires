@@ -47,7 +47,7 @@ class VisualMediaTests(unittest.TestCase):
 
     def test_visuals_and_105_hour_plan_are_complete_without_migrating_old_editions(self):
         manifest=vtc.curriculum_manifest()
-        self.assertEqual(manifest['version'],VERSION)
+        self.assertIn(VERSION,manifest['exam_versions'])
         refs=set();table_count=0
         for m in manifest['modules']:
             current=vtc.load_bundled_course(m['id'],VERSION)

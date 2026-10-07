@@ -33,19 +33,20 @@
   ],
   "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
   "final_exam_id": "vtc-final",
-  "version": "20261007-vtc-v4-visuals",
-  "reviewed_on": "2026-10-06",
+  "version": "20261007-vtc-v5-annales",
+  "reviewed_on": "2026-10-07",
   "planned_minutes": 6300,
   "lesson_count": 96,
   "workshop_count": 96,
   "modules": [
     {
       "id": "academy-vtc-a",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "A",
       "title": "VTC A · Exercer dans le cadre du T3P",
@@ -132,11 +133,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 224,
-        "decisions": 368,
+        "exercises": 200,
+        "decisions": 332,
         "listening_dialogues": 0,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 10
       },
       "duration_breakdown": [
         {
@@ -167,11 +169,12 @@
     },
     {
       "id": "academy-vtc-b",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "B",
       "title": "VTC B · Gérer son entreprise",
@@ -258,11 +261,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 323,
-        "decisions": 383,
+        "exercises": 295,
+        "decisions": 343,
         "listening_dialogues": 0,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 11
       },
       "duration_breakdown": [
         {
@@ -293,11 +297,12 @@
     },
     {
       "id": "academy-vtc-c",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "C",
       "title": "VTC C · Conduire en sécurité",
@@ -384,11 +389,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 292,
-        "decisions": 448,
+        "exercises": 256,
+        "decisions": 400,
         "listening_dialogues": 0,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 12
       },
       "duration_breakdown": [
         {
@@ -419,11 +425,12 @@
     },
     {
       "id": "academy-vtc-d",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "D",
       "title": "VTC D · Comprendre et s’exprimer en français",
@@ -510,11 +517,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 253,
-        "decisions": 320,
+        "exercises": 214,
+        "decisions": 269,
         "listening_dialogues": 0,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 6
       },
       "duration_breakdown": [
         {
@@ -545,11 +553,12 @@
     },
     {
       "id": "academy-vtc-e",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "E",
       "title": "VTC E · Accueillir en anglais",
@@ -636,11 +645,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 354,
-        "decisions": 414,
+        "exercises": 276,
+        "decisions": 324,
         "listening_dialogues": 48,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 12
       },
       "duration_breakdown": [
         {
@@ -671,11 +681,12 @@
     },
     {
       "id": "academy-vtc-f",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "F",
       "title": "VTC F · Développer son activité VTC",
@@ -762,11 +773,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 281,
-        "decisions": 341,
+        "exercises": 251,
+        "decisions": 299,
         "listening_dialogues": 0,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 11
       },
       "duration_breakdown": [
         {
@@ -797,11 +809,12 @@
     },
     {
       "id": "academy-vtc-g",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "G",
       "title": "VTC G · Appliquer les règles du VTC",
@@ -888,11 +901,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 309,
-        "decisions": 333,
+        "exercises": 205,
+        "decisions": 229,
         "listening_dialogues": 0,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 12
       },
       "duration_breakdown": [
         {
@@ -923,11 +937,12 @@
     },
     {
       "id": "academy-vtc-h",
-      "version": "20261007-vtc-v4-visuals",
+      "version": "20261007-vtc-v5-annales",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
-        "20261006-vtc-v3-105h"
+        "20261006-vtc-v3-105h",
+        "20261007-vtc-v4-visuals"
       ],
       "letter": "H",
       "title": "VTC H · Réaliser une mission professionnelle",
@@ -1014,11 +1029,12 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 324,
-        "decisions": 500,
+        "exercises": 282,
+        "decisions": 446,
         "listening_dialogues": 0,
         "visual_methods": 12,
-        "comparison_tables": 4
+        "comparison_tables": 4,
+        "annales_lessons": 5
       },
       "duration_breakdown": [
         {
@@ -1052,7 +1068,8 @@
     "20261006-vtc-v1",
     "20261006-vtc-v2",
     "20261006-vtc-v3-105h",
-    "20261007-vtc-v4-visuals"
+    "20261007-vtc-v4-visuals",
+    "20261007-vtc-v5-annales"
   ],
   "video_count": 8,
   "narrated_video_count": 8,
@@ -1067,13 +1084,18 @@
   "module_exam_questions": 240,
   "final_exam_questions": 100,
   "activity_count": 336,
-  "exercise_count": 2360,
-  "decision_count": 3107,
+  "exercise_count": 1979,
+  "decision_count": 2642,
   "visual_edition_on": "2026-10-07",
   "visual_method_count": 96,
   "comparison_table_count": 32,
   "inline_manual_figure_count": 20,
   "animated_video_count": 8,
   "video_minutes": 70.1,
-  "video_min_seconds": 496.872
+  "video_min_seconds": 496.872,
+  "annales_question_count": 404,
+  "annales_source_count": 8,
+  "annales_section_count": 26,
+  "annales_active_count": 330,
+  "annales_lesson_count": 79
 }

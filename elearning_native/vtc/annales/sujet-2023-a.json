@@ -1,0 +1,654 @@
+{
+  "id": "sujet-2023-a",
+  "title": "28 mars 2023 · T3P",
+  "year": 2023,
+  "source_filename": "SUJET-T3P-VTC-MARS-2023.pdf",
+  "source_sha256": "b7fe9fd8e868d6a964340ebf73deb9cfcece04340827328277c4653d8200ba33",
+  "sections": [
+    {
+      "id": "annales-2023-a",
+      "module": "A",
+      "title": "T3P · mars 2023",
+      "minutes": 45,
+      "questions": [
+        {
+          "number": 1,
+          "page": 4,
+          "prompt": "Quelles sont les sanctions possibles qui peuvent être décidées par les commissions disciplinaires locales ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Avis pouvant conduire l’autorité compétente à un avertissement ou au retrait temporaire ou définitif de la carte."
+            },
+            {
+              "id": "b",
+              "text": "Condamnation pénale et peine de prison prononcées directement par la commission."
+            },
+            {
+              "id": "c",
+              "text": "Modification du contrat d’assurance décidée par la commission."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "A.02",
+            "A.12"
+          ],
+          "explanation": "Les sections disciplinaires donnent un avis ; la décision administrative relève de l’autorité compétente. Il faut distinguer l’avertissement et le retrait temporaire ou définitif de la carte des sanctions pénales décidées par un tribunal.",
+          "status": "historical",
+          "update_note": "L’énoncé attribue directement la décision à la commission, alors que son rôle est consultatif. L’adaptation clarifie cette distinction et reste hors score pour ne pas valider cette imprécision.",
+          "sources": [
+            {
+              "title": "Commissions locales T3P · Code des transports",
+              "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000034084258"
+            }
+          ],
+          "original_answer": "Avis pouvant conduire l’autorité compétente à un avertissement ou au retrait temporaire ou définitif de la carte.",
+          "id": "annales-2023-a-01",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Les sections disciplinaires donnent un avis ; la décision administrative relève de l’autorité compétente. Il faut distinguer l’avertissement et le retrait temporaire ou définitif de la carte des sanctions pénales décidées par un tribunal."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical"
+        },
+        {
+          "number": 2,
+          "page": 4,
+          "prompt": "Quelle est la périodicité du contrôle technique ou de l'attestation d'entretien des véhicules du T3P?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Tous les ans pour le contrôle technique d’une voiture VTC."
+            },
+            {
+              "id": "b",
+              "text": "Tous les deux ans, comme une voiture particulière à usage privé."
+            },
+            {
+              "id": "c",
+              "text": "Uniquement lors de la revente du véhicule."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "A.04",
+            "G.11"
+          ],
+          "explanation": "Pour une voiture VTC, le contrôle technique est annuel, avec les échéances propres à sa mise en service et à son affectation. Il ne faut pas appliquer la périodicité ordinaire de deux ans des voitures particulières utilisées à titre privé. Le sujet emploie aussi l’attestation d’entretien pour d’autres catégories du T3P.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Contrôle technique des transports de personnes · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F22299"
+            }
+          ],
+          "original_answer": "Tous les ans pour le contrôle technique d’une voiture VTC.",
+          "id": "annales-2023-a-02",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Pour une voiture VTC, le contrôle technique est annuel, avec les échéances propres à sa mise en service et à son affectation. Il ne faut pas appliquer la périodicité ordinaire de deux ans des voitures particulières utilisées à titre privé. Le sujet emploie aussi l’attestation d’entretien pour d’autres catégories du T3P."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical"
+        },
+        {
+          "number": 3,
+          "page": 4,
+          "prompt": "Quels types de personnalités ont voix délibérative lors de la commission locale des T3P ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Les membres des collèges prévus par les textes ; les personnes qualifiées invitées n’ont pas voix délibérative."
+            },
+            {
+              "id": "b",
+              "text": "Tous les invités, y compris les personnes qualifiées, ont toujours un droit de vote."
+            },
+            {
+              "id": "c",
+              "text": "Seuls les professionnels votent, les représentants de l’État étant uniquement observateurs."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "A.02"
+          ],
+          "explanation": "La commission locale comprend des représentants de l’État, des professionnels, des collectivités et, le cas échéant, des usagers ou associations prévus par les textes. Les personnes qualifiées invitées au titre de D3120-31 n’ont pas voix délibérative. Les sections disciplinaires ont une composition spécifique paritaire État/profession.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Commissions locales T3P · Code des transports",
+              "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000034084258"
+            }
+          ],
+          "original_answer": "Les membres des collèges prévus par les textes ; les personnes qualifiées invitées n’ont pas voix délibérative.",
+          "id": "annales-2023-a-03",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La commission locale comprend des représentants de l’État, des professionnels, des collectivités et, le cas échéant, des usagers ou associations prévus par les textes. Les personnes qualifiées invitées au titre de D3120-31 n’ont pas voix délibérative. Les sections disciplinaires ont une composition spécifique paritaire État/profession."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical"
+        },
+        {
+          "number": 4,
+          "page": 4,
+          "prompt": "Quels agents sont habilités à effectuer un contrôle routier de conducteur de T3P ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Le juge du tribunal judiciaire"
+            },
+            {
+              "id": "b",
+              "text": "Les agents représentant la SNCF"
+            },
+            {
+              "id": "c",
+              "text": "Les policiers"
+            },
+            {
+              "id": "d",
+              "text": "Les gendarmes"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c",
+            "d"
+          ],
+          "lesson_refs": [
+            "A.11"
+          ],
+          "explanation": "Les policiers et les gendarmes habilités peuvent effectuer les contrôles routiers. Un juge exerce une fonction juridictionnelle et un agent SNCF ne devient pas, du seul fait de cet emploi, un agent habilité au contrôle routier général du T3P.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-a-04",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Les policiers et les gendarmes habilités peuvent effectuer les contrôles routiers. Un juge exerce une fonction juridictionnelle et un agent SNCF ne devient pas, du seul fait de cet emploi, un agent habilité au contrôle routier général du T3P."
+          ]
+        },
+        {
+          "number": 5,
+          "page": 4,
+          "prompt": "Lors d'un contrôle par la police des transports, quels documents le conducteur de T3P doit-il présenter en plus de sa carte professionnelle?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Le permis de conduire"
+            },
+            {
+              "id": "b",
+              "text": "Le constat amiable"
+            },
+            {
+              "id": "c",
+              "text": "Le Kbis de l'exploitant"
+            },
+            {
+              "id": "d",
+              "text": "Le certificat d'aptitude physique"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "d"
+          ],
+          "lesson_refs": [
+            "A.11"
+          ],
+          "explanation": "Le permis et les justificatifs d’aptitude professionnelle/médicale doivent être vérifiés dans le cadre approprié. Les documents du conducteur, de l’exploitant, du véhicule et de la réservation répondent à des obligations distinctes.",
+          "status": "historical",
+          "update_note": "La question mélange les pièces à détenir, à présenter et leur forme ; elle ne précise pas le statut de l’exploitant. Le PDF ne fournit pas de corrigé. Les choix A/D ne sont pas présentés comme liste officielle exhaustive et la question est hors score.",
+          "sources": [],
+          "id": "annales-2023-a-05",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le permis et les justificatifs d’aptitude professionnelle/médicale doivent être vérifiés dans le cadre approprié. Les documents du conducteur, de l’exploitant, du véhicule et de la réservation répondent à des obligations distinctes."
+          ]
+        },
+        {
+          "number": 6,
+          "page": 4,
+          "prompt": "Le(s) quel(s) est(sont) un(des) dommage(s) couvert par l'assurance dite RCP pour le transport public de personnes à titre onéreux ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Accident de circulation"
+            },
+            {
+              "id": "b",
+              "text": "Dégât causé au véhicule"
+            },
+            {
+              "id": "c",
+              "text": "Retard provoqué par un passager entraînant un retard pour la prise en charge du client suivant"
+            },
+            {
+              "id": "d",
+              "text": "Erreur de parcours involontaire (mauvaises indications du client par exemple)."
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c",
+            "d"
+          ],
+          "lesson_refs": [
+            "A.05"
+          ],
+          "explanation": "La RC circulation couvre les dommages causés par le véhicule dans le cadre assuré. La responsabilité civile professionnelle concerne les préjudices liés à l’exécution du service, sous réserve des garanties et exclusions. Un retard ou une erreur de parcours ne déclenche pas automatiquement une indemnisation.",
+          "status": "historical",
+          "update_note": "Les choix C/D dépendent du contrat, d’une responsabilité et d’un préjudice établi. Un retard causé par un passager n’engage pas automatiquement le chauffeur. Sans hypothèses ni corrigé, cette question reste hors score.",
+          "sources": [],
+          "id": "annales-2023-a-06",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La RC circulation couvre les dommages causés par le véhicule dans le cadre assuré. La responsabilité civile professionnelle concerne les préjudices liés à l’exécution du service, sous réserve des garanties et exclusions. Un retard ou une erreur de parcours ne déclenche pas automatiquement une indemnisation."
+          ]
+        },
+        {
+          "number": 7,
+          "page": 4,
+          "prompt": "Quelles sont les conséquences pour un conducteur de T3P qui ne serait pas titulaire d'une responsabilité civile professionnelle ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "une amende de 30 000 € et deux ans d'emprisonnement"
+            },
+            {
+              "id": "b",
+              "text": "une amende de 1 500 € et six mois d'emprisonnement"
+            },
+            {
+              "id": "c",
+              "text": "une amende de 15 000 € et un an d'emprisonnement"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [],
+          "lesson_refs": [
+            "A.05",
+            "A.12"
+          ],
+          "explanation": "L’activité doit être couverte par une responsabilité civile professionnelle adaptée et les attestations doivent être tenues à jour. Ne confondez pas défaut d’assurance, absence de carte et absence d’inscription au registre : les textes et sanctions diffèrent.",
+          "status": "historical",
+          "update_note": "Le PDF ne fournit pas de corrigé et les montants proposés ne permettent pas d’établir une réponse actuelle fiable à cette qualification d’infraction. Ce montant historique n’est pas enseigné comme une sanction générale de l’absence de RCP.",
+          "sources": [],
+          "id": "annales-2023-a-07",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "L’activité doit être couverte par une responsabilité civile professionnelle adaptée et les attestations doivent être tenues à jour. Ne confondez pas défaut d’assurance, absence de carte et absence d’inscription au registre : les textes et sanctions diffèrent."
+          ]
+        },
+        {
+          "number": 8,
+          "page": 4,
+          "prompt": "Le stage de formation continue dispensé aux conducteurs de transport public routier particulier de personnes permet d'obtenir une attestation valable :",
+          "options": [
+            {
+              "id": "a",
+              "text": "2 ans"
+            },
+            {
+              "id": "b",
+              "text": "10 ans"
+            },
+            {
+              "id": "c",
+              "text": "5 ans"
+            },
+            {
+              "id": "d",
+              "text": "1 an"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "A.04"
+          ],
+          "explanation": "La formation continue du conducteur doit être renouvelée tous les cinq ans et donne lieu à une attestation. Sa date doit être suivie séparément des autres échéances : permis, aptitude médicale, assurances et contrôle du véhicule.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Devenir chauffeur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "id": "annales-2023-a-08",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La formation continue du conducteur doit être renouvelée tous les cinq ans et donne lieu à une attestation. Sa date doit être suivie séparément des autres échéances : permis, aptitude médicale, assurances et contrôle du véhicule."
+          ]
+        },
+        {
+          "number": 9,
+          "page": 5,
+          "prompt": "Pour être exploitable en activité de transport public particulier de personnes un véhicule électrique doit être validé par :",
+          "options": [
+            {
+              "id": "a",
+              "text": "le conseil régional"
+            },
+            {
+              "id": "b",
+              "text": "la Mairie"
+            },
+            {
+              "id": "c",
+              "text": "la CMA"
+            },
+            {
+              "id": "d",
+              "text": "la préfecture ou Préfet de Police"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [],
+          "lesson_refs": [
+            "G.03",
+            "G.11"
+          ],
+          "explanation": "Un véhicule électrique utilisé en VTC doit satisfaire les règles applicables à l’activité ; certaines exigences techniques comportent des dérogations pour les véhicules électriques et hybrides. Cela ne dispense ni des formalités du véhicule ni des contrôles requis.",
+          "status": "historical",
+          "update_note": "La formulation « validé par » ne désigne aucune procédure précise. Le PDF sans corrigé ne permet pas de retenir une autorité pour une validation générale : question hors score, à clarifier avec le référentiel de la session.",
+          "sources": [],
+          "id": "annales-2023-a-09",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Un véhicule électrique utilisé en VTC doit satisfaire les règles applicables à l’activité ; certaines exigences techniques comportent des dérogations pour les véhicules électriques et hybrides. Cela ne dispense ni des formalités du véhicule ni des contrôles requis."
+          ]
+        },
+        {
+          "number": 10,
+          "page": 5,
+          "prompt": "Dans quel(s) cas de condamnation ne peut-on exercer la profession de conducteur de T3P ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Condamnation pour abus de confiance"
+            },
+            {
+              "id": "b",
+              "text": "Condamnation pour refus de prise en charge dans un cadre légal"
+            },
+            {
+              "id": "c",
+              "text": "Condamnation pour escroquerie"
+            },
+            {
+              "id": "d",
+              "text": "Condamnation pour non-paiement d'une pension alimentaire"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "c"
+          ],
+          "lesson_refs": [
+            "A.03"
+          ],
+          "explanation": "L’honorabilité s’apprécie au regard des condamnations incompatibles énumérées par le Code des transports, avec leurs conditions de peine et d’inscription au bulletin n° 2. L’abus de confiance et l’escroquerie font partie des infractions à examiner.",
+          "status": "historical",
+          "update_note": "Le libellé omet les conditions légales de peine et d’inscription. Il ne faut pas enseigner qu’une condamnation quelconque entraîne automatiquement l’interdiction : étude hors score avec les conditions actuelles.",
+          "sources": [
+            {
+              "title": "Devenir chauffeur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "id": "annales-2023-a-10",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "L’honorabilité s’apprécie au regard des condamnations incompatibles énumérées par le Code des transports, avec leurs conditions de peine et d’inscription au bulletin n° 2. L’abus de confiance et l’escroquerie font partie des infractions à examiner."
+          ]
+        },
+        {
+          "number": 11,
+          "page": 5,
+          "prompt": "Citez 4 informations communes qui figurent sur une carte professionnelle T3P.",
+          "options": [
+            {
+              "id": "a",
+              "text": "Nom, prénom, photographie et numéro de la carte."
+            },
+            {
+              "id": "b",
+              "text": "Nom de l’exploitant, numéro SIREN, assurance professionnelle et liste des véhicules."
+            },
+            {
+              "id": "c",
+              "text": "Numéro de réservation, horaires du client, contrat d’assurance et facture du véhicule."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "A.03",
+            "A.11"
+          ],
+          "explanation": "Pour identifier une carte professionnelle, contrôlez notamment le nom, le prénom, la photographie et le numéro de la carte, puis sa catégorie d’activité et ses dates. Une carte d’une autre activité ou expirée n’autorise pas la mission.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Devenir chauffeur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "original_answer": "Nom, prénom, photographie et numéro de la carte.",
+          "id": "annales-2023-a-11",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Pour identifier une carte professionnelle, contrôlez notamment le nom, le prénom, la photographie et le numéro de la carte, puis sa catégorie d’activité et ses dates. Une carte d’une autre activité ou expirée n’autorise pas la mission."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical"
+        },
+        {
+          "number": 12,
+          "page": 5,
+          "prompt": "Un chauffeur effectue à la demande et à titre onéreux le transport particulier de personnes et de bagages sans être titulaire d'une carte professionnelle. Quelles sont les peines encourues lorsqu'il est reconnu coupable de cette infraction ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "confiscation du véhicule"
+            },
+            {
+              "id": "b",
+              "text": "deux ans d'emprisonnement et 300 000 € d'amende"
+            },
+            {
+              "id": "c",
+              "text": "un an d'emprisonnement et 15 000 € d'amende"
+            },
+            {
+              "id": "d",
+              "text": "immobilisation du véhicule pour une durée d'un an"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [],
+          "lesson_refs": [
+            "A.03",
+            "A.12"
+          ],
+          "explanation": "Dans le cadre historique du sujet, le questionnaire combine une peine principale et des peines complémentaires. Il faut toujours distinguer sanction maximale encourue, peine effectivement prononcée et mesure administrative.",
+          "status": "historical",
+          "update_note": "La loi du 25 juin 2026 a modifié L3124-12 : les prestations sans la carte correspondant à l’activité sont désormais visées par trois ans d’emprisonnement et 45 000 € d’amende, avec les peines complémentaires prévues. Les anciens choix ne forment plus un corrigé actuel : hors score.",
+          "sources": [
+            {
+              "title": "Loi du 25 juin 2026 · article 28",
+              "url": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000054309429"
+            }
+          ],
+          "id": "annales-2023-a-12",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Dans le cadre historique du sujet, le questionnaire combine une peine principale et des peines complémentaires. Il faut toujours distinguer sanction maximale encourue, peine effectivement prononcée et mesure administrative."
+          ]
+        },
+        {
+          "number": 13,
+          "page": 5,
+          "prompt": "La réglementation du T3P se trouve dans le :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Code préfectoral"
+            },
+            {
+              "id": "b",
+              "text": "Code des transports"
+            },
+            {
+              "id": "c",
+              "text": "Code pénal"
+            },
+            {
+              "id": "d",
+              "text": "Code du travail"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "A.01",
+            "A.02"
+          ],
+          "explanation": "Le Code des transports contient le cadre sectoriel du transport public particulier de personnes. Il s’articule avec d’autres textes, notamment Code de la route, assurances et droit pénal. La question recherche le code organisant spécifiquement le T3P.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-a-13",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le Code des transports contient le cadre sectoriel du transport public particulier de personnes. Il s’articule avec d’autres textes, notamment Code de la route, assurances et droit pénal. La question recherche le code organisant spécifiquement le T3P."
+          ]
+        },
+        {
+          "number": 14,
+          "page": 5,
+          "prompt": "Dans la liste ci-dessous quels sont les véhicules qui sont autorisés à être en attente de clientèle sur la voie publique ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "VTC"
+            },
+            {
+              "id": "b",
+              "text": "taxi"
+            },
+            {
+              "id": "c",
+              "text": "VMDTR"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "G.06"
+          ],
+          "explanation": "Le taxi bénéficie de la possibilité de prise en charge et d’attente de clientèle sur la voie publique dans le périmètre et les conditions de son autorisation. Le VTC et le VMDTR ne bénéficient pas du même droit de maraude. Une réservation ou une zone autorisée pour un client identifié se distingue de l’attente indifférenciée de clientèle.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Devenir chauffeur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "id": "annales-2023-a-14",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le taxi bénéficie de la possibilité de prise en charge et d’attente de clientèle sur la voie publique dans le périmètre et les conditions de son autorisation. Le VTC et le VMDTR ne bénéficient pas du même droit de maraude. Une réservation ou une zone autorisée pour un client identifié se distingue de l’attente indifférenciée de clientèle."
+          ]
+        },
+        {
+          "number": 15,
+          "page": 5,
+          "prompt": "Comment s'appelle le document sur lequel ne doivent pas figurer certaines condamnations définitives incompatibles avec l'exercice du transport public particulier de personnes ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Le bulletin n° 2 du casier judiciaire."
+            },
+            {
+              "id": "b",
+              "text": "Le bulletin n° 3 présenté par le conducteur remplace systématiquement le B2."
+            },
+            {
+              "id": "c",
+              "text": "Le relevé des points du permis de conduire."
+            }
+          ],
+          "original_kind": "qrc",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "A.03"
+          ],
+          "explanation": "Le contrôle d’honorabilité se réfère au bulletin n° 2 du casier judiciaire et aux condamnations incompatibles prévues par les textes. Il ne faut pas remplacer cette exigence par « casier entièrement vierge », ni confondre le B2 avec le B3 remis à un particulier.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Devenir chauffeur VTC · Service Public",
+              "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+            }
+          ],
+          "original_answer": "Le bulletin n° 2 du casier judiciaire.",
+          "id": "annales-2023-a-15",
+          "kind": "single",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le contrôle d’honorabilité se réfère au bulletin n° 2 du casier judiciaire et aux condamnations incompatibles prévues par les textes. Il ne faut pas remplacer cette exigence par « casier entièrement vierge », ni confondre le B2 avec le B3 remis à un particulier."
+          ],
+          "adaptation_note": "Question ouverte du sujet original, adaptée en choix pédagogiques pour répondre sans rédaction.",
+          "original_answer_origin": "pedagogical"
+        }
+      ]
+    }
+  ]
+}

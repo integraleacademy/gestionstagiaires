@@ -16,6 +16,7 @@
       <div><span>Temps actif cumulé</span><strong>{{ active_time_label }}</strong></div>
       <div><span>Activités terminées</span><strong>{{ completed_activities }} / {{ total_activities }}</strong></div>
     </section>
+    {% if annales_url %}<section class="np-panel"><h2>Les annales VTC</h2><p>Entraînez-vous avec les sujets fournis, puis retrouvez les corrections expliquées et les leçons à réviser. Les questions anciennes qui ne peuvent plus être évaluées sont signalées.</p><a class="np-button np-button--primary" href="{{ annales_url }}">Ouvrir les annales →</a></section>{% endif %}
     <div class="np-modules np-learner-modules">
       {% for module in modules %}
         <article class="np-panel np-learner-module{% if module.locked %} is-locked{% endif %}">

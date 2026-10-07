@@ -1,0 +1,295 @@
+[
+  {
+    "number": 1,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "C.05"
+    ],
+    "explanation": "Le panneau triangulaire à deux bosses signale un cassis ou dos-d’âne (A2a). Le ralentisseur de type dos-d’âne est représenté par une seule bosse. Observez le dessin, pas seulement la forme triangulaire de danger.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 2,
+    "answers": [
+      "a",
+      "c"
+    ],
+    "lesson_refs": [
+      "C.05"
+    ],
+    "explanation": "En agglomération, dans une rue à double sens, l’arrêt et le stationnement s’effectuent normalement du côté droit dans le sens de marche. Le côté gauche ne devient pas autorisé parce que l’arrêt est bref ; respectez aussi les interdictions locales.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 3,
+    "answers": [
+      "a",
+      "c"
+    ],
+    "lesson_refs": [
+      "C.11"
+    ],
+    "explanation": "Pour une voiture, les feux de position peuvent suffire en agglomération lorsque l’éclairage permet de voir distinctement à une distance suffisante. Les feux de croisement sont également possibles. On ne circule pas sans éclairage la nuit ; par visibilité insuffisante, appliquez les exigences adaptées.",
+    "status": "active",
+    "update_note": "",
+    "sources": [
+      {
+        "title": "Code de la route · R416-6",
+        "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006842262/"
+      }
+    ]
+  },
+  {
+    "number": 4,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "C.03",
+      "C.12"
+    ],
+    "explanation": "Un véhicule contraint de circuler à une allure fortement réduite avertit les autres avec ses feux de détresse. Dans une file ininterrompue, cette obligation concerne le dernier véhicule. Allumer les feux de détresse n’autorise pas à circuler sur la bande d’arrêt d’urgence.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 5,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "C.01"
+    ],
+    "explanation": "Un témoin rouge signale généralement une alerte majeure imposant une réaction immédiate adaptée : se mettre en sécurité et consulter la notice. Orange signale le plus souvent une anomalie ou une vigilance ; bleu et vert renseignent habituellement sur un équipement en service.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 6,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "C.08"
+    ],
+    "explanation": "Le pictogramme rouge niveau 3 signifie de ne pas conduire. La reprise exige l’avis d’un médecin. Niveau 1 : lire la notice ; niveau 2 : demander l’avis d’un professionnel de santé. Ne décidez pas de reprendre uniquement parce que vous ne ressentez pas de somnolence.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 7,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "C.12"
+    ],
+    "explanation": "La bande d’arrêt d’urgence sert aux situations d’urgence, notamment panne ou accident. Un appel téléphonique ou une pause de confort ne justifie pas de s’y arrêter. Recherchez un emplacement sécurisé et suivez les consignes de protection.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 8,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "C.04"
+    ],
+    "explanation": "En agglomération, lorsque le croisement avec un véhicule de transport en commun est difficile, le conducteur de la voiture facilite son passage et s’arrête si nécessaire. Anticiper l’encombrement évite de bloquer les deux véhicules.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 9,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "C.12",
+      "A.05"
+    ],
+    "explanation": "Après un accident matériel, transmettez rapidement le constat à l’assureur et respectez le délai de déclaration prévu par le contrat, qui ne peut en principe être inférieur à cinq jours ouvrés. Le sujet abrège cette précision en « 5 jours » : il ne s’agit pas de cinq jours calendaires.",
+    "status": "active",
+    "update_note": "",
+    "sources": [
+      {
+        "title": "Déclaration des dégâts matériels · Service Public",
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2152"
+      }
+    ]
+  },
+  {
+    "number": 10,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "C.06"
+    ],
+    "explanation": "Le permis B permet au maximum huit passagers, soit neuf places conducteur compris, dans les limites de la catégorie du véhicule. Le nombre inscrit sur la carte grise et les conditions propres à l’activité peuvent réduire la capacité réellement utilisable.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 11,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "C.11"
+    ],
+    "explanation": "Les feux de brouillard arrière s’utilisent en cas de brouillard ou de chute de neige ; la pluie seule ne les justifie pas et leur forte lumière peut éblouir les conducteurs suiveurs. Ne confondez pas leurs règles avec celles des feux avant.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 12,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "C.04"
+    ],
+    "explanation": "Sur une route de montagne ou à forte déclivité, le véhicule descendant facilite le passage au véhicule montant et s’arrête d’abord lorsque le croisement est difficile. Si une marche arrière devient nécessaire, les règles dépendent aussi de la catégorie des véhicules et de la position des refuges : la priorité ne doit pas être appliquée aveuglément.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 13,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "C.11"
+    ],
+    "explanation": "Dans un tunnel, même éclairé, utilisez les feux de croisement. Les feux de route peuvent éblouir et les feux de brouillard ne remplacent pas l’éclairage adapté au tunnel.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 14,
+    "answers": [
+      "a"
+    ],
+    "lesson_refs": [
+      "A.03",
+      "C.05"
+    ],
+    "explanation": "Après une invalidation pour solde de points nul, le nouveau permis est probatoire avec six points. Ne confondez pas la récupération progressive des points et le droit de reprendre immédiatement une activité professionnelle soumise à conditions.",
+    "status": "active",
+    "update_note": "",
+    "sources": [
+      {
+        "title": "Permis probatoire · Service Public",
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2390"
+      }
+    ]
+  },
+  {
+    "number": 15,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "C.05"
+    ],
+    "explanation": "Pour plusieurs infractions commises simultanément, le retrait est plafonné à huit points. Un permis probatoire disposant de six points peut néanmoins perdre tout son solde. Le plafond ne signifie pas qu’un conducteur conserve forcément son droit de conduire.",
+    "status": "active",
+    "update_note": "",
+    "sources": [
+      {
+        "title": "Retrait simultané de points · Service Public",
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F11863"
+      }
+    ]
+  },
+  {
+    "number": 16,
+    "answers": [
+      "b"
+    ],
+    "lesson_refs": [
+      "C.12"
+    ],
+    "explanation": "Le constat décrit les circonstances, positions et dommages de l’accident. L’assureur s’appuie sur ces faits pour déterminer les responsabilités et appliquer les garanties. Le document n’est ni un devis de réparation ni une décision de sanction pénale.",
+    "status": "active",
+    "update_note": "",
+    "sources": [
+      {
+        "title": "Constat amiable · Service Public",
+        "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2149"
+      }
+    ]
+  },
+  {
+    "number": 17,
+    "answers": [
+      "a",
+      "c"
+    ],
+    "lesson_refs": [
+      "C.01"
+    ],
+    "explanation": "Contrôlez le niveau sur terrain plat, moteur arrêté et selon le délai indiqué dans la notice, généralement moteur froid ou après un temps de repos suffisant. Ne contrôlez pas un niveau d’huile avec le moteur allumé. Ne dépassez pas le repère maximal.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 18,
+    "answers": [
+      "b",
+      "d"
+    ],
+    "lesson_refs": [
+      "C.12"
+    ],
+    "explanation": "Choisissez un emplacement stable et plat, immobilisez le véhicule et desserrez légèrement les écrous avant de lever au point prévu par le constructeur. Ne vous placez jamais sous un véhicule tenu uniquement par un cric ; sur un lieu dangereux, privilégiez l’assistance.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 19,
+    "answers": [
+      "a",
+      "c"
+    ],
+    "lesson_refs": [
+      "C.03"
+    ],
+    "explanation": "La distance d’arrêt est la distance parcourue pendant le temps de réaction, plus la distance de freinage. L’ABS est un équipement, pas l’une de ces deux composantes. Plus la vitesse augmente, plus les distances nécessaires augmentent.",
+    "status": "active",
+    "update_note": "",
+    "sources": []
+  },
+  {
+    "number": 20,
+    "answers": [
+      "c"
+    ],
+    "lesson_refs": [
+      "C.05"
+    ],
+    "explanation": "Les lignes temporaires de circulation sont généralement jaunes et priment sur les lignes blanches lorsqu’elles organisent temporairement la circulation.",
+    "status": "historical",
+    "update_note": "L’énoncé dit seulement « marquage jaune ». Certaines marques jaunes sont permanentes, notamment des interdictions d’arrêt ou de stationnement. Sans image ni précision « lignes temporaires de circulation », on ne peut pas généraliser ; question hors score.",
+    "sources": []
+  }
+]

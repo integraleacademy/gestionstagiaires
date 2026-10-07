@@ -1,0 +1,989 @@
+{
+  "id": "vtc-g",
+  "version": "20261007-vtc-v5-annales",
+  "training_label": "VTC",
+  "title": "VTC · Appliquer les règles du VTC · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-g-independent-01",
+      "prompt": "Vous créez une entreprise VTC et détenez déjà votre carte professionnelle personnelle. Un hôtel propose une première mission, mais votre entreprise n’est pas encore inscrite au registre des exploitants. Quelle vérification manque avant de commencer ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "La copie de la carte professionnelle jointe au devis, qui remplace l’inscription de l’entreprise"
+        },
+        {
+          "id": "o3",
+          "text": "La confirmation écrite de l’hôtel, qui autorise l’activité dès la première commande"
+        },
+        {
+          "id": "o1",
+          "text": "La finalisation de l’inscription de l’exploitant au REVTC, distincte de la carte du conducteur"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La carte concerne l’aptitude professionnelle du conducteur ; le registre concerne l’exploitant. Une commande ne remplace pas cette inscription. Le dossier d’entreprise doit être conforme avant le démarrage des transports.",
+      "module": "G",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        },
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-02",
+      "prompt": "Pour un véhicule, vous présentez un contrat de location de huit mois signé au nom de votre entreprise. Comment analysez-vous la capacité financière avant de déposer le dossier ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Ne fournir aucune preuve, car le simple paiement d’un premier loyer suffit à l’exemption"
+        },
+        {
+          "id": "o1",
+          "text": "Vérifier que ce contrat justifie bien la location d’une durée d’au moins six mois ouvrant l’exemption de garantie pour ce véhicule"
+        },
+        {
+          "id": "o2",
+          "text": "Joindre systématiquement une garantie supplémentaire, car aucun véhicule loué ne peut être exempté"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La location d’une durée d’au moins six mois fait partie des situations permettant de ne pas fournir la garantie financière pour le véhicule concerné. L’exemption doit être justifiée par le contrat approprié ; elle ne signifie pas absence de justificatif.",
+      "module": "G",
+      "lesson_refs": [
+        "G.02"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-03",
+      "prompt": "En octobre 2026, un vendeur propose un véhicule thermique ordinaire acheté neuf par son premier propriétaire en septembre 2018, puis revendu en 2025. Il affirme que la revente a remis son ancienneté à zéro pour le VTC. Quel point vérifiez-vous ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "La première mise en circulation et les critères en vigueur : la revente ne remet pas l’âge du véhicule à zéro"
+        },
+        {
+          "id": "o2",
+          "text": "La date de la facture de revente uniquement, qui devient le nouveau départ de l’ancienneté réglementaire"
+        },
+        {
+          "id": "o3",
+          "text": "La date du dernier entretien, qui remplace la date de première mise en circulation"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’ancienneté du véhicule ne redémarre ni lors d’une revente ni lors d’un entretien. Pour ce véhicule thermique ordinaire, il faut contrôler l’âge depuis la première mise en circulation et l’ensemble des critères applicables avant l’achat.",
+      "module": "G",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-04",
+      "prompt": "Vous ajoutez un second véhicule à votre activité. Pour démarrer plus vite, un collègue propose de photocopier la signalétique du premier véhicule et de la poser sur le second. Quelle réponse convient ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Accepter la copie puisque les deux véhicules appartiennent au même exploitant"
+        },
+        {
+          "id": "o3",
+          "text": "Utiliser à la place un lumineux de taxi jusqu’à réception de la signalétique"
+        },
+        {
+          "id": "o1",
+          "text": "Obtenir et poser la signalétique appropriée au second véhicule après les démarches requises"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’appartenance à la même entreprise ne rend pas interchangeables les documents et la signalétique des véhicules. Il faut mettre le dossier du second véhicule en cohérence et utiliser le support réglementaire qui lui correspond.",
+      "module": "G",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Article R3122-8, signalétique VTC",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000034389549/2026-05-03"
+        },
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-05",
+      "prompt": "Un hôtel réserve à 14 h un transport pour 16 h. Au contrôle, le conducteur peut afficher uniquement le message « client à récupérer », sans identité du client ni horaire de réservation. Quel dossier préparez-vous avant la mission ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Une attestation à créer après l’arrivée du client si un contrôle a effectivement lieu"
+        },
+        {
+          "id": "o1",
+          "text": "Un justificatif complet de la réservation antérieure, rattaché à ce client et à cette prise en charge"
+        },
+        {
+          "id": "o2",
+          "text": "Le seul message de l’hôtel, car une réservation téléphonique dispense de toute autre preuve"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La réalité d’une réservation antérieure et les informations exigées doivent pouvoir être justifiées. Un message trop vague ne relie pas suffisamment la commande à la mission ; fabriquer la preuve après coup n’établit pas sa chronologie.",
+      "module": "G",
+      "lesson_refs": [
+        "G.05"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-06",
+      "prompt": "Après votre dépose devant un restaurant, un passant ouvre la porte et vous propose de payer immédiatement pour un trajet. Il n’a effectué aucune réservation et vous n’avez pas encore accepté. Quelle décision prenez-vous ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Ne pas effectuer cette prise en charge à la demande dans la rue ; la mission doit relever d’une réservation préalable"
+        },
+        {
+          "id": "o2",
+          "text": "Accepter puis saisir la réservation une fois le passager installé, avant de démarrer le moteur"
+        },
+        {
+          "id": "o3",
+          "text": "Accepter à condition que le paiement soit effectué par carte plutôt qu’en espèces"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le moyen de paiement ne transforme pas une demande dans la rue en réservation préalable. Saisir après la prise en charge un document censé la précéder ne corrige pas la situation.",
+      "module": "G",
+      "lesson_refs": [
+        "G.06"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        },
+        {
+          "title": "Code des transports — Sanctions pénales du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000023086525/LEGISCTA000023071123/"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-07",
+      "prompt": "Votre client est réservé à l’aéroport, mais la zone qu’il vous indique par message est réservée aux taxis. Un parking autorisé aux VTC est accessible à proximité. Que convenez-vous avec lui ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "D’une prise en charge dans la file taxi, la réservation préalable donnant accès à toutes les zones"
+        },
+        {
+          "id": "o3",
+          "text": "D’un arrêt dans la file taxi uniquement le temps de charger les bagages, sans changer le rendez-vous"
+        },
+        {
+          "id": "o1",
+          "text": "D’un rendez-vous précis dans la zone autorisée, en expliquant comment vous rejoindre"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La réservation permet d’identifier la mission, mais elle ne supprime pas les règles locales d’accès et de stationnement. Définir un point autorisé évite une prise en charge improvisée dans une zone réservée.",
+      "module": "G",
+      "lesson_refs": [
+        "G.07"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        },
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-08",
+      "prompt": "La dernière course est terminée et vous ne disposez d’aucune réservation suivante. Vous souhaitez rester sur une place de la voie publique devant une salle de spectacle pour attirer un nouveau client. Quelle organisation est conforme ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Rester sur la place en affichant une promotion, puisque la dernière course est terminée"
+        },
+        {
+          "id": "o1",
+          "text": "Rejoindre l’établissement de l’exploitant ou un emplacement autorisé hors chaussée, selon la règle de fin de prestation"
+        },
+        {
+          "id": "o2",
+          "text": "Rester devant la salle tant que le véhicule est arrêté et que le moteur est coupé"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Sans nouvelle réservation ni contrat avec le client final, la fin de prestation impose le retour prévu par le texte vers l’établissement ou un emplacement autorisé hors chaussée. Couper le moteur ou afficher un prix ne crée pas d’exception.",
+      "module": "G",
+      "lesson_refs": [
+        "G.08"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Article L3122-9, fin de prestation",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029529985/2026-01-27"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-09",
+      "prompt": "Le devis d’un transfert fixe un prix de 68 € TTC, sans supplément indiqué. Avant de confirmer, le client demande un arrêt supplémentaire que vous facturez habituellement. Comment modifiez-vous l’offre ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Préciser le service ajouté et son prix ou mode de calcul, puis faire accepter le nouveau périmètre"
+        },
+        {
+          "id": "o2",
+          "text": "Confirmer les 68 € TTC et ajouter votre supplément habituel seulement sur la note finale"
+        },
+        {
+          "id": "o3",
+          "text": "Conserver le devis initial et considérer la demande d’arrêt comme une acceptation de tout supplément"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La liberté tarifaire exige une information claire. La demande d’un service supplémentaire ne vaut pas acceptation d’un coût non annoncé ; l’accord doit porter sur la modification et ses conditions.",
+      "module": "G",
+      "lesson_refs": [
+        "G.09"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information sur les prix et frais supplémentaires",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-10",
+      "prompt": "Votre véhicule professionnel tombe en panne. Un proche propose sa voiture particulière assurée pour ses déplacements privés, et votre carte professionnelle est valide. Que vérifiez-vous avant d’envisager un remplacement ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Seulement la validité de votre carte, qui étend automatiquement l’assurance privée au transport de clients"
+        },
+        {
+          "id": "o3",
+          "text": "Seulement l’accord oral du client, qui dispense des règles applicables au véhicule"
+        },
+        {
+          "id": "o1",
+          "text": "L’éligibilité du véhicule, l’assurance adaptée au transport rémunéré et la conformité du dossier de remplacement"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La validité du titre du conducteur ne valide pas le véhicule utilisé. L’assurance doit couvrir l’usage réel et les conditions propres à l’exploitation doivent être réunies avant d’accepter la solution de remplacement.",
+      "module": "G",
+      "lesson_refs": [
+        "G.10"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-11",
+      "prompt": "Le contrôle technique requis pour votre activité arrive à échéance lundi. Le centre ne peut vous recevoir que jeudi et une mission est prévue mardi. Quel raisonnement retenez-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Effectuer seulement des trajets courts jusqu’à jeudi, car la distance remplace la validité du contrôle"
+        },
+        {
+          "id": "o1",
+          "text": "Ne pas considérer le rendez-vous de jeudi comme une prolongation ; organiser un véhicule conforme ou avancer le contrôle"
+        },
+        {
+          "id": "o2",
+          "text": "Effectuer la mission mardi en conservant la preuve du rendez-vous, qui proroge automatiquement la validité"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Une prise de rendez-vous ne prolonge pas la validité du contrôle requis. Il faut anticiper l’échéance et garantir que le véhicule affecté à la mission est conforme le jour où elle est réalisée.",
+      "module": "G",
+      "lesson_refs": [
+        "G.11"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-12",
+      "prompt": "Une fiche d’annales de 2022 indique un ancien plafond de peine pour la prise en charge sans réservation. La version officielle du texte applicable en 2026 a changé. Quelle mise à jour faites-vous dans votre procédure ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Conserver la fiche comme document historique et appliquer le texte officiel en vigueur à la date des faits, en identifiant précisément l’infraction"
+        },
+        {
+          "id": "o2",
+          "text": "Conserver le plafond de 2022, puisque la réponse figure dans un ancien corrigé d’examen"
+        },
+        {
+          "id": "o3",
+          "text": "Retenir automatiquement le montant le plus faible trouvé parmi plusieurs documents datés"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La date du corrigé ne fige pas la réglementation. Il faut distinguer l’étude de l’ancienne réponse et la procédure actuelle, puis vérifier que le texte consulté vise bien les faits et la personne concernés.",
+      "module": "G",
+      "lesson_refs": [
+        "G.12"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Sanctions pénales du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000023086525/LEGISCTA000023071123/"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-13",
+      "prompt": "L’entreprise déménage son siège et ajoute un véhicule, mais conserve son nom commercial. Le responsable estime que son ancien dossier REVTC peut rester inchangé. Quelle action organisez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Conserver l’ancien dossier tant que le nom visible sur les devis ne change pas"
+        },
+        {
+          "id": "o3",
+          "text": "Mettre uniquement à jour le site commercial, qui remplace la mise à jour du registre"
+        },
+        {
+          "id": "o1",
+          "text": "Identifier les changements à déclarer et actualiser les données et justificatifs du registre selon la procédure applicable"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le registre suit la situation de l’exploitant et de son activité. La stabilité du nom commercial ne rend pas les autres informations exactes ; les changements concernés doivent être rapprochés du dossier officiel.",
+      "module": "G",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-14",
+      "prompt": "Vous possédez un premier véhicule et louez le second pour trois mois. Aucun autre motif d’exemption ne s’applique au second. Quelle analyse du dossier financier est correcte ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Remplacer la garantie du second par le montant estimé des prochaines réservations"
+        },
+        {
+          "id": "o1",
+          "text": "Justifier la propriété du premier et traiter séparément la garantie exigible pour le véhicule loué trois mois"
+        },
+        {
+          "id": "o2",
+          "text": "Considérer que la propriété du premier exonère automatiquement toute la flotte"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’examen se fait véhicule par véhicule. La propriété du premier peut justifier son exemption ; elle ne transfère pas cette situation au second véhicule, et des recettes espérées ne constituent pas une garantie.",
+      "module": "G",
+      "lesson_refs": [
+        "G.02"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-15",
+      "prompt": "Une annonce présente une voiture électrique comme « dispensée de toute règle VTC ». Vous envisagez de l’acheter sans consulter sa capacité d’accueil ni ses documents. Comment contrôlez-vous l’offre ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Distinguer les critères bénéficiant d’une exception liée à la motorisation des autres conditions qui restent applicables"
+        },
+        {
+          "id": "o2",
+          "text": "Accepter l’annonce, car l’électrique dispense aussi des assurances et des documents d’exploitation"
+        },
+        {
+          "id": "o3",
+          "text": "Contrôler seulement l’autonomie annoncée, puisque tous les autres critères deviennent sans objet"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Une exception ciblée n’est pas une exemption générale. Il faut vérifier les caractéristiques réellement concernées et maintenir les contrôles de capacité, de sécurité, de documents et d’assurance applicables à l’usage professionnel.",
+      "module": "G",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-16",
+      "prompt": "Lors de la préparation du véhicule, la signalétique de l’exploitant est en place mais la carte professionnelle du conducteur est absente. Le conducteur propose de montrer uniquement la vignette en cas de contrôle. Quelle distinction doit-il faire ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "La vignette et la carte sont deux exemplaires du même document et peuvent se remplacer"
+        },
+        {
+          "id": "o3",
+          "text": "La carte n’a plus d’utilité dès que l’exploitant dispose de plusieurs véhicules"
+        },
+        {
+          "id": "o1",
+          "text": "La vignette identifie le véhicule dans l’activité VTC ; elle ne remplace pas le titre professionnel du conducteur"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La conformité du véhicule et celle du conducteur sont deux vérifications distinctes. Présenter une signalétique ne démontre pas que la personne qui conduit détient le titre requis.",
+      "module": "G",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        },
+        {
+          "title": "Code des transports — Article R3122-8, signalétique VTC",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000034389549/2026-05-03"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-17",
+      "prompt": "Vos réservations sont enregistrées dans une application qui devient inaccessible sans réseau. Une prise en charge est prévue dans un parking souterrain. Quel dispositif préparez-vous avant d’y entrer ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Une capture du seul écran d’accueil de l’application, sans données de la mission"
+        },
+        {
+          "id": "o1",
+          "text": "Un accès hors ligne au justificatif complet de cette réservation antérieure, dans un format présentable au contrôle"
+        },
+        {
+          "id": "o2",
+          "text": "Un formulaire vierge à dater une fois le client installé, en cas de difficulté de connexion"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La panne de réseau ne dispense pas de pouvoir justifier la réservation. Préparer une preuve correspondant à la mission conserve les informations et leur antériorité ; une page générique ou un formulaire vierge ne suffit pas.",
+      "module": "G",
+      "lesson_refs": [
+        "G.05"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-18",
+      "prompt": "Vous arrivez au lieu convenu pour une personne ayant réservé. Une autre personne vous sollicite directement et propose un prix supérieur pour partir immédiatement. Quel choix respecte la distinction entre réservation et maraude ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Vérifier et prendre en charge le client correspondant à la réservation ; ne pas substituer le passant sans réservation préalable"
+        },
+        {
+          "id": "o2",
+          "text": "Annuler la première mission et faire monter immédiatement le passant puisque son offre est plus élevée"
+        },
+        {
+          "id": "o3",
+          "text": "Faire monter le passant puis lui demander d’envoyer un message de réservation pendant le trajet"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’existence d’une réservation pour un client ne couvre pas la prise en charge spontanée d’une autre personne. Le prix proposé ne modifie pas l’exigence de réservation préalable applicable à la nouvelle mission.",
+      "module": "G",
+      "lesson_refs": [
+        "G.06"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-19",
+      "prompt": "La réservation indique terminal 1, mais la compagnie transfère l’arrivée au terminal 2. Votre client vous en informe avant votre entrée dans l’aéroport. Quelle préparation actualisez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Conserver le terminal 1 sans réponse puisque cette adresse figure dans la première réservation"
+        },
+        {
+          "id": "o3",
+          "text": "Rejoindre n’importe quelle zone du terminal 2 en considérant que le message autorise toutes les voies d’accès"
+        },
+        {
+          "id": "o1",
+          "text": "Vérifier terminal, horaire et zone de rencontre autorisée, puis confirmer les nouvelles consignes au client"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le changement affecte l’organisation concrète de la prise en charge. Il faut garder la preuve de réservation et ajuster la rencontre aux règles locales ; le message du client n’accorde pas un droit d’accès général.",
+      "module": "G",
+      "lesson_refs": [
+        "G.07"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        },
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-20",
+      "prompt": "Vous terminez une prestation et disposez déjà d’une réservation suivante documentée, dans un autre quartier. Un collègue affirme que vous devez obligatoirement retourner à votre établissement entre les deux. Quelle analyse retenez-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Considérer qu’une application simplement ouverte constitue toujours une réservation suivante"
+        },
+        {
+          "id": "o1",
+          "text": "Vérifier que la réservation suivante est réelle et justifiable : le texte prévoit cette exception au retour de fin de prestation"
+        },
+        {
+          "id": "o2",
+          "text": "Effectuer systématiquement l’aller-retour jusqu’à l’établissement, même avec une réservation suivante établie"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’article L3122-9 prévoit l’exception liée à une autre réservation préalable ou à un contrat avec le client final. Une mission suivante documentée doit être distinguée d’un simple espoir de recevoir une commande.",
+      "module": "G",
+      "lesson_refs": [
+        "G.08"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Article L3122-9, fin de prestation",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029529985/2026-01-27"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-21",
+      "prompt": "Pour une mission, le client accepte avant départ 1,80 € TTC par kilomètre et 0,40 € TTC par minute, sans autre frais. Le parcours facturable représente 20 km et 30 minutes. Quel prix résulte de cet accord ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "48 € TTC"
+        },
+        {
+          "id": "o2",
+          "text": "36 € TTC"
+        },
+        {
+          "id": "o3",
+          "text": "50 € TTC"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La distance représente 20 × 1,80 € = 36 € et la durée 30 × 0,40 € = 12 €, soit 48 € TTC. Le calcul applique les deux composantes annoncées ; il n’ajoute aucun supplément absent de l’accord.",
+      "module": "G",
+      "lesson_refs": [
+        "G.09"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information sur les prix et frais supplémentaires",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-22",
+      "prompt": "Un conducteur remplaçant est disponible, mais il présente une ancienne carte professionnelle expirée et une attestation d’emploi récente. Le véhicule et son assurance sont conformes. Quelle décision prenez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Accepter l’attestation d’emploi comme renouvellement automatique de la carte expirée"
+        },
+        {
+          "id": "o3",
+          "text": "Laisser le conducteur utiliser votre propre carte puisque le véhicule appartient à l’entreprise"
+        },
+        {
+          "id": "o1",
+          "text": "Exiger la justification d’un titre professionnel actuellement valable avant de lui confier la mission"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’attestation d’emploi ne prolonge pas un titre expiré et une carte personnelle ne se prête pas. La conformité du véhicule ne corrige pas l’absence de justification professionnelle du remplaçant.",
+      "module": "G",
+      "lesson_refs": [
+        "G.10"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-23",
+      "prompt": "Le contrôle technique est encore valide, mais une anomalie de freinage apparaît pendant le contrôle du véhicule avant départ. Le planning est complet. Quelle priorité retenez-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Réduire seulement le prix de la course pour compenser l’anomalie auprès du client"
+        },
+        {
+          "id": "o1",
+          "text": "Faire vérifier l’anomalie et retirer le véhicule de la mission tant que sa sécurité n’est pas assurée"
+        },
+        {
+          "id": "o2",
+          "text": "Poursuivre l’activité jusqu’à la prochaine date du contrôle technique puisqu’il est valide"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La validité du contrôle technique ne garantit pas qu’aucun défaut ne peut apparaître ensuite. L’entretien et le traitement des anomalies conditionnent la disponibilité réelle du véhicule ; le prix ne compense pas un risque de freinage.",
+      "module": "G",
+      "lesson_refs": [
+        "G.11"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-24",
+      "prompt": "Pour renouveler un dossier, vous trouvez une fiche officielle actuelle sur la capacité financière et un article ancien qui traite uniquement du capital social d’une société. Comment utilisez-vous ces documents ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Séparer les deux notions et appliquer au dossier véhicule la règle actuelle de capacité financière correspondant à sa situation"
+        },
+        {
+          "id": "o2",
+          "text": "Utiliser le capital social comme réponse universelle à toute exigence de garantie des véhicules"
+        },
+        {
+          "id": "o3",
+          "text": "Faire la moyenne des montants cités pour obtenir un justificatif intermédiaire"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Capital social et capacité financière des véhicules n’ont pas le même objet. Une veille utile vérifie le champ de la règle, sa date et les justificatifs attendus, sans mélanger des montants portant sur des obligations différentes.",
+      "module": "G",
+      "lesson_refs": [
+        "G.12"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2022-g-01",
+      "prompt": "Le portail REVTC ou registre des exploitants de VTC est utilisé pour :",
+      "options": [
+        {
+          "id": "a",
+          "text": "créer un dossier d'exploitant (inscription) ou le mettre à jour"
+        },
+        {
+          "id": "b",
+          "text": "mettre en relation des exploitants de VTC et des clients par les plateformes"
+        },
+        {
+          "id": "c",
+          "text": "obtenir la carte professionnelle"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le REVTC sert à inscrire l’exploitant et à tenir son dossier à jour. Il ne délivre pas la carte professionnelle personnelle du conducteur et ne joue pas le rôle commercial d’une plateforme mettant chauffeurs et clients en relation.",
+      "module": "G",
+      "sources": [
+        [
+          "REVTC · Informations générales et garantie financière",
+          "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        ]
+      ],
+      "lesson_refs": [
+        "G.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-g-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 22,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-g-03",
+      "prompt": "Vous exploitez un véhicule avec lunette arrière surteintée. Est-il obligatoire d'apposer le macaron EVTC?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Non, car il ne serait pas visible"
+        },
+        {
+          "id": "b",
+          "text": "Oui"
+        },
+        {
+          "id": "c",
+          "text": "Non, sous réserve d'une dérogation délivrée par le Ministère chargé des transports"
+        }
+      ],
+      "answer": "b",
+      "explanation": "La signalétique VTC reste obligatoire lorsque la lunette arrière est surteintée. Le conducteur doit appliquer les emplacements et conditions de visibilité prévus ; une difficulté de visibilité ne crée pas spontanément une dispense.",
+      "module": "G",
+      "sources": [
+        [
+          "Service Public · Devenir chauffeur de VTC",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "G.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-g-03",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 22,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-g-06",
+      "prompt": "Je suis conducteur d'un véhicule de transport avec chauffeur, je peux :",
+      "options": [
+        {
+          "id": "a",
+          "text": "éviter de rentrer à mon siège social sous conditions"
+        },
+        {
+          "id": "b",
+          "text": "prendre à bord un client qui me hèle en sortant de chez lui à condition de remplir un bon de réservation pendant la course"
+        },
+        {
+          "id": "c",
+          "text": "prendre un client qui lève la main dans la rue car il n'y a pas de taxis à proximité"
+        },
+        {
+          "id": "d",
+          "text": "rouler à petite vitesse dans les zones commerciales, d'affaires ou de loisirs à la recherche de clients"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le conducteur peut éviter le retour à la base lorsqu’il justifie de la situation autorisée par la réglementation. En revanche, la réservation doit précéder la prise en charge : elle ne peut pas être inventée pendant la course. Circuler lentement à la recherche de clients et prendre un client qui hèle le véhicule sont de la maraude interdite au VTC.",
+      "module": "G",
+      "sources": [
+        [
+          "Code des transports · obligations de l’exploitant VTC, dont fin de course",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029529985/2026-01-27"
+        ]
+      ],
+      "lesson_refs": [
+        "G.06",
+        "G.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-g-06",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 22,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-g-08",
+      "prompt": "Proposez 4 situations entraînant une mise à jour des dossiers sur le registre des exploitants VTC.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Uniquement le changement de véhicule ; les changements de conducteur, d’assureur et d’adresse attendent le renouvellement quinquennal."
+        },
+        {
+          "id": "b",
+          "text": "Véhicule remplacé, nouveau conducteur, nouvel assureur, changement d’adresse ou de dirigeant."
+        },
+        {
+          "id": "c",
+          "text": "Nouveau tarif, nouvelle destination, facture client et changement de moyen de paiement."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le registre doit rester cohérent avec l’activité réelle : déclarer notamment un changement de véhicule, de conducteur, d’assureur, de dirigeant, d’adresse ou de forme de société. Une inscription ancienne ne suffit pas si les pièces et personnes utilisées dans l’exploitation ont changé.",
+      "module": "G",
+      "sources": [
+        [
+          "REVTC · Informations générales et garantie financière",
+          "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        ]
+      ],
+      "lesson_refs": [
+        "G.01",
+        "G.10"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-g-08",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 22,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-g-01",
+      "prompt": "Quelle sont les dimensions minimum d'une voiture pour être utilisée comme VTC ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "4,3 m x 1,5 m"
+        },
+        {
+          "id": "b",
+          "text": "4,5 m x 1,7 m"
+        },
+        {
+          "id": "c",
+          "text": "4,5 m x 1,6 m"
+        },
+        {
+          "id": "d",
+          "text": "4,6 m x 1,8 m"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Pour un VTC concerné par ces caractéristiques minimales, la longueur est de 4,50 m et la largeur de 1,70 m. Vérifier aussi les autres conditions et les dérogations applicables aux véhicules hybrides ou électriques : les dimensions seules ne suffisent pas.",
+      "module": "G",
+      "sources": [
+        [
+          "Devenir chauffeur de VTC — Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "G.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-g-01",
+      "source_title": "Annales VTC 2021",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-g-03",
+      "prompt": "Pour la réalisation d'une prestation de VTC :",
+      "options": [
+        {
+          "id": "a",
+          "text": "les conditions générales de vente peuvent constituer un document valant contrat, sous réserve que le client ait dûment signé la dernière page"
+        },
+        {
+          "id": "b",
+          "text": "les conditions générales de vente peuvent constituer un document valant contrat, sous réserve que le client ait dûment signé toutes les pages"
+        },
+        {
+          "id": "c",
+          "text": "il doit exister un contrat avec le client final qui doit être obligatoirement écrit sur support papier"
+        },
+        {
+          "id": "d",
+          "text": "il doit exister un contrat avec le client final pouvant être écrit sur support papier ou électronique"
+        }
+      ],
+      "answer": "d",
+      "explanation": "La réservation et les conditions convenues doivent pouvoir être prouvées. Un support électronique est admis : une impression papier n'est pas obligatoire par principe. Des CGV générales ne remplacent pas les éléments propres à la commande du client.",
+      "module": "G",
+      "sources": [
+        [
+          "Code des transports — obligations des conducteurs",
+          "https://www.legifrance.gouv.fr/codes/id/LEGIARTI000054659821/2026-08-12"
+        ],
+        [
+          "Conditions générales de vente — Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F33527"
+        ]
+      ],
+      "lesson_refs": [
+        "G.05",
+        "G.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-g-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 16,
+      "correction_origin": "source"
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 6,
+    "original_questions": 24
+  }
+}

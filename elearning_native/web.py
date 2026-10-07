@@ -845,6 +845,21 @@ def create_native_elearning_blueprint(
             abort(409, 'La version de cet examen a changé. Rechargez la page.')
         return payload, grade_exam(exam,payload.get('answers'))
 
+    def exam_correction_links(result, exam, token=None):
+        questions = {q['id']: q for q in exam['questions']}
+        for correction in result['corrections']:
+            links = []
+            for ref in questions.get(correction['id'], {}).get('lesson_refs', []):
+                if not re.fullmatch(r'[A-H]\.\d{2}', ref):
+                    continue
+                cid = 'academy-vtc-' + ref[0].lower()
+                activity = 'vtc-' + ref.lower().replace('.', '-') + '-cours'
+                url = (url_for('native_elearning.course_player',token=token,course_id=cid,activity=activity)
+                       if token else url_for('native_elearning.admin_preview',course_id=cid,version=exam['version'],activity=activity))
+                links.append({'ref': ref, 'url': url})
+            correction['lesson_links'] = links
+        return result
+
     @blueprint.get('/admin/elearning/exams/<exam_id>')
     @admin_required
     def admin_exam(exam_id):
@@ -862,7 +877,7 @@ def create_native_elearning_blueprint(
             abort(404)
         try:
             _, result = mark_exam(exam)
-            return jsonify(ok=True, result=result)
+            return jsonify(ok=True, result=exam_correction_links(result, exam))
         except ValueError as error:
             return jsonify(ok=False, error=str(error)),400
 
@@ -881,7 +896,7 @@ def create_native_elearning_blueprint(
         try:
             payload,result = mark_exam(exam)
             result = ExamStore(root()/'tracking.sqlite3').save(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam,payload.get('attempt_id'),result)
-            return jsonify(ok=True,result=result)
+            return jsonify(ok=True,result=exam_correction_links(result, exam, token))
         except ValueError as error:
             return jsonify(ok=False,error=str(error)),400
 
@@ -1449,6 +1464,7 @@ def create_native_elearning_blueprint(
             final_exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=matched_manifest.get('final_exam_id','final')) if final_available else '',
             final_exam_unlocked=final_ready,
             final_module_count=len(exam_modules),
+            annales_url=url_for('native_elearning.annales_learner_catalog',token=token) if any(m['course'] and m['course']['id'].startswith('academy-vtc-') for m in modules) else '',
             final_exam_description="Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
         )
 
@@ -1756,4 +1772,8 @@ def create_native_elearning_blueprint(
             }
         )
 
+    from .annales_web import register as register_annales
+    register_annales(blueprint, admin_required=admin_required, learner_session=learner_session,
+                     learner_context=learner_context, root=root, csrf_token=_csrf_token,
+                     require_csrf=_require_csrf)
     return blueprint

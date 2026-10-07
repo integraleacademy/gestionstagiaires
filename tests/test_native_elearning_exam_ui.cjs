@@ -6,11 +6,11 @@ const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'../static/js/aps62-exam.js'),'utf8');
 
 function fixture() {
-  const questions=[1,2,3].map(n=>({id:`q${n}`,prompt:`Question ${n}`,options:[{id:'1',text:'Une option'},{id:'2',text:'Une autre option'},{id:'3',text:'<script>non exécuté</script>'}]}));
+  const questions=[1,2,3].map(n=>({id:`q${n}`,prompt:`Question ${n}`,options:[{id:'1',text:'Une option'},{id:'2',text:'Une autre option'},{id:'3',text:'<script>non exécuté</script>'},{id:'4',text:'Quatrième choix'}]}));
   const config={exam:{id:'module-01',version:'v2',title:'Test',pass_percent:75,questions},attemptId:'a'.repeat(32),submitUrl:'/submit',csrfToken:'csrf',preview:false};
   const dom=new JSDOM(`<main><div id="examWorkspace"><span id="examAnswered"></span><progress id="examProgress"></progress><nav id="examGrid"></nav><button id="examReview"></button><span id="examPosition"></span><form id="examForm"><fieldset id="examQuestion"></fieldset><button type="button" id="examPrevious"></button><button type="button" id="examNext"></button><p id="examError" hidden></p><button id="examSubmit"></button></form><p id="examDraft"></p></div><section id="examResult" hidden tabindex="-1"></section><script type="application/json" id="apsExamConfig">${JSON.stringify(config).replace(/</g,"\\u003c")}</script></main>`,{url:'https://test.invalid/exam',runScripts:'outside-only'});
   const {window}=dom,requests=[];let fail=true;
-  window.fetch=async(url,opts)=>{requests.push({url,...opts});if(fail)throw new Error('Connexion perdue');return{ok:true,headers:{get:()=> 'application/json'},json:async()=>({ok:true,result:{score:2,total:3,percent:66.7,passed:false,pass_percent:75,corrections:questions.map((q,i)=>({...q,selected:'1',answer:i===0?'2':'1',correct:i!==0,explanation:'Explication du choix.',module:'Module 01',sources:[['Source','https://example.org/']]}))}})};};
+  window.fetch=async(url,opts)=>{requests.push({url,...opts});if(fail)throw new Error('Connexion perdue');return{ok:true,headers:{get:()=> 'application/json'},json:async()=>({ok:true,result:{score:2,total:3,percent:66.7,passed:false,pass_percent:75,corrections:questions.map((q,i)=>({...q,selected:'1',answer:i===0?'2':'1',correct:i!==0,explanation:'Explication du choix.',module:'Module 01',sources:[['Source','https://example.org/'],'Manuel VTC — référence texte',{title:'Source objet',url:'https://example.org/reference'}],lesson_links:[{ref:'A.01',url:'/cours-a'}]}))}})};};
   window.eval(source);
   return{dom,window,requests,resolve:()=>fail=false,close:()=>window.close()};
 }
@@ -22,7 +22,7 @@ test('Unanswered questions prevent submission; navigation and draft retain selec
   d.querySelector('input[value="2"]').click();d.getElementById('examNext').click();d.getElementById('examPrevious').click();
   assert.equal(d.querySelector('input:checked').value,'2');
   const draft=JSON.parse(f.window.sessionStorage.getItem('aps-exam:/exam:v2'));
-  assert.equal(draft.answers.q1,'2');assert.equal(d.querySelector('#examQuestion script'),null);f.close();
+  assert.equal(draft.answers.q1,'2');assert.equal(d.querySelector('#examQuestion script'),null);assert.match(d.getElementById('examQuestion').textContent,/D\. Quatrième choix/);assert.doesNotMatch(d.getElementById('examQuestion').textContent,/undefined/);f.close();
 });
 
 test('Network retry reuses attempt identity, displays server correction and clears the draft',async()=>{
@@ -35,5 +35,5 @@ test('Network retry reuses attempt identity, displays server correction and clea
   assert.equal(f.requests.length,2);assert.equal(JSON.parse(f.requests[0].body).attempt_id,JSON.parse(f.requests[1].body).attempt_id);
   assert.equal(f.requests[1].headers['X-Elearning-CSRF'],'csrf');assert.equal(d.getElementById('examWorkspace').hidden,true);
   assert.match(d.getElementById('examResult').textContent,/66.7 %/);assert.equal(d.querySelectorAll('.exam-correction').length,3);
-  assert.equal(f.window.sessionStorage.getItem('aps-exam:/exam:v2'),null);assert.match(d.getElementById('examResult').textContent,/Recommencer/);f.close();
+  assert.equal(f.window.sessionStorage.getItem('aps-exam:/exam:v2'),null);assert.match(d.getElementById('examResult').textContent,/Recommencer/);assert.match(d.getElementById('examResult').textContent,/Manuel VTC — référence texte/);assert.equal(d.querySelector('a[href="/cours-a"]').textContent,'Revoir la leçon A.01');f.close();
 });

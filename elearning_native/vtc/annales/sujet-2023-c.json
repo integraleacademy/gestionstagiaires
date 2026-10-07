@@ -1,0 +1,813 @@
+{
+  "id": "sujet-2023-c",
+  "title": "28 mars 2023 · Sécurité routière",
+  "year": 2023,
+  "source_filename": "SUJET-SECURITE-ROUTIERE-VTC-MARS-2025.pdf",
+  "source_sha256": "45b3f349137514e0be38f26f71379820daeae72af2e7b24e9be87c914236c262",
+  "sections": [
+    {
+      "id": "annales-2023-c",
+      "module": "C",
+      "title": "Sécurité routière · mars 2023",
+      "minutes": 30,
+      "questions": [
+        {
+          "number": 1,
+          "page": 2,
+          "prompt": " Ce panneau signale :",
+          "options": [
+            {
+              "id": "a",
+              "text": "un cassis ou dos d'âne"
+            },
+            {
+              "id": "b",
+              "text": "un ralentisseur"
+            },
+            {
+              "id": "c",
+              "text": "un ralentisseur de type dos d'âne"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "C.05"
+          ],
+          "explanation": "Le panneau triangulaire à deux bosses signale un cassis ou dos-d’âne (A2a). Le ralentisseur de type dos-d’âne est représenté par une seule bosse. Observez le dessin, pas seulement la forme triangulaire de danger.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-01",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le panneau triangulaire à deux bosses signale un cassis ou dos-d’âne (A2a). Le ralentisseur de type dos-d’âne est représenté par une seule bosse. Observez le dessin, pas seulement la forme triangulaire de danger."
+          ],
+          "image": "media/vtc/annales/2023-c-01.jpg"
+        },
+        {
+          "number": 2,
+          "page": 2,
+          "prompt": "Dans une rue à double sens de circulation en agglomération, je peux :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Stationner sur le côté droit de la chaussée"
+            },
+            {
+              "id": "b",
+              "text": "M'arrêter sur le côté gauche de la chaussée"
+            },
+            {
+              "id": "c",
+              "text": "M'arrêter sur le côté droit de la chaussée"
+            },
+            {
+              "id": "d",
+              "text": "Stationner sur le côté gauche de la chaussée"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "c"
+          ],
+          "lesson_refs": [
+            "C.05"
+          ],
+          "explanation": "En agglomération, dans une rue à double sens, l’arrêt et le stationnement s’effectuent normalement du côté droit dans le sens de marche. Le côté gauche ne devient pas autorisé parce que l’arrêt est bref ; respectez aussi les interdictions locales.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-02",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "En agglomération, dans une rue à double sens, l’arrêt et le stationnement s’effectuent normalement du côté droit dans le sens de marche. Le côté gauche ne devient pas autorisé parce que l’arrêt est bref ; respectez aussi les interdictions locales."
+          ]
+        },
+        {
+          "number": 3,
+          "page": 2,
+          "prompt": "En agglomération éclairée la nuit :",
+          "options": [
+            {
+              "id": "a",
+              "text": "je peux rouler en feux de position"
+            },
+            {
+              "id": "b",
+              "text": "je peux rouler sans feux"
+            },
+            {
+              "id": "c",
+              "text": "je peux rouler en feux de croisement"
+            },
+            {
+              "id": "d",
+              "text": "je dois rouler en feux de croisement"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "c"
+          ],
+          "lesson_refs": [
+            "C.11"
+          ],
+          "explanation": "Pour une voiture, les feux de position peuvent suffire en agglomération lorsque l’éclairage permet de voir distinctement à une distance suffisante. Les feux de croisement sont également possibles. On ne circule pas sans éclairage la nuit ; par visibilité insuffisante, appliquez les exigences adaptées.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Code de la route · R416-6",
+              "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006842262/"
+            }
+          ],
+          "id": "annales-2023-c-03",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Pour une voiture, les feux de position peuvent suffire en agglomération lorsque l’éclairage permet de voir distinctement à une distance suffisante. Les feux de croisement sont également possibles. On ne circule pas sans éclairage la nuit ; par visibilité insuffisante, appliquez les exigences adaptées."
+          ]
+        },
+        {
+          "number": 4,
+          "page": 2,
+          "prompt": "Dans quel cas un conducteur circulant à allure fortement réduite dans une file de voitures est-il obligé de faire usage de ses feux de détresse ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Ce n'est pas obligatoire"
+            },
+            {
+              "id": "b",
+              "text": "Lorsque son véhicule est le premier d'une file de circulation ininterrompue"
+            },
+            {
+              "id": "c",
+              "text": "Lorsque son véhicule est le dernier d'une file de circulation ininterrompue"
+            },
+            {
+              "id": "d",
+              "text": "Lorsque son véhicule circule sur une bande d'arrêt d'urgence"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "C.03",
+            "C.12"
+          ],
+          "explanation": "Un véhicule contraint de circuler à une allure fortement réduite avertit les autres avec ses feux de détresse. Dans une file ininterrompue, cette obligation concerne le dernier véhicule. Allumer les feux de détresse n’autorise pas à circuler sur la bande d’arrêt d’urgence.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-04",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Un véhicule contraint de circuler à une allure fortement réduite avertit les autres avec ses feux de détresse. Dans une file ininterrompue, cette obligation concerne le dernier véhicule. Allumer les feux de détresse n’autorise pas à circuler sur la bande d’arrêt d’urgence."
+          ]
+        },
+        {
+          "number": 5,
+          "page": 2,
+          "prompt": "Les témoins sur le tableau de bord du véhicule qui alertent le conducteur d'une urgence mécanique sont de couleur :",
+          "options": [
+            {
+              "id": "a",
+              "text": "orange"
+            },
+            {
+              "id": "b",
+              "text": "rouge"
+            },
+            {
+              "id": "c",
+              "text": "bleue"
+            },
+            {
+              "id": "d",
+              "text": "verte"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "C.01"
+          ],
+          "explanation": "Un témoin rouge signale généralement une alerte majeure imposant une réaction immédiate adaptée : se mettre en sécurité et consulter la notice. Orange signale le plus souvent une anomalie ou une vigilance ; bleu et vert renseignent habituellement sur un équipement en service.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-05",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Un témoin rouge signale généralement une alerte majeure imposant une réaction immédiate adaptée : se mettre en sécurité et consulter la notice. Orange signale le plus souvent une anomalie ou une vigilance ; bleu et vert renseignent habituellement sur un équipement en service."
+          ]
+        },
+        {
+          "number": 6,
+          "page": 3,
+          "prompt": " Ce pictogramme, qui figure sur des boîtes de médicaments, signifie :",
+          "options": [
+            {
+              "id": "a",
+              "text": "soyez très prudent. Ne pas conduire sans l'avis d'un professionnel de santé"
+            },
+            {
+              "id": "b",
+              "text": "attention, danger : ne pas conduire. Pour la reprise de la conduite, demandez l'avis d'un médecin"
+            },
+            {
+              "id": "c",
+              "text": "soyez prudent. Ne pas conduire sans avoir lu la notice"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "C.08"
+          ],
+          "explanation": "Le pictogramme rouge niveau 3 signifie de ne pas conduire. La reprise exige l’avis d’un médecin. Niveau 1 : lire la notice ; niveau 2 : demander l’avis d’un professionnel de santé. Ne décidez pas de reprendre uniquement parce que vous ne ressentez pas de somnolence.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-06",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le pictogramme rouge niveau 3 signifie de ne pas conduire. La reprise exige l’avis d’un médecin. Niveau 1 : lire la notice ; niveau 2 : demander l’avis d’un professionnel de santé. Ne décidez pas de reprendre uniquement parce que vous ne ressentez pas de somnolence."
+          ],
+          "image": "media/vtc/annales/2023-c-06.jpg"
+        },
+        {
+          "number": 7,
+          "page": 3,
+          "prompt": "Dans quel cas l'arrêt est-il autorisé sur la bande d'arrêt d'urgence de l'autoroute ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "en cas de panne ou d'accident"
+            },
+            {
+              "id": "b",
+              "text": "jamais"
+            },
+            {
+              "id": "c",
+              "text": "dans tous les cas"
+            },
+            {
+              "id": "d",
+              "text": "pour téléphoner"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "C.12"
+          ],
+          "explanation": "La bande d’arrêt d’urgence sert aux situations d’urgence, notamment panne ou accident. Un appel téléphonique ou une pause de confort ne justifie pas de s’y arrêter. Recherchez un emplacement sécurisé et suivez les consignes de protection.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-07",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La bande d’arrêt d’urgence sert aux situations d’urgence, notamment panne ou accident. Un appel téléphonique ou une pause de confort ne justifie pas de s’y arrêter. Recherchez un emplacement sécurisé et suivez les consignes de protection."
+          ]
+        },
+        {
+          "number": 8,
+          "page": 3,
+          "prompt": "Quand le croisement s'avère difficile, le conducteur d'une voiture, en agglomération doit au besoin s'arrêter pour laisser passer :",
+          "options": [
+            {
+              "id": "a",
+              "text": "un tracteur"
+            },
+            {
+              "id": "b",
+              "text": "un véhicule de transport de marchandises"
+            },
+            {
+              "id": "c",
+              "text": "un véhicule de transport en commun"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "C.04"
+          ],
+          "explanation": "En agglomération, lorsque le croisement avec un véhicule de transport en commun est difficile, le conducteur de la voiture facilite son passage et s’arrête si nécessaire. Anticiper l’encombrement évite de bloquer les deux véhicules.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-08",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "En agglomération, lorsque le croisement avec un véhicule de transport en commun est difficile, le conducteur de la voiture facilite son passage et s’arrête si nécessaire. Anticiper l’encombrement évite de bloquer les deux véhicules."
+          ]
+        },
+        {
+          "number": 9,
+          "page": 3,
+          "prompt": "Dans quel délai un chauffeur doit-il transmettre un constat amiable à son assureur après un accident matériel ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "1 mois"
+            },
+            {
+              "id": "b",
+              "text": "5 jours"
+            },
+            {
+              "id": "c",
+              "text": "2 jours"
+            },
+            {
+              "id": "d",
+              "text": "7 jours"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "C.12",
+            "A.05"
+          ],
+          "explanation": "Après un accident matériel, transmettez rapidement le constat à l’assureur et respectez le délai de déclaration prévu par le contrat, qui ne peut en principe être inférieur à cinq jours ouvrés. Le sujet abrège cette précision en « 5 jours » : il ne s’agit pas de cinq jours calendaires.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Déclaration des dégâts matériels · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2152"
+            }
+          ],
+          "id": "annales-2023-c-09",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Après un accident matériel, transmettez rapidement le constat à l’assureur et respectez le délai de déclaration prévu par le contrat, qui ne peut en principe être inférieur à cinq jours ouvrés. Le sujet abrège cette précision en « 5 jours » : il ne s’agit pas de cinq jours calendaires."
+          ]
+        },
+        {
+          "number": 10,
+          "page": 3,
+          "prompt": "Un permis B, permet de transporter au maximum :",
+          "options": [
+            {
+              "id": "a",
+              "text": "6 passagers"
+            },
+            {
+              "id": "b",
+              "text": "7 passagers"
+            },
+            {
+              "id": "c",
+              "text": "8 passagers"
+            },
+            {
+              "id": "d",
+              "text": "9 passagers"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "C.06"
+          ],
+          "explanation": "Le permis B permet au maximum huit passagers, soit neuf places conducteur compris, dans les limites de la catégorie du véhicule. Le nombre inscrit sur la carte grise et les conditions propres à l’activité peuvent réduire la capacité réellement utilisable.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-10",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le permis B permet au maximum huit passagers, soit neuf places conducteur compris, dans les limites de la catégorie du véhicule. Le nombre inscrit sur la carte grise et les conditions propres à l’activité peuvent réduire la capacité réellement utilisable."
+          ]
+        },
+        {
+          "number": 11,
+          "page": 3,
+          "prompt": "Par temps de pluie, l'utilisation des feux de brouillard arrière est :",
+          "options": [
+            {
+              "id": "a",
+              "text": "conseillée"
+            },
+            {
+              "id": "b",
+              "text": "obligatoire"
+            },
+            {
+              "id": "c",
+              "text": "interdite"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "C.11"
+          ],
+          "explanation": "Les feux de brouillard arrière s’utilisent en cas de brouillard ou de chute de neige ; la pluie seule ne les justifie pas et leur forte lumière peut éblouir les conducteurs suiveurs. Ne confondez pas leurs règles avec celles des feux avant.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-11",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Les feux de brouillard arrière s’utilisent en cas de brouillard ou de chute de neige ; la pluie seule ne les justifie pas et leur forte lumière peut éblouir les conducteurs suiveurs. Ne confondez pas leurs règles avec celles des feux avant."
+          ]
+        },
+        {
+          "number": 12,
+          "page": 3,
+          "prompt": "Sur une route à forte déclivité :",
+          "options": [
+            {
+              "id": "a",
+              "text": "il n'y a pas de priorité, au bon vouloir des deux conducteurs"
+            },
+            {
+              "id": "b",
+              "text": "le véhicule descendant est prioritaire"
+            },
+            {
+              "id": "c",
+              "text": "le véhicule montant est prioritaire"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "C.04"
+          ],
+          "explanation": "Sur une route de montagne ou à forte déclivité, le véhicule descendant facilite le passage au véhicule montant et s’arrête d’abord lorsque le croisement est difficile. Si une marche arrière devient nécessaire, les règles dépendent aussi de la catégorie des véhicules et de la position des refuges : la priorité ne doit pas être appliquée aveuglément.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-12",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Sur une route de montagne ou à forte déclivité, le véhicule descendant facilite le passage au véhicule montant et s’arrête d’abord lorsque le croisement est difficile. Si une marche arrière devient nécessaire, les règles dépendent aussi de la catégorie des véhicules et de la position des refuges : la priorité ne doit pas être appliquée aveuglément."
+          ]
+        },
+        {
+          "number": 13,
+          "page": 3,
+          "prompt": "Dans un tunnel éclairé, hors agglomération, je circule :",
+          "options": [
+            {
+              "id": "a",
+              "text": "en feux de croisement"
+            },
+            {
+              "id": "b",
+              "text": "en feux de brouillard"
+            },
+            {
+              "id": "c",
+              "text": "en feux de route"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "C.11"
+          ],
+          "explanation": "Dans un tunnel, même éclairé, utilisez les feux de croisement. Les feux de route peuvent éblouir et les feux de brouillard ne remplacent pas l’éclairage adapté au tunnel.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-13",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Dans un tunnel, même éclairé, utilisez les feux de croisement. Les feux de route peuvent éblouir et les feux de brouillard ne remplacent pas l’éclairage adapté au tunnel."
+          ]
+        },
+        {
+          "number": 14,
+          "page": 4,
+          "prompt": "Lorsque le permis a été invalidé en raison d'une perte totale de points, le nouveau permis obtenu est :",
+          "options": [
+            {
+              "id": "a",
+              "text": "un permis probatoire doté d'un capital de 6 points"
+            },
+            {
+              "id": "b",
+              "text": "un permis non probatoire doté d'un capital de 12 points"
+            },
+            {
+              "id": "c",
+              "text": "un permis probatoire doté d'un capital de 12 points"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a"
+          ],
+          "lesson_refs": [
+            "A.03",
+            "C.05"
+          ],
+          "explanation": "Après une invalidation pour solde de points nul, le nouveau permis est probatoire avec six points. Ne confondez pas la récupération progressive des points et le droit de reprendre immédiatement une activité professionnelle soumise à conditions.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Permis probatoire · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2390"
+            }
+          ],
+          "id": "annales-2023-c-14",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Après une invalidation pour solde de points nul, le nouveau permis est probatoire avec six points. Ne confondez pas la récupération progressive des points et le droit de reprendre immédiatement une activité professionnelle soumise à conditions."
+          ]
+        },
+        {
+          "number": 15,
+          "page": 4,
+          "prompt": "Dans le cas où plusieurs infractions entrainant un retrait de points seraient commises simultanément, la perte maximale de points est de :",
+          "options": [
+            {
+              "id": "a",
+              "text": "6 points"
+            },
+            {
+              "id": "b",
+              "text": "12 points"
+            },
+            {
+              "id": "c",
+              "text": "8 points"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "C.05"
+          ],
+          "explanation": "Pour plusieurs infractions commises simultanément, le retrait est plafonné à huit points. Un permis probatoire disposant de six points peut néanmoins perdre tout son solde. Le plafond ne signifie pas qu’un conducteur conserve forcément son droit de conduire.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Retrait simultané de points · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F11863"
+            }
+          ],
+          "id": "annales-2023-c-15",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Pour plusieurs infractions commises simultanément, le retrait est plafonné à huit points. Un permis probatoire disposant de six points peut néanmoins perdre tout son solde. Le plafond ne signifie pas qu’un conducteur conserve forcément son droit de conduire."
+          ]
+        },
+        {
+          "number": 16,
+          "page": 4,
+          "prompt": "Pourquoi faut-il rédiger un constat amiable?",
+          "options": [
+            {
+              "id": "a",
+              "text": "pour calculer les indemnisations de chacune des personnes impliquées"
+            },
+            {
+              "id": "b",
+              "text": "pour déterminer les responsabilité de chacune des personnes impliquées"
+            },
+            {
+              "id": "c",
+              "text": "pour que le garagiste puisse établir un devis des réparations"
+            },
+            {
+              "id": "d",
+              "text": "pour déterminer la sanction encourue par l'auteur"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b"
+          ],
+          "lesson_refs": [
+            "C.12"
+          ],
+          "explanation": "Le constat décrit les circonstances, positions et dommages de l’accident. L’assureur s’appuie sur ces faits pour déterminer les responsabilités et appliquer les garanties. Le document n’est ni un devis de réparation ni une décision de sanction pénale.",
+          "status": "active",
+          "update_note": "",
+          "sources": [
+            {
+              "title": "Constat amiable · Service Public",
+              "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2149"
+            }
+          ],
+          "id": "annales-2023-c-16",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Le constat décrit les circonstances, positions et dommages de l’accident. L’assureur s’appuie sur ces faits pour déterminer les responsabilités et appliquer les garanties. Le document n’est ni un devis de réparation ni une décision de sanction pénale."
+          ]
+        },
+        {
+          "number": 17,
+          "page": 4,
+          "prompt": "Quelles sont les précautions nécessaires pour vérifier le niveau d'huile?",
+          "options": [
+            {
+              "id": "a",
+              "text": "Moteur froid"
+            },
+            {
+              "id": "b",
+              "text": "Moteur chaud"
+            },
+            {
+              "id": "c",
+              "text": "Terrain plat"
+            },
+            {
+              "id": "d",
+              "text": "Moteur allumé"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "c"
+          ],
+          "lesson_refs": [
+            "C.01"
+          ],
+          "explanation": "Contrôlez le niveau sur terrain plat, moteur arrêté et selon le délai indiqué dans la notice, généralement moteur froid ou après un temps de repos suffisant. Ne contrôlez pas un niveau d’huile avec le moteur allumé. Ne dépassez pas le repère maximal.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-17",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Contrôlez le niveau sur terrain plat, moteur arrêté et selon le délai indiqué dans la notice, généralement moteur froid ou après un temps de repos suffisant. Ne contrôlez pas un niveau d’huile avec le moteur allumé. Ne dépassez pas le repère maximal."
+          ]
+        },
+        {
+          "number": 18,
+          "page": 4,
+          "prompt": "Pour changer la roue d'une voiture, il faut :",
+          "options": [
+            {
+              "id": "a",
+              "text": "Lever la voiture avec le cric avant de débloquer les écrous"
+            },
+            {
+              "id": "b",
+              "text": "Positionner le véhicule sur un endroit plat"
+            },
+            {
+              "id": "c",
+              "text": "Obligatoirement porter des gants"
+            },
+            {
+              "id": "d",
+              "text": "Débloquer les écrous avant de lever la voiture avec le cric"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "b",
+            "d"
+          ],
+          "lesson_refs": [
+            "C.12"
+          ],
+          "explanation": "Choisissez un emplacement stable et plat, immobilisez le véhicule et desserrez légèrement les écrous avant de lever au point prévu par le constructeur. Ne vous placez jamais sous un véhicule tenu uniquement par un cric ; sur un lieu dangereux, privilégiez l’assistance.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-18",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Choisissez un emplacement stable et plat, immobilisez le véhicule et desserrez légèrement les écrous avant de lever au point prévu par le constructeur. Ne vous placez jamais sous un véhicule tenu uniquement par un cric ; sur un lieu dangereux, privilégiez l’assistance."
+          ]
+        },
+        {
+          "number": 19,
+          "page": 4,
+          "prompt": "En cas de freinage, quels sont les deux principaux facteurs qui constituent la distance d'arrêt ?",
+          "options": [
+            {
+              "id": "a",
+              "text": "le temps de réaction"
+            },
+            {
+              "id": "b",
+              "text": "l'utilisation de l'ABS"
+            },
+            {
+              "id": "c",
+              "text": "la distance de freinage"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "a",
+            "c"
+          ],
+          "lesson_refs": [
+            "C.03"
+          ],
+          "explanation": "La distance d’arrêt est la distance parcourue pendant le temps de réaction, plus la distance de freinage. L’ABS est un équipement, pas l’une de ces deux composantes. Plus la vitesse augmente, plus les distances nécessaires augmentent.",
+          "status": "active",
+          "update_note": "",
+          "sources": [],
+          "id": "annales-2023-c-19",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "La distance d’arrêt est la distance parcourue pendant le temps de réaction, plus la distance de freinage. L’ABS est un équipement, pas l’une de ces deux composantes. Plus la vitesse augmente, plus les distances nécessaires augmentent."
+          ]
+        },
+        {
+          "number": 20,
+          "page": 4,
+          "prompt": "Le marquage au sol de couleur jaune est :",
+          "options": [
+            {
+              "id": "a",
+              "text": "un indicateur de croisement"
+            },
+            {
+              "id": "b",
+              "text": "définitif"
+            },
+            {
+              "id": "c",
+              "text": "provisoire"
+            }
+          ],
+          "original_kind": "qcm",
+          "answers": [
+            "c"
+          ],
+          "lesson_refs": [
+            "C.05"
+          ],
+          "explanation": "Les lignes temporaires de circulation sont généralement jaunes et priment sur les lignes blanches lorsqu’elles organisent temporairement la circulation.",
+          "status": "historical",
+          "update_note": "L’énoncé dit seulement « marquage jaune ». Certaines marques jaunes sont permanentes, notamment des interdictions d’arrêt ou de stationnement. Sans image ni précision « lignes temporaires de circulation », on ne peut pas généraliser ; question hors score.",
+          "sources": [],
+          "id": "annales-2023-c-20",
+          "kind": "multiple",
+          "correction_origin": "pedagogical",
+          "learning_points": [
+            "Les lignes temporaires de circulation sont généralement jaunes et priment sur les lignes blanches lorsqu’elles organisent temporairement la circulation."
+          ]
+        }
+      ]
+    }
+  ],
+  "source_note": "Le fichier porte « MARS-2025 », mais toutes les pages du sujet indiquent le 28 mars 2023. Le classement reprend la date imprimée dans le document."
+}

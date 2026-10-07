@@ -1,0 +1,3170 @@
+{
+  "id": "vtc-final",
+  "version": "20261007-vtc-v5-annales",
+  "training_label": "VTC",
+  "title": "VTC · Examen blanc final · Les sept matières",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "exam-annales-2023-e-11",
+      "prompt": "J'ai un avion demain matin à 10h20",
+      "options": [
+        {
+          "id": "a",
+          "text": "I have a plane tomorrow morning at twenty to ten"
+        },
+        {
+          "id": "b",
+          "text": "I have a plane tomorrow morning at twenty past ten"
+        },
+        {
+          "id": "c",
+          "text": "I had a plane tomorrow evening at twenty past ten"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Twenty past ten » signifie 10 h 20 ; « twenty to ten » signifie 9 h 40. « Tomorrow morning » désigne demain matin. Vérifiez séparément jour, moment de la journée et heure.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-11",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-13",
+      "prompt": "Vous demandez à votre client de mettre sa ceinture de sécurité, il vous demande pourquoi :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Because it's for your goodness"
+        },
+        {
+          "id": "b",
+          "text": "Because it's my rule"
+        },
+        {
+          "id": "c",
+          "text": "Because it's for your safety"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« Safety » est la sécurité. Expliquez la raison professionnelle : « Please fasten your seat belt for your safety. » « Goodness » ne signifie pas sécurité et une règle personnelle ne répond pas à la raison demandée.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-13",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "independent-f-07",
+      "prompt": "Un hôtel propose des transferts à horaires fixes avec règlement à 45 jours. Quel point doit être étudié en plus du prix par course ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le financement des dépenses engagées avant le règlement."
+        },
+        {
+          "id": "b",
+          "text": "Le montant du règlement comme s’il était encaissé le jour de la course."
+        },
+        {
+          "id": "c",
+          "text": "Le nombre d’étoiles de l’hôtel comme seule garantie du paiement."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le carburant, les commissions et d’autres dépenses peuvent être payés avant l’encaissement. Le délai client crée donc un besoin de trésorerie.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.07"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "exam-annales-2023-e-09",
+      "prompt": "Do you want to choose the route?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Voulez-vous m'indiquer où vous voulez vous rendre ?"
+        },
+        {
+          "id": "b",
+          "text": "Voulez-vous choisir le parcours ?"
+        },
+        {
+          "id": "c",
+          "text": "Voulez-vous que je vous indique la route ?"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Choose the route » signifie choisir l’itinéraire ou le parcours. La destination se demande avec « Where would you like to go? ». Ne confondez pas le lieu d’arrivée et le chemin emprunté.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-09",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "independent-f-05",
+      "prompt": "Deux canaux génèrent chacun 1 000 € de ventes. Le premier prélève 200 € et le second coûte 80 € de prospection pour ces mêmes ventes. À coûts de mission identiques, quel canal laisse la meilleure contribution ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ils sont équivalents puisque leur chiffre d’affaires est identique."
+        },
+        {
+          "id": "b",
+          "text": "Le second, avec 120 € de plus."
+        },
+        {
+          "id": "c",
+          "text": "Le premier, car une commission remplace les coûts de véhicule."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Les coûts commerciaux diffèrent : 1 000 − 200 = 800 €, contre 1 000 − 80 = 920 €. L’écart est de 120 €, avant les mêmes coûts de mission.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.05"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "exam-annales-2022-c-15",
+      "prompt": "Dans quel cas exceptionnel devez-vous dépasser un véhicule par la droite ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "lorsque le conducteur du véhicule qui me précède a signalé qu'il allait changer de direction vers la droite"
+        },
+        {
+          "id": "b",
+          "text": "lorsque le conducteur du véhicule qui me précède a signalé qu'il allait changer de direction vers la gauche"
+        },
+        {
+          "id": "c",
+          "text": "lorsque le conducteur du véhicule qui me suit a signalé qu'il allait changer de direction vers la gauche"
+        },
+        {
+          "id": "d",
+          "text": "il est toujours autorisé de dépasser un véhicule par la droite"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le dépassement se fait normalement à gauche. Lorsqu’un véhicule annonce son changement de direction vers la gauche, le dépassement par la droite est l’exception prévue, à condition de pouvoir l’effectuer sans danger. Le clignotant du véhicule qui suit ne donne pas cette autorisation.",
+      "module": "C",
+      "sources": [
+        [
+          "Code de la route · Usage des voies",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006074228/LEGISCTA000006129092/"
+        ]
+      ],
+      "lesson_refs": [
+        "C.04",
+        "C.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-15",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 8,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-g-08",
+      "prompt": "Proposez 4 situations entraînant une mise à jour des dossiers sur le registre des exploitants VTC.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Uniquement le changement de véhicule ; les changements de conducteur, d’assureur et d’adresse attendent le renouvellement quinquennal."
+        },
+        {
+          "id": "b",
+          "text": "Véhicule remplacé, nouveau conducteur, nouvel assureur, changement d’adresse ou de dirigeant."
+        },
+        {
+          "id": "c",
+          "text": "Nouveau tarif, nouvelle destination, facture client et changement de moyen de paiement."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le registre doit rester cohérent avec l’activité réelle : déclarer notamment un changement de véhicule, de conducteur, d’assureur, de dirigeant, d’adresse ou de forme de société. Une inscription ancienne ne suffit pas si les pièces et personnes utilisées dans l’exploitation ont changé.",
+      "module": "G",
+      "sources": [
+        [
+          "REVTC · Informations générales et garantie financière",
+          "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        ]
+      ],
+      "lesson_refs": [
+        "G.01",
+        "G.10"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-g-08",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 22,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-03",
+      "prompt": "Dans le mix marketing, à quoi correspondent les 4P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Prix - Produit - Place - Promotion"
+        },
+        {
+          "id": "b",
+          "text": "Prix - Produit - Parrainage - Personnalisation"
+        },
+        {
+          "id": "c",
+          "text": "Plateforme - Présentation - Place - Promotion"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les 4P du marketing mix sont Product, Price, Place et Promotion : produit ou service, prix, distribution et communication. Place ne désigne pas ici une place assise mais la manière de rendre l'offre accessible aux clients.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-d-independent-07",
+      "prompt": "Une note affirme : « Trois rues sont fermées ce matin. Le trajet pourrait durer dix minutes de plus. » Quelle donnée est présentée comme certaine dans cette note ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Trois rues sont fermées ce matin."
+        },
+        {
+          "id": "o2",
+          "text": "Le trajet durera exactement dix minutes de plus."
+        },
+        {
+          "id": "o3",
+          "text": "Les trois rues rouvriront dans dix minutes."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La fermeture est énoncée comme un fait. « Pourrait » marque une possibilité ; aucune heure de réouverture n’est donnée.",
+      "module": "D",
+      "lesson_refs": [
+        "D.03"
+      ],
+      "sources": []
+    },
+    {
+      "id": "exam-annales-2022-b-09",
+      "prompt": "Qu'est-ce qu'une créance client ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "une facture en attente de création"
+        },
+        {
+          "id": "b",
+          "text": "une facture impayée par un client"
+        },
+        {
+          "id": "c",
+          "text": "une facture réglée par un client"
+        },
+        {
+          "id": "d",
+          "text": "une facture due à un fournisseur"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Une créance client est une somme due à l’entreprise pour une vente réalisée et non encore réglée. La facture impayée constitue donc la réponse attendue. Une dette fournisseur est au contraire une somme que l’entreprise doit payer.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.03",
+        "B.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-09",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "independent-f-03",
+      "prompt": "Une course rapporte 84 € avant une commission de 25 % et entraîne 18 € de coûts variables. Quelle contribution reste pour couvrir les charges fixes ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "45 €."
+        },
+        {
+          "id": "b",
+          "text": "63 €."
+        },
+        {
+          "id": "c",
+          "text": "66 €."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Commission : 84 × 25 % = 21 €. Contribution : 84 − 21 − 18 = 45 €. Le montant après commission n’est pas encore la contribution après coûts variables.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.03"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "vtc-d-independent-26",
+      "prompt": "Votre arrivée était annoncée à 10 heures ; elle est maintenant estimée à 10 h 10. Quel message informe clairement et courtoisement le client ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Bonjour, je suis légèrement décalé ; vous comprendrez en arrivant."
+        },
+        {
+          "id": "o2",
+          "text": "Bonjour, l’horaire reste celui prévu, mais je serai là dix minutes après."
+        },
+        {
+          "id": "o3",
+          "text": "Bonjour, mon arrivée est désormais estimée à 10 h 10. Je vous prie de m’excuser pour ce décalage."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Le premier message donne l’heure actualisée et présente des excuses. Le deuxième manque de précision ; le troisième conserve un horaire tout en le contredisant.",
+      "module": "D",
+      "lesson_refs": [
+        "D.11"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-g-independent-18",
+      "prompt": "Vous arrivez au lieu convenu pour une personne ayant réservé. Une autre personne vous sollicite directement et propose un prix supérieur pour partir immédiatement. Quel choix respecte la distinction entre réservation et maraude ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Vérifier et prendre en charge le client correspondant à la réservation ; ne pas substituer le passant sans réservation préalable"
+        },
+        {
+          "id": "o2",
+          "text": "Annuler la première mission et faire monter immédiatement le passant puisque son offre est plus élevée"
+        },
+        {
+          "id": "o3",
+          "text": "Faire monter le passant puis lui demander d’envoyer un message de réservation pendant le trajet"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’existence d’une réservation pour un client ne couvre pas la prise en charge spontanée d’une autre personne. Le prix proposé ne modifie pas l’exigence de réservation préalable applicable à la nouvelle mission.",
+      "module": "G",
+      "lesson_refs": [
+        "G.06"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ]
+    },
+    {
+      "id": "vtc-g-independent-07",
+      "prompt": "Votre client est réservé à l’aéroport, mais la zone qu’il vous indique par message est réservée aux taxis. Un parking autorisé aux VTC est accessible à proximité. Que convenez-vous avec lui ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "D’une prise en charge dans la file taxi, la réservation préalable donnant accès à toutes les zones"
+        },
+        {
+          "id": "o3",
+          "text": "D’un arrêt dans la file taxi uniquement le temps de charger les bagages, sans changer le rendez-vous"
+        },
+        {
+          "id": "o1",
+          "text": "D’un rendez-vous précis dans la zone autorisée, en expliquant comment vous rejoindre"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La réservation permet d’identifier la mission, mais elle ne supprime pas les règles locales d’accès et de stationnement. Définir un point autorisé évite une prise en charge improvisée dans une zone réservée.",
+      "module": "G",
+      "lesson_refs": [
+        "G.07"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        },
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2023-c-13",
+      "prompt": "Dans un tunnel éclairé, hors agglomération, je circule :",
+      "options": [
+        {
+          "id": "a",
+          "text": "en feux de croisement"
+        },
+        {
+          "id": "b",
+          "text": "en feux de brouillard"
+        },
+        {
+          "id": "c",
+          "text": "en feux de route"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Dans un tunnel, même éclairé, utilisez les feux de croisement. Les feux de route peuvent éblouir et les feux de brouillard ne remplacent pas l’éclairage adapté au tunnel.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-13",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "vtc-g-independent-03",
+      "prompt": "En octobre 2026, un vendeur propose un véhicule thermique ordinaire acheté neuf par son premier propriétaire en septembre 2018, puis revendu en 2025. Il affirme que la revente a remis son ancienneté à zéro pour le VTC. Quel point vérifiez-vous ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "La première mise en circulation et les critères en vigueur : la revente ne remet pas l’âge du véhicule à zéro"
+        },
+        {
+          "id": "o2",
+          "text": "La date de la facture de revente uniquement, qui devient le nouveau départ de l’ancienneté réglementaire"
+        },
+        {
+          "id": "o3",
+          "text": "La date du dernier entretien, qui remplace la date de première mise en circulation"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’ancienneté du véhicule ne redémarre ni lors d’une revente ni lors d’un entretien. Pour ce véhicule thermique ordinaire, il faut contrôler l’âge depuis la première mise en circulation et l’ensemble des critères applicables avant l’achat.",
+      "module": "G",
+      "lesson_refs": [
+        "G.03"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2021-a-10",
+      "prompt": "Quelles assurances doit souscrire un professionnel effectuant du T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une assurance du véhicule couvrant le transport de personnes à titre onéreux et une responsabilité civile professionnelle."
+        },
+        {
+          "id": "b",
+          "text": "Une assurance automobile pour usage privé uniquement."
+        },
+        {
+          "id": "c",
+          "text": "Une responsabilité civile professionnelle qui dispense de toute assurance circulation."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Deux risques sont à couvrir : la circulation du véhicule utilisé pour transporter des personnes à titre onéreux et la responsabilité civile professionnelle de l'activité. Une assurance automobile pour usage privé ne remplace pas ces garanties professionnelles.",
+      "module": "A",
+      "sources": [
+        [
+          "Code des transports — obligations des conducteurs",
+          "https://www.legifrance.gouv.fr/codes/id/LEGIARTI000054659821/2026-08-12"
+        ],
+        [
+          "Assurance professionnelle VTC — Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "A.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-10",
+      "source_title": "Annales VTC 2021",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-d-independent-20",
+      "prompt": "Vous décrivez une habitude passée : « Avant ce changement d’organisation, elle ___ son trajet la veille de chaque déplacement. » Quel verbe convient ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "préparera"
+        },
+        {
+          "id": "o2",
+          "text": "vient de préparer"
+        },
+        {
+          "id": "o3",
+          "text": "préparait"
+        }
+      ],
+      "answer": "o3",
+      "explanation": "L’imparfait « préparait » exprime une action répétée dans le passé. « Préparera » situe l’action dans le futur ; « vient de préparer » indique un passé très récent lié au présent.",
+      "module": "D",
+      "lesson_refs": [
+        "D.08"
+      ],
+      "sources": []
+    },
+    {
+      "id": "exam-annales-2022-b-17",
+      "prompt": "Quel est le code qui permet de déterminer l'activité réalisée par une entreprise ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "SIRET"
+        },
+        {
+          "id": "b",
+          "text": "SIREN"
+        },
+        {
+          "id": "c",
+          "text": "APE"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le code APE caractérise l’activité principale exercée. Le SIREN identifie l’entreprise et le SIRET identifie un établissement. L’APE est statistique et ne vaut ni carte professionnelle ni inscription au registre des exploitants VTC.",
+      "module": "B",
+      "sources": [
+        [
+          "Insee · Présentation générale de la NAF et du code APE",
+          "https://www.insee.fr/fr/information/3281579"
+        ]
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-17",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-c-04",
+      "prompt": "Dans quel cas un conducteur circulant à allure fortement réduite dans une file de voitures est-il obligé de faire usage de ses feux de détresse ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Ce n'est pas obligatoire"
+        },
+        {
+          "id": "b",
+          "text": "Lorsque son véhicule est le premier d'une file de circulation ininterrompue"
+        },
+        {
+          "id": "c",
+          "text": "Lorsque son véhicule est le dernier d'une file de circulation ininterrompue"
+        },
+        {
+          "id": "d",
+          "text": "Lorsque son véhicule circule sur une bande d'arrêt d'urgence"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Un véhicule contraint de circuler à une allure fortement réduite avertit les autres avec ses feux de détresse. Dans une file ininterrompue, cette obligation concerne le dernier véhicule. Allumer les feux de détresse n’autorise pas à circuler sur la bande d’arrêt d’urgence.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.03",
+        "C.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-04",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-11",
+      "prompt": "Par temps de pluie, l'utilisation des feux de brouillard arrière est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "conseillée"
+        },
+        {
+          "id": "b",
+          "text": "obligatoire"
+        },
+        {
+          "id": "c",
+          "text": "interdite"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Les feux de brouillard arrière s’utilisent en cas de brouillard ou de chute de neige ; la pluie seule ne les justifie pas et leur forte lumière peut éblouir les conducteurs suiveurs. Ne confondez pas leurs règles avec celles des feux avant.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-11",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-e-02",
+      "prompt": "I booked a car, are you my driver?",
+      "options": [
+        {
+          "id": "a",
+          "text": "I booked the car too"
+        },
+        {
+          "id": "b",
+          "text": "There is no book in my car"
+        },
+        {
+          "id": "c",
+          "text": "If you are Mr Martin, yes I am your driver"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le client veut vérifier l’identité du chauffeur réservé. « If you are Mr Martin, yes I am your driver » confirme la réservation en vérifiant le nom. « Book » est ici le verbe réserver, pas le nom livre.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-02",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-c-09",
+      "prompt": "Dans quel délai un chauffeur doit-il transmettre un constat amiable à son assureur après un accident matériel ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1 mois"
+        },
+        {
+          "id": "b",
+          "text": "5 jours"
+        },
+        {
+          "id": "c",
+          "text": "2 jours"
+        },
+        {
+          "id": "d",
+          "text": "7 jours"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Après un accident matériel, transmettez rapidement le constat à l’assureur et respectez le délai de déclaration prévu par le contrat, qui ne peut en principe être inférieur à cinq jours ouvrés. Le sujet abrège cette précision en « 5 jours » : il ne s’agit pas de cinq jours calendaires.",
+      "module": "C",
+      "sources": [
+        [
+          "Déclaration des dégâts matériels · Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F2152"
+        ]
+      ],
+      "lesson_refs": [
+        "C.12",
+        "A.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-09",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2021-c-09",
+      "prompt": "En cas de panne de votre véhicule, à quelle distance placez-vous le triangle de pré signalisation ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "50 mètres au moins de votre véhicule"
+        },
+        {
+          "id": "b",
+          "text": "10 mètres au moins de votre véhicule"
+        },
+        {
+          "id": "c",
+          "text": "30 mètres au moins de votre véhicule"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Un triangle de présignalisation se place à au moins 30 mètres de l'obstacle, et peut devoir être placé plus loin pour être visible. Il ne faut pas l'installer si cette action met manifestement la vie du conducteur en danger, notamment selon la situation sur autoroute.",
+      "module": "C",
+      "sources": [
+        [
+          "Équipements obligatoires — Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F19459"
+        ]
+      ],
+      "lesson_refs": [
+        "C.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-09",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-g-03",
+      "prompt": "Vous exploitez un véhicule avec lunette arrière surteintée. Est-il obligatoire d'apposer le macaron EVTC?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Non, car il ne serait pas visible"
+        },
+        {
+          "id": "b",
+          "text": "Oui"
+        },
+        {
+          "id": "c",
+          "text": "Non, sous réserve d'une dérogation délivrée par le Ministère chargé des transports"
+        }
+      ],
+      "answer": "b",
+      "explanation": "La signalétique VTC reste obligatoire lorsque la lunette arrière est surteintée. Le conducteur doit appliquer les emplacements et conditions de visibilité prévus ; une difficulté de visibilité ne crée pas spontanément une dispense.",
+      "module": "G",
+      "sources": [
+        [
+          "Service Public · Devenir chauffeur de VTC",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "G.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-g-03",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 22,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-12",
+      "prompt": "Le Président de la Chambre de Métiers et de l'Artisanat est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "un(e) salarié(e) de la fonction publique"
+        },
+        {
+          "id": "b",
+          "text": "un(e) artisan(e) en exercice"
+        },
+        {
+          "id": "c",
+          "text": "une personne nommée par le Préfet de région"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le président d’une chambre de métiers et de l’artisanat est un élu issu du monde artisanal. Ce mandat ne se confond pas avec un emploi de fonctionnaire ni avec une nomination du préfet ; la chambre représente et accompagne les entreprises artisanales.",
+      "module": "B",
+      "sources": [
+        [
+          "CMA France · Présentation du président et de son élection",
+          "https://www.artisanat.fr/nous-connaitre/joel-fourny-president-cma-france"
+        ]
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-12",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-e-16",
+      "prompt": "France has …… places to visit:",
+      "options": [
+        {
+          "id": "a",
+          "text": "a much"
+        },
+        {
+          "id": "b",
+          "text": "a many"
+        },
+        {
+          "id": "c",
+          "text": "lots of"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« Lots of » se construit avec des noms dénombrables au pluriel comme places. « Many places » conviendrait aussi, mais « a many » et « a much » sont incorrects.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-16",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "vtc-d-independent-11",
+      "prompt": "Complétez la phrase en exprimant une conséquence : « L’accès est bloqué ; ___, le point de rendez-vous a été déplacé. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "en revanche"
+        },
+        {
+          "id": "o2",
+          "text": "auparavant"
+        },
+        {
+          "id": "o3",
+          "text": "par conséquent"
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Le déplacement résulte du blocage : « par conséquent » marque ce lien. « En revanche » introduit un contraste et « auparavant » situe un événement antérieur.",
+      "module": "D",
+      "lesson_refs": [
+        "D.05"
+      ],
+      "sources": []
+    },
+    {
+      "id": "exam-annales-2022-f-03",
+      "prompt": "De manière générale, quelle est l'attitude à adopter lors de l'approche du lieu de destination?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Informer le client de votre arrivée prochaine"
+        },
+        {
+          "id": "b",
+          "text": "Préparer la mission suivante"
+        },
+        {
+          "id": "c",
+          "text": "Demander à votre client de rassembler ses effets personnels"
+        }
+      ],
+      "answer": "a",
+      "explanation": "À l’approche de la destination, informer le client lui permet de préparer sereinement la fin de course. Garder l’attention sur la circulation et la dépose ; la mission suivante se prépare au moment approprié, sans précipiter le passager.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "H.10",
+        "F.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-03",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-04",
+      "prompt": "Une entreprise individuelle :",
+      "options": [
+        {
+          "id": "a",
+          "text": "doit changer de statut juridique pour embaucher un salarié"
+        },
+        {
+          "id": "b",
+          "text": "peut embaucher des salariés"
+        },
+        {
+          "id": "c",
+          "text": "ne peut embaucher qu'un apprenti"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Une entreprise individuelle peut employer des salariés, y compris sans changer de forme juridique. « Individuelle » décrit l’exercice en nom propre, pas l’obligation de travailler seul ; l’employeur doit alors respecter les formalités et obligations sociales.",
+      "module": "B",
+      "sources": [
+        [
+          "Service Public · Choisir la forme juridique de l’entreprise",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F23844?language=fr"
+        ]
+      ],
+      "lesson_refs": [
+        "B.01",
+        "B.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-04",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-f-12",
+      "prompt": "Quelles sont les méthodes de prospection existantes ? Citez un exemple de chaque.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Prospection directe, par exemple téléphone ou rendez-vous ; prospection numérique, par exemple site web ou réseaux sociaux."
+        },
+        {
+          "id": "b",
+          "text": "Uniquement les centrales de réservation ; les autres contacts ne relèvent jamais de la prospection."
+        },
+        {
+          "id": "c",
+          "text": "Uniquement la facturation des clients actuels et le classement des achats."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La prospection peut utiliser des contacts directs (rendez-vous, téléphone) ou des canaux numériques (site, courriel, réseaux sociaux, plateformes). Choisir le canal selon la clientèle visée, préparer une proposition utile et suivre les résultats ; les coordonnées personnelles ne sont pas une ressource à utiliser sans règles.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.06",
+        "F.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-12",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 17,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-02",
+      "prompt": "Qu'est-ce qu'un service de transport régulier ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un transport dont le trajet est toujours fixé uniquement par le conducteur."
+        },
+        {
+          "id": "b",
+          "text": "Un service collectif défini par un itinéraire, des arrêts, une fréquence, des horaires et des tarifs."
+        },
+        {
+          "id": "c",
+          "text": "Une course individuelle sur réservation avec trajet librement convenu."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Un service régulier transporte collectivement des voyageurs selon une organisation fixée à l’avance : itinéraire, arrêts, fréquence, horaires et tarifs. Une réservation téléphonique ne suffit pas à transformer une course VTC en ligne régulière.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-02",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-b-18",
+      "prompt": "Le dirigeant d'une micro-entreprise :",
+      "options": [
+        {
+          "id": "a",
+          "text": "est soumis à l'impôt sur les sociétés"
+        },
+        {
+          "id": "b",
+          "text": "n'est pas soumis à l'impôt"
+        },
+        {
+          "id": "c",
+          "text": "est soumis à l'impôt sur le revenu"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le régime micro-entreprise relève de l’impôt sur le revenu, selon les règles de la catégorie concernée et les options autorisées. Il ne signifie pas absence d’impôt. Une option vers un autre cadre fiscal doit être distinguée du maintien dans le régime micro.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-18",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "independent-f-01",
+      "prompt": "Un quartier compte cinq nouveaux hôtels. Quelle donnée transforme cette observation en estimation commerciale exploitable ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le seul nombre de chambres construites."
+        },
+        {
+          "id": "b",
+          "text": "Le tarif le plus élevé affiché par un hôtel."
+        },
+        {
+          "id": "c",
+          "text": "Leurs besoins réels de transferts, horaires et conditions de partenariat."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La présence d’hôtels signale un marché possible ; les besoins, créneaux et modalités d’achat permettent d’évaluer les courses accessibles.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.01"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "exam-annales-2021-a-15",
+      "prompt": "Quel kilométrage maximum un conducteur de T3P peut-il réaliser pour sa course ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1000 km"
+        },
+        {
+          "id": "b",
+          "text": "500 km"
+        },
+        {
+          "id": "c",
+          "text": "300 km"
+        },
+        {
+          "id": "d",
+          "text": "pas de limitation"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Il n'existe pas de plafond kilométrique général propre à une course de T3P. Une longue prestation exige néanmoins une préparation réaliste : pauses, fatigue, autonomie, itinéraire, prix convenu et règles applicables au trajet.",
+      "module": "A",
+      "sources": [
+        [
+          "Devenir chauffeur de VTC — Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "A.01",
+        "H.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-15",
+      "source_title": "Annales VTC 2021",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-03",
+      "prompt": "Quelle est la durée de vie maximum prévue par la loi pour une SARL ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "25 ans"
+        },
+        {
+          "id": "b",
+          "text": "10 ans"
+        },
+        {
+          "id": "c",
+          "text": "50 ans"
+        },
+        {
+          "id": "d",
+          "text": "99 ans"
+        }
+      ],
+      "answer": "d",
+      "explanation": "La durée fixée dans les statuts d'une société ne peut excéder 99 ans. Une prorogation décidée selon les règles applicables peut prolonger sa vie : 99 ans n'impose donc pas la disparition automatique définitive de toute société.",
+      "module": "B",
+      "sources": [
+        [
+          "Code civil — article 1838",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006444089/2013-11-28"
+        ]
+      ],
+      "lesson_refs": [
+        "B.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-b-15",
+      "prompt": "Les achats de carburant figurent :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Au compte de résultat, dans les produits"
+        },
+        {
+          "id": "b",
+          "text": "Au bilan, à l'actif"
+        },
+        {
+          "id": "c",
+          "text": "Au compte de résultat, dans les charges"
+        },
+        {
+          "id": "d",
+          "text": "Au bilan, au passif"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le carburant consommé dans l’activité est une charge du compte de résultat. Les produits correspondent aux recettes de l’activité. Un solde bancaire, une dette ou un stock relève d’une autre lecture comptable.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.04",
+        "B.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-15",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-f-16",
+      "prompt": "Vous avez réussi votre examen avec succès et décidez d'acheter un véhicule pour réaliser votre activité. Sur quels points allez-vous être attentifs concernant l'achat de celui-ci ? Citez-en 3.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Couleur et prestige uniquement, le coût d’usage n’intervenant pas dans le choix."
+        },
+        {
+          "id": "b",
+          "text": "Montant de la mensualité uniquement, sans tenir compte de l’apport ni de la durée."
+        },
+        {
+          "id": "c",
+          "text": "Énergie et conformité ; prix et coût de financement ; confort, entretien et assurance."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Comparer un véhicule sur son coût total : achat, financement, énergie, entretien et assurance, puis sur sa conformité VTC, sa capacité, son confort et son adéquation à la clientèle. Un prix d’achat attractif ne suffit pas si l’usage est coûteux ou le véhicule inéligible.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "B.10",
+        "G.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-16",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 17,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-g-independent-24",
+      "prompt": "Pour renouveler un dossier, vous trouvez une fiche officielle actuelle sur la capacité financière et un article ancien qui traite uniquement du capital social d’une société. Comment utilisez-vous ces documents ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Séparer les deux notions et appliquer au dossier véhicule la règle actuelle de capacité financière correspondant à sa situation"
+        },
+        {
+          "id": "o2",
+          "text": "Utiliser le capital social comme réponse universelle à toute exigence de garantie des véhicules"
+        },
+        {
+          "id": "o3",
+          "text": "Faire la moyenne des montants cités pour obtenir un justificatif intermédiaire"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Capital social et capacité financière des véhicules n’ont pas le même objet. Une veille utile vérifie le champ de la règle, sa date et les justificatifs attendus, sans mélanger des montants portant sur des obligations différentes.",
+      "module": "G",
+      "lesson_refs": [
+        "G.12"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2022-e-10",
+      "prompt": "Can you take us to the airport before 4 pm?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pouvez-vous nous conduire à l'aéroport avant 4h de l'après midi ?"
+        },
+        {
+          "id": "b",
+          "text": "Pouvez-vous aller à l'aéroport à 4h de l'après midi ?"
+        },
+        {
+          "id": "c",
+          "text": "Peux-tu nous prendre à l'aéroport à 4h ?"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« Take us to the airport » veut dire nous conduire à l’aéroport ; « before 4 pm » signifie avant 16 heures. Il faut conserver nous, la destination et avant : à 16 heures n’exprime pas la même contrainte.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.03",
+        "E.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-10",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-12",
+      "prompt": "A l'aéroport, le parking professionnel est saturé alors que vos clients ne vont pas tarder à sortir du check out :",
+      "options": [
+        {
+          "id": "a",
+          "text": "vous vous garez sur des zébras"
+        },
+        {
+          "id": "b",
+          "text": "vous vous garez au niveau de la dépose taxi car c'est au niveau des arrivées"
+        },
+        {
+          "id": "c",
+          "text": "vous vous garez au parking public"
+        },
+        {
+          "id": "d",
+          "text": "vous attendez qu'une place se libère"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Si le parking professionnel est saturé, chercher un stationnement public autorisé et informer les clients du point de rencontre. Les zébras et les emplacements réservés aux taxis ne deviennent pas utilisables par un VTC du seul fait de la saturation.",
+      "module": "F",
+      "sources": [
+        [
+          "Devenir chauffeur de VTC — Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "G.07",
+        "H.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-12",
+      "source_title": "Annales VTC 2021",
+      "source_page": 15,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-d-independent-28",
+      "prompt": "Vous devez annoncer un rendez-vous à l’entrée est du musée à 15 heures. Quel message évite toute ambiguïté ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Bonjour, je vous attendrai à 15 heures devant l’entrée est du musée."
+        },
+        {
+          "id": "o2",
+          "text": "Bonjour, je vous attendrai là-bas à l’heure habituelle."
+        },
+        {
+          "id": "o3",
+          "text": "Bonjour, je serai devant une entrée du musée dans l’après-midi."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Un message opérationnel identifie précisément l’heure et le lieu. « Là-bas », « habituelle » et « une entrée » supposent des informations que le destinataire peut ne pas partager.",
+      "module": "D",
+      "lesson_refs": [
+        "D.11"
+      ],
+      "sources": []
+    },
+    {
+      "id": "independent-a-04",
+      "prompt": "Après une course, un chauffeur veut publier une photo de son planning pour montrer son activité. Les noms et numéros de clients sont visibles. Que faire ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Retirer ces données avant toute publication."
+        },
+        {
+          "id": "b",
+          "text": "Publier si aucun montant payé ne figure sur la photo."
+        },
+        {
+          "id": "c",
+          "text": "Conserver les noms et masquer uniquement les numéros."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les noms et coordonnées sont des données personnelles. La promotion de l’activité ne justifie pas leur exposition ; il faut supprimer les éléments identifiants.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.10"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "vtc-d-independent-16",
+      "prompt": "Le message demande : « Veuillez confirmer la prise en charge. » Dans ce contexte professionnel, que signifie « confirmer » ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Indiquer clairement que la prise en charge est maintenue."
+        },
+        {
+          "id": "o2",
+          "text": "Annuler la prise en charge annoncée."
+        },
+        {
+          "id": "o3",
+          "text": "Modifier obligatoirement l’heure de la prise en charge."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Confirmer, c’est rendre certaine ou valider une information déjà annoncée. Ce verbe ne signifie ni annuler ni modifier systématiquement.",
+      "module": "D",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "sources": []
+    },
+    {
+      "id": "exam-annales-2021-a-02",
+      "prompt": "Un conducteur sanctionné par le tribunal correctionnel pour délit de fuite peut saisir :",
+      "options": [
+        {
+          "id": "a",
+          "text": "le tribunal judiciaire pour une condamnation inférieure à 4 000 €"
+        },
+        {
+          "id": "b",
+          "text": "la cour d'appel"
+        },
+        {
+          "id": "c",
+          "text": "la cour de cassation"
+        },
+        {
+          "id": "d",
+          "text": "le tribunal correctionnel qui jugera à nouveau l'affaire"
+        }
+      ],
+      "answer": "b",
+      "explanation": "L'appel d'un jugement correctionnel permet à la cour d'appel de réexaminer l'affaire. La Cour de cassation contrôle l'application du droit dans les décisions rendues en dernier ressort ; elle ne remplace pas cet appel ordinaire.",
+      "module": "A",
+      "sources": [
+        [
+          "Faire appel d’un jugement — Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F1384"
+        ]
+      ],
+      "lesson_refs": [
+        "A.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-02",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-12",
+      "prompt": "Do you have a business card?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Avez-vous une carte professionnelle?"
+        },
+        {
+          "id": "b",
+          "text": "Avez-vous une carte des entreprises ?"
+        },
+        {
+          "id": "c",
+          "text": "Avez-vous une carte de visite ?"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Business card signifie carte de visite. Une carte professionnelle autorisant l’exercice du VTC est un autre document ; traduire mot à mot business par entreprise produirait ici un contresens.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-12",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 13,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-d-independent-24",
+      "prompt": "Le texte précise : « Le point de départ a changé parce que la place accueille un marché. » On vous demande pourquoi le départ a changé. Quelle réponse est la plus directe ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Le marché propose des produits locaux."
+        },
+        {
+          "id": "o2",
+          "text": "Parce qu’un marché occupe la place."
+        },
+        {
+          "id": "o3",
+          "text": "Le point de départ a changé."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Une question introduite par « pourquoi » attend la cause. Répéter le changement ne l’explique pas ; les produits du marché ne sont pas mentionnés.",
+      "module": "D",
+      "lesson_refs": [
+        "D.10"
+      ],
+      "sources": []
+    },
+    {
+      "id": "independent-c-01",
+      "prompt": "À 72 km/h, un véhicule parcourt 20 mètres par seconde. Quelle distance parcourt-il pendant deux secondes avant tout freinage ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "40 mètres."
+        },
+        {
+          "id": "b",
+          "text": "20 mètres."
+        },
+        {
+          "id": "c",
+          "text": "72 mètres."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Distance = vitesse en mètres par seconde × durée. Ici 20 × 2 = 40 m. Ce calcul porte seulement sur le temps avant freinage, pas sur la distance totale d’arrêt.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.03"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "exam-annales-2023-a-15",
+      "prompt": "Comment s'appelle le document sur lequel ne doivent pas figurer certaines condamnations définitives incompatibles avec l'exercice du transport public particulier de personnes ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le bulletin n° 2 du casier judiciaire."
+        },
+        {
+          "id": "b",
+          "text": "Le bulletin n° 3 présenté par le conducteur remplace systématiquement le B2."
+        },
+        {
+          "id": "c",
+          "text": "Le relevé des points du permis de conduire."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le contrôle d’honorabilité se réfère au bulletin n° 2 du casier judiciaire et aux condamnations incompatibles prévues par les textes. Il ne faut pas remplacer cette exigence par « casier entièrement vierge », ni confondre le B2 avec le B3 remis à un particulier.",
+      "module": "A",
+      "sources": [
+        [
+          "Devenir chauffeur VTC · Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "A.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-15",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2021-b-09",
+      "prompt": "Dans un bilan :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Si le total de l'actif est supérieur au passif il y a bénéfice"
+        },
+        {
+          "id": "b",
+          "text": "Le total de l'actif est toujours égal au total du passif"
+        },
+        {
+          "id": "c",
+          "text": "Si le total de l'actif est inférieur au passif il y a perte"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Un bilan est équilibré : le total de l'actif égale le total du passif. L'actif décrit les emplois et le passif les ressources, notamment les capitaux propres et les dettes. Le bénéfice se lit dans le résultat, pas dans un déséquilibre entre les deux côtés.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-09",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-d-independent-22",
+      "prompt": "Complétez : « Les clients ___ à l’accueil et attendent ___ chauffeur. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "sont / leur"
+        },
+        {
+          "id": "o2",
+          "text": "son / leur"
+        },
+        {
+          "id": "o3",
+          "text": "sont / leurs"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "« Sont » est le verbe être au pluriel. Devant le nom singulier « chauffeur », le déterminant possessif est « leur », sans s.",
+      "module": "D",
+      "lesson_refs": [
+        "D.09"
+      ],
+      "sources": []
+    },
+    {
+      "id": "exam-annales-2023-e-04",
+      "prompt": "\"To demand\" signifie :",
+      "options": [
+        {
+          "id": "a",
+          "text": "exiger"
+        },
+        {
+          "id": "b",
+          "text": "supplier"
+        },
+        {
+          "id": "c",
+          "text": "demander"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« To demand » signifie exiger. Pour demander poliment, utilisez plutôt « to ask » ou « could you…? ». C’est un faux ami : il ne faut pas traduire automatiquement demander par demand.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-04",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2021-c-03",
+      "prompt": "Vous êtes au volant de votre véhicule et recevez un appel sur votre téléphone portable. Vous prenez le téléphone en main, vous encourez :",
+      "options": [
+        {
+          "id": "a",
+          "text": "un retrait d'un point"
+        },
+        {
+          "id": "b",
+          "text": "un retrait de deux points"
+        },
+        {
+          "id": "c",
+          "text": "un retrait de trois points"
+        }
+      ],
+      "answer": "c",
+      "explanation": "L'usage d'un téléphone tenu en main au volant est sanctionné par le retrait de trois points, en plus de l'amende applicable. La bonne méthode consiste à préparer les communications avant de partir et à s'arrêter dans un endroit autorisé pour manipuler le téléphone.",
+      "module": "C",
+      "sources": [
+        [
+          "Barème des retraits de points — Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F31551"
+        ]
+      ],
+      "lesson_refs": [
+        "C.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 6,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-07",
+      "prompt": "Quelle est la marque de votre voiture ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "What brand is your car?"
+        },
+        {
+          "id": "b",
+          "text": "How is your car?"
+        },
+        {
+          "id": "c",
+          "text": "Is that your car?"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« What brand is your car? » demande la marque du véhicule. « How is your car? » porte sur son état et « Is that your car? » demande si ce véhicule est le vôtre. La formulation fréquente « What make is your car? » convient aussi.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-07",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-c-07",
+      "prompt": "Dans quel cas l'arrêt est-il autorisé sur la bande d'arrêt d'urgence de l'autoroute ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "en cas de panne ou d'accident"
+        },
+        {
+          "id": "b",
+          "text": "jamais"
+        },
+        {
+          "id": "c",
+          "text": "dans tous les cas"
+        },
+        {
+          "id": "d",
+          "text": "pour téléphoner"
+        }
+      ],
+      "answer": "a",
+      "explanation": "La bande d’arrêt d’urgence sert aux situations d’urgence, notamment panne ou accident. Un appel téléphonique ou une pause de confort ne justifie pas de s’y arrêter. Recherchez un emplacement sécurisé et suivez les consignes de protection.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-07",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-a-06",
+      "prompt": "Quelle est la signification du terme LOTI ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Loi d'observation des taxis intramuros"
+        },
+        {
+          "id": "b",
+          "text": "Loi d'orientation des transports intérieurs"
+        },
+        {
+          "id": "c",
+          "text": "Loi d'organisation du tourisme intérieur"
+        },
+        {
+          "id": "d",
+          "text": "Loi d'orientation du tourisme interne"
+        }
+      ],
+      "answer": "b",
+      "explanation": "LOTI signifie Loi d’orientation des transports intérieurs. Cet acronyme désigne la loi du 30 décembre 1982 ; ce n’est ni une loi propre aux taxis intramuros, ni une dénomination du tourisme.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-06",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-c-07",
+      "prompt": "Puis-je rajouter moi-même du liquide de refroidissement?",
+      "options": [
+        {
+          "id": "a",
+          "text": "non, cela doit attendre la prochaine révision"
+        },
+        {
+          "id": "b",
+          "text": "non, il faut aller chez le garagiste"
+        },
+        {
+          "id": "c",
+          "text": "oui, mais avec le moteur chaud"
+        },
+        {
+          "id": "d",
+          "text": "oui, mais avec le moteur froid"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Le contrôle et l’appoint du liquide de refroidissement se font moteur froid, en suivant la notice. Un circuit chaud peut être sous pression et provoquer des brûlures ; ouvrir le bouchon immédiatement après avoir roulé n’est pas la bonne procédure.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-07",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-03",
+      "prompt": "Pouvez-vous attendre quelques minutes ? Mon ami arrive.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Could you wait a couple of minutes ? My friend would arrive"
+        },
+        {
+          "id": "b",
+          "text": "Could you wait a couple of minutes ? My friend is coming"
+        },
+        {
+          "id": "c",
+          "text": "Are you waiting a couple of minutes ? My friend is coming"
+        }
+      ],
+      "answer": "b",
+      "explanation": "« Could you wait a couple of minutes? » formule une demande polie d’attente. « My friend is coming » indique que l’ami est en train d’arriver ; « would arrive » exprimerait une autre modalité et « Are you waiting » n’est pas la même demande.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-03",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-b-02",
+      "prompt": "Expliquez la différence entre une charge fixe et une charge variable.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une charge fixe dépend peu du volume de courses à court terme ; une charge variable évolue avec l’activité."
+        },
+        {
+          "id": "b",
+          "text": "Une charge fixe est toujours payée comptant ; une charge variable est toujours payée à crédit."
+        },
+        {
+          "id": "c",
+          "text": "Une charge fixe correspond à tout achat de véhicule ; une charge variable correspond à toutes les factures mensuelles."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Une charge fixe varie peu avec le nombre de courses à court terme, par exemple le loyer mensuel du véhicule. Une charge variable évolue avec l’activité, par exemple le carburant lié aux kilomètres. Une charge peut aussi comprendre une part fixe et une part variable.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-02",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "vtc-d-independent-01",
+      "prompt": "Un message indique : « Rendez-vous à 8 h 15, entrée du personnel, derrière le bâtiment principal. » Vous cherchez uniquement où accueillir le client. Quelle information devez-vous retenir ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "L’entrée du personnel, derrière le bâtiment principal."
+        },
+        {
+          "id": "o2",
+          "text": "L’entrée principale du bâtiment."
+        },
+        {
+          "id": "o3",
+          "text": "Le rendez-vous à 8 h 15."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’objectif de lecture est ici de trouver un lieu. L’horaire est exact mais ne répond pas à cette recherche ; l’entrée du personnel est distincte de l’entrée principale.",
+      "module": "D",
+      "lesson_refs": [
+        "D.01"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-g-independent-05",
+      "prompt": "Un hôtel réserve à 14 h un transport pour 16 h. Au contrôle, le conducteur peut afficher uniquement le message « client à récupérer », sans identité du client ni horaire de réservation. Quel dossier préparez-vous avant la mission ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Une attestation à créer après l’arrivée du client si un contrôle a effectivement lieu"
+        },
+        {
+          "id": "o1",
+          "text": "Un justificatif complet de la réservation antérieure, rattaché à ce client et à cette prise en charge"
+        },
+        {
+          "id": "o2",
+          "text": "Le seul message de l’hôtel, car une réservation téléphonique dispense de toute autre preuve"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La réalité d’une réservation antérieure et les informations exigées doivent pouvoir être justifiées. Un message trop vague ne relie pas suffisamment la commande à la mission ; fabriquer la preuve après coup n’établit pas sa chronologie.",
+      "module": "G",
+      "lesson_refs": [
+        "G.05"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Obligations du transport public particulier de personnes",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2022-f-07",
+      "prompt": "Quelle est la première étape d'une stratégie commerciale d'un chauffeur VTC ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le marketing mix"
+        },
+        {
+          "id": "b",
+          "text": "Le plan d'action"
+        },
+        {
+          "id": "c",
+          "text": "L'étude de marché"
+        }
+      ],
+      "answer": "c",
+      "explanation": "L’étude de marché précède le choix détaillé des actions commerciales : identifier clients, besoins, concurrence et territoire. Le marketing mix organise ensuite l’offre, le prix, la distribution et la communication ; le plan d’action met la stratégie en œuvre.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-07",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-d-independent-09",
+      "prompt": "Le chauffeur a placé les valises près du chariot. Il les charge ensuite dans le coffre. Que remplace le pronom « les » ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Le chauffeur et le chariot."
+        },
+        {
+          "id": "o2",
+          "text": "Les valises."
+        },
+        {
+          "id": "o3",
+          "text": "Le chariot."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "« Les » est un pronom complément pluriel qui reprend les valises. Le chariot est singulier ; « il » désigne le chauffeur.",
+      "module": "D",
+      "lesson_refs": [
+        "D.04"
+      ],
+      "sources": []
+    },
+    {
+      "id": "exam-annales-2021-a-04",
+      "prompt": "Qui agrée les organismes de formation continue des conducteurs de T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Les préfectures."
+        },
+        {
+          "id": "b",
+          "text": "Les chambres de métiers et de l’artisanat, sans décision préfectorale."
+        },
+        {
+          "id": "c",
+          "text": "Les organismes assureurs du centre."
+        }
+      ],
+      "answer": "a",
+      "explanation": "L'agrément d'un centre de formation T3P relève de l'autorité préfectorale. Il faut distinguer cet agrément du centre, la carte du conducteur et l'inscription de l'exploitant au REVTC.",
+      "module": "A",
+      "sources": [
+        [
+          "Code des transports — agrément des centres, R3120-9",
+          "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048387"
+        ]
+      ],
+      "lesson_refs": [
+        "A.02",
+        "A.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-04",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-e-19",
+      "prompt": "Don't worry, I can drive you there :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pas d'ennui, je peux vous y conduire"
+        },
+        {
+          "id": "b",
+          "text": "Pas de quoi, je peux vous y conduire"
+        },
+        {
+          "id": "c",
+          "text": "Pas de soucis, je peux vous y conduire"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« Don’t worry » rassure : ne vous inquiétez pas, pas de souci. « I can drive you there » signifie je peux vous y conduire. « Pas de quoi » répond plutôt à un remerciement.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.09"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-19",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "vtc-g-independent-01",
+      "prompt": "Vous créez une entreprise VTC et détenez déjà votre carte professionnelle personnelle. Un hôtel propose une première mission, mais votre entreprise n’est pas encore inscrite au registre des exploitants. Quelle vérification manque avant de commencer ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "La copie de la carte professionnelle jointe au devis, qui remplace l’inscription de l’entreprise"
+        },
+        {
+          "id": "o3",
+          "text": "La confirmation écrite de l’hôtel, qui autorise l’activité dès la première commande"
+        },
+        {
+          "id": "o1",
+          "text": "La finalisation de l’inscription de l’exploitant au REVTC, distincte de la carte du conducteur"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La carte concerne l’aptitude professionnelle du conducteur ; le registre concerne l’exploitant. Une commande ne remplace pas cette inscription. Le dossier d’entreprise doit être conforme avant le démarrage des transports.",
+      "module": "G",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        },
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2021-c-14",
+      "prompt": "La durée du temps de réaction est d'environ:",
+      "options": [
+        {
+          "id": "a",
+          "text": "1/2 seconde"
+        },
+        {
+          "id": "b",
+          "text": "1/10 ième de seconde"
+        },
+        {
+          "id": "c",
+          "text": "1 seconde"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Une seconde est un repère courant pour le temps de réaction d'un conducteur attentif. Pendant ce délai, le véhicule continue à avancer avant le début du freinage. Fatigue, alcool, stupéfiants et distraction peuvent allonger ce temps.",
+      "module": "C",
+      "sources": [],
+      "lesson_refs": [
+        "C.03",
+        "C.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-14",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-a-13",
+      "prompt": "La réglementation du T3P se trouve dans le :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Code préfectoral"
+        },
+        {
+          "id": "b",
+          "text": "Code des transports"
+        },
+        {
+          "id": "c",
+          "text": "Code pénal"
+        },
+        {
+          "id": "d",
+          "text": "Code du travail"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le Code des transports contient le cadre sectoriel du transport public particulier de personnes. Il s’articule avec d’autres textes, notamment Code de la route, assurances et droit pénal. La question recherche le code organisant spécifiquement le T3P.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.01",
+        "A.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-13",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-a-09",
+      "prompt": "Quels types de personnalités peuvent être associées avec voix consultative aux travaux des membres de la commission locale des T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un collège de représentants des professionnels (syndicats, organisations professionnelles)"
+        },
+        {
+          "id": "b",
+          "text": "Les représentants des organisations professionnelles des centrales de réservation des transports publics particuliers de personnes"
+        },
+        {
+          "id": "c",
+          "text": "Un collège de représentants de l'État (ex : préfet ou son représentant, DDPP, représentant de la gendarmerie/police nationale, ….)"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Les représentants des centrales de réservation peuvent être associés avec voix consultative. Les représentants de l’État et des professionnels composent déjà des collèges de la commission ; participer à un collège et être invité à titre consultatif sont deux statuts différents.",
+      "module": "A",
+      "sources": [
+        [
+          "Code des transports · obligations générales des conducteurs et commissions locales",
+          "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        ]
+      ],
+      "lesson_refs": [
+        "A.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-09",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-g-independent-16",
+      "prompt": "Lors de la préparation du véhicule, la signalétique de l’exploitant est en place mais la carte professionnelle du conducteur est absente. Le conducteur propose de montrer uniquement la vignette en cas de contrôle. Quelle distinction doit-il faire ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "La vignette et la carte sont deux exemplaires du même document et peuvent se remplacer"
+        },
+        {
+          "id": "o3",
+          "text": "La carte n’a plus d’utilité dès que l’exploitant dispose de plusieurs véhicules"
+        },
+        {
+          "id": "o1",
+          "text": "La vignette identifie le véhicule dans l’activité VTC ; elle ne remplace pas le titre professionnel du conducteur"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La conformité du véhicule et celle du conducteur sont deux vérifications distinctes. Présenter une signalétique ne démontre pas que la personne qui conduit détient le titre requis.",
+      "module": "G",
+      "lesson_refs": [
+        "G.04"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        },
+        {
+          "title": "Code des transports — Article R3122-8, signalétique VTC",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000034389549/2026-05-03"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2023-b-05",
+      "prompt": "Au 1er janvier N, j'achète un véhicule 20 000 € HT amortissable linéairement sur 4 ans et un ordinateur portable 600 € HT amortissable linéairement sur 3 ans. Quel sera le montant de la dotation d'amortissement déductible sur les charges d'entreprise en année N ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "5 200 €"
+        },
+        {
+          "id": "b",
+          "text": "4 198 €"
+        },
+        {
+          "id": "c",
+          "text": "10 400 €"
+        },
+        {
+          "id": "d",
+          "text": "5 300 €"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Dans les hypothèses scolaires données, l’annuité du véhicule est 20 000 ÷ 4 = 5 000 €, celle de l’ordinateur 600 ÷ 3 = 200 €, soit 5 200 €. On raisonne sur une année entière et sur les bases amortissables indiquées, hors particularités fiscales non précisées.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.03",
+        "B.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-05",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-a-11",
+      "prompt": "Quelles sont les sanctions administratives encourues par un conducteur de T3P en cas de violation de la réglementation de la profession ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Suspension automatique du permis pour chaque réclamation commerciale."
+        },
+        {
+          "id": "b",
+          "text": "Avertissement, retrait temporaire ou retrait définitif de la carte professionnelle."
+        },
+        {
+          "id": "c",
+          "text": "Amende pénale, emprisonnement ou travail d’intérêt général prononcés par la préfecture."
+        }
+      ],
+      "answer": "b",
+      "explanation": "L’autorité administrative peut prononcer un avertissement ou retirer temporairement ou définitivement la carte professionnelle. Ces mesures sont distinctes d’une amende ou d’une peine d’emprisonnement décidées au titre pénal.",
+      "module": "A",
+      "sources": [
+        [
+          "Code des transports · article L3124-11, sanctions administratives",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000033745438"
+        ]
+      ],
+      "lesson_refs": [
+        "A.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-11",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-b-07",
+      "prompt": "Quelle est la durée de validité d'un chèque ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "10 ans et 8 jours"
+        },
+        {
+          "id": "b",
+          "text": "1 an et 8 jours"
+        },
+        {
+          "id": "c",
+          "text": "6 mois"
+        },
+        {
+          "id": "d",
+          "text": "3 mois et 5 jours"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Pour un chèque émis et payable en France métropolitaine, la durée d’encaissement est un an et huit jours à compter de la date inscrite. Cette durée ne doit pas être confondue avec la disponibilité réelle de la provision ni avec la durée de conservation des justificatifs.",
+      "module": "B",
+      "sources": [
+        [
+          "Paiement par chèque · Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F2402"
+        ]
+      ],
+      "lesson_refs": [
+        "B.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-07",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-f-01",
+      "prompt": "Le prix psychologique correspond :",
+      "options": [
+        {
+          "id": "a",
+          "text": "au prix dont se souvient le consommateur"
+        },
+        {
+          "id": "b",
+          "text": "au prix que le consommateur est prêt à payer pour acheter le produit/la prestation"
+        },
+        {
+          "id": "c",
+          "text": "au prix de référence pour une catégorie de produits/prestations"
+        },
+        {
+          "id": "d",
+          "text": "au prix perçu par le consommateur"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le prix psychologique est le prix que le client est prêt à accepter pour le produit ou le service. Il s’analyse avec le coût de revient et les prix du marché ; un prix simplement mémorisé ou affiché par un concurrent n’est pas sa définition.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-f-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 16,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-05",
+      "prompt": "Ma voiture ne démarre pas :",
+      "options": [
+        {
+          "id": "a",
+          "text": "my car shouldn't start"
+        },
+        {
+          "id": "b",
+          "text": "my car didn't start"
+        },
+        {
+          "id": "c",
+          "text": "my car doesn't start"
+        }
+      ],
+      "answer": "c",
+      "explanation": "« My car doesn’t start » exprime le problème actuel : ma voiture ne démarre pas. « Didn’t start » le situe dans le passé et « shouldn’t start » signifie qu’elle ne devrait pas démarrer.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-05",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-b-10",
+      "prompt": "Citez 2 modes de transmission d'une entreprise.",
+      "options": [
+        {
+          "id": "a",
+          "text": "La vente et la donation."
+        },
+        {
+          "id": "b",
+          "text": "L’amortissement et la déclaration de TVA."
+        },
+        {
+          "id": "c",
+          "text": "Le paiement d’un fournisseur et le retrait du dirigeant."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La transmission peut être réalisée à titre onéreux par une vente ou à titre gratuit par une donation. Le décès peut aussi conduire à une transmission successorale. Distinguez la transmission d’une activité de sa cessation sans repreneur.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-10",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2021-b-07",
+      "prompt": "Qui attribue le code APE d'une entreprise ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "URSSAF"
+        },
+        {
+          "id": "b",
+          "text": "SSI"
+        },
+        {
+          "id": "c",
+          "text": "CMA"
+        },
+        {
+          "id": "d",
+          "text": "INSEE"
+        }
+      ],
+      "answer": "d",
+      "explanation": "L'Insee attribue le code APE à partir de l'activité principale déclarée. Ce code permet de classer statistiquement l'entreprise ; il ne vaut pas à lui seul autorisation d'exercer une profession réglementée.",
+      "module": "B",
+      "sources": [
+        [
+          "Attribution et modification du code APE — Insee",
+          "https://www.insee.fr/fr/information/7614104"
+        ]
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-07",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "independent-f-09",
+      "prompt": "Un client effectue une première course. Le chauffeur souhaite réutiliser son numéro pour des offres promotionnelles. Quelle démarche respecte la finalité initiale des données ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Considérer la réservation comme un accord permanent à toute publicité."
+        },
+        {
+          "id": "b",
+          "text": "Transmettre le numéro à un partenaire qui se chargera de demander ensuite."
+        },
+        {
+          "id": "c",
+          "text": "Vérifier les conditions applicables à la prospection et informer le client avant une réutilisation commerciale."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Une coordonnée collectée pour exécuter une course ne devient pas librement réutilisable. La prospection demande de vérifier sa base et l’information du client.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.09"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "exam-annales-2022-b-14",
+      "prompt": "Lors de la création d'une société, la publication d'une annonce légale est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "obligatoire"
+        },
+        {
+          "id": "b",
+          "text": "nécessaire pour faire de la publicité"
+        },
+        {
+          "id": "c",
+          "text": "facultative"
+        }
+      ],
+      "answer": "a",
+      "explanation": "La constitution d’une société nécessite la publication d’un avis dans un support habilité à recevoir des annonces légales. Cette formalité informe juridiquement les tiers ; elle n’a pas la même fonction qu’une publicité destinée à trouver des clients.",
+      "module": "B",
+      "sources": [
+        [
+          "Service Public · Formalités d’immatriculation d’une société",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F35934"
+        ]
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-14",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-f-14",
+      "prompt": "Le panier moyen est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "la taille des achats à charger dans le coffre"
+        },
+        {
+          "id": "b",
+          "text": "la moyenne des achats par client"
+        },
+        {
+          "id": "c",
+          "text": "la taille moyenne des paniers de courses en France"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le panier moyen mesure le montant moyen des achats ou prestations par client ou commande selon la définition retenue. Il se calcule en divisant le chiffre d'affaires du périmètre par le nombre correspondant ; il faut conserver la même définition pour comparer les périodes.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-14",
+      "source_title": "Annales VTC 2021",
+      "source_page": 15,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-c-15",
+      "prompt": "Dans le cas où plusieurs infractions entrainant un retrait de points seraient commises simultanément, la perte maximale de points est de :",
+      "options": [
+        {
+          "id": "a",
+          "text": "6 points"
+        },
+        {
+          "id": "b",
+          "text": "12 points"
+        },
+        {
+          "id": "c",
+          "text": "8 points"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Pour plusieurs infractions commises simultanément, le retrait est plafonné à huit points. Un permis probatoire disposant de six points peut néanmoins perdre tout son solde. Le plafond ne signifie pas qu’un conducteur conserve forcément son droit de conduire.",
+      "module": "C",
+      "sources": [
+        [
+          "Retrait simultané de points · Service Public",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F11863"
+        ]
+      ],
+      "lesson_refs": [
+        "C.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-c-15",
+      "source_title": "28 mars 2023 · Sécurité routière",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "vtc-d-independent-05",
+      "prompt": "Le courriel indique : « L’accueil ferme à 19 heures ; les personnes déjà présentes peuvent rester jusqu’à 19 h 30. » Quelle affirmation reprend exactement le texte ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "De nouvelles personnes peuvent entrer jusqu’à 19 h 30."
+        },
+        {
+          "id": "o2",
+          "text": "Toutes les personnes doivent quitter les lieux à 19 heures."
+        },
+        {
+          "id": "o3",
+          "text": "Les personnes déjà présentes peuvent rester après la fermeture de l’accueil."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Le texte distingue la fermeture de l’accueil et l’heure limite pour les personnes déjà présentes. Il n’autorise pas explicitement de nouvelles entrées après 19 heures.",
+      "module": "D",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-g-independent-13",
+      "prompt": "L’entreprise déménage son siège et ajoute un véhicule, mais conserve son nom commercial. Le responsable estime que son ancien dossier REVTC peut rester inchangé. Quelle action organisez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Conserver l’ancien dossier tant que le nom visible sur les devis ne change pas"
+        },
+        {
+          "id": "o3",
+          "text": "Mettre uniquement à jour le site commercial, qui remplace la mise à jour du registre"
+        },
+        {
+          "id": "o1",
+          "text": "Identifier les changements à déclarer et actualiser les données et justificatifs du registre selon la procédure applicable"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le registre suit la situation de l’exploitant et de son activité. La stabilité du nom commercial ne rend pas les autres informations exactes ; les changements concernés doivent être rapprochés du dossier officiel.",
+      "module": "G",
+      "lesson_refs": [
+        "G.01"
+      ],
+      "sources": [
+        {
+          "title": "Registre VTC — Informations générales et capacité financière",
+          "url": "https://registre-vtc.developpement-durable.gouv.fr/public/aide/informations-generales"
+        }
+      ]
+    },
+    {
+      "id": "independent-a-02",
+      "prompt": "Un nouveau contrat automobile porte la mention « usage privé ». Quel point bloque son utilisation pour une activité VTC rémunérée ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "La preuve de paiement de la prime suffit quel que soit l’usage déclaré."
+        },
+        {
+          "id": "b",
+          "text": "La garantie doit couvrir explicitement le transport rémunéré de personnes."
+        },
+        {
+          "id": "c",
+          "text": "Le contrat doit seulement mentionner une utilisation quotidienne."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le risque assuré doit correspondre à l’activité réelle. Un paiement à jour n’étend pas automatiquement une assurance privée au transport rémunéré.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.05"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "vtc-g-independent-09",
+      "prompt": "Le devis d’un transfert fixe un prix de 68 € TTC, sans supplément indiqué. Avant de confirmer, le client demande un arrêt supplémentaire que vous facturez habituellement. Comment modifiez-vous l’offre ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Préciser le service ajouté et son prix ou mode de calcul, puis faire accepter le nouveau périmètre"
+        },
+        {
+          "id": "o2",
+          "text": "Confirmer les 68 € TTC et ajouter votre supplément habituel seulement sur la note finale"
+        },
+        {
+          "id": "o3",
+          "text": "Conserver le devis initial et considérer la demande d’arrêt comme une acceptation de tout supplément"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La liberté tarifaire exige une information claire. La demande d’un service supplémentaire ne vaut pas acceptation d’un coût non annoncé ; l’accord doit porter sur la modification et ses conditions.",
+      "module": "G",
+      "lesson_refs": [
+        "G.09"
+      ],
+      "sources": [
+        {
+          "title": "DGCCRF — Information sur les prix et frais supplémentaires",
+          "url": "https://www.economie.gouv.fr/dgccrf/les-fiches-pratiques/linformation-sur-les-prix"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2023-a-08",
+      "prompt": "Le stage de formation continue dispensé aux conducteurs de transport public routier particulier de personnes permet d'obtenir une attestation valable :",
+      "options": [
+        {
+          "id": "a",
+          "text": "2 ans"
+        },
+        {
+          "id": "b",
+          "text": "10 ans"
+        },
+        {
+          "id": "c",
+          "text": "5 ans"
+        },
+        {
+          "id": "d",
+          "text": "1 an"
+        }
+      ],
+      "answer": "c",
+      "explanation": "La formation continue du conducteur doit être renouvelée tous les cinq ans et donne lieu à une attestation. Sa date doit être suivie séparément des autres échéances : permis, aptitude médicale, assurances et contrôle du véhicule.",
+      "module": "A",
+      "sources": [
+        [
+          "Devenir chauffeur VTC · Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "A.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-08",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2021-f-06",
+      "prompt": "En cas de retard très important du client, que faites-vous ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Contacter le client, réévaluer l’attente et proposer un remplaçant si les engagements suivants l’exigent."
+        },
+        {
+          "id": "b",
+          "text": "Partir sans contacter le client dès que l’horaire est dépassé."
+        },
+        {
+          "id": "c",
+          "text": "Accepter de l’attendre sans limite sans vérifier les autres réservations."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Si le client est fortement retardé, le contacter pour estimer son heure d'arrivée et vérifier les engagements suivants. Si l'attente compromet une autre course, proposer avec son accord une solution de remplacement ; expliquer les conditions d'attente convenues et garder une trace du nouvel accord.",
+      "module": "F",
+      "sources": [],
+      "lesson_refs": [
+        "F.10",
+        "H.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-f-06",
+      "source_title": "Annales VTC 2021",
+      "source_page": 14,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2023-b-13",
+      "prompt": "Qu'appelle-t-on TVA collectée ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "la TVA reversée à l'état après déduction de la TVA sur les achats"
+        },
+        {
+          "id": "b",
+          "text": "la TVA acquittée par l'artisan lorsqu'il achète des biens et services"
+        },
+        {
+          "id": "c",
+          "text": "la TVA acquittée par le client lors du règlement de la prestation"
+        }
+      ],
+      "answer": "c",
+      "explanation": "La TVA collectée est la TVA facturée au client sur les ventes/prestations imposables. Pour une prestation de services, l’exigibilité suit en principe l’encaissement, sauf option ou règle particulière. TVA nette à reverser = TVA collectée exigible − TVA déductible, sous réserve des règles applicables.",
+      "module": "B",
+      "sources": [
+        [
+          "TVA des transports de voyageurs · BOFiP",
+          "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+        ]
+      ],
+      "lesson_refs": [
+        "B.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-13",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "vtc-d-independent-13",
+      "prompt": "Le chauffeur écrit : « Je devrais arriver vers 16 heures. » Quelle reformulation respecte la nuance du message ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "L’arrivée est estimée autour de 16 heures."
+        },
+        {
+          "id": "o2",
+          "text": "L’arrivée est garantie exactement à 16 heures."
+        },
+        {
+          "id": "o3",
+          "text": "Le chauffeur arrivera nécessairement après 16 heures."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le conditionnel « devrais » et le mot « vers » expriment une estimation. Ils ne fixent ni une heure certaine ni un retard obligatoire.",
+      "module": "D",
+      "lesson_refs": [
+        "D.06"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-g-independent-20",
+      "prompt": "Vous terminez une prestation et disposez déjà d’une réservation suivante documentée, dans un autre quartier. Un collègue affirme que vous devez obligatoirement retourner à votre établissement entre les deux. Quelle analyse retenez-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Considérer qu’une application simplement ouverte constitue toujours une réservation suivante"
+        },
+        {
+          "id": "o1",
+          "text": "Vérifier que la réservation suivante est réelle et justifiable : le texte prévoit cette exception au retour de fin de prestation"
+        },
+        {
+          "id": "o2",
+          "text": "Effectuer systématiquement l’aller-retour jusqu’à l’établissement, même avec une réservation suivante établie"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’article L3122-9 prévoit l’exception liée à une autre réservation préalable ou à un contrat avec le client final. Une mission suivante documentée doit être distinguée d’un simple espoir de recevoir une commande.",
+      "module": "G",
+      "lesson_refs": [
+        "G.08"
+      ],
+      "sources": [
+        {
+          "title": "Code des transports — Article L3122-9, fin de prestation",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029529985/2026-01-27"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2023-a-02",
+      "prompt": "Quelle est la périodicité du contrôle technique ou de l'attestation d'entretien des véhicules du T3P?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tous les ans pour le contrôle technique d’une voiture VTC."
+        },
+        {
+          "id": "b",
+          "text": "Tous les deux ans, comme une voiture particulière à usage privé."
+        },
+        {
+          "id": "c",
+          "text": "Uniquement lors de la revente du véhicule."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Pour une voiture VTC, le contrôle technique est annuel, avec les échéances propres à sa mise en service et à son affectation. Il ne faut pas appliquer la périodicité ordinaire de deux ans des voitures particulières utilisées à titre privé. Le sujet emploie aussi l’attestation d’entretien pour d’autres catégories du T3P.",
+      "module": "A",
+      "sources": [
+        [
+          "Contrôle technique des transports de personnes · Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F22299"
+        ]
+      ],
+      "lesson_refs": [
+        "A.04",
+        "G.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-02",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2021-c-17",
+      "prompt": "Les feux de route éclairent à une distance minimale de :",
+      "options": [
+        {
+          "id": "a",
+          "text": "100 mètres"
+        },
+        {
+          "id": "b",
+          "text": "50 mètres"
+        },
+        {
+          "id": "c",
+          "text": "150 mètres"
+        },
+        {
+          "id": "d",
+          "text": "200 mètres"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les feux de route doivent éclairer efficacement la route, par temps clair et de nuit, sur au moins 100 mètres. Leur portée ne dispense pas d'adapter la vitesse et de repasser en feux de croisement pour éviter d'éblouir.",
+      "module": "C",
+      "sources": [
+        [
+          "Feux de route — article R313-2",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000042266184/2025-11-16"
+        ]
+      ],
+      "lesson_refs": [
+        "C.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-c-17",
+      "source_title": "Annales VTC 2021",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-c-01",
+      "prompt": "Je peux suivre un stage de sensibilisation à la sécurité routière :",
+      "options": [
+        {
+          "id": "a",
+          "text": "une fois tous les 2 ans"
+        },
+        {
+          "id": "b",
+          "text": "trois fois par an"
+        },
+        {
+          "id": "c",
+          "text": "une fois par an"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Pour récupérer des points par un stage volontaire, le permis doit rester valide et le délai minimal entre deux stages donnant récupération est d’un an. Le stage peut rendre jusqu’à quatre points dans la limite du plafond applicable. « Une fois par an » ne signifie pas un nouveau droit dès chaque 1er janvier.",
+      "module": "C",
+      "sources": [
+        [
+          "Service Public · Stage de sensibilisation à la sécurité routière",
+          "https://www.service-public.gouv.fr/particuliers/vosdroits/F14208?edit=1"
+        ]
+      ],
+      "lesson_refs": [
+        "A.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-c-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 7,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-d-independent-18",
+      "prompt": "Vous racontez deux actions passées : le client avait réservé avant votre arrivée. Quelle phrase respecte cet ordre ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Quand je suis arrivé, le client va réserver demain."
+        },
+        {
+          "id": "o2",
+          "text": "Quand je suis arrivé, le client avait déjà réservé."
+        },
+        {
+          "id": "o3",
+          "text": "Quand je suis arrivé, le client réservera déjà."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Le plus-que-parfait « avait réservé » situe la réservation avant l’arrivée passée, exprimée par « suis arrivé ». Les autres choix introduisent un futur incompatible avec l’ordre demandé.",
+      "module": "D",
+      "lesson_refs": [
+        "D.08"
+      ],
+      "sources": []
+    },
+    {
+      "id": "exam-annales-2021-a-06",
+      "prompt": "Quelle est l'ancienneté maximum pour un véhicule hybride ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "6 ans"
+        },
+        {
+          "id": "b",
+          "text": "aucune"
+        },
+        {
+          "id": "c",
+          "text": "7 ans"
+        },
+        {
+          "id": "d",
+          "text": "2 ans"
+        }
+      ],
+      "answer": "b",
+      "explanation": "L'exception d'ancienneté vise les véhicules VTC hybrides et électriques. Elle ne supprime pas les obligations générales de sécurité, d'assurance et de contrôle technique. Il faut vérifier l'éligibilité du véhicule avec ses caractéristiques exactes.",
+      "module": "A",
+      "sources": [
+        [
+          "Devenir chauffeur de VTC — Service Public",
+          "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        ]
+      ],
+      "lesson_refs": [
+        "G.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-06",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-e-01",
+      "prompt": "I need a taxi for tomorrow afternoon :",
+      "options": [
+        {
+          "id": "a",
+          "text": "J'ai besoin d'un taxi pour demain après-midi"
+        },
+        {
+          "id": "b",
+          "text": "J'ai besoin d'un taxi pour demain"
+        },
+        {
+          "id": "c",
+          "text": "J'ai besoin d'un taxi pour cet après-midi"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« I need » signifie « j’ai besoin » et « tomorrow afternoon » signifie « demain après-midi ». Conserver la précision de l’après-midi évite de transformer la réservation en simple demande pour demain ou pour aujourd’hui.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.02",
+        "E.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-e-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 12,
+      "correction_origin": "source"
+    },
+    {
+      "id": "vtc-g-independent-22",
+      "prompt": "Un conducteur remplaçant est disponible, mais il présente une ancienne carte professionnelle expirée et une attestation d’emploi récente. Le véhicule et son assurance sont conformes. Quelle décision prenez-vous ?",
+      "options": [
+        {
+          "id": "o2",
+          "text": "Accepter l’attestation d’emploi comme renouvellement automatique de la carte expirée"
+        },
+        {
+          "id": "o3",
+          "text": "Laisser le conducteur utiliser votre propre carte puisque le véhicule appartient à l’entreprise"
+        },
+        {
+          "id": "o1",
+          "text": "Exiger la justification d’un titre professionnel actuellement valable avant de lui confier la mission"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’attestation d’emploi ne prolonge pas un titre expiré et une carte personnelle ne se prête pas. La conformité du véhicule ne corrige pas l’absence de justification professionnelle du remplaçant.",
+      "module": "G",
+      "lesson_refs": [
+        "G.10"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "exam-annales-2023-e-07",
+      "prompt": "Mettez votre ceinture de sécurité :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Fasten your seat belt"
+        },
+        {
+          "id": "b",
+          "text": "Unfasten your seat belt"
+        },
+        {
+          "id": "c",
+          "text": "Sit on your seat belt"
+        }
+      ],
+      "answer": "a",
+      "explanation": "« Fasten your seat belt » demande d’attacher sa ceinture. « Unfasten » signifie détacher et « sit on » s’asseoir sur. Ajoutez « please » pour une consigne courtoise.",
+      "module": "E",
+      "sources": [],
+      "lesson_refs": [
+        "E.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-e-07",
+      "source_title": "28 mars 2023 · Anglais",
+      "source_page": 2,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "vtc-g-independent-11",
+      "prompt": "Le contrôle technique requis pour votre activité arrive à échéance lundi. Le centre ne peut vous recevoir que jeudi et une mission est prévue mardi. Quel raisonnement retenez-vous ?",
+      "options": [
+        {
+          "id": "o3",
+          "text": "Effectuer seulement des trajets courts jusqu’à jeudi, car la distance remplace la validité du contrôle"
+        },
+        {
+          "id": "o1",
+          "text": "Ne pas considérer le rendez-vous de jeudi comme une prolongation ; organiser un véhicule conforme ou avancer le contrôle"
+        },
+        {
+          "id": "o2",
+          "text": "Effectuer la mission mardi en conservant la preuve du rendez-vous, qui proroge automatiquement la validité"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Une prise de rendez-vous ne prolonge pas la validité du contrôle requis. Il faut anticiper l’échéance et garantir que le véhicule affecté à la mission est conforme le jour où elle est réalisée.",
+      "module": "G",
+      "lesson_refs": [
+        "G.11"
+      ],
+      "sources": [
+        {
+          "title": "Service Public Entreprendre — Devenir chauffeur VTC",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ]
+    },
+    {
+      "id": "vtc-d-independent-03",
+      "prompt": "Le client écrit : « Mon train arrive à 14 h 08. Retrouvez-moi à 14 h 25 devant la sortie nord, et non devant la sortie sud. » Quel rendez-vous est explicitement demandé ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "À 14 h 25 devant la sortie sud."
+        },
+        {
+          "id": "o2",
+          "text": "À 14 h 25 devant la sortie nord."
+        },
+        {
+          "id": "o3",
+          "text": "À 14 h 08 devant la sortie nord."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Deux horaires et deux sorties apparaissent. Il faut associer l’horaire de rendez-vous à la sortie retenue, en tenant compte de la négation « et non ».",
+      "module": "D",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "sources": []
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 66,
+    "original_questions": 34
+  }
+}

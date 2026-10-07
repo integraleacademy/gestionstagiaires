@@ -1,0 +1,766 @@
+{
+  "id": "vtc-d",
+  "version": "20261007-vtc-v5-annales",
+  "training_label": "VTC",
+  "title": "VTC · Comprendre et s’exprimer en français · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "vtc-d-independent-01",
+      "prompt": "Un message indique : « Rendez-vous à 8 h 15, entrée du personnel, derrière le bâtiment principal. » Vous cherchez uniquement où accueillir le client. Quelle information devez-vous retenir ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "L’entrée du personnel, derrière le bâtiment principal."
+        },
+        {
+          "id": "o2",
+          "text": "L’entrée principale du bâtiment."
+        },
+        {
+          "id": "o3",
+          "text": "Le rendez-vous à 8 h 15."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "L’objectif de lecture est ici de trouver un lieu. L’horaire est exact mais ne répond pas à cette recherche ; l’entrée du personnel est distincte de l’entrée principale.",
+      "module": "D",
+      "lesson_refs": [
+        "D.01"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-02",
+      "prompt": "La note présente successivement l’adresse du rendez-vous, les travaux dans la rue et les coordonnées de l’accueil. Vous voulez savoir pourquoi l’accès habituel est fermé. Quelle partie devez-vous lire en priorité ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Le passage donnant les coordonnées de l’accueil."
+        },
+        {
+          "id": "o2",
+          "text": "La ligne contenant uniquement l’adresse."
+        },
+        {
+          "id": "o3",
+          "text": "Le passage consacré aux travaux."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "La question porte sur la cause de la fermeture. Une lecture ciblée commence par le passage qui traite des travaux, sans confondre cause, lieu et contact.",
+      "module": "D",
+      "lesson_refs": [
+        "D.01"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-03",
+      "prompt": "Le client écrit : « Mon train arrive à 14 h 08. Retrouvez-moi à 14 h 25 devant la sortie nord, et non devant la sortie sud. » Quel rendez-vous est explicitement demandé ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "À 14 h 25 devant la sortie sud."
+        },
+        {
+          "id": "o2",
+          "text": "À 14 h 25 devant la sortie nord."
+        },
+        {
+          "id": "o3",
+          "text": "À 14 h 08 devant la sortie nord."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Deux horaires et deux sorties apparaissent. Il faut associer l’horaire de rendez-vous à la sortie retenue, en tenant compte de la négation « et non ».",
+      "module": "D",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-04",
+      "prompt": "La réservation précise : « Quatre adultes, dont une personne avec une canne, et deux valises. » Combien d’adultes sont annoncés au total ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Quatre adultes."
+        },
+        {
+          "id": "o2",
+          "text": "Cinq adultes."
+        },
+        {
+          "id": "o3",
+          "text": "Trois adultes."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "« Dont » introduit un élément compris dans l’ensemble : la personne avec une canne fait partie des quatre adultes. Il ne faut pas l’ajouter une seconde fois.",
+      "module": "D",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-05",
+      "prompt": "Le courriel indique : « L’accueil ferme à 19 heures ; les personnes déjà présentes peuvent rester jusqu’à 19 h 30. » Quelle affirmation reprend exactement le texte ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "De nouvelles personnes peuvent entrer jusqu’à 19 h 30."
+        },
+        {
+          "id": "o2",
+          "text": "Toutes les personnes doivent quitter les lieux à 19 heures."
+        },
+        {
+          "id": "o3",
+          "text": "Les personnes déjà présentes peuvent rester après la fermeture de l’accueil."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Le texte distingue la fermeture de l’accueil et l’heure limite pour les personnes déjà présentes. Il n’autorise pas explicitement de nouvelles entrées après 19 heures.",
+      "module": "D",
+      "lesson_refs": [
+        "D.02"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-06",
+      "prompt": "Le rapport mentionne : « Le client est monté à 9 h 12. Il n’a pas parlé pendant le trajet. » Quelle affirmation constitue une interprétation ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Le client n’a pas parlé pendant le trajet."
+        },
+        {
+          "id": "o2",
+          "text": "Le client était mécontent."
+        },
+        {
+          "id": "o3",
+          "text": "Le client est monté à 9 h 12."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Le silence est un fait rapporté. Lui attribuer une cause comme le mécontentement est une interprétation, car d’autres explications restent possibles.",
+      "module": "D",
+      "lesson_refs": [
+        "D.03"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-07",
+      "prompt": "Une note affirme : « Trois rues sont fermées ce matin. Le trajet pourrait durer dix minutes de plus. » Quelle donnée est présentée comme certaine dans cette note ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Trois rues sont fermées ce matin."
+        },
+        {
+          "id": "o2",
+          "text": "Le trajet durera exactement dix minutes de plus."
+        },
+        {
+          "id": "o3",
+          "text": "Les trois rues rouvriront dans dix minutes."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "La fermeture est énoncée comme un fait. « Pourrait » marque une possibilité ; aucune heure de réouverture n’est donnée.",
+      "module": "D",
+      "lesson_refs": [
+        "D.03"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-08",
+      "prompt": "Lina remet la facture à Nora, puis lui demande de la vérifier. Dans « lui demande », qui est désigné par « lui » ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Lina."
+        },
+        {
+          "id": "o2",
+          "text": "La facture."
+        },
+        {
+          "id": "o3",
+          "text": "Nora."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Dans cette phrase, Lina reste le sujet qui demande et Nora est la destinataire de la demande. Le pronom « la », lui, reprend la facture.",
+      "module": "D",
+      "lesson_refs": [
+        "D.04"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-09",
+      "prompt": "Le chauffeur a placé les valises près du chariot. Il les charge ensuite dans le coffre. Que remplace le pronom « les » ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Le chauffeur et le chariot."
+        },
+        {
+          "id": "o2",
+          "text": "Les valises."
+        },
+        {
+          "id": "o3",
+          "text": "Le chariot."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "« Les » est un pronom complément pluriel qui reprend les valises. Le chariot est singulier ; « il » désigne le chauffeur.",
+      "module": "D",
+      "lesson_refs": [
+        "D.04"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-10",
+      "prompt": "Complétez le message en exprimant la cause : « Nous empruntons la rue des Tilleuls, ___ l’avenue principale est fermée. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "car"
+        },
+        {
+          "id": "o2",
+          "text": "pourtant"
+        },
+        {
+          "id": "o3",
+          "text": "puis"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "« Car » introduit la raison de l’itinéraire choisi. « Pourtant » exprime une opposition et « puis » une succession.",
+      "module": "D",
+      "lesson_refs": [
+        "D.05"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-11",
+      "prompt": "Complétez la phrase en exprimant une conséquence : « L’accès est bloqué ; ___, le point de rendez-vous a été déplacé. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "en revanche"
+        },
+        {
+          "id": "o2",
+          "text": "auparavant"
+        },
+        {
+          "id": "o3",
+          "text": "par conséquent"
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Le déplacement résulte du blocage : « par conséquent » marque ce lien. « En revanche » introduit un contraste et « auparavant » situe un événement antérieur.",
+      "module": "D",
+      "lesson_refs": [
+        "D.05"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-12",
+      "prompt": "Lisez : « Bien que la rue soit encombrée, l’accès au parking reste ouvert. » Quelle relation relie les deux informations ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Une succession entre deux fermetures."
+        },
+        {
+          "id": "o2",
+          "text": "Une opposition entre une difficulté et un accès maintenu."
+        },
+        {
+          "id": "o3",
+          "text": "Une cause expliquant la fermeture du parking."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "« Bien que » introduit une concession : malgré l’encombrement, l’accès reste possible. Le texte n’annonce aucune fermeture du parking.",
+      "module": "D",
+      "lesson_refs": [
+        "D.05"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-13",
+      "prompt": "Le chauffeur écrit : « Je devrais arriver vers 16 heures. » Quelle reformulation respecte la nuance du message ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "L’arrivée est estimée autour de 16 heures."
+        },
+        {
+          "id": "o2",
+          "text": "L’arrivée est garantie exactement à 16 heures."
+        },
+        {
+          "id": "o3",
+          "text": "Le chauffeur arrivera nécessairement après 16 heures."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Le conditionnel « devrais » et le mot « vers » expriment une estimation. Ils ne fixent ni une heure certaine ni un retard obligatoire.",
+      "module": "D",
+      "lesson_refs": [
+        "D.06"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-14",
+      "prompt": "La consigne dit : « Seuls les voyageurs munis d’une réservation peuvent emprunter cette navette. » Que signifie « seuls » ici ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Les voyageurs ayant réservé doivent voyager sans accompagnant."
+        },
+        {
+          "id": "o2",
+          "text": "Tous les voyageurs peuvent monter, même sans réservation."
+        },
+        {
+          "id": "o3",
+          "text": "L’accès est réservé aux voyageurs ayant une réservation."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "« Seuls » limite la catégorie autorisée. Il ne décrit pas le fait de voyager sans autre personne.",
+      "module": "D",
+      "lesson_refs": [
+        "D.06"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-15",
+      "prompt": "Le client accepte « un itinéraire alternatif » parce que la route habituelle est coupée. Quel sens a « alternatif » dans ce contexte ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Un itinéraire réservé aux véhicules électriques."
+        },
+        {
+          "id": "o2",
+          "text": "Un autre itinéraire permettant de remplacer le trajet habituel."
+        },
+        {
+          "id": "o3",
+          "text": "Un itinéraire nécessairement plus court."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Une solution alternative constitue un autre choix possible. Le mot ne garantit ni une distance plus courte ni une catégorie particulière de véhicules.",
+      "module": "D",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-16",
+      "prompt": "Le message demande : « Veuillez confirmer la prise en charge. » Dans ce contexte professionnel, que signifie « confirmer » ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Indiquer clairement que la prise en charge est maintenue."
+        },
+        {
+          "id": "o2",
+          "text": "Annuler la prise en charge annoncée."
+        },
+        {
+          "id": "o3",
+          "text": "Modifier obligatoirement l’heure de la prise en charge."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Confirmer, c’est rendre certaine ou valider une information déjà annoncée. Ce verbe ne signifie ni annuler ni modifier systématiquement.",
+      "module": "D",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-17",
+      "prompt": "Le compte rendu précise que le chauffeur est resté « courtois » pendant la réclamation. Quel mot peut remplacer « courtois » ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Pressé."
+        },
+        {
+          "id": "o2",
+          "text": "Indifférent."
+        },
+        {
+          "id": "o3",
+          "text": "Poli."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "La courtoisie concerne la politesse et le respect dans les échanges. Elle ne renseigne pas sur la vitesse d’action et ne signifie pas l’absence d’intérêt.",
+      "module": "D",
+      "lesson_refs": [
+        "D.07"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-18",
+      "prompt": "Vous racontez deux actions passées : le client avait réservé avant votre arrivée. Quelle phrase respecte cet ordre ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Quand je suis arrivé, le client va réserver demain."
+        },
+        {
+          "id": "o2",
+          "text": "Quand je suis arrivé, le client avait déjà réservé."
+        },
+        {
+          "id": "o3",
+          "text": "Quand je suis arrivé, le client réservera déjà."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Le plus-que-parfait « avait réservé » situe la réservation avant l’arrivée passée, exprimée par « suis arrivé ». Les autres choix introduisent un futur incompatible avec l’ordre demandé.",
+      "module": "D",
+      "lesson_refs": [
+        "D.08"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-19",
+      "prompt": "Complétez ce message pour annoncer une action future : « Demain, nous ___ votre déplacement à 7 heures. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "confirmerons"
+        },
+        {
+          "id": "o2",
+          "text": "confirmions"
+        },
+        {
+          "id": "o3",
+          "text": "avons confirmé"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "« Confirmerons » est le futur simple de « confirmer » avec « nous ». « Confirmions » renvoie ici à l’imparfait ; « avons confirmé » au passé composé.",
+      "module": "D",
+      "lesson_refs": [
+        "D.08"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-20",
+      "prompt": "Vous décrivez une habitude passée : « Avant ce changement d’organisation, elle ___ son trajet la veille de chaque déplacement. » Quel verbe convient ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "préparera"
+        },
+        {
+          "id": "o2",
+          "text": "vient de préparer"
+        },
+        {
+          "id": "o3",
+          "text": "préparait"
+        }
+      ],
+      "answer": "o3",
+      "explanation": "L’imparfait « préparait » exprime une action répétée dans le passé. « Préparera » situe l’action dans le futur ; « vient de préparer » indique un passé très récent lié au présent.",
+      "module": "D",
+      "lesson_refs": [
+        "D.08"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-21",
+      "prompt": "Choisissez l’accord correct dans ce message : « Les deux valises sont ___ dans le coffre. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "rangée"
+        },
+        {
+          "id": "o2",
+          "text": "rangées"
+        },
+        {
+          "id": "o3",
+          "text": "rangés"
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Avec « être », le participe passé s’accorde ici avec le sujet « les deux valises », féminin pluriel : « rangées ».",
+      "module": "D",
+      "lesson_refs": [
+        "D.09"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-22",
+      "prompt": "Complétez : « Les clients ___ à l’accueil et attendent ___ chauffeur. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "sont / leur"
+        },
+        {
+          "id": "o2",
+          "text": "son / leur"
+        },
+        {
+          "id": "o3",
+          "text": "sont / leurs"
+        }
+      ],
+      "answer": "o1",
+      "explanation": "« Sont » est le verbe être au pluriel. Devant le nom singulier « chauffeur », le déterminant possessif est « leur », sans s.",
+      "module": "D",
+      "lesson_refs": [
+        "D.09"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-23",
+      "prompt": "Complétez : « Le client ___ rendez-vous ___ la sortie ouest. »",
+      "options": [
+        {
+          "id": "o1",
+          "text": "à / a"
+        },
+        {
+          "id": "o2",
+          "text": "a / a"
+        },
+        {
+          "id": "o3",
+          "text": "a / à"
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Le premier mot est le verbe avoir : « avait rendez-vous » permet de le vérifier. Le second introduit un lieu et s’écrit « à » avec accent.",
+      "module": "D",
+      "lesson_refs": [
+        "D.09"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-24",
+      "prompt": "Le texte précise : « Le point de départ a changé parce que la place accueille un marché. » On vous demande pourquoi le départ a changé. Quelle réponse est la plus directe ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Le marché propose des produits locaux."
+        },
+        {
+          "id": "o2",
+          "text": "Parce qu’un marché occupe la place."
+        },
+        {
+          "id": "o3",
+          "text": "Le point de départ a changé."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Une question introduite par « pourquoi » attend la cause. Répéter le changement ne l’explique pas ; les produits du marché ne sont pas mentionnés.",
+      "module": "D",
+      "lesson_refs": [
+        "D.10"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-25",
+      "prompt": "La note indique : « L’équipe a installé un panneau et envoyé un SMS pour signaler le nouvel accès. » On vous demande de citer deux moyens d’information. Quelle réponse est complète ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Un panneau et un SMS."
+        },
+        {
+          "id": "o2",
+          "text": "Un panneau et le nouvel accès."
+        },
+        {
+          "id": "o3",
+          "text": "L’équipe et un SMS."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Les deux moyens utilisés sont le panneau et le SMS. L’équipe est l’auteur de l’action ; le nouvel accès est l’information à transmettre.",
+      "module": "D",
+      "lesson_refs": [
+        "D.10"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-26",
+      "prompt": "Votre arrivée était annoncée à 10 heures ; elle est maintenant estimée à 10 h 10. Quel message informe clairement et courtoisement le client ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Bonjour, je suis légèrement décalé ; vous comprendrez en arrivant."
+        },
+        {
+          "id": "o2",
+          "text": "Bonjour, l’horaire reste celui prévu, mais je serai là dix minutes après."
+        },
+        {
+          "id": "o3",
+          "text": "Bonjour, mon arrivée est désormais estimée à 10 h 10. Je vous prie de m’excuser pour ce décalage."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Le premier message donne l’heure actualisée et présente des excuses. Le deuxième manque de précision ; le troisième conserve un horaire tout en le contredisant.",
+      "module": "D",
+      "lesson_refs": [
+        "D.11"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-27",
+      "prompt": "Un client demande de modifier une adresse, mais son message ne donne pas la nouvelle destination. Quelle réponse permet de clarifier sa demande ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Bonjour, je choisis une destination proche de l’adresse initiale."
+        },
+        {
+          "id": "o2",
+          "text": "Bonjour, pourriez-vous me préciser la nouvelle adresse de destination, s’il vous plaît ?"
+        },
+        {
+          "id": "o3",
+          "text": "Bonjour, je confirme la nouvelle adresse sans autre précision."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "Il manque une information indispensable : la nouvelle adresse. Une question précise et polie évite de confirmer une donnée inconnue ou de décider à la place du client.",
+      "module": "D",
+      "lesson_refs": [
+        "D.11"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-28",
+      "prompt": "Vous devez annoncer un rendez-vous à l’entrée est du musée à 15 heures. Quel message évite toute ambiguïté ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Bonjour, je vous attendrai à 15 heures devant l’entrée est du musée."
+        },
+        {
+          "id": "o2",
+          "text": "Bonjour, je vous attendrai là-bas à l’heure habituelle."
+        },
+        {
+          "id": "o3",
+          "text": "Bonjour, je serai devant une entrée du musée dans l’après-midi."
+        }
+      ],
+      "answer": "o1",
+      "explanation": "Un message opérationnel identifie précisément l’heure et le lieu. « Là-bas », « habituelle » et « une entrée » supposent des informations que le destinataire peut ne pas partager.",
+      "module": "D",
+      "lesson_refs": [
+        "D.11"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-29",
+      "prompt": "Le passage explique : « Les voyageurs apprécient la navette parce qu’elle dessert directement la gare. Son tarif est plus élevé que celui du bus. » Quelle raison de satisfaction est explicitement donnée ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Un tarif inférieur à celui du bus."
+        },
+        {
+          "id": "o2",
+          "text": "Un trajet toujours plus rapide que tous les autres transports."
+        },
+        {
+          "id": "o3",
+          "text": "La liaison directe avec la gare."
+        }
+      ],
+      "answer": "o3",
+      "explanation": "Il faut retenir la raison écrite après « parce que ». Le tarif inférieur contredit le texte et la supériorité sur tous les transports n’y figure pas.",
+      "module": "D",
+      "lesson_refs": [
+        "D.12"
+      ],
+      "sources": []
+    },
+    {
+      "id": "vtc-d-independent-30",
+      "prompt": "La consigne demande : « Selon le texte, relevez l’unique condition d’accès au salon. » Le passage indique : « Le salon est ouvert aux détenteurs d’un billet premium ; des boissons y sont proposées. » Quelle réponse respecte exactement la consigne ?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Acheter une boisson, quel que soit le billet."
+        },
+        {
+          "id": "o2",
+          "text": "Détenir un billet premium."
+        },
+        {
+          "id": "o3",
+          "text": "Détenir un billet premium et acheter une boisson."
+        }
+      ],
+      "answer": "o2",
+      "explanation": "La seule condition énoncée est la possession du billet premium. Les boissons sont un service proposé ; le texte n’en fait pas une condition d’accès.",
+      "module": "D",
+      "lesson_refs": [
+        "D.12"
+      ],
+      "sources": []
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 0,
+    "original_questions": 30
+  }
+}

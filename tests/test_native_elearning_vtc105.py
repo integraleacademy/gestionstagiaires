@@ -54,7 +54,8 @@ class Vtc105ContentTests(unittest.TestCase):
                         self.assertTrue(grade_practice(p,{e['id']:expected[e['id']]},step=e['id'])['correct'])
                         self.assertIn(e['competency'].split('.')[0],set('ABCDEFGH'))
         self.assertEqual(len(refs),96)
-        self.assertEqual(exercises,manifest['exercise_count'])
+        self.assertEqual(exercises,sum(vtc.load_bundled_course(m['id'],VERSION)['counts']['exercises'] for m in manifest['modules']))
+        self.assertEqual(exercises,2360)  # This pinned edition remains immutable.
 
     def test_audio_and_partial_grading_boundaries(self):
         root=Path(vtc.__file__).parent/'vtc'

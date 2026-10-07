@@ -1,5 +1,5 @@
 {
-  "version": "20261007-vtc-v4-visuals",
+  "version": "20261007-vtc-v5-annales",
   "planned_minutes": 6300,
   "status": "programme_previsionnel",
   "duration_note": "105 h de programme pédagogique prévisionnel. La durée réellement nécessaire dépend des acquis et des reprises. Le suivi distingue le temps actif et l’achèvement ; un groupe pilote permet de calibrer les estimations.",
@@ -256,7 +256,8 @@
   "validation": {
     "real_learners_tested": 0,
     "measured_median_minutes": null,
-    "method": "Groupe pilote de profils variés : mesurer les temps actifs par activité et les premières erreurs ; recueillir les difficultés ; comparer la médiane et les écarts au programme ; ajouter, scinder ou redistribuer les séquences avant de déclarer la durée validée."
+    "method": "Groupe pilote de profils variés : mesurer les temps actifs par activité et les premières erreurs ; recueillir les difficultés ; comparer la médiane et les écarts au programme ; ajouter, scinder ou redistribuer les séquences avant de déclarer la durée validée.",
+    "content_revision_note": "Les doublons de dossiers ont été retirés et les notions des annales ajoutées. Les 105 heures restent un objectif prévisionnel ; aucune mesure apprenant ne justifie encore cette durée."
   },
   "rules": [
     "Aucun temps fictif ajouté par une réponse ou une correction.",
