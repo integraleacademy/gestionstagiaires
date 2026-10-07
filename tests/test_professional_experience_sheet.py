@@ -1,4 +1,6 @@
+import subprocess
 import unittest
+from pathlib import Path
 
 import app as gestion_app
 
@@ -283,6 +285,150 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("experiences.0.executive_status", errors)
         self.assertIn("certified", errors)
         self.assertNotIn("professional_experience_sheet", self.payload["sessions"][0]["trainees"][0])
+
+    def test_public_submission_requires_end_date_on_last_experience_only(self):
+        self._authenticate_public()
+        payload = self._valid_payload()
+        first_experience = dict(payload["experiences"][0], end_date="")
+        last_experience = dict(
+            payload["experiences"][0],
+            job_title="Directrice sécurité",
+            company_name="Entreprise actuelle",
+            start_date="2026-06-01",
+            end_date="2026-09-01",
+        )
+        payload["experiences"] = [first_experience, last_experience]
+
+        response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=payload)
+
+        self.assertEqual(response.status_code, 200)
+        sheet = self.payload["sessions"][0]["trainees"][0]["professional_experience_sheet"]
+        self.assertEqual(sheet["experiences"][0]["end_date"], "")
+        self.assertEqual(sheet["experiences"][1]["end_date"], "2026-09-01")
+
+    def test_public_submission_rejects_missing_end_date_on_last_experience(self):
+        self._authenticate_public()
+        payload = self._valid_payload()
+        payload["experiences"] = [
+            dict(payload["experiences"][0]),
+            dict(
+                payload["experiences"][0],
+                job_title="Directrice sécurité",
+                company_name="Entreprise actuelle",
+                start_date="2026-06-01",
+                end_date="",
+            ),
+        ]
+
+        response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=payload)
+
+        self.assertEqual(response.status_code, 400)
+        errors = response.get_json()["errors"]
+        self.assertNotIn("experiences.0.end_date", errors)
+        self.assertEqual(
+            errors["experiences.1.end_date"],
+            "Renseignez la date de sortie de votre dernière expérience.",
+        )
+
+    def test_public_submission_rejects_invalid_optional_end_date(self):
+        for invalid_date in ("pas-une-date", "2026-02-31"):
+            with self.subTest(invalid_date=invalid_date):
+                self._authenticate_public()
+                payload = self._valid_payload()
+                payload["experiences"] = [
+                    dict(payload["experiences"][0], end_date=invalid_date),
+                    dict(
+                        payload["experiences"][0],
+                        job_title="Directrice sécurité",
+                        company_name="Entreprise actuelle",
+                        start_date="2026-06-01",
+                        end_date="2026-09-01",
+                    ),
+                ]
+
+                response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=payload)
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.get_json()["errors"]["experiences.0.end_date"],
+                    "Renseignez une date de sortie valide.",
+                )
+
+    def test_end_date_requirement_is_rendered_and_reassigned_by_javascript(self):
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        form = html.split('id="professionalExperienceForm"', 1)[1].split("</form>", 1)[0]
+        self.assertIn('data-end-date-label>Date de sortie <strong>*</strong>', form)
+        self.assertIn('data-field="end_date" value="" required', form)
+
+        javascript = Path("static/js/professional-experience.js").read_text(encoding="utf-8")
+        runner = r'''
+const vm = require("vm");
+const source = process.argv[1];
+const start = source.indexOf("  const renumber = () => {");
+const end = source.indexOf("\n\n  addButton.addEventListener", start);
+if (start < 0 || end < 0) throw new Error("renumber() production function not found");
+const renumberSource = source.slice(start, end).replace("const renumber =", "var renumber =");
+
+const makeCard = () => {
+  const heading = {textContent: ""};
+  const endDate = {required: false};
+  const endDateLabel = {innerHTML: ""};
+  const contractInputs = [{name: ""}, {name: ""}];
+  const executiveInputs = [{name: ""}, {name: ""}];
+  return {
+    dataset: {}, heading, endDate, endDateLabel, contractInputs, executiveInputs,
+    querySelector(selector) {
+      if (selector === "h4 span") return heading;
+      if (selector === '[data-field="end_date"]') return endDate;
+      if (selector === "[data-end-date-label]") return endDateLabel;
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === '[data-field="contract_type"]') return contractInputs;
+      if (selector === '[data-field="executive_status"]') return executiveInputs;
+      return [];
+    }
+  };
+};
+
+const first = makeCard();
+const experiences = {children: [first]};
+const addButton = {disabled: false};
+const limit = {hidden: true};
+const context = {experiences, addButton, limit};
+vm.createContext(context);
+vm.runInContext(renumberSource, context);
+
+context.renumber();
+if (!first.endDate.required || first.endDateLabel.innerHTML !== "Date de sortie <strong>*</strong>")
+  throw new Error("the only experience is not required");
+
+const second = makeCard();
+experiences.children.push(second);
+context.renumber();
+if (first.endDate.required || !first.endDateLabel.innerHTML.includes("facultatif"))
+  throw new Error("adding a card did not make the previous card optional");
+if (!second.endDate.required || second.endDateLabel.innerHTML !== "Date de sortie <strong>*</strong>")
+  throw new Error("adding a card did not make the new last card required");
+
+experiences.children.pop();
+context.renumber();
+if (!first.endDate.required || first.endDateLabel.innerHTML !== "Date de sortie <strong>*</strong>")
+  throw new Error("removing the last card did not restore the requirement");
+if (first.dataset.experienceIndex !== 0 || first.heading.textContent !== 1)
+  throw new Error("renumbering did not preserve the first card index");
+
+const addHandler = source.slice(source.indexOf('addButton.addEventListener'), source.indexOf('experiences.addEventListener'));
+const removeHandler = source.slice(source.indexOf('experiences.addEventListener'), source.indexOf('form.addEventListener("change"'));
+if (!addHandler.includes("renumber();") || !removeHandler.includes("renumber();"))
+  throw new Error("add/remove handlers do not invoke renumber()");
+'''
+        subprocess.run(["node", "-e", runner, javascript], check=True, cwd=Path.cwd())
 
     def test_sheet_requirement_depends_on_training_start_date_for_non_vae(self):
         for start_date, expected in (

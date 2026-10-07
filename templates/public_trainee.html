@@ -379,6 +379,31 @@
   }
   .aps-elearning-icon svg{width:24px;height:24px;display:block;}
   .aps-elearning-content{min-width:0;flex:1;}
+  .aps-attendance{margin-top:20px;padding:18px;border:1px solid #c7d2fe;border-radius:16px;background:#fff;}
+  .aps-attendance-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+  .aps-attendance-heading h3{margin:0;font-size:18px;color:#312e81;}
+  .aps-attendance-heading-result{display:flex;align-items:center;gap:10px;}
+  .aps-attendance-heading-result > strong{font-size:30px;color:#4338ca;}
+  .aps-attendance-completion-badge{display:inline-flex;flex:0 0 38px;width:38px;height:38px;color:#48b4f4;filter:drop-shadow(0 3px 5px rgba(37,99,235,.2));}
+  .aps-attendance-completion-badge svg{display:block;width:100%;height:100%;}
+  .aps-attendance-completion-badge-seal{fill:currentColor;}
+  .aps-attendance-completion-badge-check{fill:#fff;}
+  .aps-attendance-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin-top:18px;}
+  .aps-attendance-metric{padding:16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;min-width:0;}
+  .aps-attendance-label{display:block;color:#475569;font-size:13px;margin-bottom:8px;}
+  .aps-attendance-metric strong{font-size:23px;color:#312e81;}
+  .aps-attendance-metric small{font-size:14px;font-weight:600;color:#64748b;}
+  .aps-attendance-check{display:block;margin-top:10px;font-size:12px;font-weight:700;color:#64748b;}
+  .aps-attendance-metric.is-met{border-color:#bbf7d0;background:#f0fdf4;}
+  .aps-attendance-metric.is-met strong,.aps-attendance-metric.is-met .aps-attendance-check{color:#166534;}
+  .aps-attendance progress{display:block;width:100%;height:10px;margin:16px 0 12px;accent-color:#4f46e5;}
+  .aps-attendance p{margin:6px 0 0;color:#64748b;font-size:12px;line-height:1.5;}
+  .aps-attendance-status{margin-top:18px;padding:14px 16px;border-radius:12px;background:#eef2ff;color:#3730a3;}
+  .aps-attendance-status p{color:inherit;font-size:13px;}
+  .aps-attendance.is-complete{border-color:#86efac;}
+  .aps-attendance.is-complete .aps-attendance-heading strong{color:#15803d;}
+  .aps-attendance.is-complete progress,.aps-attendance-metric.is-met progress{accent-color:#16a34a;}
+  .aps-attendance.is-complete .aps-attendance-status{background:#dcfce7;color:#166534;}
   .aps-elearning-card h2{font-size:23px;margin:0;color:#111827;letter-spacing:-.02em;}
   .aps-elearning-card .aps-elearning-subtitle{max-width:760px;margin:7px 0 0;color:#4b5563;line-height:1.55;}
   .aps-elearning-badge{display:inline-flex;align-items:center;margin-top:14px;padding:8px 12px;border:1px solid #c7d2fe;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:13px;font-weight:1000;box-shadow:0 6px 16px rgba(79,70,229,.08);}
@@ -996,6 +1021,10 @@
     {% if aps_elearning_enabled %}
       {% set aps_link = (trainee.aps_elearning_login or '')|trim %}
       {% set aps_link_is_valid = aps_link[:8] == 'https://' %}
+      {% set aps_tracking = trainee.aps_elearning_tracking if trainee.aps_elearning_tracking is mapping else {} %}
+      {% set aps_signature = trainee.aps_elearning_signature if trainee.aps_elearning_signature is mapping else {} %}
+      {% set aps_signature_status = (aps_signature.status or '')|trim|lower %}
+      {% set aps_show_completion_badge = aps_elearning_progress and aps_elearning_progress.is_complete and aps_tracking.file and aps_signature_status in ['done', 'signed'] %}
       <section class="card aps-elearning-card" aria-labelledby="apsElearningTitle">
         <div class="aps-elearning-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" role="img">
@@ -1009,6 +1038,76 @@
           <p class="aps-elearning-subtitle">Votre parcours de formation à distance sera activé au démarrage de la formation.</p>
           <div class="aps-elearning-badge">Accès disponible le {{ session.date_start|frdate }}</div>
           <p class="aps-elearning-note">Votre progression restera suivie pendant toute la formation, sans identifiant ni mot de passe à saisir.</p>
+          {% if aps_elearning_progress %}
+          <section class="aps-attendance{% if aps_elearning_progress.is_complete %} is-complete{% endif %}" id="apsElearningAttendance" aria-labelledby="apsAttendanceTitle">
+            <div class="aps-attendance-heading">
+              <h3 id="apsAttendanceTitle">Suivi global du e-learning</h3>
+              <div class="aps-attendance-heading-result">
+                <strong id="apsOverallRate">{{ aps_elearning_progress.overall_rate_label }}</strong>
+                {% if aps_show_completion_badge %}
+                <span class="aps-attendance-completion-badge"
+                      data-aps-elearning-complete-badge
+                      role="img"
+                      aria-label="E-learning terminé et tableau de suivi FOAD signé par le stagiaire"
+                      title="E-learning terminé et tableau de suivi FOAD signé par le stagiaire">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path class="aps-attendance-completion-badge-seal" d="M23 12l-2.44-2.79.34-3.69-3.61-.82L15.4 1.52 12 2.97 8.6 1.52 6.71 4.7l-3.61.81.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.81 1.89 3.18 3.4-1.46 3.4 1.45 1.89-3.18 3.61-.82-.34-3.69L23 12z"/>
+                    <path class="aps-attendance-completion-badge-check" d="M10.09 16.2 6.7 12.81l1.41-1.42 1.98 1.98 5.8-5.8 1.41 1.42-7.21 7.21z"/>
+                  </svg>
+                </span>
+                {% endif %}
+              </div>
+            </div>
+            {% if aps_elearning_progress.overall_rate is not none %}
+            <progress id="apsOverallProgress" max="100" value="{{ aps_elearning_progress.overall_rate }}" aria-label="Pourcentage global de suivi du e-learning">{{ aps_elearning_progress.overall_rate_label }}</progress>
+            {% endif %}
+            <div class="aps-attendance-metrics">
+              <div class="aps-attendance-metric{% if aps_elearning_progress.paths_requirement_met %} is-met{% endif %}" id="apsPathsProgress">
+                <span class="aps-attendance-label">Parcours suivis</span>
+                {% if aps_elearning_progress.paths_completed is not none %}
+                <strong>{{ aps_elearning_progress.paths_completed }}/{{ aps_elearning_progress.paths_required }}</strong>
+                <span class="aps-attendance-check">{{ '✓ Objectif atteint' if aps_elearning_progress.paths_requirement_met else 'À poursuivre' }}</span>
+                {% else %}
+                <strong>À vérifier</strong><small> / {{ aps_elearning_progress.paths_required }} parcours</small>
+                {% endif %}
+              </div>
+              <div class="aps-attendance-metric{% if aps_elearning_progress.evaluations_requirement_met %} is-met{% endif %}" id="apsEvaluationsProgress">
+                <span class="aps-attendance-label">Questionnaires d’évaluation</span>
+                {% if aps_elearning_progress.evaluations_completed is not none %}
+                <strong>{{ aps_elearning_progress.evaluations_completed }}/{{ aps_elearning_progress.evaluations_required }}</strong> <small>réalisés</small>
+                <span class="aps-attendance-check">{{ '✓ Objectif atteint' if aps_elearning_progress.evaluations_requirement_met else 'À poursuivre' }}</span>
+                {% else %}
+                <strong>À vérifier</strong><small> / {{ aps_elearning_progress.evaluations_required }} évaluations</small>
+                {% endif %}
+              </div>
+              <div class="aps-attendance-metric{% if aps_elearning_progress.connection_requirement_met %} is-met{% endif %}" id="apsConnectionProgress">
+                <span class="aps-attendance-label">Durée totale de connexion</span>
+                <strong title="{{ aps_elearning_progress.connection_duration_label }}">{{ aps_elearning_progress.connection_duration_short_label }}</strong> <small>/ 62 heures</small>
+                {% if aps_elearning_progress.connection_seconds is not none %}
+                <progress max="100" value="{{ aps_elearning_progress.attendance_rate }}" aria-label="Objectif de durée de connexion">{{ aps_elearning_progress.attendance_rate_label }}</progress>
+                <p>Objectif de connexion : {{ aps_elearning_progress.attendance_rate_label }}.</p>
+                <span class="aps-attendance-check">{{ '✓ Plus de 62 heures : objectif atteint' if aps_elearning_progress.connection_requirement_met else 'À poursuivre : plus de 62 heures requises' }}</span>
+                {% else %}
+                <p>Durée non renseignée dans le relevé.</p>
+                {% endif %}
+              </div>
+            </div>
+            <div class="aps-attendance-status">
+              {% if aps_elearning_progress.is_complete %}
+              <strong>E-learning terminé</strong>
+              <p>Bravo ! Vous avez suivi les 8 parcours, réalisé les 8 évaluations et dépassé les 62 heures de connexion. Félicitations pour votre travail !</p>
+              {% elif aps_elearning_progress.overall_rate is none %}
+              <strong>Suivi à vérifier</strong>
+              <p>Le dernier relevé contient des informations manquantes ou illisibles. L’équipe pédagogique doit les vérifier pour calculer votre suivi global.</p>
+              {% else %}
+              <strong>E-learning en cours</strong>
+              <p>Pour terminer : 8/8 parcours suivis, 8/8 évaluations réalisées et plus de 62 heures de connexion.</p>
+              {% endif %}
+            </div>
+            <p>Le suivi global est la moyenne des trois objectifs, chacun comptant pour un tiers. Il atteint 100 % uniquement lorsque les trois conditions sont remplies.</p>
+            {% if aps_elearning_progress.updated_at_label %}<p>Dernière mise à jour : {{ aps_elearning_progress.updated_at_label }}.</p>{% endif %}
+          </section>
+          {% endif %}
         {% if not aps_elearning_available %}
           <div class="aps-elearning-pending">
             Votre lien d’accès sera affiché ici le premier jour de formation.
@@ -1875,6 +1974,9 @@ id="upload_{{ d.key }}"
               <li>
                 <strong>Renvoyer le Livret 2 :</strong> Par courrier postal, accompagné de toutes les pièces justificatives, à
                 <strong>Intégrale Academy - A l'attention de Cassandre MENARD - 54 chemin du Carreou - 83480 PUGET SUR ARGENS</strong>.
+                <div role="note" aria-label="Consigne importante pour l'envoi du Livret 2" style="margin-top:10px;padding:10px 12px;border-left:4px solid #dc2626;border-radius:8px;background:#fef2f2;color:#991b1b;font-weight:800;">
+                  ⚠️ Important : envoyez le Livret 2 et toutes ses pièces justificatives sans agrafes.
+                </div>
               </li>
             </ol>
           </div>

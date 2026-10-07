@@ -59,7 +59,7 @@
     if(countEl) countEl.textContent = "Chargement…";
     if(listEl) listEl.textContent = "Chargement…";
     try{
-      const r = await fetch("/api/docs_to_control", {headers:{"Accept":"application/json"}});
+      const r = await window.adminReadFetch("/api/docs_to_control");
       const res = await r.json();
       if(!r.ok || !res.ok) throw new Error(res.error || "request_failed");
       const items = res.items || [];

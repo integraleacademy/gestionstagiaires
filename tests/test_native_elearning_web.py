@@ -95,6 +95,33 @@ class NativeElearningWebTests(unittest.TestCase):
         with self.client.session_transaction() as browser_session:
             browser_session["public_auth_public-token"] = True
 
+    def test_native_portal_does_not_display_a_previous_digiforma_report(self):
+        self._public_login()
+        session_obj = self.data["sessions"][0]
+        trainee = session_obj["trainees"][0]
+        trainee["aps_elearning_tracking"] = {
+            "file": "previous-digiforma.pdf", "connection_log_total": "70 heures"
+        }
+        for training in ("APS", "VTC"):
+            with self.subTest(training=training):
+                session_obj["training_type"] = training
+                response = self.client.get("/espace/public-token")
+                self.assertEqual(response.status_code, 200)
+                self.assertIn('href="/espace/public-token/elearning"', response.text)
+                self.assertIn(f"Accéder à mon parcours {training}", response.text)
+                self.assertNotIn('id="apsElearningAttendance"', response.text)
+                self.assertEqual(trainee["aps_elearning_tracking"]["file"], "previous-digiforma.pdf")
+
+    def test_vtc_without_native_assignment_keeps_its_existing_access(self):
+        self._public_login()
+        session_obj = self.data["sessions"][0]
+        session_obj.update(training_type="VTC", aps_native_modules=[], aps_native_course_id="")
+        session_obj["trainees"][0]["elearning_link"] = "https://learning.example.test/vtc"
+        response = self.client.get("/espace/public-token")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('href="https://learning.example.test/vtc"', response.text)
+        self.assertNotIn('href="/espace/public-token/elearning"', response.text)
+
     def _admin_login(self) -> None:
         with self.client.session_transaction() as browser_session:
             browser_session["admin_logged_in"] = True

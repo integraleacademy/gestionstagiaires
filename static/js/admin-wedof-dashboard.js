@@ -4,6 +4,11 @@
 
   function showPageSection(section, {updateUrl = true} = {}) {
     if (!pageTabs.some(tab => tab.dataset.wedofPageTab === section)) return;
+    const selectedPanel = pagePanels.find(panel => panel.dataset.wedofPagePanel === section);
+    if (updateUrl && selectedPanel?.dataset.wedofLoadUrl) {
+      selectedPanel.setAttribute('aria-busy', 'true');
+      window.location.assign(selectedPanel.dataset.wedofLoadUrl);
+    }
     pageTabs.forEach(tab => {
       const active = tab.dataset.wedofPageTab === section;
       tab.classList.toggle('is-active', active);
@@ -57,9 +62,12 @@
     anomaly: row => row.dataset.wedofPanel === 'anomaly',
     planned: row => row.dataset.wedofPlanned === 'true',
     invoiced: row => row.dataset.wedofInvoiced === 'true',
+    to_associate: row => row.dataset.wedofToAssociate === 'true',
   };
+  let activeFilter = 'accepted';
 
   function show(filter, {scroll = true} = {}) {
+    activeFilter = filter;
     const matcher = rowMatches[filter] || rowMatches.accepted;
     let visible = 0;
     rows.forEach(row => {
@@ -80,6 +88,12 @@
   counters.forEach(counter => {
     counter.setAttribute('aria-pressed', 'false');
     counter.addEventListener('click', () => show(counter.dataset.wedofCounter));
+  });
+
+  document.addEventListener('wedof:association-updated', () => {
+    const counter = document.querySelector('#wedof-unlinked-count');
+    if (counter) counter.textContent = rows.filter(rowMatches.to_associate).length;
+    show(activeFilter, {scroll: false});
   });
 
   const requested = new URLSearchParams(window.location.search).get('tab');

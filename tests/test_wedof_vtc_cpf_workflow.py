@@ -45,7 +45,8 @@ def test_target_not_processed_folder_is_validated_and_notified_once():
     assert send_email.call_count == 1
     assert send_email.call_args.args[0] == "nora@example.test"
     assert "Mon Compte Formation" in send_email.call_args.args[2]
-    assert "acceptez l'inscription" in send_email.call_args.args[2]
+    assert "Vos dossiers de formation" in send_email.call_args.args[2]
+    assert "Devis à valider" in send_email.call_args.args[2]
     send_sms.assert_called_once()
     assert send_sms.call_args.args[0] == "0612345678"
     assert "acceptez l'inscription" in send_sms.call_args.args[1]

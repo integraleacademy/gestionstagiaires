@@ -1,3 +1,17 @@
+.wedof-requests-table td {
+  vertical-align: top;
+}
+
+.wedof-request-actions > summary {
+  margin-top: 6px;
+}
+
+.wedof-request-actions[open] > .btn,
+.wedof-request-actions[open] > details,
+.wedof-request-actions[open] > form {
+  margin-top: 6px;
+}
+
 .wedof-page {
   --wedof-navy: #172554;
   --wedof-indigo: #4f46e5;
@@ -171,7 +185,7 @@
   z-index: 20;
   top: 12px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
   gap: 6px;
   overflow-x: auto;
   border: 1px solid #dbe4f0;
@@ -598,7 +612,7 @@
 
 .wedof-counters {
   display: grid;
-  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
   padding: 18px 22px 20px;
 }
@@ -666,6 +680,7 @@
 .wedof-counter[data-wedof-counter="training"]::before { background: #0ea5e9; }
 .wedof-counter[data-wedof-counter="service"]::before { background: #22c55e; }
 .wedof-counter[data-wedof-counter="invoiced"]::before { background: #f59e0b; }
+.wedof-counter[data-wedof-counter="to_associate"]::before { background: #14b8a6; }
 .wedof-counter[data-wedof-counter="anomaly"]::before { background: #ef4444; }
 
 .wedof-table-panel { overflow: hidden; }
