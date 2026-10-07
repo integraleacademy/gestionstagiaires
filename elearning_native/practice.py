@@ -47,7 +47,7 @@ def _learning_text(value):
 def adapt_course(course):
     if course.get('source', {}).get('type') != 'academy-aps62':
         return course
-    if course.get('interaction_revision') in ('20261006-aps62-v3', '20261006-aps62-v4', '20261006-aps62-v5'):
+    if course.get('interaction_revision') in ('20261006-aps62-v3', '20261006-aps62-v4', '20261006-aps62-v5', '20261007-aps62-v6'):
         return copy.deepcopy(course)
     course = _learning_text(course)
     total = 0
@@ -92,13 +92,19 @@ def public_practice(practice):
             for key in ('context', 'stage', 'competency', 'documents', 'audio', 'transcript', 'translation', 'map', 'calculator'):
                 if key in original:
                     public[key] = copy.deepcopy(original[key])
+    elif practice.get('mode') == 'guided':
+        result['mode'] = 'guided'
+        # Explanations, branches and answer keys are disclosed only after a check.
+        for public, original in zip(result['exercises'], practice['exercises']):
+            public.pop('branches', None)
+            public['stage'] = original.get('stage', '')
     return result
 
 
 def grade_practice(practice, answers, review_answers=None, *, step=None):
     exercises = practice['exercises']
     if step is not None:
-        if practice.get('mode') != 'journey' or not isinstance(step, str):
+        if practice.get('mode') not in ('journey', 'guided') or not isinstance(step, str):
             raise ValueError('Cette activité se corrige dans son ensemble.')
         exercises = [ex for ex in exercises if ex['id'] == step]
         if len(exercises) != 1:

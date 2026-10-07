@@ -1,0 +1,965 @@
+{
+  "version": "20261007-aps62-v6",
+  "timing_status": "Objectif pédagogique de 62 h à éprouver avec des apprenants ; aucune durée réelle garantie.",
+  "modules": [
+    {
+      "module": "01",
+      "title": "APS 01 · Le cadre de la sécurité privée",
+      "target_minutes": 240,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-01-01",
+          "minutes": 57,
+          "activities": [
+            "Le cours · Connaître les limites de sa mission",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-01-02",
+          "minutes": 57,
+          "activities": [
+            "Le cours · Vérifier le droit d'exercer",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-01-03",
+          "minutes": 56,
+          "activities": [
+            "Le cours · Distinguer entreprise et service interne",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-01-04",
+          "minutes": 70,
+          "activities": [
+            "Le cours · Être reconnu comme agent de sécurité",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Contrôler un planning d'affectation",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "02",
+      "title": "APS 02 · Responsabilité et droit pénal",
+      "target_minutes": 180,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-02-01",
+          "minutes": 56,
+          "activities": [
+            "Le cours · Comprendre les responsabilités",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-02-02",
+          "minutes": 55,
+          "activities": [
+            "Le cours · Comprendre la légitime défense",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-02-03",
+          "minutes": 69,
+          "activities": [
+            "Le cours · Aider sans créer un autre danger",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Comparer deux chronologies de défense",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "03",
+      "title": "APS 03 · Flagrance et article 73",
+      "target_minutes": 120,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-03-01",
+          "minutes": 53,
+          "activities": [
+            "Le cours · Partir des faits avant l'article 73",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-03-02",
+          "minutes": 67,
+          "activities": [
+            "Le cours · Passer rapidement le relais à la police",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Un portique, un témoin et un justificatif",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "04",
+      "title": "APS 04 · Libertés et données personnelles",
+      "target_minutes": 60,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-04-01",
+          "minutes": 60,
+          "activities": [
+            "Le cours · Protéger les informations personnelles",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Préparer une transmission de données utile",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "05",
+      "title": "APS 05 · République, égalité et dignité",
+      "target_minutes": 180,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-05-01",
+          "minutes": 56,
+          "activities": [
+            "Le cours · Accueillir chacun avec le même respect",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-05-02",
+          "minutes": 55,
+          "activities": [
+            "Le cours · Respecter les convictions de chacun",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-05-03",
+          "minutes": 69,
+          "activities": [
+            "Le cours · Comprendre le rôle de la loi",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Relire une règle d’accueil",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "06",
+      "title": "APS 06 · Déontologie au quotidien",
+      "target_minutes": 240,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-06-01",
+          "minutes": 57,
+          "activities": [
+            "Le cours · Refuser les passe-droits",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-06-02",
+          "minutes": 57,
+          "activities": [
+            "Le cours · Garder les informations au bon endroit",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-06-03",
+          "minutes": 56,
+          "activities": [
+            "Le cours · Coopérer lors d'un contrôle",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-06-04",
+          "minutes": 70,
+          "activities": [
+            "Le cours · Réagir à une consigne interdite",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Contrôler les demandes adressées au poste",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "07",
+      "title": "APS 07 · Comprendre et apaiser les conflits",
+      "target_minutes": 300,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-07-01",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Repérer les premiers signes de tension",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-07-02",
+          "minutes": 57,
+          "activities": [
+            "Le cours · Écouter et reformuler simplement",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-07-03",
+          "minutes": 57,
+          "activities": [
+            "Le cours · Adapter sa posture et sa distance",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-07-04",
+          "minutes": 57,
+          "activities": [
+            "Le cours · Répondre aux insultes sans aggraver le conflit",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-07-05",
+          "minutes": 71,
+          "activities": [
+            "Le cours · Terminer le conflit et transmettre l'essentiel",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Analyser un dialogue d’accueil",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "08",
+      "title": "APS 08 · Consignes et comptes rendus",
+      "target_minutes": 300,
+      "journals": 2,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-08-01",
+          "minutes": 68,
+          "activities": [
+            "Le cours · Lire une consigne avant de l'appliquer",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Choisir la bonne version d’une consigne",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-08-02",
+          "minutes": 53,
+          "activities": [
+            "Le cours · Faire un compte rendu oral clair",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-08-03",
+          "minutes": 63,
+          "activities": [
+            "Le cours · Remettre les faits dans l'ordre",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Main courante 1 · distinguer les heures et les sources",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-08-04",
+          "minutes": 53,
+          "activities": [
+            "Le cours · Décrire un incident avec précision",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-08-05",
+          "minutes": 63,
+          "activities": [
+            "Le cours · Préparer une relève utile",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Main courante 2 · transmettre un suivi à la relève",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "09",
+      "title": "APS 09 · Justifier ses décisions",
+      "target_minutes": 180,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-09-01",
+          "minutes": 56,
+          "activities": [
+            "Le cours · Expliquer une réaction de défense",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-09-02",
+          "minutes": 55,
+          "activities": [
+            "Le cours · Choisir une aide adaptée à l'urgence",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-09-03",
+          "minutes": 69,
+          "activities": [
+            "Le cours · Expliquer pourquoi une demande dépasse les droits",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Relire une justification de décision",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "10",
+      "title": "APS 10 · Prévention et risques industriels",
+      "target_minutes": 420,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-10-01",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Distinguer un danger et un risque",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-10-02",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Comprendre le document d'évaluation des risques",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-10-03",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Comprendre les risques liés à plusieurs entreprises",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-10-04",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Se repérer sur un site industriel",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-10-05",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Choisir la bonne protection",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-10-06",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Lire les informations d'un produit dangereux",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-10-07",
+          "minutes": 72,
+          "activities": [
+            "Le cours · Respecter une zone à risque d'explosion",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Préparer l’accès d’une entreprise extérieure",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "11",
+      "title": "APS 11 · Sensibilisation au risque électrique",
+      "target_minutes": 120,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-11-01",
+          "minutes": 53,
+          "activities": [
+            "Le cours · Reconnaître un danger électrique",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-11-02",
+          "minutes": 67,
+          "activities": [
+            "Le cours · Éviter une seconde victime électrique",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Lire une demande d’intervention électrique",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "12",
+      "title": "APS 12 · Prévenir la menace terroriste",
+      "target_minutes": 420,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-12-01",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Comprendre la menace sans inventer",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-12-02",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Décrire un objet sans le manipuler",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-12-03",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Appliquer les mesures Vigipirate du site",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-12-04",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Observer des faits plutôt que des apparences",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-12-05",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Transmettre un appel menaçant",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-12-06",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Rester vigilant face aux nouvelles menaces",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-12-07",
+          "minutes": 72,
+          "activities": [
+            "Le cours · Décrire les besoins de secours après une attaque",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Distinguer signalement, rumeur et consigne",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "13",
+      "title": "APS 13 · La main courante numérique",
+      "target_minutes": 120,
+      "journals": 2,
+      "document_studies": 0,
+      "sections": [
+        {
+          "id": "aps62-13-01",
+          "minutes": 60,
+          "activities": [
+            "Le cours · Utiliser une main courante électronique",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Main courante 3 · rectifier une entrée sans effacer son histoire",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-13-02",
+          "minutes": 60,
+          "activities": [
+            "Le cours · Continuer le suivi pendant une panne",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Main courante 4 · reprendre après une panne sans créer de doublon",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "14",
+      "title": "APS 14 · Décider face à une infraction",
+      "target_minutes": 420,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-14-01",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Observer une infraction dans une mission de surveillance",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-14-02",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Ne pas confondre alarme et preuve de vol",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-14-03",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Connaître son rôle en sécurité incendie",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-14-04",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Adapter l'intervention quand la situation change",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-14-05",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Préserver les traces sans mener l'enquête",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-14-06",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Remettre des informations claires à la police",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-14-07",
+          "minutes": 72,
+          "activities": [
+            "Le cours · Décider lorsque des informations manquent",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Comparer les pièces avant un relais à l’OPJ",
+            "À retenir"
+          ]
+        }
+      ]
+    },
+    {
+      "module": "15",
+      "title": "APS 15 · Sécuriser un événement",
+      "target_minutes": 420,
+      "journals": 0,
+      "document_studies": 1,
+      "sections": [
+        {
+          "id": "aps62-15-01",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Comprendre l'organisation d'un événement",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-15-02",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Vérifier les droits d'accès aux différentes zones",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-15-03",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Éviter qu'une file bloque la circulation",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-15-04",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Observer les signes de pression dans une foule",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-15-05",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Organiser une mise en sécurité cohérente",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-15-06",
+          "minutes": 58,
+          "activities": [
+            "Le cours · Accueillir les intervenants selon leur rôle",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "À retenir"
+          ]
+        },
+        {
+          "id": "aps62-15-07",
+          "minutes": 72,
+          "activities": [
+            "Le cours · Traiter un billet refusé sans accusation immédiate",
+            "Le cours en vidéo",
+            "Que faites-vous ? · pas à pas",
+            "Choisir une réponse",
+            "Relier les mots à leur définition",
+            "Un nouvel exemple · pas à pas",
+            "Préparer l’ouverture d’un événement",
+            "À retenir"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -36,7 +36,7 @@ class ReadabilityTests(unittest.TestCase):
         authored = courses()
         videos = json.loads((ROOT/'video_manifest_v5.json').read_text())
         self.assertEqual(set(videos), set(authored))
-        self.assertEqual(curriculum_manifest()['version'], '20261006-aps62-v5')
+        self.assertEqual(curriculum_manifest()['version'], '20261007-aps62-v6')
         for module in curriculum_manifest()['modules']:
             course = load_bundled_course(module['id'])
             old = load_bundled_course(module['id'], '20261006-aps62-v4')

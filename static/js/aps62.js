@@ -19,7 +19,7 @@
   }));
   root.querySelector('[data-aps-check-sort]')?.addEventListener('click', () => {
     const cards = [...root.querySelectorAll('[data-aps-sort] .aps-sort-card')];
-    const labels = {fait:'Fait de la situation', adapte:'Action adaptée', ecarter:'Décision à écarter'};
+    const labels = {fait:'Ce qui se passe', adapte:'L’action adaptée', ecarter:'L’erreur à éviter'};
     let correct = 0;
     cards.forEach(card => {
       const value = card.querySelector('select').value;

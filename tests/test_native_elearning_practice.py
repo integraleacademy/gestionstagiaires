@@ -96,7 +96,8 @@ class PracticeWebTests(unittest.TestCase):
             config = self._player_config(response)
             self.assertEqual(self._api_post(config['completeUrl'], config, reflection='A' * 500).status_code, 400)
             self.assertEqual(self._api_post(config['practiceUrl'], config).status_code, 400)
-            wrong = {**answers, 'decision': next(o['id'] for o in activity['practice']['exercises'][0]['options'] if o['id'] != answers['decision'])}
+            decision = next(ex for ex in activity['practice']['exercises'] if ex['id'] == 'decision')
+            wrong = {**answers, 'decision': next(o['id'] for o in decision['options'] if o['id'] != answers['decision'])}
             self.assertFalse(self._api_post(config['practiceUrl'], config, practice_answers=wrong).json['correct'])
             self.assertEqual(self._api_post(config['completeUrl'], config, practice_answers=wrong).status_code, 400)
             marked = self._api_post(config['practiceUrl'], config, practice_answers=answers)

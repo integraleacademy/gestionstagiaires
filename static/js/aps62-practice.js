@@ -3,6 +3,7 @@
   const root = document.querySelector('[data-aps-practice]');
   if (!root) return;
   const config = JSON.parse(document.getElementById('apsPracticeConfig').textContent);
+  if (config.practice.mode === 'guided') return;
   const preview = Boolean(document.getElementById('nativePreviewConfig'));
   const access = JSON.parse(document.getElementById(preview ? 'nativePreviewConfig' : 'nativeElearningConfig').textContent);
   const form = root.querySelector('form');

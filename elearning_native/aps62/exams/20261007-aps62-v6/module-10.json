@@ -1,0 +1,939 @@
+{
+  "id": "module-10",
+  "version": "20261007-aps62-v6",
+  "title": "Prévention et risques industriels",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-10-01",
+      "prompt": "Un chariot circule dans une allée piétonne. Quelle priorité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Se protéger et signaler le croisement dangereux"
+        },
+        {
+          "id": "2",
+          "text": "Ignorer si le conducteur est expérimenté"
+        },
+        {
+          "id": "3",
+          "text": "Se placer devant pour l’arrêter à mains nues"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La séparation des flux et le relais réduisent le risque de collision.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-02",
+      "prompt": "Quelle différence entre danger et risque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Ce sont toujours deux mots identiques"
+        },
+        {
+          "id": "2",
+          "text": "Le danger peut causer un dommage ; le risque dépend de l’exposition"
+        },
+        {
+          "id": "3",
+          "text": "Le risque n’existe qu’après l’accident"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Identifier une source dangereuse ne suffit pas : il faut regarder qui peut y être exposé.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-03",
+      "prompt": "Un bidon fuit et son contenu est inconnu. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Mélanger un produit nettoyant"
+        },
+        {
+          "id": "2",
+          "text": "Éloigner les personnes et alerter selon les consignes"
+        },
+        {
+          "id": "3",
+          "text": "Le sentir de près pour l’identifier"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Sans identification et compétence adaptées, une manipulation peut aggraver l’exposition.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-04",
+      "prompt": "À quoi sert la fiche de données de sécurité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "À remplacer la formation de l’intervenant"
+        },
+        {
+          "id": "2",
+          "text": "À informer sur les dangers et mesures de prévention d’un produit"
+        },
+        {
+          "id": "3",
+          "text": "À donner un prix de vente"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Elle constitue une ressource pour les personnes compétentes et l’organisation de la prévention.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-05",
+      "prompt": "Une étiquette de produit est illisible. Quelle décision ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Deviner le contenu d’après sa couleur"
+        },
+        {
+          "id": "2",
+          "text": "Signaler et éviter une manipulation non maîtrisée"
+        },
+        {
+          "id": "3",
+          "text": "Transvaser dans une bouteille alimentaire"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’identification fiable précède l’usage ou le traitement d’un produit.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-06",
+      "prompt": "Une sortie de secours est encombrée de palettes. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Signaler et faire rétablir le dégagement selon la procédure"
+        },
+        {
+          "id": "2",
+          "text": "Bloquer aussi l’autre sortie"
+        },
+        {
+          "id": "3",
+          "text": "Attendre un incendie"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’écart compromet une évacuation et doit être traité avant l’urgence.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-07",
+      "prompt": "Quel document rassemble l’évaluation des risques professionnels ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le planning des congés"
+        },
+        {
+          "id": "2",
+          "text": "La seule facture d’assurance"
+        },
+        {
+          "id": "3",
+          "text": "Le DUERP"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le document unique formalise l’évaluation et contribue à organiser la prévention.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-08",
+      "prompt": "À quoi sert la coordination des entreprises extérieures ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "À supprimer les règles locales"
+        },
+        {
+          "id": "2",
+          "text": "À traiter les risques liés à leurs interférences sur le site"
+        },
+        {
+          "id": "3",
+          "text": "À transférer toutes les responsabilités à l’APS"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La coactivité crée des interactions qui doivent être anticipées entre les entreprises.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-09",
+      "prompt": "Un permis de feu est-il une autorisation permanente de tous travaux ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui pour toute l’année"
+        },
+        {
+          "id": "2",
+          "text": "Oui tant que l’entreprise est connue"
+        },
+        {
+          "id": "3",
+          "text": "Non, il concerne une opération et des conditions définies"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le contexte et les mesures doivent correspondre au travail réellement prévu.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-10",
+      "prompt": "Un prestataire arrive sans les autorisations attendues. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Lui prêter un badge technique"
+        },
+        {
+          "id": "2",
+          "text": "Vérifier auprès du relais désigné avant l’accès concerné"
+        },
+        {
+          "id": "3",
+          "text": "Laisser entrer car il est pressé"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La pression du planning ne remplace pas la vérification des conditions d’intervention.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-11",
+      "prompt": "Une odeur inhabituelle apparaît dans un local technique. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Se tenir à distance et alerter sans recherche dangereuse"
+        },
+        {
+          "id": "2",
+          "text": "Entrer seul pour trouver l’origine"
+        },
+        {
+          "id": "3",
+          "text": "Allumer une flamme pour mieux voir"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La reconnaissance improvisée d’une atmosphère inconnue peut exposer l’agent.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-12",
+      "prompt": "Pourquoi ne pas entrer spontanément dans un espace confiné ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Des dangers invisibles peuvent exiger une organisation spécialisée"
+        },
+        {
+          "id": "2",
+          "text": "Parce qu’un casque suffit ailleurs"
+        },
+        {
+          "id": "3",
+          "text": "Parce que toute porte fermée est interdite"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le risque ne se déduit pas seulement de l’aspect du lieu.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-13",
+      "prompt": "Un casque autorise-t-il à passer sous une charge suspendue ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non"
+        },
+        {
+          "id": "2",
+          "text": "Oui si le grutier a vu l’agent"
+        },
+        {
+          "id": "3",
+          "text": "Oui si le passage est court"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un équipement individuel ne supprime pas le danger d’une charge en mouvement.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-14",
+      "prompt": "Quel ordre de prévention est généralement privilégié ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Compter seulement sur l’attention individuelle"
+        },
+        {
+          "id": "2",
+          "text": "Distribuer un EPI puis ignorer le danger"
+        },
+        {
+          "id": "3",
+          "text": "Éviter le risque, agir à la source et privilégier les protections collectives"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les moyens individuels complètent une organisation et des protections adaptées.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-15",
+      "prompt": "Une protection de machine est retirée. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Fabriquer seul une protection provisoire"
+        },
+        {
+          "id": "2",
+          "text": "Signaler, prévenir l’exposition et solliciter le responsable compétent"
+        },
+        {
+          "id": "3",
+          "text": "Remettre la machine en marche pour tester"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’agent constate et organise le relais sans intervenir techniquement hors compétence.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-16",
+      "prompt": "Un déversement rend le sol glissant. Quelle réponse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Poser une chaise sans prévenir"
+        },
+        {
+          "id": "2",
+          "text": "Baliser sans s’exposer et faire traiter la cause"
+        },
+        {
+          "id": "3",
+          "text": "Attendre la ronde suivante"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La mesure provisoire doit être visible et accompagnée d’un traitement durable.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-17",
+      "prompt": "Pourquoi identifier les points de rassemblement ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour y stocker les équipements"
+        },
+        {
+          "id": "2",
+          "text": "Pour éviter tout comptage"
+        },
+        {
+          "id": "3",
+          "text": "Pour orienter et organiser le regroupement selon le plan"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le regroupement doit se faire dans une zone prévue et sûre.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-18",
+      "prompt": "Une évacuation est déclenchée. Que faire des effets personnels ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Demander à tous de vérifier leur bureau"
+        },
+        {
+          "id": "2",
+          "text": "Ne pas retarder la sortie pour les récupérer"
+        },
+        {
+          "id": "3",
+          "text": "Retourner systématiquement au vestiaire"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le délai et le sens des déplacements doivent rester compatibles avec la protection des personnes.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-19",
+      "prompt": "Un agent isolé ne répond plus au contact prévu. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Déclencher la procédure de vérification et d’alerte"
+        },
+        {
+          "id": "2",
+          "text": "Désactiver le dispositif d’alerte"
+        },
+        {
+          "id": "3",
+          "text": "Attendre la fin du service"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’absence de réponse prévue doit être traitée comme une situation à vérifier, sans supposition rassurante.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-20",
+      "prompt": "Un dispositif pour travailleur isolé remplace-t-il toute organisation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui s’il envoie une notification"
+        },
+        {
+          "id": "2",
+          "text": "Non, il doit s’intégrer à une procédure de réponse"
+        },
+        {
+          "id": "3",
+          "text": "Oui si la batterie est pleine"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une alerte n’est utile que si elle peut être reçue, évaluée et suivie d’une action.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-21",
+      "prompt": "Une alarme habituelle se déclenche. Peut-on la considérer fausse sans contrôle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Oui après trois fausses alarmes"
+        },
+        {
+          "id": "2",
+          "text": "Non, appliquer la levée de doute prévue sans s’exposer"
+        },
+        {
+          "id": "3",
+          "text": "Oui pendant la pause"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’habitude ne prouve pas l’absence d’événement réel.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-22",
+      "prompt": "Une zone est balisée par une entreprise technique. Que vérifier avant d’y entrer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement la couleur du ruban"
+        },
+        {
+          "id": "2",
+          "text": "L’absence de témoin"
+        },
+        {
+          "id": "3",
+          "text": "L’autorisation, le risque et les conditions d’accès"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un balisage matérialise une limite qui ne doit pas être franchie par routine.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-23",
+      "prompt": "Un EPI est défectueux. Quelle action ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Continuer parce qu’il est presque intact"
+        },
+        {
+          "id": "2",
+          "text": "Le signaler et obtenir un moyen adapté avant exposition"
+        },
+        {
+          "id": "3",
+          "text": "Le prêter à un collègue"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un équipement dégradé ne doit pas être considéré comme une protection fiable.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-24",
+      "prompt": "La circulation a changé après des travaux. Que faut-il mettre à jour ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les consignes, les cheminements et l’information utile"
+        },
+        {
+          "id": "2",
+          "text": "Rien avant un accident"
+        },
+        {
+          "id": "3",
+          "text": "Uniquement le plan décoratif de l’accueil"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le risque évolue avec l’aménagement réel du site.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-25",
+      "prompt": "Pourquoi signaler un presque-accident ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Pour corriger une situation dangereuse avant un dommage"
+        },
+        {
+          "id": "2",
+          "text": "Pour désigner automatiquement un coupable"
+        },
+        {
+          "id": "3",
+          "text": "Pour augmenter artificiellement les statistiques"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’absence de blessure n’efface pas l’enseignement préventif.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-26",
+      "prompt": "Un incendie se déclare près de produits inconnus. Quel rôle pour l’APS non spécialisé ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Alerter, protéger et appliquer ses consignes sans intervention hors capacité"
+        },
+        {
+          "id": "2",
+          "text": "Ouvrir tous les contenants"
+        },
+        {
+          "id": "3",
+          "text": "Mélanger les produits pour les neutraliser"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les moyens et gestes doivent rester adaptés au risque identifié et à la formation.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-27",
+      "prompt": "Une consigne technique est modifiée oralement par un prestataire. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Faire valider la modification par le circuit du site"
+        },
+        {
+          "id": "2",
+          "text": "La considérer automatiquement applicable"
+        },
+        {
+          "id": "3",
+          "text": "Supprimer l’ancienne sans trace"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La coordination doit éviter des consignes contradictoires ou non autorisées.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-28",
+      "prompt": "Quel compte rendu d’anomalie est utile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une photographie diffusée publiquement"
+        },
+        {
+          "id": "2",
+          "text": "« Site dangereux » sans précision"
+        },
+        {
+          "id": "3",
+          "text": "Le lieu, le danger, les personnes exposées et les mesures prises"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une description exploitable permet de hiérarchiser et de traiter l’écart.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-29",
+      "prompt": "Quand clore une anomalie signalée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Dès l’envoi du premier message"
+        },
+        {
+          "id": "2",
+          "text": "À chaque changement d’équipe"
+        },
+        {
+          "id": "3",
+          "text": "Après vérification de son traitement selon les responsabilités prévues"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Signaler et résoudre sont deux étapes différentes.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-10-30",
+      "prompt": "Quel réflexe évite un suraccident industriel ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Courir systématiquement vers la victime"
+        },
+        {
+          "id": "2",
+          "text": "Toucher l’installation pour vérifier"
+        },
+        {
+          "id": "3",
+          "text": "Évaluer le danger avant de s’approcher et mobiliser le bon relais"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La protection des personnes inclut celle de l’intervenant.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04"
+}

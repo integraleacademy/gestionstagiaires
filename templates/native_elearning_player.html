@@ -7,8 +7,8 @@
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20260923-series') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261006-5') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261006-3') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-2') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
 </head>
@@ -261,8 +261,9 @@
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261006-3') }}" defer></script>
   {% endif %}
-<script src="{{ url_for('static', filename='js/aps62.js', v='20261006-3') }}" defer></script>
-<script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261006-3') }}" defer></script>
+<script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
+<script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>
+{% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261007-6') }}" defer></script>{% endif %}
 {% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261006-105-1') }}" defer></script>{% endif %}
 </body>
 </html>

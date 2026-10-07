@@ -1,0 +1,16 @@
+<section class="aps-visual-start" aria-label="Le cours en images">
+  <div class="aps-visual-heading"><span class="aps-label">Comprendre avec des images</span><h2>{{ lesson.visual_guide.title }}</h2></div>
+  <div class="aps-visual-scene">
+    <img src="{{ lesson.image }}" alt="{{ lesson.image_alt|default('Illustration du lieu de travail de l’agent de sécurité') }}" loading="eager">
+    <div><span class="aps-visual-step">1 · Ce qui se passe</span><p>{{ lesson.visual_guide.situation }}</p></div>
+  </div>
+  <div class="aps-visual-bridge" aria-hidden="true">↓</div>
+  <div class="aps-visual-choice">
+    <article class="aps-visual-good"><span class="aps-visual-step">2 · L’action adaptée</span><p>{{ lesson.visual_guide.action }}</p></article>
+    <article class="aps-visual-why"><span class="aps-visual-step">3 · Pourquoi cette action ?</span><p>{{ lesson.visual_guide.why }}</p></article>
+  </div>
+  <div class="aps-term-map" aria-label="Trois mots expliqués">
+    {% for term in lesson.visual_guide.terms %}<article><span class="aps-term-icon" aria-hidden="true">{{ loop.index }}</span><h3>{{ term.term }}</h3><p>{{ term.definition }}</p></article>{% endfor %}
+  </div>
+  <div class="aps-table-wrap aps-visual-compare"><table><caption>Comparer les deux choix</caption><thead><tr><th scope="col">✓ L’action adaptée</th><th scope="col">! L’erreur à éviter</th></tr></thead><tbody><tr><td>{{ lesson.visual_guide.action }}</td><td>{{ lesson.visual_guide.mistake }}</td></tr></tbody></table></div>
+</section>

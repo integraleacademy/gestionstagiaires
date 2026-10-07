@@ -1,10 +1,10 @@
 {
-  "version": "20261006-aps62-v5",
+  "version": "20261007-aps62-v6",
   "hours": 62,
   "modules": [
     {
       "id": "academy-aps62-01",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Le cadre de la sécurité privée",
       "number": "01",
       "hours": 4,
@@ -16,13 +16,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-02",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Responsabilité et droit pénal",
       "number": "02",
       "hours": 3,
@@ -34,13 +35,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-03",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Flagrance et article 73",
       "number": "03",
       "hours": 2,
@@ -52,13 +54,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-04",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Libertés et données personnelles",
       "number": "04",
       "hours": 1,
@@ -70,13 +73,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-05",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "République, égalité et dignité",
       "number": "05",
       "hours": 3,
@@ -88,13 +92,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-06",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Déontologie au quotidien",
       "number": "06",
       "hours": 4,
@@ -106,13 +111,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-07",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Comprendre et apaiser les conflits",
       "number": "07",
       "hours": 5,
@@ -124,13 +130,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-08",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Consignes et comptes rendus",
       "number": "08",
       "hours": 5,
@@ -142,13 +149,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-09",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Justifier ses décisions",
       "number": "09",
       "hours": 3,
@@ -160,13 +168,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-10",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Prévention et risques industriels",
       "number": "10",
       "hours": 7,
@@ -178,13 +187,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-11",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Sensibilisation au risque électrique",
       "number": "11",
       "hours": 2,
@@ -196,13 +206,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-12",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Prévenir la menace terroriste",
       "number": "12",
       "hours": 7,
@@ -214,13 +225,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-13",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "La main courante numérique",
       "number": "13",
       "hours": 2,
@@ -232,13 +244,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-14",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Décider face à une infraction",
       "number": "14",
       "hours": 7,
@@ -250,13 +263,14 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     },
     {
       "id": "academy-aps62-15",
-      "version": "20261006-aps62-v5",
+      "version": "20261007-aps62-v6",
       "title": "Sécuriser un événement",
       "number": "15",
       "hours": 7,
@@ -268,7 +282,8 @@
         "20261003-aps62-v1",
         "20261004-aps62-v2",
         "20261006-aps62-v3",
-        "20261006-aps62-v4"
+        "20261006-aps62-v4",
+        "20261006-aps62-v5"
       ],
       "exam_questions": 30
     }
@@ -316,12 +331,13 @@
     "20261004-aps62-v2",
     "20261006-aps62-v3",
     "20261006-aps62-v4",
-    "20261006-aps62-v5"
+    "20261006-aps62-v5",
+    "20261007-aps62-v6"
   ],
   "mock_questions": 450,
   "final_questions": 100,
   "illustrations": 15,
-  "interaction_revision": "20261006-aps62-v5",
+  "interaction_revision": "20261007-aps62-v6",
   "interactive_workshop_count": 142,
   "enrichment": {
     "missions": 62,
@@ -343,5 +359,14 @@
     "authored_on": "2026-10-06",
     "source_sha256": "6803213bfb9605f11df9bc9bb37d5088677b2f82c269df7f995317f804c6d481",
     "validation": "Relecture éditoriale et contrôles techniques. Compréhension à éprouver avec les apprenants concernés ; aucune certification FALC revendiquée."
+  },
+  "visual_learning": {
+    "guided_workshops": 142,
+    "illustrated_summaries": 62,
+    "vocabulary_diagrams": 62,
+    "comparison_tables": 62,
+    "observation_questions": 62,
+    "authored_on": "2026-10-07",
+    "long_videos_published": false
   }
 }

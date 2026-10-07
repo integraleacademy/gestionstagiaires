@@ -2,3 +2,25 @@
 
 /* Dossiers, étapes successives et révisions de l'édition approfondie. */
 .aps-evidence-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:22px 0}.aps-evidence,.aps-journal{background:#f7faff;border:1px solid #cbdced;border-radius:16px;padding:22px}.aps-evidence h3{margin:8px 0 12px}.aps-evidence p{white-space:pre-line;line-height:1.65}.aps-evidence dl,.aps-journal dl{display:grid;grid-template-columns:minmax(100px,.4fr) minmax(0,1fr);gap:10px}.aps-evidence dt,.aps-journal dt{font-weight:800}.aps-evidence dd,.aps-journal dd{margin:0;line-height:1.55;overflow-wrap:anywhere}.aps-stage-context{border-left:4px solid #2563eb;padding:14px;background:#eff6ff;line-height:1.65}.aps-stage-consequence{padding:12px 16px;background:#edf6fa;border-radius:10px;line-height:1.6}.aps-stage-status{font-weight:800;color:#1e40af}.aps-remediation{margin-top:24px;border:2px solid #f0c069;border-radius:18px;padding:22px;background:#fffbeb}.aps-remediation fieldset{border:1px solid #ecd9ab;border-radius:12px;margin:20px 0;padding:18px}.aps-remediation legend{font-weight:800}.aps-remediation label{display:flex;align-items:flex-start;gap:10px;padding:10px;line-height:1.5}.aps-practice-review{padding:12px 18px;border:0;border-radius:12px;background:#172b4d;color:white;font-weight:800;cursor:pointer}.aps-deepening{margin:24px 0;background:#fff;border:1px solid #d7e4ef;border-radius:18px;padding:26px}.aps-deepening p{line-height:1.8}.aps-exercise[hidden],.aps-remediation[hidden]{display:none}.aps-ref-table{overflow-x:auto}.aps-ref-table table{border-collapse:collapse;width:100%;font-size:13px}.aps-ref-table th,.aps-ref-table td{border-bottom:1px solid #dce3eb;text-align:left;padding:10px;vertical-align:top}@media(max-width:700px){.aps-evidence-grid{grid-template-columns:1fr}.aps-evidence dl,.aps-journal dl{grid-template-columns:1fr}.aps-evidence dd,.aps-journal dd{margin-bottom:10px}}
+.aps-guided [hidden] {display:none!important}
+.aps-guided .aps-practice-intro {padding-bottom:12px}
+.aps-guided .aps-practice-intro p {max-width:65ch;font-size:1.08rem;line-height:1.75}
+.aps-guided .aps-stage-status {padding:12px 18px;border-radius:10px;background:#eaf1fc;color:#1c4b91;font-size:1.05rem;font-weight:800}
+.aps-guided .aps-exercise {padding:24px;border:2px solid #d9e4f2;border-radius:18px;margin-top:24px;min-width:0}
+.aps-guided .aps-exercise legend {max-width:100%;font-size:1.2rem;line-height:1.5}
+.aps-guided-context {display:flex;gap:22px;align-items:flex-start;background:#f5f8fc;padding:20px;border-radius:12px;margin:12px 0 24px}
+.aps-guided-context img {width:210px;aspect-ratio:4/3;object-fit:cover;border-radius:10px}
+.aps-guided-context p {font-size:1.08rem;line-height:1.75;max-width:65ch;margin:8px 0}
+.aps-guided-context b {color:#1e4b79}
+.aps-guided-question {font-size:1.3rem;line-height:1.45;margin:18px 0 8px;color:#173852}
+.aps-guided .aps-practice-options label {min-height:64px;font-size:1.08rem;line-height:1.65;gap:14px;padding:18px;border-width:2px;cursor:pointer}
+.aps-guided .aps-practice-options label:has(input:checked) {border-color:#245bdc;background:#eff5ff}
+.aps-guided input[type=radio] {width:22px;height:22px;flex-shrink:0;accent-color:#245bdc}
+.aps-guided .aps-exercise-feedback {font-size:1.05rem;line-height:1.75;margin-top:22px;padding:20px}
+.aps-guided-next {border:0;border-radius:10px;background:#245bdc;color:white;padding:14px 22px;font:inherit;font-weight:750;cursor:pointer;min-height:48px}
+.aps-guided button:focus-visible,.aps-guided input:focus-visible {outline:3px solid #a26715;outline-offset:4px}
+.aps-guided .aps-remediation details {border:1px solid #d8e3ef;border-radius:10px;padding:16px;margin:12px 0;background:white}
+.aps-guided .aps-remediation summary {font-weight:750;cursor:pointer}
+.aps-guided .aps-remediation label {display:flex;gap:12px;padding:12px;line-height:1.7}
+.aps-guided .aps-remediation button {min-height:44px;padding:10px 18px;margin-top:12px}
+@media(max-width:650px) {.aps-guided-context{flex-direction:column;padding:15px}.aps-guided-context img{width:100%;max-height:190px;object-fit:cover}.aps-guided .aps-exercise{padding:15px}.aps-guided .aps-practice-actions{flex-direction:column;align-items:stretch}.aps-guided .aps-practice-actions button{width:100%}}

@@ -1,19 +1,20 @@
-<section class="aps-practice" data-aps-practice>
+{% set guided = activity.practice.mode == 'guided' %}
+<section class="aps-practice{% if guided %} aps-guided{% endif %}" data-aps-practice>
   <header class="aps-practice-intro">
-    <span class="aps-label">À vous de jouer · {{ activity.practice.exercises|length }} exercices</span>
+    <span class="aps-label">À vous de jouer · {{ activity.practice.exercises|length }} questions</span>
     <h2>{{ activity.practice.title or 'Faites vos choix, puis vérifiez' }}</h2>
-    <p>Choisissez vos réponses, puis cliquez sur « Vérifier mes réponses ». En cas d’erreur, lisez l’explication et essayez à nouveau.</p>
+    {% if guided %}<p><strong>Une seule question à la fois.</strong> Lisez la situation, cliquez sur une réponse, puis sur « Vérifier ma réponse ».</p><p>La correction vous explique le choix. Vous passez ensuite à la question suivante.</p>{% else %}<p>Choisissez vos réponses, puis cliquez sur « Vérifier mes réponses ». En cas d’erreur, lisez l’explication et essayez à nouveau.</p>{% endif %}
     <div class="aps-practice-chips"><span>Aucune rédaction</span><span>Correction immédiate</span><span>Essais illimités</span></div>
     {% if activity_completed %}<p class="aps-practice-saved">Cette activité est déjà terminée. Vous pouvez vous entraîner à nouveau librement.</p>{% endif %}
   </header>
   {% if activity.practice.documents %}<div class="aps-evidence-grid" aria-label="Documents du dossier">
   {% for document in activity.practice.documents %}<article class="aps-evidence"><span class="aps-label">Pièce {{ loop.index }} · Document pédagogique fictif</span><h3>{{ document.title }}</h3><p>{{ document.text }}</p>{% if document.rows %}<dl>{% for row in document.rows %}<dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd>{% endfor %}</dl>{% endif %}</article>{% endfor %}</div>{% endif %}
-  {% if activity.practice.sequential %}<p class="aps-stage-status" data-stage-status role="status"></p>{% endif %}
+  {% if activity.practice.sequential or guided %}<p class="aps-stage-status" data-stage-status role="status"></p>{% endif %}
   <form id="apsPracticeForm">
     {% for exercise in activity.practice.exercises %}
-    <fieldset class="aps-exercise" data-exercise-id="{{ exercise.id }}" data-kind="{{ exercise.kind }}">
-      <legend><span class="aps-exercise-number">{{ '%02d'|format(loop.index) }}</span>{{ exercise.prompt }}</legend>
-      {% if exercise.context %}<p class="aps-stage-context">{{ exercise.context }}</p>{% endif %}
+    <fieldset class="aps-exercise" data-exercise-id="{{ exercise.id }}" data-kind="{{ exercise.kind }}"{% if guided and not loop.first %} hidden{% endif %}>
+      <legend tabindex="-1"><span class="aps-exercise-number">{{ '%02d'|format(loop.index) }}</span>{{ exercise.stage if guided else exercise.prompt }}</legend>
+      {% if guided %}<div class="aps-guided-context">{% if lesson.image and loop.first %}<img src="{{ lesson.image }}" alt="Illustration du contexte professionnel" loading="eager">{% endif %}<div><b>{{ 'Un nouvel événement' if exercise.stage == 'La suite de l’histoire' else 'La situation' }}</b>{% for paragraph in exercise.context.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}</div></div><h3 class="aps-guided-question">{{ exercise.prompt }}</h3>{% elif exercise.context %}<p class="aps-stage-context">{{ exercise.context }}</p>{% endif %}
       {% if exercise.kind == 'single' %}
       <p class="aps-exercise-instruction">Sélectionnez une réponse.</p>
       <div class="aps-practice-options">
@@ -29,7 +30,7 @@
       <div class="aps-exercise-feedback" data-exercise-feedback hidden></div>
     </fieldset>
     {% endfor %}
-    <div class="aps-practice-actions"><button type="submit" class="aps-practice-check"{% if preview_mode and not preview_can_answer %} disabled{% endif %}>Vérifier mes réponses</button><button type="button" class="aps-practice-restart">Recommencer l’atelier</button></div>
+    <div class="aps-practice-actions"><button type="submit" class="aps-practice-check"{% if preview_mode and not preview_can_answer %} disabled{% endif %}>{{ 'Vérifier ma réponse' if guided else 'Vérifier mes réponses' }}</button>{% if guided %}<button type="button" class="aps-guided-next" hidden>Question suivante →</button>{% endif %}<button type="button" class="aps-practice-restart">Recommencer</button></div>
   </form>
   {% if activity.practice.journal %}<section class="aps-journal"><h3>Votre entrée de main courante</h3><p>Composez l’entrée avec les propositions ci-dessus. Le document se met à jour avec vos choix.</p><dl data-journal-preview></dl></section>{% endif %}
   <section class="aps-remediation" data-remediation hidden><h3>Réviser les points à reprendre</h3><p>Une autre situation pour chaque difficulté repérée. Répondez, puis vérifiez vos révisions.</p><div data-remediation-items></div><button type="button" class="aps-practice-review">Vérifier mes révisions</button><p data-review-status role="status"></p></section>
