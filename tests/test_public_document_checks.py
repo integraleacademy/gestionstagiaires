@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from datetime import date
 from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
 from PIL import Image
 from pypdf import PdfWriter
@@ -97,6 +98,60 @@ class DocumentRulesTests(unittest.TestCase):
             result = visual.analyze_images(['front-image', 'back-image'], 'identity', 'test-key', date.today())
         self.assertEqual(provider.call_count, 2)
         self.assertEqual(checks.summarize([result], 'id')['status'], 'success')
+
+    def test_inconclusive_identity_explains_the_uncertain_point_without_inventing_a_defect(self):
+        fields = observations(document_type='identity', identity_document='identity_card', identity_sides=['front'],
+                              side_confidence='high', identity_checks={key: 'pass' for key in visual.IDENTITY_CHECKS})
+        cases = [({'confidence': 'medium'}, 'identity_confidence_uncertain', 'certitude'),
+                 ({'document_type': 'uncertain'}, 'document_type_uncertain', 'type de document'),
+                 ({'readability': 'uncertain'}, 'identity_criteria_uncertain', 'lisibilité'),
+                 ({'identity_checks': {**fields['identity_checks'], 'no_glare': 'uncertain'}},
+                  'identity_criteria_uncertain', 'l’absence de reflet gênant')]
+        for changes, reason, detail in cases:
+            with self.subTest(reason=reason, changes=changes):
+                answer = visual.advisory({**fields, **changes}, 'identity', date.today())
+                self.assertEqual(answer['status'], 'unknown')
+                self.assertEqual(answer['reason_code'], reason)
+                self.assertTrue(answer['title'])
+                self.assertIn(detail, answer['message'])
+                self.assertIn('choisir un autre fichier', answer['message'])
+                self.assertNotIn('est bien lisible', answer['message'])
+                self.assertEqual(checks.summarize([answer], 'id')['reason_code'], reason)
+
+    def test_identity_page_budget_exhaustion_is_a_timeout_not_a_readability_problem(self):
+        fields = observations(document_type='identity', identity_document='identity_card', identity_sides=['front'],
+                              side_confidence='high', identity_checks={key: 'pass' for key in visual.IDENTITY_CHECKS})
+        with patch.object(visual.time, 'monotonic', side_effect=[0, 0, 26]), \
+             patch.object(visual, 'call_openai', return_value=fields) as provider:
+            result = visual.analyze_images(['front-image', 'back-image'], 'identity', 'test-key', date.today())
+        self.assertEqual(provider.call_count, 1)
+        self.assertEqual(result['status'], 'unknown')
+        self.assertEqual(result['reason_code'], 'timeout')
+        self.assertIn('toutes les pages', result['message'])
+        self.assertNotIn('bien lisible', result['message'])
+
+    def test_multipage_uncertainty_identifies_the_page_and_keeps_its_reason(self):
+        fields = observations(document_type='identity', identity_document='identity_card', identity_sides=['front'],
+                              side_confidence='high', identity_checks={key: 'pass' for key in visual.IDENTITY_CHECKS})
+        with patch.object(visual, 'call_openai', side_effect=[fields, {**fields, 'confidence': 'low'}]):
+            result = visual.analyze_images(['front-image', 'back-image'], 'identity', 'test-key', date.today())
+        self.assertEqual(result['reason_code'], 'identity_confidence_uncertain')
+        self.assertTrue(result['message'].startswith('Page 2 : '))
+
+    def test_service_failures_are_distinguished_from_document_quality(self):
+        errors = [(TimeoutError(), 'timeout'), (URLError(TimeoutError()), 'timeout'),
+                  (HTTPError('https://example.invalid', 401, 'secret upstream details', {}, None), 'http_401'),
+                  (HTTPError('https://example.invalid', 429, 'secret upstream details', {}, None), 'http_429')]
+        with gestion.app.app_context(), patch.dict(os.environ, {'OPENAI_API_KEY': 'synthetic-key'}), \
+             patch.object(visual, 'render_pages', return_value=['synthetic-image']), \
+             patch.object(visual, 'reserve_usage', return_value=True):
+            for error, reason in errors:
+                with self.subTest(reason=reason), patch.object(visual, 'analyze_images', side_effect=error):
+                    result = checks.analyze_file(b'%PDF-synthetic', 'id', 'identity', ':memory:', 'synthetic-token')
+                self.assertEqual(result['status'], 'unknown')
+                self.assertEqual(result['reason_code'], reason)
+                self.assertNotIn('secret upstream details', str(result))
+                self.assertNotIn('synthetic-key', str(result))
 
     def test_other_document_types_use_structured_advisory_results(self):
         for changes, expected in [({}, 'success'), ({'expected_type': 'no'}, 'warning'),
@@ -250,6 +305,19 @@ class UploadWorkflowTests(unittest.TestCase):
         self.assertEqual(response.json['summary']['status'], 'unknown')
         self.assertEqual(response.json['summary']['reason_code'], 'not_configured')
         self.assertTrue(response.json['receipt'])
+
+    def test_inconclusive_reason_reaches_user_and_safe_logs_without_document_or_identity_data(self):
+        answer = visual.unavailable('identity', 'identity_confidence_uncertain')
+        with patch.object(checks, 'analyze_file', return_value=answer), \
+             patch.object(gestion.app.logger, 'warning') as warning:
+            response = self.post(key='id', data=pdf_bytes(), name='PERSONAL-NAME-passport.pdf')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json['summary']['reason_code'], 'identity_confidence_uncertain')
+        warning.assert_called_once_with('trainee_document_check_inconclusive kind=%s reason=%s',
+                                        'id', 'identity_confidence_uncertain')
+        self.assertNotIn('PERSONAL-NAME', str(warning.call_args))
+        self.assertNotIn('synthetic-token', str(warning.call_args))
+        self.save.assert_not_called()
 
     def test_non_required_document_and_three_identity_files_are_rejected(self):
         self.assertEqual(self.post(key='arbitrary').status_code, 404)

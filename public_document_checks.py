@@ -8,7 +8,7 @@ import secrets
 import time
 from datetime import datetime
 from io import BytesIO
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
@@ -21,7 +21,7 @@ from document_conversion import ConversionError, convert_upload
 
 import document_visual_checks as visual
 
-CHECK_VERSION = 2
+CHECK_VERSION = 3
 MIME_FORMATS = {"application/pdf": {"pdf"}, "image/jpeg": {"jpg", "jpeg"},
                 "image/png": {"png"}, "image/webp": {"webp"},
                 "image/*": {"jpg", "jpeg", "png", "webp"}}
@@ -88,8 +88,21 @@ def read_upload(upload, limit):
 
 
 def unknown(reason="technical_error"):
-    return {"status": "unknown", "title": "Vérification à confirmer", "reason_code": reason,
-            "message": "La vérification automatique n’a pas pu aboutir. Vous pouvez réessayer ou déposer le fichier : notre équipe le vérifiera."}
+    title, message = {
+        "uncertain": ("Document à vérifier par notre équipe", "Le contrôle automatique n’a pas pu confirmer tous les points à vérifier sur ce document."),
+        "timeout": ("La vérification a pris trop de temps", "Le service de vérification n’a pas répondu dans le délai disponible. Cela ne signifie pas que le document est illisible."),
+        "batch_limit": ("La vérification a pris trop de temps", "Tous les fichiers n’ont pas pu être analysés dans le délai disponible."),
+        "busy": ("Service de vérification occupé", "Plusieurs documents sont déjà en cours d’analyse. Vous pouvez réessayer dans quelques instants."),
+        "quota": ("Limite de vérifications automatiques atteinte", "Le nombre de vérifications automatiques disponibles a été atteint. Notre équipe peut vérifier votre document."),
+        "http_429": ("Service de vérification temporairement indisponible", "Le service de vérification ne peut pas accepter de nouvelle analyse pour le moment."),
+        "page_limit": ("Document à vérifier par notre équipe", "Le format du PDF est correct. Ce document dépasse 4 pages et nécessite une vérification par notre équipe."),
+        "analysis_size_limit": ("Document à vérifier par notre équipe", "Le fichier dépasse 5 Mo : son format a été contrôlé, mais l’analyse visuelle n’a pas pu être réalisée. Vous pouvez choisir une copie plus légère."),
+        "not_configured": ("Vérification automatique indisponible", "Le service de vérification automatique doit être activé par notre équipe."),
+        "http_401": ("Vérification automatique indisponible", "Le service de vérification rencontre un problème de configuration. Notre équipe doit intervenir."),
+        "http_403": ("Vérification automatique indisponible", "Le service de vérification rencontre un problème d’accès. Notre équipe doit intervenir."),
+    }.get(reason, ("Vérification automatique indisponible", "Le service de vérification n’a pas fourni de résultat exploitable. Cela ne signifie pas que votre document est illisible. Vous pouvez réessayer."))
+    return {"status": "unknown", "title": title, "reason_code": reason,
+            "message": message + " Vous pouvez aussi choisir un autre fichier ou déposer celui-ci pour vérification par notre équipe."}
 
 
 def invalid_file(message):
@@ -191,7 +204,7 @@ Signature : seulement si explicitement demandée, recherche sa présence visuell
 
 def analyze_file(data, doc_key, label, db_path, trainee_token):
     if len(data) > visual.MAX_BYTES:
-        return {**unknown("analysis_size_limit"), "message": "Le fichier dépasse 5 Mo : son format a été contrôlé, mais l’analyse visuelle n’a pas pu être réalisée. Déposez une copie plus légère ou conservez ce fichier pour vérification par notre équipe."}
+        return unknown("analysis_size_limit")
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
         return unknown("not_configured")
@@ -208,15 +221,12 @@ def analyze_file(data, doc_key, label, db_path, trainee_token):
         return generic_analysis(images, label, api_key, doc_key == "desp_exam_sworn_statement")
     except Exception as error:
         reason = str(error) if isinstance(error, ValueError) and str(error) in {"page_limit", "incomplete_response", "invalid_result", "refusal"} else "technical_error"
-        if isinstance(error, TimeoutError):
+        if isinstance(error, TimeoutError) or (isinstance(error, URLError) and isinstance(error.reason, TimeoutError)):
             reason = "timeout"
         elif isinstance(error, HTTPError):
             reason = f"http_{error.code}"
         current_app.logger.warning("trainee_document_check_failed kind=%s reason=%s", doc_key, reason)
-        result = unknown(reason)
-        if reason == "page_limit":
-            result["message"] = "Le format du PDF est correct. Ce document dépasse 4 pages et nécessite une vérification par notre équipe. Vous pouvez le déposer."
-        return result
+        return unknown(reason)
     finally:
         visual._slots.release()
 
@@ -263,9 +273,14 @@ def check_documents(files, doc_key, label, db_path, trainee_token, existing_toke
     results = []
     for data in files:
         if deadline - time.monotonic() < 26:
-            results.append({**unknown("batch_limit"), "message": "La vérification de tous les fichiers dépasse le délai disponible. Vous pouvez les déposer pour vérification par notre équipe."})
+            results.append(unknown("batch_limit"))
         else:
             results.append(analyze_file(data, doc_key, label, db_path, trainee_token))
+        result = results[-1]
+        # Fixed diagnostic codes only: no file, identity observation or personal data.
+        if result["status"] == "unknown":
+            current_app.logger.warning("trainee_document_check_inconclusive kind=%s reason=%s",
+                                       doc_key, result.get("reason_code", "uncertain"))
     checked = {"results": results, "summary": summarize(results, doc_key, bool(existing_tokens)),
                "checked_at": datetime.now(visual.FRANCE_TZ).isoformat(timespec="seconds")}
     if all(result["status"] != "unknown" for result in results):

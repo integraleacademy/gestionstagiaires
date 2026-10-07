@@ -211,15 +211,29 @@ date_confidence low. Pour un portrait, all_fields_legible false (pas de champs a
 """
 
 
-def unavailable(kind):
-    detail = {
-        "proof_address": "votre justificatif de domicile a moins de 3 mois",
-        "host_identity": "la pièce d’identité de la personne qui vous héberge est bien lisible",
-        "identity_photo": "votre photo d’identité respecte tous les critères indiqués ci-dessus",
-        "hosting_certificate": "l’attestation d’hébergement est bien signée par la personne qui vous héberge",
-    }.get(kind, "votre pièce d’identité est bien lisible")
-    return {"status": "unknown", "message": "La vérification automatique n'a pas pu aboutir. "
-            f"Veuillez vérifier que {detail}."}
+def unavailable(kind, reason="uncertain", details=None):
+    """Explain inconclusive observations without inventing a defect in the file."""
+    title, message = {
+        "document_type_uncertain": ("Type de document à confirmer",
+            "Le contrôle automatique n’a pas reconnu avec certitude le type de document attendu."),
+        "photo_criteria_uncertain": ("Photo à vérifier par notre équipe",
+            "Le contrôle automatique n’a pas pu confirmer tous les critères de la photo d’identité."),
+        "signature_uncertain": ("Signature à confirmer",
+            "Le contrôle automatique n’a pas pu confirmer la présence de la signature de l’hébergeant."),
+        "date_uncertain": ("Date du justificatif à confirmer",
+            "La date du justificatif n’a pas pu être déterminée avec certitude. Son ancienneté reste à vérifier."),
+        "date_in_future": ("Date du justificatif à confirmer",
+            "La date repérée semble être dans le futur. Notre équipe doit vérifier la date du justificatif."),
+        "identity_confidence_uncertain": ("Pièce d’identité à vérifier par notre équipe",
+            "Le contrôle automatique manque de certitude pour confirmer la lisibilité de cette pièce d’identité. Cela ne signifie pas que votre document est illisible."),
+        "identity_criteria_uncertain": ("Lisibilité à confirmer",
+            "Le contrôle automatique n’a pas pu confirmer certains points : " + "; ".join(details or ["la lisibilité des informations"]) + ". Aucun défaut n’est confirmé sur ces points."),
+        "timeout": ("La vérification a pris trop de temps",
+            "L’analyse n’a pas pu examiner toutes les pages dans le délai disponible. Ce délai ne permet pas de juger la qualité du document."),
+    }.get(reason, ("Vérification à confirmer",
+        "Le contrôle automatique n’a pas pu conclure avec certitude. Notre équipe doit examiner le document."))
+    return {"status": "unknown", "title": title, "reason_code": reason,
+            "message": message + " Vous pouvez choisir un autre fichier ou déposer celui-ci pour vérification par notre équipe."}
 
 
 def three_months_before(today):
@@ -279,7 +293,7 @@ def advisory(result, kind, today):
             return {"status": "warning", "title": "Une photo d’identité est nécessaire", "message":
                     "Ce fichier ne semble pas être une photo de portrait adaptée. Déposez une photo officielle de votre visage, de face, sur fond neutre.",
                     "critical": "Une photo non conforme entraînera le rejet de votre dossier lors du contrôle de conformité."}
-        return unavailable(kind)
+        return unavailable(kind, "document_type_uncertain")
     if kind == "identity_photo":
         failed = [description for key, description in PHOTO_CRITERIA.items() if result["photo_criteria"][key] == "fail"]
         if failed:
@@ -289,7 +303,7 @@ def advisory(result, kind, today):
         if (result["confidence"] != "high" or result["photo_portrait_count"] != "one"
                 or result["photo_layout"] != "single_photo"
                 or any(value != "pass" for value in result["photo_criteria"].values())):
-            return unavailable(kind)
+            return unavailable(kind, "photo_criteria_uncertain")
         return {"status": "success", "title": "Photo : c’est bon !", "message": "",
                 "photo_check_version": PHOTO_CHECK_VERSION}
     if kind == "hosting_certificate":
@@ -298,13 +312,13 @@ def advisory(result, kind, today):
                     "L’attestation semble ne pas être signée. Faites-la signer par la personne qui vous héberge, puis déposez la version signée.",
                     "critical": "Une attestation d’hébergement non signée sera rejetée lors du contrôle de conformité."}
         if result["signature"] != "present" or result["signature_confidence"] != "high" or result["confidence"] != "high":
-            return unavailable(kind)
+            return unavailable(kind, "signature_uncertain")
         return {"status": "success", "title": "Signature repérée sur l’attestation", "message":
                 "Une signature a été repérée visuellement. Assurez-vous qu’il s’agit bien de celle de la personne qui vous héberge. "
                 "Ce contrôle ne certifie pas son authenticité ; notre équipe vérifiera l’attestation."}
     if kind == "proof_address":
         if result["address_kind_confidence"] != "high" or result["address_kind"] == "uncertain":
-            return {"status": "unknown", "title": "Type de justificatif à vérifier", "message":
+            return {"status": "unknown", "title": "Type de justificatif à vérifier", "reason_code": "address_type_uncertain", "message":
                     "Je n’ai pas pu déterminer le type de justificatif. Fournissez une facture d’eau, de gaz, d’électricité, de téléphone fixe seul ou une quittance de loyer de moins de 3 mois. Les factures de mobile et d’Internet ne sont pas acceptées."}
         if result["address_kind"] not in ACCEPTED_ADDRESS_KINDS:
             reason = "Les factures de téléphone mobile et d’Internet, y compris les offres box avec téléphone fixe, ne sont pas acceptées." if result["address_kind"] in {"mobile", "internet", "mixed_telecom"} else "Ce type de document n’est pas accepté comme justificatif dans ce formulaire."
@@ -312,13 +326,13 @@ def advisory(result, kind, today):
                     " Remplacez-le par une facture d’eau, de gaz, d’électricité, de téléphone fixe seul ou une quittance de loyer de moins de 3 mois.",
                     "critical": "Ce justificatif sera refusé lors du contrôle du dossier."}
         if result["confidence"] != "high" or result["date_confidence"] != "high" or result["date_kind"] == "uncertain":
-            return unavailable(kind)
+            return unavailable(kind, "date_uncertain")
         try:
             issued = date.fromisoformat(result["document_date"] or "")
         except ValueError:
-            return unavailable(kind)
+            return unavailable(kind, "date_uncertain")
         if issued > today:
-            return unavailable(kind)
+            return unavailable(kind, "date_in_future")
         formatted = issued.strftime("%d/%m/%Y")
         if issued <= three_months_before(today):
             return {"status": "warning", "title": "Justificatif à actualiser", "date": issued.isoformat(), "message":
@@ -344,7 +358,7 @@ def advisory(result, kind, today):
         and all(result["identity_checks"][key] == "pass" for key in ("whole_document_visible", "no_glare", "no_obstruction"))
     )
     if soft_blur_only and not readable_soft_scan:
-        return {"status": "unknown", "title": "Lisibilité à confirmer", "message":
+        return {"status": "unknown", "title": "Lisibilité à confirmer", "reason_code": "identity_soft_blur_uncertain", "message":
                 "La netteté de l’image ne permet pas de confirmer automatiquement la lecture de tous les champs. "
                 "Vous pouvez conserver ce fichier : notre équipe vérifiera sa lisibilité. Ce résultat n’est pas un refus du document."}
     if not readable_soft_scan and (result["readability"] in {"slightly_blurred", "poor"} or result["problems"] or not result["all_fields_legible"] or "fail" in result["identity_checks"].values()):
@@ -368,7 +382,13 @@ def advisory(result, kind, today):
                 "Déposez de préférence une photo ou un scan plus net : toutes les informations, y compris les petits caractères, doivent être lisibles, sans reflet et sans bord coupé.",
                 "critical": "Une pièce illisible peut être refusée lors du contrôle de votre dossier par notre équipe."}
     if not readable_soft_scan and (result["readability"] != "clear" or result["confidence"] != "high" or any(value != "pass" for value in result["identity_checks"].values())):
-        return unavailable(kind)
+        descriptions = {"sharp_text": "la netteté des caractères", "all_fields_readable": "la lecture de tous les champs",
+                        "whole_document_visible": "la présence de toutes les zones utiles", "no_glare": "l’absence de reflet gênant",
+                        "no_obstruction": "l’absence d’information masquée"}
+        uncertain = [text for key, text in descriptions.items() if result["identity_checks"][key] != "pass"]
+        if uncertain or result["readability"] != "clear":
+            return unavailable(kind, "identity_criteria_uncertain", uncertain)
+        return unavailable(kind, "identity_confidence_uncertain")
     return {"status": "success", "title": "Fichier lisible", "message":
             f"Les informations de {subject.lower()} sont lisibles sur les pages fournies, sans zone utile coupée ni reflet gênant."}
 
@@ -549,7 +569,7 @@ def analyze_images(images, kind, api_key, today):
     for number, image in enumerate(images, 1):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            return unavailable(kind)
+            return unavailable(kind, "timeout")
         inspected = check_schema(call_openai([image], kind, api_key, timeout=remaining))
         if inspected["document_type"] == "identity":
             evidence.append({"type": inspected["identity_document"], "sides": inspected["identity_sides"], "confidence": inspected["side_confidence"]})
@@ -583,4 +603,3 @@ def reserve_usage(db_path, token, now, units=1):
             conn.execute("INSERT INTO document_analysis_usage VALUES (?, ?, ?) ON CONFLICT(bucket) DO UPDATE SET used = used + excluded.used",
                          (bucket, units, int(now) + 2 * 86400))
     return True
-
