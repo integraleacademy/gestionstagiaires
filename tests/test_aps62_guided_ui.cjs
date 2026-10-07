@@ -4,7 +4,8 @@ const {JSDOM} = require('jsdom');
 const fs = require('node:fs');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname,'../static/js/aps62-guided.js'),'utf8');
-const course = JSON.parse(fs.readFileSync(path.join(__dirname,'../elearning_native/aps62/courses/academy-aps62-01/20261007-aps62-v7.json'),'utf8'));
+const currentVersion = JSON.parse(fs.readFileSync(path.join(__dirname,'../elearning_native/aps62/manifest.json'),'utf8')).version;
+const course = JSON.parse(fs.readFileSync(path.join(__dirname,`../elearning_native/aps62/courses/academy-aps62-01/${currentVersion}.json`),'utf8'));
 
 function fixture(selectedActivity) {
   const activity = selectedActivity || course.sections[0].activities[2], practice = activity.practice;
@@ -75,7 +76,7 @@ test('a failed request preserves the answer and permits a retry',async()=>{
 test('the four guided journals still assemble their entry without typing',()=>{
   let count = 0;
   for(const module of ['08','13']) {
-    const data=JSON.parse(fs.readFileSync(path.join(__dirname,`../elearning_native/aps62/courses/academy-aps62-${module}/20261007-aps62-v7.json`),'utf8'));
+    const data=JSON.parse(fs.readFileSync(path.join(__dirname,`../elearning_native/aps62/courses/academy-aps62-${module}/${currentVersion}.json`),'utf8'));
     for(const activity of data.sections.flatMap(section=>section.activities).filter(a=>a.practice?.journal)) {
       const f=fixture(activity);
       try {

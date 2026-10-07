@@ -5,5 +5,6 @@
   "shards": 4,
   "requested_on": "2026-10-07",
   "request": "Publier les 62 vidéos APS longues, avec narration, sous-titres et contrôle des durées.",
-  "request_revision": 2
+  "request_revision": 3,
+  "reuse_artifact_run_id": "37615426550"
 }

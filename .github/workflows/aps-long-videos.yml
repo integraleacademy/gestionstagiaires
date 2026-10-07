@@ -15,9 +15,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Préparer la production ou reprendre les lots déjà terminés
+    if: github.repository == 'integraleacademy/gestionstagiaires' && github.ref == 'refs/heads/test-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      reuse_run: ${{ steps.release.outputs.reuse_run }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Lire la demande explicite
+        id: release
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, re
+          from pathlib import Path
+          release = json.loads(Path('scripts/aps62_video_release.json').read_text())
+          assert release['version'] == '20261007-aps62-v8'
+          assert release['branch'] == 'test-v2'
+          assert release['enabled'] is True and release['shards'] == 4
+          reuse_run = str(release.get('reuse_artifact_run_id') or '')
+          assert not reuse_run or re.fullmatch(r'[1-9][0-9]+', reuse_run)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'reuse_run={reuse_run}\n')
+          PYTHON
+
   render:
     name: Produire le lot ${{ matrix.shard }} / 4
-    if: github.repository == 'integraleacademy/gestionstagiaires' && github.ref == 'refs/heads/test-v2'
+    needs: prepare
+    if: needs.prepare.outputs.reuse_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     permissions:
@@ -93,11 +124,13 @@ jobs:
 
   publish:
     name: Vérifier puis publier la nouvelle édition complète
-    needs: render
+    needs: [prepare, render]
+    if: always() && !cancelled() && needs.prepare.result == 'success' && (needs.render.result == 'success' || (needs.render.result == 'skipped' && needs.prepare.outputs.reuse_run != ''))
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     permissions:
       contents: write
+      actions: read
     env:
       APS62_VERIFY_FULL_DECODE: '1'
       PERSIST_DIR: /tmp/aps62-test-data
@@ -109,10 +142,50 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
-      - name: Télécharger les quatre lots du même lancement
+      - name: Vérifier la provenance des lots conservés
+        if: needs.prepare.outputs.reuse_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ needs.prepare.outputs.reuse_run }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, subprocess, urllib.request
+          repository = os.environ['GITHUB_REPOSITORY']
+          source_run = os.environ['SOURCE_RUN']
+          base = f'https://api.github.com/repos/{repository}/actions/runs/{source_run}'
+          def read(url):
+              request = urllib.request.Request(url, headers={
+                  'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              })
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          run = read(base)
+          assert run['repository']['full_name'] == repository
+          assert run['head_branch'] == 'test-v2'
+          assert run['path'] == '.github/workflows/aps-long-videos.yml'
+          assert run['event'] == 'push' and run['status'] == 'completed'
+          jobs = read(base + '/jobs?per_page=100')['jobs']
+          expected = {f'Produire le lot {i} / 4' for i in range(4)}
+          completed = {job['name'] for job in jobs if job['conclusion'] == 'success'}
+          assert expected.issubset(completed), 'Not all four renders succeeded'
+          # Reuse only when narration, rendering code, illustrations and fonts
+          # are identical to the source run; publication-only fixes are allowed.
+          subprocess.run(['git', 'diff', '--exit-code', run['head_sha'], 'HEAD', '--',
+              'scripts/aps62_v6/', 'scripts/aps62_v5/',
+              'scripts/render_aps62_v6.py', 'scripts/render_aps62_v5.py',
+              'scripts/academy_videos/reference_settings.json',
+              'scripts/academy_videos/assets/',
+              'elearning_native/aps62/assets/media/aps62/v2/'], check=True)
+          print(f'Reprise des quatre lots terminés du run {source_run}')
+          PYTHON
+      - name: Télécharger les quatre lots du lancement sélectionné
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: aps62-v8-shard-*
+          run-id: ${{ needs.prepare.outputs.reuse_run || github.run_id }}
+          github-token: ${{ github.token }}
           path: ${{ runner.temp }}/aps62-lots
           merge-multiple: true
       - name: Fusionner les lots sans écraser de dossier
@@ -156,6 +229,15 @@ jobs:
           (root / 'video_manifest_v6.json').write_text(
               json.dumps(dict(sorted(merged.items())), ensure_ascii=False, indent=2) + '\n')
           PY
+      - name: Normaliser la fin des nouveaux sous-titres WebVTT
+        run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          files = list(Path('elearning_native/aps62/assets/media/aps62/v6').glob('*.vtt'))
+          assert len(files) == 62
+          for path in files:
+              path.write_text(path.read_text(encoding='utf-8').rstrip() + '\n', encoding='utf-8')
+          PYTHON
       - name: Installer les outils de validation
         run: |
           sudo apt-get update -qq
@@ -164,7 +246,7 @@ jobs:
       - name: Créer l'édition v8 sans modifier les éditions précédentes
         run: python scripts/build_aps62_v6.py --version 20261007-aps62-v8 --videos-v6
       - name: Vérifier les 62 médias, sous-titres, durées et parcours
-        run: python -m unittest tests.test_aps62_long_videos -v
+        run: python -m unittest tests.test_aps62_long_videos tests.test_aps62_v8_continuity tests.test_aps62_guided tests.test_aps62_readability -v
       - name: Vérifier le périmètre exact du commit
         run: |
           git add -- elearning_native/aps62
@@ -222,7 +304,7 @@ jobs:
             echo '::error::Changements concurrents incompatibles : les vidéos restent dans les artifacts.'
             exit 1
           fi
-          APS62_VERIFY_FULL_DECODE=0 python -m unittest tests.test_aps62_long_videos -v
+          APS62_VERIFY_FULL_DECODE=0 python -m unittest tests.test_aps62_long_videos tests.test_aps62_v8_continuity tests.test_aps62_guided tests.test_aps62_readability -v
           git push origin HEAD:refs/heads/test-v2
           python - <<'PY'
           import json, os, subprocess
