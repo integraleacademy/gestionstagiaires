@@ -61,8 +61,8 @@ def courses():
                       ' Cette formulation sépare le constat et la proposition. Elle ne présente pas une action prévue comme déjà réalisée.'),
             dict(kind='field_consequence', title='Comprendre les conséquences du choix',
                  decision=case['decision'], wrong=case['wrong'], reason=case['reason'],
-                 text='Une première option serait de '+case['wrong'][0].lower()+case['wrong'][1:]+
-                      ' Le raisonnement adapté conduit à '+case['decision'][0].lower()+case['decision'][1:]+
+                 text='Une première option serait la suivante : '+case['wrong']+
+                      ' La décision adaptée est la suivante : '+case['decision']+
                       ' Voici pourquoi ces choix ne sont pas équivalents. '+case['reason']),
             dict(kind='field_evolution', title='Un fait nouveau · adapter la décision',
                  evolution=case['evolution'], decision=case['next_decision'],
