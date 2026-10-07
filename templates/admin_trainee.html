@@ -839,6 +839,13 @@
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
 </div>
 
+{% for message in get_flashed_messages(category_filter=['document_conversion_error']) %}
+  <div class="aps-elearning-tracking__feedback aps-elearning-tracking__feedback--error" role="alert">
+    <strong>Le document n’a pas été déposé</strong>
+    {{ message }}
+  </div>
+{% endfor %}
+
 <div class="session-header admin-trainee-hero{% if trainee.registration_cancelled %} is-registration-cancelled{% endif %}" id="adminTraineeHero">
   <div>
     <div class="admin-trainee-hero__eyebrow">Espace de gestion · Dossier stagiaire</div>
@@ -1814,7 +1821,7 @@
           {% endif %}
         </div>
 
-    {% for category, message in get_flashed_messages(with_categories=true) %}
+    {% for category, message in get_flashed_messages(with_categories=true) if category != 'document_conversion_error' %}
       <div class="aps-elearning-tracking__feedback aps-elearning-tracking__feedback--{{ category }}"
            role="{{ 'alert' if category == 'error' else 'status' }}">
         {% if category == 'error' %}<strong>L’opération n’a pas abouti</strong>{% endif %}
@@ -3035,12 +3042,13 @@
       <input type="file"
              name="file"
              id="upload-{{ session.id }}-{{ trainee.id }}-{{ d.key }}"
-             accept="{{ d.accept or '' }}"
+             accept="{{ trainee_document_upload_accept(d.key) }}"
              required
              style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;"
              onchange="if(this.files && this.files.length){ this.form.submit(); }">
       <button class="btn btn-primary" type="button" onclick="document.getElementById('upload-{{ session.id }}-{{ trainee.id }}-{{ d.key }}').click();">⬆️ Importer un fichier</button>
     </form>
+    <div class="hint">{{ trainee_document_upload_hint(d.key) }}</div>
   {% else %}
     <span class="hint">Aucun fichier</span>
   {% endif %}

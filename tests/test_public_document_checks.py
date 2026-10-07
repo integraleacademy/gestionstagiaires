@@ -122,10 +122,12 @@ class UploadWorkflowTests(unittest.TestCase):
         gestion.ensure_documents_schema_for_trainee(self.trainee, 'APS')
         self.patches = [patch.object(gestion, 'load_data', return_value=self.data),
                         patch.object(gestion, 'save_data'), patch.object(gestion, 'PERSIST_DIR', self.tmp.name),
-                        patch.object(gestion, 'UPLOADS_DIR', self.tmp.name), patch.object(gestion, 'brevo_send_email')]
+                        patch.object(gestion, 'UPLOADS_DIR', self.tmp.name), patch.object(gestion, 'brevo_send_email'),
+                        patch.object(gestion, 'get_partner_storage_path',
+                                     side_effect=lambda partner_id, *parts: os.path.join(self.tmp.name, 'partners', partner_id, *parts))]
         self.started = [p.start() for p in self.patches]
         self.save = self.started[1]
-        self.mail = self.started[-1]
+        self.mail = self.started[4]
         with self.client.session_transaction() as session:
             session['public_auth_synthetic-token'] = True
             session['trainee_document_check_token'] = 'synthetic-csrf'
@@ -256,6 +258,99 @@ class UploadWorkflowTests(unittest.TestCase):
             'document_check_token': 'synthetic-csrf'}, content_type='multipart/form-data')
         self.assertEqual(response.status_code, 422)
         self.save.assert_not_called()
+
+    def test_photo_of_document_is_checked_and_stored_as_the_same_pdf(self):
+        with patch.object(checks, 'analyze_file', return_value=side(sides=['front', 'back'])) as analyze:
+            preview = self.post(key='id', name='carte.png').json
+            analyzed_pdf = analyze.call_args.args[0]
+            self.assertTrue(analyzed_pdf.startswith(b'%PDF-'))
+            response = self.post('upload', key='id', name='carte.png', receipt=preview['receipt'])
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(analyze.call_count, 1)
+        target = next(d for d in self.trainee['documents'] if d['key'] == 'id')
+        self.assertTrue(target['file'].endswith('.pdf'))
+        with open(gestion._detokenize_path(target['file']), 'rb') as saved:
+            self.assertEqual(saved.read(), analyzed_pdf)
+        self.assertEqual(target['status'], 'A CONTRÔLER')
+
+    def test_upload_without_preview_converts_before_analysis(self):
+        with patch.object(checks, 'analyze_file', return_value=side()) as analyze:
+            response = self.post('upload', key='id', name='scan.png')
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(analyze.call_args.args[0].startswith(b'%PDF-'))
+        target = next(d for d in self.trainee['documents'] if d['key'] == 'id')
+        self.assertTrue(target['file'].endswith('.pdf'))
+
+    def test_identity_photo_remains_an_image(self):
+        original = photo_bytes()
+        with patch.object(checks, 'analyze_file', return_value=self.good):
+            self.post('upload', data=original, name='portrait.png')
+        target = next(d for d in self.trainee['documents'] if d['key'] == 'photo')
+        self.assertTrue(target['file'].endswith('.png'))
+        with open(gestion._detokenize_path(target['file']), 'rb') as saved:
+            self.assertEqual(saved.read(), original)
+
+    def test_failed_office_conversion_does_not_replace_previous_document(self):
+        target = next(d for d in self.trainee['documents'] if d['key'] == 'id')
+        target.update(file='old.pdf', files=['old.pdf'], status='NON CONFORME')
+        before = copy.deepcopy(target)
+        with patch.object(checks, 'convert_upload', side_effect=checks.ConversionError('Conversion impossible.')):
+            response = self.post('upload', key='id', data=b'office', name='document.docx')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(target, before)
+        self.save.assert_not_called()
+        self.mail.assert_not_called()
+
+    def test_changed_conversion_invalidates_precheck_receipt(self):
+        first = pdf_bytes()
+        writer = PdfWriter()
+        writer.add_blank_page(width=200, height=300)
+        output = io.BytesIO()
+        writer.write(output)
+        with patch.object(checks, 'convert_upload', side_effect=[(first, 'scan.pdf'), (output.getvalue(), 'scan.pdf')]), \
+             patch.object(checks, 'analyze_file', return_value=side()) as analyze:
+            receipt = self.post(key='id', name='scan.docx').json['receipt']
+            self.post('upload', key='id', name='scan.docx', receipt=receipt)
+        self.assertEqual(analyze.call_count, 2)
+
+    def test_two_image_sides_become_two_pdfs_without_losing_a_side(self):
+        with patch.object(checks, 'analyze_file', side_effect=[side(), side(sides=['back'])]):
+            response = self.client.post('/espace/synthetic-token/documents/id/upload', data={
+                'files': [(io.BytesIO(photo_bytes('red')), 'recto.png'), (io.BytesIO(photo_bytes('blue')), 'verso.png')],
+                'document_check_token': 'synthetic-csrf'}, content_type='multipart/form-data')
+        self.assertEqual(response.status_code, 302)
+        target = next(d for d in self.trainee['documents'] if d['key'] == 'id')
+        self.assertEqual(len(target['files']), 2)
+        self.assertTrue(all(name.endswith('.pdf') for name in target['files']))
+        self.assertEqual(target['auto_check_summary']['status'], 'success')
+
+    def test_admin_upload_also_stores_a_converted_pdf(self):
+        with self.client.session_transaction() as session:
+            session['admin_logged_in'] = True
+            session['admin_role'] = 'admin'
+        response = self.client.post('/admin/sessions/SYNTHETIC-S1/stagiaires/SYNTHETIC-T1/documents/id/upload',
+                                    data={'file': (io.BytesIO(photo_bytes()), 'scan.png')},
+                                    content_type='multipart/form-data')
+        self.assertEqual(response.status_code, 302)
+        target = next(d for d in self.trainee['documents'] if d['key'] == 'id')
+        self.assertTrue(target['file'].endswith('.pdf'))
+        with open(gestion._detokenize_path(target['file']), 'rb') as saved:
+            self.assertTrue(saved.read().startswith(b'%PDF-'))
+
+    def test_admin_conversion_error_is_visible_and_preserves_existing_file(self):
+        with self.client.session_transaction() as session:
+            session['admin_logged_in'] = True
+            session['admin_role'] = 'admin'
+        target = next(d for d in self.trainee['documents'] if d['key'] == 'id')
+        target.update(file='old.pdf', files=['old.pdf'], status='CONFORME')
+        response = self.client.post('/admin/sessions/SYNTHETIC-S1/stagiaires/SYNTHETIC-T1/documents/id/upload',
+                                    data={'file': (io.BytesIO(b'not a document'), 'file.exe')},
+                                    content_type='multipart/form-data')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(target['files'], ['old.pdf'])
+        self.save.assert_not_called()
+        with self.client.session_transaction() as session:
+            self.assertEqual(session['_flashes'][0][0], 'document_conversion_error')
 
 
 if __name__ == '__main__':

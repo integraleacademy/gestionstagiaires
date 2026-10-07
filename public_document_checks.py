@@ -15,10 +15,13 @@ from urllib.request import Request, urlopen
 from flask import current_app, request, session
 from itsdangerous import BadData, URLSafeTimedSerializer
 from PIL import Image
+from werkzeug.datastructures import FileStorage
+
+from document_conversion import ConversionError, convert_upload
 
 import document_visual_checks as visual
 
-CHECK_VERSION = 1
+CHECK_VERSION = 2
 MIME_FORMATS = {"application/pdf": {"pdf"}, "image/jpeg": {"jpg", "jpeg"},
                 "image/png": {"png"}, "image/webp": {"webp"},
                 "image/*": {"jpg", "jpeg", "png", "webp"}}
@@ -54,6 +57,25 @@ def format_label(accept):
     labels = [label for group, label in [({"pdf"}, "PDF"), ({"jpg", "jpeg"}, "JPEG"),
                                        ({"png"}, "PNG"), ({"webp"}, "WebP")] if extensions & group]
     return " ou ".join(labels)
+
+
+def upload_accept(doc_key):
+    # Documents are selected freely; the server checks and converts their content.
+    return ".jpg,.jpeg,.png,.webp,.heic,.heif,.tif,.tiff,.bmp,.gif,.avif" if doc_key == "photo" else ""
+
+
+def upload_hint(doc_key):
+    if doc_key == "photo":
+        return "Image JPEG, PNG, HEIC, HEIF, WebP, TIFF, BMP, GIF ou AVIF. La photo reste au format image."
+    return "PDF, photos et fichiers bureautiques (Word, Excel, PowerPoint, OpenDocument, RTF, TXT, CSV) : conversion automatique en PDF. Les PDF existants sont conservés."
+
+
+def prepare_upload(upload, doc_key, max_bytes):
+    data, filename = convert_upload(read_upload(upload, max_bytes), upload.filename or "document",
+                                    photo=doc_key == "photo", max_bytes=max_bytes)
+    return FileStorage(stream=BytesIO(data), filename=filename,
+                       content_type="application/pdf" if filename.lower().endswith(".pdf") else
+                       "image/png" if filename.lower().endswith(".png") else "image/jpeg")
 
 
 def read_upload(upload, limit):
@@ -281,7 +303,7 @@ def existing_files(target):
     return values
 
 
-def validate_batch(uploads, target, max_bytes):
+def prepare_batch(uploads, target, max_bytes):
     limit = 2 if target["key"] == "id" else None if target["key"] in {"livret_2", "complementary_documents"} else 1
     if not uploads:
         return [], invalid_file("Sélectionnez un fichier avant de le déposer.")
@@ -289,13 +311,28 @@ def validate_batch(uploads, target, max_bytes):
         return [], invalid_file(f"Vous pouvez déposer {limit} fichier{'s' if limit > 1 else ''} pour ce document. Retirez le fichier en trop.")
     files = []
     total = 0
+    # Check the entire batch before starting a potentially expensive conversion.
     for upload in uploads:
         data = read_upload(upload, max_bytes)
         total += len(data)
         if total > max_bytes - 65536:
             return [], invalid_file(f"L’ensemble des fichiers doit rester inférieur à {max_bytes // (1024 * 1024)} Mo. Réduisez leur taille puis réessayez.")
-        failure = validate_file(data, upload.filename or "", target.get("accept"), max_bytes)
-        if failure:
-            return [], failure
-        files.append(data)
+    converted_total = 0
+    conversion_deadline = time.monotonic() + 60
+    for upload in uploads:
+        if time.monotonic() > conversion_deadline:
+            return [], invalid_file("La conversion de ce lot prend trop de temps. Sélectionnez moins de fichiers par envoi, puis réessayez.")
+        try:
+            prepared = prepare_upload(upload, target["key"], max_bytes)
+        except ConversionError as error:
+            return [], invalid_file(str(error))
+        converted_total += len(prepared.stream.getbuffer())
+        if converted_total > max_bytes:
+            return [], invalid_file(f"Les PDF obtenus dépassent {max_bytes // (1024 * 1024)} Mo. Réduisez la taille des fichiers puis réessayez.")
+        files.append(prepared)
     return files, None
+
+
+def validate_batch(uploads, target, max_bytes):
+    prepared, failure = prepare_batch(uploads, target, max_bytes)
+    return [read_upload(upload, max_bytes) for upload in prepared], failure
