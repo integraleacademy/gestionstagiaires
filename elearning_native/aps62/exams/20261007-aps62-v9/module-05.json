@@ -1,0 +1,940 @@
+{
+  "id": "module-05",
+  "version": "20261007-aps62-v9",
+  "title": "République, égalité et dignité",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-05-01",
+      "prompt": "Deux visiteurs ont les mêmes droits d’accès. Quel principe appliquer ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Appliquer la même règle avec les adaptations d’accessibilité utiles"
+        },
+        {
+          "id": "1",
+          "text": "Appliquer une vérification renforcée au visiteur le moins familier"
+        },
+        {
+          "id": "2",
+          "text": "Appliquer une règle plus souple à celui recommandé par un collègue"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’accueil se fonde sur des critères professionnels objectifs, sans discrimination.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-02",
+      "prompt": "Un client exige de refuser un groupe en raison de son origine. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Appliquer la consigne en demandant ensuite un ordre écrit"
+        },
+        {
+          "id": "3",
+          "text": "Demander à un collègue d’annoncer le refus à sa place"
+        },
+        {
+          "id": "2",
+          "text": "Refuser la consigne discriminatoire et alerter la hiérarchie"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Changer l’intitulé d’un refus ne rend pas son motif discriminatoire acceptable.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-03",
+      "prompt": "Une personne en fauteuil arrive à un accès étroit. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Faire entrer l’accompagnant d’abord pour qu’il organise seul l’accès"
+        },
+        {
+          "id": "2",
+          "text": "Rechercher un accès adapté en demandant le besoin à la personne"
+        },
+        {
+          "id": "3",
+          "text": "Déplacer le fauteuil vers l’autre entrée sans demander l’accord"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’accessibilité s’organise avec la personne, dans le respect de son autonomie.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-04",
+      "prompt": "Un visiteur comprend difficilement le français. Quelle aide proposer ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Répéter la même phrase plus fort jusqu’à obtenir une réponse"
+        },
+        {
+          "id": "3",
+          "text": "Demander uniquement à un autre visiteur de répondre à sa place"
+        },
+        {
+          "id": "1",
+          "text": "Utiliser des phrases simples et un support de communication adapté"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La difficulté de compréhension appelle une adaptation de communication.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-05",
+      "prompt": "Quel critère peut justifier un contrôle d’accès ciblé ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une apparence que l’agent associe à un groupe jugé à risque"
+        },
+        {
+          "id": "3",
+          "text": "Un droit d’accès absent ou un fait objectif lié à la mission"
+        },
+        {
+          "id": "2",
+          "text": "Une origine supposée correspondant à un signalement très général"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le contrôle doit être relié à la règle et à des faits, pas à un stéréotype.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-06",
+      "prompt": "Une personne retenue légalement conserve-t-elle sa dignité ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Oui, le respect de sa dignité reste une obligation"
+        },
+        {
+          "id": "1",
+          "text": "Oui, mais seulement si elle répond calmement"
+        },
+        {
+          "id": "3",
+          "text": "Oui, mais après confirmation de son identité"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La dignité s’impose en toute circonstance, y compris pendant une intervention.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-07",
+      "prompt": "Un collègue tient une remarque raciste au poste. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Attendre la fin du service avant de relever les propos"
+        },
+        {
+          "id": "1",
+          "text": "Faire cesser les propos et utiliser le relais prévu"
+        },
+        {
+          "id": "3",
+          "text": "S’éloigner pour ne pas être associé aux propos du collègue"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le climat professionnel et l’accueil doivent rester respectueux des personnes.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-08",
+      "prompt": "Que signifie la fraternité dans une situation d’accueil ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Accueillir avec respect et solidarité dans le cadre de la mission"
+        },
+        {
+          "id": "1",
+          "text": "Écarter les contrôles pour toute personne exprimant une difficulté"
+        },
+        {
+          "id": "3",
+          "text": "Réserver une aide particulière aux visiteurs déjà connus du poste"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le respect d’autrui peut coexister avec un contrôle clair et identique dans ses principes.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-09",
+      "prompt": "Un désaccord religieux justifie-t-il une humiliation ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Non, un désaccord ne justifie aucune humiliation"
+        },
+        {
+          "id": "1",
+          "text": "Oui, si ses propos ont choqué des témoins"
+        },
+        {
+          "id": "3",
+          "text": "Oui, si le rappel reste verbal et sans contact"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le respect de la personne ne dépend pas de l’accord avec ses convictions.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-10",
+      "prompt": "Une règle de sécurité est expliquée à une personne sourde. Que prévoir ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Donner la consigne à l’accompagnant sans s’adresser à la personne"
+        },
+        {
+          "id": "3",
+          "text": "Répéter plus fort la consigne en conservant la même formulation"
+        },
+        {
+          "id": "1",
+          "text": "Adapter la communication pour rendre la consigne accessible"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’information doit pouvoir être comprise par la personne concernée.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-11",
+      "prompt": "Une limitation d’accès doit reposer sur quoi ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une consigne fondée sur la réputation du groupe"
+        },
+        {
+          "id": "3",
+          "text": "Un motif licite, précis et proportionné à la situation"
+        },
+        {
+          "id": "2",
+          "text": "Une préférence du client sans lien avec l’accès"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’agent doit pouvoir expliquer le lien entre la décision, la règle et les faits.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-12",
+      "prompt": "Le respect des différences impose-t-il d’ignorer une infraction observée ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Oui, si relever les faits risque de créer un sentiment d’inégalité"
+        },
+        {
+          "id": "3",
+          "text": "Oui, si la personne explique agir au nom d’une conviction personnelle"
+        },
+        {
+          "id": "1",
+          "text": "Non, les faits restent traités dans le même cadre applicable"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’égalité exclut tant le traitement défavorable arbitraire que l’exception sans justification.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-13",
+      "prompt": "Une personne âgée demande plus de temps au contrôle. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Adapter le rythme en maintenant les vérifications nécessaires"
+        },
+        {
+          "id": "2",
+          "text": "Écarter les vérifications afin de ne pas ralentir davantage la file"
+        },
+        {
+          "id": "3",
+          "text": "Accélérer le contrôle en demandant aux suivants de l’aider sans accord"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’adaptation de l’accueil permet d’appliquer la règle avec respect.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-14",
+      "prompt": "Pourquoi éviter les surnoms liés à l’apparence dans un rapport ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Ils ne sont pas utiles tant que la personne n’a pas donné son accord"
+        },
+        {
+          "id": "1",
+          "text": "Ils peuvent dévaloriser la personne et remplacent des faits précis"
+        },
+        {
+          "id": "3",
+          "text": "Ils doivent seulement être évités dans la version remise au public"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une description professionnelle choisit les informations utiles et un vocabulaire neutre.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-15",
+      "prompt": "Une personne est accompagnée mais répond elle-même. À qui s’adresser ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Faire répondre l’accompagnant à sa place"
+        },
+        {
+          "id": "3",
+          "text": "Questionner le responsable avant de la laisser répondre"
+        },
+        {
+          "id": "1",
+          "text": "S’adresser à la personne elle-même selon ses besoins"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le respect de l’autonomie passe par une communication directe adaptée.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-16",
+      "prompt": "Un visiteur filme une altercation. Cela autorise-t-il à le frapper ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Non, la réaction doit rester dans le cadre légal applicable"
+        },
+        {
+          "id": "2",
+          "text": "Oui, si l’agent a d’abord demandé d’arrêter l’enregistrement"
+        },
+        {
+          "id": "3",
+          "text": "Oui, si la scène se déroule dans un établissement privé"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’agent explique les règles applicables et sollicite un relais sans violence punitive.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-17",
+      "prompt": "Que faire si deux personnes contestent une différence de traitement ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Vérifier les faits et expliquer le critère objectif appliqué"
+        },
+        {
+          "id": "1",
+          "text": "Justifier le choix par l’expérience personnelle de l’agent"
+        },
+        {
+          "id": "2",
+          "text": "Mettre fin à l’échange sans préciser la règle d’accès utilisée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une décision doit être compréhensible et réexaminée si les faits ne la justifient pas.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-18",
+      "prompt": "Quel accueil protège la vie privée ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Faire expliquer la difficulté devant la file pour justifier l’attente"
+        },
+        {
+          "id": "3",
+          "text": "Annoncer au poste le nom et la difficulté sur un canal entendu du public"
+        },
+        {
+          "id": "1",
+          "text": "Évoquer discrètement une difficulté personnelle avec l’intéressé"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La confidentialité évite une exposition inutile et contribue au respect de la personne.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-19",
+      "prompt": "Une personne exprime une opinion politique licite. Est-ce en soi un motif de suspicion ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Oui, si cette opinion déplaît à plusieurs personnes présentes"
+        },
+        {
+          "id": "1",
+          "text": "Non, une opinion licite ne suffit pas à justifier une suspicion"
+        },
+        {
+          "id": "3",
+          "text": "Oui, si l’agent pense qu’elle pourrait provoquer une discussion"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’évaluation d’un risque repose sur les comportements et faits pertinents.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-20",
+      "prompt": "Pourquoi vérifier un besoin avant d’aider physiquement quelqu’un ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "S’assurer qu’un témoin pourra confirmer que l’aide a été proposée"
+        },
+        {
+          "id": "2",
+          "text": "Déterminer si la personne doit être dispensée de tout contrôle"
+        },
+        {
+          "id": "3",
+          "text": "Respecter son autonomie et éviter une aide physique inadaptée"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’aide proposée n’est pas imposée lorsque la situation permet de demander.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-21",
+      "prompt": "Un enfant est séparé de son accompagnant. Quelle attitude ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Confier l’enfant au premier adulte qui déclare le connaître"
+        },
+        {
+          "id": "2",
+          "text": "Rassurer l’enfant et appliquer le dispositif de protection prévu"
+        },
+        {
+          "id": "3",
+          "text": "Publier sa photo sur un groupe local afin de retrouver sa famille"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La remise à un adulte doit suivre une vérification adaptée, avec le relais compétent.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-22",
+      "prompt": "Le principe de laïcité peut-il servir de prétexte à inventer une interdiction d’accès ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Non, il faut vérifier la règle réellement applicable à la situation"
+        },
+        {
+          "id": "1",
+          "text": "Oui, si l’interdiction est appliquée de manière identique à tous"
+        },
+        {
+          "id": "3",
+          "text": "Oui, si la règle permet de simplifier le contrôle à l’entrée"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les obligations varient selon le contexte ; une préférence personnelle ne constitue pas une règle.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-23",
+      "prompt": "Comment réagir à une insulte visant votre identité ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Répondre aux insultes pour montrer que la règle sera respectée"
+        },
+        {
+          "id": "3",
+          "text": "Rester professionnel, préserver la sécurité et signaler les faits"
+        },
+        {
+          "id": "2",
+          "text": "Poursuivre un débat sur les convictions de la personne devant la file"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le respect professionnel n’empêche ni l’alerte ni la traçabilité des propos subis.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-24",
+      "prompt": "Une personne ne souhaite pas expliquer un handicap invisible. Que demander ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Demander quel besoin concret permettrait un accueil adapté"
+        },
+        {
+          "id": "2",
+          "text": "Exiger le diagnostic pour choisir soi-même l’aide"
+        },
+        {
+          "id": "3",
+          "text": "Exiger une explication devant l’équipe avant d’adapter"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’organisation de l’aide demande les informations nécessaires, sans intrusion excessive.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-25",
+      "prompt": "Une file réservée est prévue pour l’accessibilité. Est-ce forcément une inégalité injustifiée ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Oui, une règle identique interdit toute différence de parcours"
+        },
+        {
+          "id": "3",
+          "text": "Oui, sauf lorsque la personne est déjà connue de l’accueil"
+        },
+        {
+          "id": "1",
+          "text": "Non, une adaptation peut rendre l’accès réellement possible"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’égalité d’accès peut nécessiter des aménagements adaptés aux besoins.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-26",
+      "prompt": "Quelle formule respecte le mieux une personne en désaccord ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "« Le règlement est affiché, il n’y a rien à ajouter. »"
+        },
+        {
+          "id": "1",
+          "text": "« Je vous explique la règle et le recours prévu. »"
+        },
+        {
+          "id": "3",
+          "text": "« Si vous contestez, le contrôle sera prolongé. »"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La formulation vise la situation et la solution, pas l’identité ou la dévalorisation.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-27",
+      "prompt": "Un responsable demande de noter les religions supposées des visiteurs. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Remplir le registre seulement quand l’apparence paraît évidente"
+        },
+        {
+          "id": "2",
+          "text": "Demander systématiquement la religion pour traiter chacun pareil"
+        },
+        {
+          "id": "3",
+          "text": "Signaler que cette collecte supposée est inadaptée à la mission"
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’égalité ne rend pas légitime une collecte de données sans nécessité et sans cadre.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-28",
+      "prompt": "Comment vérifier qu’une consigne d’accueil a été comprise ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Considérer l’absence de question comme une compréhension certaine"
+        },
+        {
+          "id": "1",
+          "text": "Faire reformuler calmement ou montrer le parcours à suivre"
+        },
+        {
+          "id": "3",
+          "text": "Répéter mot pour mot la consigne sans vérifier ce qui a été compris"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La compréhension se vérifie avec une formulation accessible et respectueuse.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-29",
+      "prompt": "Une personne présente un comportement dangereux réel. L’égalité interdit-elle toute mesure ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Non, des mesures fondées sur les faits restent possibles"
+        },
+        {
+          "id": "1",
+          "text": "Oui, toute intervention créerait une différence de traitement"
+        },
+        {
+          "id": "2",
+          "text": "Oui, sauf si l’identité de la personne est déjà connue du poste"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La prévention d’un risque concret doit rester licite, nécessaire et proportionnée.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-05-30",
+      "prompt": "Quel indicateur révèle une décision possiblement discriminatoire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Une décision d’accès expliquée à partir d’un droit vérifié"
+        },
+        {
+          "id": "3",
+          "text": "Une décision contestée puis réexaminée par le responsable prévu"
+        },
+        {
+          "id": "1",
+          "text": "Une décision fondée sur une identité supposée plutôt que sur les faits"
+        }
+      ],
+      "answer": "1",
+      "explanation": "L’agent doit vérifier ce qui fonde réellement son choix et corriger un critère illégitime.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-04",
+  "assessment_revision": "20261007-aps62-v9"
+}
