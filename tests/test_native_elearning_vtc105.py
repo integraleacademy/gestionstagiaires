@@ -22,7 +22,8 @@ def script_config(response, name):
 class Vtc105ContentTests(unittest.TestCase):
     def test_duration_content_and_every_answer_key(self):
         manifest=vtc.curriculum_manifest()
-        self.assertEqual(manifest['version'], VERSION)
+        self.assertIn(VERSION, manifest['exam_versions'])
+        self.assertTrue(all(VERSION in [m['version'], *m.get('previous_versions', [])] for m in manifest['modules']))
         self.assertEqual([m['planned_minutes']//60 for m in manifest['modules']], [14,16,14,11,15,14,11,10])
         self.assertEqual(sum(m['planned_minutes'] for m in manifest['modules']),6300)
         self.assertEqual(manifest['duration_status'],'programme_previsionnel')

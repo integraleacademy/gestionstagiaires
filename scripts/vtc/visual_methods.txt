@@ -1,0 +1,96 @@
+A.01|Le besoin|Qui a demandé ce déplacement ?|La rémunération|Un service payé ou un partage de frais ?|Le métier|Appliquer le cadre du transport identifié.
+A.02|La pièce|Conducteur, entreprise, véhicule ou course ?|L’interlocuteur|Identifier l’organisme compétent.|La vérification|Lire ce que le document autorise vraiment.
+A.03|Les conditions|Vérifier la situation du candidat.|Les démarches|Suivre la voie d’accès et obtenir le titre.|Le premier départ|Contrôler aussi l’entreprise et le véhicule.
+A.04|Le calendrier|Repérer les dates de chaque document.|L’anticipation|Préparer le renouvellement à temps.|La décision|Vérifier que le droit d’exercer reste valable.
+A.05|Le risque|Dommage au client, au véhicule ou à un tiers ?|Le contrat|Vérifier l’usage professionnel déclaré.|La déclaration|Transmettre les faits et les pièces utiles.
+A.06|Le besoin|Écouter la demande sans préjugé.|La possibilité|Vérifier une contrainte réelle du service.|La solution|Expliquer et proposer une réponse adaptée.
+A.07|La sécurité|Protéger la personne et éviter l’escalade.|La limite|Faire cesser le comportement et demander de l’aide.|Le signalement|Conserver les faits utiles avec discrétion.
+A.08|Se protéger|Repérer le danger avant de s’approcher.|Alerter|Donner le lieu exact et ce qui est observé.|Être guidé|Suivre les consignes des secours.
+A.09|Demander|Quelle aide la personne souhaite-t-elle ?|Adapter|Préparer l’accès, les bagages et l’installation.|Vérifier|Respecter le confort et l’autonomie.
+A.10|Le besoin|Quelle donnée sert réellement à la course ?|Le partage|Uniquement les personnes concernées.|La conservation|Durée adaptée et accès sécurisé.
+A.11|Préparer|Rassembler les documents de cette course.|Présenter|Répondre avec calme sur des faits exacts.|Traiter|Comprendre l’observation et corriger l’écart.
+A.12|Les faits|Que s’est-il passé ? Quel dommage ?|Les volets|Distinguer civil, pénal et administratif.|Les suites|Informer le bon interlocuteur avec les preuves.
+B.01|Le projet|Recettes prévues, frais et revenu souhaité.|Les choix|Séparer forme juridique, fiscalité et régime social.|La comparaison|Comparer les mêmes hypothèses d’activité.
+B.02|La création|Identifier les formalités du projet.|L’organisation|Séparer documents, échéances et comptes.|Le lancement|Vérifier les obligations avant de vendre.
+B.03|L’actif|Ce que l’entreprise possède ou attend.|Le passif|Comment ces éléments sont financés.|La lecture|Observer une situation à une date donnée.
+B.04|Les produits|Les revenus rattachés à la période.|Les charges|Les consommations de cette même période.|Le résultat|Produits moins charges, distinct de la banque.
+B.05|Les coûts fixes|Présents même avec peu de courses.|Les coûts variables|Évoluent avec le volume d’activité.|Le coût complet|Intégrer aussi l’approche et les retours à vide.
+B.06|La vente|Séparer le prix hors taxe et la TVA.|Les achats|Identifier la TVA déductible si elle l’est.|Le solde|Comparer TVA collectée et déductible.
+B.07|Le régime|Vérifier les conditions applicables.|Les recettes|Suivre le chiffre d’affaires de référence.|Le revenu|Retirer aussi les dépenses réellement payées.
+B.08|Les dates|Quand l’argent entre-t-il et sort-il ?|Le solde|Solde initial plus entrées moins sorties.|L’anticipation|Préparer les mois où la banque baisse.
+B.09|La contribution|Recette moins coûts variables.|Les charges fixes|Montant à couvrir sur la période.|Le seuil|Diviser les charges fixes par la contribution unitaire.
+B.10|Le besoin|Véhicule, usage prévu et durée de détention.|Les offres|Comparer apport, loyers, intérêts et conditions.|Le coût total|Inclure la fin du contrat et la trésorerie mobilisée.
+B.11|La prestation|Vérifier le service et le bon destinataire.|La facture|Contrôler les lignes et le total.|La preuve|Rapprocher facture, règlement et justificatifs.
+B.12|Les échéances|Repérer les obligations récurrentes.|Le suivi|Classer et conserver les justificatifs.|La disponibilité|Prévoir les ressources et les remplacements.
+C.01|Autour du véhicule|Pneus, feux, vitres et anomalies.|Au poste de conduite|Siège, rétroviseurs et objets rangés.|Avant de partir|Documents, autonomie et trajet préparés.
+C.02|La limite|Lire la signalisation applicable.|La situation|Observer visibilité, météo et circulation.|L’adaptation|Choisir une vitesse qui laisse le temps d’agir.
+C.03|Réagir|La voiture avance avant le freinage.|Freiner|La distance dépend aussi de l’adhérence.|Garder une marge|Augmenter l’écart quand les conditions se dégradent.
+C.04|Regarder loin|Repérer les mouvements et les zones masquées.|Contrôler autour|Rétroviseurs et angles morts au bon moment.|Anticiper|Laisser de l’espace aux usagers vulnérables.
+C.05|Observer|Feux, panneaux, marquage et autres usagers.|Comprendre|Identifier la règle à cette intersection.|S’engager|Vérifier que le passage est réellement libre.
+C.06|Les places|Vérifier la capacité et les équipements.|L’installation|Dispositifs de retenue et bagages sécurisés.|Le départ|S’assurer que tout le monde est prêt.
+C.07|Repérer|Bâillements, yeux lourds, attention qui baisse.|S’arrêter|Choisir un endroit sûr pour se reposer.|Réorganiser|Prévenir le client si le service doit changer.
+C.08|Avant le service|Vérifier son aptitude à conduire.|Le doute|Lire les précautions et demander conseil.|La sécurité|Ne pas prendre le volant si l’aptitude est altérée.
+C.09|Préparer à l’arrêt|Navigation et messages avant le départ.|Pendant le trajet|Garder les mains et l’attention disponibles.|Si nécessaire|S’arrêter en sécurité avant de manipuler.
+C.10|Anticiper|Voir les ralentissements assez tôt.|Agir progressivement|Accélérer et freiner avec souplesse.|Préserver le confort|Éviter les changements brusques inutiles.
+C.11|La visibilité|Voir et être vu selon les conditions.|L’adhérence|Adapter la vitesse et les distances.|La marge|Éviter toute manœuvre brutale.
+C.12|Se mettre en sécurité|Éviter de créer un second accident.|Alerter|Donner le lieu et les dangers présents.|Organiser la suite|Suivre les consignes et informer le client.
+D.01|La question|Savoir quelle information chercher.|Le texte|Lire le passage qui répond au besoin.|La réponse|Retenir uniquement ce que le texte permet.
+D.02|Les mots clés|Nom, lieu, heure ou condition demandée.|La preuve|Retrouver la phrase exacte.|Le contrôle|Écarter les réponses qui ajoutent une supposition.
+D.03|Le fait|Ce qui est écrit ou observable.|L’interprétation|Ce que l’on déduit sans preuve suffisante.|Le choix|Ne pas confondre constat et opinion.
+D.04|Le pronom|Repérer « il », « elle », « leur » ou « celui-ci ».|Le référent|Chercher de qui ou de quoi il est question.|La relecture|Remplacer mentalement le pronom par le nom.
+D.05|Le connecteur|Repérer « mais », « car », « donc » ou « si ».|Le lien|Opposition, cause, conséquence ou condition.|Le sens|Relire les deux propositions ensemble.
+D.06|Le mot précis|Toujours, parfois, seulement ou peut-être ?|La portée|Mesurer la force réelle de l’affirmation.|La fidélité|Conserver la nuance dans la réponse.
+D.07|Le contexte|Lire les mots autour du terme inconnu.|Le sens utile|Choisir le sens adapté au transport.|La vérification|Remplacer le mot et relire la phrase.
+D.08|Le moment|Avant, maintenant ou après ?|Le verbe|Identifier le temps et la personne.|La cohérence|Vérifier la chronologie de la mission.
+D.09|Le sujet|Qui réalise l’action ?|L’accord|Relier le verbe et les mots concernés.|Le sens|Vérifier les homophones en contexte.
+D.10|La demande|Repérer précisément ce qui est demandé.|L’information|Sélectionner les éléments nécessaires.|La réponse courte|Rester exact sans ajouter d’information inutile.
+D.11|Le destinataire|Adapter le ton au client.|Le message|Présenter le fait et la solution clairement.|La relecture|Vérifier noms, horaires et ponctuation.
+D.12|Le repérage|Lire la consigne et identifier les questions.|La recherche|Retrouver les preuves dans le texte.|La vérification|Contrôler les réponses et le temps restant.
+E.01|Saluer|Good morning, afternoon ou evening.|Se présenter|I’m your driver.|Confirmer|Are you Mr Brown?
+E.02|La réservation|May I confirm your booking?|Le trajet|Your destination is the hotel, correct?|L’accord|Faire confirmer les informations importantes.
+E.03|Écouter|Distinguer les nombres proches.|Reformuler|Répéter l’heure, le prix ou la quantité.|Confirmer|Demander un accord explicite.
+E.04|Le point|Identifier le terminal ou la sortie.|Le repère|Décrire un lieu facile à reconnaître.|La rencontre|Confirmer où attend chaque personne.
+E.05|Le besoin|How many bags do you have?|L’aide|May I help you with your luggage?|L’accord|Attendre l’accord avant de manipuler.
+E.06|La sécurité|Please fasten your seat belt.|Le confort|Is the temperature comfortable?|La réponse|Adapter le service quand cela est possible.
+E.07|Le trajet|Expliquer la route prévue simplement.|L’alternative|Présenter la raison d’un changement.|L’accord|Confirmer le choix avec le passager.
+E.08|Le prix|The agreed price is…|Les inclusions|Préciser ce qui est compris.|La confirmation|Faire vérifier le montant et les conditions.
+E.09|Le retard|Expliquer la difficulté observée.|Le délai|Donner une estimation prudente.|La solution|Proposer la suite et faire confirmer.
+E.10|Le règlement|How would you like to pay?|La preuve|Would you like a receipt?|La clôture|Vérifier le paiement avant de conclure.
+E.11|L’écoute|Please tell me what happened.|La reformulation|Vérifier le problème compris.|La solution|Proposer une réponse claire et réaliste.
+E.12|Le lieu|Nommer le point d’intérêt.|Le repère|Donner une information simple et fiable.|La limite|Vérifier les détails que l’on ne connaît pas.
+F.01|La clientèle|Qui a besoin de ce service ?|Le besoin|Pour quels trajets et à quels moments ?|L’offre|Comparer la demande aux moyens disponibles.
+F.02|Le service|Définir trajet, capacité et conditions.|La promesse|Annoncer des engagements réalisables.|La lisibilité|Permettre au client de comparer facilement.
+F.03|Le coût|Inclure temps, kilomètres et frais.|La commission|Calculer ce qui reste après la retenue.|Le prix|Vérifier que la recette couvre le besoin.
+F.04|Le périmètre|Trajet, date, passagers et bagages.|Le montant|Présenter inclusions et suppléments.|L’accord|Confirmer la version acceptée.
+F.05|La vente|Montant facturé pour les courses.|Les retenues|Commission et ajustements du relevé.|Le virement|Rapprocher le net reçu et les justificatifs.
+F.06|La cible|Choisir les clients à contacter.|La proposition|Répondre à leur besoin concret.|La mesure|Suivre rendez-vous, devis et ventes.
+F.07|Les rôles|Qui réserve, voyage et paie ?|Les conditions|Définir accueil, attente et annulation.|La réalisation|Vérifier capacité et remplacement.
+F.08|Le message|Présenter un service et un contact clairs.|La preuve|Utiliser des informations et images autorisées.|La mesure|Suivre les demandes utiles et les clients acquis.
+F.09|Le service|Être fiable d’une course à l’autre.|La discrétion|Ne retenir que les préférences utiles.|Le suivi|Observer les nouvelles réservations.
+F.10|La définition|Que mesure précisément l’indicateur ?|La période|Comparer les mêmes bases.|L’action|Choisir une amélioration observable.
+F.11|L’écoute|Identifier la demande du client.|Les faits|Vérifier course, prix et échanges.|La réponse|Expliquer la solution et son suivi.
+F.12|Les recettes|Suivre les ventes de la période.|Les moyens|Comparer kilomètres, temps et coûts.|La décision|Agir sur une cause identifiée.
+G.01|L’exploitant|Identifier l’entreprise concernée.|Le dossier|Préparer les justificatifs demandés.|Le suivi|Vérifier l’inscription et ses mises à jour.
+G.02|La situation|Comment le véhicule est-il détenu ?|La règle|Vérifier l’exigence et les justificatifs applicables.|La preuve|Présenter le document adapté au dossier.
+G.03|Le véhicule|Relever ses caractéristiques réelles.|Le cadre|Vérifier les critères et exceptions applicables.|La décision|Confirmer l’éligibilité avant l’achat ou l’usage.
+G.04|Le support|Utiliser la signalétique prévue.|La pose|Vérifier les emplacements et la visibilité.|La cohérence|Rapprocher véhicule et documents.
+G.05|Avant la course|La réservation existe avant la prise en charge.|Le justificatif|Vérifier les informations exigées.|Le contrôle|Pouvoir présenter la preuve correspondante.
+G.06|La demande|Le client a-t-il réservé avant la prise en charge ?|La voie publique|Ne pas chercher des clients en maraude.|La mission|Accepter uniquement dans le cadre autorisé.
+G.07|La réservation|Vérifier client, heure et terminal.|L’accès|Respecter les règles locales de circulation.|La rencontre|Convenir d’un point autorisé et précis.
+G.08|La dépose|Terminer la prestation en sécurité.|La suite|Identifier la réservation suivante éventuelle.|Le déplacement|Appliquer les règles de fin de course.
+G.09|Le service|Définir ce qui est demandé.|Le prix|Faire comprendre montant et conditions.|La preuve|Conserver l’accord et ses modifications.
+G.10|Le remplacement|Identifier le conducteur ou véhicule prévu.|Les conditions|Vérifier titre, assurance et éligibilité.|L’information|Mettre la mission et les documents en cohérence.
+G.11|L’entretien|Suivre les préconisations et anomalies.|Les échéances|Planifier les contrôles requis.|Les preuves|Conserver les justificatifs à jour.
+G.12|La source|Consulter un texte ou organisme officiel.|La date|Vérifier l’entrée en vigueur et le champ.|L’application|Mettre à jour la procédure concernée.
+H.01|La commande|Qui, où, quand et avec quels bagages ?|La faisabilité|Vérifier temps, capacité et accès.|La confirmation|Clarifier les informations manquantes.
+H.02|Le trajet|Comparer durée, distance et contraintes.|La marge|Ajouter approche, accueil et dépose.|Le repli|Préparer une alternative réaliste.
+H.03|Le réglage|Siège, volant, appuie-tête et rétroviseurs.|La disponibilité|Ranger les objets et préparer la navigation.|Le contrôle|S’installer correctement avant de rouler.
+H.04|La rencontre|Vérifier le bon passager avec discrétion.|L’aide|Proposer une aide adaptée aux bagages.|Le départ|Confirmer destination et installation.
+H.05|L’anticipation|Observer loin et autour du véhicule.|La conduite|Adapter allure, distances et trajectoire.|L’attention|Traiter les demandes sans se distraire.
+H.06|Le lieu|Choisir un emplacement autorisé et sûr.|La manœuvre|Contrôler l’environnement et agir lentement.|La sortie|Vérifier la sécurité du passager.
+H.07|Le besoin|Comprendre la question du passager.|L’information|Donner des repères utiles et fiables.|La vérification|Ne pas inventer un horaire ou un tarif.
+H.08|L’imprévu|Identifier ce qui a changé.|La solution|Choisir une option sûre et réalisable.|L’information|Expliquer l’incidence au client.
+H.09|Le service réalisé|Vérifier le trajet et les suppléments convenus.|Le total|Contrôler les lignes et le montant.|La preuve|Remettre le document adapté.
+H.10|La dépose|Faciliter la sortie et les bagages.|La vérification|Objets oubliés, règlement et documents.|La clôture|Remercier et préparer la suite du service.
+H.11|Les critères|Connaître les domaines évalués.|La préparation|S’entraîner en circulation avec le formateur.|La priorité|Conserver une conduite sûre pendant l’épreuve.
+H.12|L’observation|Identifier une difficulté précise.|L’entraînement|Reprendre la situation avec un objectif.|Le progrès|Vérifier l’amélioration avec le formateur.

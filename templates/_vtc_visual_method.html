@@ -1,0 +1,20 @@
+{% macro method_icon(number) %}
+<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+{% if number == 1 %}<rect x="15" y="8" width="34" height="48" rx="5"/><path d="M23 21h18M23 30h18M23 39h12"/>{% elif number == 2 %}<path d="M15 47V22h33v25M33 15l8 7-8 7"/><circle cx="15" cy="48" r="6"/><circle cx="48" cy="48" r="6"/>{% else %}<circle cx="32" cy="32" r="24"/><path d="m20 32 8 8 17-18"/>{% endif %}
+</svg>
+{% endmacro %}
+<section class="vtc-visual-method" aria-labelledby="vtcMethodTitle">
+  <span class="vtc-eyebrow">Le geste professionnel, étape par étape</span>
+  <h2 id="vtcMethodTitle">La méthode : {{ lesson.title }}</h2>
+  <ol class="vtc-method-flow">{% for step in lesson.visual_steps %}
+    <li><div class="vtc-method-symbol">{{ method_icon(loop.index) }}<span>{{ loop.index }}</span></div><h3>{{ step.title }}</h3><p>{{ step.text }}</p></li>
+  {% endfor %}</ol>
+  <div class="vtc-method-takeaway"><span aria-hidden="true">!</span><p><strong>Le point de vigilance</strong>{{ lesson.deepening.pitfall }}</p></div>
+</section>
+{% if lesson.visual_table %}{% set visual = lesson.visual_table %}
+<section class="vtc-visual-table" aria-labelledby="vtcTableTitle">
+  <span class="vtc-eyebrow">Voir la différence</span><h2 id="vtcTableTitle">{{ visual.title }}</h2>
+  <div class="vtc-table-scroll" role="region" aria-label="{{ visual.title }}" tabindex="0"><table><thead><tr>{% for label in visual.headers %}<th scope="col">{{ label }}</th>{% endfor %}</tr></thead><tbody>{% for row in visual.rows %}<tr>{% for cell in row %}{% if loop.first %}<th scope="row">{{ cell }}</th>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>
+  {% if visual.note %}<p class="vtc-table-note">{{ visual.note }}</p>{% endif %}
+</section>
+{% endif %}

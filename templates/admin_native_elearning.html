@@ -15,7 +15,7 @@
   </header>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="nel-flash nel-flash--{{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261006-2') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
   <nav class="curriculum-tabs" aria-label="Choisir une formation"><a href="{{ url_for('native_elearning.admin_catalog') }}"{% if selected_curriculum == 'aps' %} aria-current="page"{% endif %}>Sécurité privée · APS</a><a href="{{ url_for('native_elearning.admin_vtc_catalog') }}"{% if selected_curriculum == 'vtc' %} aria-current="page"{% endif %}>Chauffeur · VTC</a></nav>
   {% if selected_curriculum == 'vtc' %}{% include '_vtc_catalog.html' %}{% elif academy_courses %}{% include '_aps62_catalog.html' %}{% endif %}
 

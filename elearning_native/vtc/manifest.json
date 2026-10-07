@@ -33,7 +33,7 @@
   ],
   "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
   "final_exam_id": "vtc-final",
-  "version": "20261006-vtc-v3-105h",
+  "version": "20261007-vtc-v4-visuals",
   "reviewed_on": "2026-10-06",
   "planned_minutes": 6300,
   "lesson_count": 96,
@@ -41,10 +41,11 @@
   "modules": [
     {
       "id": "academy-vtc-a",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "A",
       "title": "VTC A · Exercer dans le cadre du T3P",
@@ -133,7 +134,9 @@
         "adaptive_reviews": 1,
         "exercises": 224,
         "decisions": 368,
-        "listening_dialogues": 0
+        "listening_dialogues": 0,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -164,10 +167,11 @@
     },
     {
       "id": "academy-vtc-b",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "B",
       "title": "VTC B · Gérer son entreprise",
@@ -256,7 +260,9 @@
         "adaptive_reviews": 1,
         "exercises": 323,
         "decisions": 383,
-        "listening_dialogues": 0
+        "listening_dialogues": 0,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -287,10 +293,11 @@
     },
     {
       "id": "academy-vtc-c",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "C",
       "title": "VTC C · Conduire en sécurité",
@@ -379,7 +386,9 @@
         "adaptive_reviews": 1,
         "exercises": 292,
         "decisions": 448,
-        "listening_dialogues": 0
+        "listening_dialogues": 0,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -410,10 +419,11 @@
     },
     {
       "id": "academy-vtc-d",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "D",
       "title": "VTC D · Comprendre et s’exprimer en français",
@@ -502,7 +512,9 @@
         "adaptive_reviews": 1,
         "exercises": 253,
         "decisions": 320,
-        "listening_dialogues": 0
+        "listening_dialogues": 0,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -533,10 +545,11 @@
     },
     {
       "id": "academy-vtc-e",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "E",
       "title": "VTC E · Accueillir en anglais",
@@ -625,7 +638,9 @@
         "adaptive_reviews": 1,
         "exercises": 354,
         "decisions": 414,
-        "listening_dialogues": 48
+        "listening_dialogues": 48,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -656,10 +671,11 @@
     },
     {
       "id": "academy-vtc-f",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "F",
       "title": "VTC F · Développer son activité VTC",
@@ -748,7 +764,9 @@
         "adaptive_reviews": 1,
         "exercises": 281,
         "decisions": 341,
-        "listening_dialogues": 0
+        "listening_dialogues": 0,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -779,10 +797,11 @@
     },
     {
       "id": "academy-vtc-g",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "G",
       "title": "VTC G · Appliquer les règles du VTC",
@@ -871,7 +890,9 @@
         "adaptive_reviews": 1,
         "exercises": 309,
         "decisions": 333,
-        "listening_dialogues": 0
+        "listening_dialogues": 0,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -902,10 +923,11 @@
     },
     {
       "id": "academy-vtc-h",
-      "version": "20261006-vtc-v3-105h",
+      "version": "20261007-vtc-v4-visuals",
       "previous_versions": [
         "20261006-vtc-v1",
-        "20261006-vtc-v2"
+        "20261006-vtc-v2",
+        "20261006-vtc-v3-105h"
       ],
       "letter": "H",
       "title": "VTC H · Réaliser une mission professionnelle",
@@ -994,7 +1016,9 @@
         "adaptive_reviews": 1,
         "exercises": 324,
         "decisions": 500,
-        "listening_dialogues": 0
+        "listening_dialogues": 0,
+        "visual_methods": 12,
+        "comparison_tables": 4
       },
       "duration_breakdown": [
         {
@@ -1027,7 +1051,8 @@
   "exam_versions": [
     "20261006-vtc-v1",
     "20261006-vtc-v2",
-    "20261006-vtc-v3-105h"
+    "20261006-vtc-v3-105h",
+    "20261007-vtc-v4-visuals"
   ],
   "video_count": 8,
   "narrated_video_count": 8,
@@ -1043,5 +1068,12 @@
   "final_exam_questions": 100,
   "activity_count": 336,
   "exercise_count": 2360,
-  "decision_count": 3107
+  "decision_count": 3107,
+  "visual_edition_on": "2026-10-07",
+  "visual_method_count": 96,
+  "comparison_table_count": 32,
+  "inline_manual_figure_count": 20,
+  "animated_video_count": 8,
+  "video_minutes": 70.1,
+  "video_min_seconds": 496.872
 }
