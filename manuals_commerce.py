@@ -53,7 +53,7 @@ def configuration_status(host, data, order=None):
         rate = tax.get("rate", settings.get(kind + "_vat"))
         exemption = tax.get("exemption", settings.get(kind + "_exemption"))
         if rate not in VAT_RATES or (rate == "0" and exemption not in EXEMPTIONS):
-            missing_taxes.append("manuels imprimés" if kind == "manual" else "supports PowerPoint sur clé USB")
+            missing_taxes.append({"manual": "manuels imprimés", "usb": "supports PowerPoint sur clé USB", "elearning": "accès e-learning"}.get(kind, kind))
     return {
         "api_configured": host._qonto_is_configured(),
         "iban_configured": bool(os.environ.get("QONTO_IBAN", "").strip()),
@@ -66,10 +66,10 @@ def configuration_status(host, data, order=None):
 
 def validate_settings(form):
     result = {}
-    for kind in ("manual", "usb"):
+    for kind in (("manual", "usb", "elearning") if "elearning_vat" in form else ("manual", "usb")):
         rate = str(form.get(kind + "_vat", "")).strip().replace(",", ".")
         if rate not in VAT_RATES:
-            raise ValueError("Sélectionnez le taux de TVA des manuels et des supports PowerPoint.")
+            raise ValueError("Sélectionnez le taux de TVA de chaque catégorie proposée.")
         exemption = str(form.get(kind + "_exemption", "")).strip()
         if rate == "0" and exemption not in EXEMPTIONS:
             raise ValueError("Précisez le motif d’exonération pour chaque catégorie à 0 %.")
@@ -100,7 +100,7 @@ def build_invoice_payload(order, client_id, iban):
         item = {"title": line["label"], "quantity": str(line["quantity"]),
                 "unit_price": {"value": format(net, "f"), "currency": "EUR"},
                 "vat_rate": str(rate),
-                "description": f"Prix unitaire TTC : {Decimal(line['unit_cents']) / 100:.2f} EUR. Personnalisation et livraison incluses."}
+                "description": f"Prix unitaire TTC : {Decimal(line['unit_cents']) / 100:.2f} EUR. " + ("Accès individuel activé après règlement intégral." if line["kind"] == "elearning" else "Personnalisation et livraison incluses.")}
         if tax["exemption"]:
             item["vat_exemption_reason"] = tax["exemption"]
         items.append(item)
@@ -111,8 +111,8 @@ def build_invoice_payload(order, client_id, iban):
             "issue_date": issue_date, "due_date": issue_date,
             "purchase_order": order["id"], "header": "Commande " + order["reference"],
             "payment_methods": {"iban": iban}, "items": items,
-            "settings": {"transaction_type": "goods"},
-            "terms_and_conditions": terms + "Personnalisation et livraison incluses."}
+            "settings": {"transaction_type": "services" if order.get("order_type") == "elearning" else "goods"},
+            "terms_and_conditions": terms + ("Accès e-learning individuels activés après règlement intégral de la facture." if order.get("order_type") == "elearning" else "Personnalisation et livraison incluses.")}
 
 
 def safe_payment_url(value):
@@ -599,6 +599,9 @@ def process_order(host, pid, oid):
     order = claimed["order"]
     outcome, message = "ready", ""
     try:
+        if order.get("order_type") == "elearning":
+            from elearning_orders import process_claimed
+            return process_claimed(host, order)
         invoice_ready = False
         try:
             state = order["commerce"]
@@ -711,3 +714,4 @@ def install_worker(host):
         if notify:
             wake.set()
     return kick
+

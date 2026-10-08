@@ -31,7 +31,7 @@
 </form>
 
 <div class="card" id="subscription" style="grid-column:1/-1">
-  <h2>Abonnement et utilisation</h2>
+  <h2>Abonnement et utilisation</h2><p><a class="btn btn-blue" href="{{ url_for('manuals_shop.elearning_admin', partner_id=partner.id) }}">Accès e-learning · Tarifs APS/VTC et gratuité</a></p>
   {% set sub = partner.subscription or {} %}
   <div class="admin-subscription-grid">
     <label>Nom de l’abonnement<input form="edit" name="subscription_plan_name" value="{{ sub.get('plan_name','Essentiel') }}"></label>
@@ -109,3 +109,4 @@ document.querySelectorAll('[data-copy-activation-url]').forEach(btn => btn.addEv
 }));
 </script>{% endif %}
 {% endblock %}
+

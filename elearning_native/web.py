@@ -353,6 +353,9 @@ def create_native_elearning_blueprint(
 
     @blueprint.after_request
     def private_exam_responses(response):
+        if str((request.view_args or {}).get("token") or "").startswith("el_"):
+            response.headers['Referrer-Policy'] = 'no-referrer'
+            response.headers['Cache-Control'] = 'private, no-store'
         if request.endpoint in {'native_elearning.admin_exam', 'native_elearning.admin_exam_submit',
                                 'native_elearning.learner_exam', 'native_elearning.learner_exam_submit'}:
             response.headers['Cache-Control'] = 'private, no-store'
@@ -446,7 +449,7 @@ def create_native_elearning_blueprint(
         )), bool(session.get("admin_logged_in")))
         with access_checks_lock:
             recently_checked = time.monotonic() - access_checks.get(cache_key, float("-inf")) < 60
-        if request.endpoint == "native_elearning.tracking_heartbeat" and recently_checked and access.get("section_ids"):
+        if request.endpoint == "native_elearning.tracking_heartbeat" and recently_checked and access.get("section_ids") and not str(access.get("public_token", "")).startswith("el_"):
             try:
                 return project_course(catalog().load_course(str(access["course_id"]), str(access["course_version"])),
                                       {"section_ids": access["section_ids"], "title": access.get("module_title"),
@@ -1428,7 +1431,7 @@ def create_native_elearning_blueprint(
     @blueprint.get("/espace/<token>/elearning")
     def learner_path(token: str) -> Any:
         if not public_is_authed(token):
-            return redirect(url_for("public_trainee_login", token=token))
+            return redirect(url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_login", token=token))
         session_obj, trainee = learner_session(token)
         raw_progress = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
         progress_by_key = {(item["course_id"], item["course_version"]): item for item in raw_progress}
@@ -1476,7 +1479,7 @@ def create_native_elearning_blueprint(
             total_activities=total, completed_activities=completed, completed_modules=finished,
             progress_percent=round(completed / total * 100) if total else 0,
             active_time_label=_format_seconds(seconds), resume_url=resume_url,
-            portal_url=url_for("public_trainee_space", token=token),
+            portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
             final_exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=matched_manifest.get('final_exam_id','final')) if final_available else '',
             final_exam_unlocked=final_ready,
             final_module_count=len(exam_modules),
@@ -1487,7 +1490,7 @@ def create_native_elearning_blueprint(
     @blueprint.get("/espace/<token>/elearning/<course_id>")
     def course_player(token: str, course_id: str) -> Any:
         if not public_is_authed(token):
-            return redirect(url_for("public_trainee_login", token=token))
+            return redirect(url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_login", token=token))
         session_obj, trainee, course = learner_context(token, course_id)
         access = _course_access_payload(session_obj, trainee, course, public_token=token)
         access_token = _sign_access(access)
@@ -1550,7 +1553,7 @@ def create_native_elearning_blueprint(
             videos_completed=videos_complete(progress.get("video_progress", {}).get(requested_id, {}), activity_videos(raw_activity)),
             previous_url=previous_url,
             next_url=next_url,
-            portal_url=url_for("public_trainee_space", token=token),
+            portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
             path_url=path_url, end_url=end_url,
             end_label="Module suivant" if next_module else "Retour au parcours",
             module_position=module_index + 1, module_count=len(modules),
@@ -1793,3 +1796,4 @@ def create_native_elearning_blueprint(
                      learner_context=learner_context, root=root, csrf_token=_csrf_token,
                      require_csrf=_require_csrf)
     return blueprint
+

@@ -1,0 +1,4 @@
+{% extends 'manuals/layout.html' %}
+{% block title %}Bienvenue dans votre formation{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css') }}"><meta name="referrer" content="no-referrer">{% endblock %}
+{% block content %}<div class="order-wrap el-wrap"><section class="el-hero"><span class="eyebrow">VOTRE ESPACE PERSONNEL</span><h1>Bonjour {{ person.first_name }}.</h1><p>Votre parcours {{ training.training_type }} est prêt. Retrouvez vos cours, vos exercices et votre progression à chaque connexion.</p></section><section class="form-card"><h2>À vous de commencer.</h2><p>Ce lien est personnel : conservez-le pour reprendre votre formation et ne le partagez pas.</p><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button primary" type="submit">Accéder à ma formation →</button></form></section></div>{% endblock %}

@@ -13,8 +13,8 @@
     <a class="logo" href="{{ url_for('manuals_shop.home') if session.get('admin_logged_in') else url_for('admin_login') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
     <span class="header-label">L’espace des organismes de formation</span>
     <nav aria-label="Navigation principale">
-    {% if staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a>
-    {% elif session.get('admin_logged_in') %}<a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Mon espace</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail','manuals_shop.catalogue'] %}aria-current="page"{% endif %}>Manuels</a><a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint == 'manuals_shop.elearning_soon' %}aria-current="page"{% endif %}>E-learning <span class="nav-soon">Prochainement</span></a>
+    {% if staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a><a href="{{ url_for('manuals_shop.elearning_admin') }}">E-learning</a>
+    {% elif session.get('admin_logged_in') %}<a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Mon espace</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail','manuals_shop.catalogue'] %}aria-current="page"{% endif %}>Manuels</a><a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint == 'manuals_shop.elearning_soon' %}aria-current="page"{% endif %}>E-learning</a>
     {% else %}<a href="{{ url_for('admin_login') }}">J’ai déjà un compte <span aria-hidden="true">↗</span></a>{% endif %}
     {% if session.get('admin_logged_in') %}<a class="logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>{% endif %}
     </nav>
@@ -23,3 +23,4 @@
   <footer class="site-footer"><span>Intégrale Academy · Des supports pour transmettre.</span><a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a><a href="tel:+33422470768">04 22 47 07 68</a></footer>
 </body>
 </html>
+

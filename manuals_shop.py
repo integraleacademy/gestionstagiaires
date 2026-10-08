@@ -22,6 +22,7 @@ from urllib.parse import urlparse, urlencode
 from flask import Blueprint, abort, flash, g, redirect, render_template, request, send_file, session, url_for
 from PIL import Image, UnidentifiedImageError
 import manuals_commerce as commerce
+import elearning_orders
 from manuals_presentation import presentation_books
 
 
@@ -36,7 +37,8 @@ CATALOGUE = (
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
-SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
+CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS
+SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 
 
@@ -142,6 +144,9 @@ def save_logo(host, upload, partner_id, draft_id):
 
 def register(host):
     app = host.app
+    # Partners can read their own negotiated prices, but cannot write them
+    # through the general profile editor (not in PARTNER_SELF_EDITABLE_FIELDS).
+    host.PARTNER_VISIBLE_FIELDS.add("elearning_pricing")
     bp = Blueprint("manuals_shop", __name__)
     app.add_template_filter(money, "manuals_money")
     kick_worker = commerce.install_worker(host)
@@ -154,6 +159,7 @@ def register(host):
     def private_pages(response):
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
         return response
 
     def page(template, **context):
@@ -166,6 +172,8 @@ def register(host):
                 return redirect(url_for("admin_login", next=url_for("manuals_shop.home")))
             if not host._is_external_partner_session():
                 if host._is_super_admin_session():
+                    if view.__name__.startswith("elearning"):
+                        return redirect(url_for("manuals_shop.elearning_admin"))
                     if view.__name__ == "order_detail":
                         order = find_order(host.load_data(), kwargs["order_id"])
                         return redirect(url_for("manuals_shop.admin_order", partner_id=order["partner_id"], order_id=order["id"]))
@@ -205,7 +213,7 @@ def register(host):
             login_url = base_url(host) + url_for("admin_login", next=url_for("manuals_shop.home"))
             body = render_template("manuals/welcome_email.html", partner=partner, user=user, login_url=login_url)
             result = host.brevo_send_email(user["email"], "Votre espace organisme de formation est créé", body,
-                text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos commandes et prochainement vos accès e-learning.\nIntégrale Academy — 04 22 47 07 68",
+                text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos commandes et vos accès e-learning APS et VTC.\nIntégrale Academy — 04 22 47 07 68",
                 metadata={"partner_id": partner_id, "user_id": user_id, "purpose": "manuals_welcome"})
         except Exception:
             app.logger.exception("manuals_welcome_failed partner_id=%s", partner_id)
@@ -290,14 +298,15 @@ def register(host):
     @customer
     def home():
         data, partner = partner_data()
-        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft"), key=lambda o: o.get("submitted_at", ""), reverse=True)
-        return page("home.html", partner=partner, orders=orders, order_count=len(orders))
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        return page("home.html", partner=partner, orders=orders, order_count=len(orders), elearning_prices=elearning_orders.prices(partner))
 
     @bp.get("/admin/organisme/e-learning")
     @customer
     def elearning_soon():
-        _, partner = partner_data()
-        return page("elearning.html", partner=partner)
+        data, partner = partner_data()
+        orders = sorted((o for o in data.get("manual_orders", []) if elearning_orders.is_order(o) and o.get("partner_id") == partner["id"]), key=lambda o: o.get("created_at", ""), reverse=True)
+        return page("elearning_catalogue.html", partner=partner, courses=elearning_orders.prices(partner), orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[])
 
     def presentation_context():
         # Staff can inspect the same editorial pages without impersonating a
@@ -327,7 +336,7 @@ def register(host):
     @customer
     def catalogue():
         data, partner = partner_data()
-        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft"), key=lambda o: o.get("created_at", ""), reverse=True)
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("created_at", ""), reverse=True)
         values = {}
         if request.args.get("draft"):
             draft = find_order(data, request.args["draft"])
@@ -342,7 +351,7 @@ def register(host):
             values["existing_logo"] = bool(draft.get("logo_filename"))
             for line in draft["items"]:
                 values[f"{line['kind']}_{line['code']}"] = line["quantity"]
-        drafts = sorted((o for o in data.get("manual_orders", []) if o.get("status") == "draft"), key=lambda o: o.get("created_at", ""), reverse=True)
+        drafts = sorted((o for o in data.get("manual_orders", []) if o.get("status") == "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("created_at", ""), reverse=True)
         return page("catalogue.html", partner=partner, books=CATALOGUE, orders=orders, drafts=drafts, values=values, errors=[])
 
     @bp.post("/admin/manuels/recapitulatif")
@@ -421,7 +430,7 @@ def register(host):
 
     def find_order(data, order_id):
         order = next((o for o in data.get("manual_orders", []) if o.get("id") == order_id), None)
-        if not order:
+        if not order or elearning_orders.is_order(order):
             abort(404)
         if not host._is_super_admin_session() and order.get("partner_id") != host._current_partner_id():
             abort(404)
@@ -512,7 +521,7 @@ def register(host):
     @host.require_super_admin
     def admin_orders():
         data = host.load_data()
-        orders = sorted((o for o in data.get("manual_orders", []) if o.get("status") != "draft"), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("status") != "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
         return page("admin_orders.html", orders=orders, staff=True, configuration=commerce.configuration_status(host, data))
 
     @bp.route("/admin/commandes-manuels/<partner_id>/<order_id>", methods=["GET", "POST"])
@@ -628,4 +637,6 @@ def register(host):
                 flash("La connexion Qonto a échoué. Vérifiez les réglages OAuth de ce service et réessayez.", "error")
         return redirect(url_for("manuals_shop.commerce_settings"))
 
+    elearning_orders.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     app.register_blueprint(bp)
+

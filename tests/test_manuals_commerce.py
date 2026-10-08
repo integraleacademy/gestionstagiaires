@@ -113,17 +113,17 @@ def merchant(shop, monkeypatch):
     return state
 
 
-def test_portal_and_upcoming_have_no_purchase_actions(shop):
+def test_portal_links_to_aps_vtc_ordering(shop):
     signup(shop["client"])
     login(shop["client"])
-    for path in ("/admin/organisme", "/admin/organisme/e-learning"):
-        page = shop["client"].get(path)
-        assert page.status_code == 200
-        assert "Prochainement" in page.text
+    portal = shop["client"].get("/admin/organisme")
+    assert portal.status_code == 200 and "Commander des accès" in portal.text
     page = shop["client"].get("/admin/organisme/e-learning")
-    assert "59 €" in page.text and "89 €" in page.text and "157 h 30" in page.text
-    assert '<form' not in page.text and 'type="submit"' not in page.text
-    assert shop["client"].post("/admin/organisme/e-learning").status_code in {403, 405}
+    assert page.status_code == 200
+    assert 'name="course_code" value="aps"' in page.text
+    assert 'name="course_code" value="vtc"' in page.text
+    assert 'name="last_name"' in page.text and 'name="first_name"' in page.text and 'name="email"' in page.text
+    assert 'Prochainement' not in page.text
 
 
 def test_order_emails_invoice_payment_and_no_duplicates(shop, merchant):
@@ -699,3 +699,4 @@ def test_automatic_checkout_stops_for_paid_cancelled_unavailable_or_unsafe_link(
         response = shop['client'].get(checkout)
         assert response.status_code == 303 and response.location == detail
     assert merchant['invoice'] is None
+
