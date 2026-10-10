@@ -114,16 +114,34 @@ def merchant(shop, monkeypatch):
 
 
 def test_portal_links_to_aps_vtc_ordering(shop):
-    signup(shop["client"])
-    login(shop["client"])
-    portal = shop["client"].get("/admin/organisme")
+    client = shop["client"]
+    signup(client)
+    login(client)
+    portal = client.get("/admin/organisme")
     assert portal.status_code == 200 and "Commander des accès" in portal.text
-    page = shop["client"].get("/admin/organisme/e-learning")
+    root = "/admin/organisme/e-learning"
+    page = client.get(root)
     assert page.status_code == 200
-    assert 'name="course_code" value="aps"' in page.text
-    assert 'name="course_code" value="vtc"' in page.text
-    assert 'name="last_name"' in page.text and 'name="first_name"' in page.text and 'name="email"' in page.text
+    assert root + '/nouveau' in page.text and root + '/nouveau?mode=individual' in page.text
+    assert 'name="last_name"' not in page.text
     assert 'Prochainement' not in page.text
+
+    creation = client.get(root + "/nouveau")
+    assert creation.status_code == 200
+    for field in ('name="mode" value="group"', 'name="mode" value="individual"',
+                  'name="course_code" value="aps"', 'name="course_code" value="vtc"'):
+        assert field in creation.text
+    assert 'name="last_name"' not in creation.text
+    request_id = re.search(rb'name="request_id" value="([^"]+)"', creation.data).group(1).decode()
+    created = client.post(root + "/nouveau", data={"csrf_token": csrf(client, root + "/nouveau"),
+                          "request_id": request_id, "mode": "group", "course_code": "aps", "group_name": "APS septembre 2026"})
+    assert created.status_code == 303 and root + "/groupes/" in created.location
+    roster = client.get(created.location)
+    assert roster.status_code == 200
+    assert all('name="' + field + '"' in roster.text for field in ("last_name", "first_name", "email"))
+    assert "Enregistrer et continuer plus tard" in roster.text and "Créer les espaces e-learning" in roster.text
+    saved = all_data(shop)["manual_orders"]
+    assert len(saved) == 1 and saved[0]["order_type"] == "elearning_group" and not saved[0].get("commerce")
 
 
 def test_order_emails_invoice_payment_and_no_duplicates(shop, merchant):
@@ -699,4 +717,5 @@ def test_automatic_checkout_stops_for_paid_cancelled_unavailable_or_unsafe_link(
         response = shop['client'].get(checkout)
         assert response.status_code == 303 and response.location == detail
     assert merchant['invoice'] is None
+
 

@@ -34,6 +34,11 @@ def is_order(order):
     return order.get("order_type") == "elearning"
 
 
+def is_record(order):
+    """Both immutable purchases and editable rosters belong outside the manual shop."""
+    return order.get("order_type") in {"elearning", "elearning_group"}
+
+
 def prices(partner):
     saved = partner.get("elearning_pricing") or {}
     result = {}
@@ -101,6 +106,7 @@ def entitled(order):
 def status_view(order):
     state = order.get("commerce", {})
     return {"status": state.get("status"), "payment_status": state.get("payment_status"), "invoice_status": state.get("invoice_status"),
+            "payment_url": bool(state.get("payment_url")), "payment_link_status": state.get("payment_link_status"),
             "active": bool(order.get("activated_at")), "mail_sent": sum(m.get("status") == "sent" for k, m in state.get("emails", {}).items() if k.startswith("learner_"))}
 
 
@@ -283,7 +289,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                 return {"id": oid}
             result = host._atomic_update_data(persist, partner_id=partner["id"])
         except ValueError as exc:
-            return page("elearning_catalogue.html", partner=partner, courses=prices(partner), orders=[], values=values, rows=rows, request_id=request.form.get("request_id") or secrets.token_hex(16), errors=[str(exc)]), 400
+            from elearning_groups import dashboard
+            return page("elearning_catalogue.html", partner=partner, courses=prices(partner), groups=dashboard(data, partner), orders=[], values=values, rows=rows, request_id=request.form.get("request_id") or secrets.token_hex(16), errors=[str(exc)]), 400
         return redirect(url_for("manuals_shop.elearning_order", oid=result["id"]), code=303)
 
     @bp.get("/admin/organisme/e-learning/commandes/<oid>")
@@ -395,3 +402,4 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             session.permanent = True
             return redirect(url_for("native_elearning.learner_path", token=token), code=303)
         return page("elearning_access.html", person=person, training=training)
+

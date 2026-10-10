@@ -16,7 +16,7 @@
     <span class="header-label">L’espace des organismes de formation</span>
     <nav aria-label="Navigation principale">
     {% if staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a><a href="{{ url_for('manuals_shop.elearning_admin') }}">E-learning</a>
-    {% elif session.get('admin_logged_in') %}<a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Mon espace</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail','manuals_shop.catalogue'] %}aria-current="page"{% endif %}>Manuels</a><a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint == 'manuals_shop.elearning_soon' %}aria-current="page"{% endif %}>E-learning</a>
+    {% elif session.get('admin_logged_in') %}<a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Mon espace</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail','manuals_shop.catalogue'] %}aria-current="page"{% endif %}>Manuels</a><a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint and request.endpoint.startswith('manuals_shop.elearning_') %}aria-current="page"{% endif %}>E-learning</a>
     {% else %}<a href="{{ url_for('admin_login') }}">J’ai déjà un compte <span aria-hidden="true">↗</span></a>{% endif %}
     {% if session.get('admin_logged_in') %}<a class="logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>{% endif %}
     </nav>
@@ -29,4 +29,5 @@
   {% endif %}
 </body>
 </html>
+
 

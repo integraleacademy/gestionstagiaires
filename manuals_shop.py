@@ -23,6 +23,7 @@ from flask import Blueprint, abort, flash, g, redirect, render_template, request
 from PIL import Image, UnidentifiedImageError
 import manuals_commerce as commerce
 import elearning_orders
+import elearning_groups
 from manuals_presentation import presentation_books
 
 
@@ -37,7 +38,7 @@ CATALOGUE = (
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
-CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS
+CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS
 SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 
@@ -298,7 +299,7 @@ def register(host):
     @customer
     def home():
         data, partner = partner_data()
-        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
         return page("home.html", partner=partner, orders=orders, order_count=len(orders), elearning_prices=elearning_orders.prices(partner))
 
     @bp.get("/admin/organisme/e-learning")
@@ -306,7 +307,7 @@ def register(host):
     def elearning_soon():
         data, partner = partner_data()
         orders = sorted((o for o in data.get("manual_orders", []) if elearning_orders.is_order(o) and o.get("partner_id") == partner["id"]), key=lambda o: o.get("created_at", ""), reverse=True)
-        return page("elearning_catalogue.html", partner=partner, courses=elearning_orders.prices(partner), orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[])
+        return page("elearning_catalogue.html", partner=partner, courses=elearning_orders.prices(partner), groups=elearning_groups.dashboard(data, partner), orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[])
 
     def presentation_context():
         # Staff can inspect the same editorial pages without impersonating a
@@ -336,7 +337,7 @@ def register(host):
     @customer
     def catalogue():
         data, partner = partner_data()
-        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("created_at", ""), reverse=True)
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("created_at", ""), reverse=True)
         values = {}
         if request.args.get("draft"):
             draft = find_order(data, request.args["draft"])
@@ -351,7 +352,7 @@ def register(host):
             values["existing_logo"] = bool(draft.get("logo_filename"))
             for line in draft["items"]:
                 values[f"{line['kind']}_{line['code']}"] = line["quantity"]
-        drafts = sorted((o for o in data.get("manual_orders", []) if o.get("status") == "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("created_at", ""), reverse=True)
+        drafts = sorted((o for o in data.get("manual_orders", []) if o.get("status") == "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("created_at", ""), reverse=True)
         return page("catalogue.html", partner=partner, books=CATALOGUE, orders=orders, drafts=drafts, values=values, errors=[])
 
     @bp.post("/admin/manuels/recapitulatif")
@@ -401,7 +402,7 @@ def register(host):
             if personalization == "upload" and not logo:
                 raise ValueError("Ajoutez votre logo ou choisissez de l’envoyer plus tard.")
         except ValueError as exc:
-            orders = [o for o in data.get("manual_orders", []) if o.get("status") != "draft"]
+            orders = [o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)]
             return page("catalogue.html", partner=partner, books=CATALOGUE, orders=orders, values=values, errors=[str(exc)]), 400
         order = {"id": draft_id, "partner_id": partner["id"], "created_by": session.get("user_id"), "status": "draft", "created_at": host._now_iso(), "items": lines, "total_cents": sum(line["total_cents"] for line in lines), "shipping_cents": 0, "tariff_version": "2026", "billing": billing, "centre": {k: partner.get(k, "") for k in ("name", "siret", "email", "contact_first_name", "contact_last_name")}, "delivery": {k: values[k] for k in ("recipient", "phone", "address", "address_extra", "postal_code", "city", "country")}, "notes": values["notes"], "session_date": values["session_date"], "personalization": personalization, "logo_filename": logo}
         def persist(data):
@@ -412,7 +413,7 @@ def register(host):
                     abort(409, "Cette commande a déjà été confirmée.")
                 current.update(order)
             else:
-                if sum(1 for o in orders if o.get("status") == "draft") >= 30:
+                if sum(1 for o in orders if o.get("partner_id") == partner["id"] and o.get("status") == "draft" and not elearning_orders.is_record(o)) >= 30:
                     abort(429, "Trop de brouillons. Reprenez un récapitulatif déjà ouvert ou contactez-nous.")
                 orders.append(order)
             return {}
@@ -430,7 +431,7 @@ def register(host):
 
     def find_order(data, order_id):
         order = next((o for o in data.get("manual_orders", []) if o.get("id") == order_id), None)
-        if not order or elearning_orders.is_order(order):
+        if not order or elearning_orders.is_record(order):
             abort(404)
         if not host._is_super_admin_session() and order.get("partner_id") != host._current_partner_id():
             abort(404)
@@ -521,7 +522,7 @@ def register(host):
     @host.require_super_admin
     def admin_orders():
         data = host.load_data()
-        orders = sorted((o for o in data.get("manual_orders", []) if o.get("status") != "draft" and not elearning_orders.is_order(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
+        orders = sorted((o for o in data.get("manual_orders", []) if o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
         return page("admin_orders.html", orders=orders, staff=True, configuration=commerce.configuration_status(host, data))
 
     @bp.route("/admin/commandes-manuels/<partner_id>/<order_id>", methods=["GET", "POST"])
@@ -638,5 +639,7 @@ def register(host):
         return redirect(url_for("manuals_shop.commerce_settings"))
 
     elearning_orders.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
+    elearning_groups.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     app.register_blueprint(bp)
+
 

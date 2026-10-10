@@ -1,0 +1,20 @@
+{% extends 'manuals/layout.html' %}
+{% from 'manuals/_elearning_ui.html' import icon, steps, errors_box %}
+{% block title %}Préparer des accès e-learning{% endblock %}
+{% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css',v='20261010-2') }}"><script src="{{ url_for('static',filename='js/elearning-orders.js',v='20261010-2') }}" defer></script>{% endblock %}
+{% block content %}<div class="el-wrap el-narrow">
+  <a class="text-link el-back" href="{{ url_for('manuals_shop.elearning_soon') }}">← Mes espaces e-learning</a>{{ steps(1) }}
+  <div class="el-page-heading"><span class="eyebrow blue">UNE NOUVELLE PRÉPARATION</span><h1>Commençons par l’essentiel.</h1><p>Choisissez une formation et un format. Vous ajouterez les stagiaires à l’étape suivante.</p></div>
+  {{ errors_box(errors) }}
+  <form method="post" action="{{ url_for('manuals_shop.elearning_group_create') }}" id="el-create-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="request_id" value="{{ request_id }}">
+    <section class="form-card"><h2>Pour qui préparez-vous des accès ?</h2><div class="el-mode-grid">
+      <label class="el-mode-card"><input type="radio" name="mode" value="group" {% if values.get('mode','group') != 'individual' %}checked{% endif %}>{{ icon('users') }}<strong>Un groupe de stagiaires</strong><span>Une session nommée, à compléter au fil des jours.</span></label>
+      <label class="el-mode-card"><input type="radio" name="mode" value="individual" {% if values.get('mode') == 'individual' %}checked{% endif %}>{{ icon('user') }}<strong>Un accès individuel</strong><span>Une préparation dédiée à une seule personne.</span></label>
+    </div><div id="el-group-name-field"><label for="el-group-name">Nom du groupe</label><input id="el-group-name" name="group_name" maxlength="150" value="{{ values.get('group_name','') }}" placeholder="Ex. APS septembre 2026"><small>Ce nom vous permettra de retrouver facilement votre session.</small></div></section>
+    <section class="form-card"><h2>Quel parcours souhaitez-vous proposer ?</h2><div class="el-course-grid">
+      {% for code, course in courses.items() %}<label class="el-course" style="--course-color:{{ course.color }}"><input type="radio" name="course_code" value="{{ code }}" {% if values.get('course_code','aps') == code %}checked{% endif %} required><span class="el-course-top">{{ course.name }}<small>{{ course.hours }} h de parcours</small></span><strong>{{ course.title }}</strong><span>Cours illustrés, quiz et suivi individuel.</span><b>{{ 'Gratuit' if course.free else (course.unit_cents|manuals_money ~ ' TTC' if course.configured else 'Tarif à définir') }}</b><small>{{ 'par personne · votre tarif organisme' if course.configured else 'Vous pouvez préparer la liste. Contactez-nous avant de commander.' }}</small></label>{% endfor %}
+    </div></section>
+    <div class="el-form-footer"><p>{{ icon('save') }} Votre préparation sera enregistrée.<br>Aucun paiement à cette étape.</p><button class="button primary" type="submit">Créer ma préparation {{ icon('arrow') }}</button></div>
+  </form>
+</div>{% endblock %}
