@@ -1484,6 +1484,15 @@ def create_native_elearning_blueprint(
         blocker = ""
         for item in modules:
             course = item["course"]
+            item["illustration_url"] = ""
+            if course:
+                course_id = str(course.get("id") or "")
+                aps_image = re.fullmatch(r"academy-aps62-(0[1-9]|1[0-5])", course_id)
+                vtc_image = re.fullmatch(r"academy-vtc-([a-h])", course_id)
+                if aps_image:
+                    item["illustration_url"] = url_for("static", filename=f"images/aps62/module-{aps_image.group(1)}.webp")
+                elif vtc_image:
+                    item["illustration_url"] = url_for("static", filename=f"images/vtc/module-{vtc_image.group(1)}.webp")
             item["locked"] = bool(blocker)
             item["lock_reason"] = blocker
             if not course:
@@ -1516,6 +1525,11 @@ def create_native_elearning_blueprint(
         training_label = 'VTC' if 'VTC' in str(session_obj.get('training_type') or '').upper() else 'APS'
         return render_template(
             "native_elearning_path.html", modules=modules,
+            learner_brand=session_obj.get("learner_brand") or {},
+            training_label=training_label,
+            hero_illustration_url=url_for("static", filename="images/learner-welcome-aps.webp") if any(
+                m["course"] and str(m["course"].get("id") or "").startswith("academy-aps62-") for m in modules
+            ) else "",
             path_title=session_obj.get("aps_native_path_title") or "Mon parcours " + training_label,
             session_name=session_obj.get("name") or "Formation " + training_label,
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
@@ -1905,3 +1919,4 @@ def create_native_elearning_blueprint(
                       csrf_token=_csrf_token, require_csrf=_require_csrf,
                       prepare_activity=prepare_activity, asset_token_for=training_asset_token)
     return blueprint
+
