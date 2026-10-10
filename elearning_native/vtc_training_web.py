@@ -57,6 +57,7 @@ def _bank(course):
 
         bank['activities'] = [item for item in bank['activities']
                               if permitted(item)]
+        vtc.repair_listening_activities(bank['activities'], cid, version)
         return bank
     abort(404, "L’entraînement de cette matière sera disponible prochainement.")
 

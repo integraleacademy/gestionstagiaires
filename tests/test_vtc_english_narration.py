@@ -34,7 +34,8 @@ def capsule(course):
 def test_repair_changes_media_only_without_modifying_frozen_course_or_cache(version):
     path = vtc.ROOT / 'courses' / COURSE / (version + '.json')
     frozen = path.read_bytes()
-    before = original(version)
+    frozen_course = original(version)
+    before = vtc._repair_english_listening(copy.deepcopy(frozen_course))
     repaired = vtc.load_bundled_course(COURSE, version)
     video = capsule(repaired)['blocks'][0]['video']
     previous = capsule(before)['blocks'][0]['video']
@@ -59,7 +60,7 @@ def test_repair_changes_media_only_without_modifying_frozen_course_or_cache(vers
     expected['counts']['assets'] = len(expected['assets'])
     assert repaired == expected
     assert path.read_bytes() == frozen
-    assert vtc._course(COURSE, version) == before
+    assert vtc._course(COURSE, version) == frozen_course
     video['chapters'][0]['start_seconds'] = 123
     repaired['assets'].clear()
     assert capsule(vtc.load_bundled_course(COURSE, version))['blocks'][0]['video']['chapters'] == previous['chapters']
@@ -71,7 +72,7 @@ def test_other_modules_and_older_editions_are_unchanged():
         for version in [module['version'], *module['previous_versions']]:
             if module['id'] == COURSE and version in VERSIONS:
                 continue
-            assert vtc.load_bundled_course(module['id'], version) == original(version, module['id'])
+            assert vtc.load_bundled_course(module['id'], version) == vtc._repair_english_listening(original(version, module['id']))
     assert vtc.load_bundled_course(COURSE, 'unreviewed-version') is None
 
 

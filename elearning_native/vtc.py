@@ -1,7 +1,7 @@
 """Immutable VTC curriculum, independent of APS editions and learner records."""
 from pathlib import Path
 from functools import lru_cache
-import copy, json
+import copy, hashlib, json
 ROOT=Path(__file__).parent/'vtc'
 
 # This is a pronunciation repair, not a new learner assignment. The replacement
@@ -11,6 +11,67 @@ _BILINGUAL_VERSIONS = frozenset({
     '20261007-vtc-v5-annales',
     '20261010-vtc-v6-pedagogie',
 })
+
+_LISTENING_VERSIONS = _BILINGUAL_VERSIONS | {'20261006-vtc-v3-105h'}
+_GREEN_ORIGINAL_SRC = 'media/vtc/v3/audio/e-01-2.mp3'
+_GREEN_REPAIRED_SRC = 'media/vtc/v8/audio/e-01-2.mp3'
+_GREEN_ORIGINAL_SHA256 = '55789c9af8fba6cad6a91b45a6ec350f8f282880126f879cb5b0c1f07bb219f3'
+
+
+@lru_cache(maxsize=1)
+def _listening_correction():
+    manifest = json.loads((ROOT / 'listening_corrections_v8.json').read_text())
+    replacement = manifest.get('dialogues', {}).get('e-01-2', {})
+    original = replacement.get('original_turns', [])
+    turns = [{key: turn.get(key) for key in ('speaker', 'text')}
+             for turn in replacement.get('turns', [])]
+    original_hash = hashlib.sha256(json.dumps(original, ensure_ascii=False, sort_keys=True,
+                                               separators=(',', ':')).encode()).hexdigest()
+    if (manifest.get('revision') != 8
+            or replacement.get('original_src') != _GREEN_ORIGINAL_SRC
+            or replacement.get('src') != _GREEN_REPAIRED_SRC
+            or original_hash != _GREEN_ORIGINAL_SHA256
+            or len(turns) != 6
+            or turns[0] != {'speaker': 'Driver', 'text': 'Good evening. My name is Alex. I am your driver. Is your booking under the name Green?'}
+            or turns[1] != {'speaker': 'Passenger', 'text': 'Yes, it is. Good evening. Thank you for waiting. It took a little longer to collect my luggage.'}
+            or turns[2:] != original[2:]
+            or not isinstance(replacement.get('translation'), str)
+            or not replacement['translation']):
+        return None
+    return {**replacement, 'turns': turns}
+
+
+def repair_listening_activities(activities, course_id, version):
+    """Repair reviewed dialogue copies without changing exercise/progress IDs."""
+    if course_id != 'academy-vtc-e' or version not in _LISTENING_VERSIONS:
+        return False
+    try:
+        replacement = _listening_correction()
+    except FileNotFoundError:
+        return False
+    if not replacement:
+        return False
+    changed = False
+    for activity in activities:
+        for exercise in activity.get('practice', {}).get('exercises', []):
+            if (exercise.get('audio') != _GREEN_ORIGINAL_SRC
+                    or exercise.get('transcript') != replacement['original_turns']):
+                continue
+            exercise['audio'] = replacement['src']
+            exercise['transcript'] = copy.deepcopy(replacement['turns'])
+            exercise['translation'] = replacement['translation']
+            changed = True
+    return changed
+
+
+def _repair_english_listening(course):
+    activities = [activity for section in course.get('sections', [])
+                  for activity in section.get('activities', [])]
+    if repair_listening_activities(activities, course.get('id'), course.get('version')):
+        if _GREEN_REPAIRED_SRC not in course['assets']:
+            course['assets'].append(_GREEN_REPAIRED_SRC)
+        course.setdefault('counts', {})['assets'] = len(course['assets'])
+    return course
 
 
 @lru_cache(maxsize=1)
@@ -71,7 +132,7 @@ def load_bundled_course(course_id,version=None):
     if not module:return None
     version=version or module['version']
     if version not in [module['version'],*module.get('previous_versions',[])]:return None
-    return _repair_english_narration(copy.deepcopy(_course(course_id,version)))
+    return _repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version))))
 
 def bundled_asset(course_id,version,name):
     course=load_bundled_course(course_id,version)

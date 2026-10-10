@@ -45,3 +45,23 @@ media and manifests are not overwritten.
   manifest; a six-frame visual review checks subtitle layout.
 - Voice selection and technical checks do not substitute for the learner's
   subjective listening assessment. A short excerpt is provided for listening.
+
+## E-01-2: unambiguous booking-name question
+
+The subsequent audit of all 48 listening files found one unresolved recognition
+difference, `Ms Green` versus `Miss Green`. At the user's request, E-01-2 now asks
+`Is your booking under the name Green?` and the passenger answers `Yes, it is.`
+The rest of the conversation, its destination, baggage information and exercise
+answers are preserved. Both speakers still use British voices at the same rate.
+
+`scripts/vtc/render_green_dialogue.py` generates a distinct
+`media/vtc/v8/audio/e-01-2.mp3` and `listening_corrections_v8.json`. The repair
+updates the audio and displayed transcript together in the main course and free
+practice, without rewriting historical course files or learner records. This is
+an ordinary listening exercise, not the duration-locked mandatory lesson video.
+The original v3 audio remains available to its authorized historical references.
+
+Independent local recognition checks the entire corrected dialogue without being
+given its expected text; it must recover the new booking question and matching
+answer. This establishes that the ambiguous title has been removed, rather than
+claiming the original voice was conclusively mispronouncing it.
