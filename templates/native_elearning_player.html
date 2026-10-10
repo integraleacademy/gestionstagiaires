@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-pacing') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-aps-vtc-pacing') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
@@ -33,6 +33,18 @@
           </div>
           {% endif %}
         </div>
+        {% if block.video.required and not preview_mode and course.id.startswith('academy-aps62-') %}
+        <div class="native-video-pace">
+          <label>Rythme de lecture
+            <select data-video-rate="{{ block.video.id }}">
+              <option value="1">Normal · 1×</option>
+              <option value="0.9">Plus lent · 0,90×</option>
+              <option value="0.85">Encore plus lent · 0,85×</option>
+            </select>
+          </label>
+          <p>Choisissez le rythme qui vous convient. Votre progression reste enregistrée.</p>
+        </div>
+        {% endif %}
         {% if block.video.required %}
         <div class="native-video-followup"{% if not preview_mode %} data-video-followup="{{ block.video.id }}"{% endif %}>
           <div><strong>{{ 'Visionnage obligatoire pour les stagiaires' if preview_mode else 'Vidéo à regarder en entier' }}</strong><span data-video-status role="status" aria-live="polite">{{ 'Lecture libre en mode aperçu' if preview_mode else 'Votre progression est enregistrée au fil de la lecture.' }}</span></div>
@@ -228,7 +240,7 @@
           {% endif %}
         </div>
         {% if not preview_mode %}
-        <p class="native-tracking-explainer">Le temps est enregistré pendant la lecture réelle d’une vidéo obligatoire à vitesse normale, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.</p>
+        <p class="native-tracking-explainer">Le temps réellement passé est enregistré pendant la lecture d’une vidéo obligatoire, au rythme proposé par le lecteur, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.</p>
         {% endif %}
       </div>
     </main>
@@ -281,7 +293,7 @@
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-pacing') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-aps-vtc-pacing') }}" defer></script>
   {% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-1') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>

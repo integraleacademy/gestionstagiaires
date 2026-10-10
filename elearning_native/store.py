@@ -18,6 +18,8 @@ from .videos import videos_complete, vtc_pacing_enabled
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
 ACTIVE_SESSION_STALE_SECONDS = 45.0
 IDLE_TIMEOUT_SECONDS = 300.0
+VIDEO_PLAYBACK_RATES = frozenset((0.85, 0.9, 1.0))
+APS_PACED_COURSES = frozenset(f"academy-aps62-{number:02d}" for number in range(1, 16))
 
 _INITIALIZE_LOCK = threading.Lock()
 _INITIALIZED_DATABASES: set[str] = set()
@@ -463,10 +465,15 @@ class NativeElearningStore:
         if isinstance(age, bool) or not isinstance(age, (int, float)) or not math.isfinite(age) or age < 0:
             raise TrackingError("Durée d’inactivité invalide. Rechargez la page.")
         # A media_playing flag alone never establishes presence. Required-video
-        # receipts must advance normally between two server-timed heartbeats.
+        # receipts must advance at an allowed rate between server-timed heartbeats.
         interactive_active = bool(visible and focused and recent_activity and age < IDLE_TIMEOUT_SECONDS)
         key = self._key_values(access)
         playback = (video_playback_policy or {}) if vtc_pacing_enabled(key[2], key[3]) else {}
+        if key[2] in APS_PACED_COURSES:
+            # APS speed choices are authorized by the authenticated module,
+            # never by a policy supplied in a browser heartbeat.
+            playback = {video_id: {"rates": VIDEO_PLAYBACK_RATES, "conservative_rate_changes": True}
+                        for video_id in (video_requirements or {})}
         with self._transaction() as connection:
             tracking = connection.execute(
                 "SELECT * FROM tracking_sessions WHERE id = ?",
@@ -676,20 +683,26 @@ class NativeElearningStore:
             position = float(sample["position"])
             prior_position = float(before.get("position") or 0)
             advancement = position - prior_position
+            rate = sample.get("rate", 1)
+            prior_rate = before.get("rate", 1)
             duration = requirements[video_id]
             record = saved.get(video_id) or {}
             completed = videos_complete({video_id: record}, {video_id: duration})
             frontier = float(record.get("watched_seconds") or 0) if record.get("duration_seconds") == duration else 0
-            rates = playback.get(video_id, {}).get("rates", (1,))
-            prior_rate = float(before.get("rate", 1))
+            policy = playback.get(video_id, {})
+            rates = policy.get("rates", (1,))
+            # VTC closes its prior-rate interval on every speed change. APS
+            # conservatively allows an interval spanning either endpoint rate.
+            interval_rate = max(rate, prior_rate) if policy.get("conservative_rate_changes") else prior_rate
             if (before.get("playing") is True and sample.get("rate", 1) in rates and prior_rate in rates
                     and position <= duration + .05 and (completed or prior_position <= frontier + .5)
                     and delta <= HEARTBEAT_MAX_CREDIT_SECONDS
-                    and 0 < advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * prior_rate):
+                    and 0 < advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * interval_rate):
                 # Only previously uncredited wall time may absorb request jitter;
                 # it is not a new per-request allowance. Buffering earns nothing.
                 carry = min(.5, max(0.0, float(before.get("time_credit_carry") or 0)))
-                return video_id, min(advancement / prior_rate, delta + carry, HEARTBEAT_MAX_CREDIT_SECONDS)
+                elapsed_playback = round(advancement / interval_rate, 9)
+                return video_id, min(elapsed_playback, delta + carry, HEARTBEAT_MAX_CREDIT_SECONDS)
         return None, 0.0
 
     @staticmethod
@@ -736,7 +749,8 @@ class NativeElearningStore:
         budget = credited if visible and focused else 0.0
         for video_id, sample in incoming.items():
             duration = requirements[video_id]
-            rates = (playback or {}).get(video_id, {}).get("rates", (1,))
+            policy = (playback or {}).get(video_id, {})
+            rates = policy.get("rates", (1,))
             normal_rate = sample.get("rate", 1) in rates
             rate = sample.get("rate", 1)
             record = activity_saved.get(video_id) or {}
@@ -758,18 +772,19 @@ class NativeElearningStore:
             previous_position = float(before.get("position") or 0)
             advancement = position - previous_position
             prior_rate = float(before.get("rate", 1))
+            interval_rate = max(rate, prior_rate) if policy.get("conservative_rate_changes") else prior_rate
             valid_position = normal_rate and position <= duration + .05
             continuous = (before.get("playing") is True and prior_rate in rates and previous_position <= frontier + .5
-                          and -.25 <= advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * prior_rate)
+                          and -.25 <= advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * interval_rate)
             carry = 0.0
             if valid_position and continuous and budget > 0:
                 # Retain a small amount of *already credited* time to absorb
                 # request jitter without losing viewing time on every ping.
                 # This is a balance, not a fresh allowance per request.
                 available = budget + min(.5, max(0.0, float(before.get("credit_carry") or 0)))
-                extension = max(0.0, min(position, frontier + available * prior_rate) - frontier)
+                extension = max(0.0, min(position, frontier + available * interval_rate) - frontier)
                 frontier += extension
-                carry = min(.5, max(0.0, available - extension / prior_rate))
+                carry = min(.5, max(0.0, available - extension / interval_rate))
                 budget = 0.0
             if not valid_position or position > frontier + .5:
                 resync[video_id] = round(frontier, 3)

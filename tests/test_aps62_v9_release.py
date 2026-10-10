@@ -37,7 +37,7 @@ class ImprovedReleaseTests(unittest.TestCase):
 
     def test_complete_published_courses_preserve_guided_work_and_budgets(self):
         manifest = curriculum_manifest()
-        if manifest['version'] not in (VERSION, '20261010-aps62-v10'):
+        if manifest['version'] not in (VERSION, '20261010-aps62-v10', '20261010-aps62-v11'):
             self.assertEqual(manifest['version'], PREVIOUS)
             self.skipTest('New edition is not yet published')
         videos = read(ROOT/'video_manifest_v7.json')

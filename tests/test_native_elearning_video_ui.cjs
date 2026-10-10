@@ -7,7 +7,7 @@ const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-player.js"), "utf8");
 const pacingSource = fs.readFileSync(path.join(__dirname, "../static/js/native-video-pacing.js"), "utf8");
 
-async function fixture({ watched = 0, completed = false, duration = 8, autoAdvance = false, pacing = false, pauses = [], realSeeking = false } = {}) {
+async function fixture({ watched = 0, completed = false, duration = 8, autoAdvance = false, pacing = false, pauses = [], realSeeking = false, aps = false, savedRate } = {}) {
   let record = { watched_seconds: watched, completed, duration_seconds: duration };
   const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds: 300,
     startUrl: "/start", heartbeatUrl: "/heartbeat", finishUrl: "/finish", completeUrl: "/complete",
@@ -19,6 +19,7 @@ async function fixture({ watched = 0, completed = false, duration = 8, autoAdvan
     ${pacing ? `<script type="application/json" data-video-pacing-config>${JSON.stringify({default_playback_rate:.85,allowed_playback_rates:[.85,1],learning_pauses:pauses})}</script>
     <select data-playback-rate><option value="0.85">0.85</option><option value="1">1</option></select>
     <div data-learning-pause hidden><p data-pause-message></p><span data-pause-countdown></span><button data-pause-resume>Reprendre</button><button data-pause-stay>Rester</button></div>` : ''}</div>
+    ${aps ? '<label>Rythme de lecture<select data-video-rate="capsule"><option value="1">Normal · 1×</option><option value="0.9">Plus lent · 0,90×</option><option value="0.85">Encore plus lent · 0,85×</option></select></label>' : ''}
     <strong id="nativeActiveTimer"></strong><div id="nativeIdleNotice" hidden><button id="nativeResumeTimer">Reprendre</button></div>
     <details data-video-chapters="capsule"><p data-chapter-hint></p><button data-chapter-start="4" disabled>Chapitre 2</button></details>
     <div data-video-followup="capsule"><span data-video-status></span>
@@ -26,6 +27,7 @@ async function fixture({ watched = 0, completed = false, duration = 8, autoAdvan
     <script id="nativeElearningConfig" type="application/json">${JSON.stringify(config)}</script>`,
     { runScripts: "outside-only", url: "https://test.invalid/" });
   const { window } = dom, video = window.document.querySelector("video");
+  if (savedRate !== undefined) window.sessionStorage.setItem('nativeElearningPlaybackRate', String(savedRate));
   let now = 0, nextTimer = 0, focused = true, offline = false, resync = {}, receiptPosition = 0;
   let blockedResponse = null, releaseResponse = null;
   const scheduled = new Map(), requests = [];
@@ -349,4 +351,52 @@ test("chapters unlock only after server-confirmed completion, including after re
     await reloaded.video.play(); await reloaded.advance(0); reloaded.blur();
     assert.equal(reloaded.video.paused, true);
   } finally { reloaded.close(); }
+});
+
+test("slower speeds are available on first viewing, keep real playback alive and save the preference", async () => {
+  for (const rate of [.85, .9]) {
+    const f = await fixture({ duration: 660, autoAdvance: true, aps: true });
+    try {
+      const select = f.window.document.querySelector('[data-video-rate]');
+      assert.equal(select.disabled, false);
+      select.value = String(rate);
+      select.dispatchEvent(new f.window.Event('change'));
+      f.emit('ratechange');
+      assert.equal(f.video.playbackRate, rate);
+      assert.equal(f.window.sessionStorage.getItem('nativeElearningPlaybackRate'), String(rate));
+      await f.video.play(); await f.advance(0); await f.advance(620000);
+      assert.equal(f.video.paused, false);
+      assert.equal(f.window.document.getElementById('nativeIdleNotice').hidden, true);
+      const receipt = f.requests.filter(r => r.url === '/heartbeat').at(-1).body;
+      assert.equal(receipt.recent_activity, false);
+      assert.equal(receipt.videos[0].rate, rate);
+      assert.ok(Math.abs(receipt.videos[0].position - 620 * rate) < .001);
+      assert.equal(f.button.disabled, true);
+      f.video.pause(); await f.advance(0);
+      assert.equal(f.window.document.getElementById('nativeIdleNotice').hidden, false);
+    } finally { f.close(); }
+  }
+});
+
+test("a saved slow preference survives reload without bypassing forward seek or acceleration guards", async () => {
+  const f = await fixture({ watched: 3, savedRate: .85, aps: true });
+  try {
+    assert.equal(f.video.currentTime, 3);
+    assert.equal(f.video.playbackRate, .85);
+    assert.equal(f.window.document.querySelector('[data-video-rate]').value, '0.85');
+    await f.video.play(); await f.advance(0);
+    assert.equal(f.video.playbackRate, .85);
+    f.video.currentTime = 7; f.emit('seeking');
+    assert.equal(f.video.currentTime, 3);
+    for (const rate of [.9, 1, .85]) {
+      f.video.playbackRate = rate; f.emit('ratechange'); await f.settle();
+      assert.equal(f.video.playbackRate, rate);
+      assert.equal(f.window.document.querySelector('[data-video-rate]').value, String(rate));
+    }
+    f.video.playbackRate = 2; f.emit('ratechange');
+    assert.equal(f.video.playbackRate, 1);
+    f.blur(); await f.settle();
+    assert.equal(f.video.paused, true);
+    assert.equal(f.button.disabled, true);
+  } finally { f.close(); }
 });

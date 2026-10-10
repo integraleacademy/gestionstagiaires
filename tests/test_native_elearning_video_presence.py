@@ -102,6 +102,78 @@ class LongViewingPresenceTests(unittest.TestCase):
         self.assertEqual(review['progress']['active_seconds'], 20)
         self.assertTrue(review['progress']['video_progress']['lesson-1']['lesson-video']['completed'])
 
+    def test_slow_long_viewing_counts_elapsed_time_once_and_stops_when_buffering(self):
+        self.access = {**self.access, 'course_id': 'academy-aps62-01', 'course_version': '20261010-aps62-v10'}
+        for rate in (.85, .9):
+            with self.subTest(rate=rate):
+                access = {**self.access, 'trainee_id': f'slow-{rate}'}
+                tracking = self.start(access)
+                self.ping(tracking, 0, 0, rate=rate, access=access)
+                for elapsed in range(4, 641, 4):
+                    result = self.ping(tracking, elapsed, elapsed * rate, rate=rate, access=access)
+                    self.assertTrue(result['media_active'])
+                    self.assertAlmostEqual(result['progress']['active_seconds'], elapsed, places=2)
+                    self.assertAlmostEqual(result['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'],
+                                           elapsed * rate, places=3)
+                    self.assertFalse(result['video_resync'])
+                stopped = self.ping(tracking, 644, 640 * rate, rate=rate, access=access)
+                self.assertFalse(stopped['active'])
+                self.assertEqual(stopped['credited_seconds'], 0)
+                self.assertEqual(stopped['progress']['active_seconds'], 640)
+
+    def test_slow_jitter_preserves_wall_time_and_watched_prefix(self):
+        self.access = {**self.access, 'course_id': 'academy-aps62-01', 'course_version': '20261010-aps62-v10'}
+        for rate in (.85, .9):
+            with self.subTest(rate=rate):
+                access = {**self.access, 'trainee_id': f'jitter-{rate}'}
+                tracking = self.start(access)
+                self.ping(tracking, 0, 0, age=299, rate=rate, access=access)
+                for elapsed, played in [(4.35, 4), (8, 8), (12.35, 12), (16, 16)]:
+                    result = self.ping(tracking, elapsed, played * rate, age=299 + elapsed, rate=rate, access=access)
+                    self.assertFalse(result['video_resync'])
+                    self.assertAlmostEqual(result['progress']['active_seconds'], played, places=2)
+                    self.assertAlmostEqual(result['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'],
+                                           played * rate, places=3)
+
+    def test_speed_transitions_never_inflate_time_or_skip_the_viewing_frontier(self):
+        self.access = {**self.access, 'course_id': 'academy-aps62-01', 'course_version': '20261010-aps62-v10'}
+        tracking = self.start()
+        self.ping(tracking, 0, 0, age=299)
+        # A changed rate in an interval is deliberately credited using its
+        # faster endpoint. Subsequent constant-speed intervals earn full time.
+        position = 0
+        elapsed = 0
+        for old_rate, new_rate in [(1, .85), (.85, .85), (.85, .9), (.9, .9), (.9, 1), (1, 1)]:
+            elapsed += 4
+            position += 4 * (old_rate + new_rate) / 2
+            result = self.ping(tracking, elapsed, position, age=299 + elapsed, rate=new_rate)
+            self.assertTrue(result['media_active'])
+            self.assertLessEqual(result['credited_seconds'], 4)
+            self.assertLessEqual(result['progress']['active_seconds'], elapsed)
+            self.assertFalse(result['video_resync'])
+            self.assertAlmostEqual(result['progress']['video_progress']['lesson-1']['lesson-video']['watched_seconds'],
+                                   position, places=3)
+
+    def test_hidden_blurred_fast_and_duplicate_slow_receipts_do_not_extend_presence(self):
+        self.access = {**self.access, 'course_id': 'academy-aps62-01', 'course_version': '20261010-aps62-v10'}
+        for case in ('hidden', 'blurred', 'fast', 'duplicate'):
+            with self.subTest(case=case):
+                access = {**self.access, 'trainee_id': f'slow-invalid-{case}'}
+                tracking = self.start(access)
+                self.ping(tracking, 0, 0, access=access, age=296, rate=.85)
+                self.ping(tracking, 4, 3.4, access=access, age=300, rate=.85)
+                args = dict(access=access, age=304, rate=.85)
+                if case == 'hidden': args['visible'] = False
+                if case == 'blurred': args['focused'] = False
+                if case == 'fast': args['rate'] = 2
+                if case == 'duplicate':
+                    tracking = self.start(access, when=1004)
+                    self.assertTrue(self.ping(tracking, 4, 3.4, access=access, age=0, rate=.85)['duplicate'])
+                result = self.ping(tracking, 8, 6.8, **args)
+                self.assertFalse(result['media_active'])
+                self.assertEqual(result['credited_seconds'], 0)
+                self.assertEqual(result['progress']['active_seconds'], 4)
+
 
 if __name__ == '__main__':
     unittest.main()

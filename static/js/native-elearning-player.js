@@ -25,6 +25,8 @@
   const videos = Array.from(document.querySelectorAll(".native-course-video"));
   const requiredVideos = videos.filter((video) => Object.prototype.hasOwnProperty.call(config.requiredVideos || {}, video.dataset.requiredVideo));
   const videoReaders = new Map();
+  const playbackRates = [0.85, 0.9, 1];
+  const allowedPlaybackRate = (rate) => playbackRates.includes(Number(rate));
   const remainingTime = document.getElementById("nativeRemainingTime");
   const durationStatus = document.getElementById("nativeDurationStatus");
   const idleNotice = document.getElementById("nativeIdleNotice");
@@ -180,11 +182,16 @@
   }
 
   function allowedVideoRate(video) {
-    return (videoReaders.get(video)?.pacing?.rates || [1]).includes(video.playbackRate);
+    const reader = videoReaders.get(video);
+    return (reader?.pacing?.rates || reader?.allowedRates || [1]).includes(video.playbackRate);
   }
 
   function enforceVideoRate(video) {
-    const pacing = videoReaders.get(video)?.pacing;
+    const reader = videoReaders.get(video);
+    // attach() sets the reviewed default rate before returning its policy.
+    // Some players dispatch ratechange synchronously during that assignment.
+    if (reader?.pacingInitializing) return;
+    const pacing = reader?.pacing;
     if ((pacing || !videoCompleted(video)) && !allowedVideoRate(video)) video.playbackRate = pacing ? .85 : 1;
   }
 
@@ -266,12 +273,32 @@
 
   function setupRequiredVideos() {
     const panels = Array.from(document.querySelectorAll("[data-video-followup]"));
+    const rateSelectors = Array.from(document.querySelectorAll("[data-video-rate]"));
     requiredVideos.forEach((video) => {
+      const rateSelector = rateSelectors.find((select) => select.dataset.videoRate === video.dataset.requiredVideo);
+      if (rateSelector) {
+        try {
+          const savedRate = Number(sessionStorage.getItem("nativeElearningPlaybackRate"));
+          if (allowedPlaybackRate(savedRate)) video.playbackRate = savedRate;
+        } catch (_error) { /* The control remains usable without browser storage. */ }
+        rateSelector.value = String(video.playbackRate);
+        rateSelector.addEventListener("change", () => {
+          const rate = Number(rateSelector.value);
+          if (!allowedPlaybackRate(rate)) return;
+          markActivity();
+          video.playbackRate = rate;
+          try { sessionStorage.setItem("nativeElearningPlaybackRate", String(rate)); } catch (_error) { /* Optional preference. */ }
+        });
+      }
       const reader = { maximum: Number(videoProgress(video).watched_seconds) || 0,
-        lastPosition: 0, lastTime: Date.now(), lastAdvance: null, waiting: false, restored: false,
+        allowedRates: rateSelector ? playbackRates : [1],
+        lastPosition: 0, lastTime: Date.now(), lastRate: video.playbackRate,
+        lastAdvance: null, waiting: false, restored: false,
         panel: panels.find((panel) => panel.dataset.videoFollowup === video.dataset.requiredVideo) };
       videoReaders.set(video, reader);
-      const anchor = () => { reader.lastPosition = video.currentTime; reader.lastTime = Date.now(); };
+      const anchor = () => {
+        reader.lastPosition = video.currentTime; reader.lastTime = Date.now(); reader.lastRate = video.playbackRate;
+      };
       const restore = () => {
         if (reader.restored || video.readyState < 1) return;
         reader.restored = true;
@@ -285,10 +312,11 @@
       video.addEventListener("timeupdate", () => {
         const elapsed = Math.max(0, (Date.now() - reader.lastTime) / 1000);
         const delta = video.currentTime - reader.lastPosition;
+        const possibleAdvance = elapsed * Math.max(reader.lastRate, video.playbackRate);
         if (!video.paused && !video.seeking && allowedVideoRate(video) && !reader.waiting
             && document.visibilityState === "visible" && document.hasFocus()
-            && delta > 0 && delta <= elapsed * video.playbackRate + .5
-            && (videoCompleted(video) || video.currentTime <= reader.maximum + elapsed * video.playbackRate + .5)) {
+            && delta > 0 && delta <= possibleAdvance + .5
+            && (videoCompleted(video) || video.currentTime <= reader.maximum + possibleAdvance + .5)) {
           reader.lastAdvance = Date.now();
           if (!videoCompleted(video)) reader.maximum = Math.max(reader.maximum, video.currentTime);
         }
@@ -306,6 +334,7 @@
       video.addEventListener("ratechange", () => {
         reader.lastAdvance = null;
         enforceVideoRate(video);
+        if (rateSelector) rateSelector.value = String(video.playbackRate);
         anchor();
         sendHeartbeat();
       });
@@ -330,6 +359,7 @@
       video.addEventListener("error", () => {
         showToast("La vidéo ne peut pas être chargée. Vérifiez votre connexion puis rechargez la page.", true);
       });
+      reader.pacingInitializing = true;
       reader.pacing = window.NativeVideoPacing?.attach(video, {
         savedPosition: reader.maximum,
         canResume: () => Boolean(state.trackingSessionId && !state.stopped && state.playbackAvailable),
@@ -345,6 +375,8 @@
           }
         },
       });
+      reader.pacingInitializing = false;
+      enforceVideoRate(video);
     });
     document.querySelectorAll("[data-video-chapters]").forEach((chapters) => {
       const video = requiredVideos.find((item) => item.dataset.requiredVideo === chapters.dataset.videoChapters);
