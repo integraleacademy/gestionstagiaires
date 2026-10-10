@@ -1,13 +1,16 @@
 <!doctype html>
 <html lang="fr">
+{% set show_organisme_identity = next_url and (next_url == '/admin/organisme' or next_url.startswith('/admin/organisme/') or next_url == '/admin/manuels' or next_url.startswith('/admin/manuels/')) %}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Espace organismes de formation • Intégrale Connect</title>
   <meta name="description" content="Votre espace organisme de formation : commandes de manuels personnalisés, suivi des commandes et factures, et prochainement les accès e-learning de vos stagiaires.">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-login.css', v='organismes-20261006') }}">
+  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-1') }}">{% endif %}
 </head>
 <body class="admin-login-page">
+  {% if show_organisme_identity %}{% include "manuals/_organisme_identity.html" %}{% endif %}
   <main class="login-shell" aria-labelledby="portal-title">
     <section class="login-brand" aria-label="Votre espace organisme de formation">
       <a class="brand-logo-link" href="{{ url_for('admin_login', next=next_url) }}" aria-label="Intégrale Connect — accueil de connexion">

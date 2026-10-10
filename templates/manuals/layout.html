@@ -1,14 +1,17 @@
 <!doctype html>
 <html lang="fr">
+{% set show_organisme_identity = not staff and request.endpoint != "manuals_shop.elearning_access" %}
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Espace organisme{% endblock %} · Intégrale Connect</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261006-3') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css') }}">
+  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-1') }}">{% endif %}
   {% block extra_styles %}{% endblock %}
   <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261006-3') }}" defer></script>
 </head>
 <body>
+  {% if show_organisme_identity %}{% include "manuals/_organisme_identity.html" %}{% endif %}
   <header class="site-header">
     <a class="logo" href="{{ url_for('manuals_shop.home') if session.get('admin_logged_in') else url_for('admin_login') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
     <span class="header-label">L’espace des organismes de formation</span>
