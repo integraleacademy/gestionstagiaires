@@ -10,6 +10,7 @@
   const button = document.getElementById("nativePreviewAnswerButton");
   const form = document.getElementById("nativeQuestionForm");
   const feedback = document.getElementById("nativeAnswerFeedback");
+  document.querySelectorAll(".native-course-video").forEach(video => window.NativeVideoPacing?.attach(video));
 
   function collectAnswer() {
     if (["single_choice", "multiple_choice", "statement"].includes(config.questionType)) {

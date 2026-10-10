@@ -58,6 +58,7 @@ def test_only_exact_dialogue_support_changes_and_all_other_47_recordings_stay(ve
             old_ex[field] = copy.deepcopy(new_ex[field])
     expected['assets'].append(NEW)
     expected['counts']['assets'] = len(expected['assets'])
+    expected = vtc._repair_video_pacing(expected)
     assert repaired == expected
     assert course_videos(repaired) == course_videos(before)
     assert vtc._course(COURSE, version) == before
@@ -77,7 +78,8 @@ def test_earlier_courses_and_other_modules_are_unchanged():
         for version in [module['version'], *module['previous_versions']]:
             if module['id'] == COURSE and version in VERSIONS:
                 continue
-            assert vtc.load_bundled_course(module['id'], version) == original(version, module['id'])
+            expected = vtc._repair_video_pacing(vtc._repair_english_narration(original(version, module['id'])))
+            assert vtc.load_bundled_course(module['id'], version) == expected
             assert vtc.bundled_asset(module['id'], version, NEW) is None
 
 

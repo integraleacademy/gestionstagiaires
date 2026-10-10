@@ -37,6 +37,7 @@
     stopped: false,
     serverActive: false,
     serverMediaActive: false,
+    playbackAvailable: false,
     lastReceipt: 0,
     idlePaused: false,
     baseSeconds: Number(config.initialActiveSeconds || 0),
@@ -174,8 +175,24 @@
     const reader = videoReaders.get(video);
     return Boolean(reader && !reader.waiting && reader.lastAdvance !== null
       && Date.now() - reader.lastAdvance < 6000 && !video.paused && !video.ended
-      && !video.seeking && video.readyState >= 2 && video.playbackRate === 1
+      && !video.seeking && video.readyState >= 2 && allowedVideoRate(video)
       && document.visibilityState === "visible" && document.hasFocus());
+  }
+
+  function allowedVideoRate(video) {
+    return (videoReaders.get(video)?.pacing?.rates || [1]).includes(video.playbackRate);
+  }
+
+  function enforceVideoRate(video) {
+    const pacing = videoReaders.get(video)?.pacing;
+    if ((pacing || !videoCompleted(video)) && !allowedVideoRate(video)) video.playbackRate = pacing ? .85 : 1;
+  }
+
+  function learningPauseActive() {
+    return state.playbackAvailable && requiredVideos.some(video => {
+      const reader = videoReaders.get(video);
+      return reader?.pacing?.isPausing() || (!reader?.waiting && reader?.pacing?.isResuming());
+    });
   }
 
   function confirmedPlayback() {
@@ -204,6 +221,7 @@
 
   function pauseRequiredVideos(reset = false) {
     requiredVideos.forEach((video) => {
+      videoReaders.get(video)?.pacing?.cancelPause();
       if (!video.paused) video.pause();
       if (videoCompleted(video)) return;
       if (reset && video.readyState >= 1) {
@@ -222,6 +240,7 @@
       const progress = videoProgress(video);
       const confirmed = Number(progress.watched_seconds) || 0;
       reader.maximum = Math.max(reader.maximum, confirmed);
+      reader.pacing?.markPast(confirmed);
       const percent = Math.min(100, confirmed / Number(config.requiredVideos[video.dataset.requiredVideo]) * 100);
       const panel = reader.panel;
       if (!panel) return;
@@ -266,10 +285,10 @@
       video.addEventListener("timeupdate", () => {
         const elapsed = Math.max(0, (Date.now() - reader.lastTime) / 1000);
         const delta = video.currentTime - reader.lastPosition;
-        if (!video.paused && !video.seeking && video.playbackRate === 1 && !reader.waiting
+        if (!video.paused && !video.seeking && allowedVideoRate(video) && !reader.waiting
             && document.visibilityState === "visible" && document.hasFocus()
-            && delta > 0 && delta <= elapsed + .5
-            && (videoCompleted(video) || video.currentTime <= reader.maximum + elapsed + .5)) {
+            && delta > 0 && delta <= elapsed * video.playbackRate + .5
+            && (videoCompleted(video) || video.currentTime <= reader.maximum + elapsed * video.playbackRate + .5)) {
           reader.lastAdvance = Date.now();
           if (!videoCompleted(video)) reader.maximum = Math.max(reader.maximum, video.currentTime);
         }
@@ -286,8 +305,9 @@
       video.addEventListener("seeked", () => { anchor(); sendHeartbeat(); });
       video.addEventListener("ratechange", () => {
         reader.lastAdvance = null;
-        if (!videoCompleted(video) && video.playbackRate !== 1) video.playbackRate = 1;
+        enforceVideoRate(video);
         anchor();
+        sendHeartbeat();
       });
       const playing = () => {
         if (!state.trackingSessionId || document.visibilityState !== "visible" || !document.hasFocus()) {
@@ -295,7 +315,7 @@
           return;
         }
         requiredVideos.forEach((other) => { if (other !== video && !other.paused) other.pause(); });
-        if (!videoCompleted(video) && video.playbackRate !== 1) video.playbackRate = 1;
+        enforceVideoRate(video);
         reader.waiting = false;
         anchor();
         sendHeartbeat();
@@ -309,6 +329,21 @@
       }));
       video.addEventListener("error", () => {
         showToast("La vidéo ne peut pas être chargée. Vérifiez votre connexion puis rechargez la page.", true);
+      });
+      reader.pacing = window.NativeVideoPacing?.attach(video, {
+        savedPosition: reader.maximum,
+        canResume: () => Boolean(state.trackingSessionId && !state.stopped && state.playbackAvailable),
+        beforePause: (position) => {
+          // Decoded-frame callbacks can precede timeupdate. Record only the
+          // same small, naturally reached prefix before snapping to its frame.
+          const elapsed = Math.max(0, (Date.now() - reader.lastTime) / 1000);
+          if (!video.paused && !video.seeking && !reader.waiting && allowedVideoRate(video)
+              && position >= reader.lastPosition && position <= video.currentTime + .00001
+              && position - reader.lastPosition <= elapsed * video.playbackRate + .5
+              && position <= reader.maximum + elapsed * video.playbackRate + .5) {
+            reader.maximum = Math.max(reader.maximum, position);
+          }
+        },
       });
     });
     document.querySelectorAll("[data-video-chapters]").forEach((chapters) => {
@@ -363,6 +398,7 @@
       for (const video of requiredVideos) {
         const position = result.video_resync?.[video.dataset.requiredVideo];
         if (Number.isFinite(position)) {
+          videoReaders.get(video)?.pacing?.cancelPause();
           video.pause();
           videoReaders.get(video).maximum = position;
           if (Math.abs(video.currentTime - position) > .05) video.currentTime = position;
@@ -370,6 +406,7 @@
         }
       }
       state.serverMediaActive = Boolean(result.media_active);
+      state.playbackAvailable = !result.duplicate;
       state.lastReceipt = Date.now();
       state.serverActive = Boolean(result.active) && document.visibilityState === "visible" && document.hasFocus()
         && (activitySignals().recent_activity || confirmedPlayback());
@@ -388,6 +425,7 @@
       scheduleIdlePause();
     } catch (error) {
       pauseRequiredVideos(true);
+      state.playbackAvailable = false;
       state.serverActive = false;
       state.serverMediaActive = false;
       state.displayAnchor = Date.now();
@@ -423,6 +461,8 @@
   function finishTracking() {
     if (!state.trackingSessionId || state.stopped) return;
     state.stopped = true;
+    state.playbackAvailable = false;
+    pauseRequiredVideos();
     state.serverActive = false;
     postJson(
       config.finishUrl,
@@ -436,7 +476,7 @@
   function scheduleIdlePause() {
     window.clearTimeout(idleTimeout);
     const remaining = state.lastInteraction + idleMilliseconds - Date.now();
-    if (remaining <= 0 && confirmedPlayback()) {
+    if (remaining <= 0 && (confirmedPlayback() || learningPauseActive())) {
       state.idlePaused = false;
       if (idleNotice) idleNotice.hidden = true;
       // Watching is evidenced by advancing video and server receipts, never by
@@ -445,7 +485,7 @@
       return;
     }
     idleTimeout = window.setTimeout(() => {
-      if (confirmedPlayback()) { scheduleIdlePause(); return; }
+      if (confirmedPlayback() || learningPauseActive()) { scheduleIdlePause(); return; }
       if (state.idlePaused) return;
       state.idlePaused = true;
       pauseRequiredVideos();

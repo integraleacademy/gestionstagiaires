@@ -93,7 +93,7 @@ class VisualWebTests(unittest.TestCase):
                         self.assertIn('vtc-method-flow',page)
                         self.assertEqual(page.count('class="vtc-method-symbol"'),3)
                     else:
-                        self.assertIn('/media/vtc/v4/lesson-',page)
+                        self.assertIn('/media/vtc/v9/lesson-',page)
                         self.assertIn('leçon continue',page)
                         self.assertNotIn('Faites une pause',page)
         self.assertIsNone(self.saved_data)

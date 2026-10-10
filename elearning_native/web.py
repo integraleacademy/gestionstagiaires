@@ -38,7 +38,7 @@ from flask import (
 from markupsafe import Markup
 from werkzeug.exceptions import Conflict
 
-from .videos import activity_videos, course_videos, video_blocker, videos_complete
+from .videos import activity_playback_policy, activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
 from . import vtc
 from .exams import ExamStore, load_exam, public_exam, grade_exam
@@ -539,6 +539,9 @@ def create_native_elearning_blueprint(
                 "captions": asset_url(asset_token, course_id, str(video['captions'])) if video.get('captions') else '',
                 "course_only": bool(video.get("course_only")),
                 "chapters": [],
+                "default_playback_rate": video.get("default_playback_rate", 1),
+                "allowed_playback_rates": video.get("allowed_playback_rates", [1]),
+                "learning_pauses": video.get("learning_pauses", []),
             }
             duration = video.get("duration_seconds")
             chapters = video.get("chapters")
@@ -1694,6 +1697,7 @@ def create_native_elearning_blueprint(
                 media_playing=payload.get("media_playing") is True,
                 interaction_age_seconds=payload["interaction_age_seconds"],
                 video_requirements=course_videos(_course).get(activity_id, {}),
+                video_playback_policy=activity_playback_policy(_course, activity_id),
                 video_samples=payload.get("videos"),
             )
             result["progress"] = current_progress(access, _course)

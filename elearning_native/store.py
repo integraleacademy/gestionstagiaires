@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence
 
-from .videos import videos_complete
+from .videos import videos_complete, vtc_pacing_enabled
 
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
@@ -455,6 +455,7 @@ class NativeElearningStore:
         now_epoch: Optional[float] = None,
         video_requirements: Optional[Mapping[str, float]] = None,
         video_samples: Any = None,
+        video_playback_policy: Optional[Mapping[str, Mapping[str, Any]]] = None,
     ) -> Dict[str, Any]:
         epoch = float(now_epoch if now_epoch is not None else time.time())
         now_iso = _utc_iso(epoch)
@@ -465,6 +466,7 @@ class NativeElearningStore:
         # receipts must advance normally between two server-timed heartbeats.
         interactive_active = bool(visible and focused and recent_activity and age < IDLE_TIMEOUT_SECONDS)
         key = self._key_values(access)
+        playback = (video_playback_policy or {}) if vtc_pacing_enabled(key[2], key[3]) else {}
         with self._transaction() as connection:
             tracking = connection.execute(
                 "SELECT * FROM tracking_sessions WHERE id = ?",
@@ -487,10 +489,13 @@ class NativeElearningStore:
             delta = max(0.0, epoch - float(tracking["last_seen_epoch"] or epoch))
             incoming = self._validated_video_samples(video_samples, video_requirements or {})
             media_id, media_credit = self._video_activity_evidence(
-                tracking, progress, activity_id, video_requirements or {}, incoming, delta,
+                tracking, progress, activity_id, video_requirements or {}, incoming, delta, playback,
             ) if visible and focused else (None, 0.0)
+            pause_windows = self._learning_pause_windows(
+                tracking, activity_id, incoming, playback, media_id, epoch,
+            ) if visible and focused else {}
             media_active = bool(media_id and incoming[media_id].get("playing") is True)
-            requested_active = interactive_active or media_active
+            requested_active = interactive_active or media_active or bool(pause_windows)
             owner_id = str(progress["active_tracking_session_id"] or "")
             owner_seen = float(progress["active_tracking_seen_epoch"] or 0)
             owner_is_stale = not owner_id or epoch - owner_seen > ACTIVE_SESSION_STALE_SECONDS
@@ -619,6 +624,7 @@ class NativeElearningStore:
                 requirements=video_requirements or {}, samples=video_samples,
                 credited=credited, delta=delta, accepted_active=accepted_active,
                 visible=visible, focused=focused, now_iso=now_iso,
+                playback=playback, pause_windows=pause_windows,
                 media_time_carry={media_id: min(.5, max(0.0, delta - credited))}
                     if media_active and accepted_active else {},
             )
@@ -661,6 +667,7 @@ class NativeElearningStore:
     def _video_activity_evidence(
         tracking: sqlite3.Row, progress: sqlite3.Row, activity_id: str,
         requirements: Mapping[str, float], incoming: Mapping[str, Any], delta: float,
+        playback: Mapping[str, Mapping[str, Any]],
     ) -> tuple[Optional[str], float]:
         previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
         saved = _json_dict(progress["video_progress_json"]).get(activity_id, {})
@@ -673,15 +680,42 @@ class NativeElearningStore:
             record = saved.get(video_id) or {}
             completed = videos_complete({video_id: record}, {video_id: duration})
             frontier = float(record.get("watched_seconds") or 0) if record.get("duration_seconds") == duration else 0
-            if (before.get("playing") is True and sample.get("rate", 1) == 1
+            rates = playback.get(video_id, {}).get("rates", (1,))
+            prior_rate = float(before.get("rate", 1))
+            if (before.get("playing") is True and sample.get("rate", 1) in rates and prior_rate in rates
                     and position <= duration + .05 and (completed or prior_position <= frontier + .5)
                     and delta <= HEARTBEAT_MAX_CREDIT_SECONDS
-                    and 0 < advancement <= min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5):
+                    and 0 < advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * prior_rate):
                 # Only previously uncredited wall time may absorb request jitter;
                 # it is not a new per-request allowance. Buffering earns nothing.
                 carry = min(.5, max(0.0, float(before.get("time_credit_carry") or 0)))
-                return video_id, min(advancement, delta + carry, HEARTBEAT_MAX_CREDIT_SECONDS)
+                return video_id, min(advancement / prior_rate, delta + carry, HEARTBEAT_MAX_CREDIT_SECONDS)
         return None, 0.0
+
+    @staticmethod
+    def _learning_pause_windows(tracking, activity_id, incoming, playback, media_id, epoch):
+        """Keep a short resume window for a reached, server-configured pause.
+
+        This maintains single-tab ownership but never provides viewing/time
+        credit. A stalled flag or an arbitrary paused position cannot create it.
+        """
+        previous = _json_dict(tracking["video_samples_json"]) if tracking["current_activity_id"] == activity_id else {}
+        windows = {}
+        for video_id, sample in incoming.items():
+            policy = playback.get(video_id) or {}
+            if sample.get("rate", 1) not in policy.get("rates", (1,)):
+                continue
+            before = previous.get(video_id) or {}
+            position = float(sample["position"])
+            prior_until = float(before.get("learning_pause_until") or 0)
+            if prior_until > epoch and abs(position - float(before.get("position") or 0)) <= .5:
+                windows[video_id] = prior_until
+            if video_id == media_id and sample.get("playing") is not True and sample.get("ended") is not True:
+                for pause in policy.get("pauses") or []:
+                    if abs(position - pause["at_seconds"]) <= .5:
+                        windows[video_id] = epoch + pause["duration_seconds"] + 3
+                        break
+        return windows
 
     def _record_video_samples(
         self, connection: sqlite3.Connection, access: Mapping[str, Any],
@@ -689,6 +723,8 @@ class NativeElearningStore:
         requirements: Mapping[str, float], samples: Any, credited: float,
         delta: float, accepted_active: bool, visible: bool, focused: bool, now_iso: str,
         media_time_carry: Optional[Mapping[str, float]] = None,
+        playback: Optional[Mapping[str, Mapping[str, Any]]] = None,
+        pause_windows: Optional[Mapping[str, float]] = None,
     ) -> Dict[str, float]:
         """Credit a continuous prefix within server-timed, single-tab receipts."""
         incoming = self._validated_video_samples(samples, requirements)
@@ -700,13 +736,18 @@ class NativeElearningStore:
         budget = credited if visible and focused else 0.0
         for video_id, sample in incoming.items():
             duration = requirements[video_id]
+            rates = (playback or {}).get(video_id, {}).get("rates", (1,))
+            normal_rate = sample.get("rate", 1) in rates
+            rate = sample.get("rate", 1)
             record = activity_saved.get(video_id) or {}
             if record.get("duration_seconds") != duration:
                 record = {"duration_seconds": duration, "watched_seconds": 0.0, "completed": False}
             if videos_complete({video_id: record}, {video_id: duration}):
                 next_samples[video_id] = {
                     "position": min(float(sample["position"]), duration),
-                    "playing": bool(sample.get("playing") is True and sample.get("rate", 1) == 1
+                    "rate": rate,
+                    "learning_pause_until": (pause_windows or {}).get(video_id, 0) if accepted_active else 0,
+                    "playing": bool(sample.get("playing") is True and normal_rate
                                     and accepted_active and visible and focused),
                     "time_credit_carry": (media_time_carry or {}).get(video_id, 0.0),
                 }
@@ -716,19 +757,19 @@ class NativeElearningStore:
             before = previous.get(video_id) or {}
             previous_position = float(before.get("position") or 0)
             advancement = position - previous_position
-            normal_rate = sample.get("rate", 1) == 1
+            prior_rate = float(before.get("rate", 1))
             valid_position = normal_rate and position <= duration + .05
-            continuous = (before.get("playing") is True and previous_position <= frontier + .5
-                          and -.25 <= advancement <= min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5)
+            continuous = (before.get("playing") is True and prior_rate in rates and previous_position <= frontier + .5
+                          and -.25 <= advancement <= (min(delta, HEARTBEAT_MAX_CREDIT_SECONDS) + .5) * prior_rate)
             carry = 0.0
             if valid_position and continuous and budget > 0:
                 # Retain a small amount of *already credited* time to absorb
                 # request jitter without losing viewing time on every ping.
                 # This is a balance, not a fresh allowance per request.
                 available = budget + min(.5, max(0.0, float(before.get("credit_carry") or 0)))
-                extension = max(0.0, min(position, frontier + available) - frontier)
+                extension = max(0.0, min(position, frontier + available * prior_rate) - frontier)
                 frontier += extension
-                carry = min(.5, max(0.0, available - extension))
+                carry = min(.5, max(0.0, available - extension / prior_rate))
                 budget = 0.0
             if not valid_position or position > frontier + .5:
                 resync[video_id] = round(frontier, 3)
@@ -745,6 +786,8 @@ class NativeElearningStore:
             }
             next_samples[video_id] = {
                 "position": frontier if video_id in resync else min(position, duration),
+                "rate": rate,
+                "learning_pause_until": (pause_windows or {}).get(video_id, 0) if accepted_active and video_id not in resync else 0,
                 "playing": bool(sample.get("playing") is True and normal_rate and accepted_active
                                 and visible and focused and video_id not in resync),
                 "credit_carry": carry if sample.get("playing") is True and video_id not in resync else 0.0,

@@ -68,6 +68,22 @@ def test_no_skip_by_button_direct_url_api_or_fake_ended(lesson):
     assert c._api_post(c.config["completeUrl"], c.config).status_code == 409
 
 
+def test_client_cannot_authorize_slow_playback_for_an_unconfigured_course(lesson):
+    c = lesson
+    heartbeat(c, 0)
+    c.clock[0] += 4
+    response = c._api_post(c.config['heartbeatUrl'], c.config,
+        tracking_session_id=c.tracking, activity_id='content-1', visible=True,
+        focused=True, recent_activity=True, media_playing=True,
+        video_playback_policy={'required-video': {'rates': [.85, 1]}},
+        allowed_playback_rates=[.85, 1],
+        videos=[{'id':'required-video','position':3.4,'playing':True,'rate':.85,
+                 'allowed_playback_rates':[.85, 1]}])
+    assert response.status_code == 200
+    assert response.get_json()['video_resync'] == {'required-video': 0}
+    assert video_state(response)['watched_seconds'] == 0
+
+
 def test_complete_video_unlocks_only_after_watching_and_explicit_completion(lesson):
     c = lesson
     heartbeat(c, 0)

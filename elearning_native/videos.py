@@ -89,6 +89,42 @@ def course_videos(course: Mapping[str, Any]) -> dict[str, dict[str, float]]:
             if (videos := activity_videos(activity))}
 
 
+def vtc_pacing_enabled(course_id: str, version: str) -> bool:
+    return course_id in {f"academy-vtc-{letter}" for letter in "abcdefgh"} and version in {
+        "20261007-vtc-v4-visuals", "20261007-vtc-v5-annales", "20261010-vtc-v6-pedagogie",
+    }
+
+
+def activity_playback_policy(course: Mapping[str, Any], activity_id: str) -> dict[str, dict]:
+    """Read reviewed pacing rules from the authenticated course, never a receipt."""
+    if not vtc_pacing_enabled(str(course.get("id")), str(course.get("version"))):
+        return {}
+    policy = {}
+    for section in course.get("sections") or []:
+        for activity in section.get("activities") or []:
+            if activity.get("id") != activity_id:
+                continue
+            pending = list(activity.get("blocks") or [])
+            while pending:
+                block = pending.pop()
+                pending.extend(block.get("children") or [])
+                video = block.get("video") or {}
+                if not video.get("required") or video.get("default_playback_rate") != .85:
+                    continue
+                if video.get("allowed_playback_rates") != [.85, 1]:
+                    continue
+                pauses = [pause for pause in video.get("learning_pauses") or []
+                          if isinstance(pause, dict)
+                          and isinstance(pause.get("at_seconds"), (int, float))
+                          and not isinstance(pause.get("at_seconds"), bool)
+                          and 0 < pause["at_seconds"] < float(video.get("duration_seconds") or 0)
+                          and pause.get("duration_seconds") in (4, 5)]
+                policy[str(video.get("id") or block.get("id"))] = {
+                    "rates": (.85, 1), "pauses": pauses,
+                }
+    return policy
+
+
 def videos_complete(saved: Mapping[str, Any], requirements: Mapping[str, float]) -> bool:
     return all(isinstance((state := saved.get(video_id)), Mapping)
                and state.get("completed") is True
