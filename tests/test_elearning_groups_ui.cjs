@@ -13,7 +13,7 @@ class Element {
   constructor(props = {}) {
     Object.assign(this, {dataset: {}, disabled: false, hidden: false, textContent: '', listeners: {}}, props);
     const classes = new Set();
-    this.classList = {add: x => classes.add(x), remove: x => classes.delete(x), contains: x => classes.has(x)};
+    this.classList = {add: x => classes.add(x), remove: x => classes.delete(x), contains: x => classes.has(x), toggle: (x, enabled) => enabled ? classes.add(x) : classes.delete(x)};
   }
   addEventListener(name, handler) { (this.listeners[name] ||= []).push(handler); }
   dispatch(name, props = {}) {
@@ -22,6 +22,8 @@ class Element {
     return event;
   }
   focus() { this.focused = true; }
+  setAttribute(name, value) { (this.attributes ||= {})[name] = value; }
+  removeAttribute(name) { delete (this.attributes ||= {})[name]; }
 }
 
 class Input extends Element {
@@ -78,7 +80,7 @@ function boot({rows = [{}], individual = false, locked = 0, price = '5900', unsa
     'el-course-code': course, 'el-save-status': status, 'el-review-button': review,
     'el-count': new Element(), 'el-total': new Element(), 'el-roster-count': people ? new Element() : null,
   };
-  const document = {querySelector: () => null, getElementById: id => nodes[id] || null};
+  const document = {querySelector: () => null, querySelectorAll: () => [], getElementById: id => nodes[id] || null};
   const window = new Element();
   vm.runInNewContext(script, {document, window, Intl}, {filename: 'elearning-orders.js'});
   return {people, roster, course, review, save, add, status, nodes, window};
@@ -196,9 +198,96 @@ test('individual creation hides/disables group naming, switching back restores i
   const input = new Input('group_name');
   const field = new Element();
   field.querySelector = selector => { assert.equal(selector, 'input'); return input; };
-  const nodes = {'el-create-form': create, 'el-group-name-field': field};
+  const createLabel = new Element();
+  const nodes = {'el-create-form': create, 'el-group-name-field': field, 'el-create-label': createLabel};
   vm.runInNewContext(script, {document: {querySelector: () => null, getElementById: id => nodes[id] || null}, Intl});
   assert.equal(field.hidden, true); assert.equal(input.disabled, true); assert.equal(input.required, false);
+  assert.equal(createLabel.textContent, 'Créer mon accès individuel');
   mode.value = 'group'; create.dispatch('change');
   assert.equal(field.hidden, false); assert.equal(input.disabled, false); assert.equal(input.required, true);
+  assert.equal(createLabel.textContent, 'Créer mon groupe');
+});
+
+function bootDashboard() {
+  const card = (name, states, people = []) => {
+    const result = new Element({dataset: {search: name, states}});
+    result.people = people.map(([name, email]) => new Element({dataset: {personSearch: name + ' ' + email, personName: name}}));
+    result.matches = new Element();
+    result.querySelectorAll = selector => { assert.equal(selector, '[data-person-search]'); return result.people; };
+    result.querySelector = selector => { assert.equal(selector, '[data-el-matches]'); return result.matches; };
+    return result;
+  };
+  const cards = [
+    card('APS septembre 2026 aps', 'draft active', [['Élodie Martin', 'elodie@example.fr']]),
+    card('VTC novembre 2026 vtc', 'waiting', [['Marie Dupont', 'marie@example.fr']]),
+    card('APS décembre 2026 aps', 'active', [['Jean Durand', 'jean@example.fr']]),
+  ];
+  const search = new Input('q');
+  const filter = new Input('state', 'all');
+  const links = ['all', 'draft', 'waiting', 'active'].map(state => new Element({dataset: {elState: state}}));
+  const nodes = {'#el-search': search, '#el-filter': filter, '#el-filter-form': new Element(), '#el-clear-search': new Element(), '#el-reset-filters': new Element(), '#el-results-count': new Element(), '#el-no-results': new Element()};
+  const dashboard = new Element();
+  dashboard.querySelector = selector => nodes[selector] || null;
+  dashboard.querySelectorAll = selector => selector === '[data-el-group]' ? cards : selector === '[data-el-state]' ? links : [];
+  const document = {querySelector: selector => selector === '[data-el-dashboard]' ? dashboard : null, getElementById: () => null};
+  const window = new Element({location: {href: 'https://example.fr/admin/organisme/e-learning'}});
+  window.history = {replaceState: (_state, _title, url) => { window.lastUrl = url; }};
+  vm.runInNewContext(script, {document, window, Intl, URL}, {filename: 'elearning-orders.js'});
+  return {cards, links, nodes, search, filter, window};
+}
+
+test('dashboard metric cards filter results, update selected state and preserve clickable URL fallback', () => {
+  const page = bootDashboard();
+  assert.equal(page.nodes['#el-results-count'].textContent, '3 résultats');
+  const active = page.links.find(link => link.dataset.elState === 'active');
+  assert.equal(active.dispatch('click').defaultPrevented, true);
+  assert.equal(page.filter.value, 'active');
+  assert.equal(page.cards[0].hidden, false);
+  assert.equal(page.cards[1].hidden, true);
+  assert.equal(page.cards[2].hidden, false);
+  assert.equal(active.attributes['aria-current'], 'true');
+  assert.equal(active.classList.contains('is-selected'), true);
+  assert.match(page.nodes['#el-results-count'].textContent, /^2 résultats · Accès activés$/);
+  assert.match(page.window.lastUrl, /state=active/);
+  assert.equal(active.dispatch('click', {ctrlKey: true}).defaultPrevented, false);
+  page.links[0].dispatch('click');
+  assert.ok(page.cards.every(card => !card.hidden));
+  assert.equal(active.attributes['aria-current'], undefined);
+});
+
+test('dashboard search finds groups or people, accents, reversed names and e-mails', () => {
+  const page = bootDashboard();
+  page.search.value = 'septembre'; page.search.dispatch('input');
+  assert.deepEqual(page.cards.map(card => card.hidden), [false, true, true]);
+  page.search.value = 'martin elodie'; page.search.dispatch('input');
+  assert.deepEqual(page.cards.map(card => card.hidden), [false, true, true]);
+  assert.equal(page.cards[0].matches.hidden, false);
+  assert.equal(page.cards[0].matches.textContent, 'Stagiaire : Élodie Martin');
+  page.search.value = 'marie@example.fr'; page.search.dispatch('input');
+  assert.deepEqual(page.cards.map(card => card.hidden), [true, false, true]);
+  assert.match(page.window.lastUrl, /q=marie%40example.fr/);
+  page.links.find(link => link.dataset.elState === 'active').dispatch('click');
+  assert.equal(page.nodes['#el-no-results'].hidden, false);
+  assert.match(page.nodes['#el-results-count'].textContent, /^0 résultats/);
+  assert.equal(page.nodes['#el-reset-filters'].hidden, false);
+  page.nodes['#el-reset-filters'].dispatch('click');
+  assert.equal(page.search.value, '');
+  assert.equal(page.filter.value, 'all');
+  assert.ok(page.cards.every(card => !card.hidden));
+  assert.equal(page.nodes['#el-reset-filters'].hidden, true);
+});
+
+test('search form and clear button work without losing the selected state', () => {
+  const page = bootDashboard();
+  page.filter.value = 'waiting'; page.filter.dispatch('change');
+  page.search.value = 'introuvable';
+  const submit = page.nodes['#el-filter-form'].dispatch('submit');
+  assert.equal(submit.defaultPrevented, true);
+  assert.equal(page.nodes['#el-no-results'].hidden, false);
+  page.nodes['#el-clear-search'].dispatch('click');
+  assert.equal(page.search.value, '');
+  assert.equal(page.filter.value, 'waiting');
+  assert.equal(page.cards[1].hidden, false);
+  assert.equal(page.nodes['#el-no-results'].hidden, true);
+  assert.equal(page.nodes['#el-clear-search'].hidden, true);
 });

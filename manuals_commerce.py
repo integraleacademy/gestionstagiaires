@@ -669,7 +669,7 @@ def process_order(host, pid, oid):
 
 def queue_again(host, pid, oid, *, throttle=False):
     def change(order):
-        if order.get("status") in {"draft", "cancelled"}:
+        if order.get("status") in {"draft", "cancelled"} or order.get("cancellation_requested_at"):
             return {}
         state = order.setdefault("commerce", {})
         if throttle and state.get("refresh_requested_at", 0) > time.time() - 60:
@@ -714,4 +714,5 @@ def install_worker(host):
         if notify:
             wake.set()
     return kick
+
 

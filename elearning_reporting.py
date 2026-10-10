@@ -1,0 +1,324 @@
+"""Read-only, tenant-scoped reporting for purchased native learning spaces.
+
+The purchase's module versions and virtual session are the source of truth. A
+report never opens the learner's session, creates activity, or changes progress.
+"""
+from __future__ import annotations
+
+import csv
+import datetime as dt
+import io
+import json
+import sqlite3
+from pathlib import Path
+from xml.sax.saxutils import escape
+from zoneinfo import ZoneInfo
+
+from flask import Response, abort, url_for
+from werkzeug.utils import secure_filename
+
+import elearning_orders as learning
+from elearning_native.importer import CourseCatalog, CourseImportError
+from elearning_native.paths import project_course, project_progress
+from elearning_native.store import NativeElearningStore
+
+
+CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
+    "elearning_progress", "elearning_progress_certificate", "elearning_progress_connections",
+)}
+STATUS_LABELS = {"not_started": "Non commencé", "in_progress": "En cours",
+                 "awaiting_time": "Temps de suivi à compléter", "passed": "Terminé",
+                 "failed": "Terminé · résultats à revoir", "unavailable": "Suivi indisponible"}
+
+
+def time_label(seconds):
+    value = max(0, int(float(seconds or 0)))
+    hours, remainder = divmod(value, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d} h {minutes:02d} min {seconds:02d} s"
+
+
+def date_label(value):
+    if not value:
+        return "—"
+    try:
+        date = dt.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if date.tzinfo is None:
+            date = date.replace(tzinfo=dt.timezone.utc)
+        return date.astimezone(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H:%M")
+    except (ValueError, TypeError):
+        return "—"
+
+
+class ProgressReader:
+    def __init__(self, host):
+        root = Path(host.PERSIST_DIR).resolve() / "native_elearning"
+        self.catalog = CourseCatalog(root)
+        self.database_path = root / "tracking.sqlite3"
+        self.courses = {}
+
+    def course(self, module):
+        # Missing version must not silently report against today's curriculum.
+        key = (str(module.get("course_id") or ""), str(module.get("course_version") or ""))
+        if not all(key):
+            raise CourseImportError("La version du module n’est pas disponible.")
+        if key not in self.courses:
+            self.courses[key] = self.catalog.load_course(*key)
+        return project_course(self.courses[key], module)
+
+    def rows(self, table, session_id, learner_id):
+        """Use existing history only: no schema creation, no learner mutation."""
+        if not self.database_path.is_file():
+            return []
+        queries = {
+            "progress": """SELECT * FROM learner_course_progress
+                WHERE session_id = ? AND trainee_id = ?""",
+            "connections": """SELECT course_id, course_version, created_at, last_seen_at,
+                ended_at, credited_seconds, status FROM tracking_sessions
+                WHERE session_id = ? AND trainee_id = ? ORDER BY created_at DESC, id DESC""",
+            "exams": """SELECT exam_id, version, submitted_at, result_json FROM aps_exam_attempts
+                WHERE session_id = ? AND trainee_id = ? ORDER BY submitted_at DESC""",
+        }
+        table_name = {"progress": "learner_course_progress", "connections": "tracking_sessions", "exams": "aps_exam_attempts"}[table]
+        with sqlite3.connect(self.database_path.as_uri() + "?mode=ro", uri=True, timeout=15) as db:
+            db.row_factory = sqlite3.Row
+            exists = db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table_name,)).fetchone()
+            records = [dict(row) for row in db.execute(queries[table], (session_id, learner_id))] if exists else []
+        if table == "progress":
+            for row in records:
+                row.setdefault("video_progress_json", "{}")
+            return [NativeElearningStore._serialize_progress(row) for row in records]
+        return records
+
+    def report(self, order, person, *, detailed=True):
+        session_id, learner_id = "el-" + order["id"], str(person["id"])
+        raw_rows = self.rows("progress", session_id, learner_id)
+        by_key = {(r["course_id"], r["course_version"]): r for r in raw_rows}
+        modules, exam_keys, course_titles = [], set(), {}
+        total = completed = active = required = finished = 0
+        starts, updates = [], []
+        for assignment in order.get("modules", []):
+            module = {"title": assignment.get("title") or assignment.get("course_id") or "Module",
+                      "version": assignment.get("course_version") or "", "available": False,
+                      "status_label": "Suivi indisponible", "sections": [], "module_complete": False,
+                      "required_time_label": time_label(int(assignment.get("required_minutes") or 0) * 60)}
+            try:
+                course = self.course(assignment)
+            except (CourseImportError, OSError):
+                required += int(assignment.get("required_minutes") or 0) * 60
+                modules.append(module)
+                continue
+            key = (course["id"], course["version"])
+            course_titles[key] = course["title"]
+            progress = project_progress(by_key.get(key, {}), course)
+            ids = set(progress["completed_activity_ids"])
+            activities = [a for section in course["sections"] for a in section.get("activities", [])]
+            questions = [a for a in activities if a.get("scored")]
+            answered = sum(a["id"] in progress.get("answers", {}) for a in questions)
+            total += len(course["activity_order"])
+            completed += len(ids)
+            active += progress["active_seconds"]
+            required += progress["required_seconds"]
+            finished += int(progress["module_complete"])
+            if progress.get("started_at"):
+                starts.append(progress["started_at"])
+            if progress.get("updated_at"):
+                updates.append(progress["updated_at"])
+            module.update(title=course["title"], version=course["version"], available=True,
+                          progress_percent=progress["progress_percent"], active_seconds=progress["active_seconds"],
+                          active_time_label=time_label(progress["active_seconds"]),
+                          required_time_label=time_label(progress["required_seconds"]),
+                          remaining_time_label=time_label(progress["remaining_seconds"]),
+                          module_complete=progress["module_complete"], status=progress["status"],
+                          status_label=STATUS_LABELS.get(progress["status"], "En cours"),
+                          completed_activities=len(ids), total_activities=len(course["activity_order"]),
+                          score_percent=progress["score_percent"] if answered else None,
+                          answered_questions=answered, total_questions=len(questions),
+                          completed_videos=progress["completed_video_count"], total_videos=progress["required_video_count"],
+                          started_at_label=date_label(progress.get("started_at")), updated_at_label=date_label(progress.get("updated_at")))
+            if course.get("mock_exam_id"):
+                exam_keys.add((course["mock_exam_id"], course["version"]))
+            if detailed:
+                for section in course["sections"]:
+                    rows = []
+                    for activity in section.get("activities", []):
+                        answer = progress.get("answers", {}).get(activity["id"], {})
+                        rows.append({"title": activity.get("title") or "Activité", "completed": activity["id"] in ids,
+                                     "current": activity["id"] == progress.get("current_activity_id"),
+                                     "answer_label": ("Réponse correcte" if answer.get("correct") else "À revoir") if activity.get("scored") and answer else ""})
+                    module["sections"].append({"title": section.get("title") or "Séquence", "activities": rows,
+                                               "completed": sum(a["completed"] for a in rows), "total": len(rows)})
+            modules.append(module)
+        versions = {m["version"] for m in modules if m["available"]}
+        if len(versions) == 1:
+            exam_keys.add(("vtc-final" if order["course_code"] == "vtc" else "final", next(iter(versions))))
+        complete = bool(modules) and finished == len(modules)
+        available = bool(modules) and all(m["available"] for m in modules)
+        report = {"available": available, "modules": modules, "completed_modules": finished, "total_modules": len(modules),
+                  "completed_activities": completed, "total_activities": total,
+                  "progress_percent": round(completed / total * 100, 1) if total and available else None,
+                  "active_seconds": round(active, 2), "active_time_label": time_label(active),
+                  "required_seconds": required, "required_time_label": time_label(required), "complete": complete,
+                  "status_label": "Parcours terminé" if complete else "Suivi partiellement indisponible" if not available else "En cours" if starts else "Non commencé",
+                  "started_at_label": date_label(min(starts)) if starts else "Pas encore commencé",
+                  "updated_at_label": date_label(max(updates)) if updates else "Aucune activité enregistrée",
+                  "generated_at_label": date_label(dt.datetime.now(dt.timezone.utc).isoformat()),
+                  "connections": [], "exams": []}
+        if detailed:
+            for connection in self.rows("connections", session_id, learner_id):
+                key = (connection["course_id"], connection["course_version"])
+                if key not in course_titles:
+                    continue
+                report["connections"].append({"module": course_titles[key],
+                    "started_at_label": date_label(connection["created_at"]),
+                    "last_seen_label": date_label(connection["last_seen_at"]),
+                    "ended_at_label": date_label(connection["ended_at"]),
+                    "active_time_label": time_label(connection["credited_seconds"]),
+                    "credited_seconds": round(float(connection["credited_seconds"] or 0), 2),
+                    "status_label": "Clôturée" if connection["ended_at"] else "Dernière activité enregistrée"})
+            for attempt in self.rows("exams", session_id, learner_id):
+                if (attempt["exam_id"], attempt["version"]) not in exam_keys:
+                    continue
+                try:
+                    result = json.loads(attempt["result_json"])
+                    row = {k: result[k] for k in ("score", "total", "percent", "passed")}
+                except (ValueError, KeyError, TypeError):
+                    continue
+                title = "Examen blanc final" if attempt["exam_id"] in {"final", "vtc-final"} else "Examen blanc " + attempt["exam_id"].replace("vtc-", "").replace("module-", "module ")
+                report["exams"].append({**row, "title": title, "date_label": date_label(attempt["submitted_at"])})
+        return report
+
+
+def group_progress(host, group):
+    """Compact mapping consumed by the group/individual roster template."""
+    reader, result = None, {}
+    orders = {o["id"]: o for o in group.get("orders", [])}
+    for row in group.get("learners", []):
+        order = orders.get(row.get("order_id"))
+        if not order or not learning.entitled(order):
+            continue
+        person = next((p for p in order.get("learners", []) if p.get("id") == row.get("id") and p.get("activated_at")), None)
+        if not person:
+            continue
+        reader = reader or ProgressReader(host)
+        report = reader.report(order, person, detailed=False)
+        result[row["id"]] = {k: report[k] for k in (
+            "available", "progress_percent", "active_time_label", "completed_modules", "total_modules", "status_label")}
+    return result
+
+
+def certificate_pdf(report, partner, order, person):
+    """Issue an accurate follow-up record, never a claim of unearned hours."""
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+
+    output = io.BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=18 * mm, leftMargin=18 * mm,
+                            topMargin=18 * mm, bottomMargin=20 * mm, title="Attestation de suivi e-learning")
+    styles = {name: ParagraphStyle(name, fontName=font, fontSize=size, leading=leading,
+              textColor=colors.HexColor(color), spaceAfter=after, alignment=TA_LEFT) for name, font, size, leading, color, after in (
+        ("brand", "Helvetica-Bold", 12, 15, "#2265a8", 16),
+        ("title", "Helvetica-Bold", 23, 27, "#172c46", 10),
+        ("heading", "Helvetica-Bold", 12, 16, "#172c46", 8),
+        ("body", "Helvetica", 10, 15, "#263d55", 8),
+        ("small", "Helvetica", 8, 11, "#526579", 4),
+        ("cell", "Helvetica", 8, 11, "#263d55", 0),
+        ("th", "Helvetica-Bold", 8, 11, "#ffffff", 0))}
+    def p(value, style="body"):
+        return Paragraph(escape(str(value)).replace("\n", "<br/>"), styles[style])
+    name = f"{person.get('first_name', '')} {person.get('last_name', '')}".strip()
+    story = [p("INTÉGRALE ACADEMY  /  E-LEARNING", "brand"), p("Attestation de suivi", "title"),
+             p("Parcours e-learning terminé" if report["complete"] else "Relevé de suivi partiel - parcours non terminé", "heading"),
+             p(f"Stagiaire : {name}"), p(f"Adresse e-mail : {person.get('email', '')}"),
+             p(f"Organisme de formation : {partner.get('name') or partner.get('centre') or 'Organisme partenaire'}"),
+             p(f"Formation : {learning.COURSES[order['course_code']]['title']} ({order['course_code'].upper()})"),
+             p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}"), Spacer(1, 4 * mm)]
+    metrics = [[p("TEMPS ACTIF ENREGISTRÉ", "small"), p("MODULES TERMINÉS", "small")],
+               [p(report["active_time_label"], "heading"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading")],
+               [p("DURÉE PRÉVUE DU PARCOURS", "small"), p("ACTIVITÉS TERMINÉES", "small")],
+               [p(report["required_time_label"], "body"), p(f"{report['completed_activities']} / {report['total_activities']}" if report["available"] else "Données partielles", "body")]]
+    box = Table(metrics, colWidths=[87 * mm, 87 * mm])
+    box.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#edf4fb")),
+                            ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
+    story.extend([box, Spacer(1, 6 * mm), p(f"Première activité : {report['started_at_label']}"),
+                  p(f"Dernière activité : {report['updated_at_label']}"),
+                  p("Le temps indiqué correspond exclusivement au temps actif comptabilisé par la plateforme. La durée prévue n’est pas une durée automatiquement acquise. Un module est terminé lorsque ses activités et sa durée obligatoire sont accomplies.", "small"),
+                  Spacer(1, 5 * mm)])
+    table_rows = [[p(value, "th") for value in ("MODULE", "PROGRESSION", "TEMPS ACTIF", "ÉTAT")]]
+    for module in report["modules"]:
+        table_rows.append([p(module["title"], "cell"), p(f"{module['progress_percent']:g} %" if module["available"] else "Indisponible", "cell"),
+                           p(module.get("active_time_label", "Indisponible"), "cell"), p(module["status_label"], "cell")])
+    table = Table(table_rows, colWidths=[67 * mm, 31 * mm, 36 * mm, 40 * mm], repeatRows=1, hAlign="LEFT")
+    table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173858")),
+                              ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fa")]),
+                              ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                              ("RIGHTPADDING", (0, 0), (-1, -1), 8), ("TOPPADDING", (0, 0), (-1, -1), 9),
+                              ("BOTTOMPADDING", (0, 0), (-1, -1), 9)]))
+    story.extend([p("Détail du parcours", "heading"), table, Spacer(1, 6 * mm),
+                  KeepTogether([p(f"Édité le {report['generated_at_label']} (heure de Paris).", "small"),
+                    p("Attestation établie à partir des traces de la plateforme Intégrale Academy. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
+                    p(f"Référence de commande : {order['id']}\nIdentifiant du stagiaire : {person['id']}", "small")])])
+    def footer(canvas, document):
+        canvas.saveState()
+        canvas.setStrokeColor(colors.HexColor("#d6e1ec"))
+        canvas.line(18 * mm, 15 * mm, 192 * mm, 15 * mm)
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(colors.HexColor("#526579"))
+        canvas.drawString(18 * mm, 10 * mm, "Intégrale Academy - Suivi e-learning")
+        canvas.drawRightString(192 * mm, 10 * mm, f"Page {document.page}")
+        canvas.restoreState()
+    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    return output.getvalue()
+
+
+def register_routes(host, bp, *, page, customer, partner_data):
+    def context(oid, learner_id):
+        data, partner = partner_data()
+        order = next((o for o in data.get("manual_orders", []) if learning.is_order(o) and o.get("id") == oid
+                      and o.get("partner_id") == partner["id"] == host._current_partner_id()), None)
+        if not order or not learning.entitled(order):
+            abort(404)
+        person = next((p for p in order.get("learners", []) if p.get("id") == learner_id and p.get("activated_at")), None)
+        if not person:
+            abort(404)
+        group = next((g for g in data.get("manual_orders", []) if g.get("order_type") == "elearning_group"
+                      and g.get("partner_id") == partner["id"] and g.get("id") == order.get("group_id")), None)
+        return partner, order, person, group
+
+    base = "/admin/organisme/e-learning/commandes/<oid>/stagiaires/<learner_id>/suivi"
+
+    @bp.get(base)
+    @customer
+    def elearning_progress(oid, learner_id):
+        partner, order, person, group = context(oid, learner_id)
+        report = ProgressReader(host).report(order, person)
+        return page("elearning_progress.html", partner=partner, order=order, person=person, group=group, report=report,
+                    course=learning.COURSES[order["course_code"]])
+
+    @bp.get(base + "/attestation.pdf")
+    @customer
+    def elearning_progress_certificate(oid, learner_id):
+        partner, order, person, _ = context(oid, learner_id)
+        report = ProgressReader(host).report(order, person, detailed=False)
+        filename = secure_filename(f"attestation-suivi-{person.get('last_name', '')}-{person.get('first_name', '')}.pdf")
+        return Response(certificate_pdf(report, partner, order, person), mimetype="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+    @bp.get(base + "/connexions.csv")
+    @customer
+    def elearning_progress_connections(oid, learner_id):
+        _, order, person, _ = context(oid, learner_id)
+        report = ProgressReader(host).report(order, person)
+        output = io.StringIO(newline="")
+        writer = csv.writer(output, delimiter=";")
+        writer.writerow(["Module", "Connexion (Paris)", "Dernière activité (Paris)", "Fin (Paris)", "Temps actif", "Temps actif (secondes)"])
+        for row in report["connections"]:
+            values = [row[k] for k in ("module", "started_at_label", "last_seen_label", "ended_at_label", "active_time_label", "credited_seconds")]
+            writer.writerow(["'" + str(value) if str(value).lstrip().startswith(("=", "+", "-", "@")) else value for value in values])
+        return Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="releve-connexions.csv"'})

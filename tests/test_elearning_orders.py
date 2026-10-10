@@ -1,7 +1,9 @@
 """Payment gating, tenant isolation and durable deliveries, with no real network."""
 import copy
+import json
 import re
 import secrets
+from pathlib import Path
 
 import pytest
 from werkzeug.datastructures import MultiDict
@@ -125,13 +127,16 @@ def test_wrong_invoice_total_fails_closed(shop, merchant):
     assert not order.get("activated_at")
 
 
-def test_free_vtc_never_calls_billing_and_has_105_hours(shop, monkeypatch):
+def test_free_vtc_never_calls_billing_and_pins_current_curriculum(shop, monkeypatch):
     order = submit(shop, code="vtc", free=True)
     monkeypatch.setattr(host,"_qonto_request",lambda *a,**k: pytest.fail("No Qonto call for free access"))
     run(order)
     order = latest(shop)
     assert order["total_cents"] == 0 and learning.entitled(order)
-    assert sum(m["required_minutes"] for m in order["modules"]) == 105*60
+    manifest = json.loads((Path(learning.__file__).parent / "elearning_native/vtc/manifest.json").read_text())
+    assert [(m["course_id"], m["course_version"], m["required_minutes"]) for m in order["modules"]] == [
+        (m["id"], m["version"], m["planned_minutes"]) for m in manifest["modules"]]
+    assert sum(m["required_minutes"] for m in order["modules"]) == manifest["planned_minutes"]
     assert not order["commerce"].get("invoice_id")
     assert all(p.get("activated_at") for p in order["learners"])
     assert sum(k.startswith("learner_") for k in order["commerce"]["emails"]) == 2
@@ -262,3 +267,4 @@ def test_individual_order_and_viewer_cannot_confirm(shop):
     token=csrf(c,response.location)
     with c.session_transaction() as state: state["admin_role"]="viewer"
     assert c.post(response.location+"/confirmer",data={"csrf_token":token,"confirm":"yes"}).status_code==403
+

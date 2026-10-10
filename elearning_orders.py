@@ -23,8 +23,8 @@ from flask import abort, flash, redirect, request, session, url_for
 import manuals_commerce as commerce
 
 COURSES = {
-    "aps": {"name": "APS", "title": "Agent de prévention et de sécurité", "hours": 62, "color": "#2468b3", "default_cents": 5900, "folder": "aps62"},
-    "vtc": {"name": "VTC", "title": "Chauffeur VTC", "hours": 105, "color": "#7951a8", "default_cents": None, "folder": "vtc"},
+    "aps": {"name": "APS", "title": "Agent de prévention et de sécurité", "color": "#2468b3", "default_cents": 5900, "folder": "aps62"},
+    "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": None, "folder": "vtc"},
 }
 CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice"}
 MAX_LEARNERS = 100
@@ -48,7 +48,12 @@ def prices(partner):
         cents = cfg.get("unit_cents", course["default_cents"])
         if cents is not None and (type(cents) is not int or not 1 <= cents <= 10000000):
             cents = None
-        result[code] = {**course, "code": code, "free": free, "unit_cents": 0 if free else cents, "configured": free or cents is not None}
+        minutes = sum(module["required_minutes"] for module in curriculum(code))
+        hours, remaining = divmod(minutes, 60)
+        duration_label = f"{hours} h" + (f" {remaining:02d} min" if remaining else "")
+        result[code] = {**course, "code": code, "free": free, "unit_cents": 0 if free else cents,
+                        "configured": free or cents is not None, "planned_minutes": minutes,
+                        "hours": minutes / 60, "duration_label": duration_label}
     return result
 
 
@@ -94,7 +99,7 @@ def curriculum(code):
 
 def entitled(order):
     state = order.get("commerce") or {}
-    if not is_order(order) or order.get("status") in {"draft", "cancelled"}:
+    if not is_order(order) or order.get("status") in {"draft", "cancelled"} or order.get("cancellation_requested_at"):
         return False
     if order.get("free_snapshot") is True and order.get("total_cents") == 0:
         return True
@@ -198,6 +203,9 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
 
 def process_claimed(host, order):
     """Called by the merchant worker under its durable, ten-minute order lease."""
+    if order.get("cancellation_requested_at"):
+        from elearning_groups import process_cancellation
+        return process_cancellation(host, order)
     outcome, error = "ready", ""
     try:
         if not order.get("free_snapshot"):

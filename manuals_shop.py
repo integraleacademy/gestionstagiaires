@@ -24,6 +24,7 @@ from PIL import Image, UnidentifiedImageError
 import manuals_commerce as commerce
 import elearning_orders
 import elearning_groups
+import elearning_reporting
 from manuals_presentation import presentation_books
 
 
@@ -38,7 +39,7 @@ CATALOGUE = (
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
-CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS
+CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS
 SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 
@@ -307,7 +308,8 @@ def register(host):
     def elearning_soon():
         data, partner = partner_data()
         orders = sorted((o for o in data.get("manual_orders", []) if elearning_orders.is_order(o) and o.get("partner_id") == partner["id"]), key=lambda o: o.get("created_at", ""), reverse=True)
-        return page("elearning_catalogue.html", partner=partner, courses=elearning_orders.prices(partner), groups=elearning_groups.dashboard(data, partner), orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[])
+        groups = elearning_groups.dashboard(data, partner)
+        return page("elearning_catalogue.html", partner=partner, courses=elearning_orders.prices(partner), groups=groups, orders=orders, values=partner, rows=[], request_id=secrets.token_hex(16), errors=[], **elearning_groups.dashboard_filter(groups, request.args))
 
     def presentation_context():
         # Staff can inspect the same editorial pages without impersonating a
@@ -640,6 +642,7 @@ def register(host):
 
     elearning_orders.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     elearning_groups.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
+    elearning_reporting.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data)
     app.register_blueprint(bp)
 
 

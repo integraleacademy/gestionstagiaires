@@ -10,6 +10,8 @@ import copy
 import datetime as dt
 import re
 import secrets
+import time
+import unicodedata
 import uuid
 
 from flask import abort, flash, redirect, request, session, url_for
@@ -17,10 +19,11 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.datastructures import MultiDict
 
 import elearning_orders as learning
+import manuals_commerce as commerce
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
     "elearning_group_create", "elearning_group", "elearning_group_save",
-    "elearning_group_review", "elearning_group_confirm",
+    "elearning_group_review", "elearning_group_confirm", "elearning_group_delete",
 )}
 MAX_GROUPS = 300
 
@@ -57,16 +60,253 @@ def group_view(data, group):
     result.update(learners=people, pending_learners=pending, orders=orders,
                   pending_count=len(pending), active_count=sum(p["status"] == "active" for p in people),
                   waiting_count=sum(p["status"] == "waiting_payment" for p in people),
-                  total_count=len(people), can_change_course=not orders)
+                  total_count=len(people), can_change_course=not orders,
+                  deletion_pending=bool(group.get("deletion_requested_at")), deletion_error=group.get("deletion_error", ""),
+                  can_delete=not group.get("deletion_requested_at") and not deletion_block_reason(orders),
+                  delete_block_reason=deletion_block_reason(orders))
     return result
 
 
 def dashboard(data, partner):
     groups = sorted((group_view(data, record) for record in data.get("manual_orders", [])
-                     if is_group(record) and record.get("partner_id") == partner["id"]),
+                     if is_group(record) and not record.get("deleted_at") and record.get("partner_id") == partner["id"]),
                     key=lambda group: group.get("updated_at", group.get("created_at", "")), reverse=True)
     return groups
 
+
+
+
+def deletion_block_reason(orders):
+    if any(order.get("activated_at") or any(p.get("activated_at") for p in order.get("learners", [])) for order in orders):
+        return "Un accès a déjà été activé : ce groupe ne peut plus être supprimé."
+    for order in orders:
+        state = order.get("commerce", {})
+        if state.get("invoice_status") == "paid" or state.get("payment_status") in {"paid", "partially_paid", "processing"} or state.get("paid_cents", 0) > 0:
+            return "Un paiement a été reçu ou est en cours. Ce groupe ne peut pas être supprimé."
+        if state.get("lease_until", 0) > time.time():
+            return "La commande est en cours de traitement. Réessayez dans quelques instants."
+    return ""
+
+
+def _cancel_locally(order, now):
+    order.update(status="cancelled", cancelled_at=now)
+    order.pop("cancellation_requested_at", None)
+    order.setdefault("commerce", {}).update(queued=False, status="cancelled", payment_url="", error="", lease_until=0,
+                                            lease_token=str(uuid.uuid4()))
+
+
+def _remote_billing(order):
+    state = order.get("commerce", {})
+    return any(state.get(key) for key in ("invoice_id", "invoice_creation_started", "payment_id", "payment_creation_started"))
+
+
+class CancellationBlocked(Exception):
+    """A confirmed or in-flight payment must remain attached to the customer."""
+
+
+def process_cancellation(host, order):
+    """Cancel under the merchant lease; archive only after provider confirmation.
+
+    Qonto API: POST client_invoices/{id}/mark_as_canceled (unpaid only),
+    PATCH payment_links/{id}/deactivate. No provider call is made in a tenant
+    request; all invoice/link identities and amounts are checked before mutation.
+    """
+    def payment_guard(link):
+        if link.get("invoice_id") != order["commerce"].get("invoice_id") or commerce._money_cents(link.get("amount")) != order["total_cents"]:
+            raise commerce.ReviewRequired("Le lien de paiement ne correspond pas à cette commande.")
+        if link.get("status") in {"paid", "processing"}:
+            raise CancellationBlocked("Un paiement est reçu ou en cours. La suppression n’a pas été effectuée.")
+        if link.get("status") not in {"open", "expired", "canceled"}:
+            raise commerce.ReviewRequired("Le statut du lien de paiement doit être vérifié avant suppression.")
+        for page in range(1, 51):
+            response = host._qonto_request("GET", f"/v2/payment_links/{link['id']}/payments", params={"page": page, "per_page": 100})
+            if not isinstance(response, dict) or not ({"payments", "payment_link_payments"} & response.keys()):
+                raise commerce.ReviewRequired("La liste des paiements n’a pas pu être vérifiée avant suppression.")
+            payments = response.get("payments", response.get("payment_link_payments"))
+            if not isinstance(payments, list) or any(not isinstance(payment, dict) for payment in payments):
+                raise commerce.ReviewRequired("La liste des paiements doit être vérifiée avant suppression.")
+            if any(payment.get("status") not in {"failed", "canceled", "expired"} for payment in payments):
+                raise CancellationBlocked("Un règlement est en cours ou a été reçu. La suppression n’a pas été effectuée.")
+            if not host._qonto_invoice_list_has_next_page(response, page, len(payments), 100):
+                return
+        raise commerce.ReviewRequired("La liste complète des paiements n’a pas pu être vérifiée.")
+
+    def invoice_guard(invoice):
+        commerce._assert_invoice(order, invoice)
+        normalized = host.normalize_qonto_invoice_payment_data(invoice)
+        commerce._save(host, order, invoice_status=invoice.get("status"), invoice_number=invoice.get("number", ""),
+                       payment_status=normalized["qonto_payment_status"], paid_cents=normalized["qonto_amount_paid_cents"],
+                       remaining_cents=normalized["qonto_remaining_amount_cents"])
+        if invoice.get("status") == "paid" or normalized["qonto_amount_paid_cents"] > 0:
+            raise CancellationBlocked("Un paiement a été reçu. La suppression n’a pas été effectuée ; votre commande reste disponible.")
+        if invoice.get("status") not in {"draft", "unpaid", "canceled"}:
+            raise commerce.ReviewRequired("La facture doit être vérifiée avant suppression.")
+
+    def terminate_request(message):
+        # Release the whole group request; already-cancelled snapshots remain
+        # canceled, while a paid order resumes its normal delivery workflow.
+        def update(data):
+            current = commerce._find(data, order["partner_id"], order["id"])
+            if not current or current.get("commerce", {}).get("lease_token") != order["commerce"]["lease_token"]:
+                return {}
+            group = next((g for g in data.get("manual_orders", []) if is_group(g) and g.get("id") == order.get("group_id") and g.get("partner_id") == order["partner_id"]), None)
+            if group:
+                group.pop("deletion_requested_at", None)
+                group.update(deletion_error=message, revision=group["revision"] + 1, updated_at=host._now_iso())
+                for item in group_orders(data, group):
+                    if item.pop("cancellation_requested_at", None):
+                        item.setdefault("commerce", {}).update(queued=True, next_attempt=0, lease_until=0, lease_token=str(uuid.uuid4()))
+            return {}
+        host._atomic_update_data(update, partner_id=order["partner_id"])
+
+    try:
+        state = order["commerce"]
+        invoice = None
+        if state.get("invoice_id"):
+            try:
+                invoice = host._qonto_invoice_payload(host.get_qonto_invoice(state["invoice_id"]))
+            except host.QontoApiError as exc:
+                if exc.status_code != 404 or not state.get("invoice_deletion_started"):
+                    raise
+                # A previous draft DELETE succeeded remotely but its response
+                # or local save was lost. A subsequent GET proves absence.
+                commerce._save(host, order, invoice_status="canceled", invoice_cancelled_at=host._now_iso())
+        elif state.get("invoice_creation_started"):
+            invoice = commerce._recover_invoice(host, order)
+            if not invoice:
+                # An ambiguous earlier POST may still complete remotely.
+                raise commerce.ReviewRequired("La création de facture doit être vérifiée avant suppression. Aucun accès n’est activé.")
+            commerce._save(host, order, invoice_id=invoice["id"])
+        if invoice:
+            invoice_guard(invoice)
+        elif state.get("payment_id") or state.get("payment_creation_started"):
+            raise commerce.ReviewRequired("Le paiement doit être rapproché de sa facture avant suppression.")
+        links = []
+        state = order["commerce"]
+        if state.get("payment_id"):
+            response = host._qonto_request("GET", "/v2/payment_links/" + state["payment_id"])
+            link = response.get("payment_link") or response
+            if link.get("id") != state["payment_id"]:
+                raise commerce.ReviewRequired("L’identifiant du lien de paiement ne correspond pas.")
+            links = [link]
+        elif state.get("payment_creation_started"):
+            for page in range(1, 51):
+                response = host._qonto_request("GET", "/v2/payment_links", params={"page": page, "per_page": 100})
+                if not isinstance(response, dict) or not isinstance(response.get("payment_links"), list) or any(not isinstance(link, dict) for link in response["payment_links"]):
+                    raise commerce.ReviewRequired("La liste des liens de paiement n’a pas pu être vérifiée.")
+                page_links = response["payment_links"]
+                links.extend(link for link in page_links if link.get("invoice_id") == state.get("invoice_id"))
+                if not host._qonto_invoice_list_has_next_page(response, page, len(page_links), 100):
+                    break
+            else:
+                raise commerce.ReviewRequired("La liste complète des liens de paiement n’a pas pu être vérifiée.")
+            if not links:
+                raise commerce.ReviewRequired("La création du lien de paiement doit être vérifiée avant suppression.")
+        for link in links:
+            payment_guard(link)
+        for link in links:
+            if link.get("status") == "open":
+                commerce._save(host, order, status="cancellation_pending")
+                host._qonto_request("PATCH", f"/v2/payment_links/{link['id']}/deactivate", idempotency_key="elearning-cancel-link-" + link["id"])
+            response = host._qonto_request("GET", "/v2/payment_links/" + link["id"])
+            current_link = response.get("payment_link") or response
+            if current_link.get("id") != link["id"]:
+                raise commerce.ReviewRequired("Le lien annulé n’a pas pu être vérifié.")
+            payment_guard(current_link)
+            if current_link.get("status") not in {"canceled", "expired"}:
+                raise commerce.ReviewRequired("La désactivation du lien de paiement reste à confirmer.")
+            commerce._save(host, order, payment_url="", payment_link_status=current_link["status"])
+        if invoice and invoice.get("status") == "draft":
+            # Draft invoices have no accounting effect and cannot be marked canceled.
+            commerce._save(host, order, invoice_deletion_started=host._now_iso())
+            host._qonto_request("DELETE", "/v2/client_invoices/" + invoice["id"], idempotency_key="elearning-cancel-draft-" + order["id"])
+            commerce._save(host, order, invoice_status="canceled", invoice_cancelled_at=host._now_iso())
+        elif invoice:
+            # Re-read after closing checkout links to catch payment races.
+            invoice = host._qonto_invoice_payload(host.get_qonto_invoice(invoice["id"]))
+            invoice_guard(invoice)
+            if invoice.get("status") == "unpaid":
+                commerce._save(host, order, status="cancellation_pending")
+                host._qonto_request("POST", f"/v2/client_invoices/{invoice['id']}/mark_as_canceled", idempotency_key="elearning-cancel-invoice-" + order["id"])
+            invoice = host._qonto_invoice_payload(host.get_qonto_invoice(invoice["id"]))
+            invoice_guard(invoice)
+            if invoice.get("status") != "canceled":
+                raise commerce.ReviewRequired("L’annulation de la facture reste à confirmer.")
+        def finish(data):
+            current = commerce._find(data, order["partner_id"], order["id"])
+            if not current or current.get("commerce", {}).get("lease_token") != order["commerce"]["lease_token"] or not current.get("cancellation_requested_at"):
+                raise commerce.ReviewRequired("La suppression a été reprise par un autre traitement.")
+            if current.get("activated_at") or any(p.get("activated_at") for p in current.get("learners", [])):
+                raise CancellationBlocked("Un accès est déjà activé. La suppression n’a pas été effectuée.")
+            now = host._now_iso()
+            _cancel_locally(current, now)
+            group = next((g for g in data.get("manual_orders", []) if is_group(g) and g.get("id") == order.get("group_id") and g.get("partner_id") == order["partner_id"]), None)
+            if group and group.get("deletion_requested_at"):
+                remaining = group_orders(data, group)
+                if all(o.get("status") == "cancelled" for o in remaining):
+                    group.update(deleted_at=now, updated_at=now, revision=group["revision"] + 1, deletion_error="")
+                    group.pop("deletion_requested_at", None)
+                else:
+                    following = next((item for item in remaining if item.get("cancellation_requested_at")), None)
+                    if following:
+                        following["commerce"].update(queued=True, next_attempt=0)
+            return {}
+        host._atomic_update_data(finish, partner_id=order["partner_id"])
+    except CancellationBlocked as exc:
+        terminate_request(str(exc))
+    except Exception as exc:
+        message = str(exc) if isinstance(exc, commerce.ReviewRequired) else "La suppression est en attente de vérification du paiement. Elle sera réessayée automatiquement."
+        commerce._save(host, order, status="cancellation_pending", error=message, queued=True,
+                       next_attempt=time.time() + min(60 * 2 ** min(order["commerce"].get("attempts", 1), 6), 3600), lease_until=0)
+        def note(data):
+            group = next((g for g in data.get("manual_orders", []) if is_group(g) and g.get("id") == order.get("group_id") and g.get("partner_id") == order["partner_id"]), None)
+            if group and group.get("deletion_requested_at"):
+                group["deletion_error"] = message
+            return {}
+        host._atomic_update_data(note, partner_id=order["partner_id"])
+
+def billing_defaults(data, partner, group=None):
+    """Reuse a complete own-tenant address; never mix fields across customers."""
+    keys = ("address", "postal_code", "city")
+    billing = {key: str(partner.get(key) or "") for key in keys}
+    prior = sorted((order for order in data.get("manual_orders", [])
+                    if order.get("partner_id") == partner["id"] and not is_group(order)
+                    and order.get("status") not in {"draft", "cancelled"}
+                    and not order.get("deleted_at")
+                    and order.get("commerce", {}).get("invoice_status") != "canceled"),
+                   key=lambda order: order.get("submitted_at") or order.get("created_at", ""), reverse=True)
+    for order in prior:
+        saved = order.get("billing") or {}
+        delivery = order.get("delivery") or {}
+        # Legacy manuals orders sometimes contain only a delivery address.
+        candidate = {key: str(saved.get(key) or delivery.get(key) or "").strip() for key in keys}
+        if all(candidate.values()):
+            billing.update(candidate)
+            break
+    for key, value in ((group or {}).get("billing") or {}).items():
+        if key in keys:
+            # An explicitly stored empty field is a choice, not missing data.
+            billing[key] = str(value or "")
+    return billing
+
+
+def dashboard_filter(groups, values):
+    state = values.get("state", "all")
+    if state not in {"all", "draft", "waiting", "active"}:
+        state = "all"
+    query = str(values.get("q", ""))[:200].strip()
+    def normalized(value):
+        return "".join(c for c in unicodedata.normalize("NFKD", value.casefold()) if not unicodedata.combining(c))
+    words = normalized(query).split()
+    counts = {"draft": "pending_count", "waiting": "waiting_count", "active": "active_count"}
+    def matches(group):
+        state_match = (state == "all" or bool(group[counts[state]])
+                       or (state == "draft" and not group["total_count"]))
+        subjects = [group.get("group_name", "") + " " + group.get("course_code", "")]
+        subjects.extend(" ".join(str(person.get(key, "")) for key in ("first_name", "last_name", "email")) for person in group.get("learners", []))
+        return state_match and (not words or any(all(word in normalized(subject) for word in words) for subject in subjects))
+    visible = {group["id"] for group in groups if matches(group)}
+    return {"group_ids_visible": visible, "filter_state": state, "filter_query": query, "visible_count": len(visible)}
 
 def _roster(form, group, locked):
     columns = [form.getlist(k) for k in ("learner_id", "last_name", "first_name", "email")]
@@ -116,7 +356,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         # callbacks. A submitted partner ID can never select another tenant.
         group = next((o for o in data.get("manual_orders", [])
                       if is_group(o) and o.get("id") == gid
-                      and o.get("partner_id") == host._current_partner_id()), None)
+                      and not o.get("deleted_at") and o.get("partner_id") == host._current_partner_id()), None)
         if not group:
             abort(404)
         return group
@@ -126,6 +366,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
 
     def detail(data, partner, group, *, errors=None, values=None, rows=None):
         view = group_view(data, group)
+        from elearning_reporting import group_progress
+        view["progress"] = group_progress(host, view)
         return page("elearning_group.html", partner=partner, courses=learning.prices(partner), group=view,
                     errors=errors or [], values=values if values is not None else group,
                     rows=rows if rows is not None else view["pending_learners"])
@@ -137,7 +379,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         payload = {"group_id": group["id"], "partner_id": partner["id"], "revision": group["revision"],
                    "request_id": request_id, "learner_ids": [p["id"] for p in view["pending_learners"]],
                    "unit_cents": price["unit_cents"], "free": price["free"]}
-        billing = copy.deepcopy(group.get("billing") or {k: partner.get(k, "") for k in ("address", "postal_code", "city")})
+        billing = billing_defaults(data, partner, group)
         if values is not None:
             billing.update(values)
         return page("elearning_group_review.html", partner=partner, courses=learning.prices(partner), group=view,
@@ -171,7 +413,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                     existing = next((o for o in records if is_group(o) and o.get("partner_id") == partner["id"] and o.get("request_id") == token), None)
                     if existing:
                         return {"id": existing["id"]}
-                    if sum(is_group(o) and o.get("partner_id") == partner["id"] for o in records) >= MAX_GROUPS:
+                    if sum(is_group(o) and not o.get("deleted_at") and o.get("partner_id") == partner["id"] for o in records) >= MAX_GROUPS:
                         abort(429, "Vous avez atteint la limite de groupes. Contactez-nous pour continuer.")
                     records.append(record)
                     return {"id": gid}
@@ -189,6 +431,60 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         data, partner = partner_data()
         return detail(data, partner, find(data, gid))
 
+    @bp.post("/admin/organisme/e-learning/groupes/<gid>/supprimer")
+    @customer
+    def elearning_group_delete(gid):
+        check_csrf()
+        _, partner = partner_data()
+        expected = _revision(request.form)
+        if request.form.get("confirm") != "yes":
+            abort(400)
+        def remove(data):
+            group = find(data, gid)
+            if group.get("revision") != expected:
+                return {"error": "Le groupe a changé. Vérifiez sa version actuelle avant de le supprimer."}
+            if group.get("deletion_requested_at"):
+                return {"pending": True}
+            orders = group_orders(data, group)
+            blocked = deletion_block_reason(orders)
+            if blocked:
+                return {"error": blocked}
+            now = host._now_iso()
+            pending = False
+            for order in orders:
+                if order.get("status") == "cancelled":
+                    continue
+                if _remote_billing(order):
+                    pending = True
+                    order["cancellation_requested_at"] = now
+                    order.setdefault("commerce", {}).update(queued=True, status="cancellation_pending", next_attempt=0,
+                                                            lease_until=0, lease_token=str(uuid.uuid4()))
+                else:
+                    _cancel_locally(order, now)
+            group.update(revision=expected + 1, updated_at=now, deletion_error="")
+            if pending:
+                # Only one cancellation batch per group may reach Qonto at a
+                # time, including across multiple application workers.
+                queued_one = False
+                for order in orders:
+                    if order.get("cancellation_requested_at"):
+                        order["commerce"]["queued"] = not queued_one
+                        queued_one = True
+                group["deletion_requested_at"] = now
+            else:
+                group["deleted_at"] = now
+            return {"pending": pending}
+        result = host._atomic_update_data(remove, partner_id=partner["id"])
+        if result.get("error"):
+            data, partner = partner_data()
+            return detail(data, partner, find(data, gid), errors=[result["error"]]), 409
+        if result.get("pending"):
+            kick_worker()
+            flash("La suppression est en cours. Nous vérifions l’absence de paiement et annulons la facture avant de supprimer le groupe.", "success")
+            return redirect(url_for("manuals_shop.elearning_group", gid=gid), code=303)
+        flash("Le groupe ou l’accès individuel a été supprimé. Aucun accès ne sera activé.", "success")
+        return redirect(url_for("manuals_shop.elearning_soon"), code=303)
+
     @bp.post("/admin/organisme/e-learning/groupes/<gid>/enregistrer")
     @customer
     def elearning_group_save(gid):
@@ -199,6 +495,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             group = find(data, gid)
             if group.get("revision") != expected:
                 return {"conflict": True}
+            if group.get("deletion_requested_at"):
+                raise ValueError("La suppression de ce groupe est en cours de vérification.")
             view = group_view(data, group)
             name = _name(request.form.get("group_name"), group["mode"])
             code = request.form.get("course_code", group["course_code"])
@@ -235,6 +533,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             if _revision(request.form) != group.get("revision"):
                 return detail(data, partner, group, errors=["Le groupe a été modifié. Vérifiez sa liste actuelle avant de créer les accès."]), 409
         view = group_view(data, group)
+        if view["deletion_pending"]:
+            return detail(data, partner, group, errors=["La suppression de ce groupe est en cours de vérification."]), 409
         if not view["pending_count"]:
             flash("Ajoutez au moins un participant avant de créer les espaces e-learning.", "error")
             return redirect(url_for("manuals_shop.elearning_group", gid=gid), code=303)
@@ -263,6 +563,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         billing.update(country="France", country_code="FR")
         def confirm(current):
             current_group = find(current, gid)
+            if current_group.get("deletion_requested_at"):
+                raise ValueError("La suppression de ce groupe est en cours de vérification.")
             orders = current.setdefault("manual_orders", [])
             existing = next((o for o in orders if learning.is_order(o) and o.get("partner_id") == partner["id"]
                              and o.get("group_id") == gid and o.get("request_id") == quote["request_id"]), None)

@@ -9,19 +9,60 @@
     const search = dashboard.querySelector('#el-search');
     const filter = dashboard.querySelector('#el-filter');
     const cards = [...dashboard.querySelectorAll('[data-el-group]')];
+    const metricLinks = [...dashboard.querySelectorAll('[data-el-state]')];
+    const filterForm = dashboard.querySelector('#el-filter-form');
+    const reset = dashboard.querySelector('#el-reset-filters');
+    const clear = dashboard.querySelector('#el-clear-search');
+    const countLabel = dashboard.querySelector('#el-results-count');
     const normalize = text => text.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const update = () => {
+    const labels = {all: 'Tous les états', draft: 'Accès à préparer', waiting: 'En attente d’activation', active: 'Accès activés'};
+    const update = (changeUrl = true) => {
+      if (!search || !filter) return;
       const query = normalize(search.value.trim());
+      const words = query.split(/\s+/).filter(Boolean);
+      const matchesQuery = value => words.every(word => normalize(value).includes(word));
       let count = 0;
       cards.forEach(card => {
-        const matches = normalize(card.dataset.search).includes(query) && (filter.value === 'all' || card.dataset.states.split(/\s+/).includes(filter.value));
-        card.hidden = !matches;
-        if (matches) count++;
+        const matchedPeople = [...card.querySelectorAll('[data-person-search]')].filter(person => query && matchesQuery(person.dataset.personSearch));
+        const textMatches = !query || matchesQuery(card.dataset.search) || matchedPeople.length > 0;
+        const stateMatches = filter.value === 'all' || card.dataset.states.split(/\s+/).includes(filter.value);
+        card.hidden = !(textMatches && stateMatches);
+        if (!card.hidden) count++;
+        const detail = card.querySelector('[data-el-matches]');
+        if (detail) {
+          detail.hidden = matchedPeople.length === 0;
+          detail.textContent = matchedPeople.length ? 'Stagiaire' + (matchedPeople.length > 1 ? 's' : '') + ' : ' + matchedPeople.map(person => person.dataset.personName).join(', ') : '';
+        }
+      });
+      metricLinks.forEach(link => {
+        const selected = link.dataset.elState === filter.value;
+        link.classList.toggle('is-selected', selected);
+        if (selected) link.setAttribute('aria-current', 'true'); else link.removeAttribute('aria-current');
       });
       const empty = dashboard.querySelector('#el-no-results');
       if (empty) empty.hidden = count > 0;
+      if (countLabel) countLabel.textContent = count + ' résultat' + (count !== 1 ? 's' : '') + (filter.value !== 'all' ? ' · ' + labels[filter.value] : '') + (query ? ' pour « ' + search.value.trim() + ' »' : '');
+      if (reset) reset.hidden = filter.value === 'all' && !query;
+      if (clear) clear.hidden = !query;
+      if (changeUrl && window.history && window.location) {
+        const url = new URL(window.location.href);
+        if (query) url.searchParams.set('q', search.value.trim()); else url.searchParams.delete('q');
+        if (filter.value !== 'all') url.searchParams.set('state', filter.value); else url.searchParams.delete('state');
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+      }
     };
-    if (search && filter) { search.addEventListener('input', update); filter.addEventListener('change', update); }
+    if (search && filter) {
+      search.addEventListener('input', () => update());
+      filter.addEventListener('change', () => update());
+      if (filterForm) filterForm.addEventListener('submit', event => { event.preventDefault(); update(); });
+      metricLinks.forEach(link => link.addEventListener('click', event => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault(); filter.value = link.dataset.elState; update();
+      }));
+      if (reset) reset.addEventListener('click', event => { event.preventDefault(); search.value = ''; filter.value = 'all'; update(); search.focus(); });
+      if (clear) clear.addEventListener('click', () => { search.value = ''; update(); search.focus(); });
+      update(false);
+    }
   }
 
   const create = document.getElementById('el-create-form');
@@ -33,6 +74,8 @@
       field.hidden = !group;
       input.required = group;
       input.disabled = !group;
+      const label = document.getElementById('el-create-label');
+      if (label) label.textContent = group ? 'Créer mon groupe' : 'Créer mon accès individuel';
     };
     create.addEventListener('change', update); update();
   }
@@ -62,7 +105,7 @@
       const counter = document.getElementById('el-roster-count');
       if (counter) counter.textContent = count + ' à préparer';
       if (add) { add.disabled = list.length >= max; add.title = add.disabled ? 'Ce groupe peut contenir jusqu’à 100 stagiaires.' : ''; }
-      review.disabled = count === 0 || roster.dataset.conflict === 'true';
+      review.disabled = count === 0 || roster.dataset.conflict === 'true' || roster.dataset.pendingDeletion === 'true';
       const seen = new Set();
       list.forEach((row, index) => {
         row.querySelector('.el-row-number').textContent = String(index + 1);
@@ -102,6 +145,7 @@
     window.addEventListener('beforeunload', event => {
       if (dirty && !submitting) { event.preventDefault(); event.returnValue = ''; }
     });
+    document.querySelectorAll('[data-el-delete-form]').forEach(form => form.addEventListener('submit', () => { submitting = true; }));
     if (dirty) showDirty();
     update();
   }
