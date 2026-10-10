@@ -115,6 +115,27 @@ def status_view(order):
             "active": bool(order.get("activated_at")), "mail_sent": sum(m.get("status") == "sent" for k, m in state.get("emails", {}).items() if k.startswith("learner_"))}
 
 
+
+def centre_snapshot(partner):
+    return {key: partner.get(key, "") for key in ("name", "siret", "email", "contact_first_name", "contact_last_name", "phone", "contact_email")}
+
+
+def learner_brand(data, order):
+    """Learner messages use this centre only, never platform contact defaults."""
+    snapshot = order.get("centre") or {}
+    partner = next((record for record in data.get("partners", []) if record.get("id") == order.get("partner_id")), {})
+    def clean(value, limit):
+        return " ".join(str(value or "").split())[:limit]
+    name = clean(snapshot.get("name") or partner.get("name"), 160) or "Votre organisme de formation"
+    email = ""
+    for candidate in (snapshot.get("contact_email"), snapshot.get("email"), partner.get("contact_email"), partner.get("email")):
+        candidate = str(candidate or "").strip()
+        if len(candidate) <= 254 and not any(ord(char) < 32 or char in "?#&" for char in candidate) and re.fullmatch(r"[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+", candidate):
+            email = candidate
+            break
+    phone = clean(snapshot.get("phone") or partner.get("phone"), 50)
+    return {"name": name, "email": email, "phone": phone}
+
 def learner_context(data, token):
     if not re.fullmatch(r"el_[A-Za-z0-9_-]{40,100}", str(token or "")):
         return None, None
@@ -128,7 +149,8 @@ def learner_context(data, token):
                 continue
             virtual_session = {"id": "el-" + order["id"], "partner_id": order["partner_id"], "name": order.get("group_name") or "Parcours " + order["course_code"].upper(),
                                "training_type": order["course_code"].upper(), "date_start": person["activated_at"][:10], "aps_elearning_enabled": True,
-                               "aps_native_modules": copy.deepcopy(order["modules"]), "aps_native_path_title": "Mon parcours " + order["course_code"].upper()}
+                               "aps_native_modules": copy.deepcopy(order["modules"]), "aps_native_path_title": "Mon parcours " + order["course_code"].upper(),
+                               "learner_brand": learner_brand(data, order)}
             return virtual_session, {**person, "public_token": token, "partner_id": order["partner_id"]}
     return None, None
 
@@ -171,12 +193,26 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     paid = entitled(order)
     title = "Votre formation vous attend" if person else ("Vos accès sont activés" if paid else "Votre commande e-learning")
     link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
-    subject = ("Votre accès personnel " if person else "Commande e-learning ") + order["course_code"].upper() + " · Intégrale Academy"
+    brand = learner_brand(host.load_data(run_background_tasks=False), order) if person else None
+    subject = ("Votre accès personnel " if person else "Commande e-learning ") + order["course_code"].upper() + " · " + (brand["name"] if person else "Intégrale Academy")
     if invoice:
         subject = ("Facture acquittée " if paid else "Facture à régler ") + state.get("invoice_number", "") + " · E-learning"
-    body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money)
+    body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand)
     plain = (f"Bonjour {person['first_name']},\nVotre accès personnel au parcours {order['course_code'].upper()} est activé.\n" if person else f"Commande {order['reference']} : {len(order['learners'])} accès {order['course_code'].upper()}.\nTotal : {money(order['total_cents'])} TTC.\n" + ("Accès activés.\n" if paid else "Les accès seront activés uniquement après règlement intégral de la facture.\n"))
-    plain += "Ouvrir mon espace : " + link + "\nIntégrale Academy — 04 22 47 07 68"
+    plain += "Ouvrir mon espace : " + link
+    send_options = {}
+    if person:
+        plain += "\n\n" + brand["name"]
+        if brand["email"]:
+            plain += "\nContact : " + brand["email"]
+            send_options["reply_to"] = {"email": brand["email"], "name": brand["name"]}
+        if brand["phone"]:
+            plain += "\nTéléphone : " + brand["phone"]
+        send_options["sender_name"] = brand["name"]
+        # Only a verified platform-configured sending address may override From.
+        send_options["sender_email"] = str(getattr(host, "ELEARNING_SENDER_EMAIL", "") or "").strip() or None
+    else:
+        plain += "\nIntégrale Academy — 04 22 47 07 68"
     try:
         attachments = []
         if invoice:
@@ -192,7 +228,7 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
                 temporary.unlink(missing_ok=True)
             attachments = [{"name": name, "content": base64.b64encode(pdf).decode("ascii")}]
         result = host.brevo_send_email(recipient, subject, body, text_content=plain, attachments=attachments,
-                                     metadata={"partner_id": order["partner_id"], "order_id": order["id"], "purpose": "elearning_" + key})
+                                     metadata={"partner_id": order["partner_id"], "order_id": order["id"], "purpose": "elearning_" + key}, **send_options)
     except Exception as exc:
         host.app.logger.warning("elearning_email_failed order=%s type=%s", order["id"], type(exc).__name__)
         result = {"ok": False}
@@ -286,7 +322,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                      "request_id": token, "course_code": code, "group_name": group_name, "learners": people, "modules": modules, "billing": billing,
                      "free_snapshot": price["free"], "unit_cents": unit, "total_cents": unit * quantity, "shipping_cents": 0,
                      "items": [{"kind": "elearning", "code": code, "label": "Accès e-learning " + code.upper(), "quantity": quantity, "unit_cents": unit, "total_cents": unit * quantity}],
-                     "centre": {k: partner.get(k, "") for k in ("name", "siret", "email", "contact_first_name", "contact_last_name")}}
+                     "centre": centre_snapshot(partner)}
             def persist(current):
                 existing = next((o for o in current.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("request_id") == token), None)
                 if existing:
@@ -409,5 +445,5 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             session["public_auth_" + token] = True
             session.permanent = True
             return redirect(url_for("native_elearning.learner_path", token=token), code=303)
-        return page("elearning_access.html", person=person, training=training)
+        return page("elearning_access.html", person=person, training=training, learner_brand=training["learner_brand"])
 

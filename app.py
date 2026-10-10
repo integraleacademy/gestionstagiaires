@@ -5704,6 +5704,8 @@ def _restore_data_from_backups_if_possible() -> Optional[Dict[str, Any]]:
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
+# Optional neutral sending address, already verified in the merchant Brevo account.
+ELEARNING_SENDER_EMAIL = os.environ.get("ELEARNING_SENDER_EMAIL", "").strip()
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
 CNAPS_PUBLIC_ANNUAIRE_LEGACY_ENDPOINT = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public"
 CNAPS_PUBLIC_ANNUAIRE_PAGE_URL = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public"
@@ -7612,6 +7614,10 @@ def brevo_send_email(
     attachments: Optional[List[Dict[str, str]]] = None,
     text_content: str = "",
     metadata: Optional[Dict[str, Any]] = None,
+    *,
+    sender_name: Optional[str] = None,
+    sender_email: Optional[str] = None,
+    reply_to: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     to_email = (to_email or "").strip()
     missing = _missing_brevo_config()
@@ -7634,13 +7640,38 @@ def brevo_send_email(
 
     email_attachments = [item for item in (attachments or []) if isinstance(item, dict) and item.get("content") and item.get("name")]
 
+    def identity_name(value):
+        return re.sub(r"[\x00-\x1f\x7f]+", " ", str(value or "")).strip()[:200]
+
+    def valid_identity_email(value):
+        return (isinstance(value, str) and len(value) <= 254
+                and re.fullmatch(r"[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+", value)
+                and not any(ord(character) < 32 or ord(character) == 127 for character in value))
+
+    # Only application-controlled, verified sender addresses may be passed here.
+    # A centre's contact address belongs in Reply-To, never implicitly in From.
+    from_email = sender_email or BREVO_SENDER_EMAIL
+    from_name = identity_name(sender_name) or identity_name(BREVO_SENDER_NAME)
+    reply_identity = None
+    if reply_to is not None:
+        if isinstance(reply_to, dict) and valid_identity_email(reply_to.get("email")):
+            reply_identity = {"email": reply_to["email"], "name": identity_name(reply_to.get("name")) or from_name}
+        else:
+            result = {"ok": False, "not_sent": True, "status_code": None, "message_id": "", "error": "Adresse de réponse invalide."}
+            return result if metadata is not None else False
+    if not valid_identity_email(from_email):
+        result = {"ok": False, "not_sent": True, "status_code": None, "message_id": "", "error": "Adresse d’expédition invalide."}
+        return result if metadata is not None else False
+
     payload = {
-        "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
+        "sender": {"name": from_name, "email": from_email},
         "to": [{"email": to_email}],
         "subject": subject,
         "htmlContent": html,
     }
 
+    if reply_identity:
+        payload["replyTo"] = reply_identity
     if text_content:
         payload["textContent"] = text_content
 
@@ -55477,3 +55508,4 @@ _log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")
 if __name__ == "__main__":
     debug_enabled = os.environ.get("FLASK_DEBUG", "0") == "1"
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=debug_enabled)
+

@@ -595,7 +595,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                      "free_snapshot": price["free"], "unit_cents": unit, "total_cents": unit * quantity, "shipping_cents": 0,
                      "items": [{"kind": "elearning", "code": current_group["course_code"], "label": "Accès e-learning " + current_group["course_code"].upper(),
                                 "quantity": quantity, "unit_cents": unit, "total_cents": unit * quantity}],
-                     "centre": {k: current_partner.get(k, "") for k in ("name", "siret", "email", "contact_first_name", "contact_last_name")},
+                     "centre": learning.centre_snapshot(current_partner),
                      "commerce": {"queued": True, "status": "pending", "flow": "elearning_invoice_first", "attempts": 0, "emails": {}}}
             orders.append(order)
             current_group.update(revision=expected + 1, updated_at=now, billing=copy.deepcopy(billing))

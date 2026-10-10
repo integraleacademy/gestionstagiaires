@@ -18,7 +18,9 @@ Une commande payante émet sa facture Qonto avant le paiement. Le traitement vé
 
 La file durable existante des commandes traite aussi les commandes e-learning. Une facture impayée est normalement vérifiée toutes les 60 secondes, ou toutes les cinq minutes si elle nécessite une intervention. Le centre peut actualiser le suivi ; l'administrateur peut relancer le traitement. Les commandes sans configuration de facturation reprennent après enregistrement des réglages.
 
-Le centre reçoit sa confirmation et ses factures PDF. Chaque stagiaire reçoit un e-mail HTML avec son lien personnel seulement après activation. Les envois réussis sont mémorisés ; les échecs sont relancés sans recréer de facture ni d'accès. Comme tout envoi sans transaction commune avec le fournisseur d'e-mail, une interruption entre la livraison Brevo et l'enregistrement local peut exceptionnellement provoquer un doublon.
+Le centre reçoit sa confirmation et ses factures PDF. Chaque stagiaire reçoit un e-mail HTML avec son lien personnel seulement après activation. Les messages destinés aux stagiaires reprennent le nom et les coordonnées de leur organisme dans l’objet, le contenu HTML/texte et l’adresse de réponse. La page d’arrivée reprend cette identité sans coordonnées commerciales de la plateforme. L’adresse technique d’expédition reste celle authentifiée dans Brevo ; le paramètre serveur `ELEARNING_SENDER_EMAIL` permet de choisir une adresse neutre déjà vérifiée, sans changer les confirmations et factures envoyées aux organismes. Ne jamais utiliser automatiquement l’adresse du centre comme expéditeur non vérifié. Les messages déjà livrés ne sont pas renvoyés.
+
+Les envois réussis sont mémorisés ; les échecs sont relancés sans recréer de facture ni d'accès. Comme tout envoi sans transaction commune avec le fournisseur d'e-mail, une interruption entre la livraison Brevo et l'enregistrement local peut exceptionnellement provoquer un doublon.
 
 ## Suppression et suivi
 

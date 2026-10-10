@@ -917,7 +917,7 @@ def create_native_elearning_blueprint(
     @blueprint.get('/espace/<token>/elearning/exams/<exam_id>')
     def learner_exam(token,exam_id):
         if not public_is_authed(token):
-            return redirect(url_for('public_trainee_login',token=token))
+            return redirect(url_for('manuals_shop.elearning_access' if token.startswith('el_') else 'public_trainee_login',token=token))
         session_obj, trainee, exam, back_url = exam_for_learner(token,exam_id)
         history = ExamStore(root()/'tracking.sqlite3').history(session_obj['id'],trainee.get('id') or trainee.get('trainee_id'),exam)
         return exam_page(exam, back_url, url_for('native_elearning.learner_exam_submit',token=token,exam_id=exam_id), history)
