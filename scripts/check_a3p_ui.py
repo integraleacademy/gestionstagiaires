@@ -47,8 +47,13 @@ try:
             assert page.locator('.a3p-reading').count()>=3
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), label+' lesson overflow'
             page.goto('http://a3p.test/admin/elearning/courses/academy-a3p-06/preview?activity=a3p-06-cas')
-            page.locator('textarea').first.fill('Je vérifie le nouvel accès avant de valider le déplacement.')
-            page.locator('.a3p-case-feedback summary').click()
+            for step in page.locator('.a3p-decision-step').all():
+                correct=step.get_attribute('data-answer')
+                wrong=str((int(correct)+1)%3)
+                step.locator('[data-choice="'+wrong+'"]').click()
+                assert 'À reprendre' in step.locator('.a3p-decision-feedback').inner_text()
+                step.locator('[data-choice="'+correct+'"]').click()
+                step.locator('[data-next]').click()
             assert page.locator('.a3p-case-feedback h3').first.is_visible()
             page.screenshot(path=str(root/f'{label}-case.png'),full_page=False)
             page.goto('http://a3p.test/admin/elearning/courses/academy-a3p-02/preview?activity=a3p-q-001')

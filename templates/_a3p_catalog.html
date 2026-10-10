@@ -3,7 +3,7 @@
   <header class="a3p-hero">
     <div><span class="a3p-eyebrow">Protection physique des personnes</span><h2 id="a3p-title">Préparer chaque décision.<br>Protéger avec méthode.</h2>
       <p>Le parcours A3P du manuel Intégrale Academy : comprendre le cadre, préparer la mission, analyser les risques et organiser le relais.</p>
-      <div class="a3p-stats"><span><strong>{{ a3p_manifest.lesson_count }}</strong> leçons</span><span><strong>{{ a3p_manifest.question_count }}</strong> questions corrigées</span><span><strong>{{ a3p_manifest.case_count }}</strong> études de cas</span></div>
+      <div class="a3p-stats"><span><strong>{{ a3p_manifest.lesson_count }}</strong> leçons</span><span><strong>{{ a3p_manifest.question_count }}</strong> questions corrigées</span><span><strong>{{ a3p_manifest.case_count }}</strong> études de cas</span>{% if a3p_manifest.video_count %}<span><strong>{{ a3p_manifest.video_count }}</strong> synthèses vidéo</span>{% endif %}</div>
       <a class="a3p-button a3p-button--light" href="{{ url_for('native_elearning.admin_preview', course_id='academy-a3p-02', version=a3p_manifest.version) }}">Ouvrir la première leçon →</a>
     </div>
     <img src="{{ url_for('static', filename='manuals/a3p.jpg') }}" alt="Couverture du manuel A3P Intégrale Academy" width="200" height="280">
@@ -19,13 +19,14 @@
     <article class="a3p-module">
       <div class="a3p-module-top"><span class="a3p-uv">UV {{ module.uv }}</span><span>{{ module.lesson_count }} leçons</span></div>
       <h4>{{ module.title }}</h4><p>{{ module.objective }}</p>
-      <div class="a3p-module-meta">{{ module.question_count }} questions corrigées · 1 étude de cas</div>
+      <div class="a3p-module-meta">{{ module.question_count }} questions corrigées · 1 étude de cas{% if module.video_minutes %} · vidéo Henri {{ module.video_minutes }} min{% endif %}</div>
       <div class="a3p-actions"><a class="a3p-button" href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version) }}">Consulter les cours</a><a class="a3p-text-link" href="{{ url_for('native_elearning.admin_exam', exam_id=module.exam_id, version=module.version) }}">QCM · 30 questions →</a></div>
       <details class="a3p-syllabus"><summary>Sommaire des {{ module.lesson_count }} leçons</summary><ol>{% for lesson in module.lessons %}<li><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity=lesson.activity) }}"><b>{{ lesson.ref }}</b> {{ lesson.title }}</a></li>{% endfor %}</ol></details>
     </article>
     {% endfor %}
   </div>
 
+{% if a3p_manifest.video_count %}<p class="a3p-source">{{ a3p_manifest.video_count }} synthèses vidéo avec la voix Henri, sous-titres intégrés et piste de sous-titres disponible. Durée cumulée des vidéos : {{ a3p_manifest.video_minutes }} minutes. Cette durée mesurée ne correspond pas à des heures certifiantes.</p>{% endif %}
   <section class="a3p-exam-card"><div><span class="a3p-eyebrow">Faire le point</span><h3>Examen blanc transversal</h3><p>100 questions issues des 8 unités, correction expliquée et retour à la leçon concernée. Seuil pédagogique interne : 80 %. Cet entraînement ne remplace pas l’examen officiel.</p></div><a class="a3p-button" href="{{ url_for('native_elearning.admin_exam', exam_id=a3p_manifest.final_exam_id, version=a3p_manifest.version) }}">Tester l’examen blanc →</a></section>
 
   <section class="a3p-regulatory" id="a3p-reglementation" aria-labelledby="a3p-reg-title">

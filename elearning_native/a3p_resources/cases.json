@@ -1,10 +1,402 @@
 {
-  "02": {"title":"Une demande du client dépasse la mission", "situation":"À la sortie d’un hôtel, un photographe prend des clichés depuis le trottoir. Le client vous demande de prendre son téléphone et de le retenir jusqu’à l’arrivée de son avocat. Aucun acte violent ni délit flagrant n’est constaté.", "tasks":["Séparez les faits observés de la demande du client.","Expliquez deux limites juridiques applicables.","Formulez une réponse au client et une alternative de protection.","Rédigez quatre lignes de compte rendu factuel."], "criteria":["Absence de pouvoir général de saisie ou de rétention", "Pas d’application automatique de l’article 73", "Respect des libertés et prévention de l’escalade", "Solution concrète et compte rendu neutre"], "example":"Je constate une prise de vues depuis l’espace public et une demande de saisie. La demande privée ne crée pas un pouvoir de police. Je propose au client de rejoindre l’accès convenu ou un espace à l’abri des regards, sans saisir le téléphone ni retenir le photographe. Je rends compte de l’heure, du lieu, des faits et de la solution proposée. Si des faits nouveaux apparaissent, la situation doit être réévaluée.", "debrief":"À discuter avec le formateur : quelles circonstances nouvelles changeraient l’analyse ? Ne déduisez jamais une autorisation d’intervention du seul inconfort du client."},
-  "03": {"title":"Refus d’accès et montée de tension", "situation":"Un visiteur non annoncé insiste pour entrer dans un salon privé. Il hausse la voix et conteste votre consigne, mais ne porte pas de coups. L’accueil peut joindre l’organisateur et une sortie latérale reste libre.", "tasks":["Relevez les signes observables et les ressources disponibles.","Écrivez une phrase d’écoute puis une limite claire.","Proposez une option réalisable et définissez le moment du relais.","Identifiez ce qui imposerait de réévaluer la distance et la protection."], "criteria":["Faits séparés des jugements", "Ton calme et absence d’humiliation", "Limite intelligible et solution vérifiable", "Relais anticipé sans promesse irréalisable"], "example":"Je comprends que vous souhaitez rejoindre le salon. L’accès nécessite une confirmation de l’organisateur. Je vous propose d’attendre ici pendant que l’accueil le contacte. Je conserve un espace adapté, informe mon collègue et surveille l’évolution de la situation. Si le danger augmente, je réévalue le dispositif et sollicite le relais prévu.", "debrief":"Jouez ensuite cet échange avec le formateur : la posture, la distance et l’adaptation réelle ne se valident pas à l’écran."},
-  "04": {"title":"Du constat au message opérationnel", "situation":"À 14 h 20, l’accès nord du centre de congrès est fermé par l’exploitant à cause d’une fuite d’eau. Le client arrive à 14 h 35. L’accès est existe mais sa disponibilité n’a pas encore été confirmée.", "tasks":["Rédigez un message radio de moins de 45 mots.","Distinguez l’information confirmée et celle à vérifier.","Indiquez la décision ou confirmation attendue.","Transformez ensuite le message en entrée de main courante."], "criteria":["Heure et localisation", "Fermeture confirmée et motif attribué à l’exploitant", "Alternative présentée comme non confirmée", "Demande explicite et absence de donnée privée inutile"], "example":"Équipe accueil, ici point nord. À 14 h 20, accès nord fermé par l’exploitant pour fuite d’eau. Arrivée prévue à 14 h 35. Merci de confirmer la disponibilité de l’accès est avant réorientation. Je reste au point convenu et attends votre retour. La main courante ajoute l’auteur du constat et la suite effectivement donnée.", "debrief":"Faites relire le message par quelqu’un qui ne connaît pas la scène : sait-il où est le problème et ce qu’il doit faire ?"},
-  "05": {"title":"Un objet inhabituel près du cheminement", "situation":"Avant un passage du client, un bagage isolé est découvert près de l’accès prévu. Son origine n’est pas connue. Aucun contenu n’est visible et le personnel du site n’a pas encore été interrogé.", "tasks":["Décrivez seulement ce qui est établi.","Proposez une mesure de réduction de l’exposition.","Rédigez l’alerte au responsable du site et précisez les informations manquantes.","Indiquez ce que vous ne devez pas improviser."], "criteria":["Pas de conclusion certaine sur la nature de l’objet", "Absence de manipulation", "Cheminement du client réévalué", "Alerte et coordination avec les acteurs compétents"], "example":"Je signale un bagage isolé, sa localisation et l’heure de découverte, sans affirmer qu’il contient un engin. Je n’y touche pas. J’évite d’engager le client à proximité, informe le responsable sécurité et applique les consignes de mise à distance et d’alerte. Une variante n’est retenue qu’après vérification de sa disponibilité.", "debrief":"Les distances et décisions opérationnelles dépendent du risque et des consignes compétentes. Cet exercice n’enseigne aucune intervention sur un objet suspect."},
-  "06": {"title":"Préparer une visite avec changement de programme", "situation":"Le client doit participer à une conférence de 18 h à 19 h, puis quitter le site par une entrée réservée. À 17 h 40, l’organisateur annonce que cette entrée est occupée par une livraison. Le conducteur attend sur le point initial et l’accès alternatif n’est pas reconnu.", "tasks":["Rédigez les informations à vérifier avant d’engager le déplacement.","Attribuez les rôles de vérification, liaison organisateur et coordination conducteur.","Proposez une décision provisoire compatible avec les moyens disponibles.","Préparez un mini-briefing et un critère de bascule vers une alternative."], "criteria":["Données confirmées séparées des hypothèses", "Vérification de l’accès et du point véhicule", "Rôles et canal de communication clairs", "Validation de l’alternative avant engagement"], "example":"L’équipe confirme la durée du blocage auprès de l’organisateur, vérifie le cheminement alternatif et son point d’embarquement, puis informe le conducteur. Le client reçoit une explication sobre du délai ou de la variante. Aucun déplacement vers un accès inconnu n’est présenté comme sûr par défaut. Le briefing précise qui donne le départ et comment gérer une nouvelle indisponibilité.", "debrief":"L’étude prépare le raisonnement. La reconnaissance, le placement, les transitions et la conduite doivent être exercés et évalués en présentiel."},
-  "07": {"title":"Suspicion de suivi et protection de l’information", "situation":"Un même véhicule a été remarqué à 09 h 10 près de l’hôtel puis à 09 h 35 près du lieu de réunion. Un collègue propose de publier sa plaque dans un groupe public et de le suivre. Vous disposez d’un responsable de mission joignable.", "tasks":["Rédigez les observations avec leur niveau de certitude.","Expliquez les risques des deux propositions du collègue.","Proposez une transmission et une adaptation compatibles avec la protection du client.","Définissez les destinataires nécessaires du compte rendu."], "criteria":["Suspicion distinguée d’une preuve", "Pas de poursuite improvisée", "Pas de diffusion publique de données", "Relais hiérarchique et réévaluation du dispositif"], "example":"Je transmets les deux observations datées au responsable, en précisant leurs limites. Je ne présente pas le véhicule comme hostile sans autre élément. Une poursuite pourrait exposer l’équipe et abandonner le client ; une publication publique diffuserait des données et une accusation non vérifiée. L’équipe réévalue le déplacement et les possibilités de mise en sûreté selon les consignes.", "debrief":"Évaluez la qualité de votre raisonnement à partir des faits disponibles, sans inventer des éléments pour confirmer votre hypothèse."},
-  "08": {"title":"Évacuation d’un événement et accès indisponible", "situation":"Pendant un événement, une alarme retentit. Le personnel du site demande l’évacuation. La sortie empruntée à l’arrivée est maintenant encombrée ; un agent du site indique une autre issue. Le conducteur n’a pas encore été informé.", "tasks":["Identifiez les priorités immédiates et les interlocuteurs.","Expliquez comment vérifier et suivre le cheminement utilisable.","Préparez le message au conducteur sans gêner l’évacuation.","Prévoyez le regroupement et le compte rendu."], "criteria":["Respect des consignes d’évacuation", "Prise en compte du cheminement réel", "Coordination de l’équipe sans exposition inutile", "Regroupement, contrôle des personnes et information du responsable"], "example":"L’équipe suit les consignes du site et se coordonne avec l’agent qui indique l’issue utilisable. Elle conserve la continuité de l’accompagnement et informe le conducteur du changement, sans lui demander d’approcher une zone dangereuse. Au point sûr prévu ou confirmé, elle rend compte de sa position et de la présence des personnes. Aucun retour dans le bâtiment n’est improvisé.", "debrief":"Une alarme n’autorise pas l’agent à remplacer l’organisation de sécurité du site. La pratique d’évacuation et l’usage d’extincteurs relèvent d’un encadrement adapté."},
-  "09": {"title":"Organiser une alerte et un relais de secours", "situation":"Après un incident, deux personnes sont blessées dans un hall. L’équipe est à l’abri dans une zone indiquée comme accessible par le responsable du site, mais elle ne connaît pas l’ensemble des dangers résiduels. Une victime répond aux questions ; l’autre présente une respiration anormale observée. Les secours sont appelés.", "tasks":["Distinguez les observations des informations manquantes.","Préparez une transmission avec localisation, accès, nombre de victimes et signes observés.","Indiquez les limites de vos compétences et l’importance des consignes des secours.","Prévoyez la réévaluation et les informations à conserver pour le relais."], "criteria":["Sécurité et dangers résiduels pris en compte", "Respiration anormale signalée rapidement", "Aucun diagnostic inventé ni geste technique non maîtrisé", "Transmission datée, évolution et actions réellement effectuées"], "example":"J’indique le lieu exact, l’accès signalé utilisable et le nombre de victimes. Je précise qu’une personne répond et qu’une autre présente une respiration anormale, sans poser de diagnostic. Je signale les incertitudes sur les dangers résiduels, suis les instructions des secours et n’effectue que les gestes relevant de ma formation. Je surveille l’évolution et transmets les horaires et actions réellement réalisés.", "debrief":"Aucun QCM ni cas écrit ne valide le SST ou le secourisme tactique. Les gestes, matériels, extractions et transmissions en situation doivent être formés et évalués en présentiel."}
+  "02": {
+    "title": "Une demande du client dépasse la mission",
+    "situation": "À la sortie d’un hôtel, un photographe prend des clichés depuis le trottoir. Le client vous demande de prendre son téléphone et de le retenir jusqu’à l’arrivée de son avocat. Aucun acte violent ni délit flagrant n’est constaté.",
+    "tasks": [
+      "Séparez les faits observés de la demande du client.",
+      "Expliquez deux limites juridiques applicables.",
+      "Formulez une réponse au client et une alternative de protection.",
+      "Rédigez quatre lignes de compte rendu factuel."
+    ],
+    "criteria": [
+      "Absence de pouvoir général de saisie ou de rétention",
+      "Pas d’application automatique de l’article 73",
+      "Respect des libertés et prévention de l’escalade",
+      "Solution concrète et compte rendu neutre"
+    ],
+    "example": "Je constate une prise de vues depuis l’espace public et une demande de saisie. La demande privée ne crée pas un pouvoir de police. Je propose au client de rejoindre l’accès convenu ou un espace à l’abri des regards, sans saisir le téléphone ni retenir le photographe. Je rends compte de l’heure, du lieu, des faits et de la solution proposée. Si des faits nouveaux apparaissent, la situation doit être réévaluée.",
+    "debrief": "À discuter avec le formateur : quelles circonstances nouvelles changeraient l’analyse ? Ne déduisez jamais une autorisation d’intervention du seul inconfort du client.",
+    "steps": [
+      {
+        "prompt": "Quel fait établissez-vous au départ ?",
+        "options": [
+          "Une autorisation de saisir l’appareil donnée par le client",
+          "Une prise de vues et une demande du client, sans violence ni délit flagrant constaté",
+          "Une infraction certaine parce que le client est contrarié"
+        ],
+        "answer": 1,
+        "feedback": "Les faits décrits ne permettent pas d’inventer un pouvoir de saisie ou de rétention."
+      },
+      {
+        "prompt": "Quelle réponse proposez-vous au client ?",
+        "options": [
+          "Rejoindre un espace moins exposé par le cheminement convenu",
+          "Retenir le photographe pendant que l’avocat vient",
+          "Effacer les images pour régler rapidement le problème"
+        ],
+        "answer": 0,
+        "feedback": "Une solution licite agit sur l’exposition du client et préserve les libertés du tiers."
+      },
+      {
+        "prompt": "Quelle trace conserver ?",
+        "options": [
+          "Une accusation de harcèlement présentée comme certaine",
+          "La photo du téléphone publiée dans un groupe ouvert",
+          "L’heure, le lieu, les faits observés, la demande reçue et la solution proposée"
+        ],
+        "answer": 2,
+        "feedback": "Le compte rendu distingue le constat, la demande et la réponse ; les qualifications ne sont pas inventées."
+      }
+    ]
+  },
+  "03": {
+    "title": "Refus d’accès et montée de tension",
+    "situation": "Un visiteur non annoncé insiste pour entrer dans un salon privé. Il hausse la voix et conteste votre consigne, mais ne porte pas de coups. L’accueil peut joindre l’organisateur et une sortie latérale reste libre.",
+    "tasks": [
+      "Relevez les signes observables et les ressources disponibles.",
+      "Écrivez une phrase d’écoute puis une limite claire.",
+      "Proposez une option réalisable et définissez le moment du relais.",
+      "Identifiez ce qui imposerait de réévaluer la distance et la protection."
+    ],
+    "criteria": [
+      "Faits séparés des jugements",
+      "Ton calme et absence d’humiliation",
+      "Limite intelligible et solution vérifiable",
+      "Relais anticipé sans promesse irréalisable"
+    ],
+    "example": "Je comprends que vous souhaitez rejoindre le salon. L’accès nécessite une confirmation de l’organisateur. Je vous propose d’attendre ici pendant que l’accueil le contacte. Je conserve un espace adapté, informe mon collègue et surveille l’évolution de la situation. Si le danger augmente, je réévalue le dispositif et sollicite le relais prévu.",
+    "debrief": "Jouez ensuite cet échange avec le formateur : la posture, la distance et l’adaptation réelle ne se valident pas à l’écran.",
+    "steps": [
+      {
+        "prompt": "Quelle entrée en dialogue est adaptée ?",
+        "options": [
+          "Je comprends que vous souhaitez rejoindre le salon ; je vais faire vérifier votre accès.",
+          "Vous criez donc vous n’entrerez jamais.",
+          "Vous pouvez entrer, nous vérifierons plus tard."
+        ],
+        "answer": 0,
+        "feedback": "L’écoute ouvre le dialogue sans supprimer la limite d’accès."
+      },
+      {
+        "prompt": "Quelle option concrète pouvez-vous proposer ?",
+        "options": [
+          "Promettre que l’organisateur répondra en une minute",
+          "Affirmer que la police arrive alors qu’aucun appel n’a été fait",
+          "Attendre au point indiqué pendant que l’accueil joint l’organisateur"
+        ],
+        "answer": 2,
+        "feedback": "Une option réalisable évite les promesses inventées et donne un cadre à l’attente."
+      },
+      {
+        "prompt": "La personne se rapproche rapidement en vous menaçant. Que réévaluez-vous ?",
+        "options": [
+          "Uniquement le statut commercial du visiteur",
+          "La distance, la protection des personnes et le besoin de relais",
+          "Seulement le choix des mots pour terminer la phrase"
+        ],
+        "answer": 1,
+        "feedback": "Un fait nouveau peut modifier la priorité de sécurité. La posture réelle doit être travaillée en présentiel."
+      }
+    ]
+  },
+  "04": {
+    "title": "Du constat au message opérationnel",
+    "situation": "À 14 h 20, l’accès nord du centre de congrès est fermé par l’exploitant à cause d’une fuite d’eau. Le client arrive à 14 h 35. L’accès est existe mais sa disponibilité n’a pas encore été confirmée.",
+    "tasks": [
+      "Rédigez un message radio de moins de 45 mots.",
+      "Distinguez l’information confirmée et celle à vérifier.",
+      "Indiquez la décision ou confirmation attendue.",
+      "Transformez ensuite le message en entrée de main courante."
+    ],
+    "criteria": [
+      "Heure et localisation",
+      "Fermeture confirmée et motif attribué à l’exploitant",
+      "Alternative présentée comme non confirmée",
+      "Demande explicite et absence de donnée privée inutile"
+    ],
+    "example": "Équipe accueil, ici point nord. À 14 h 20, accès nord fermé par l’exploitant pour fuite d’eau. Arrivée prévue à 14 h 35. Merci de confirmer la disponibilité de l’accès est avant réorientation. Je reste au point convenu et attends votre retour. La main courante ajoute l’auteur du constat et la suite effectivement donnée.",
+    "debrief": "Faites relire le message par quelqu’un qui ne connaît pas la scène : sait-il où est le problème et ce qu’il doit faire ?",
+    "steps": [
+      {
+        "prompt": "Quelle information est confirmée à 14 h 20 ?",
+        "options": [
+          "L’accès est est disponible",
+          "L’arrivée du client est annulée",
+          "L’accès nord est fermé par l’exploitant pour fuite d’eau"
+        ],
+        "answer": 2,
+        "feedback": "Le récit confirme la fermeture du nord ; il ne confirme ni l’autre accès ni un changement d’horaire."
+      },
+      {
+        "prompt": "Quelle demande ajouter au message radio ?",
+        "options": [
+          "Ne me répondez pas avant l’arrivée du client.",
+          "Merci de confirmer la disponibilité de l’accès est avant réorientation.",
+          "Allez tous à l’accès est immédiatement."
+        ],
+        "answer": 1,
+        "feedback": "La demande précise ce qui doit être vérifié et évite d’engager l’équipe sur une hypothèse."
+      },
+      {
+        "prompt": "Le responsable confirme finalement l’accès est. Quelle suite tracer ?",
+        "options": [
+          "L’heure de confirmation, sa source et la réorientation décidée",
+          "Une confirmation supposée reçue dès 14 h 20",
+          "Aucune suite : le premier constat suffit"
+        ],
+        "answer": 0,
+        "feedback": "La main courante doit permettre de reconstituer la chronologie réelle, y compris les décisions ultérieures."
+      }
+    ]
+  },
+  "05": {
+    "title": "Un objet inhabituel près du cheminement",
+    "situation": "Avant un passage du client, un bagage isolé est découvert près de l’accès prévu. Son origine n’est pas connue. Aucun contenu n’est visible et le personnel du site n’a pas encore été interrogé.",
+    "tasks": [
+      "Décrivez seulement ce qui est établi.",
+      "Proposez une mesure de réduction de l’exposition.",
+      "Rédigez l’alerte au responsable du site et précisez les informations manquantes.",
+      "Indiquez ce que vous ne devez pas improviser."
+    ],
+    "criteria": [
+      "Pas de conclusion certaine sur la nature de l’objet",
+      "Absence de manipulation",
+      "Cheminement du client réévalué",
+      "Alerte et coordination avec les acteurs compétents"
+    ],
+    "example": "Je signale un bagage isolé, sa localisation et l’heure de découverte, sans affirmer qu’il contient un engin. Je n’y touche pas. J’évite d’engager le client à proximité, informe le responsable sécurité et applique les consignes de mise à distance et d’alerte. Une variante n’est retenue qu’après vérification de sa disponibilité.",
+    "debrief": "Les distances et décisions opérationnelles dépendent du risque et des consignes compétentes. Cet exercice n’enseigne aucune intervention sur un objet suspect.",
+    "steps": [
+      {
+        "prompt": "Comment qualifier l’objet au premier signalement ?",
+        "options": [
+          "Un objet sans danger puisque rien n’est visible",
+          "Un bagage isolé dont l’origine n’est pas connue",
+          "Un engin explosif confirmé"
+        ],
+        "answer": 1,
+        "feedback": "Le signalement décrit le constat sans conclure sur le contenu inconnu."
+      },
+      {
+        "prompt": "Quelle action immédiate est cohérente ?",
+        "options": [
+          "Éviter d’engager le client à proximité et prévenir le responsable sécurité",
+          "Ouvrir le bagage pour lever le doute",
+          "Déplacer le bagage hors du cheminement"
+        ],
+        "answer": 0,
+        "feedback": "La protection et l’alerte priment ; l’objet n’est pas manipulé."
+      },
+      {
+        "prompt": "Une variante est proposée. Que faut-il encore faire ?",
+        "options": [
+          "La considérer sûre parce qu’elle est différente",
+          "Y envoyer le client seul pour gagner du temps",
+          "Vérifier sa disponibilité avec les interlocuteurs compétents"
+        ],
+        "answer": 2,
+        "feedback": "Changer de cheminement ne suffit pas : l’alternative doit être évaluée et coordonnée."
+      }
+    ]
+  },
+  "06": {
+    "title": "Préparer une visite avec changement de programme",
+    "situation": "Le client doit participer à une conférence de 18 h à 19 h, puis quitter le site par une entrée réservée. À 17 h 40, l’organisateur annonce que cette entrée est occupée par une livraison. Le conducteur attend sur le point initial et l’accès alternatif n’est pas reconnu.",
+    "tasks": [
+      "Rédigez les informations à vérifier avant d’engager le déplacement.",
+      "Attribuez les rôles de vérification, liaison organisateur et coordination conducteur.",
+      "Proposez une décision provisoire compatible avec les moyens disponibles.",
+      "Préparez un mini-briefing et un critère de bascule vers une alternative."
+    ],
+    "criteria": [
+      "Données confirmées séparées des hypothèses",
+      "Vérification de l’accès et du point véhicule",
+      "Rôles et canal de communication clairs",
+      "Validation de l’alternative avant engagement"
+    ],
+    "example": "L’équipe confirme la durée du blocage auprès de l’organisateur, vérifie le cheminement alternatif et son point d’embarquement, puis informe le conducteur. Le client reçoit une explication sobre du délai ou de la variante. Aucun déplacement vers un accès inconnu n’est présenté comme sûr par défaut. Le briefing précise qui donne le départ et comment gérer une nouvelle indisponibilité.",
+    "debrief": "L’étude prépare le raisonnement. La reconnaissance, le placement, les transitions et la conduite doivent être exercés et évalués en présentiel.",
+    "steps": [
+      {
+        "prompt": "Quelle donnée manque pour décider du départ ?",
+        "options": [
+          "La disponibilité et les conditions du cheminement alternatif",
+          "La marque des bagages du client",
+          "La couleur du véhicule de livraison"
+        ],
+        "answer": 0,
+        "feedback": "L’entrée initiale est bloquée et la variante inconnue : leur situation conditionne l’organisation."
+      },
+      {
+        "prompt": "Qui doit être informé du changement de point d’embarquement ?",
+        "options": [
+          "Seulement l’organisateur",
+          "Uniquement le client, qui transmettra",
+          "Le conducteur et les membres concernés du dispositif"
+        ],
+        "answer": 2,
+        "feedback": "Les rôles et communications doivent éviter une rupture entre accompagnement et prise en charge."
+      },
+      {
+        "prompt": "Le nouvel accès reste non vérifié à l’heure du départ. Que proposer ?",
+        "options": [
+          "Laisser chaque agent choisir sa propre direction",
+          "Faire arbitrer un délai ou une autre solution maîtrisée par le responsable",
+          "Engager le client en annonçant une sécurité garantie"
+        ],
+        "answer": 1,
+        "feedback": "Une contrainte de délai ne transforme pas une inconnue en option sûre."
+      }
+    ]
+  },
+  "07": {
+    "title": "Suspicion de suivi et protection de l’information",
+    "situation": "Un même véhicule a été remarqué à 09 h 10 près de l’hôtel puis à 09 h 35 près du lieu de réunion. Un collègue propose de publier sa plaque dans un groupe public et de le suivre. Vous disposez d’un responsable de mission joignable.",
+    "tasks": [
+      "Rédigez les observations avec leur niveau de certitude.",
+      "Expliquez les risques des deux propositions du collègue.",
+      "Proposez une transmission et une adaptation compatibles avec la protection du client.",
+      "Définissez les destinataires nécessaires du compte rendu."
+    ],
+    "criteria": [
+      "Suspicion distinguée d’une preuve",
+      "Pas de poursuite improvisée",
+      "Pas de diffusion publique de données",
+      "Relais hiérarchique et réévaluation du dispositif"
+    ],
+    "example": "Je transmets les deux observations datées au responsable, en précisant leurs limites. Je ne présente pas le véhicule comme hostile sans autre élément. Une poursuite pourrait exposer l’équipe et abandonner le client ; une publication publique diffuserait des données et une accusation non vérifiée. L’équipe réévalue le déplacement et les possibilités de mise en sûreté selon les consignes.",
+    "debrief": "Évaluez la qualité de votre raisonnement à partir des faits disponibles, sans inventer des éléments pour confirmer votre hypothèse.",
+    "steps": [
+      {
+        "prompt": "Que démontrent les deux observations ?",
+        "options": [
+          "La preuve définitive d’une attaque en préparation",
+          "La nécessité de suivre le véhicule à tout prix",
+          "Une répétition à analyser, sans certitude sur une intention hostile"
+        ],
+        "answer": 2,
+        "feedback": "Des observations répétées justifient une analyse, mais restent distinctes d’une preuve d’intention."
+      },
+      {
+        "prompt": "Que faites-vous de la proposition de diffusion publique ?",
+        "options": [
+          "Je joins aussi l’itinéraire confidentiel du client",
+          "Je la refuse et transmets les informations utiles par le canal autorisé",
+          "Je publie la plaque avec une accusation pour obtenir des avis"
+        ],
+        "answer": 1,
+        "feedback": "La diffusion doit rester nécessaire, maîtrisée et respectueuse des droits des personnes."
+      },
+      {
+        "prompt": "Quelle priorité maintenez-vous ?",
+        "options": [
+          "La protection du client et la réévaluation avec le responsable",
+          "La poursuite du véhicule par toute l’équipe",
+          "L’abandon de la communication pour rester discret"
+        ],
+        "answer": 0,
+        "feedback": "La mission est de protéger la personne, sans improviser une enquête coercitive ou une poursuite."
+      }
+    ]
+  },
+  "08": {
+    "title": "Évacuation d’un événement et accès indisponible",
+    "situation": "Pendant un événement, une alarme retentit. Le personnel du site demande l’évacuation. La sortie empruntée à l’arrivée est maintenant encombrée ; un agent du site indique une autre issue. Le conducteur n’a pas encore été informé.",
+    "tasks": [
+      "Identifiez les priorités immédiates et les interlocuteurs.",
+      "Expliquez comment vérifier et suivre le cheminement utilisable.",
+      "Préparez le message au conducteur sans gêner l’évacuation.",
+      "Prévoyez le regroupement et le compte rendu."
+    ],
+    "criteria": [
+      "Respect des consignes d’évacuation",
+      "Prise en compte du cheminement réel",
+      "Coordination de l’équipe sans exposition inutile",
+      "Regroupement, contrôle des personnes et information du responsable"
+    ],
+    "example": "L’équipe suit les consignes du site et se coordonne avec l’agent qui indique l’issue utilisable. Elle conserve la continuité de l’accompagnement et informe le conducteur du changement, sans lui demander d’approcher une zone dangereuse. Au point sûr prévu ou confirmé, elle rend compte de sa position et de la présence des personnes. Aucun retour dans le bâtiment n’est improvisé.",
+    "debrief": "Une alarme n’autorise pas l’agent à remplacer l’organisation de sécurité du site. La pratique d’évacuation et l’usage d’extincteurs relèvent d’un encadrement adapté.",
+    "steps": [
+      {
+        "prompt": "Quelle instruction doit être prise en compte immédiatement ?",
+        "options": [
+          "L’habitude de toujours attendre une seconde alarme",
+          "La demande d’évacuation donnée par le personnel du site",
+          "La volonté de reprendre obligatoirement l’entrée initiale"
+        ],
+        "answer": 1,
+        "feedback": "Les consignes du site organisent la réponse ; le cheminement réellement utilisable doit être pris en compte."
+      },
+      {
+        "prompt": "Quel message adresser au conducteur ?",
+        "options": [
+          "Informer du changement et convenir d’un point sûr selon les consignes",
+          "Exiger qu’il approche au plus près de l’alarme",
+          "Lui demander de bloquer l’issue indiquée"
+        ],
+        "answer": 0,
+        "feedback": "La coordination du véhicule ne doit pas accroître l’exposition ni gêner l’évacuation."
+      },
+      {
+        "prompt": "Une fois à l’abri, que reste-t-il à faire ?",
+        "options": [
+          "Revenir seul chercher un objet oublié",
+          "Quitter le dispositif sans signaler sa position",
+          "Vérifier les personnes, rendre compte et attendre les consignes adaptées"
+        ],
+        "answer": 2,
+        "feedback": "Le regroupement et la transmission complètent l’évacuation et facilitent l’action des responsables."
+      }
+    ]
+  },
+  "09": {
+    "title": "Organiser une alerte et un relais de secours",
+    "situation": "Après un incident, deux personnes sont blessées dans un hall. L’équipe est à l’abri dans une zone indiquée comme accessible par le responsable du site, mais elle ne connaît pas l’ensemble des dangers résiduels. Une victime répond aux questions ; l’autre présente une respiration anormale observée. Les secours sont appelés.",
+    "tasks": [
+      "Distinguez les observations des informations manquantes.",
+      "Préparez une transmission avec localisation, accès, nombre de victimes et signes observés.",
+      "Indiquez les limites de vos compétences et l’importance des consignes des secours.",
+      "Prévoyez la réévaluation et les informations à conserver pour le relais."
+    ],
+    "criteria": [
+      "Sécurité et dangers résiduels pris en compte",
+      "Respiration anormale signalée rapidement",
+      "Aucun diagnostic inventé ni geste technique non maîtrisé",
+      "Transmission datée, évolution et actions réellement effectuées"
+    ],
+    "example": "J’indique le lieu exact, l’accès signalé utilisable et le nombre de victimes. Je précise qu’une personne répond et qu’une autre présente une respiration anormale, sans poser de diagnostic. Je signale les incertitudes sur les dangers résiduels, suis les instructions des secours et n’effectue que les gestes relevant de ma formation. Je surveille l’évolution et transmets les horaires et actions réellement réalisés.",
+    "debrief": "Aucun QCM ni cas écrit ne valide le SST ou le secourisme tactique. Les gestes, matériels, extractions et transmissions en situation doivent être formés et évalués en présentiel.",
+    "steps": [
+      {
+        "prompt": "Quelle information signalez-vous rapidement aux secours ?",
+        "options": [
+          "La respiration anormale observée, avec le lieu et les accès connus",
+          "Un diagnostic certain de lésion interne",
+          "La garantie qu’aucun danger ne subsiste"
+        ],
+        "answer": 0,
+        "feedback": "Les secours ont besoin de signes observés et des limites de connaissance de la scène."
+      },
+      {
+        "prompt": "Quelle limite encadre vos actions ?",
+        "options": [
+          "La seule présence d’un matériel dans un sac",
+          "Le souhait d’imiter une technique vue en vidéo",
+          "Les gestes appris, la sécurité et les instructions des secours"
+        ],
+        "answer": 2,
+        "feedback": "La compétence ne résulte pas de la disponibilité du matériel ou d’un cours à l’écran."
+      },
+      {
+        "prompt": "Que transmettez-vous lors du relais ?",
+        "options": [
+          "La seule identité du client",
+          "Les observations, leurs évolutions, les horaires et les actions réellement effectuées",
+          "Des actions imaginées pour compléter le bilan"
+        ],
+        "answer": 1,
+        "feedback": "Une transmission factuelle permet la continuité des secours ; elle ne remplace pas leur évaluation."
+      }
+    ]
+  }
 }

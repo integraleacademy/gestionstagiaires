@@ -57,6 +57,20 @@ def curriculum_ids():
     return ['academy-a3p-' + uv for uv in MODULES]
 
 
+def _video(uv):
+    path = ROOT / 'assets' / 'media' / 'a3p' / 'v1' / ('uv-' + uv + '.json')
+    return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else None
+
+
+def bundled_asset(course_id, version, name):
+    course = load_bundled_course(course_id, version)
+    if course is None or name not in course.get('assets', []):
+        return None
+    root = (ROOT / 'assets').resolve()
+    path = (root / name).resolve()
+    return path if root in path.parents and path.is_file() else None
+
+
 def curriculum_manifest():
     manual = _manual()
     review = json.loads((ROOT / 'regulatory_review.json').read_text(encoding='utf-8'))
@@ -65,6 +79,7 @@ def curriculum_manifest():
         lessons = [l for l in manual['lessons'] if l['ref'].startswith(uv + '.')]
         modules.append({'id': 'academy-a3p-' + uv, 'uv': uv, 'title': title,
                         'objective': objective, 'flow': flow, 'version': VERSION,
+                        'video_minutes': round((_video(uv) or {}).get('duration_seconds', 0) / 60, 1),
                         'lesson_count': len(lessons), 'lessons': [
                             {'ref': l['ref'], 'title': l['title'], 'activity': 'a3p-' + l['ref'].replace('.', '-') + '-cours'} for l in lessons],
                         'question_count': sum(q['module'] == 'UV ' + uv for q in _questions()),
@@ -72,7 +87,8 @@ def curriculum_manifest():
     return {'version': VERSION, 'training_label': 'A3P', 'preview_only': True, 'notice': NOTICE,
             'modules': modules, 'lesson_count': len(manual['lessons']), 'question_count': len(_questions()),
             'reading_page_count': sum(len(l['pages']) for l in manual['lessons']),
-            'case_count': len(MODULES), 'final_exam_id': 'a3p-final', 'regulatory_review': review}
+            'case_count': len(MODULES), 'video_count': sum(bool(_video(uv)) for uv in MODULES),
+            'video_minutes': round(sum((_video(uv) or {}).get('duration_seconds', 0) for uv in MODULES) / 60, 1), 'final_exam_id': 'a3p-final', 'regulatory_review': review}
 
 
 @lru_cache(maxsize=8)
@@ -100,17 +116,23 @@ def _course(uv):
                      'activities': [{'id': 'a3p-' + uv + '-cas', 'title': cases[uv]['title'],
                                      'type': 'content', 'scored': False, 'blocks': [],
                                      'a3p': {'kind': 'case', 'case': cases[uv], 'flow': flow}}]})
+    video = _video(uv)
+    assets = []
+    if video:
+        assets = [video[key] for key in ('src', 'poster', 'captions')]
+        sections[0]['activities'][0]['blocks'].append(
+            {'id': video['id'], 'type': 'video', 'html': '', 'children': [], 'video': video})
     activities = [a for s in sections for a in s['activities']]
     return {'id': 'academy-a3p-' + uv, 'version': VERSION, 'format_version': 1,
             'title': 'A3P · UV ' + uv + ' · ' + title, 'training_label': 'A3P',
             'preview_only': True, 'required_minutes': 0, 'planned_minutes': 0,
             'description': objective, 'source': {'type': 'academy-a3p', 'sha256': _manual()['source']['text_sha256']},
-            'mock_exam_id': 'a3p-module-' + uv, 'assets': [], 'import_warnings': [],
+            'mock_exam_id': 'a3p-module-' + uv, 'assets': assets, 'import_warnings': [],
             'theme': {'main_color': '#135846', 'button_color': '#135846', 'text_color': '#172f29'},
             'settings': {'mastery_score': 80, 'require_correct_answers': True},
             'introduction': [], 'sections': sections, 'activity_order': [a['id'] for a in activities],
             'counts': {'sections': len(sections), 'activities': len(activities),
-                       'scored_activities': sum(bool(a['scored']) for a in activities), 'assets': 0, 'required_videos': 0}}
+                       'scored_activities': sum(bool(a['scored']) for a in activities), 'assets': len(assets), 'required_videos': 0}}
 
 
 def load_bundled_course(course_id, version=None):

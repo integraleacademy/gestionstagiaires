@@ -128,7 +128,7 @@
 
     <main class="native-main">
       <div class="native-main__inner">
-        {% if preview_mode %}
+        {% if preview_mode and course.training_label != 'A3P' %}
         <section class="native-preview-notice" aria-label="Mode aperçu">
           <strong>Visualisation du contenu</strong>
           <p>Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.</p>
@@ -281,6 +281,7 @@
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261007-6-1') }}" defer></script>{% endif %}
 {% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261010-v6') }}" defer></script>{% endif %}
+{% if activity.a3p and activity.a3p.kind == 'case' %}<script src="{{ url_for('static', filename='js/a3p-elearning.js', v='20261010-1') }}" defer></script>{% endif %}
 {% if activity.production %}<script src="{{ url_for('static', filename='js/aps62-production.js', v='20261010-v10') }}" defer></script>{% endif %}
 </body>
 </html>

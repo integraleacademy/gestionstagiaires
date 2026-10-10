@@ -1,5 +1,7 @@
 from __future__ import annotations
 import copy
+import os
+import hashlib
 import json
 import re
 import unittest
@@ -44,6 +46,8 @@ class A3PContentTests(unittest.TestCase):
             case = course['sections'][-1]['activities'][0]['a3p']['case']
             self.assertEqual(len(case['tasks']), 4)
             self.assertTrue(case['example'])
+            self.assertEqual(len(case['steps']), 3)
+            self.assertTrue(all(0 <= step['answer'] < len(step['options']) for step in case['steps']))
         self.assertEqual(len(refs), 94)
         self.assertEqual(len(ids), 242)
 
@@ -69,6 +73,27 @@ class A3PContentTests(unittest.TestCase):
                 grade_exam(exam, {})
         self.assertIsNone(load_exam('a3p-final', 'unknown'))
         self.assertIsNone(load_exam('a3p-module-01', a3p.VERSION))
+
+    def test_video_metadata_and_assets_when_built(self):
+        manifest = a3p.curriculum_manifest()
+        if os.environ.get('A3P_REQUIRE_MEDIA') == '1':
+            self.assertEqual(manifest['video_count'], 8)
+        for uv in a3p.MODULES:
+            video = a3p._video(uv)
+            if not video:
+                continue
+            self.assertEqual(video['voice'], 'fr-FR-HenriNeural')
+            self.assertTrue(video['burned_captions'])
+            self.assertGreater(video['duration_seconds'], 120)
+            self.assertEqual(video['chapters'][0]['start_seconds'], 0)
+            self.assertLessEqual(video['chapters'][-1]['end_seconds'], video['duration_seconds'] + .5)
+            cid = 'academy-a3p-' + uv
+            for key in ('src', 'poster', 'captions'):
+                path = a3p.bundled_asset(cid, a3p.VERSION, video[key])
+                self.assertTrue(path and path.is_file())
+            self.assertIsNone(a3p.bundled_asset(cid, a3p.VERSION, '../../manual.json'))
+            self.assertIsNone(a3p.bundled_asset(cid, 'unknown', video['src']))
+            self.assertEqual(hashlib.sha256(a3p.bundled_asset(cid, a3p.VERSION, video['src']).read_bytes()).hexdigest(), video['video_sha256'])
 
     def test_versions_and_cached_content_cannot_be_mutated(self):
         c = a3p.load_bundled_course('academy-a3p-02')

@@ -992,6 +992,8 @@ class CourseCatalog:
             raise CourseImportError("Chemin de média invalide.")
         if bundled := bundled_asset(course_id, version, normalized):
             return bundled
+        if bundled := a3p.bundled_asset(course_id, version, normalized):
+            return bundled
         if bundled := vtc.bundled_asset(course_id, version, normalized):
             return bundled
         if bundled := bundled_asset_path(course_id, version, normalized):
