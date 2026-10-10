@@ -699,7 +699,7 @@ def create_native_elearning_blueprint(
         return result
 
     def _is_aps_training(session_obj: Mapping[str, Any]) -> bool:
-        return str(session_obj.get("training_type") or "").strip().upper().startswith("APS") or "VTC" in str(session_obj.get("training_type") or "").upper()
+        return str(session_obj.get("training_type") or "").strip().upper().startswith("APS") or any(label in str(session_obj.get("training_type") or "").upper() for label in ("VTC", "A3P"))
 
     def _admin_upload_nonce() -> str:
         nonce = str(session.get("native_elearning_admin_upload_nonce") or "")
@@ -838,20 +838,25 @@ def create_native_elearning_blueprint(
                 abort(404, 'Cet examen n’appartient pas à la version affectée.')
             exam = load_exam(exam_id, course['version'])
             back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
+        elif re.fullmatch(r'a3p-module-0[2-9]', exam_id):
+            session_obj, trainee, course = learner_context(token, 'academy-a3p-' + exam_id[-2:])
+            if course.get('mock_exam_id') != exam_id: abort(404)
+            exam = load_exam(exam_id, course['version'])
+            back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
         elif re.fullmatch(r'vtc-[a-h]', exam_id):
             session_obj, trainee, course = learner_context(token, 'academy-' + exam_id)
             if course.get('mock_exam_id') != exam_id: abort(404)
             exam = load_exam(exam_id, course['version'])
             back_url = url_for('native_elearning.course_player', token=token, course_id=course['id'])
-        elif exam_id in {'final','vtc-final'}:
+        elif exam_id in {'final','vtc-final','a3p-final'}:
             session_obj, trainee = learner_session(token)
             modules = load_path(session_obj)
             is_vtc = exam_id == 'vtc-final'
-            final_manifest = vtc.curriculum_manifest() if is_vtc else curriculum_manifest()
+            final_manifest = a3p.curriculum_manifest() if exam_id == 'a3p-final' else vtc.curriculum_manifest() if is_vtc else curriculum_manifest()
             expected = {m['id'] for m in final_manifest['modules']}
             academy = [m for m in modules if m['course'] and m['course']['id'] in expected]
             if {m['course']['id'] for m in academy} != expected:
-                abort(403, 'L’examen final nécessite l’affectation de tous les modules du parcours ' + ('VTC.' if is_vtc else 'APS.'))
+                abort(403, 'L’examen final nécessite l’affectation de tous les modules du parcours ' + ('A3P.' if exam_id == 'a3p-final' else 'VTC.' if is_vtc else 'APS.'))
             versions = {m['course']['version'] for m in academy}
             if len(versions) != 1:
                 abort(403, 'Les modules de cet examen doivent appartenir à la même édition.')
@@ -861,6 +866,8 @@ def create_native_elearning_blueprint(
                 c = m['course']
                 # A selection of only part of a module does not unlock the final.
                 full = catalog().load_course(c['id'],c['version'])
+                if c.get('training_label') == 'A3P':
+                    full = project_course(full, {'required_minutes': full['required_minutes']})
                 if set(c['activity_order']) != set(full['activity_order']) or not project_progress(by_key.get((c['id'],c['version']),{}),c)['module_complete']:
                     abort(403, 'Terminez tous les modules complets et leurs durées obligatoires pour ouvrir l’examen final.')
             exam = load_exam(exam_id, versions.pop())
@@ -1055,7 +1062,7 @@ def create_native_elearning_blueprint(
                 outlines[(outline["course_id"], outline["course_version"])] = outline
         return render_template(
             "admin_native_elearning_path.html", training_session=session_obj,
-            training_label="VTC" if "VTC" in str(session_obj.get("training_type") or "").upper() else "APS",
+            training_label="A3P" if "A3P" in str(session_obj.get("training_type") or "").upper() else "VTC" if "VTC" in str(session_obj.get("training_type") or "").upper() else "APS",
             path_config={
                 "catalog": list(outlines.values()), "modules": assigned_modules(session_obj),
                 "revision": path_revision(session_obj), "csrfToken": _csrf_token(),
@@ -1298,8 +1305,10 @@ def create_native_elearning_blueprint(
                 course = catalog().load_course(course_id)
             except CourseImportError:
                 abort(404)
+            if course.get("training_label") == "A3P":
+                abort(409, "Utilisez le composeur A3P pour affecter les objectifs à distance avec leurs durées minimales.")
             if course.get("preview_only"):
-                abort(409, "Le parcours A3P est disponible uniquement en aperçu pédagogique.")
+                abort(409, "Cette édition est disponible uniquement en aperçu pédagogique.")
             session_obj["aps_native_course_id"] = course["id"]
             session_obj["aps_native_course_version"] = course["version"]
             flash(f"Cours « {course.get('title')} » affecté à la session.", "success")
@@ -1531,12 +1540,12 @@ def create_native_elearning_blueprint(
                 if progress["remaining_seconds"]:
                     blocker += f" Temps actif restant : {item['remaining_time_label']}."
         exam_modules = [m for m in modules if m['course'] and m['course'].get('mock_exam_id')]
-        matched_manifest = next((candidate for candidate in [curriculum_manifest(),vtc.curriculum_manifest()]
+        matched_manifest = next((candidate for candidate in [curriculum_manifest(),vtc.curriculum_manifest(),a3p.curriculum_manifest()]
             if {m['course']['id'] for m in exam_modules} == {m['id'] for m in candidate['modules']}),None)
         final_available = bool(matched_manifest and len({m['course']['version'] for m in exam_modules}) == 1)
         final_ready = final_available and all(m.get('complete') and set(m['course']['activity_order']) ==
-            set(catalog().load_course(m['course']['id'],m['course']['version'])['activity_order']) for m in exam_modules)
-        training_label = 'VTC' if 'VTC' in str(session_obj.get('training_type') or '').upper() else 'APS'
+            set(project_course(catalog().load_course(m['course']['id'],m['course']['version']), {'required_minutes': m['course']['required_minutes']})['activity_order']) for m in exam_modules)
+        training_label = 'A3P' if 'A3P' in str(session_obj.get('training_type') or '').upper() else 'VTC' if 'VTC' in str(session_obj.get('training_type') or '').upper() else 'APS'
         return render_template(
             "native_elearning_path.html", modules=modules,
             learner_brand=session_obj.get("learner_brand") or {},
@@ -1557,7 +1566,7 @@ def create_native_elearning_blueprint(
             final_exam_unlocked=final_ready,
             final_module_count=len(exam_modules),
             annales_url=url_for('native_elearning.annales_learner_catalog',token=token) if any(m['course'] and m['course']['id'].startswith('academy-vtc-') for m in modules) else '',
-            final_exam_description="Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
+            final_exam_description="Les 8 unités A3P" if training_label == "A3P" else "Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
         )
 
     @blueprint.get("/espace/<token>/elearning/<course_id>")

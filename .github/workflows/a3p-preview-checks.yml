@@ -1,7 +1,7 @@
-name: A3P — vérifier le parcours de préparation
+name: A3P — vérifier le parcours structuré et le périmètre à distance
 on:
   push:
-    branches: [codex/a3p-preparation-20261010, test-v2]
+    branches: [codex/a3p-correction-20261010, test-v2]
     paths:
       - elearning_native/a3p.py
       - elearning_native/a3p_resources/**

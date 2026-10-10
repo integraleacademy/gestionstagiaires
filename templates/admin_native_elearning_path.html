@@ -2,7 +2,7 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-2') }}">
 <div class="np-shell" id="nativePathBuilder">
-  <a class="np-back" href="{{ url_for('native_elearning.admin_vtc_catalog' if training_label == 'VTC' else 'native_elearning.admin_catalog') }}">← Bibliothèque et sessions</a>
+  <a class="np-back" href="{{ url_for('native_elearning.admin_a3p_catalog' if training_label == 'A3P' else 'native_elearning.admin_vtc_catalog' if training_label == 'VTC' else 'native_elearning.admin_catalog') }}">← Bibliothèque et sessions</a>
   <header class="np-header">
     <div><span class="np-eyebrow">Ingénierie pédagogique · {{ training_label }}</span><h1>Composer le parcours</h1><p>{{ training_session.name or training_session.id }} · {{ training_session.date_start or 'Date à renseigner' }}</p></div>
     <span class="np-badge">{{ 'E-learning activé' if training_session.aps_elearning_enabled else 'E-learning à activer dans la session' }}</span>
@@ -10,7 +10,7 @@
   <div class="np-layout">
     <aside class="np-library np-panel">
       <span class="np-eyebrow">1 · Ajouter</span><h2>Vos modules disponibles</h2>
-      {% if training_label == 'VTC' %}<div class="aps-preset"><button class="np-button np-button--primary" id="vtcAddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours VTC complet · 8 modules</button><p>96 leçons et leurs ateliers, 8 vidéos et les examens blancs. Base de 60 h pédagogiques : ajustez les durées avant d’enregistrer selon votre organisation.</p></div>{% else %}<div class="aps-preset"><button class="np-button np-button--primary" id="aps62AddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours illustré · 62 h</button><p>Ajoute les 15 modules et leurs durées. Pour le TFP APS ADEF, adaptez la sélection aux 50 h 30 de séquences autorisées à distance. L’enregistrement reste nécessaire.</p></div>{% endif %}
+      {% if training_label == 'A3P' %}<div class="aps-preset"><button class="np-button np-button--primary" id="a3pAddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours A3P à distance · 157 h 30</button><p>Objectifs OUI des annexes II et XI. Les préparations présentielles sont exclues. Chaque fraction comporte un questionnaire à valider ; les durées sont des minima à effectuer, jamais des heures créditées automatiquement.</p></div>{% elif training_label == 'VTC' %}<div class="aps-preset"><button class="np-button np-button--primary" id="vtcAddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours VTC complet · 8 modules</button><p>96 leçons et leurs ateliers, 8 vidéos et les examens blancs. Base de 60 h pédagogiques : ajustez les durées avant d’enregistrer selon votre organisation.</p></div>{% else %}<div class="aps-preset"><button class="np-button np-button--primary" id="aps62AddPath" type="button"{% if path_config.readOnly %} disabled{% endif %}>Ajouter le parcours illustré · 62 h</button><p>Ajoute les 15 modules et leurs durées. Pour le TFP APS ADEF, adaptez la sélection aux 50 h 30 de séquences autorisées à distance. L’enregistrement reste nécessaire.</p></div>{% endif %}
       <p>Un ZIP importé devient un module. Ajoutez-en autant que nécessaire, jusqu’à 100 par parcours.</p>
       <label class="np-field">Rechercher un module<input type="search" id="nativeModuleSearch" placeholder="Ex. cadre légal, intervention…"></label>
       <div id="nativeModuleLibrary" class="np-library-list"></div>
@@ -35,5 +35,5 @@
 </div>
 <script id="nativePathConfig" type="application/json">{{ path_config|tojson }}</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-catalog.css', v='20261003-1') }}">
-<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20261006-vtc') }}" defer></script>
+<script src="{{ url_for('static', filename='js/native-elearning-path.js', v='20261010-a3p-v2') }}" defer></script>
 {% endblock %}

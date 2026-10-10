@@ -45,6 +45,8 @@ try:
             page.locator('.a3p-reading').first.wait_for()
             page.screenshot(path=str(root/f'{label}-lesson.png'),full_page=False)
             assert page.locator('.a3p-reading').count()>=3
+            assert page.locator('.a3p-nav-chapter[open]').count()==1
+            assert 'Vérifier mes connaissances' not in page.locator('.native-course-nav').inner_text()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), label+' lesson overflow'
             page.goto('http://a3p.test/admin/elearning/courses/academy-a3p-06/preview?activity=a3p-06-cas')
             for step in page.locator('.a3p-decision-step').all():
@@ -56,11 +58,14 @@ try:
                 step.locator('[data-next]').click()
             assert page.locator('.a3p-case-feedback h3').first.is_visible()
             page.screenshot(path=str(root/f'{label}-case.png'),full_page=False)
-            page.goto('http://a3p.test/admin/elearning/courses/academy-a3p-02/preview?activity=a3p-q-001')
-            page.locator('input[name=answer]').first.check()
+            page.goto('http://a3p.test/admin/elearning/courses/academy-a3p-02/preview?activity=a3p-02-01-quiz')
+            for field in page.locator('select[data-group-id]').all():
+                field.select_option(index=1)
             page.locator('#nativePreviewAnswerButton').click()
             page.wait_for_function("document.querySelector('#nativeAnswerFeedback').textContent.trim().length > 0")
             assert page.locator('#nativeAnswerFeedback').inner_text().strip()
+            page.screenshot(path=str(root/f'{label}-quiz.png'),full_page=False)
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 2'), label+' quiz overflow'
             page.goto('http://a3p.test/admin/elearning/exams/a3p-final')
             page.wait_for_load_state('networkidle')
             page.screenshot(path=str(root/f'{label}-exam.png'),full_page=False)
@@ -70,7 +75,7 @@ try:
     # Small contact sheets in the job log make visual review possible even when
     # the connected client cannot download ZIP artifacts. No personal data.
     for label in ('desktop','mobile'):
-        names=['catalog','lesson','case','exam']
+        names=['catalog','lesson','case','quiz']
         tiles=[]
         for name in names:
             src=Image.open(root/f'{label}-{name}.png').convert('RGB')

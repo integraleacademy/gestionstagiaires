@@ -38,7 +38,14 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
     required_minutes = module.get("required_minutes", 0)
     if type(required_minutes) is not int or not 0 <= required_minutes <= MAX_REQUIRED_MINUTES:
         raise CourseImportError("La durée obligatoire doit être un nombre entier de minutes, entre 0 et 1 000 heures.")
-    by_id = {str(section["id"]): section for section in course.get("sections") or []}
+    sections_source = course.get("sections") or []
+    a3p_distance = course.get("training_label") == "A3P" and not course.get("preview_only")
+    if a3p_distance:
+        sections_source = [section for section in sections_source if section.get("delivery") == "distance"]
+        minimum = int(course.get("required_minutes") or 0)
+        if required_minutes < minimum:
+            raise CourseImportError(f"Ce module A3P requiert au moins {minimum} minutes pour ses objectifs à distance.")
+    by_id = {str(section["id"]): section for section in sections_source}
     section_ids = module.get("section_ids")
     if section_ids is None:
         section_ids = list(by_id)
@@ -47,6 +54,8 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
             or len(set(section_ids)) != len(section_ids)
             or any(value not in by_id for value in section_ids)):
         raise CourseImportError("Séquences invalides : choisissez au moins une séquence par module.")
+    if a3p_distance and set(section_ids) != set(by_id):
+        raise CourseImportError("Le module A3P doit conserver toutes ses fractions à distance et leurs questionnaires.")
     sections = [by_id[value] for value in section_ids]
     activities = [activity for section in sections for activity in section.get("activities") or []]
     if not activities:
@@ -99,12 +108,13 @@ def course_outline(course: Mapping[str, Any]) -> Dict[str, Any]:
         "planned_minutes": int(course.get("planned_minutes") or 0),
         "academy": course.get("source", {}).get("type") == "academy-aps62",
         "vtc": course.get("source", {}).get("type") == "academy-vtc",
+        "a3p": course.get("source", {}).get("type") == "academy-a3p",
         "sections": [{
             "id": str(section["id"]), "title": str(section.get("title") or "Séquence"),
             "activities": [{"title": str(activity.get("title") or "Activité"),
                             "scored": bool(activity.get("scored"))}
                            for activity in section.get("activities") or []],
-        } for section in course.get("sections") or []],
+        } for section in course.get("sections") or [] if course.get("training_label") != "A3P" or section.get("delivery") == "distance"],
     }
 
 
