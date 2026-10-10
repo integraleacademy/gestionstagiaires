@@ -7,10 +7,9 @@
   <title>Espace organismes de formation • Intégrale Connect</title>
   <meta name="description" content="Votre espace organisme de formation : commandes de manuels personnalisés, suivi des commandes et factures, et prochainement les accès e-learning de vos stagiaires.">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-login.css', v='organismes-20261006') }}">
-  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-1') }}">{% endif %}
+  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-2') }}">{% endif %}
 </head>
 <body class="admin-login-page">
-  {% if show_organisme_identity %}{% include "manuals/_organisme_identity.html" %}{% endif %}
   <main class="login-shell" aria-labelledby="portal-title">
     <section class="login-brand" aria-label="Votre espace organisme de formation">
       <a class="brand-logo-link" href="{{ url_for('admin_login', next=next_url) }}" aria-label="Intégrale Connect — accueil de connexion">
@@ -123,6 +122,7 @@
     </section>
     <p class="brand-footer">Intégrale Connect · Les ressources au service de vos formations</p>
   </main>
+  {% if show_organisme_identity %}{% include "manuals/_organisme_identity.html" %}{% endif %}
   <script src="{{ url_for('static', filename='js/admin-login.js') }}" defer></script>
 </body>
 </html>

@@ -6,12 +6,11 @@
   <title>{% block title %}Espace organisme{% endblock %} · Intégrale Connect</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261006-3') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css') }}">
-  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-1') }}">{% endif %}
+  {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-2') }}">{% endif %}
   {% block extra_styles %}{% endblock %}
   <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261006-3') }}" defer></script>
 </head>
 <body>
-  {% if show_organisme_identity %}{% include "manuals/_organisme_identity.html" %}{% endif %}
   <header class="site-header">
     <a class="logo" href="{{ url_for('manuals_shop.home') if session.get('admin_logged_in') else url_for('admin_login') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
     <span class="header-label">L’espace des organismes de formation</span>
@@ -23,7 +22,11 @@
     </nav>
   </header>
   <main>{% for category,message in get_flashed_messages(with_categories=true) %}<div class="notice">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
+  {% if show_organisme_identity %}
+    {% include "manuals/_organisme_identity.html" %}
+  {% else %}
   <footer class="site-footer"><span>Intégrale Academy · Des supports pour transmettre.</span><a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a><a href="tel:+33422470768">04 22 47 07 68</a></footer>
+  {% endif %}
 </body>
 </html>
 
