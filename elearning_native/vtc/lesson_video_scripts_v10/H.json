@@ -1,0 +1,1674 @@
+{
+  "revision": 10,
+  "module": "H",
+  "lessons": [
+    {
+      "ref": "H.01",
+      "title": "Lire la mission avant de partir",
+      "objective": "Transformer une commande en plan d’action.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "7e15e00ab4e7acb3d43bcc7532ea250bd3f5a2688511d303ea64ae63ae90112a",
+      "scenes": [
+        {
+          "title": "Vérifier la confirmation",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de transformer une commande en plan d’action . Une demande peut être incomplète ou encore soumise à disponibilité. Avant de partir, vérifiez qu'elle est confirmée et que les informations critiques sont connues. Identifiez le passager, le réservant et le payeur. Une entreprise peut réserver pour un collaborateur ; le nom présent sur le devis n'est donc pas nécessairement celui de la personne qui montera dans la voiture."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Demande et réservation confirmée sont différentes.",
+              "anchor_text": "Une demande peut"
+            },
+            {
+              "label": "À retenir",
+              "text": "Distinguer réservant, passager et payeur.",
+              "anchor_text": "Identifiez le passager"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles informations manquent pour décider si une commande est réalisable ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Extraire les contraintes",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Relevez la date, l'heure de prise en charge, les adresses exactes, le nombre de passagers, les bagages et les besoins d'équipement. Une heure de train ou de rendez-vous final impose de raisonner à rebours : temps de trajet, marge, dépose et déplacement du client jusqu'à son lieu d'arrivée. L'heure de départ ne se choisit pas uniquement avec le temps affiché par le GPS."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Adresses, horaire, voyageurs et bagages.",
+              "anchor_text": "Relevez la date"
+            },
+            {
+              "label": "À retenir",
+              "text": "Raisonner à rebours depuis l’arrivée souhaitée.",
+              "anchor_text": "Une heure de train"
+            }
+          ]
+        },
+        {
+          "title": "Décider si la mission est possible",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Comparez la mission aux moyens disponibles, au planning, aux règles d'accès et au prix convenu. Si une donnée manque, demandez-la avant le service. Préparez le justificatif de réservation et une solution de contact. La lecture de mission est un travail de décision : elle peut conduire à demander une adaptation ou à ne pas accepter une prestation impossible à réaliser correctement."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Comparer la demande aux moyens.",
+              "anchor_text": "Comparez la mission"
+            },
+            {
+              "label": "À retenir",
+              "text": "Clarifier les informations avant le service.",
+              "anchor_text": "Si une donnée manque"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Clarifier les informations avant le service.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Mission : quatre passagers, trois grandes valises, départ gare à 18 h. Votre berline peut accueillir quatre passagers mais son coffre n'accepte pas les trois valises. La capacité en sièges ne suffit donc pas à valider la mission. Comptez les places et le volume de bagages séparément. Quatre sièges disponibles ne font pas apparaître de place supplémentaire dans le coffre. Avant de confirmer, vérifiez la configuration réelle et proposez un moyen adapté si nécessaire. Ce contrôle évite de découvrir l'impossibilité devant les passagers, au moment où une autre solution devient plus difficile à organiser."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Mission : quatre passagers, trois grandes valises, départ gare"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Vérifier sièges et coffre séparément.",
+              "anchor_text": "Comptez les places et le volume de bagages séparément."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles informations manquent pour décider si une commande est réalisable ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un hôtel réserve pour « M. Martin, demain matin, aéroport ». Aucun horaire ni terminal ni numéro de vol n'est précisé. Recontactez l'hôtel pour préciser l'heure souhaitée, l'aéroport, le terminal et les informations de vol utiles. Confirmez aussi le passager, les bagages et les conditions de règlement. L'expression « demain matin » ne permet pas d'établir un planning fiable. Vous transformez la demande vague en une mission précise avant de préparer le trajet et le justificatif."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un hôtel réserve pour « M. Martin, demain matin,"
+            },
+            {
+              "label": "Décision",
+              "text": "Préciser la mission avant de l’organiser.",
+              "anchor_text": "Recontactez l'hôtel pour préciser l'heure souhaitée, l'aéroport, le terminal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.02",
+      "title": "Préparer un itinéraire",
+      "objective": "Choisir un parcours et expliquer son choix.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "31a2817a04d43c010c20052c027343f73eb732096e8d90c943be6b285772ebfc",
+      "scenes": [
+        {
+          "title": "Repérer les accès",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de choisir un parcours et expliquer son choix . Repérez l'adresse de départ, l'entrée utilisable à destination, les grands axes et les contraintes connues. Vérifiez les sens uniques, les restrictions, les travaux et les règles d'accès. Une adresse postale peut correspondre à une entrée impossible pour la voiture. Le trajet se prépare donc jusqu'au point réel de dépose, pas seulement jusqu'au nom du bâtiment."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Préparer le point réel de dépose.",
+              "anchor_text": "Repérez l'adresse"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une adresse peut avoir une entrée inaccessible.",
+              "anchor_text": "Une adresse postale"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quels critères comparer en plus de la distance affichée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Comparer les options",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le plus court en kilomètres n'est pas forcément le plus rapide ou le plus adapté. Comparez durée, régularité du trafic, péages, confort et contraintes du véhicule. Préparez une alternative raisonnable pour un blocage. Le client peut exprimer une préférence, à intégrer lorsqu'elle est compatible avec les règles et la sécurité. Une demande ne vous oblige pas à emprunter une voie interdite."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Durée, péage, confort et contraintes.",
+              "anchor_text": "Comparez durée"
+            },
+            {
+              "label": "À retenir",
+              "text": "La préférence du client doit rester compatible.",
+              "anchor_text": "Le client peut"
+            }
+          ]
+        },
+        {
+          "title": "Préparer la navigation",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Programmez avant de partir et comprenez les grandes étapes. Un conducteur qui dépend uniquement de chaque instruction vocale réagit souvent tard. Si l'itinéraire devient impossible, poursuivez en sécurité puis réorganisez le trajet. Expliquer calmement un détour est préférable à une manœuvre brusque pour conserver la route initiale."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Programmer avant de partir.",
+              "anchor_text": "Programmez avant"
+            },
+            {
+              "label": "À retenir",
+              "text": "Réorganiser sans manœuvre brusque.",
+              "anchor_text": "Si l'itinéraire devient"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Réorganiser sans manœuvre brusque.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Parcours A : 12 km, 35 min, sans péage. Parcours B : 18 km, 25 min, péage 3 €. Pour un rendez-vous proche, B peut convenir si le client accepte les conditions ; il faut encore intégrer le temps de dépose et la marge. Le parcours le plus long gagne ici dix minutes, avec un péage de trois euros. Ce choix peut être utile, mais il dépend des conditions acceptées et de la contrainte d'arrivée. Ajoutez encore la dépose et le chemin du passager. La comparaison porte sur la mission complète, pas seulement sur deux chiffres affichés par le calculateur."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Parcours A : 12 km, 35 min, sans péage."
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Comparer la mission complète.",
+              "anchor_text": "Le parcours le plus long gagne ici dix minutes,"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quels critères comparer en plus de la distance affichée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. La destination est sur une place piétonne. Le GPS affiche une entrée dans une rue interdite aux véhicules non autorisés. N'entrez pas dans la voie interdite au seul motif que le GPS la propose. Cherchez le point autorisé le plus adapté, confirmez le chemin restant et prévenez le client. Si une autorisation particulière est nécessaire, vérifiez-la avant de vous engager. La navigation propose un trajet ; le conducteur reste responsable de choisir une option réalisable en sécurité."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "La destination est sur une place piétonne. Le GPS"
+            },
+            {
+              "label": "Décision",
+              "text": "Chercher une dépose autorisée près de la destination.",
+              "anchor_text": "N'entrez pas dans la voie interdite au seul motif"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.03",
+      "title": "Installer son poste de conduite",
+      "objective": "Réaliser les réglages dans un ordre efficace.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "c7f1f6b9a0829ca2825494a88fa8550557e28ed223183397b21394912fd09f99",
+      "scenes": [
+        {
+          "title": "Régler dans le bon ordre",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de réaliser les réglages dans un ordre efficace . Commencez par la position du siège, puis le dossier, l'appui-tête et le volant selon les réglages disponibles. Les jambes et les bras doivent permettre des commandes efficaces sans étirement excessif. Réglez ensuite les rétroviseurs depuis cette position. Si vous les ajustez avant de déplacer le siège, le champ obtenu peut ne plus correspondre à la position finale."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Siège et posture avant les rétroviseurs.",
+              "anchor_text": "Commencez par la position"
+            },
+            {
+              "label": "À retenir",
+              "text": "Les rétroviseurs dépendent de la position finale.",
+              "anchor_text": "Si vous les ajustez"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi règle-t-on les rétroviseurs après la position du siège ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Connaître les commandes",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Identifiez les commandes de désembuage, d'éclairage et d'essuie-glaces avant le départ. Un véhicule inhabituel demande un temps de familiarisation. Fixez les appareils et rangez les objets susceptibles de tomber. Une bouteille près des pédales ou un câble gênant peut devenir un danger. Le poste de conduite doit rester dégagé et compatible avec une bonne visibilité."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Repérer éclairage, essuie-glaces et désembuage.",
+              "anchor_text": "Identifiez les commandes"
+            },
+            {
+              "label": "À retenir",
+              "text": "Fixer les appareils et dégager les pédales.",
+              "anchor_text": "Fixez les appareils"
+            }
+          ]
+        },
+        {
+          "title": "Faire le contrôle final",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Vérifiez la ceinture, les portes, les témoins et l'installation des passagers. L'écran de navigation ne doit pas masquer la route. Le téléphone et les documents se préparent à l'arrêt. Le professionnalisme se voit dans cette routine calme : partir précipitamment oblige souvent à corriger un réglage lorsque l'attention devrait déjà être entièrement disponible pour la circulation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Ceinture, portes, témoins et passagers.",
+              "anchor_text": "Vérifiez la ceinture"
+            },
+            {
+              "label": "À retenir",
+              "text": "Préparer les outils à l’arrêt.",
+              "anchor_text": "Le téléphone et"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Préparer les outils à l’arrêt.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un siège trop éloigné oblige à tendre la jambe et peut réduire la précision des commandes. Corriger le réglage après avoir quitté le stationnement détourne l'attention. Le temps de préparation fait partie de la prestation. Le réglage du siège influence l'accès aux commandes et le champ de vision. Il précède donc les derniers ajustements des rétroviseurs. Une fois la bonne posture obtenue, contrôlez que les commandes restent faciles à utiliser. Cette préparation évite d'ajouter une tâche délicate au moment où le véhicule se déplace déjà dans un environnement changeant."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un siège trop éloigné oblige à tendre la jambe"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Préparer une posture stable avant le départ.",
+              "anchor_text": "Le réglage du siège influence l'accès aux commandes et"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi règle-t-on les rétroviseurs après la position du siège ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Vous prenez un véhicule inconnu. La pluie commence, et vous ne savez pas où se trouve la commande de désembuage. Prenez le temps de repérer le désembuage avant de démarrer. Identifiez également les essuie-glaces et vérifiez la visibilité réelle. Si vous êtes déjà en circulation et qu'une recherche de commande détourne votre attention, cherchez un arrêt sûr pour résoudre le problème. Le service commence par la maîtrise du véhicule utilisé, même s'il est différent du vôtre."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Vous prenez un véhicule inconnu. La pluie commence, et"
+            },
+            {
+              "label": "Décision",
+              "text": "Connaître le désembuage avant de circuler.",
+              "anchor_text": "Prenez le temps de repérer le désembuage avant de"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.04",
+      "title": "Réussir l’accueil",
+      "objective": "Donner un cadre rassurant dès la rencontre.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "8ba48213ea6903b27635033ea969c39f4e3563e6e7a738664bd8f6e99c737fc4",
+      "scenes": [
+        {
+          "title": "Identifier le bon client",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de donner un cadre rassurant dès la rencontre . Présentez-vous et vérifiez la réservation avec discrétion. Confirmez la destination et le nombre de personnes. Ne supposez pas que le premier voyageur avec une valise est votre client. Dans un lieu fréquenté, une erreur d'identification peut entraîner une mauvaise prise en charge et divulguer des informations. Utilisez les repères convenus dans la réservation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Présenter puis vérifier discrètement.",
+              "anchor_text": "Présentez-vous"
+            },
+            {
+              "label": "À retenir",
+              "text": "Ne pas reconnaître un passager à sa seule valise.",
+              "anchor_text": "Ne supposez pas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Comment proposer une aide tout en respectant l’autonomie du passager ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Proposer sans imposer",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Demandez l'accord avant de manipuler les bagages ou un équipement. Vérifiez le volume réel et installez les objets de façon stable. Ouvrez la porte lorsque l'environnement le permet et laissez au passager le temps de s'installer. Une personne à mobilité réduite peut souhaiter une aide précise ; une question respectueuse vaut mieux qu'un geste imposé."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Demander l’accord avant d’aider.",
+              "anchor_text": "Demandez l'accord"
+            },
+            {
+              "label": "À retenir",
+              "text": "Adapter l’aide au besoin exprimé.",
+              "anchor_text": "Une personne à mobilité"
+            }
+          ]
+        },
+        {
+          "title": "Préparer le départ",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Rappelez les éléments utiles : destination, durée estimée et conditions particulières convenues. Vérifiez les dispositifs de retenue et le confort. Le ton doit être naturel, sans récitation excessive. L'accueil prépare la suite : un client qui sait où il va, combien de temps le trajet devrait durer et comment poser une question se sent mieux accompagné."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Destination et durée estimée.",
+              "anchor_text": "Rappelez les éléments"
+            },
+            {
+              "label": "À retenir",
+              "text": "Vérifier retenue et confort.",
+              "anchor_text": "Vérifiez les dispositifs"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Vérifier retenue et confort.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. « Bonjour Madame Diallo, je suis Lina, votre chauffeur. Nous allons bien à la gare Centrale ? Souhaitez-vous de l'aide pour cette valise ? » Trois phrases suffisent pour créer un accueil clair avant les vérifications de départ. Ces phrases remplissent trois fonctions : identifier le chauffeur, confirmer la destination et proposer une aide. Elles ne remplacent pas les contrôles de départ. Attendez la réponse avant de prendre la valise, vérifiez l'environnement puis l'installation. Un accueil naturel suit ce petit ordre logique, sans chercher à réciter un texte long ni à recueillir des informations personnelles inutiles."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "« Bonjour Madame Diallo, je suis Lina, votre chauffeur."
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Identifier, confirmer, proposer.",
+              "anchor_text": "Ces phrases remplissent trois fonctions : identifier le chauffeur,"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Comment proposer une aide tout en respectant l’autonomie du passager ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Deux personnes portant le même nom attendent devant un hôtel. Vous avez une réservation pour une destination précise. Le nom commun aux deux voyageurs ne suffit pas. Vérifiez discrètement une information de la réservation pour identifier la bonne personne, puis confirmez la destination. Évitez d'annoncer publiquement toutes les données de la course. Si un doute persiste, utilisez le contact prévu. Quelques secondes de confirmation empêchent une mauvaise prise en charge et une divulgation inutile."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Deux personnes portant le même nom attendent devant un"
+            },
+            {
+              "label": "Décision",
+              "text": "Vérifier une information de réservation avec discrétion.",
+              "anchor_text": "Le nom commun aux deux voyageurs ne suffit pas."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.05",
+      "title": "Conduire avec une attention disponible",
+      "objective": "Gérer le service sans perdre la route de vue.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "53ae3b756154b733104a60108157f1e5599c85963192f156ad71b051b98529d9",
+      "scenes": [
+        {
+          "title": "Hiérarchiser les tâches",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de gérer le service sans perdre la route de vue . La conduite en sécurité reste la tâche principale. Une demande de facture, un réglage secondaire ou une question touristique peut attendre quelques instants. Prévenez simplement le client lorsque vous devez différer : « Je vous réponds dès que nous aurons passé ce carrefour. » Cette phrase explique votre priorité sans donner l'impression d'ignorer la personne."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "La conduite sûre reste prioritaire.",
+              "anchor_text": "La conduite en sécurité"
+            },
+            {
+              "label": "À retenir",
+              "text": "Différer avec une phrase courtoise.",
+              "anchor_text": "Prévenez simplement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle phrase permet de reporter une demande tout en restant attentif au client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Réguler l’échange",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une conversation courte est différente d'un échange demandant de chercher une information ou de prendre une décision complexe. Réduisez les interactions pendant une manœuvre, une insertion ou une situation dense. Le passager ne connaît pas toujours la difficulté de conduite du moment. C'est au chauffeur de réguler l'échange et de choisir un arrêt si une action nécessite son attention."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Réduire les interactions dans une situation dense.",
+              "anchor_text": "Réduisez les interactions"
+            },
+            {
+              "label": "À retenir",
+              "text": "Choisir un arrêt pour une recherche complexe.",
+              "anchor_text": "C'est au chauffeur"
+            }
+          ]
+        },
+        {
+          "title": "Anticiper les demandes",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Préparez les demandes fréquentes avant de partir : mode de paiement, destination et éventuelle facture. Une information collectée à l'arrêt réduit les interruptions ensuite. Les outils numériques doivent soutenir cette organisation. Accepter une nouvelle course en conduisant n'est pas une priorité supérieure à l'observation de la route et au service déjà en cours."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Préparer paiement, destination et facture.",
+              "anchor_text": "Préparez les demandes"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une information prise à l’arrêt évite une interruption.",
+              "anchor_text": "Une information collectée"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Une information prise à l’arrêt évite une interruption.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Dans un carrefour complexe, un passager demande le détail d'une facture. Vous pouvez dire : « Je vous l'expliquerai dès que nous serons arrêtés en sécurité. » Vous protégez la qualité de la conduite et donnez une suite à sa demande. La demande de facture mérite une réponse, mais pas au prix d'une perte d'attention dans le carrefour. En annonçant quand vous répondrez, vous maintenez le service et la priorité de sécurité. Vous pourrez ensuite regarder les lignes de la facture dans de bonnes conditions. Différer n'est pas ignorer : c'est organiser les tâches dans le bon ordre."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Dans un carrefour complexe, un passager demande le détail"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Donner une suite à la demande sans se distraire.",
+              "anchor_text": "La demande de facture mérite une réponse, mais pas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle phrase permet de reporter une demande tout en restant attentif au client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Vous manquez une sortie. Le client insiste pour que vous vous rabattiez immédiatement sur une voie déjà occupée. Ne vous rabattez pas sur la voie occupée. Poursuivez jusqu'à une possibilité autorisée, puis adaptez le trajet. Expliquez brièvement que vous reprenez une route sûre. La pression du client ne change pas les contrôles nécessaires. Une sortie manquée se corrige par un nouvel itinéraire, pas par une manœuvre qui crée un danger immédiat."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Vous manquez une sortie. Le client insiste pour que"
+            },
+            {
+              "label": "Décision",
+              "text": "Poursuivre en sécurité puis adapter le trajet.",
+              "anchor_text": "Ne vous rabattez pas sur la voie occupée. Poursuivez"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.06",
+      "title": "Manœuvrer et déposer",
+      "objective": "Choisir la sécurité avant la proximité maximale.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "942cc8c8181c25b60fe1129ec77baab3e1aaa0a65cef92ce7f69566ba4ad76c2",
+      "scenes": [
+        {
+          "title": "Choisir le point de dépose",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de choisir la sécurité avant la proximité maximale . Recherchez un endroit autorisé où les personnes peuvent descendre sans être exposées inutilement. La porte exacte de la destination n'est pas toujours accessible. Expliquez un point de dépose voisin si nécessaire. Les feux de détresse ne rendent pas licite ou sûr un arrêt gênant. Anticipez la sortie des passagers et l'accès au coffre, pas seulement la place occupée par la voiture."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Autorisation et sortie sûre avant proximité maximale.",
+              "anchor_text": "Recherchez un endroit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Les feux de détresse ne rendent pas l’arrêt sûr.",
+              "anchor_text": "Les feux de détresse"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quels risques faut-il vérifier au moment où le passager ouvre la portière ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Contrôler la manœuvre",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Observez autour du véhicule et complétez les rétroviseurs par les contrôles directs nécessaires. Une caméra ou un capteur peut ne pas montrer un obstacle ou un usager qui arrive. Manœuvrez lentement et arrêtez-vous si la situation n'est plus lisible. Il est préférable de reprendre une manœuvre que de continuer avec un doute sur la présence d'une personne."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Contrôles directs, rétroviseurs et aides.",
+              "anchor_text": "Observez autour"
+            },
+            {
+              "label": "À retenir",
+              "text": "S’arrêter lorsque la situation n’est plus lisible.",
+              "anchor_text": "Manœuvrez lentement"
+            }
+          ]
+        },
+        {
+          "title": "Sécuriser la descente",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Immobilisez correctement le véhicule, annoncez au passager quand il peut ouvrir et surveillez les cyclistes ou autres usagers. Lorsque c'est possible, privilégiez une sortie du côté le plus sûr. Aidez avec les bagages après avoir sécurisé le véhicule. La prestation n'est pas terminée tant que les personnes et leurs effets restent exposés à la circulation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Immobiliser et surveiller les autres usagers.",
+              "anchor_text": "Immobilisez correctement"
+            },
+            {
+              "label": "À retenir",
+              "text": "Aider aux bagages après sécurisation du véhicule.",
+              "anchor_text": "Aidez avec les bagages"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Aider aux bagages après sécurisation du véhicule.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. La porte demandée donne sur un emplacement interdit à l'arrêt. Le raisonnement conduit à proposer la dépose autorisée la plus adaptée. Le service ne justifie pas une dépose dangereuse ou interdite. Le besoin du client est d'atteindre sa destination dans de bonnes conditions. S'arrêter exactement devant une porte ne répond pas à ce besoin si la descente est dangereuse. Repérez une solution autorisée et expliquez le court chemin restant. Pensez aussi à l'accès au coffre : le passager doit pouvoir récupérer ses affaires sans rester exposé au trafic."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "La porte demandée donne sur un emplacement interdit à"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "La destination ne justifie pas une dépose dangereuse.",
+              "anchor_text": "Le besoin du client est d'atteindre sa destination dans"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quels risques faut-il vérifier au moment où le passager ouvre la portière ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Le client veut descendre devant une porte inaccessible en voiture. Un emplacement autorisé se trouve un peu plus loin et un cycliste approche. Proposez le point autorisé le plus proche qui convient réellement aux personnes. Annoncez-le avant l'arrêt, immobilisez correctement la voiture puis contrôlez l'environnement. Si un cycliste approche, la portière reste fermée jusqu'au moment sûr. La manœuvre, la descente et les bagages forment une même séquence de sécurité ; aucune étape ne doit être précipitée pour gagner quelques mètres."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Le client veut descendre devant une porte inaccessible en"
+            },
+            {
+              "label": "Décision",
+              "text": "Contrôler la circulation avant la descente.",
+              "anchor_text": "Proposez le point autorisé le plus proche qui convient"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.07",
+      "title": "Informer sur le territoire",
+      "objective": "Apporter une information utile au bon moment.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "fee3ccc792d246a296de14bf8b0e1f2f860596d881c4f21c7c4890f4ac9e37d2",
+      "scenes": [
+        {
+          "title": "Préparer les informations utiles",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de apporter une information utile au bon moment . Connaissez les principales gares, les accès aux aéroports, les quartiers, les lieux d'affaires et les sites touristiques utiles à votre zone. Une bonne préparation ne se limite pas à apprendre des anecdotes. Elle comprend les entrées, les contraintes d'accès et les déplacements à pied nécessaires. Les informations pratiques rendent souvent davantage service qu'un long commentaire historique."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Accès, entrées et déplacements à pied.",
+              "anchor_text": "Connaissez les principales"
+            },
+            {
+              "label": "À retenir",
+              "text": "Les informations pratiques rendent service.",
+              "anchor_text": "Les informations pratiques"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles informations touristiques peuvent changer d’un jour à l’autre ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Distinguer stable et variable",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La localisation d'un monument évolue peu ; son horaire d'ouverture ou une fermeture temporaire peuvent changer. Vérifiez les informations variables avant de les affirmer. Si vous ne savez pas, dites-le et proposez une vérification à l'arrêt. Inventer une réponse pour paraître compétent peut faire perdre du temps au client et fragiliser sa confiance."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Vérifier horaires et fermetures temporaires.",
+              "anchor_text": "La localisation d'un monument"
+            },
+            {
+              "label": "À retenir",
+              "text": "Dire ce qui reste à vérifier.",
+              "anchor_text": "Si vous ne savez"
+            }
+          ]
+        },
+        {
+          "title": "S’adapter au passager",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Demandez si le passager souhaite des informations. Choisissez un moment où la conduite le permet et restez bref. Un client qui travaille, se repose ou téléphone n'attend pas forcément une visite guidée. Votre information doit être pertinente pour sa demande, compréhensible et factuelle. Les préférences personnelles peuvent être présentées comme telles, sans les faire passer pour des faits."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Demander s’il souhaite une information.",
+              "anchor_text": "Demandez si le passager"
+            },
+            {
+              "label": "À retenir",
+              "text": "Choisir un moment compatible avec la conduite.",
+              "anchor_text": "Choisissez un moment"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Choisir un moment compatible avec la conduite.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. « Sur votre droite se trouve le musée de la ville. Il présente l'histoire locale. Si vous souhaitez le visiter, je vous invite à vérifier ses horaires du jour. » L'explication reste utile sans promettre une ouverture non confirmée. Le chauffeur décrit un lieu qu'il connaît puis distingue son horaire actuel, qu'il n'a pas vérifié. Cette précision conserve l'utilité de l'information sans créer de fausse certitude. Un commentaire bref suffit lorsque le passager veut seulement se repérer. S'il souhaite visiter, vous pourrez proposer de consulter la source officielle à un moment sûr."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "« Sur votre droite se trouve le musée de"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Connaître le lieu ne prouve pas son horaire actuel.",
+              "anchor_text": "Le chauffeur décrit un lieu qu'il connaît puis distingue"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles informations touristiques peuvent changer d’un jour à l’autre ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un client demande un restaurant ouvert ce soir, accessible avec un fauteuil, proche de son hôtel. Vous connaissez un établissement mais pas ses conditions actuelles. Le restaurant doit répondre à trois besoins : ouverture ce soir, accès adapté et proximité de l'hôtel. Votre souvenir ne confirme pas ces conditions actuelles. Proposez de vérifier les informations pertinentes à l'arrêt, puis présentez ce qui est confirmé et ce qui reste incertain. N'affirmez pas une accessibilité ou une disponibilité que vous n'avez pas pu établir."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un client demande un restaurant ouvert ce soir, accessible"
+            },
+            {
+              "label": "Décision",
+              "text": "Vérifier ouverture, accès et distance.",
+              "anchor_text": "Le restaurant doit répondre à trois besoins : ouverture"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.08",
+      "title": "Gérer un imprévu de service",
+      "objective": "Maintenir la sécurité et un accord clair.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "0babf42ebc79be96a45f99b5cf5e2f2485db755a31c2c776492f2ae849e5b879",
+      "scenes": [
+        {
+          "title": "Identifier la contrainte",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de maintenir la sécurité et un accord clair . Un changement de destination, une route fermée ou une demande imprévue peut créer de la pression. Gardez d'abord une conduite sûre. Identifiez ensuite le problème exact : manque de temps, impossibilité d'accès, équipement absent ou désaccord commercial. Ne cherchez pas une solution globale tant que vous ne savez pas quelle contrainte doit être résolue."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Conserver une conduite sûre avant de résoudre.",
+              "anchor_text": "Gardez d'abord"
+            },
+            {
+              "label": "À retenir",
+              "text": "Nommer le problème exact.",
+              "anchor_text": "Identifiez ensuite"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles conséquences d’un changement doivent être expliquées au client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Comparer les solutions",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Évaluez la sécurité, la conformité, le temps et le coût. Expliquez les options réellement possibles au client et les conséquences de chacune. Une solution peut être refusée si elle implique une manœuvre interdite ou un service que vous ne pouvez pas assurer. Cherchez une alternative utile sans promettre l'impossible."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Sécurité, conformité, temps et coût.",
+              "anchor_text": "Évaluez la sécurité"
+            },
+            {
+              "label": "À retenir",
+              "text": "Ne proposer que des options réellement possibles.",
+              "anchor_text": "Expliquez les options"
+            }
+          ]
+        },
+        {
+          "title": "Confirmer le changement",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Lorsque l'accord commercial change, conservez une trace adaptée. Informez l'exploitant ou l'organisateur si la modification affecte le planning ou le prix. La communication doit rester proportionnée : le client a besoin de comprendre la suite, pas de suivre toutes vos démarches internes. Après la mission, utilisez l'incident pour améliorer la préparation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Conserver une trace de l’accord modifié.",
+              "anchor_text": "Lorsque l'accord commercial"
+            },
+            {
+              "label": "À retenir",
+              "text": "Informer les personnes concernées.",
+              "anchor_text": "Informez l'exploitant"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Informer les personnes concernées.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une route ferme pendant le trajet. Vous poursuivez jusqu'à un endroit permettant de vérifier l'alternative, informez le passager du délai estimé et traitez les conséquences contractuelles. Vous ne consultez pas plusieurs applications en conduisant. Le premier problème est l'impossibilité de poursuivre par la route prévue. Une recherche sur plusieurs écrans pendant la conduite ajouterait un risque. Réorganisez dans un cadre sûr, puis expliquez le délai estimé et les choix possibles. Le client a besoin d'une information exploitable pour décider, pas d'une promesse de ponctualité que la nouvelle situation ne permet plus."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Une route ferme pendant le trajet. Vous poursuivez jusqu'à"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Réorganiser en sécurité puis informer.",
+              "anchor_text": "Le premier problème est l'impossibilité de poursuivre par la"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles conséquences d’un changement doivent être expliquées au client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Le client ajoute une attente de quarante minutes. Votre prochaine réservation commence dans trente minutes à vingt minutes de trajet. Quarante minutes d'attente, suivies de vingt minutes de trajet, dépassent les trente minutes disponibles avant la prochaine réservation. La demande est donc incompatible avec ce planning. Expliquez cette contrainte et cherchez une solution réaliste avec l'organisateur : adaptation acceptée ou remplacement conforme. Ne confirmez pas simultanément deux engagements que vous ne pouvez pas tenir."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Le client ajoute une attente de quarante minutes. Votre"
+            },
+            {
+              "label": "Décision",
+              "text": "40 + 20 minutes dépassent les 30 minutes disponibles.",
+              "anchor_text": "Quarante minutes d'attente, suivies de vingt minutes de trajet,"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.09",
+      "title": "Facturer pendant la pratique",
+      "objective": "Présenter un calcul lisible et un document cohérent.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "a201d4aee720d79c7ad5fc950b9cb9355f54370cc772e8d6c73dcae733829f0a",
+      "scenes": [
+        {
+          "title": "Repartir de l’accord",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de présenter un calcul lisible et un document cohérent . Avant de calculer, relisez la prestation et ses conditions : forfait, attente, arrêt supplémentaire ou autre élément convenu. Un calcul exact peut rester incorrect si sa base ne correspond pas à l'accord. Identifiez aussi le régime de TVA et le destinataire de la facture. Dans un exercice, utilisez les hypothèses données ; dans l'activité, utilisez la situation réelle de l'entreprise."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Relire le service et les conditions acceptées.",
+              "anchor_text": "Avant de calculer"
+            },
+            {
+              "label": "À retenir",
+              "text": "Identifier le régime de TVA de l’exercice.",
+              "anchor_text": "Identifiez aussi"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle base faut-il additionner avant de calculer la TVA de l’exercice ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Construire le calcul",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Déterminez les lignes de prestation, appliquez les conditions prévues puis calculez les montants HT, TVA et TTC lorsque la taxe est due. Utilisez une méthode cohérente d'arrondi aux centimes. Vérifiez l'addition finale et le montant demandé au client."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Lignes de prestation puis montants.",
+              "anchor_text": "Déterminez les lignes"
+            },
+            {
+              "label": "À retenir",
+              "text": "Vérifier l’addition et le total demandé.",
+              "anchor_text": "Vérifiez l'addition"
+            }
+          ]
+        },
+        {
+          "title": "Relier facture et règlement",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le client doit pouvoir relier le total au service reçu. Montrez les lignes utiles et répondez calmement à une question. Le règlement et l'émission de la facture sont deux opérations à suivre. Un paiement confirmé doit être rapproché de la bonne pièce pour éviter une relance injustifiée ou une double facturation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Expliquer les lignes utiles au client.",
+              "anchor_text": "Le client doit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Rapprocher le paiement de la bonne facture.",
+              "anchor_text": "Un paiement confirmé"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Rapprocher le paiement de la bonne facture.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Exercice : entreprise redevable de TVA, transport intérieur au taux de 10 %, prix HT 70 €. TVA 7 €, TTC 77 €. Si le client paie 100 € en espèces, la monnaie est de 23 €. Ce calcul ne modifie pas le prix accepté. Dans cet exercice, dix pour cent de soixante-dix euros donnent sept euros de taxe. Le total est donc soixante-dix-sept euros. Cent euros remis moins soixante-dix-sept euros dus donnent vingt-trois euros de monnaie. Chaque étape conserve son unité et la base du sujet. Une entreprise en franchise ne doit pas recevoir ce même calcul de taxe par automatisme."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Exercice : entreprise redevable de TVA, transport intérieur au"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "70 € HT + 7 € de TVA = 77 € TTC.",
+              "anchor_text": "Dans cet exercice, dix pour cent de soixante-dix euros"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle base faut-il additionner avant de calculer la TVA de l’exercice ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Le sujet prévoit 50 € HT de transfert et 10 € HT d'attente acceptée, tous deux traités au taux de 10 % dans l'exercice. Le client règle par carte. Additionnez d'abord les bases hors taxes : cinquante euros de transfert et dix euros d'attente donnent soixante euros. À dix pour cent dans cet exercice, la taxe vaut six euros et le total soixante-six euros. Vérifiez le statut du paiement par carte avant de considérer la facture réglée. Un écran incertain demande une vérification, pas un nouveau débit immédiat."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Le sujet prévoit 50 € HT de transfert et"
+            },
+            {
+              "label": "Décision",
+              "text": "60 € HT + 6 € de TVA = 66 € TTC.",
+              "anchor_text": "Additionnez d'abord les bases hors taxes : cinquante euros"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.10",
+      "title": "Terminer la prestation",
+      "objective": "Clore le service sans oublier les personnes ni les objets.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "9f8a29306756bd8765800dd03e727cd864a38398e5f1259a88720da75423ad1d",
+      "scenes": [
+        {
+          "title": "Terminer l’accompagnement",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de clore le service sans oublier les personnes ni les objets . La fin du trajet comprend l'immobilisation, la descente, la remise des bagages et les informations utiles pour rejoindre l'entrée. Prenez le temps de vérifier que chacun a récupéré ses effets. Une arrivée précise suivie d'une descente précipitée laisse une impression de service inachevé et peut créer un danger."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Descente, bagages et chemin jusqu’à l’entrée.",
+              "anchor_text": "La fin du trajet"
+            },
+            {
+              "label": "À retenir",
+              "text": "Vérifier que chacun a repris ses effets.",
+              "anchor_text": "Prenez le temps"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles étapes permettent de restituer un objet sans exposer les données du client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Contrôler l’habitacle",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Après le départ du passager, regardez les places, les vide-poches et le coffre. Un objet oublié se traite selon une procédure permettant d'identifier son propriétaire et de le restituer dans de bonnes conditions. Ne fouillez pas inutilement dans un appareil ou un sac pour satisfaire votre curiosité. La recherche d'un contact doit respecter la confidentialité."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Places, vide-poches et coffre.",
+              "anchor_text": "Après le départ"
+            },
+            {
+              "label": "À retenir",
+              "text": "Traiter l’objet oublié avec confidentialité.",
+              "anchor_text": "La recherche d'un contact"
+            }
+          ]
+        },
+        {
+          "title": "Préparer la prochaine mission",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Mettez à jour le statut de la mission, classez les pièces et signalez un incident utile. Vérifiez la propreté et l'autonomie avant le prochain client. Organisez ensuite votre déplacement selon les règles de fin de course. Le temps de clôture fait partie de l'activité : le supprimer du planning conduit souvent à des retards ou à des oublis."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Pièces, incidents, propreté et autonomie.",
+              "anchor_text": "Mettez à jour"
+            },
+            {
+              "label": "À retenir",
+              "text": "Intégrer la clôture au planning.",
+              "anchor_text": "Le temps de clôture"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Intégrer la clôture au planning.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un téléphone reste sur la banquette. Vous contactez le client par le canal de réservation si possible et organisez la restitution. Il n'est pas nécessaire d'ouvrir ses messages pour chercher une identité. Le téléphone appartient au passager et peut contenir des données privées. Le canal de réservation permet souvent un contact sans ouvrir les messages. Identifiez la course, gardez l'objet de façon sûre et organisez une restitution au bon destinataire. La rapidité du prochain départ ne justifie pas d'abandonner l'objet ou de publier son contenu."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un téléphone reste sur la banquette. Vous contactez le"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Contacter par le canal de réservation.",
+              "anchor_text": "Le téléphone appartient au passager et peut contenir des"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles étapes permettent de restituer un objet sans exposer les données du client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Après une course d'hôtel, vous découvrez un portefeuille fermé sous le siège. Votre prochaine réservation est dans vingt minutes. Consignez la découverte du portefeuille et la course concernée, conservez-le en sécurité puis utilisez le contact professionnel approprié. Organisez une restitution qui respecte aussi votre prochaine mission. Il n'est pas nécessaire de fouiller par curiosité. Prévenez l'organisation si le traitement impose un ajustement, plutôt que de créer un retard sans information ou une remise à la mauvaise personne."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Après une course d'hôtel, vous découvrez un portefeuille fermé"
+            },
+            {
+              "label": "Décision",
+              "text": "Tracer la découverte et organiser la restitution.",
+              "anchor_text": "Consignez la découverte du portefeuille et la course concernée,"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.11",
+      "title": "Comprendre l’épreuve pratique",
+      "objective": "Préparer les compétences évaluées et les documents demandés.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "31e5f98fb1023fdf22cd11cdd95f5270bffe275c8a717c7ec3861704a262f96b",
+      "scenes": [
+        {
+          "title": "Comprendre le barème",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de préparer les compétences évaluées et les documents demandés . L'épreuve d'admission comporte une phase de conduite en circulation d'au moins vingt minutes. Le barème VTC en vigueur répartit vingt points : préparation et réalisation du parcours, trois ; sécurité, souplesse et Code de la route, dix ; prise en charge, relation client et information touristique, cinq ; facturation, deux. L'admission demande au moins douze sur vingt."
+            }
+          ],
+          "points": [
+            {
+              "label": "À retenir",
+              "text": "La conduite dure au moins vingt minutes.",
+              "anchor_text": "L'épreuve d'admission"
+            },
+            {
+              "label": "À comprendre",
+              "text": "Parcours 3 ; sécurité 10 ; relation 5 ; facture 2.",
+              "anchor_text": "Le barème VTC"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi un total supérieur à douze ne permet-il pas d’ignorer une intervention éliminatoire ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Montrer des actions réelles",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un comportement observable vaut mieux qu'une intention annoncée. Dire « je contrôle » ne remplace pas le contrôle effectif. Une facture lisible, un itinéraire justifié et une dépose sécurisée montrent des compétences. Le candidat doit conserver une attitude naturelle ; une récitation permanente peut détourner l'attention et nuire à la qualité de la conduite."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Dire le contrôle ne remplace pas le geste.",
+              "anchor_text": "Dire « je contrôle »"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une prestation complète et naturelle.",
+              "anchor_text": "Une facture lisible"
+            }
+          ]
+        },
+        {
+          "title": "Préparer les conditions",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Lisez la convocation et les consignes de la CMA pour les documents, le véhicule et les équipements requis. Arrivez avec une organisation permettant de vous concentrer sur la prestation. Le seuil de réussite est de 12/20. Une intervention de l'examinateur sur les doubles commandes ou le volant entraîne l'arrêt de l'épreuve et l'ajournement selon le règlement."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Convocation, documents, véhicule et équipements.",
+              "anchor_text": "Lisez la convocation"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une intervention peut entraîner l’ajournement.",
+              "anchor_text": "Une intervention de"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Une intervention peut entraîner l’ajournement.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un candidat obtient 2/3, 7/10, 4/5 et 1/2 : total 14/20. Ce calcul illustre le barème ; il ne permet pas d'ignorer une intervention éliminatoire ou une condition de recevabilité prévue par le règlement. Additionner deux, sept, quatre et un donne quatorze points sur vingt. Cela dépasse le seuil de douze dans le calcul proposé. Mais ce total ne supprime pas les conditions de l'épreuve ni une intervention entraînant l'ajournement. Préparez chaque domaine avec une priorité constante : les gestes de sécurité doivent être réellement effectués à toutes les étapes."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un candidat obtient 2/3, 7/10, 4/5 et 1/2 :"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Le calcul de points ne supprime pas les autres conditions.",
+              "anchor_text": "Additionner deux, sept, quatre et un donne quatorze points"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi un total supérieur à douze ne permet-il pas d’ignorer une intervention éliminatoire ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un camarade révise une ancienne grille indiquant deux points pour le parcours et six pour la relation client. La grille citée par votre camarade est ancienne. Reprenez la grille applicable et les consignes de l'organisateur : trois points pour le parcours et cinq pour la relation client dans le barème présenté ici. Vérifiez l'ensemble des domaines plutôt que deux chiffres isolés. Une préparation sur la bonne version évite de répartir l'entraînement à partir d'un document périmé."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un camarade révise une ancienne grille indiquant deux points"
+            },
+            {
+              "label": "Décision",
+              "text": "Utiliser la grille applicable et la convocation.",
+              "anchor_text": "La grille citée par votre camarade est ancienne. Reprenez"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "H.12",
+      "title": "S’entraîner et progresser",
+      "objective": "Transformer une observation en action de travail.",
+      "image": "media/vtc/module-h.webp",
+      "source_sha256": "290a1658f28c07cf8d9d4abb3419c75d930d2ce8ffca688b22a415beb8e9145b",
+      "scenes": [
+        {
+          "title": "Décrire un fait précis",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de transformer une observation en action de travail . Après un entraînement, décrivez ce qui s'est passé : « Le GPS a été réglé après le départ » est plus utile que « mauvaise préparation ». Une observation précise permet de savoir quelle action travailler. Distinguez les faits, leurs conséquences et l'objectif suivant. Évitez les jugements globaux sur la personne, qui n'indiquent aucune méthode de progrès."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Observer une action plutôt que juger la personne.",
+              "anchor_text": "Après un entraînement"
+            },
+            {
+              "label": "À retenir",
+              "text": "Relier le fait à un objectif de travail.",
+              "anchor_text": "Une observation précise"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Comment transformer « mauvaise préparation » en objectif directement observable ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Choisir un exercice adapté",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Choisissez un point prioritaire et entraînez-le dans un cadre adapté. Une routine d'accueil peut être répétée à l'arrêt ; un calcul de facture peut être travaillé au calme ; une manœuvre exige un encadrement et un lieu autorisé. Réunissez ensuite les compétences dans une mission complète. La répétition sert à rendre les gestes plus fiables, sans automatiser une erreur."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Une priorité dans un cadre sécurisé.",
+              "anchor_text": "Choisissez un point"
+            },
+            {
+              "label": "À retenir",
+              "text": "Réunir ensuite les compétences dans une mission.",
+              "anchor_text": "Réunissez ensuite"
+            }
+          ]
+        },
+        {
+          "title": "Vérifier le transfert",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une compétence est mieux acquise lorsqu'elle reste correcte dans une situation légèrement différente : autre adresse, nouveau passager ou itinéraire modifié. Reprenez le carnet d'erreurs et expliquez pourquoi la nouvelle réponse est meilleure. L'objectif est de savoir décider, pas de reconnaître uniquement un exercice déjà vu. Le formateur aide à choisir le niveau de difficulté et à sécuriser la progression."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Réussir aussi dans une situation différente.",
+              "anchor_text": "Une compétence est"
+            },
+            {
+              "label": "À retenir",
+              "text": "Expliquer pourquoi la nouvelle réponse est meilleure.",
+              "anchor_text": "Reprenez le carnet"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Expliquer pourquoi la nouvelle réponse est meilleure.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Observation : le candidat règle son GPS après le départ. Objectif suivant : saisir et vérifier la destination avant toute mise en mouvement. Le prochain exercice mesure cet objectif, sans multiplier dix corrections simultanées. L'objectif est observable : la destination est saisie et vérifiée avant le mouvement. Lors de l'exercice suivant, le formateur peut contrôler cette séquence précise. Si vous ajoutez immédiatement dix autres objectifs, la cause de l'amélioration devient difficile à repérer. Travaillez d'abord la routine correcte, puis testez-la avec une adresse différente avant de l'intégrer à la mission complète."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Observation : le candidat règle son GPS après le"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Un objectif précis et vérifiable.",
+              "anchor_text": "L'objectif est observable : la destination est saisie et"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Comment transformer « mauvaise préparation » en objectif directement observable ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Votre entraînement est correct en conduite, mais vous oubliez de confirmer le prix et de vérifier le coffre à l'arrivée. Notez séparément les deux oublis : confirmation du prix et contrôle du coffre. Préparez une routine de départ qui inclut l'accord commercial, puis une routine d'arrivée avec restitution des bagages. Répétez à l'arrêt avant une mission encadrée. Lors du prochain bilan, vérifiez les faits observés plutôt que l'impression générale. Le progrès se mesure à des actions devenues fiables."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Votre entraînement est correct en conduite, mais vous oubliez"
+            },
+            {
+              "label": "Décision",
+              "text": "Entraîner les routines de départ et d’arrivée.",
+              "anchor_text": "Notez séparément les deux oublis : confirmation du prix"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

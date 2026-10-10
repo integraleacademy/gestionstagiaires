@@ -28,7 +28,7 @@ def capsule(course):
 def test_every_current_capsule_gets_pacing_without_changing_progress_contract(letter, version):
     cid = f'academy-vtc-{letter.lower()}'
     frozen = old_course(letter, version)
-    before = vtc._repair_english_listening(vtc._repair_english_narration(copy.deepcopy(frozen)))
+    before = vtc.enrich_lessons(vtc._repair_english_listening(vtc._repair_english_narration(copy.deepcopy(frozen))))
     after = vtc.load_bundled_course(cid, version)
     original_video = capsule(before)['blocks'][0]['video']
     video = capsule(after)['blocks'][0]['video']

@@ -1,0 +1,1452 @@
+{
+  "revision": 10,
+  "module": "C",
+  "lessons": [
+    {
+      "ref": "C.01",
+      "title": "Préparer le départ",
+      "objective": "Transformer les vérifications en routine professionnelle.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "e8a3d56e57ae95a4b82a89d06632c281df5777b5c5f16ad7ee0a24f2ead75d43",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Avant la première course, vérifiez l’état général : pneus, éclairage, vitrages, essuie-glaces, niveaux selon le constructeur, voyants et absence d’anomalie. Le contrôle technique ne remplace pas cette observation quotidienne. Un voyant rouge d’alerte, une fuite ou un pneu endommagé peut imposer de ne pas partir. Dans l’habitacle, ajustez siège, appuie-tête, volant et rétroviseurs avant de rouler. Rangez les objets qui pourraient passer sous les pédales. Préparez la navigation à l’arrêt et vérifiez les équipements destinés aux passagers. Ne neutralisez pas une alerte pour maintenir une réservation : protégez les personnes, informez le client et organisez une solution conforme."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Vérifier pneus, feux, vitrages, niveaux, voyants et anomalies.",
+              "anchor_text": "Avant la première course, vérifiez l’état général :"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Dans l’habitacle, ajustez siège, appuie-tête, volant et rétroviseurs avant de rouler.",
+              "anchor_text": "Dans l’habitacle, ajustez siège, appuie-tête, volant et rétroviseurs"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Transformer les vérifications en routine professionnelle."
+          }
+        },
+        {
+          "title": "Préparer le véhicule et le départ",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La préparation commence avant l’arrivée du client. Vérifiez l’état extérieur, les pneumatiques, la visibilité, les équipements utiles, le niveau d’énergie et les documents nécessaires. Une anomalie importante doit être traitée avant le départ. Le contrôle quotidien ne remplace ni l’entretien ni les vérifications périodiques ; il permet de repérer ce qui a changé depuis la dernière utilisation."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La préparation commence avant l’arrivée du client.",
+              "anchor_text": "La préparation commence avant l’arrivée du client."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Une anomalie importante doit être traitée avant le départ.",
+              "anchor_text": "Une anomalie importante doit être traitée avant le"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Pneus, feux, vitres et anomalies."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une baisse de pression répétée n’est pas résolue par le simple effacement du voyant. Il faut rechercher la cause selon la notice et faire vérifier le pneumatique si nécessaire. Le temps perdu avant le départ évite une panne en service. Organisez une vérification toujours dans le même ordre pour réduire les oublis : tour extérieur, habitacle, poste de conduite, documents et mission. La propreté participe au service, mais ne doit pas masquer un défaut de sécurité. Un voyant, un bruit inhabituel ou une perte de pression justifie une analyse adaptée ; l’horaire du client ne rend pas le défaut acceptable."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Une baisse de pression répétée n’est pas résolue par le simple effacement du voyant.",
+              "anchor_text": "Une baisse de pression répétée n’est pas résolue"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Toujours le même ordre : extérieur, habitacle, poste de conduite, documents et mission.",
+              "anchor_text": "Organisez une vérification toujours dans le même ordre"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Autour du véhicule : Pneus, feux, vitres et anomalies. Au poste de conduite : Siège, rétroviseurs et objets rangés. Avant de partir : Documents, autonomie et trajet préparés. Le piège à éviter : Un contrôle technique à jour ne remplace pas la vérification quotidienne et ne rend pas une anomalie acceptable."
+            }
+          ],
+          "points": [
+            {
+              "label": "Autour du véhicule",
+              "text": "Pneus, feux, vitres et anomalies.",
+              "anchor_text": "Autour du véhicule : Pneus, feux, vitres et"
+            },
+            {
+              "label": "Au poste de conduite",
+              "text": "Siège, rétroviseurs et objets rangés.",
+              "anchor_text": "Au poste de conduite : Siège, rétroviseurs et"
+            },
+            {
+              "label": "Avant de partir",
+              "text": "Documents, autonomie et trajet préparés.",
+              "anchor_text": "Avant de partir : Documents, autonomie et trajet"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.02",
+      "title": "Choisir la bonne vitesse",
+      "objective": "Distinguer plafond réglementaire et allure adaptée.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "64c60770688c5b39387803b985ee77e14c61933379274a8241410f77d107cbb7",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La limitation est un maximum, pas une consigne à atteindre. En règle générale, par temps sec : 130 km/h sur autoroute, 110 sur chaussées séparées par un terre-plein central, 80 sur une route à double sens sans séparateur central ; certains tronçons autorisent 90 selon leur configuration ou une décision locale. En agglomération, la règle générale est 50, avec de nombreuses zones à 30. Sous la pluie, les plafonds usuels deviennent 110 sur autoroute, 100 sur chaussées séparées et 80 sur les autres routes concernées. Si la visibilité est inférieure à 50 mètres, le plafond est 50 sur tous les réseaux. La signalisation, les restrictions locales et une limitation plus basse restent prioritaires. Réduisez encore l’allure si les circonstances le demandent."
+            }
+          ],
+          "points": [
+            {
+              "label": "Temps sec — repères",
+              "text": "Sec : 130 / 110 / 80 km/h, selon le réseau et la signalisation.",
+              "anchor_text": "En règle générale, par temps sec"
+            },
+            {
+              "label": "Sous la pluie",
+              "text": "Pluie : 110 / 100 / 80 km/h ; toute limite plus basse reste prioritaire.",
+              "anchor_text": "Sous la pluie, les plafonds usuels"
+            },
+            {
+              "label": "Visibilité sous 50 m",
+              "text": "Visibilité sous 50 m : 50 km/h maximum, voire moins si nécessaire.",
+              "anchor_text": "Si la visibilité est inférieure"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Distinguer plafond réglementaire et allure adaptée."
+          }
+        },
+        {
+          "title": "Choisir une allure adaptée aux conditions",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une limitation est une valeur maximale autorisée, pas une vitesse à atteindre dans toute situation. La visibilité, l’adhérence, la densité, les usagers vulnérables et la capacité à s’arrêter dans l’espace visible peuvent imposer une allure plus faible. Le client ne peut pas transformer une contrainte horaire en autorisation de dépasser les règles."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Une limitation est une valeur maximale autorisée, pas une vitesse à atteindre dans toute situation.",
+              "anchor_text": "Une limitation est une valeur maximale autorisée, pas"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Visibilité, adhérence, circulation et usagers peuvent imposer de ralentir davantage.",
+              "anchor_text": "La visibilité, l’adhérence, la densité, les usagers vulnérables"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Lire la signalisation applicable."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Sur une autoroute habituellement limitée à 130, un chantier impose 90. La pluie ne permet pas de rouler à 110 : la limite locale de 90 reste à respecter, voire une allure inférieure si la situation l’exige. L’adaptation doit être anticipée et progressive quand la situation le permet. Réduisez avant la zone difficile, gardez une marge et évitez les corrections brusques. La vitesse augmente la distance parcourue pendant le temps de réaction et l’énergie à dissiper au freinage. Les exercices isolent certaines grandeurs pour comprendre le phénomène ; ils ne prédisent pas une distance d’arrêt universelle."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Sur une autoroute habituellement limitée à 130, un chantier impose 90.",
+              "anchor_text": "Sur une autoroute habituellement limitée à 130, un"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "L’adaptation doit être anticipée et progressive quand la situation le permet.",
+              "anchor_text": "L’adaptation doit être anticipée et progressive quand la"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La limite : Lire la signalisation applicable. La situation : Observer visibilité, météo et circulation. L’adaptation : Choisir une vitesse qui laisse le temps d’agir. Le piège à éviter : Une limitation est un maximum, pas une vitesse à atteindre. Une limite locale plus basse reste prioritaire."
+            }
+          ],
+          "points": [
+            {
+              "label": "La limite",
+              "text": "Lire la signalisation applicable.",
+              "anchor_text": "La limite : Lire la signalisation applicable."
+            },
+            {
+              "label": "La situation",
+              "text": "Observer visibilité, météo et circulation.",
+              "anchor_text": "La situation : Observer visibilité, météo et circulation."
+            },
+            {
+              "label": "L’adaptation",
+              "text": "Choisir une vitesse qui laisse le temps d’agir.",
+              "anchor_text": "L’adaptation : Choisir une vitesse qui laisse le"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.03",
+      "title": "Garder une marge de sécurité",
+      "objective": "Comprendre temps de réaction, freinage et intervalle.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "cf0c894f196701117598bc295445d426fa0248fd6c3c6bfc2bc0babd450aed4b",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La distance d’arrêt additionne la distance parcourue pendant la réaction et celle du freinage. La fatigue et la distraction allongent la réaction ; l’état des pneus, la chaussée et la vitesse influencent le freinage. À conditions comparables, doubler la vitesse multiplie approximativement la distance de freinage par quatre. L’intervalle minimal de sécurité correspond à la distance parcourue en au moins deux secondes. Il faut l’augmenter lorsque les conditions se dégradent. Pour l’évaluer, choisissez un repère fixe : quand le véhicule précédent le passe, comptez avant d’y arriver à votre tour. Ce repère temporel est plus utile qu’une estimation visuelle imprécise de quelques mètres."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "La distance d’arrêt additionne la distance parcourue pendant la réaction et celle du freinage.",
+              "anchor_text": "La distance d’arrêt additionne la distance parcourue pendant"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "L’intervalle minimal de sécurité correspond à la distance parcourue en au moins deux secondes.",
+              "anchor_text": "L’intervalle minimal de sécurité correspond à la distance"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Comprendre temps de réaction, freinage et intervalle."
+          }
+        },
+        {
+          "title": "Comprendre les distances sans formule magique",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Pendant le temps de réaction, le véhicule continue d’avancer. La distance correspondante dépend de la vitesse et du temps nécessaire avant l’action. La distance de freinage vient ensuite et dépend notamment de l’adhérence, de l’état du véhicule et du freinage. La distance d’arrêt réunit ces deux parties. Les repères de calcul ne remplacent jamais une marge adaptée aux conditions."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Pendant le temps de réaction, le véhicule continue d’avancer.",
+              "anchor_text": "Pendant le temps de réaction, le véhicule continue"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Le freinage dépend de l’adhérence, du véhicule et de l’action de freinage.",
+              "anchor_text": "La distance de freinage vient ensuite et dépend"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : La voiture avance avant le freinage."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. À quatre-vingt-dix kilomètres par heure, divisez quatre-vingt-dix par trois virgule six pour obtenir la vitesse en mètres par seconde. Le résultat est vingt-cinq mètres par seconde. En deux secondes, vingt-cinq multiplié par deux donnent cinquante mètres parcourus. Cette valeur illustre un intervalle de deux secondes. Elle n’annonce pas une distance d’arrêt universelle de cinquante mètres. La distance d’arrêt comprend la réaction puis le freinage, qui dépend de l’adhérence, du véhicule et de la vitesse. Les repères de calcul aident à comprendre ; les conditions réelles imposent toujours une marge adaptée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Conversion",
+              "text": "90 km/h ÷ 3,6 = 25 m/s.",
+              "anchor_text": "À quatre-vingt-dix kilomètres par heure"
+            },
+            {
+              "label": "Deux secondes",
+              "text": "25 × 2 = 50 m parcourus.",
+              "anchor_text": "En deux secondes, vingt-cinq multiplié"
+            },
+            {
+              "label": "À distinguer",
+              "text": "Cet intervalle ne constitue pas une distance d’arrêt universelle.",
+              "anchor_text": "Cette valeur illustre un intervalle"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Réagir : La voiture avance avant le freinage. Freiner : La distance dépend aussi de l’adhérence. Garder une marge : Augmenter l’écart quand les conditions se dégradent. Le piège à éviter : Ne confondez pas la distance parcourue pendant un intervalle et la distance totale nécessaire pour s’arrêter."
+            }
+          ],
+          "points": [
+            {
+              "label": "Réagir",
+              "text": "La voiture avance avant le freinage.",
+              "anchor_text": "Réagir : La voiture avance avant le freinage."
+            },
+            {
+              "label": "Freiner",
+              "text": "La distance dépend aussi de l’adhérence.",
+              "anchor_text": "Freiner : La distance dépend aussi de l’adhérence."
+            },
+            {
+              "label": "Garder une marge",
+              "text": "Augmenter l’écart quand les conditions se dégradent.",
+              "anchor_text": "Garder une marge : Augmenter l’écart quand les"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.04",
+      "title": "Observer et partager la route",
+      "objective": "Détecter tôt ce que les autres usagers peuvent faire.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "049afd882fca80acb8b2bb973c713bbeb9376d16ad374e49576f45c3111918a2",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Balayez le regard loin devant, sur les côtés et dans les rétroviseurs. Cherchez les indices : roue d’un vélo, porte qui s’entrouvre, piéton masqué, bus à l’arrêt. L’angle mort impose un contrôle adapté avant de se déporter ; le rétroviseur seul ne couvre pas tout. Les aides à la conduite assistent, elles ne remplacent pas l’observation. Laissez passer le piéton régulièrement engagé ou manifestant clairement son intention de traverser, dans les conditions du Code. Pour dépasser un cycle, respectez au minimum un mètre latéral en agglomération et un mètre cinquante hors agglomération. Si l’espace manque, attendez. Un client qui presse le chauffeur ne réduit pas la vulnérabilité des autres usagers."
+            }
+          ],
+          "points": [
+            {
+              "label": "Observer",
+              "text": "Regarder loin, autour et dans les rétroviseurs ; contrôler l’angle mort.",
+              "anchor_text": "Balayez le regard loin devant"
+            },
+            {
+              "label": "Les piétons",
+              "text": "Laisser passer le piéton engagé ou voulant clairement traverser.",
+              "anchor_text": "Laissez passer le piéton régulièrement engagé"
+            },
+            {
+              "label": "Dépasser un cycle",
+              "text": "Minimum : 1 m en agglomération ; 1,50 m hors agglomération.",
+              "anchor_text": "Pour dépasser un cycle"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Détecter tôt ce que les autres usagers peuvent faire."
+          }
+        },
+        {
+          "title": "Observer loin, près et sur les côtés",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. L’attention se répartit entre la trajectoire, les intersections, les rétroviseurs et les zones où un usager peut apparaître. Regarder loin aide à anticiper ; regarder près permet de contrôler l’environnement immédiat. Avant un déplacement latéral, les rétroviseurs ne dispensent pas du contrôle approprié des angles morts."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Répartir l’attention entre trajectoire, intersections, rétroviseurs et zones masquées.",
+              "anchor_text": "L’attention se répartit entre la trajectoire, les intersections,"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Regarder loin aide à anticiper ; regarder près permet de contrôler l’environnement immédiat.",
+              "anchor_text": "Regarder loin aide à anticiper ; regarder près"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Repérer les mouvements et les zones masquées."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une camionnette masque le bord d’un passage piéton. Même sans personne visible, vous préparez un ralentissement. L’absence de visibilité n’est pas une preuve d’absence de danger. Un usager vulnérable peut être masqué par un véhicule ou un obstacle. N’interprétez pas une absence de visibilité comme une absence de personne. La communication par clignotant annonce une intention ; elle ne donne pas priorité à la manœuvre. Une action se décide après observation et vérification de l’espace disponible."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Une camionnette masque le bord d’un passage piéton.",
+              "anchor_text": "Une camionnette masque le bord d’un passage piéton."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Un usager vulnérable peut être masqué par un véhicule ou un obstacle.",
+              "anchor_text": "Un usager vulnérable peut être masqué par un"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Regarder loin : Repérer les mouvements et les zones masquées. Contrôler autour : Rétroviseurs et angles morts au bon moment. Anticiper : Laisser de l’espace aux usagers vulnérables. Le piège à éviter : Une zone masquée peut cacher un usager. Le clignotant annonce une intention, mais ne donne pas priorité."
+            }
+          ],
+          "points": [
+            {
+              "label": "Regarder loin",
+              "text": "Repérer les mouvements et les zones masquées.",
+              "anchor_text": "Regarder loin : Repérer les mouvements et les"
+            },
+            {
+              "label": "Contrôler autour",
+              "text": "Rétroviseurs et angles morts au bon moment.",
+              "anchor_text": "Contrôler autour : Rétroviseurs et angles morts au"
+            },
+            {
+              "label": "Anticiper",
+              "text": "Laisser de l’espace aux usagers vulnérables.",
+              "anchor_text": "Anticiper : Laisser de l’espace aux usagers vulnérables."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.05",
+      "title": "Priorités et signalisation",
+      "objective": "Lire l’ensemble de la situation avant de s’engager.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "487e92b6b11225b36dc7e9878a65f19c97af00b5635885e627c1507dec91e962",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Les indications des agents, les feux et la signalisation organisent la circulation. Un panneau de priorité ne dispense pas de vérifier que la voie est libre. Au stop, l’arrêt doit être effectif à l’endroit approprié ; au cédez-le-passage, vous laissez passer les usagers prioritaires et vous vous arrêtez si nécessaire. Un carrefour à sens giratoire avec cédez-le-passage donne la priorité aux véhicules circulant sur l’anneau. Un rond-point sans ce régime peut relever de la priorité à droite : observez la signalisation réelle. Une flèche du GPS ne permet pas d’emprunter un sens interdit, une voie réservée non autorisée ou une zone fermée. Lisez aussi les panonceaux, horaires et exceptions."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Les indications des agents, les feux et la signalisation organisent la circulation.",
+              "anchor_text": "Les indications des agents, les feux et la"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Giratoire avec cédez-le-passage : priorité aux véhicules sur l’anneau.",
+              "anchor_text": "Un carrefour à sens giratoire avec cédez-le-passage donne"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Lire l’ensemble de la situation avant de s’engager."
+          }
+        },
+        {
+          "title": "Lire la signalisation avant de décider",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La décision dépend de la signalisation, des règles applicables et des mouvements des autres usagers. Un itinéraire GPS n’autorise jamais à ignorer un sens interdit ou une restriction. La signalisation temporaire et les instructions d’un agent peuvent modifier l’organisation habituelle. Il faut lire la situation actuelle, pas seulement appliquer le souvenir du lieu."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La décision dépend de la signalisation, des règles applicables et des mouvements des autres usagers.",
+              "anchor_text": "La décision dépend de la signalisation, des règles"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Un agent ou une signalisation temporaire peut modifier l’organisation habituelle.",
+              "anchor_text": "La signalisation temporaire et les instructions d’un agent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Feux, panneaux, marquage et autres usagers."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le GPS demande de tourner à droite, mais une rue est fermée pour travaux. Vous poursuivez par une voie autorisée puis recalculez. Une instruction numérique n’est pas une autorisation de circulation. À une intersection, observez suffisamment tôt pour éviter une décision brusque. Si vous manquez une direction, poursuivez vers une solution autorisée au lieu d’improviser un demi-tour dangereux. Un passager qui connaît les lieux peut aider à confirmer la destination, mais ne remplace pas votre responsabilité de conducteur."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Le GPS demande de tourner à droite, mais une rue est fermée pour travaux.",
+              "anchor_text": "Le GPS demande de tourner à droite, mais"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "À une intersection, observez suffisamment tôt pour éviter une décision brusque.",
+              "anchor_text": "À une intersection, observez suffisamment tôt pour éviter"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Observer : Feux, panneaux, marquage et autres usagers. Comprendre : Identifier la règle à cette intersection. S’engager : Vérifier que le passage est réellement libre. Le piège à éviter : Une instruction du GPS ne constitue pas une autorisation d’emprunter une voie interdite."
+            }
+          ],
+          "points": [
+            {
+              "label": "Observer",
+              "text": "Feux, panneaux, marquage et autres usagers.",
+              "anchor_text": "Observer : Feux, panneaux, marquage et autres usagers."
+            },
+            {
+              "label": "Comprendre",
+              "text": "Identifier la règle à cette intersection.",
+              "anchor_text": "Comprendre : Identifier la règle à cette intersection."
+            },
+            {
+              "label": "S’engager",
+              "text": "Vérifier que le passage est réellement libre.",
+              "anchor_text": "S’engager : Vérifier que le passage est réellement"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.06",
+      "title": "Installer les passagers",
+      "objective": "Sécuriser ceintures, enfants et bagages.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "fd80bcf143283cdc35bba4f8f444be6cd47f20c709b28d73a31edaaf7abe986d",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Chaque occupant utilise une place autorisée et un dispositif de retenue adapté. Le conducteur doit s’assurer que les passagers mineurs sont attachés. Pour un enfant de moins de dix ans, un système homologué adapté est requis dans les conditions du Code, avec les exceptions prévues. L’exemption propre aux taxis ne s’étend pas aux VTC. Préparez le dispositif dès la réservation. L’installation doit respecter la notice du siège et celle du véhicule, notamment les règles d’airbag pour un siège dos à la route placé à l’avant dans un cas autorisé. Chargez les bagages sans masquer la visibilité ni laisser d’objet lourd libre dans l’habitacle. Une valise ou une tablette peut devenir dangereuse lors d’un freinage."
+            }
+          ],
+          "points": [
+            {
+              "label": "Chaque occupant",
+              "text": "Une place autorisée et un dispositif de retenue adapté.",
+              "anchor_text": "Chaque occupant utilise une place autorisée"
+            },
+            {
+              "label": "L’enfant",
+              "text": "Moins de 10 ans : dispositif homologué adapté, selon le Code.",
+              "anchor_text": "Pour un enfant de moins de dix ans"
+            },
+            {
+              "label": "Préparer la course",
+              "text": "Préparer dès la réservation. L’exemption taxi ne vaut pas pour un VTC.",
+              "anchor_text": "Préparez le dispositif dès la réservation"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Sécuriser ceintures, enfants et bagages."
+          }
+        },
+        {
+          "title": "Installer les occupants et leurs effets",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La capacité autorisée du véhicule comprend le conducteur. Ne créez pas une place supplémentaire en partageant une ceinture ou en installant une personne sur des bagages. Le choix des dispositifs adaptés aux enfants doit être préparé avec les informations utiles à la réservation et les règles applicables. Une demande tardive exige une solution sûre avant le départ."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La capacité autorisée du véhicule comprend le conducteur.",
+              "anchor_text": "La capacité autorisée du véhicule comprend le conducteur."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Préparer le dispositif enfant avec les informations de réservation et les règles applicables.",
+              "anchor_text": "Le choix des dispositifs adaptés aux enfants doit"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Vérifier la capacité et les équipements."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Des parents proposent de garder leur enfant sur les genoux pour un trajet court. Cela ne fournit pas la protection d’un dispositif adapté. Vous expliquez la règle et recherchez une solution avant le départ. Les bagages doivent être rangés de façon à ne pas devenir des projectiles, gêner la visibilité ou entraver l’accès. Demandez l’accord avant d’aider une personne ou de manipuler son matériel. La vérification de l’installation se fait avant de mettre le véhicule en mouvement et peut nécessiter une interruption dans un lieu sûr si un problème apparaît."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Des parents proposent de garder leur enfant sur les genoux pour un trajet court.",
+              "anchor_text": "Des parents proposent de garder leur enfant sur"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Ranger les bagages sans gêner la visibilité ni créer de projectiles.",
+              "anchor_text": "Les bagages doivent être rangés de façon à"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les places : Vérifier la capacité et les équipements. L’installation : Dispositifs de retenue et bagages sécurisés. Le départ : S’assurer que tout le monde est prêt. Le piège à éviter : Un trajet court ne justifie pas de partager une ceinture ou de renoncer au dispositif de retenue adapté."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les places",
+              "text": "Vérifier la capacité et les équipements.",
+              "anchor_text": "Les places : Vérifier la capacité et les"
+            },
+            {
+              "label": "L’installation",
+              "text": "Dispositifs de retenue et bagages sécurisés.",
+              "anchor_text": "L’installation : Dispositifs de retenue et bagages sécurisés."
+            },
+            {
+              "label": "Le départ",
+              "text": "S’assurer que tout le monde est prêt.",
+              "anchor_text": "Le départ : S’assurer que tout le monde"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.07",
+      "title": "Prévenir la fatigue",
+      "objective": "Reconnaître quand il faut s’arrêter.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "83611d69d65d5a3c5a0bfba39752d4425f6e0357d4fb5fa077e8f0807b320c66",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La somnolence peut se manifester par des bâillements, des paupières lourdes, des écarts de trajectoire ou des souvenirs incomplets des derniers kilomètres. Ouvrir la fenêtre, augmenter la musique ou boire un café ne remplace pas le repos. L’habitude du métier ne protège pas contre l’endormissement. Planifiez les pauses et le sommeil, notamment pour les horaires de nuit, les départs matinaux et les journées fractionnées. Une pause au moins toutes les deux heures est un repère de prévention ; il faut s’arrêter plus tôt si un signe apparaît. En cas de somnolence, cherchez une aire ou un emplacement sûr et reposez-vous. La bande d’arrêt d’urgence n’est pas une aire de repos."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Bâillements, paupières lourdes, écarts de trajectoire : prendre les signes au sérieux.",
+              "anchor_text": "La somnolence peut se manifester par des bâillements,"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Planifier le sommeil et les pauses, notamment la nuit et tôt le matin.",
+              "anchor_text": "Planifiez les pauses et le sommeil, notamment pour"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Reconnaître quand il faut s’arrêter."
+          }
+        },
+        {
+          "title": "Reconnaître la baisse de vigilance",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La fatigue et la somnolence altèrent l’attention et les réactions. Des bâillements, des paupières lourdes ou des difficultés à maintenir la concentration doivent être pris au sérieux. L’ouverture d’une fenêtre ou une musique forte ne rétablit pas durablement une capacité de conduite sûre. L’organisation des horaires et des pauses prépare la prévention, mais il faut aussi réagir aux signes présents."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La fatigue et la somnolence altèrent l’attention et les réactions.",
+              "anchor_text": "La fatigue et la somnolence altèrent l’attention et"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Fenêtre ouverte ou musique forte ne rétablissent pas durablement la vigilance.",
+              "anchor_text": "L’ouverture d’une fenêtre ou une musique forte ne"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Bâillements, yeux lourds, attention qui baisse."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Les paupières deviennent lourdes et le conducteur lutte pour rester attentif. Il doit rechercher un arrêt sûr et traiter cet état de vigilance. Augmenter la musique ou ouvrir la fenêtre ne remplace pas le repos. Il prévient le client si le service doit être réorganisé. Prévoir une pause signifie choisir une possibilité d’arrêt autorisée et une marge dans le planning. Si l’état du conducteur ne permet pas de poursuivre en sécurité, il faut interrompre la conduite et organiser la suite avec l’exploitant. Les exercices de planning n’établissent pas les durées réglementaires d’un statut : ils entraînent à repérer un enchaînement irréaliste et une décision de sécurité."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Les paupières deviennent lourdes et le conducteur lutte pour rester attentif.",
+              "anchor_text": "Les paupières deviennent lourdes et le conducteur lutte"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Prévoir une pause signifie choisir une possibilité d’arrêt autorisée et une marge dans le planning.",
+              "anchor_text": "Prévoir une pause signifie choisir une possibilité d’arrêt"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Repérer : Bâillements, yeux lourds, attention qui baisse. S’arrêter : Choisir un endroit sûr pour se reposer. Réorganiser : Prévenir le client si le service doit changer. Le piège à éviter : La bande d’arrêt d’urgence n’est pas une aire de repos, et le café ne remplace pas le sommeil."
+            }
+          ],
+          "points": [
+            {
+              "label": "Repérer",
+              "text": "Bâillements, yeux lourds, attention qui baisse.",
+              "anchor_text": "Repérer : Bâillements, yeux lourds, attention qui baisse."
+            },
+            {
+              "label": "S’arrêter",
+              "text": "Choisir un endroit sûr pour se reposer.",
+              "anchor_text": "S’arrêter : Choisir un endroit sûr pour se"
+            },
+            {
+              "label": "Réorganiser",
+              "text": "Prévenir le client si le service doit changer.",
+              "anchor_text": "Réorganiser : Prévenir le client si le service"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.08",
+      "title": "Alcool, drogues et médicaments",
+      "objective": "Protéger sa vigilance avant la prise de service.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "158e47788933dd119cc1dbd5b2fc4b825968dea448d0afff3dd4e32f04316c41",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L’alcool altère jugement, perception et temps de réaction. Le seuil général d’interdiction est de 0,5 g/L de sang, et de 0,2 g/L pour les catégories concernées, notamment le permis probatoire. Le VTC n’est pas à confondre avec le transport en commun pour appliquer automatiquement son régime. La pratique professionnelle la plus sûre est de ne pas boire avant de conduire. La conduite après usage de stupéfiants est interdite. Certains médicaments provoquent une somnolence ou réduisent les capacités ; les pictogrammes signalent des niveaux de risque et la notice précise la conduite à tenir. Demandez conseil à un professionnel de santé, sans arrêter seul un traitement prescrit. Les mélanges peuvent aggraver les effets. Aucune astuce ne garantit une élimination rapide de l’alcool."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les seuils",
+              "text": "Seuil : 0,5 g/L ; 0,2 g/L pour les catégories concernées.",
+              "anchor_text": "Le seuil général d’interdiction"
+            },
+            {
+              "label": "Les stupéfiants",
+              "text": "Conduire après usage est interdit.",
+              "anchor_text": "La conduite après usage de stupéfiants"
+            },
+            {
+              "label": "Les médicaments",
+              "text": "Lire la notice et demander conseil ; ne pas arrêter seul un traitement.",
+              "anchor_text": "Certains médicaments provoquent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Protéger sa vigilance avant la prise de service."
+          }
+        },
+        {
+          "title": "Alcool, substances et médicaments : décider avant de conduire",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une consommation ou un traitement peut modifier l’attention, la vision et les réactions. Les pictogrammes et notices de médicaments donnent des indications à lire, mais une situation incertaine doit être éclaircie avec un professionnel de santé. Ne modifiez pas votre traitement de votre propre initiative pour pouvoir assurer une mission. La priorité est de ne pas prendre le volant lorsque la conduite n’est pas sûre."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Une consommation ou un traitement peut modifier l’attention, la vision et les réactions.",
+              "anchor_text": "Une consommation ou un traitement peut modifier l’attention,"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Ne modifiez pas votre traitement de votre propre initiative pour pouvoir assurer une mission.",
+              "anchor_text": "Ne modifiez pas votre traitement de votre propre"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Vérifier son aptitude à conduire."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un médicament nouveau porte une mise en garde sur la conduite. Le chauffeur contacte le pharmacien ou le prescripteur pour savoir comment organiser son activité. Il ne teste pas ses réactions avec un client à bord. Les impressions personnelles ne mesurent pas de façon fiable l’aptitude à conduire ou le respect d’un seuil légal. Les règles relatives à l’alcool et aux stupéfiants s’appliquent indépendamment du souhait du client. Une boisson, un café ou une douche ne doit pas être présenté comme une méthode permettant de neutraliser rapidement un risque ou de garantir un contrôle négatif."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Un médicament nouveau porte une mise en garde sur la conduite.",
+              "anchor_text": "Un médicament nouveau porte une mise en garde"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Le ressenti personnel ne prouve pas l’aptitude ni le respect d’un seuil légal.",
+              "anchor_text": "Les impressions personnelles ne mesurent pas de façon"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Avant le service : Vérifier son aptitude à conduire. Le doute : Lire les précautions et demander conseil. La sécurité : Ne pas prendre le volant si l’aptitude est altérée. Le piège à éviter : Une impression de bien-être, deux cafés ou une douche ne garantissent ni l’aptitude ni le respect d’un seuil."
+            }
+          ],
+          "points": [
+            {
+              "label": "Avant le service",
+              "text": "Vérifier son aptitude à conduire.",
+              "anchor_text": "Avant le service : Vérifier son aptitude à"
+            },
+            {
+              "label": "Le doute",
+              "text": "Lire les précautions et demander conseil.",
+              "anchor_text": "Le doute : Lire les précautions et demander"
+            },
+            {
+              "label": "La sécurité",
+              "text": "Ne pas prendre le volant si l’aptitude est altérée.",
+              "anchor_text": "La sécurité : Ne pas prendre le volant"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.09",
+      "title": "Éviter les distractions",
+      "objective": "Préparer le numérique pour garder les yeux sur la route.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "d552dffdda173fded64e8b86a33464d5344970a9e819c028faabc48b7c0e9de5",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le téléphone tenu en main est interdit au conducteur d’un véhicule en circulation. Le port à l’oreille d’un dispositif émettant du son est également interdit, sauf exceptions prévues. Un système intégré mains libres ne supprime pas la distraction mentale : une conversation complexe réduit la disponibilité pour la route. Réglez le trajet, la musique et les notifications avant le départ. Une adresse ambiguë, une nouvelle réservation ou un message de plateforme attendent un arrêt autorisé et sûr. Un feu rouge ou un embouteillage ne doit pas être traité comme un stationnement permettant de manipuler librement le téléphone. Expliquez au client que vous vérifierez sa demande au bon moment."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Le téléphone tenu en main est interdit au conducteur d’un véhicule en circulation.",
+              "anchor_text": "Le téléphone tenu en main est interdit au"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Réglez le trajet, la musique et les notifications avant le départ.",
+              "anchor_text": "Réglez le trajet, la musique et les notifications"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Préparer le numérique pour garder les yeux sur la route."
+          }
+        },
+        {
+          "title": "Réduire les distractions avant le mouvement",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La distraction peut être visuelle, manuelle ou cognitive. Lire une notification, manipuler une application ou chercher un objet détourne des ressources nécessaires à la conduite. Préparez la destination et les réglages avant de partir. Si une correction demande de la manipulation, organisez un arrêt dans un endroit autorisé et sûr."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La distraction peut être visuelle, manuelle ou cognitive.",
+              "anchor_text": "La distraction peut être visuelle, manuelle ou cognitive."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Préparez la destination et les réglages avant de partir.",
+              "anchor_text": "Préparez la destination et les réglages avant de"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Navigation et messages avant le départ."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une nouvelle course s’affiche pendant un virage. L’intérêt commercial ne justifie pas de quitter la route des yeux pour l’accepter. L’organisation doit prévoir des interactions compatibles avec la sécurité. La relation client doit rester compatible avec l’attention disponible. Une réponse courte peut reporter une recherche touristique ou une question administrative à l’arrêt. Un dispositif technique ne garantit pas que l’attention reste suffisante. La responsabilité consiste à éviter une tâche secondaire lorsque la circulation demande toute votre vigilance."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Une nouvelle course s’affiche pendant un virage.",
+              "anchor_text": "Une nouvelle course s’affiche pendant un virage."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "La relation client doit rester compatible avec l’attention disponible.",
+              "anchor_text": "La relation client doit rester compatible avec l’attention"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Préparer à l’arrêt : Navigation et messages avant le départ. Pendant le trajet : Garder les mains et l’attention disponibles. Si nécessaire : S’arrêter en sécurité avant de manipuler. Le piège à éviter : Un feu rouge n’est pas un stationnement autorisant à manipuler librement le téléphone."
+            }
+          ],
+          "points": [
+            {
+              "label": "Préparer à l’arrêt",
+              "text": "Navigation et messages avant le départ.",
+              "anchor_text": "Préparer à l’arrêt : Navigation et messages avant"
+            },
+            {
+              "label": "Pendant le trajet",
+              "text": "Garder les mains et l’attention disponibles.",
+              "anchor_text": "Pendant le trajet : Garder les mains et"
+            },
+            {
+              "label": "Si nécessaire",
+              "text": "S’arrêter en sécurité avant de manipuler.",
+              "anchor_text": "Si nécessaire : S’arrêter en sécurité avant de"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.10",
+      "title": "Conduire avec souplesse",
+      "objective": "Associer confort, sobriété et anticipation.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "0c4085ab17f4ccc45f4f05b1eea533d507ced004d8906d841e77937007012f7c",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une conduite souple repose sur l’observation : lever le pied tôt, conserver une allure régulière et éviter les freinages tardifs. La douceur ne signifie pas lenteur excessive ni hésitation. Elle permet de garder de la marge et de réduire les variations ressenties par les passagers. Adaptez l’accélération, le freinage et les virages au véhicule, à l’adhérence et aux personnes transportées. Ne roulez pas au point mort pour économiser : cela dégrade la maîtrise et n’est pas une méthode recommandée. Vérifiez la pression prescrite, retirez les charges inutiles et gérez la climatisation avec mesure. Sur un véhicule électrique, anticipez l’autonomie réelle, la météo et la recharge, sans laisser le client découvrir un arrêt imprévu."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Observer tôt, garder une allure régulière et éviter les freinages tardifs.",
+              "anchor_text": "Une conduite souple repose sur l’observation : lever"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Adapter accélération, freinage et virages au véhicule, à l’adhérence et aux passagers.",
+              "anchor_text": "Adaptez l’accélération, le freinage et les virages au"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Associer confort, sobriété et anticipation."
+          }
+        },
+        {
+          "title": "Conduire avec anticipation et souplesse",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La souplesse vient d’abord de l’anticipation : lire les ralentissements, garder une marge, doser l’accélération et préparer les changements de direction. Elle améliore le confort et évite les corrections inutiles. Une conduite souple n’est pas une conduite passive ; le conducteur doit pouvoir réagir nettement lorsqu’un danger l’exige."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Anticiper les ralentissements et préparer les changements de direction.",
+              "anchor_text": "La souplesse vient d’abord de l’anticipation : lire"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Elle améliore le confort et évite les corrections inutiles.",
+              "anchor_text": "Elle améliore le confort et évite les corrections"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Voir les ralentissements assez tôt."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. À l’approche d’un feu déjà rouge, relâcher tôt l’accélérateur permet une décélération progressive. Accélérer jusqu’au dernier moment puis freiner fort consomme davantage et dégrade le confort. L’écoconduite recherche une utilisation adaptée des moyens du véhicule, sans compromettre la sécurité. Le gonflage, la charge, la préparation de l’itinéraire et l’anticipation influencent la consommation. Les aides à la conduite sont des appuis dont les limites doivent être connues. Le conducteur reste responsable de l’observation et du contrôle."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "À l’approche d’un feu déjà rouge, relâcher tôt l’accélérateur permet une décélération progressive.",
+              "anchor_text": "À l’approche d’un feu déjà rouge, relâcher tôt"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Réduire la consommation sans compromettre la sécurité.",
+              "anchor_text": "L’écoconduite recherche une utilisation adaptée des moyens du"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Anticiper : Voir les ralentissements assez tôt. Agir progressivement : Accélérer et freiner avec souplesse. Préserver le confort : Éviter les changements brusques inutiles. Le piège à éviter : Conduire souplement ne signifie pas rouler au point mort ou renoncer à réagir à un danger."
+            }
+          ],
+          "points": [
+            {
+              "label": "Anticiper",
+              "text": "Voir les ralentissements assez tôt.",
+              "anchor_text": "Anticiper : Voir les ralentissements assez tôt."
+            },
+            {
+              "label": "Agir progressivement",
+              "text": "Accélérer et freiner avec souplesse.",
+              "anchor_text": "Agir progressivement : Accélérer et freiner avec souplesse."
+            },
+            {
+              "label": "Préserver le confort",
+              "text": "Éviter les changements brusques inutiles.",
+              "anchor_text": "Préserver le confort : Éviter les changements brusques"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.11",
+      "title": "Météo, nuit et adhérence",
+      "objective": "Ajuster la mission aux conditions réelles.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "43053b01935514eaaab8949f80dd9b2f6326662916c8c19d76430de4b302002c",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La pluie, le brouillard, la neige, le verglas et l’obscurité réduisent les marges. Diminuez l’allure avant la difficulté et augmentez les distances. Utilisez les feux adaptés ; les feux arrière de brouillard ne s’emploient pas sous la pluie seule. Si l’adhérence devient incertaine, évitez les commandes brusques et recherchez une solution sûre. Vérifiez avant le départ les restrictions locales, équipements hivernaux, fermetures et prévisions. Les obligations peuvent dépendre d’une zone et d’une période. Une transmission intégrale ou une aide électronique ne supprime pas la distance de freinage. Si les conditions ne permettent plus de poursuivre, interrompre ou reporter le trajet peut être la décision professionnelle appropriée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "La pluie, le brouillard, la neige, le verglas et l’obscurité réduisent les marges.",
+              "anchor_text": "La pluie, le brouillard, la neige, le verglas"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Vérifiez avant le départ les restrictions locales, équipements hivernaux, fermetures et prévisions.",
+              "anchor_text": "Vérifiez avant le départ les restrictions locales, équipements"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Ajuster la mission aux conditions réelles."
+          }
+        },
+        {
+          "title": "Adapter les marges à la météo et à la nuit",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La pluie, le vent, le brouillard et l’obscurité peuvent réduire la visibilité ou l’adhérence. L’éclairage et les équipements doivent être adaptés dans le respect des règles, sans éblouir. La prudence concerne aussi les transitions : une zone d’ombre, une chaussée humide après une partie sèche ou une rafale à la sortie d’un abri."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La pluie, le vent, le brouillard et l’obscurité peuvent réduire la visibilité ou l’adhérence.",
+              "anchor_text": "La pluie, le vent, le brouillard et l’obscurité"
+            },
+            {
+              "label": "Le point clé",
+              "text": "L’éclairage et les équipements doivent être adaptés dans le respect des règles, sans éblouir.",
+              "anchor_text": "L’éclairage et les équipements doivent être adaptés dans"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Voir et être vu selon les conditions."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. En brouillard épais avec visibilité sous cinquante mètres, le plafond est de cinquante kilomètres par heure, y compris sur autoroute. Une allure plus faible peut rester nécessaire. Il ne faut pas suivre les feux du véhicule précédent de trop près. Une estimation GPS ne reflète pas toujours l’effet immédiat des conditions. Adaptez l’allure, les distances et l’organisation de la mission ; informez le client si l’horaire change. Si une route est fermée ou une situation n’est plus praticable en sécurité, choisissez une alternative autorisée ou interrompez la progression dans un lieu sûr."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Visibilité sous 50 m : plafond de 50 km/h, avec une allure plus faible si nécessaire.",
+              "anchor_text": "En brouillard épais avec visibilité sous cinquante mètres,"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Une estimation GPS ne reflète pas toujours l’effet immédiat des conditions.",
+              "anchor_text": "Une estimation GPS ne reflète pas toujours l’effet"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La visibilité : Voir et être vu selon les conditions. L’adhérence : Adapter la vitesse et les distances. La marge : Éviter toute manœuvre brutale. Le piège à éviter : Une transmission intégrale ou une aide électronique ne supprime pas la distance de freinage."
+            }
+          ],
+          "points": [
+            {
+              "label": "La visibilité",
+              "text": "Voir et être vu selon les conditions.",
+              "anchor_text": "La visibilité : Voir et être vu selon"
+            },
+            {
+              "label": "L’adhérence",
+              "text": "Adapter la vitesse et les distances.",
+              "anchor_text": "L’adhérence : Adapter la vitesse et les distances."
+            },
+            {
+              "label": "La marge",
+              "text": "Éviter toute manœuvre brutale.",
+              "anchor_text": "La marge : Éviter toute manœuvre brutale."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "C.12",
+      "title": "Gérer panne et accident",
+      "objective": "Protéger les personnes et alerter correctement.",
+      "image": "media/vtc/module-c.webp",
+      "source_sha256": "b4d35782c1224e63af6b396e3c870d7b426828d5e70aa8edaedb1f368c4d35d6",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "En cas d’incident, évitez le suraccident. Immobilisez le véhicule au mieux selon la situation, allumez les feux de détresse et mettez le gilet avant de sortir si cela peut être fait en sécurité. Sur autoroute, rejoignez un refuge derrière la glissière si accessible, à l’écart de la circulation. Ne vous exposez pas pour poser un triangle ; il n’est pas à installer lorsque cette action met votre vie en danger. Alertez par le 112 ou les moyens d’urgence disponibles et donnez lieu, sens de circulation, repère, dangers et nombre de victimes. Ne déplacez pas un blessé sauf danger immédiat que vous pouvez éviter sans vous exposer ; suivez les consignes des secours. Le constat amiable décrit les faits d’un accident matériel : lisez avant de signer et ne modifiez pas un document signé unilatéralement."
+            }
+          ],
+          "points": [
+            {
+              "label": "Protéger",
+              "text": "Éviter le suraccident et rejoindre un refuge sûr si accessible.",
+              "anchor_text": "En cas d’incident, évitez le suraccident."
+            },
+            {
+              "label": "Alerter",
+              "text": "112 ou moyens d’urgence : lieu, sens, repère, dangers et victimes.",
+              "anchor_text": "Alertez par le 112"
+            },
+            {
+              "label": "Le blessé",
+              "text": "Ne pas déplacer, sauf danger immédiat évitable sans vous exposer.",
+              "anchor_text": "Ne déplacez pas un blessé"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Protéger les personnes et alerter correctement."
+          }
+        },
+        {
+          "title": "Gérer une panne ou un accident sans aggraver le risque",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La première séquence est protéger, alerter et suivre les consignes adaptées. Cherchez une position sûre et préservez les occupants des dangers de circulation. Les gestes et équipements se choisissent selon la situation et les règles applicables. N’exposez pas une personne à un danger supplémentaire pour installer un matériel ou prendre une photo."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La première séquence est protéger, alerter et suivre les consignes adaptées.",
+              "anchor_text": "La première séquence est protéger, alerter et suivre"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Les gestes et équipements se choisissent selon la situation et les règles applicables.",
+              "anchor_text": "Les gestes et équipements se choisissent selon la"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Éviter de créer un second accident."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un véhicule tombe en panne sur autoroute. Chercher un objet dans le coffre côté circulation ou rester debout devant la voiture augmente le danger. La sécurité des personnes passe avant la récupération des bagages. Une fois l’urgence traitée, organisez l’assistance, le remplacement éventuel et l’information du client. Conservez les faits nécessaires au constat, à l’entreprise et à l’assurance. Le retour à une prestation normale suppose une solution réellement sûre et conforme ; le simple fait que le moteur redémarre ne règle pas tout défaut."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Un véhicule tombe en panne sur autoroute.",
+              "anchor_text": "Un véhicule tombe en panne sur autoroute."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Après l’urgence : assistance, remplacement éventuel et information du client.",
+              "anchor_text": "Une fois l’urgence traitée, organisez l’assistance, le remplacement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Se mettre en sécurité : Éviter de créer un second accident. Alerter : Donner le lieu et les dangers présents. Organiser la suite : Suivre les consignes et informer le client. Le piège à éviter : La récupération des bagages et les formalités passent après la protection des personnes et l’alerte."
+            }
+          ],
+          "points": [
+            {
+              "label": "Se mettre en sécurité",
+              "text": "Éviter de créer un second accident.",
+              "anchor_text": "Se mettre en sécurité : Éviter de créer"
+            },
+            {
+              "label": "Alerter",
+              "text": "Donner le lieu et les dangers présents.",
+              "anchor_text": "Alerter : Donner le lieu et les dangers"
+            },
+            {
+              "label": "Organiser la suite",
+              "text": "Suivre les consignes et informer le client.",
+              "anchor_text": "Organiser la suite : Suivre les consignes et"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

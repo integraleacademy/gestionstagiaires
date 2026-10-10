@@ -227,6 +227,10 @@
   }
 
   function pauseRequiredVideos(reset = false) {
+    optionalVideoPacing.forEach((pacing, video) => {
+      pacing?.cancelPause();
+      if (!video.paused) video.pause();
+    });
     requiredVideos.forEach((video) => {
       videoReaders.get(video)?.pacing?.cancelPause();
       if (!video.paused) video.pause();
@@ -393,6 +397,18 @@
       });
     });
     renderVideoProgress();
+  }
+
+  // Existing enrolments can watch the new explanations without changing their
+  // completion requirements. They use the same pace and learning pauses.
+  const optionalVideoPacing = new Map();
+  function setupOptionalVideos() {
+    document.querySelectorAll('.native-video-shell video').forEach((video) => {
+      if (requiredVideos.includes(video) || !video.closest('.native-video-shell')?.querySelector('[data-video-pacing-config]')) return;
+      optionalVideoPacing.set(video, window.NativeVideoPacing?.attach(video, {
+        canResume: () => Boolean(state.trackingSessionId && !state.stopped && state.playbackAvailable),
+      }));
+    });
   }
 
   function applyProgress(progress) {
@@ -730,6 +746,7 @@
 
   restoreSavedAnswer();
   setupRequiredVideos();
+  setupOptionalVideos();
   updateAction();
   renderTimer();
   scheduleIdlePause();

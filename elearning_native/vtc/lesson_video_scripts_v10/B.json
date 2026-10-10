@@ -1,0 +1,1482 @@
+{
+  "revision": 10,
+  "module": "B",
+  "lessons": [
+    {
+      "ref": "B.01",
+      "title": "Choisir un cadre juridique",
+      "objective": "Séparer les choix qui structurent l’entreprise.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "6f88c8ae01e6a8c6762e11dff80f9ec171ac15409da27e2871886795c5026220",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L’entreprise individuelle permet d’exercer en nom propre. L’EURL et la SASU sont des sociétés à associé unique : elles ont une personnalité juridique distincte et imposent des formalités de constitution et de suivi. La micro-entreprise est un régime simplifié, pas une société supplémentaire. Comparez quatre dimensions : responsabilités, coût administratif, fiscalité du résultat et protection sociale du dirigeant. Le capital ne constitue pas un revenu et une société ne supprime pas tout risque personnel, notamment en cas de caution ou de faute. Aucun statut n’est « le meilleur pour tous ». Le choix se prépare avec un prévisionnel et, si nécessaire, un professionnel du chiffre ou du droit."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "L’entreprise individuelle permet d’exercer en nom propre.",
+              "anchor_text": "L’entreprise individuelle permet d’exercer en nom propre."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Comparer responsabilités, administration, fiscalité et protection sociale.",
+              "anchor_text": "Comparez quatre dimensions : responsabilités, coût administratif, fiscalité"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Séparer les choix qui structurent l’entreprise."
+          }
+        },
+        {
+          "title": "Choisir un cadre sans confondre les questions",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La forme juridique, le régime fiscal, le régime social et le régime de TVA répondent à des questions différentes. Le régime micro est un régime simplifié, notamment utilisé en entreprise individuelle et accessible à certaines EURL sous conditions ; ce n’est pas une forme de société comparable à une SASU. Un choix doit tenir compte du projet : travail seul ou à plusieurs, niveau des frais, protection, financement et obligations de gestion. Une solution intéressante pour une personne ne l’est pas automatiquement pour une autre."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Forme juridique, fiscalité, régime social et TVA : quatre questions distinctes.",
+              "anchor_text": "La forme juridique, le régime fiscal, le régime"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Adapter le choix au projet, aux frais, au financement et à la protection recherchée.",
+              "anchor_text": "Un choix doit tenir compte du projet :"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Recettes prévues, frais et revenu souhaité."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Deux chauffeurs réalisent le même chiffre d’affaires. L’un supporte une forte location et souhaite embaucher ; l’autre commence seul avec un véhicule déjà financé. Leur structure de coûts et leur projet peuvent conduire à des choix différents. Comparez des situations cohérentes. Dans une activité qui supporte un véhicule, du carburant, de l’assurance, de l’entretien et des commissions, regardez ce qui reste réellement après les sorties. Les cotisations ou le calcul fiscal d’un régime simplifié ne signifient pas que les dépenses ont disparu. Les seuils et taux légaux se vérifient au moment du choix avec les sources officielles et un interlocuteur compétent."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Deux chauffeurs réalisent le même chiffre d’affaires.",
+              "anchor_text": "Deux chauffeurs réalisent le même chiffre d’affaires."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Comparez des situations cohérentes.",
+              "anchor_text": "Comparez des situations cohérentes."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le projet : Recettes prévues, frais et revenu souhaité. Les choix : Séparer forme juridique, fiscalité et régime social. La comparaison : Comparer les mêmes hypothèses d’activité. Le piège à éviter : Aucun statut n’est le meilleur pour tous. Comparez le même projet, les mêmes recettes et les mêmes dépenses."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le projet",
+              "text": "Recettes prévues, frais et revenu souhaité.",
+              "anchor_text": "Le projet : Recettes prévues, frais et revenu"
+            },
+            {
+              "label": "Les choix",
+              "text": "Séparer forme juridique, fiscalité et régime social.",
+              "anchor_text": "Les choix : Séparer forme juridique, fiscalité et"
+            },
+            {
+              "label": "La comparaison",
+              "text": "Comparer les mêmes hypothèses d’activité.",
+              "anchor_text": "La comparaison : Comparer les mêmes hypothèses d’activité."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.02",
+      "title": "Créer et organiser l’activité",
+      "objective": "Mettre les démarches dans un ordre cohérent.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "ab0b9dcfb57de8c049bf4fd714420b8bef23c4cd53d7c05dec4fc2b805b6c76c",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le projet commence par une estimation réaliste du marché, des coûts et des financements. Les formalités d’entreprise se réalisent par le guichet unique. L’immatriculation et les identifiants ne remplacent pas les autorisations propres au transport. Un dossier VTC comprend donc un volet entreprise et un volet métier. Le SIREN identifie l’entreprise ; le SIRET identifie un établissement. Le code APE décrit l’activité principale à des fins statistiques, sans constituer une autorisation d’exercer. Classez les contrats, attestations, identifiants et accès professionnels. Les organismes ont des rôles différents : INPI pour le guichet, Urssaf pour le social, administration fiscale pour les impôts, CMA pour l’accompagnement artisanal et l’examen."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Le projet commence par une estimation réaliste du marché, des coûts et des financements.",
+              "anchor_text": "Le projet commence par une estimation réaliste du"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Le SIREN identifie l’entreprise ; le SIRET identifie un établissement.",
+              "anchor_text": "Le SIREN identifie l’entreprise ; le SIRET identifie"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Mettre les démarches dans un ordre cohérent."
+          }
+        },
+        {
+          "title": "Construire le dossier de démarrage",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La création administrative n’est qu’une étape de la mise en activité. Séparez les formalités de l’entreprise, l’inscription de l’exploitant, les conditions du conducteur et la mise en conformité du véhicule. Préparez aussi les procédures de devis, de réservation, de facturation et d’archivage. Chaque ligne du dossier doit avoir une preuve et un responsable de suivi."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La création administrative n’est qu’une étape de la mise en activité.",
+              "anchor_text": "La création administrative n’est qu’une étape de la"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Préparez aussi les procédures de devis, de réservation, de facturation et d’archivage.",
+              "anchor_text": "Préparez aussi les procédures de devis, de réservation,"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Identifier les formalités du projet."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une entreprise a quatre mille euros disponibles et trois mille deux cents euros de paiements de démarrage certains. Quatre mille moins trois mille deux cents donnent huit cents euros. Ce solde reste disponible avant les recettes suivantes ; il ne permet pas d’ignorer les charges du mois à venir. La trésorerie de départ finance les dépenses qui arrivent avant les premières recettes : acompte, équipement, assurance, charges fixes, communication et marge pour les imprévus. Distinguez les engagements irréversibles, les paiements différés et les réserves disponibles. Une prévision de chiffre d’affaires ne remplace pas de l’argent disponible le jour d’un prélèvement."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le départ",
+              "text": "4 000 € disponibles ; 3 200 € à payer.",
+              "anchor_text": "Une entreprise a quatre mille euros"
+            },
+            {
+              "label": "Le calcul",
+              "text": "4 000 − 3 200 = 800 € restants.",
+              "anchor_text": "Quatre mille moins trois mille deux cents"
+            },
+            {
+              "label": "La réserve",
+              "text": "Les premières dépenses arrivent avant les premières recettes.",
+              "anchor_text": "La trésorerie de départ finance"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La création : Identifier les formalités du projet. L’organisation : Séparer documents, échéances et comptes. Le lancement : Vérifier les obligations avant de vendre. Le piège à éviter : L’immatriculation de l’entreprise ne remplace pas les autorisations propres au transport."
+            }
+          ],
+          "points": [
+            {
+              "label": "La création",
+              "text": "Identifier les formalités du projet.",
+              "anchor_text": "La création : Identifier les formalités du projet."
+            },
+            {
+              "label": "L’organisation",
+              "text": "Séparer documents, échéances et comptes.",
+              "anchor_text": "L’organisation : Séparer documents, échéances et comptes."
+            },
+            {
+              "label": "Le lancement",
+              "text": "Vérifier les obligations avant de vendre.",
+              "anchor_text": "Le lancement : Vérifier les obligations avant de"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.03",
+      "title": "Lire un bilan",
+      "objective": "Reconnaître ce que l’entreprise possède et comment elle le finance.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "3fca388b28639a5593e841448e2c0a243e2e34ccf60d9eac50fc63181e59bf5c",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le bilan est une photographie à une date donnée. L’actif présente les emplois : véhicule immobilisé, créances clients, banque. Le passif explique les ressources : capitaux propres, emprunts et dettes. Le total de l’actif est égal au total du passif ; cette égalité ne prouve pas à elle seule la bonne santé de l’entreprise. Une créance correspond à une somme due par un client. Une dette correspond à une somme que l’entreprise doit payer. Un véhicule acheté durablement est généralement une immobilisation ; sa valeur comptable diminue avec l’amortissement. Le solde bancaire n’est qu’un poste du bilan : il ne résume ni la valeur de l’activité ni son bénéfice."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Le bilan est une photographie à une date donnée.",
+              "anchor_text": "Le bilan est une photographie à une date"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Une créance correspond à une somme due par un client.",
+              "anchor_text": "Une créance correspond à une somme due par"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Reconnaître ce que l’entreprise possède et comment elle le finance."
+          }
+        },
+        {
+          "title": "Lire une photographie de l’entreprise",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le bilan présente la situation à une date. À l’actif figurent notamment les biens, les créances et la trésorerie. Au passif figurent les capitaux propres et les dettes qui financent cet ensemble. Un véhicule peut augmenter les moyens de l’entreprise alors qu’un emprunt augmente aussi son endettement. Posséder un actif ne signifie pas disposer de sa valeur en argent immédiatement utilisable."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Le bilan présente la situation à une date.",
+              "anchor_text": "Le bilan présente la situation à une date."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Au passif figurent les capitaux propres et les dettes qui financent cet ensemble.",
+              "anchor_text": "Au passif figurent les capitaux propres et les"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Ce que l’entreprise possède ou attend."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Dans un bilan simplifié, le véhicule vaut dix-huit mille euros, les clients doivent deux mille euros et la banque contient quatre mille euros. Dix-huit mille plus deux mille plus quatre mille donnent vingt-quatre mille euros à l’actif. Au passif, huit mille euros de capitaux propres, quatorze mille euros d’emprunt et deux mille euros de dettes fournisseurs totalisent aussi vingt-quatre mille euros. Lorsqu’un client règle une facture déjà comptabilisée, la créance diminue et la banque augmente. Le total de l’actif peut rester identique. L’encaissement ne crée pas une deuxième vente. À l’inverse, un emprunt fait entrer de l’argent et crée une dette : ce n’est pas du chiffre d’affaires. Ces distinctions évitent de confondre le solde bancaire avec la richesse produite par les courses."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les emplois",
+              "text": "Véhicule 18 000 € + clients 2 000 € + banque 4 000 €.",
+              "anchor_text": "Dans un bilan simplifié"
+            },
+            {
+              "label": "Actif total",
+              "text": "18 000 + 2 000 + 4 000 = 24 000 €.",
+              "anchor_text": "Dix-huit mille plus deux mille"
+            },
+            {
+              "label": "Passif total",
+              "text": "8 000 + 14 000 + 2 000 = 24 000 €.",
+              "anchor_text": "Au passif, huit mille euros"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. L’actif : Ce que l’entreprise possède ou attend. Le passif : Comment ces éléments sont financés. La lecture : Observer une situation à une date donnée. Le piège à éviter : L’égalité entre actif et passif ne prouve pas, à elle seule, la bonne santé de l’entreprise."
+            }
+          ],
+          "points": [
+            {
+              "label": "L’actif",
+              "text": "Ce que l’entreprise possède ou attend.",
+              "anchor_text": "L’actif : Ce que l’entreprise possède ou attend."
+            },
+            {
+              "label": "Le passif",
+              "text": "Comment ces éléments sont financés.",
+              "anchor_text": "Le passif : Comment ces éléments sont financés."
+            },
+            {
+              "label": "La lecture",
+              "text": "Observer une situation à une date donnée.",
+              "anchor_text": "La lecture : Observer une situation à une"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.04",
+      "title": "Lire le résultat",
+      "objective": "Distinguer revenu d’activité, charges et bénéfice.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "4ba62e49693abae88033e1c00060f21383b687fa4d8c68e5d7bb3402d187c8f6",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le compte de résultat décrit une période. Les produits, dont le chiffre d’affaires, sont comparés aux charges pour déterminer un bénéfice ou une perte. Les charges comprennent notamment les consommations, les assurances, les services, certaines cotisations et les amortissements selon le régime. Au régime réel, un achat de véhicule durable ne se traite pas automatiquement comme une charge intégrale du mois. L’amortissement répartit son coût sur sa durée d’utilisation comptable. Le remboursement du capital d’un emprunt n’est pas une charge du résultat ; les intérêts le sont en principe. Ces différences expliquent pourquoi résultat et trésorerie ne varient pas toujours ensemble."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Le compte de résultat décrit une période.",
+              "anchor_text": "Le compte de résultat décrit une période."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Un véhicule durable n’est pas automatiquement une charge intégrale du mois.",
+              "anchor_text": "Au régime réel, un achat de véhicule durable"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Distinguer revenu d’activité, charges et bénéfice."
+          }
+        },
+        {
+          "title": "Différencier le résultat et l’argent disponible",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le résultat mesure la différence entre les produits et les charges d’une période. La trésorerie mesure l’argent disponible et ses mouvements. Une prestation facturée peut améliorer le résultat avant son paiement ; un emprunt peut augmenter le compte bancaire sans devenir un produit d’exploitation. Confondre ces deux lectures peut conduire à dépenser de l’argent nécessaire à une échéance."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Le résultat mesure la différence entre les produits et les charges d’une période.",
+              "anchor_text": "Le résultat mesure la différence entre les produits"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Facturation, encaissement et emprunt n’agissent pas de la même façon.",
+              "anchor_text": "Une prestation facturée peut améliorer le résultat avant"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Les revenus rattachés à la période."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Sur un mois fictif, les produits sont de six mille euros, les charges d’exploitation de quatre mille cinq cents euros et les intérêts de cent euros. Six mille moins quatre mille cinq cents, puis moins cent, donnent mille quatre cents euros de résultat avant impôt. Un remboursement de capital de cinq cents euros réduit la banque, mais n’ajoute pas cinq cents euros de charge. Avant de calculer, fixez la même période et la même base pour toutes les données. Ne mélangez pas une charge annuelle et une recette mensuelle, ni un montant HT et un TTC lorsque la TVA doit être traitée séparément. L’examen demande souvent une opération simple mais fondée sur une bonne sélection des données. Expliquez mentalement ce que représente chaque nombre avant d’utiliser la calculatrice."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les données",
+              "text": "Produits 6 000 € ; charges 4 500 € ; intérêts 100 €.",
+              "anchor_text": "Sur un mois fictif"
+            },
+            {
+              "label": "Le résultat",
+              "text": "6 000 − 4 500 − 100 = 1 400 € avant impôt.",
+              "anchor_text": "Six mille moins quatre mille cinq cents"
+            },
+            {
+              "label": "La trésorerie",
+              "text": "Rembourser 500 € de capital réduit la banque, sans ajouter 500 € de charge.",
+              "anchor_text": "Un remboursement de capital de cinq cents"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les produits : Les revenus rattachés à la période. Les charges : Les consommations de cette même période. Le résultat : Produits moins charges, distinct de la banque. Le piège à éviter : Résultat et trésorerie ne varient pas toujours ensemble. Gardez la même période et la même base dans le calcul."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les produits",
+              "text": "Les revenus rattachés à la période.",
+              "anchor_text": "Les produits : Les revenus rattachés à la"
+            },
+            {
+              "label": "Les charges",
+              "text": "Les consommations de cette même période.",
+              "anchor_text": "Les charges : Les consommations de cette même"
+            },
+            {
+              "label": "Le résultat",
+              "text": "Produits moins charges, distinct de la banque.",
+              "anchor_text": "Le résultat : Produits moins charges, distinct de"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.05",
+      "title": "Classer les coûts",
+      "objective": "Identifier ce qui dépend du volume de courses.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "5d36192bf77098d8c078e933159aadb25bdf5bbb4e4a906ffc40223afcefad18",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une charge fixe reste relativement stable dans une plage d’activité : abonnement, assurance ou location mensuelle. Une charge variable augmente avec le volume : énergie, commission proportionnelle, certains frais liés aux trajets. La classification dépend du contrat et de la période étudiée. Un coût peut comporter une partie fixe et une partie variable. Pour calculer le coût d’une course, comptez tous les kilomètres nécessaires, y compris l’approche et le retour sans client. Ajoutez le temps d’attente, de préparation et d’administration dans l’analyse de rentabilité. Ne confondez pas une dépense oubliée avec une dépense inexistante : entretien, pneus, nettoyage et renouvellement du véhicule se préparent."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Coût fixe : relativement stable dans la plage d’activité étudiée.",
+              "anchor_text": "Une charge fixe reste relativement stable dans une"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Compter l’approche, le trajet passager et le retour sans client.",
+              "anchor_text": "Pour calculer le coût d’une course, comptez tous"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Identifier ce qui dépend du volume de courses."
+          }
+        },
+        {
+          "title": "Compter les coûts fixes et les kilomètres invisibles",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Les coûts fixes de l’exercice restent dus même si le véhicule roule moins : assurance, abonnements ou charges de structure selon le modèle. Les coûts variables évoluent avec l’activité, par exemple une consommation proportionnelle aux kilomètres. Certains coûts sont mixtes ou changent par palier ; la classification doit suivre les hypothèses du dossier."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Des coûts restent dus même si le véhicule roule moins.",
+              "anchor_text": "Les coûts fixes de l’exercice restent dus même"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Les coûts variables évoluent avec l’activité.",
+              "anchor_text": "Les coûts variables évoluent avec l’activité, par exemple"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Présents même avec peu de courses."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une mission comprend huit kilomètres d’approche, vingt-quatre kilomètres avec le passager et huit kilomètres de retour. Le véhicule parcourt donc quarante kilomètres. Avec une hypothèse de vingt-quatre centimes de coût variable par kilomètre, quarante multiplié par zéro virgule vingt-quatre donnent neuf euros soixante. Multiplier seulement les vingt-quatre kilomètres du passager aurait oublié l’approche et le retour. Le coût d’une mission ne se limite pas aux kilomètres avec le passager. Ajoutez l’approche, le déplacement vers la course suivante ou le retour lorsque votre analyse les attribue à la mission. Distinguez également le coût complet et la contribution : la recette diminuée des coûts variables sert encore à payer les coûts fixes. Une contribution positive n’est pas automatiquement un bénéfice net."
+            }
+          ],
+          "points": [
+            {
+              "label": "La distance",
+              "text": "8 km d’approche + 24 km passager + 8 km de retour = 40 km.",
+              "anchor_text": "Une mission comprend huit kilomètres"
+            },
+            {
+              "label": "Le coût variable",
+              "text": "40 × 0,24 € = 9,60 €.",
+              "anchor_text": "Avec une hypothèse de vingt-quatre centimes"
+            },
+            {
+              "label": "La rentabilité",
+              "text": "Une contribution positive doit encore payer les coûts fixes.",
+              "anchor_text": "Distinguez également le coût complet et la contribution"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les coûts fixes : Présents même avec peu de courses. Les coûts variables : Évoluent avec le volume d’activité. Le coût complet : Intégrer aussi l’approche et les retours à vide. Le piège à éviter : Un kilomètre sans client coûte aussi de l’argent. Une contribution positive n’est pas automatiquement un bénéfice net."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les coûts fixes",
+              "text": "Présents même avec peu de courses.",
+              "anchor_text": "Les coûts fixes : Présents même avec peu"
+            },
+            {
+              "label": "Les coûts variables",
+              "text": "Évoluent avec le volume d’activité.",
+              "anchor_text": "Les coûts variables : Évoluent avec le volume"
+            },
+            {
+              "label": "Le coût complet",
+              "text": "Intégrer aussi l’approche et les retours à vide.",
+              "anchor_text": "Le coût complet : Intégrer aussi l’approche et"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.06",
+      "title": "Comprendre la TVA",
+      "objective": "Passer du prix hors taxe au prix payé.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "24212710c61d10245afb91b4ee844e2535a05576352a73149e22a9c65d48f01b",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La TVA collectée sur les ventes n’est pas un revenu appartenant à l’entreprise. La TVA déductible sur certains achats peut réduire le montant à reverser, sous réserve des conditions de déduction. Dans les exemples du cours, le transport intérieur de voyageurs est étudié au taux de dix pour cent lorsque l’entreprise est redevable ; des prestations accessoires ou particulières peuvent appeler une autre analyse. Pour obtenir le prix toutes taxes comprises, multipliez le prix hors taxes par un plus le taux, exprimé en nombre décimal. Pour retrouver le prix hors taxes, divisez par ce même coefficient. En franchise en base, vous ne facturez pas la TVA et ne la déduisez pas. Le régime micro et la franchise sont indépendants."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "La TVA collectée sur les ventes n’est pas un revenu appartenant à l’entreprise.",
+              "anchor_text": "La TVA collectée sur les ventes n’est pas"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "TTC = HT × (1 + taux exprimé en décimal)",
+              "anchor_text": "Pour obtenir le prix toutes taxes comprises, multipliez"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Passer du prix hors taxe au prix payé."
+          }
+        },
+        {
+          "title": "Passer du HT au TTC et revenir en arrière",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le taux s’applique au prix hors taxes. Au taux de dix pour cent, le coefficient est un virgule dix. Pour passer au prix toutes taxes comprises, on multiplie par un virgule dix ; pour revenir au prix hors taxes, on divise par un virgule dix. Retirer dix pour cent du prix toutes taxes comprises conduit à une erreur, car on utilise une base différente. Calculez ensuite la taxe par différence et vérifiez que le prix hors taxes, augmenté de la TVA, donne bien le prix payé."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le coefficient",
+              "text": "10 % → coefficient 1,10.",
+              "anchor_text": "Au taux de dix pour cent"
+            },
+            {
+              "label": "Le sens du calcul",
+              "text": "TTC = HT × 1,10 ; HT = TTC ÷ 1,10.",
+              "anchor_text": "Pour passer au prix toutes taxes comprises, on"
+            },
+            {
+              "label": "La taxe",
+              "text": "TVA = TTC − HT ; vérifier HT + TVA = TTC.",
+              "anchor_text": "Calculez ensuite la taxe par différence"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Séparer le prix hors taxe et la TVA."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une course est vendue quatre-vingt-huit euros toutes taxes comprises, avec une TVA de dix pour cent. Quatre-vingt-huit divisé par un virgule dix donnent quatre-vingts euros hors taxes. La différence est de huit euros de TVA. Sur une période fictive, six cents euros de TVA collectée moins cent quatre-vingts euros de TVA déductible donnent quatre cent vingt euros à reverser, hors autres corrections. Toutes les dépenses ne donnent pas automatiquement droit à déduction : le justificatif, l’affectation et la nature de l’achat comptent. Le montant à reverser doit être anticipé dans la trésorerie."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le hors taxes",
+              "text": "88 € TTC ÷ 1,10 = 80 € HT.",
+              "anchor_text": "Quatre-vingt-huit divisé par un virgule dix"
+            },
+            {
+              "label": "La différence",
+              "text": "88 − 80 = 8 € de TVA.",
+              "anchor_text": "La différence est de huit euros"
+            },
+            {
+              "label": "Le reversement",
+              "text": "600 € collectés − 180 € déductibles = 420 € à reverser.",
+              "anchor_text": "Sur une période fictive"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La vente : Séparer le prix hors taxe et la TVA. Les achats : Identifier la TVA déductible si elle l’est. Le solde : Comparer TVA collectée et déductible. Le piège à éviter : Pour retrouver le hors taxes, divisez le toutes taxes comprises par le coefficient ; ne soustrayez pas directement le pourcentage."
+            }
+          ],
+          "points": [
+            {
+              "label": "La vente",
+              "text": "Séparer le prix hors taxe et la TVA.",
+              "anchor_text": "La vente : Séparer le prix hors taxe"
+            },
+            {
+              "label": "Les achats",
+              "text": "Identifier la TVA déductible si elle l’est.",
+              "anchor_text": "Les achats : Identifier la TVA déductible si"
+            },
+            {
+              "label": "Le solde",
+              "text": "Comparer TVA collectée et déductible.",
+              "anchor_text": "Le solde : Comparer TVA collectée et déductible."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.07",
+      "title": "Piloter le régime micro",
+      "objective": "Comprendre le forfait sans oublier les dépenses réelles.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "c0185575f57f66f91f0803df937e1051d901a325d3f6206a95e4f8830c062257",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "En micro-BIC, les cotisations sociales se calculent sur le chiffre d’affaires encaissé selon le taux applicable ; le bénéfice imposable à l’impôt sur le revenu est déterminé par un abattement forfaitaire, hors option particulière. Les dépenses réelles restent à payer mais ne sont pas déduites une à une pour ce calcul fiscal. Pour les prestations de services, le seuil micro est de 83 600 € pour 2026 à 2028, selon les règles d’appréciation des années précédentes et de prorata. Les seuils de franchise de TVA sont distincts : 37 500 € pour l’année précédente et 41 250 € pour l’année en cours dans le cas général étudié. Anticipez tout franchissement avec le SIE ; ne confondez pas plafond micro et franchise de TVA."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Cotisations : chiffre d’affaires encaissé × taux applicable.",
+              "anchor_text": "En micro-BIC, les cotisations sociales se calculent sur"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Seuil micro services : 83 600 € pour 2026–2028, sous conditions.",
+              "anchor_text": "Pour les prestations de services, le seuil micro"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Comprendre le forfait sans oublier les dépenses réelles."
+          }
+        },
+        {
+          "title": "Ne pas confondre recettes et revenu disponible",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Dans le suivi d’un régime simplifié, identifiez les recettes à déclarer selon les règles applicables et la période. Un taux pédagogique permet de comprendre le mécanisme d’un prélèvement proportionnel, mais les taux et seuils réels dépendent du régime et doivent être vérifiés. Les charges supportées par le professionnel restent des sorties d’argent même lorsqu’elles ne sont pas déduites de la même manière dans le calcul fiscal."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Identifier les recettes à déclarer et la période concernée.",
+              "anchor_text": "Dans le suivi d’un régime simplifié, identifiez les"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Un taux pédagogique ne remplace pas la vérification du taux réel.",
+              "anchor_text": "Un taux pédagogique permet de comprendre le mécanisme"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Vérifier les conditions applicables."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Dans cet exercice, quatre mille euros sont encaissés et le taux social pédagogique est de vingt et un virgule deux pour cent, hors autres contributions et dispositifs. Quatre mille multiplié par zéro virgule deux cent douze donnent huit cent quarante-huit euros de cotisations. Après mille cinq cents euros de frais, il reste mille six cent cinquante-deux euros avant impôt et autres charges. Ce taux sert au calcul de l’exercice ; il ne remplace pas la vérification du taux applicable à votre situation. Construisez un tableau qui distingue les recettes, les commissions, les cotisations estimées, les frais du véhicule et les autres sorties. Une retenue prélevée par un intermédiaire ne permet pas de décider sans analyse que seule la somme versée sur votre compte constitue la bonne base déclarative. Le contrat et les règles du régime doivent être examinés."
+            }
+          ],
+          "points": [
+            {
+              "label": "Hypothèse pédagogique",
+              "text": "Base 4 000 € ; taux d’exercice 21,2 %.",
+              "anchor_text": "Dans cet exercice, quatre mille euros"
+            },
+            {
+              "label": "Les cotisations",
+              "text": "4 000 × 0,212 = 848 €.",
+              "anchor_text": "Quatre mille multiplié par zéro virgule"
+            },
+            {
+              "label": "Le disponible",
+              "text": "4 000 − 848 − 1 500 = 1 652 €, avant impôt et autres charges.",
+              "anchor_text": "Après mille cinq cents euros de frais"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le régime : Vérifier les conditions applicables. Les recettes : Suivre le chiffre d’affaires de référence. Le revenu : Retirer aussi les dépenses réellement payées. Le piège à éviter : Le plafond du régime micro et les seuils de franchise de TVA répondent à des règles distinctes."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le régime",
+              "text": "Vérifier les conditions applicables.",
+              "anchor_text": "Le régime : Vérifier les conditions applicables."
+            },
+            {
+              "label": "Les recettes",
+              "text": "Suivre le chiffre d’affaires de référence.",
+              "anchor_text": "Les recettes : Suivre le chiffre d’affaires de"
+            },
+            {
+              "label": "Le revenu",
+              "text": "Retirer aussi les dépenses réellement payées.",
+              "anchor_text": "Le revenu : Retirer aussi les dépenses réellement"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.08",
+      "title": "Construire la trésorerie",
+      "objective": "Prévoir les dates de paiement, pas seulement les ventes.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "61c66f5fc5f3ee1982c014b95551daf88a8d265cc2d495ab966a0ded91a0d7a9",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un plan de trésorerie suit, mois par mois, les encaissements et décaissements prévus. On part du solde initial, on ajoute les entrées puis on retire les sorties pour obtenir le solde final. Le mois suivant reprend ce dernier comme solde de départ. Les montants se raisonnent en flux réellement payés, souvent TTC. Une course facturée aujourd’hui à une entreprise peut être réglée plus tard. Entre-temps, l’énergie, les échéances du véhicule et les cotisations doivent être financées. Le besoin en fonds de roulement traduit notamment ce décalage entre clients, fournisseurs et stocks. En VTC, les créances et délais de paiement comptent même si les stocks sont faibles."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un plan de trésorerie suit, mois par mois, les encaissements et décaissements prévus.",
+              "anchor_text": "Un plan de trésorerie suit, mois par mois,"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Une course facturée aujourd’hui à une entreprise peut être réglée plus tard.",
+              "anchor_text": "Une course facturée aujourd’hui à une entreprise peut"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Prévoir les dates de paiement, pas seulement les ventes."
+          }
+        },
+        {
+          "title": "Construire une trésorerie par date",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Commencez par le solde disponible, ajoutez les encaissements prévus à leur date et retirez les paiements à leur échéance. Le résultat d’un mois ne révèle pas toujours un creux au milieu du mois. Une facture payable le 30 ne finance pas automatiquement un prélèvement prévu le 10. Prévoyez donc une lecture hebdomadaire ou journalière pour les périodes tendues."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Solde initial + encaissements − paiements, à leurs dates respectives.",
+              "anchor_text": "Commencez par le solde disponible, ajoutez les encaissements"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Une facture payable le 30 ne finance pas automatiquement un prélèvement prévu le 10.",
+              "anchor_text": "Une facture payable le 30 ne finance pas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Quand l’argent entre-t-il et sort-il ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le solde est de mille deux cents euros. Un paiement de mille cinq cents euros arrive avant un encaissement de neuf cents euros. Après le paiement, mille deux cents moins mille cinq cents donnent un solde temporaire de moins trois cents euros. L’encaissement suivant le remonte à six cents euros. Le solde final positif ne fait pas disparaître le manque d’argent à la première échéance. Une réserve sert à absorber un écart : facture réglée plus tard, immobilisation du véhicule, réparation ou variation d’activité. Elle n’est pas identique à une ligne de crédit accordée, qui est un financement avec ses propres conditions. Dans les exercices, ne décalez pas une échéance à votre convenance : calculez d’abord l’écart puis identifiez la décision à prendre avant sa survenue."
+            }
+          ],
+          "points": [
+            {
+              "label": "Avant la recette",
+              "text": "1 200 − 1 500 = −300 € : un manque temporaire.",
+              "anchor_text": "Après le paiement, mille deux cents"
+            },
+            {
+              "label": "Après la recette",
+              "text": "−300 + 900 = 600 €, sans effacer le creux précédent.",
+              "anchor_text": "L’encaissement suivant le remonte"
+            },
+            {
+              "label": "La réserve",
+              "text": "Une réserve absorbe les écarts ; un crédit a ses propres conditions.",
+              "anchor_text": "Une réserve sert à absorber un écart"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les dates : Quand l’argent entre-t-il et sort-il ? Le solde : Solde initial plus entrées moins sorties. L’anticipation : Préparer les mois où la banque baisse. Le piège à éviter : Une facture payable le trente ne finance pas automatiquement un prélèvement prévu le dix."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les dates",
+              "text": "Quand l’argent entre-t-il et sort-il ?",
+              "anchor_text": "Les dates : Quand l’argent entre-t-il et sort-il"
+            },
+            {
+              "label": "Le solde",
+              "text": "Solde initial plus entrées moins sorties.",
+              "anchor_text": "Le solde : Solde initial plus entrées moins"
+            },
+            {
+              "label": "L’anticipation",
+              "text": "Préparer les mois où la banque baisse.",
+              "anchor_text": "L’anticipation : Préparer les mois où la banque"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.09",
+      "title": "Atteindre le seuil de rentabilité",
+      "objective": "Calculer le chiffre d’affaires qui couvre les charges.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "ffc2d27bbff17aa8a9aa36b08cc037dab903309f07afca189f101a41cb782a4d",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La marge sur coûts variables est le chiffre d’affaires diminué des charges variables. Son taux est cette marge divisée par le chiffre d’affaires. Le seuil de rentabilité correspond aux charges fixes divisées par ce taux : c’est le niveau de ventes qui couvre les charges retenues dans le modèle. Le point mort exprime le moment où ce seuil est atteint, sous une hypothèse de répartition des ventes. La méthode ne garantit pas un revenu suffisant : il faut vérifier quelles charges, rémunérations et cotisations ont été incluses. Une moyenne trop optimiste de courses ou l’oubli des kilomètres à vide peut rendre le résultat trompeur."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "La marge sur coûts variables est le chiffre d’affaires diminué des charges variables.",
+              "anchor_text": "La marge sur coûts variables est le chiffre"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Point mort : moment où le seuil est atteint, selon l’hypothèse de ventes.",
+              "anchor_text": "Le point mort exprime le moment où ce"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Calculer le chiffre d’affaires qui couvre les charges."
+          }
+        },
+        {
+          "title": "Lire la marge avant le seuil de rentabilité",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le seuil de rentabilité se calcule à partir des charges fixes et de la marge sur coûts variables. Avec un prix unitaire et un coût variable unitaire constants, la marge unitaire vaut le prix moins le coût variable. Le nombre minimal de prestations doit couvrir les charges fixes ; lorsqu’il n’est pas entier, on arrondit au nombre supérieur. Un résultat arrondi vers le bas laisserait une partie des charges non couverte."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Le seuil de rentabilité se calcule à partir des charges fixes et de la marge sur coûts variables.",
+              "anchor_text": "Le seuil de rentabilité se calcule à partir"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Nombre minimal de prestations : arrondir au nombre entier supérieur.",
+              "anchor_text": "Le nombre minimal de prestations doit couvrir les"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Recette moins coûts variables."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Avec neuf cents euros de charges fixes, un prix de soixante euros et un coût variable de vingt-quatre euros par course, la marge unitaire est de trente-six euros. Soixante moins vingt-quatre donnent trente-six. Neuf cents divisé par trente-six donnent vingt-cinq courses pour couvrir les charges fixes dans ce modèle simplifié. Ce modèle suppose un niveau de prix, un coût variable et une capacité cohérents. Il ne suffit pas de calculer un nombre de courses si le planning ne permet pas de les réaliser. Il faut aussi analyser les approches, l’attente, les horaires et la demande. Une marge nulle ou négative ne permet pas de couvrir davantage de charges fixes en multipliant les mêmes prestations."
+            }
+          ],
+          "points": [
+            {
+              "label": "La marge unitaire",
+              "text": "60 − 24 = 36 € par course.",
+              "anchor_text": "Soixante moins vingt-quatre donnent"
+            },
+            {
+              "label": "Le seuil simplifié",
+              "text": "900 ÷ 36 = 25 courses pour couvrir les charges fixes.",
+              "anchor_text": "Neuf cents divisé par trente-six"
+            },
+            {
+              "label": "La faisabilité",
+              "text": "Prix, coûts, capacité, approches, attente et demande doivent être cohérents.",
+              "anchor_text": "Ce modèle suppose un niveau de prix"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La contribution : Recette moins coûts variables. Les charges fixes : Montant à couvrir sur la période. Le seuil : Diviser les charges fixes par la contribution unitaire. Le piège à éviter : Le seuil dépend des charges retenues. Oublier la rémunération, les cotisations ou des kilomètres à vide fausse la conclusion."
+            }
+          ],
+          "points": [
+            {
+              "label": "La contribution",
+              "text": "Recette moins coûts variables.",
+              "anchor_text": "La contribution : Recette moins coûts variables."
+            },
+            {
+              "label": "Les charges fixes",
+              "text": "Montant à couvrir sur la période.",
+              "anchor_text": "Les charges fixes : Montant à couvrir sur"
+            },
+            {
+              "label": "Le seuil",
+              "text": "Diviser les charges fixes par la contribution unitaire.",
+              "anchor_text": "Le seuil : Diviser les charges fixes par"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.10",
+      "title": "Financer le véhicule",
+      "objective": "Comparer les engagements sur toute leur durée.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "4220c70915e164a21d903507a49896b81dde1bb2aa1fdb8b9840e814bd4e86fc",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L’achat comptant consomme immédiatement la trésorerie. L’emprunt répartit les paiements mais ajoute intérêts et frais. La location peut apporter de la prévisibilité ; ses limites de kilométrage, assurances, entretien, dépôt, restitution et sortie anticipée doivent être examinés. Une mensualité faible ne garantit pas un coût total faible. Comparez des durées, kilométrages et services identiques. Intégrez la valeur de revente ou l’option d’achat sans les confondre. L’amortissement comptable constate l’utilisation du bien ; il ne correspond pas au remboursement bancaire. Les règles de déduction de TVA sur les véhicules affectés au transport payant dépendent du régime et des conditions d’usage : ne transposez pas automatiquement les règles d’une voiture de tourisme ordinaire."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "L’achat comptant consomme immédiatement la trésorerie.",
+              "anchor_text": "L’achat comptant consomme immédiatement la trésorerie."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Comparez des durées, kilométrages et services identiques.",
+              "anchor_text": "Comparez des durées, kilométrages et services identiques."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Comparer les engagements sur toute leur durée."
+          }
+        },
+        {
+          "title": "Comparer deux financements sur le même périmètre",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Un loyer mensuel plus faible n’est pas automatiquement une solution moins chère. Comparez la durée, l’apport, les paiements, les frais, les services inclus, les limites kilométriques, le prix final éventuel et les conditions de restitution. Un contrat peut aussi créer des contraintes d’usage ou d’entretien. Le coût total et la trésorerie mensuelle apportent deux informations complémentaires."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Un loyer mensuel plus faible n’est pas automatiquement une solution moins chère.",
+              "anchor_text": "Un loyer mensuel plus faible n’est pas automatiquement"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Un contrat peut aussi créer des contraintes d’usage ou d’entretien.",
+              "anchor_text": "Un contrat peut aussi créer des contraintes d’usage"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Véhicule, usage prévu et durée de détention."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une location fictive coûte sept cents euros par mois sur trente-six mois, avec deux mille euros initiaux et neuf cents euros de frais prévus. Trente-six fois sept cents donnent vingt-cinq mille deux cents euros. Avec les versements et frais supplémentaires, le scénario totalise vingt-huit mille cent euros. Une offre à six cent cinquante euros par mois peut rester plus chère si les kilomètres supplémentaires et les services exclus dépassent l’écart. Évitez de comparer 24 mois d’une offre avec 36 mois d’une autre comme si les services et la propriété finale étaient identiques. Les exercices précisent un périmètre simplifié : les calculs doivent respecter ces hypothèses. En pratique, le traitement fiscal, l’assurance, l’entretien et la valeur de revente doivent être examinés avec les documents contractuels."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les loyers",
+              "text": "36 × 700 € = 25 200 €.",
+              "anchor_text": "Trente-six fois sept cents donnent"
+            },
+            {
+              "label": "Le coût du scénario",
+              "text": "25 200 + 2 000 + 900 = 28 100 €.",
+              "anchor_text": "Avec les versements et frais supplémentaires"
+            },
+            {
+              "label": "La comparaison",
+              "text": "Une offre à 650 €/mois peut coûter plus si des frais restent exclus.",
+              "anchor_text": "Une offre à six cent cinquante euros"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le besoin : Véhicule, usage prévu et durée de détention. Les offres : Comparer apport, loyers, intérêts et conditions. Le coût total : Inclure la fin du contrat et la trésorerie mobilisée. Le piège à éviter : Une mensualité faible ne garantit pas un coût total faible."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le besoin",
+              "text": "Véhicule, usage prévu et durée de détention.",
+              "anchor_text": "Le besoin : Véhicule, usage prévu et durée"
+            },
+            {
+              "label": "Les offres",
+              "text": "Comparer apport, loyers, intérêts et conditions.",
+              "anchor_text": "Les offres : Comparer apport, loyers, intérêts et"
+            },
+            {
+              "label": "Le coût total",
+              "text": "Inclure la fin du contrat et la trésorerie mobilisée.",
+              "anchor_text": "Le coût total : Inclure la fin du"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.11",
+      "title": "Facturer et conserver les preuves",
+      "objective": "Produire une pièce claire, traçable et cohérente.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "37f4a23184477e35a8ebc8841c5f8a4dc45efed77215f0a7d7b40874d4314aac",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La facture identifie le vendeur et le client, porte une date et un numéro unique dans une séquence chronologique, décrit la prestation et présente les montants et taxes applicables. Les mentions varient selon le statut et le client. Pour un professionnel, les conditions de paiement, pénalités et indemnité forfaitaire de recouvrement doivent être traitées conformément aux règles applicables. Une facture ne se supprime pas pour masquer une erreur : un avoir ou une facture rectificative permet une trace cohérente. Depuis septembre 2026, les entreprises concernées doivent pouvoir recevoir les factures électroniques ; l’émission et la transmission de données s’étendent aux PME et micro-entreprises en septembre 2027. Un PDF joint à un courriel ne suffit pas à lui seul à satisfaire cette réforme."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Identifier les parties, la date, la prestation, les montants et les taxes.",
+              "anchor_text": "La facture identifie le vendeur et le client,"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Corriger par un document traçable, sans masquer l’erreur.",
+              "anchor_text": "Une facture ne se supprime pas pour masquer"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Produire une pièce claire, traçable et cohérente."
+          }
+        },
+        {
+          "title": "Relier prestation, facture et encaissement",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une facture décrit une opération et un montant dû. Elle ne prouve pas à elle seule que le paiement a été reçu. Le devis, la réservation, la prestation, la facture et le règlement correspondent à des étapes liées mais distinctes. Conservez les pièces de façon à pouvoir reconstituer cette chaîne en cas de question du client ou de contrôle."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Une facture décrit une opération et un montant dû.",
+              "anchor_text": "Une facture décrit une opération et un montant"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Devis → réservation → prestation → facture → règlement.",
+              "anchor_text": "Le devis, la réservation, la prestation, la facture"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Vérifier le service et le bon destinataire."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un transfert a été facturé quatre-vingt-cinq euros. Le client paie cinquante euros, puis trente-cinq euros. Le total réglé est de quatre-vingt-cinq euros et le reste dû est zéro, à condition que les deux règlements soient rapprochés de cette facture. Une facture décrit ce qui est dû ; les règlements établissent ce qui a été encaissé. La cohérence porte sur l’identité des parties, la date, la nature du service, les montants, le traitement de la TVA et les mentions applicables. Une correction suit une procédure traçable ; on ne doit pas effacer discrètement une facture déjà émise pour faire disparaître une opération. Les exercices portent sur la lecture des documents, pas sur un modèle juridique complet prêt à l’emploi."
+            }
+          ],
+          "points": [
+            {
+              "label": "La facture",
+              "text": "Montant facturé : 85 €.",
+              "anchor_text": "Un transfert a été facturé"
+            },
+            {
+              "label": "Les règlements",
+              "text": "50 + 35 = 85 € ; reste dû = 0 €.",
+              "anchor_text": "Le total réglé est de quatre-vingt-cinq"
+            },
+            {
+              "label": "La cohérence",
+              "text": "Rapprocher parties, date, service, montants et TVA.",
+              "anchor_text": "La cohérence porte sur l’identité des parties"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La prestation : Vérifier le service et le bon destinataire. La facture : Contrôler les lignes et le total. La preuve : Rapprocher facture, règlement et justificatifs. Le piège à éviter : Une facture ne prouve pas, à elle seule, que le paiement a été reçu."
+            }
+          ],
+          "points": [
+            {
+              "label": "La prestation",
+              "text": "Vérifier le service et le bon destinataire.",
+              "anchor_text": "La prestation : Vérifier le service et le"
+            },
+            {
+              "label": "La facture",
+              "text": "Contrôler les lignes et le total.",
+              "anchor_text": "La facture : Contrôler les lignes et le"
+            },
+            {
+              "label": "La preuve",
+              "text": "Rapprocher facture, règlement et justificatifs.",
+              "anchor_text": "La preuve : Rapprocher facture, règlement et justificatifs."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "B.12",
+      "title": "Organiser le travail et les obligations",
+      "objective": "Distinguer gestion indépendante et emploi salarié.",
+      "image": "media/vtc/module-b.webp",
+      "source_sha256": "7b040c9dee3857625c47b8c5926031dd1996ba6e122ce0da25b763a364672ddd",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un indépendant organise son activité dans les limites de ses contrats et de la réglementation. Un salarié travaille dans un cadre de subordination avec un employeur, un contrat et des obligations sociales. L’étiquette choisie ne suffit pas à qualifier la relation : les conditions réelles d’exécution comptent. L’entreprise qui embauche doit accomplir les formalités, rémunérer conformément aux règles applicables, suivre le temps de travail et prévenir les risques. Le bulletin de paie distingue brut, cotisations et net. Pour l’indépendant, cotisations, impôt, CFE éventuelle et échéances administratives se prévoient. La CMA peut accompagner l’activité ; l’Urssaf, le SIE et les professionnels compétents répondent sur leurs domaines respectifs."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un indépendant organise son activité dans les limites de ses contrats et de la réglementation.",
+              "anchor_text": "Un indépendant organise son activité dans les limites"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Formalités, rémunération, temps de travail et prévention des risques.",
+              "anchor_text": "L’entreprise qui embauche doit accomplir les formalités, rémunérer"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Distinguer gestion indépendante et emploi salarié."
+          }
+        },
+        {
+          "title": "Mesurer le temps professionnel complet",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le temps de travail d’une activité comprend plus que les minutes facturées : préparation, nettoyage, approches, retours, attente, administration et suivi client peuvent mobiliser le professionnel. Pour analyser un revenu horaire, choisissez un dénominateur cohérent. Diviser par les seules heures passager peut donner une image trompeuse de l’activité."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Compter aussi préparation, nettoyage, approche, retours et administration.",
+              "anchor_text": "Le temps de travail d’une activité comprend plus"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Pour analyser un revenu horaire, choisissez un dénominateur cohérent.",
+              "anchor_text": "Pour analyser un revenu horaire, choisissez un dénominateur"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Repérer les obligations récurrentes."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Six heures de transport, une heure d’approche, trente minutes de nettoyage et trente minutes de gestion représentent huit heures mobilisées. Avec cent soixante euros de revenu de référence dans cet exercice, cent soixante divisé par huit donnent vingt euros par heure. Diviser seulement par les six heures de transport ferait paraître le revenu horaire plus élevé en oubliant du temps réellement travaillé. Le planning doit aussi prévoir des marges, des pauses et les contraintes applicables au statut du conducteur. Les calculs pédagogiques qui suivent ne constituent pas une durée maximale légale. Ils servent à repérer les chevauchements et les temps oubliés. Une journée rentable sur le papier ne doit pas être organisée au détriment de la sécurité ou des obligations de repos."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le temps mobilisé",
+              "text": "6 h + 1 h + 30 min + 30 min = 8 h.",
+              "anchor_text": "Six heures de transport"
+            },
+            {
+              "label": "Le revenu de référence",
+              "text": "160 € ÷ 8 h = 20 €/h dans cet exercice.",
+              "anchor_text": "Avec cent soixante euros de revenu"
+            },
+            {
+              "label": "Le planning",
+              "text": "Prévoir marges, pauses et contraintes applicables au statut.",
+              "anchor_text": "Le planning doit aussi prévoir des marges"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les échéances : Repérer les obligations récurrentes. Le suivi : Classer et conserver les justificatifs. La disponibilité : Prévoir les ressources et les remplacements. Le piège à éviter : Le chiffre d’affaires d’un indépendant ne se compare pas directement à un salaire net."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les échéances",
+              "text": "Repérer les obligations récurrentes.",
+              "anchor_text": "Les échéances : Repérer les obligations récurrentes."
+            },
+            {
+              "label": "Le suivi",
+              "text": "Classer et conserver les justificatifs.",
+              "anchor_text": "Le suivi : Classer et conserver les justificatifs."
+            },
+            {
+              "label": "La disponibilité",
+              "text": "Prévoir les ressources et les remplacements.",
+              "anchor_text": "La disponibilité : Prévoir les ressources et les"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

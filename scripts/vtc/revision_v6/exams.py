@@ -19,6 +19,12 @@ ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 BASE_VERSION = '20261007-vtc-v5-annales'
 VERSION = '20261010-vtc-v6-pedagogie'
+# Later course editions may reuse this reviewed exam bank. They are not
+# antecedents when checking the originality of the v6 questions.
+PREVIOUS_EXAM_VERSIONS = frozenset({
+    '20261006-vtc-v1', '20261006-vtc-v2', '20261006-vtc-v3-105h',
+    '20261007-vtc-v4-visuals', BASE_VERSION,
+})
 FINAL_DISTRIBUTION = {'A': 15, 'B': 15, 'C': 14, 'D': 14, 'E': 14, 'F': 14, 'G': 14}
 
 
@@ -118,7 +124,7 @@ def _previous_prompts(root):
         for section in json.loads(path.read_text())['sections']:
             prompts.update(q['prompt'] for q in section['questions'])
     for path in (course_root / 'exams').glob('*/*.json'):
-        if path.parent.name != VERSION:
+        if path.parent.name in PREVIOUS_EXAM_VERSIONS:
             prompts.update(q['prompt'] for q in json.loads(path.read_text())['questions'])
     return prompts
 

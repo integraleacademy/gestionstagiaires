@@ -2,11 +2,13 @@
 from pathlib import Path
 from functools import lru_cache
 import copy, hashlib, json, math
+from .vtc_lesson_videos import enrich_lessons, REQUIRED_VERSION
 ROOT=Path(__file__).parent/'vtc'
 
 # This is a pronunciation repair, not a new learner assignment. The replacement
 # keeps every chapter boundary and the exact mandatory-viewing duration.
 _BILINGUAL_VERSIONS = frozenset({
+    REQUIRED_VERSION,
     '20261007-vtc-v4-visuals',
     '20261007-vtc-v5-annales',
     '20261010-vtc-v6-pedagogie',
@@ -202,7 +204,7 @@ def load_bundled_course(course_id,version=None):
     if not module:return None
     version=version or module['version']
     if version not in [module['version'],*module.get('previous_versions',[])]:return None
-    return _repair_video_pacing(_repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version)))))
+    return enrich_lessons(_repair_video_pacing(_repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version))))))
 
 def bundled_asset(course_id,version,name):
     course=load_bundled_course(course_id,version)

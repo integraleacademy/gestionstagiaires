@@ -1,0 +1,1674 @@
+{
+  "revision": 10,
+  "module": "F",
+  "lessons": [
+    {
+      "ref": "F.01",
+      "title": "Comprendre son marché",
+      "objective": "Choisir des clients à servir et vérifier leur besoin.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "7d3ebd49cae63f8928d780e976d4be084195ef4c05d2bc7a9bbf169a34f668b0",
+      "scenes": [
+        {
+          "title": "Définir la cible",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de choisir des clients à servir et vérifier leur besoin . Un marché réunit des clients ayant un besoin et des entreprises capables d'y répondre. « Tout le monde peut prendre un VTC » est vrai mais peu utile pour organiser une activité. Un voyageur d'affaires, une famille avec bagages et un client d'événement ont des attentes différentes. Segmenter consiste à regrouper des besoins comparables pour proposer une réponse cohérente."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Regrouper des besoins comparables.",
+              "anchor_text": "Un marché réunit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une réponse adaptée à chaque type de déplacement.",
+              "anchor_text": "Segmenter consiste"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quels besoins votre véhicule et votre planning permettent-ils réellement de servir ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Observer les faits",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Étudiez les horaires, les lieux de départ, la saisonnalité, les concurrents et les contraintes d'accès. Discutez avec des clients potentiels et des partenaires pour comprendre leurs difficultés concrètes. Une intuition devient plus solide lorsqu'elle est confrontée à des faits : demandes reçues, trajets effectivement réalisés et motifs de refus. Un concurrent très visible n'est pas forcément rentable."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Horaires, accès et concurrence.",
+              "anchor_text": "Étudiez les horaires"
+            },
+            {
+              "label": "À retenir",
+              "text": "Demandes et trajets réels avant les prévisions.",
+              "anchor_text": "Une intuition devient"
+            }
+          ]
+        },
+        {
+          "title": "Vérifier ses moyens",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Votre offre doit correspondre à vos moyens : capacité du véhicule, disponibilité, langues, rayon d'action et coûts. Une spécialisation peut faciliter la communication, mais une dépendance à un seul client fragilise l'activité. Évaluez aussi les périodes creuses. Le marché se mesure sur une année réaliste, pas uniquement pendant une semaine de forte demande."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Capacité, langues, disponibilité et coûts.",
+              "anchor_text": "Votre offre doit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Observer aussi les périodes creuses.",
+              "anchor_text": "Évaluez aussi"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Observer aussi les périodes creuses.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Près d'un centre de congrès, les arrivées se concentrent le matin et les départs en fin d'après-midi. Il faut mesurer les temps d'attente et de repositionnement ; multiplier le nombre de visiteurs par un prix moyen ne constitue pas une prévision fiable de ventes. Le raisonnement consiste à partir des missions possibles, pas de la foule présente. Observez combien de demandes correspondent à votre créneau, puis estimez le temps complet de chaque transfert. Une salle pleine ne signifie pas que tous les visiteurs réserveront votre voiture. La concurrence et les autres moyens de transport restent à considérer."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Près d'un centre de congrès, les arrivées se concentrent"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Mesurer les demandes réalisables.",
+              "anchor_text": "Le raisonnement consiste à partir des missions possibles, pas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quels besoins votre véhicule et votre planning permettent-ils réellement de servir ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Vous envisagez les transferts familiaux d'aéroport. Vous disposez d'une berline et travaillez surtout en journée. Pour des transferts familiaux, confirmez d'abord le nombre de personnes, les valises et les équipements. Comparez ensuite ces besoins au coffre et au planning. Votre berline peut convenir à certaines familles, mais pas à toutes les configurations. Vous définissez ainsi une cible précise au lieu de promettre un service universel."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Vous envisagez les transferts familiaux d'aéroport. Vous disposez d'une"
+            },
+            {
+              "label": "Décision",
+              "text": "Vérifier passagers, bagages et disponibilité.",
+              "anchor_text": "Pour des transferts familiaux, confirmez d'abord le nombre de"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.02",
+      "title": "Construire une offre lisible",
+      "objective": "Transformer des caractéristiques en bénéfices concrets.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "892f2ec049321246164002f309d2799c2ad09d38ff0a2a1967b0639576fca9a1",
+      "scenes": [
+        {
+          "title": "Décrire le service",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de transformer des caractéristiques en bénéfices concrets . Une offre précise ce qui est fourni, à qui, où et dans quelles conditions. « Service haut de gamme » reste vague sans éléments concrets. Une confirmation écrite, un point de rendez-vous expliqué et une facturation claire sont observables. Le client doit comprendre ce qu'il achète et les limites de la prestation avant de réserver."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Le client doit savoir ce qu’il achète.",
+              "anchor_text": "Une offre précise"
+            },
+            {
+              "label": "À retenir",
+              "text": "Des engagements concrets et observables.",
+              "anchor_text": "Une confirmation écrite"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quel bénéfice concret se cache derrière une caractéristique de votre véhicule ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Expliquer le bénéfice",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une caractéristique décrit un moyen : grand coffre, suivi d'une arrivée, contact professionnel. Le bénéfice explique ce que le client en retire : bagages transportés dans de bonnes conditions, accueil mieux coordonné, interlocuteur identifiable. Ne promettez pas un résultat absolu que vous ne maîtrisez pas, comme l'absence garantie de retard routier."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "La caractéristique décrit un moyen.",
+              "anchor_text": "Une caractéristique décrit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le bénéfice montre l’utilité pour le client.",
+              "anchor_text": "Le bénéfice explique"
+            }
+          ]
+        },
+        {
+          "title": "Préciser les limites",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Précisez les conditions d'attente, les arrêts supplémentaires, les équipements et la modification d'une course. Une option doit être réellement disponible, tarifée clairement lorsqu'elle est payante et compatible avec le véhicule. Les informations recueillies à la réservation servent à vérifier la faisabilité. Une promesse oubliée peut dégrader toute la prestation, même si la conduite est excellente."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Attente, équipements et modifications.",
+              "anchor_text": "Précisez les conditions"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une option doit être confirmée et réalisable.",
+              "anchor_text": "Une option doit"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Une option doit être confirmée et réalisable.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Caractéristique : « suivi du numéro de vol ». Bénéfice : « ajuster l'accueil au vol annoncé et informer le client du point de rencontre ». La seconde formulation explique l'utilité sans promettre d'éliminer tous les retards. Le suivi du vol est le moyen. L'accueil coordonné est le bénéfice. Vous expliquez ce que vous allez faire : consulter l'information disponible, ajuster l'organisation et donner un point de rencontre. Vous évitez une promesse impossible, comme supprimer les retards. Cette distinction permet au client de comparer une prestation réelle, pas seulement un adjectif."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Caractéristique : « suivi du numéro de vol »."
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Relier le moyen au bénéfice.",
+              "anchor_text": "Le suivi du vol est le moyen. L'accueil coordonné"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quel bénéfice concret se cache derrière une caractéristique de votre véhicule ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Votre annonce indique « transport premium, service parfait, tarif imbattable ». Elle ne précise ni capacité ni zone ni réservation. Réécrivez l'annonce en indiquant la zone desservie, la capacité réelle et les modalités de réservation. Remplacez « service parfait » par des engagements vérifiables : confirmation écrite, point de rendez-vous expliqué et conditions d'attente annoncées. Une offre devient crédible lorsque chaque promesse correspond à une organisation que vous pouvez tenir."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Votre annonce indique « transport premium, service parfait, tarif"
+            },
+            {
+              "label": "Décision",
+              "text": "Remplacer les adjectifs par des engagements.",
+              "anchor_text": "Réécrivez l'annonce en indiquant la zone desservie, la capacité"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.03",
+      "title": "Fixer un prix soutenable",
+      "objective": "Intégrer le temps, les coûts et la valeur du service.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "94ed36b7e77eea43e819360f386655e18b632af52e16ee884d3ec4456de77459",
+      "scenes": [
+        {
+          "title": "Compter le temps complet",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de intégrer le temps, les coûts et la valeur du service . Le prix doit contribuer aux coûts variables, aux charges fixes et au revenu recherché. Comptez le temps mobilisé, les kilomètres avec et sans passager, les frais spécifiques et les commissions éventuelles. Une course peut occuper deux heures pour seulement quarante minutes de présence du client. Le temps restant ne disparaît pas de l'économie de l'activité."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Approche, course, attente et retour.",
+              "anchor_text": "Le prix doit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le temps sans passager a aussi un coût.",
+              "anchor_text": "Une course peut"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle fraction du prix reste après la commission ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Choisir la bonne base",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un taux de marge calculé sur le coût et un taux de marque calculé sur le prix de vente n'ont pas la même base. Avec un coût de 80 €, ajouter 25 % donne un prix de 100 € : le gain de 20 € représente 25 % du coût mais 20 % du prix. Il faut connaître la base avant d'utiliser un pourcentage."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "80 € + 25 % = 100 €.",
+              "anchor_text": "Avec un coût"
+            },
+            {
+              "label": "À retenir",
+              "text": "20 € = 25 % du coût, mais 20 % du prix.",
+              "anchor_text": "le gain de"
+            }
+          ]
+        },
+        {
+          "title": "Calculer la commission",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Calculez l'approche, la course, le retour, l'attente et les frais spécifiques. Si une commission est prélevée sur le prix, raisonnez sur la bonne base. Pour conserver 60 € avant autres coûts avec une commission de 20 % du montant retenu dans l'exercice, il faut 60 ÷ 0,80 = 75 €, et non 60 + 20 %. Vérifiez toujours si la commission porte sur HT, TTC ou une autre base contractuelle."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Conserver 60 € après une retenue de 20 %.",
+              "anchor_text": "Pour conserver"
+            },
+            {
+              "label": "À retenir",
+              "text": "60 ÷ 0,80 = 75 €, sur la base de l’exercice.",
+              "anchor_text": "il faut 60"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : 60 ÷ 0,80 = 75 €, sur la base de l’exercice.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Mission fictive : coût kilométrique 18 €, temps valorisé 30 €, contribution aux frais fixes 12 €. Objectif avant commission : 60 € HT. Avec 20 % de commission sur le HT, prix nécessaire : 75 € HT, soit 82,50 € TTC à 10 % dans cet exemple. Pourquoi diviser ? Une commission de vingt pour cent laisse quatre-vingts pour cent du prix. Soixante euros représentent donc cette partie conservée. Le montant de soixante-quinze euros redonne bien quinze euros de commission et soixante euros restants. Le taux de taxe cité appartient à cet exemple : la base et le contrat doivent toujours être vérifiés."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Mission fictive : coût kilométrique 18 €, temps valorisé"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Vérifier le calcul dans les deux sens.",
+              "anchor_text": "Pourquoi diviser ? Une commission de vingt pour cent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle fraction du prix reste après la commission ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Vous voulez conserver 72 € HT avant les autres charges d'une mission. Une commission de 10 % du prix HT est prévue. Pour conserver soixante-douze euros après dix pour cent de commission sur le prix hors taxes, vous conservez quatre-vingt-dix pour cent. Divisez soixante-douze par zéro virgule neuf : le prix hors taxes vaut quatre-vingts euros. La commission vaut huit euros. Vérifiez ensuite les autres coûts et l'information donnée au client avant de retenir votre prix."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Vous voulez conserver 72 € HT avant les autres"
+            },
+            {
+              "label": "Décision",
+              "text": "72 ÷ 0,90 = 80 € HT ; commission : 8 €.",
+              "anchor_text": "Pour conserver soixante-douze euros après dix pour cent de"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.04",
+      "title": "Rédiger un devis clair",
+      "objective": "Formaliser l’accord avant de réaliser la mission.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "a772593309dd713c07e774a82be9eada1576c149be7182eb73ae33d477c695bf",
+      "scenes": [
+        {
+          "title": "Décrire la mission",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de formaliser l’accord avant de réaliser la mission . Un devis doit permettre de comprendre les personnes concernées, le trajet, la date, les horaires et les moyens prévus. Distinguez le réservant, le passager et le payeur. Précisez les arrêts, l'attente, les bagages ou équipements déterminants. Une adresse approximative peut rendre le prix et le temps estimés peu fiables."
+            }
+          ],
+          "points": [
+            {
+              "label": "À retenir",
+              "text": "Trajet, date, horaires et moyens.",
+              "anchor_text": "Un devis doit"
+            },
+            {
+              "label": "À comprendre",
+              "text": "Réservant, passager et payeur peuvent différer.",
+              "anchor_text": "Distinguez le réservant"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles informations doivent être confirmées lorsqu’un client ajoute un arrêt ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Présenter les conditions",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Indiquez le prix total ou le mode de calcul clairement convenu, les inclusions et les suppléments possibles. Expliquez la durée de validité de l'offre, les conditions de confirmation, de paiement, de modification et d'annulation. Une condition importante ne doit pas apparaître pour la première fois après la course. L'information doit rester lisible et compréhensible pour le client."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Prix, inclusions et suppléments possibles.",
+              "anchor_text": "Indiquez le prix"
+            },
+            {
+              "label": "À retenir",
+              "text": "Informer avant la course.",
+              "anchor_text": "Une condition importante"
+            }
+          ]
+        },
+        {
+          "title": "Conserver l’accord",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Gardez la version acceptée et les modifications ultérieures. Un échange téléphonique peut être récapitulé par écrit. Le devis commercial ne dispense pas du justificatif réglementaire de réservation préalable : les deux documents peuvent être liés, mais doivent chacun contenir les informations nécessaires. L'acceptation d'un prix ne prouve pas à elle seule toutes les mentions de réservation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Garder la version acceptée.",
+              "anchor_text": "Gardez la version"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le justificatif de réservation reste nécessaire.",
+              "anchor_text": "Le devis commercial"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Le justificatif de réservation reste nécessaire.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. « Transfert hôtel-gare : 66 € TTC ; péage non applicable ; dix minutes d'attente incluses ; attente supplémentaire selon le tarif accepté. » L'exemple doit être complété par les identités, horaires et autres conditions, plutôt qu'envoyé comme une simple ligne de prix. La ligne de prix ne suffit pas à décrire tout l'accord. Le client doit pouvoir comprendre ce qui déclenche l'attente payante et quel tarif a été accepté. Les informations de mission complètent le montant. Relisez le document comme si vous découvriez la course : sauriez-vous qui accueillir, où, quand et sous quelles conditions ?"
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "« Transfert hôtel-gare : 66 € TTC ; péage"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Un prix doit être relié à un périmètre.",
+              "anchor_text": "La ligne de prix ne suffit pas à décrire"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles informations doivent être confirmées lorsqu’un client ajoute un arrêt ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un client accepte un transfert à 80 € TTC. Il ajoute ensuite un arrêt de trente minutes et une seconde destination. L'arrêt supplémentaire et la nouvelle destination changent le périmètre. Vérifiez d'abord la faisabilité, puis annoncez leur effet sur le prix et le planning. Faites confirmer la modification avant de l'exécuter et conservez la nouvelle version. Le prix initial de quatre-vingts euros ne doit pas masquer un supplément découvert seulement sur la facture."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un client accepte un transfert à 80 € TTC."
+            },
+            {
+              "label": "Décision",
+              "text": "Confirmer le trajet modifié et son prix.",
+              "anchor_text": "L'arrêt supplémentaire et la nouvelle destination changent le périmètre."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.05",
+      "title": "Travailler avec une plateforme",
+      "objective": "Lire un contrat et analyser la recette réellement conservée.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "adbf7630d17bb0220c30a00e3d67abf81fecd417199d4077bacab61711f9edf6",
+      "scenes": [
+        {
+          "title": "Lire les rôles",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de lire un contrat et analyser la recette réellement conservée . Une plateforme peut intervenir dans la mise en relation, l'encaissement et la facturation selon son modèle. Lisez les conditions de commission, d'annulation, de versement, de réclamation et de suspension. Identifiez qui vend la prestation, qui facture le client et qui facture la commission. Un virement bancaire seul ne permet pas de reconstituer toute l'opération."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Qui vend, facture et encaisse ?",
+              "anchor_text": "Identifiez qui vend"
+            },
+            {
+              "label": "À retenir",
+              "text": "Un virement ne décrit pas toute l’opération.",
+              "anchor_text": "Un virement bancaire"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi le montant viré par une plateforme ne suffit-il pas à mesurer le résultat ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Séparer les flux",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Lorsque la plateforme encaisse pour votre compte, la vente au client et la commission peuvent constituer deux opérations distinctes. Le montant reversé est alors une différence entre des flux. Ne confondez pas ce montant avec le chiffre d'affaires ou le bénéfice sans analyser les pièces. Le traitement de la TVA sur une commission, notamment étrangère, doit être vérifié selon la situation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Vente et commission peuvent être distinctes.",
+              "anchor_text": "Lorsque la plateforme"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le net versé n’est pas automatiquement le bénéfice.",
+              "anchor_text": "Ne confondez pas"
+            }
+          ]
+        },
+        {
+          "title": "Comparer la contribution",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Comparez le revenu conservé au temps total mobilisé et aux kilomètres parcourus. Incluez l'approche, les périodes d'attente et les retours à vide. Une succession de petites courses peut produire un chiffre d'affaires visible tout en laissant une contribution faible. Gardez un suivi propre à l'entreprise pour comprendre les résultats, indépendamment du tableau commercial de l'application."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Inclure attente, approche et retour à vide.",
+              "anchor_text": "Incluez l'approche"
+            },
+            {
+              "label": "À retenir",
+              "text": "Garder un suivi propre à l’entreprise.",
+              "anchor_text": "Gardez un suivi"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Garder un suivi propre à l’entreprise.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Relevé fictif : prestations 500 €, commission 100 €, versement 400 €. Le revenu disponible n'est pas 400 € si énergie, location, assurances, cotisations et impôts restent à couvrir. Selon le montage contractuel, le CA déclaré peut être le montant brut des prestations. Dans ce relevé, les cent euros de commission expliquent l'écart entre les cinq cents euros de prestations et les quatre cents euros versés. Mais le versement ne retire pas toutes les dépenses de votre entreprise. Reconstituez d'abord la vente et les retenues avec les pièces. Calculez ensuite la contribution après les coûts pertinents, sur une période comparable."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Relevé fictif : prestations 500 €, commission 100 €,"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Rapprocher vente, commission et versement.",
+              "anchor_text": "Dans ce relevé, les cent euros de commission expliquent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi le montant viré par une plateforme ne suffit-il pas à mesurer le résultat ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Deux plateformes proposent la même recette nette moyenne par course. La première exige 8 km d'approche en moyenne ; la seconde, 3 km. À recette identique, huit kilomètres d'approche mobilisent davantage de véhicule et souvent davantage de temps que trois kilomètres. Comparez les kilomètres totaux, les heures et les frais sur plusieurs missions. Vous pourrez préférer le canal qui laisse une meilleure contribution réelle, sans conclure à partir du seul montant affiché dans l'application."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Deux plateformes proposent la même recette nette moyenne par"
+            },
+            {
+              "label": "Décision",
+              "text": "Comparer les moyens consommés à recette égale.",
+              "anchor_text": "À recette identique, huit kilomètres d'approche mobilisent davantage de"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.06",
+      "title": "Prospecter avec méthode",
+      "objective": "Transformer un contact en rendez-vous utile.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "861b149b34a55cbebdf1215f92f35ec63198afa0bb5633ac784e532c70506903",
+      "scenes": [
+        {
+          "title": "Cibler un interlocuteur",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de transformer un contact en rendez-vous utile . La prospection commence par une liste de partenaires dont les clients ont un besoin compatible avec votre offre. Pour chaque contact, identifiez la personne qui organise réellement les déplacements. Un message générique envoyé à de nombreuses adresses apporte rarement autant d'informations qu'un échange ciblé. Préparez une raison concrète de prendre contact."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Une raison concrète de prendre contact.",
+              "anchor_text": "Pour chaque contact"
+            },
+            {
+              "label": "À retenir",
+              "text": "Adapter le message au besoin du partenaire.",
+              "anchor_text": "Un message générique"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle question poseriez-vous pour comprendre le besoin avant de présenter votre offre ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Découvrir le besoin",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Posez des questions sur les trajets, les horaires, les difficultés et le processus de réservation. Présentez ensuite la partie de votre offre qui répond au besoin. Un entretien ne se termine pas forcément par une vente : il peut aboutir à un test, à l'envoi d'un devis ou à une reprise de contact à une date précise. Notez la prochaine action utile."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Trajets, horaires et difficultés.",
+              "anchor_text": "Posez des questions"
+            },
+            {
+              "label": "À retenir",
+              "text": "Prévoir une prochaine action utile.",
+              "anchor_text": "Un entretien ne"
+            }
+          ]
+        },
+        {
+          "title": "Respecter les contacts",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La prospection électronique auprès de particuliers repose en principe sur un consentement préalable, sous réserve des exceptions prévues. En contexte professionnel, les règles diffèrent selon le lien avec l'activité et les conditions d'information et d'opposition. Dans tous les cas, identifiez l'émetteur et permettez l'opposition lorsqu'elle est requise. N'utilisez pas automatiquement les données d'une réservation pour ajouter un client à une campagne."
+            }
+          ],
+          "points": [
+            {
+              "label": "À retenir",
+              "text": "Respecter information et opposition.",
+              "anchor_text": "Dans tous les cas"
+            },
+            {
+              "label": "À comprendre",
+              "text": "Les données de course ne sont pas une liste publicitaire.",
+              "anchor_text": "N'utilisez pas automatiquement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Respecter information et opposition.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Pour un hôtel, la question utile est : « Quelles difficultés rencontrez-vous pour les départs matinaux ? » Elle ouvre un besoin concret. Envoyer seulement une liste de véhicules ne montre pas comment votre service aidera l'établissement. La question sur les départs matinaux permet d'obtenir une information exploitable : l'horaire, le volume ou une difficulté d'accueil. Vous pourrez ensuite expliquer votre réponse précise. Si aucun besoin n'est identifié, une liste de voitures ne crée pas à elle seule une vente. Notez la réponse et convenez d'une suite seulement si elle est utile."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Pour un hôtel, la question utile est : «"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Écouter une difficulté précise.",
+              "anchor_text": "La question sur les départs matinaux permet d'obtenir une"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle question poseriez-vous pour comprendre le besoin avant de présenter votre offre ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Vous voulez contacter une entreprise qui organise chaque mois des déplacements de salariés. Vous connaissez son adresse professionnelle publique. L'adresse publique ne dispense pas de vérifier les règles applicables à votre message professionnel. Identifiez votre entreprise, reliez votre proposition aux déplacements de salariés et respectez les demandes d'opposition. L'objectif du premier échange peut être de comprendre le processus de réservation, puis de proposer un rendez-vous ou un devis adapté."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Vous voulez contacter une entreprise qui organise chaque mois"
+            },
+            {
+              "label": "Décision",
+              "text": "Un contact pertinent et une suite respectueuse.",
+              "anchor_text": "L'adresse publique ne dispense pas de vérifier les règles"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.07",
+      "title": "Créer un partenariat",
+      "objective": "Définir les engagements réciproques avec précision.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "5766aa1993f6fbbd8e308044ff53b054ec6b6bd914bc0b7a6a83f0cabb6dbe6f",
+      "scenes": [
+        {
+          "title": "Attribuer les rôles",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de définir les engagements réciproques avec précision . Un partenariat doit préciser qui reçoit la demande, confirme la course, informe le passager et facture. Définissez un canal professionnel et les informations nécessaires à transmettre. La réception d'un hôtel ne doit pas promettre un véhicule que vous n'avez pas confirmé. Un processus simple évite les doubles réservations et les attentes sans chauffeur."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Qui demande, confirme, informe et facture ?",
+              "anchor_text": "Un partenariat doit"
+            },
+            {
+              "label": "À retenir",
+              "text": "La disponibilité doit être confirmée.",
+              "anchor_text": "La réception d'un hôtel"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Qui confirme la voiture au voyageur dans votre organisation ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Prévoir les changements",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Déterminez comment gérer une arrivée décalée, une annulation, un nombre de bagages différent ou l'indisponibilité d'un conducteur. Une solution de remplacement doit rester conforme et clairement annoncée. Les conditions financières, y compris une éventuelle commission, doivent être transparentes et documentées. Une entente orale imprécise devient fragile lorsqu'un incident survient."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Retard, annulation ou remplacement.",
+              "anchor_text": "Déterminez comment"
+            },
+            {
+              "label": "À retenir",
+              "text": "Documenter les conditions financières.",
+              "anchor_text": "Les conditions financières"
+            }
+          ]
+        },
+        {
+          "title": "Suivre le partenariat",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Choisissez quelques critères observables : réservations confirmées, ponctualité, informations complètes, réclamations et factures correctes. Un échange régulier permet de corriger les causes récurrentes. Le partenariat doit rester soutenable pour les deux parties. Accepter toutes les demandes sans moyens suffisants peut dégrader à la fois votre réputation et celle du partenaire."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Ponctualité, informations et factures.",
+              "anchor_text": "Choisissez quelques"
+            },
+            {
+              "label": "À retenir",
+              "text": "Des engagements soutenables pour les deux parties.",
+              "anchor_text": "Le partenariat doit"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Des engagements soutenables pour les deux parties.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un hôtel commande pour un client et demande une facture à son nom. Le transporteur confirme qui est le cocontractant et quelles informations doivent figurer sur la réservation et la facture. Dans cet exemple, le nom de l'hôtel sur la facture ne répond pas à toutes les questions. Identifiez l'entreprise qui commande, le voyageur à accueillir et le destinataire du règlement. Les informations doivent être cohérentes entre la confirmation et les documents. Une promesse de nombreuses courses reste différente d'une commande réellement confirmée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un hôtel commande pour un client et demande une"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Distinguer réservant, voyageur et payeur.",
+              "anchor_text": "Dans cet exemple, le nom de l'hôtel sur la"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Qui confirme la voiture au voyageur dans votre organisation ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un partenaire vous demande une nouvelle prestation avant que tous les moyens soient confirmés. Si l'hôtel demande un véhicule que vous n'avez pas encore confirmé, commencez par vérifier les moyens. Annoncez ensuite une disponibilité certaine ou une autre solution conforme. Fixez qui préviendra le voyageur. La bonne méthode consiste à rendre chaque responsabilité visible avant la prestation, plutôt qu'à découvrir le désaccord quand le client attend."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un partenaire vous demande une nouvelle prestation avant que"
+            },
+            {
+              "label": "Décision",
+              "text": "Confirmer les moyens avant de promettre.",
+              "anchor_text": "Si l'hôtel demande un véhicule que vous n'avez pas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.08",
+      "title": "Communiquer en ligne",
+      "objective": "Présenter une image cohérente et une réservation compréhensible.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "21da755197d10fa110fb6b4f420f04658554aadaa1550ba84185a6d250470ed4",
+      "scenes": [
+        {
+          "title": "Rendre l’offre lisible",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de présenter une image cohérente et une réservation compréhensible . Un site ou une page professionnelle doit permettre de comprendre votre service, votre zone, vos moyens de contact et le processus de réservation. Des photos cohérentes avec les véhicules utilisés et des textes précis inspirent davantage confiance que des promesses impossibles à vérifier. Indiquez clairement ce qui reste soumis à disponibilité ou à devis."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Service, zone et moyens de contact.",
+              "anchor_text": "Un site ou"
+            },
+            {
+              "label": "À retenir",
+              "text": "Préciser ce qui reste soumis à confirmation.",
+              "anchor_text": "Indiquez clairement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Votre écran de confirmation permet-il de savoir si une voiture est déjà réservée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Clarifier la réservation",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Demandez les données nécessaires : date, heure, départ, destination, nombre de voyageurs et besoins matériels. Distinguez une demande de devis d'une réservation confirmée. Le message affiché après envoi doit expliquer la prochaine étape. Si l'utilisateur croit avoir une voiture réservée alors qu'aucun chauffeur n'a accepté, le parcours crée un risque de service."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Demande envoyée ou course confirmée ?",
+              "anchor_text": "Distinguez une demande"
+            },
+            {
+              "label": "À retenir",
+              "text": "Expliquer la prochaine étape au client.",
+              "anchor_text": "Le message affiché"
+            }
+          ]
+        },
+        {
+          "title": "Publier avec discrétion",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Publiez uniquement des contenus que vous êtes autorisé à utiliser. Une photo de passager ou une capture de réservation peut révéler son identité et son déplacement. Les avis doivent refléter des expériences réelles ; une réponse publique à une critique doit rester sobre et préserver les informations privées. Le détail du dossier se traite dans un échange approprié."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Utiliser seulement des contenus autorisés.",
+              "anchor_text": "Publiez uniquement"
+            },
+            {
+              "label": "À retenir",
+              "text": "Traiter les informations privées dans le bon canal.",
+              "anchor_text": "Le détail du dossier"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Traiter les informations privées dans le bon canal.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un formulaire demande seulement date, lieu, destination, nombre de passagers, bagages et coordonnées utiles. Il indique que la demande sera confirmée avant réalisation. Le client comprend qu'un formulaire envoyé n'est pas forcément une réservation acceptée. Le message après envoi joue un rôle décisif. S'il indique seulement « merci », le client peut croire que tout est accepté. Précisez qu'il s'agit d'une demande et expliquez comment la confirmation arrivera. Testez le formulaire sur téléphone, puis suivez le parcours jusqu'au prix et à l'accord. Chaque étape doit correspondre à la réalité du service."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un formulaire demande seulement date, lieu, destination, nombre de"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Expliquer ce qui se passe après l’envoi.",
+              "anchor_text": "Le message après envoi joue un rôle décisif. S'il"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Votre écran de confirmation permet-il de savoir si une voiture est déjà réservée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Une publicité annonce « Dès 25 € » sans expliquer trajet, conditions ni disponibilité. Plusieurs clients s'attendent à ce tarif pour l'aéroport situé à 70 km. Une annonce à partir de vingt-cinq euros doit permettre de comprendre à quelle prestation ce prix correspond. Clarifiez les trajets et conditions concernés, puis présentez un devis adapté pour l'aéroport éloigné. Un prix d'appel ne doit pas créer une attente erronée. La qualité de la communication se mesure aussi aux demandes réellement comprises."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Une publicité annonce « Dès 25 € » sans"
+            },
+            {
+              "label": "Décision",
+              "text": "Relier le prix affiché à ses conditions.",
+              "anchor_text": "Une annonce à partir de vingt-cinq euros doit permettre"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.09",
+      "title": "Fidéliser avec discrétion",
+      "objective": "Mémoriser l’utile sans envahir la vie privée.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "70496cec846d738cfd328b6dcc68f8e83e8634f659b03be9987afcc26d9fc422",
+      "scenes": [
+        {
+          "title": "Être régulier",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de mémoriser l’utile sans envahir la vie privée . Un client revient lorsqu'il trouve un service prévisible et adapté. La fidélisation ne dépend pas uniquement d'une remise. Une confirmation claire, une conduite confortable et une réponse correcte en cas de problème créent une relation durable. Les promesses doivent être répétables : un service exceptionnel un jour suivi de plusieurs oublis fragilise la confiance."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "La fidélisation commence par un service fiable.",
+              "anchor_text": "Un client revient"
+            },
+            {
+              "label": "À retenir",
+              "text": "Des promesses que l’on peut répéter.",
+              "anchor_text": "Les promesses doivent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle information améliore le service sans entrer dans la vie privée du client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Mémoriser l’utile",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Certaines préférences opérationnelles peuvent être utiles, à condition de respecter les règles de protection des données et les choix du client. Notez une entrée habituelle ou un besoin confirmé plutôt que des informations personnelles inutiles. Ne transformez pas la proximité commerciale en familiarité imposée. Un passager régulier peut souhaiter le silence ou davantage de discrétion."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Une préférence opérationnelle et justifiée.",
+              "anchor_text": "Certaines préférences"
+            },
+            {
+              "label": "À retenir",
+              "text": "Respecter le souhait de discrétion.",
+              "anchor_text": "Un passager régulier"
+            }
+          ]
+        },
+        {
+          "title": "Distinguer les messages",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un message de suivi peut servir à résoudre un problème ou à confirmer une prochaine prestation. Une communication promotionnelle relève d'un autre objectif et de règles spécifiques. Respectez les refus de contact. Un programme de fidélité doit rester compréhensible et économiquement soutenable ; promettre une réduction permanente sans calcul peut fragiliser la prestation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Suivi de service et promotion ont des buts différents.",
+              "anchor_text": "Un message de suivi"
+            },
+            {
+              "label": "À retenir",
+              "text": "Respecter les refus de contact.",
+              "anchor_text": "Respectez les refus"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Respecter les refus de contact.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un voyageur demande un véhicule calme pour travailler. Vous pouvez respecter cette demande pour la mission. Il n'est pas nécessaire d'enregistrer sa conversation, son employeur ou le contenu de ses dossiers. La demande de calme suffit à guider votre comportement pendant la mission. Vous pouvez réduire les échanges et demander si le confort convient. Connaître le contenu du travail du client n'apporte rien au service. La personnalisation utile consiste à satisfaire le besoin exprimé, sans accumuler des informations personnelles étrangères à la course."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un voyageur demande un véhicule calme pour travailler. Vous"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Répondre au besoin de calme.",
+              "anchor_text": "La demande de calme suffit à guider votre comportement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle information améliore le service sans entrer dans la vie privée du client ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Après une course, vous souhaitez envoyer chaque semaine une offre promotionnelle à tous les numéros de votre historique. Ne transformez pas automatiquement l'historique des réservations en liste de promotions hebdomadaires. Vérifiez les autorisations et les règles de contact applicables, puis respectez les oppositions. Pour fidéliser, commencez par la qualité de chaque mission et un suivi approprié. Une réduction ou un message supplémentaire ne remplace pas une prestation régulière et discrète."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Après une course, vous souhaitez envoyer chaque semaine une"
+            },
+            {
+              "label": "Décision",
+              "text": "Vérifier les conditions avant une promotion.",
+              "anchor_text": "Ne transformez pas automatiquement l'historique des réservations en liste"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.10",
+      "title": "Mesurer la qualité du service",
+      "objective": "Observer des faits pour progresser.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "304441925d3a6aa3eb5ace734a519ee94d3103b4e55869ba68a052da5b7af141",
+      "scenes": [
+        {
+          "title": "Définir l’indicateur",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de observer des faits pour progresser . « Les clients sont contents » est une impression. Le nombre de réclamations, le taux de départs à l'heure ou la part de factures corrigées sont des informations mesurables. Définissez chaque indicateur : que signifie « à l'heure » et à partir de quel moment comptez-vous le retard ? Une définition stable permet de comparer les périodes."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Choisir un fait observable.",
+              "anchor_text": "Le nombre de réclamations"
+            },
+            {
+              "label": "À retenir",
+              "text": "Garder une définition stable dans le temps.",
+              "anchor_text": "Une définition stable"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle action pourrait réduire une difficulté de rencontre avec le chauffeur ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Chercher la cause",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un retard peut provenir d'un planning trop serré, d'une adresse incomplète ou d'un incident de circulation. Compter les retards ne suffit pas : il faut identifier ce qui peut être amélioré. Les avis clients apportent un point de vue utile, mais ne remplacent pas les faits opérationnels. Une note isolée ne décrit pas toujours toute la qualité du service."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Compter les écarts ne suffit pas.",
+              "anchor_text": "Compter les retards"
+            },
+            {
+              "label": "À retenir",
+              "text": "Rapprocher les avis des faits opérationnels.",
+              "anchor_text": "Les avis clients"
+            }
+          ]
+        },
+        {
+          "title": "Tester une action",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Choisissez une action concrète, une période d'observation et un résultat attendu. Par exemple, confirmer l'entrée exacte la veille peut réduire les rendez-vous manqués. Mesurez ensuite l'effet. Si le problème persiste, reconsidérez la cause au lieu d'ajouter des consignes sans lien avec la difficulté."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Une action, une période et un résultat attendu.",
+              "anchor_text": "Choisissez une action"
+            },
+            {
+              "label": "À retenir",
+              "text": "Mesurer ensuite l’effet.",
+              "anchor_text": "Mesurez ensuite"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Mesurer ensuite l’effet.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Sur vingt courses, quatre clients ne trouvent pas le point de rencontre. Au lieu de répéter « les clients ne lisent pas », testez un message plus précis avec une porte et un repère. Comparez ensuite le nombre d'appels de localisation. Le point de rencontre est ici la difficulté mesurable. Modifiez le message avec une porte et un repère, puis observez les appels sur des courses comparables. Si le nombre baisse, vous avez un signe utile d'amélioration. S'il reste stable, cherchez une autre cause. Accuser les clients ne donne aucune action précise à tester."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Sur vingt courses, quatre clients ne trouvent pas le"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Comparer avant et après le changement.",
+              "anchor_text": "Le point de rencontre est ici la difficulté mesurable."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle action pourrait réduire une difficulté de rencontre avec le chauffeur ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Trois avis mentionnent un véhicule propre mais des frais d'attente mal compris. Les avis sur l'attente orientent vers l'information tarifaire, même si le véhicule est propre. Relisez le devis et le message de confirmation. Rendez les minutes incluses et le tarif supplémentaire compréhensibles, puis observez les contestations suivantes. Vous améliorez le point qui crée le problème, au lieu d'agir sur un aspect déjà satisfaisant."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Trois avis mentionnent un véhicule propre mais des frais"
+            },
+            {
+              "label": "Décision",
+              "text": "Expliquer les frais d’attente puis mesurer.",
+              "anchor_text": "Les avis sur l'attente orientent vers l'information tarifaire, même"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.11",
+      "title": "Traiter une réclamation",
+      "objective": "Écouter, vérifier et proposer une réponse traçable.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "c9b83a7c2b46761d750ebdfc22a50c50a76d916834b1628e375c1fd6952d0548",
+      "scenes": [
+        {
+          "title": "Écouter précisément",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de écouter, vérifier et proposer une réponse traçable . Laissez le client exposer le problème, puis reformulez le point précis : horaire, montant, accueil ou objet endommagé. Reconnaître son insatisfaction ne signifie pas accepter immédiatement tous les faits allégués. Un ton calme facilite la collecte d'informations. Évitez de répondre par une justification automatique avant d'avoir compris la demande."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Reformuler le point contesté.",
+              "anchor_text": "Laissez le client"
+            },
+            {
+              "label": "À retenir",
+              "text": "Comprendre avant de se justifier.",
+              "anchor_text": "Évitez de répondre"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles pièces permettent de distinguer une impression d’un fait vérifiable ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Vérifier les pièces",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Consultez la réservation, les conditions acceptées, les horaires et les documents utiles. Distinguez un fait établi d'une appréciation. Si une erreur est confirmée, expliquez la correction et son délai. Si le désaccord persiste, présentez votre réponse de manière motivée et les voies de traitement adaptées, notamment la médiation de la consommation dans le cadre applicable."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Réservation, conditions, horaires et documents.",
+              "anchor_text": "Consultez la réservation"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une réponse motivée et une correction traçable.",
+              "anchor_text": "Si une erreur"
+            }
+          ]
+        },
+        {
+          "title": "Corriger le processus",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Notez la date, le problème, les vérifications et la solution proposée. Une réclamation révèle parfois un défaut du processus : conditions mal expliquées, facture ambiguë ou point de rendez-vous insuffisant. Le traitement ne s'arrête donc pas à un geste commercial. Corriger la cause évite que d'autres clients rencontrent la même difficulté."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Noter les vérifications et la solution.",
+              "anchor_text": "Notez la date"
+            },
+            {
+              "label": "À retenir",
+              "text": "Éviter que la difficulté se reproduise.",
+              "anchor_text": "Corriger la cause"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Éviter que la difficulté se reproduise.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un client conteste 12 € d'attente. Le devis prévoit dix minutes incluses, mais aucun relevé fiable ne montre le début de l'attente supplémentaire. L'entreprise doit examiner les faits avant de maintenir une somme non justifiée. L'enjeu n'est pas de choisir immédiatement un camp. Recherchez la base contractuelle de l'attente et les horaires vérifiables. S'il manque une preuve fiable, une affirmation ne la remplace pas. Expliquez au client ce que vous avez pu établir, puis indiquez la correction ou la réponse retenue. La trace de ce raisonnement facilite le suivi du dossier."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un client conteste 12 € d'attente. Le devis prévoit"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Vérifier l’accord et les horaires.",
+              "anchor_text": "L'enjeu n'est pas de choisir immédiatement un camp. Recherchez"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles pièces permettent de distinguer une impression d’un fait vérifiable ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un client indique que le chauffeur n'était pas au rendez-vous. Votre historique affiche une présence à l'autre entrée du bâtiment. Une présence à une autre entrée peut expliquer que les deux personnes pensent avoir attendu. Comparez les instructions de rendez-vous et les échanges. Reconnaissez la difficulté, établissez les faits puis proposez une réponse proportionnée. Ensuite, précisez l'entrée dans les futures confirmations. Vous traitez à la fois la réclamation et sa cause possible."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un client indique que le chauffeur n'était pas au"
+            },
+            {
+              "label": "Décision",
+              "text": "Clarifier l’entrée et corriger les instructions.",
+              "anchor_text": "Une présence à une autre entrée peut expliquer que"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "F.12",
+      "title": "Lire son tableau de bord",
+      "objective": "Choisir quelques indicateurs qui aident à décider.",
+      "image": "media/vtc/module-f.webp",
+      "source_sha256": "1923819b7f046640bf4e16ad9e7aa46e53a95541f0731237c01bab49ebd09547",
+      "scenes": [
+        {
+          "title": "Relier chiffre et question",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de choisir quelques indicateurs qui aident à décider . Le chiffre d'affaires renseigne sur les ventes. La marge renseigne sur leur contribution économique. Le taux de transformation compare les réservations obtenues aux demandes ou devis selon votre définition. Le panier moyen divise le chiffre d'affaires par le nombre de prestations. Chaque indicateur répond à une question différente ; les multiplier sans décision associée rend le suivi inutilement complexe."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Ventes, marge et conversion mesurent autre chose.",
+              "anchor_text": "Le chiffre d'affaires renseigne"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le panier moyen rapporte les ventes aux prestations.",
+              "anchor_text": "Le panier moyen"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quel canal contribue le plus par heure totale dans l’exemple ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Compter les moyens",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le taux de kilomètres facturés peut se calculer en divisant les kilomètres avec recette par les kilomètres totaux. Les heures mobilisées comprennent l'approche, l'attente et les retours. Une amélioration du chiffre d'affaires peut masquer une dégradation du revenu par heure. Comparez donc les ventes aux ressources réellement consommées."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Kilomètres totaux et heures mobilisées.",
+              "anchor_text": "Le taux de kilomètres"
+            },
+            {
+              "label": "À retenir",
+              "text": "Plus de ventes ne signifie pas plus de revenu horaire.",
+              "anchor_text": "Une amélioration du chiffre"
+            }
+          ]
+        },
+        {
+          "title": "Décider puis revoir",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Si un créneau produit de longues approches et peu de marge, testez une autre organisation ou une offre mieux adaptée. Si un partenaire apporte des courses régulières mais paie tard, surveillez la trésorerie. Un tableau de bord utile se termine par une action précise, un responsable et une date de réexamen."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Tester une organisation plus adaptée.",
+              "anchor_text": "Si un créneau"
+            },
+            {
+              "label": "À retenir",
+              "text": "Fixer une action et une date de réexamen.",
+              "anchor_text": "Un tableau de bord"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Fixer une action et une date de réexamen.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Sur 40 devis, 18 sont acceptés : taux de transformation 45 %. Sur 1 000 km parcourus, 650 sont réalisés avec passager : taux de kilomètres chargés 65 %. Aucun de ces ratios ne constitue à lui seul un bénéfice. Pour la transformation, le numérateur compte les devis acceptés et le dénominateur tous les devis de la période. Dix-huit divisés par quarante donnent quarante-cinq pour cent. Pour les kilomètres chargés, six cent cinquante sur mille donnent soixante-cinq pour cent. Chaque calcul conserve sa définition. Aucun de ces pourcentages ne retire toutes les charges de l'entreprise."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Sur 40 devis, 18 sont acceptés : taux de"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Choisir le bon numérateur et le bon dénominateur.",
+              "anchor_text": "Pour la transformation, le numérateur compte les devis acceptés"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quel canal contribue le plus par heure totale dans l’exemple ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Canal A : 300 € de contribution pour 10 heures totales. Canal B : 240 € pour 6 heures. Les montants sont calculés sur le même périmètre de coûts. Le canal A produit trente euros de contribution par heure : trois cents divisés par dix. Le canal B produit quarante euros par heure : deux cent quarante divisés par six. À périmètre comparable, B utilise mieux le temps dans cet exemple. Vérifiez aussi le volume disponible, les délais de paiement et la régularité avant de changer votre organisation."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Canal A : 300 € de contribution pour 10"
+            },
+            {
+              "label": "Décision",
+              "text": "A : 30 €/h ; B : 40 €/h sur la même base.",
+              "anchor_text": "Le canal A produit trente euros de contribution par"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

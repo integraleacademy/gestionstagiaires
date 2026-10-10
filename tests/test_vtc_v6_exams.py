@@ -133,7 +133,7 @@ class VtcV6ExamsTests(unittest.TestCase):
 
     def test_all_45_historical_exam_files_are_byte_identical(self):
         base = ROOT / 'elearning_native/vtc/exams'
-        paths = sorted(p for p in base.glob('*/*.json') if p.parent.name != BUILDER.VERSION)
+        paths = sorted(p for p in base.glob('*/*.json') if p.parent.name in BUILDER.PREVIOUS_EXAM_VERSIONS)
         self.assertEqual(45, len(paths))
         digest = hashlib.sha256()
         for path in paths:

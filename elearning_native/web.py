@@ -45,6 +45,7 @@ from .exams import ExamStore, load_exam, public_exam, grade_exam
 from .practice import public_practice, grade_practice
 from .production import public_production, production_feedback, normalize_production, normalize_self_review
 from .vtc_adaptive import select_activity as select_vtc_activity
+from .vtc_enrolments import effective_learner_session
 
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
@@ -419,6 +420,10 @@ def create_native_elearning_blueprint(
                 abort(403)
             if dt.date.today() < start_date:
                 abort(403)
+        try:
+            session_obj = effective_learner_session(session_obj, trainee)
+        except CourseImportError as exc:
+            abort(403, str(exc))
         return session_obj, trainee
 
     def learner_context(token: str, course_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
@@ -542,6 +547,8 @@ def create_native_elearning_blueprint(
                 "default_playback_rate": video.get("default_playback_rate", 1),
                 "allowed_playback_rates": video.get("allowed_playback_rates", [1]),
                 "learning_pauses": video.get("learning_pauses", []),
+                "lesson_explainer": bool(video.get("lesson_explainer")),
+                "transcript": str(video.get("transcript") or '') if video.get("lesson_explainer") else '',
             }
             duration = video.get("duration_seconds")
             chapters = video.get("chapters")
@@ -680,6 +687,8 @@ def create_native_elearning_blueprint(
                         "completed": activity_id in completed,
                         "current": activity_id == current_activity_id,
                         "has_video": bool(activity_videos(activity)),
+                        "has_lesson_video": any((b.get('video') or {}).get('lesson_explainer')
+                                                for b in activity.get('blocks', []) if isinstance(b, dict)),
                         "locked": locked,
                         "url": url_for(
                             "native_elearning.admin_preview",
@@ -1313,16 +1322,21 @@ def create_native_elearning_blueprint(
             abort(404)
         rows = store().live_progress(course_id)
         identities: Dict[Tuple[str, str], Dict[str, str]] = {}
-        session_paths: Dict[str, Dict[str, Any]] = {}
+        session_paths: Dict[Tuple[str, str], Dict[str, Any]] = {}
         data = load_data()
         for session_obj in data.get("sessions", []) or []:
             if not isinstance(session_obj, dict):
                 continue
-            module = next((item for item in assigned_modules(session_obj) if item.get("course_id") == course_id), None)
-            if module:
-                session_paths[str(session_obj.get("id"))] = module
+            assigned_here = any(item.get("course_id") == course_id for item in assigned_modules(session_obj))
             for trainee in session_trainees(session_obj):
                 trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
+                if assigned_here:
+                    try:
+                        effective = effective_learner_session(session_obj, trainee)
+                    except CourseImportError as exc:
+                        abort(409, str(exc))
+                    module = next(item for item in assigned_modules(effective) if item.get("course_id") == course_id)
+                    session_paths[(str(session_obj.get("id")), trainee_id)] = module
                 identities[(str(session_obj.get("id") or ""), trainee_id)] = {
                     "trainee_name": f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
                     "session_name": str(session_obj.get("name") or session_obj.get("id") or ""),
@@ -1336,7 +1350,7 @@ def create_native_elearning_blueprint(
                 except CourseImportError:
                     versions[row_version] = course
             row_course = versions[row_version]
-            module = session_paths.get(row["session_id"])
+            module = session_paths.get((row["session_id"], row["trainee_id"]))
             if module and (not module.get("course_version") or module["course_version"] == row_version):
                 try:
                     row_course = project_course(row_course, module)

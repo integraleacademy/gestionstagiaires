@@ -1,0 +1,1674 @@
+{
+  "revision": 10,
+  "module": "G",
+  "lessons": [
+    {
+      "ref": "G.01",
+      "title": "S’inscrire au REVTC",
+      "objective": "Comprendre l’autorisation de l’exploitant.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "c20ee6c31e3101a204e22d8b444d5b8085913b98095fa915672a95cc0aa902f6",
+      "scenes": [
+        {
+          "title": "Distinguer les trois dossiers",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de comprendre l’autorisation de l’exploitant . L'immatriculation de l'entreprise établit son existence dans les registres concernés. L'inscription au registre des exploitants VTC concerne l'activité d'exploitation du transport. La carte professionnelle concerne le conducteur. Un indépendant réunit souvent les trois dossiers, ce qui peut donner l'impression d'une démarche unique. Ils restent pourtant distincts et doivent être suivis séparément."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "L’entreprise, l’exploitant et le conducteur.",
+              "anchor_text": "L'immatriculation de l'entreprise"
+            },
+            {
+              "label": "À retenir",
+              "text": "Chaque dossier reste à suivre séparément.",
+              "anchor_text": "Ils restent pourtant"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle différence faites-vous entre la carte du conducteur et l’inscription de l’exploitant ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Relier les justificatifs",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le dossier associe les informations de l'entreprise aux conducteurs et véhicules utilisés, avec les justificatifs requis. Une assurance ou une carte expirée ne devient pas valable parce qu'elle a déjà été déposée lors d'une inscription précédente. L'exploitant doit suivre la réalité de son activité et les changements à déclarer. Le compte de gestion du registre doit rester accessible à une personne autorisée."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Les pièces doivent correspondre à l’activité réelle.",
+              "anchor_text": "Le dossier associe"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une pièce expirée n’est plus une preuve valable.",
+              "anchor_text": "Une assurance ou"
+            }
+          ]
+        },
+        {
+          "title": "Préparer les échéances",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L'inscription se renouvelle tous les cinq ans dans les conditions prévues. Un calendrier permet d'anticiper les pièces à actualiser et les éventuelles anomalies. Les obligations déclaratives renforcées en 2026 demandent notamment une attention au rattachement des conducteurs et véhicules. Prêter son inscription à une autre structure n'est pas une méthode de démarrage conforme."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Renouvellement et mises à jour du registre.",
+              "anchor_text": "L'inscription se renouvelle"
+            },
+            {
+              "label": "À retenir",
+              "text": "Anticiper les pièces à actualiser.",
+              "anchor_text": "Un calendrier permet"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Anticiper les pièces à actualiser.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une société inscrite remplace durablement une voiture par une autre. Le nouveau véhicule ne devient pas conforme au dossier simplement parce qu'il porte le même logo. Il faut vérifier son éligibilité et réaliser les mises à jour nécessaires. Le logo ne fournit aucune information suffisante sur l'éligibilité du nouveau véhicule. Vérifiez ses propres documents, son assurance et son rattachement au dossier de l'exploitant. Comparez la situation déclarée à celle qui existe réellement. Cette vérification permet de repérer une pièce manquante avant de compter sur la voiture pour les missions prévues."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Une société inscrite remplace durablement une voiture par une"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Le dossier doit correspondre au véhicule utilisé.",
+              "anchor_text": "Le logo ne fournit aucune information suffisante sur l'éligibilité"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle différence faites-vous entre la carte du conducteur et l’inscription de l’exploitant ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Votre inscription arrive à échéance dans quatre mois. Vous avez changé d'adresse et ajouté un second véhicule sans vérifier le dossier en ligne. Commencez par ouvrir le dossier et comparer l'adresse, les véhicules et les conducteurs avec la réalité. Traitez les changements à déclarer puis préparez le renouvellement. Le délai restant sert à résoudre les anomalies, pas à les repousser. Conservez un calendrier et vérifiez l'état final des démarches plutôt que la seule preuve d'envoi."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Votre inscription arrive à échéance dans quatre mois. Vous"
+            },
+            {
+              "label": "Décision",
+              "text": "Mettre à jour puis préparer le renouvellement.",
+              "anchor_text": "Commencez par ouvrir le dossier et comparer l'adresse, les"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.02",
+      "title": "Justifier la capacité financière",
+      "objective": "Associer chaque véhicule à la preuve appropriée.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "a00806109324db69eb86f2db44bf3e33bbe9803dbf173a75ca55e58ace1fa963",
+      "scenes": [
+        {
+          "title": "Choisir la justification",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de associer chaque véhicule à la preuve appropriée . La capacité financière VTC concerne les véhicules utilisés régulièrement dans l'activité. Le texte prévoit plusieurs moyens de la justifier, notamment la propriété, un contrat de location d'au moins six mois ou une garantie financière réglementaire. Il faut choisir la branche correspondant aux faits et fournir les pièces qui l'établissent. Ce n'est pas un montant unique à payer sans analyse de la situation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Propriété, location suffisante ou garantie applicable.",
+              "anchor_text": "Le texte prévoit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Les pièces doivent correspondre au véhicule.",
+              "anchor_text": "Il faut choisir"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi faut-il examiner chaque véhicule avant de calculer une garantie ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Comprendre la garantie",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La garantie réglementaire de 1 500 € par véhicule, lorsque cette voie s'applique, est fournie dans les conditions prévues par les organismes habilités. Elle ne remplace pas les assurances, le financement du véhicule ni la trésorerie nécessaire au fonctionnement. Avoir 1 500 € sur un compte personnel ne prouve donc pas automatiquement la constitution de cette garantie."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "1 500 € par véhicule lorsque cette voie s’applique.",
+              "anchor_text": "La garantie réglementaire"
+            },
+            {
+              "label": "À retenir",
+              "text": "Un solde bancaire ne prouve pas la garantie.",
+              "anchor_text": "Avoir 1 500"
+            }
+          ]
+        },
+        {
+          "title": "Lire la durée du contrat",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "« Au moins six mois » inclut six mois. Un contrat d'une semaine ne répond pas à cette condition de durée par le seul fait qu'il pourrait être renouvelé. Vérifiez l'engagement réellement écrit. Les situations particulières ou temporaires doivent être examinées avec les règles et justificatifs applicables, sans extrapoler à partir d'une location habituelle."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Au moins six mois inclut six mois.",
+              "anchor_text": "« Au moins six mois »"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une possibilité de renouvellement ne suffit pas.",
+              "anchor_text": "Un contrat d'une semaine"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Une possibilité de renouvellement ne suffit pas.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un exploitant possède une voiture et loue une seconde sur douze mois. Pour chacune, il peut présenter la preuve correspondante au lieu de supposer qu'une garantie de 1 500 € est systématiquement due en plus. Traitez les deux voitures séparément. La preuve de propriété concerne la première ; le contrat de douze mois concerne la seconde. L'exercice montre qu'il faut identifier la justification adaptée avant de multiplier un montant par le nombre de véhicules. Une garantie et la trésorerie de fonctionnement répondent à des questions différentes."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un exploitant possède une voiture et loue une seconde"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Associer une voiture à sa propre preuve.",
+              "anchor_text": "Traitez les deux voitures séparément. La preuve de propriété"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi faut-il examiner chaque véhicule avant de calculer une garantie ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Une entreprise utilise régulièrement trois voitures : une possédée, une louée neuf mois, une louée trois mois. Elle retient la garantie pour la troisième, sans autre justification disponible. Dans la situation proposée, la première voiture est justifiée par la propriété et la deuxième par un contrat de neuf mois. La location de trois mois ne satisfait pas, à elle seule, la condition de six mois. L'énoncé retient donc la garantie pour cette troisième voiture : mille cinq cents euros, avec les justificatifs réglementaires correspondants."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Une entreprise utilise régulièrement trois voitures : une possédée,"
+            },
+            {
+              "label": "Décision",
+              "text": "Ici, la garantie retenue concerne la troisième voiture.",
+              "anchor_text": "Dans la situation proposée, la première voiture est justifiée"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.03",
+      "title": "Choisir un véhicule éligible",
+      "objective": "Vérifier les caractéristiques sans oublier les exceptions.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "29459cb8814312745c9b54aff031229a6306ad95289cdceac37085ec9678cbad",
+      "scenes": [
+        {
+          "title": "Vérifier le régime ordinaire",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de vérifier les caractéristiques sans oublier les exceptions . Le véhicule VTC comporte de quatre à neuf places, conducteur compris. Pour le régime ordinaire des véhicules concernés, l'arrêté du 26 mars 2015 impose moins de sept ans, au moins quatre portes, 4,50 m de longueur, 1,70 m de largeur et une puissance nette d'au moins 84 kW. L'exception d'ancienneté vise notamment les véhicules de collection."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "4 à 9 places, conducteur compris.",
+              "anchor_text": "Le véhicule VTC comporte"
+            },
+            {
+              "label": "À retenir",
+              "text": "Âge, portes, dimensions et puissance à vérifier.",
+              "anchor_text": "Pour le régime ordinaire"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi faut-il vérifier tous les critères, même si le véhicule semble adapté ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Lire précisément les exceptions",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L'article 2 écarte les dispositions de l'article 1 pour les catégories hybrides et électriques visées. Cela ne supprime pas la règle générale des quatre à neuf places ni les autres obligations de sécurité, d'assurance et de contrôle. Avant un achat, vérifiez la catégorie exacte du véhicule et les pièces constructeur. Un filtre commercial de plateforme peut ajouter des critères ; il ne remplace pas la réglementation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Catégories hybrides et électriques visées par le texte.",
+              "anchor_text": "L'article 2 écarte"
+            },
+            {
+              "label": "À retenir",
+              "text": "Les autres obligations restent à respecter.",
+              "anchor_text": "Cela ne supprime"
+            }
+          ]
+        },
+        {
+          "title": "Identifier la version exacte",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Utilisez les documents officiels du véhicule et du constructeur. La puissance nette en kilowatts ne doit pas être confondue avec la puissance fiscale en chevaux fiscaux. Une annonce commerciale peut arrondir une dimension ou décrire une motorisation de façon simplifiée. Avant un achat ou une location, identifiez la version exacte et demandez les justificatifs utiles."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Documents officiels du véhicule et du constructeur.",
+              "anchor_text": "Utilisez les documents"
+            },
+            {
+              "label": "À retenir",
+              "text": "Kilowatts et chevaux fiscaux sont différents.",
+              "anchor_text": "La puissance nette"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Kilowatts et chevaux fiscaux sont différents.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une berline thermique de huit ans, non de collection, ne satisfait pas l'exigence ordinaire de moins de sept ans, même si elle est luxueuse, bien entretenue et acceptée dans une ancienne annonce commerciale. L'entretien et le standing ne modifient pas la limite d'ancienneté dans ce cas ordinaire. Il faut lire ensemble la catégorie, l'âge et les exceptions applicables. Une annonce ancienne peut être périmée. La vérification se fait avant l'achat ou la location, quand vous pouvez encore choisir un autre véhicule et éviter un financement inadapté."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Une berline thermique de huit ans, non de collection,"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Le standing ne remplace pas l’éligibilité.",
+              "anchor_text": "L'entretien et le standing ne modifient pas la limite"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi faut-il vérifier tous les critères, même si le véhicule semble adapté ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Fiche d'une voiture thermique non de collection : six ans, cinq places, quatre portes, 4,60 m × 1,80 m, puissance 80 kW. La fiche remplit plusieurs critères ordinaires : âge inférieur à sept ans, places, portes et dimensions suffisantes. Mais la puissance annoncée est de quatre-vingts kilowatts, inférieure aux quatre-vingt-quatre kilowatts exigés dans ce régime. La voiture ne satisfait donc pas tous les critères de l'exercice. Une seule condition manquante empêche de conclure favorablement."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Fiche d'une voiture thermique non de collection : six"
+            },
+            {
+              "label": "Décision",
+              "text": "80 kW reste inférieur à 84 kW dans ce cas.",
+              "anchor_text": "La fiche remplit plusieurs critères ordinaires : âge inférieur"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.04",
+      "title": "Afficher la bonne signalétique",
+      "objective": "Identifier le véhicule sans créer de confusion avec un taxi.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "483f6f927df6434c91aa41e29ed8c177fb3678edc76e156c6aaab5721095697e",
+      "scenes": [
+        {
+          "title": "Distinguer marque et signalétique",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de identifier le véhicule sans créer de confusion avec un taxi . La signalétique VTC est obtenue selon la procédure officielle. Elle porte les informations prévues et doit correspondre à l'exploitation et au véhicule. Un logo commercial annonce votre marque ; la vignette réglementaire répond à une obligation d'identification. L'un ne remplace pas l'autre. Une reproduction artisanale d'un modèle trouvé en ligne ne constitue pas une délivrance régulière."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Le logo commercial ne remplace pas la vignette.",
+              "anchor_text": "Un logo commercial"
+            },
+            {
+              "label": "À retenir",
+              "text": "La vignette doit être délivrée régulièrement.",
+              "anchor_text": "Une reproduction artisanale"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quel document identifie le conducteur, et quel élément identifie le véhicule VTC ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Afficher le bon conducteur",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pendant l'activité, la carte professionnelle est apposée pour que sa photographie soit facilement visible de l'extérieur. Elle est personnelle. Une voiture partagée entre plusieurs chauffeurs ne justifie pas de conserver toujours la carte du même conducteur. Vérifiez avant le départ que les documents visibles et ceux présentés lors d'un contrôle correspondent à la personne qui conduit."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "La carte professionnelle est personnelle.",
+              "anchor_text": "Elle est personnelle"
+            },
+            {
+              "label": "À retenir",
+              "text": "Vérifier l’identité de la personne en service.",
+              "anchor_text": "Vérifiez avant le départ"
+            }
+          ]
+        },
+        {
+          "title": "Contrôler les emplacements",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Les vignettes définitives se placent à l'avant, en bas côté conducteur, et à l'arrière, en bas du côté opposé, selon les prescriptions applicables. La signalétique temporaire relève de conditions et d'une durée limitée. Elle ne doit pas être conservée indéfiniment en attendant de faire les démarches. Un dispositif lumineux extérieur susceptible de créer une confusion avec un taxi est interdit."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Avant côté conducteur ; arrière côté opposé.",
+              "anchor_text": "Les vignettes définitives"
+            },
+            {
+              "label": "À retenir",
+              "text": "Éviter toute confusion avec un taxi.",
+              "anchor_text": "Un dispositif lumineux"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Éviter toute confusion avec un taxi.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le véhicule porte un logo d'entreprise très visible. Ce marquage commercial ne remplace pas les vignettes réglementaires. Inversement, les vignettes ne dispensent pas d'afficher la carte personnelle du conducteur en service. Les deux signes n'ont pas la même fonction. Le logo aide le client à reconnaître une marque ; la vignette identifie l'activité dans le cadre réglementaire. La carte visible concerne la personne qui conduit. Vérifiez les trois éléments sans en laisser un masquer l'absence d'un autre. Une présentation soignée ne suffit pas à prouver la conformité."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Le véhicule porte un logo d'entreprise très visible. Ce"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Logo, vignette et carte ont des fonctions différentes.",
+              "anchor_text": "Les deux signes n'ont pas la même fonction. Le"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quel document identifie le conducteur, et quel élément identifie le véhicule VTC ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un chauffeur change de voiture et transfère une ancienne vignette portant l'immatriculation précédente. Il ajoute un voyant de toit « disponible ». La vignette portant l'ancienne immatriculation ne correspond pas au nouveau véhicule. Le voyant de toit créant une confusion avec un taxi pose un autre problème. Il faut obtenir la signalétique adaptée par la procédure officielle et retirer le dispositif inapproprié. Avant de reprendre, vérifiez aussi que la carte affichée est celle du conducteur présent."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un chauffeur change de voiture et transfère une ancienne"
+            },
+            {
+              "label": "Décision",
+              "text": "Corriger les références et retirer le voyant inadapté.",
+              "anchor_text": "La vignette portant l'ancienne immatriculation ne correspond pas au"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.05",
+      "title": "Prouver la réservation préalable",
+      "objective": "Conserver une trace établie avant la prise en charge.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "488243fde6f99239f9fa66b4d8d7d7bc37f05ef3effe395220cb06d6b258343b",
+      "scenes": [
+        {
+          "title": "Respecter la chronologie",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de conserver une trace établie avant la prise en charge . Le justificatif doit raconter une chronologie réelle : le client réserve, puis le chauffeur prend en charge. La date et l'heure de réservation ne sont pas les mêmes données que la date et l'heure souhaitées pour le départ. Un document peut contenir deux horaires très proches, mais ils doivent correspondre aux faits. On ne crée pas après coup une antériorité qui n'a pas existé."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "La réservation doit précéder la prise en charge.",
+              "anchor_text": "Le justificatif doit"
+            },
+            {
+              "label": "À retenir",
+              "text": "Ne jamais reconstruire une antériorité fictive.",
+              "anchor_text": "On ne crée pas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles deux dates et heures ne faut-il pas confondre sur le justificatif ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Contrôler les mentions",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L'arrêté du 6 août 2025 impose notamment l'identité et les coordonnées de l'exploitant, son numéro REVTC, son SIREN, le nom et le téléphone du client, la date et l'heure de réservation, la date et l'heure de prise en charge souhaitée et son lieu. Si les coordonnées client prévues ne figurent pas, le texte exige un moyen permettant aux contrôleurs de le contacter sans délai. Préparer le document avant la course évite une preuve reconstruite après coup."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Exploitant, identifiants, client, horaires et lieu.",
+              "anchor_text": "L'arrêté du 6 août"
+            },
+            {
+              "label": "À retenir",
+              "text": "Préparer la preuve avant la course.",
+              "anchor_text": "Préparer le document"
+            }
+          ]
+        },
+        {
+          "title": "Rendre la preuve accessible",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le support peut être papier ou électronique. Le conducteur doit pouvoir le présenter. Un écran indiquant seulement le prénom du client et le prix peut être insuffisant. Préparez un accès adapté à une perte de réseau, en respectant la confidentialité. Le cas particulier prévu pour les coordonnées client exige de pouvoir permettre à l'agent de le contacter sans délai."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Support papier ou électronique présentable.",
+              "anchor_text": "Le support peut"
+            },
+            {
+              "label": "À retenir",
+              "text": "Prévoir la perte de réseau avec confidentialité.",
+              "anchor_text": "Préparez un accès"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Prévoir la perte de réseau avec confidentialité.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le contrôle d'un bon consiste à lire les informations et à vérifier leur cohérence avec la mission. Une belle mise en page ne répare pas une réservation absente ou un horaire antidaté. Commencez par l'identité de l'exploitant puis les deux horaires : moment de la réservation et prise en charge souhaitée. Comparez ensuite les informations au service réellement prévu. Le prix ou une destination ne remplace pas les mentions obligatoires. Enfin, assurez-vous que le conducteur peut ouvrir le justificatif au moment où il doit le présenter."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Le contrôle d'un bon consiste à lire les informations"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Comparer la preuve à la mission réelle.",
+              "anchor_text": "Commencez par l'identité de l'exploitant puis les deux horaires"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles deux dates et heures ne faut-il pas confondre sur le justificatif ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Avant le départ, votre écran de réservation affiche uniquement un prénom et un prix. Le justificatif complet est dans un autre espace. Si le téléphone n'affiche qu'un prénom et un prix, vérifiez l'accès au justificatif complet avant de partir. Une réservation peut exister sans être suffisamment démontrée par cet écran. Préparez le document et sa disponibilité, sans modifier les faits ni créer un faux horaire. La qualité de la preuve repose sur le contenu, la chronologie et la possibilité de présentation."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Avant le départ, votre écran de réservation affiche uniquement"
+            },
+            {
+              "label": "Décision",
+              "text": "Contenu complet, chronologie réelle, accès possible.",
+              "anchor_text": "Si le téléphone n'affiche qu'un prénom et un prix,"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.06",
+      "title": "Distinguer réservation et maraude",
+      "objective": "Reconnaître les prises en charge interdites.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "bd318d73a6cafdacf7b3efcb289a236315a887e01b9ad02130beb1e29fc590a9",
+      "scenes": [
+        {
+          "title": "Comprendre la réservation",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de reconnaître les prises en charge interdites . Le VTC n'attend pas sur la voie publique pour trouver des passagers sans réservation. Il ne circule pas lentement dans ce but et ne prend pas simplement un client qui le hèle. Le régime de la réservation préalable organise une prestation identifiée avant la prise en charge. La disponibilité immédiate du véhicule ne suffit pas à autoriser toutes les formes de sollicitation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "La disponibilité ne donne pas tous les droits.",
+              "anchor_text": "Le VTC n'attend pas"
+            },
+            {
+              "label": "À retenir",
+              "text": "La prestation est identifiée avant la prise en charge.",
+              "anchor_text": "Le régime de la réservation"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Le moyen de paiement change-t-il la manière dont le client a été trouvé ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Examiner le rôle de l’application",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le fait de payer avec une application ne corrige pas automatiquement les conditions d'une rencontre dans la rue. Il faut examiner la façon dont la mission a réellement été obtenue. Le Code encadre aussi certaines informations de localisation et de disponibilité avant réservation sur la voie publique. Il n'interdit pas toute réservation numérique ; il impose un usage compatible avec les règles."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Payer sur une application ne corrige pas tout.",
+              "anchor_text": "Le fait de payer"
+            },
+            {
+              "label": "À retenir",
+              "text": "Un outil numérique doit respecter le cadre applicable.",
+              "anchor_text": "Il n'interdit pas"
+            }
+          ]
+        },
+        {
+          "title": "Répondre sans montage fictif",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Face à une sollicitation irrégulière, expliquez que votre activité fonctionne sur réservation et orientez vers les moyens licites. Ne proposez pas un montage fictif ou un faux horodatage. Les contraintes commerciales et la volonté de rendre service ne modifient pas le régime du transport. Une règle comprise se justifie plus facilement qu'une interdiction récitée sans explication."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Expliquer le fonctionnement sur réservation.",
+              "anchor_text": "Face à une sollicitation"
+            },
+            {
+              "label": "À retenir",
+              "text": "Ne pas antidater une preuve.",
+              "anchor_text": "Ne proposez pas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Ne pas antidater une preuve.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un passant fait signe au véhicule. Le chauffeur explique qu'il travaille sur réservation et ne négocie pas une course immédiate de rue. Créer ensuite un document antidaté ne corrigerait pas la situation. Le problème n'est pas le moyen de paiement choisi à la fin. C'est la façon dont la course a été obtenue sur la voie publique. Le chauffeur garde une explication simple et oriente vers les moyens licites. Refaire le document après la rencontre ne change pas la chronologie. La même logique évite de confondre réservation numérique et prise en charge de rue."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un passant fait signe au véhicule. Le chauffeur explique"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Analyser l’origine réelle de la course.",
+              "anchor_text": "Le problème n'est pas le moyen de paiement choisi"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Le moyen de paiement change-t-il la manière dont le client a été trouvé ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un chauffeur attend devant un restaurant avec une pancarte « disponible, montez ». Il assure que le paiement sera enregistré sur son application une fois le client installé. La pancarte cherche des passagers non réservés sur la voie publique. Enregistrer un paiement après leur installation ne transforme pas cette recherche en réservation préalable. Le conducteur doit cesser cette organisation et travailler dans le cadre autorisé. Pour analyser un cas d'examen, identifiez d'abord les faits : lieu, sollicitation, réservation et moment de la prise en charge."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un chauffeur attend devant un restaurant avec une pancarte"
+            },
+            {
+              "label": "Décision",
+              "text": "Identifier la sollicitation avant le paiement.",
+              "anchor_text": "La pancarte cherche des passagers non réservés sur la"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.07",
+      "title": "Accueillir en gare et à l’aéroport",
+      "objective": "Articuler réservation, horaire et accès local.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "b6c699c90d8cb30c3da21922ba5d9f89f6ce9de046158fb34cf760cccb3d2938",
+      "scenes": [
+        {
+          "title": "Combiner les règles",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de articuler réservation, horaire et accès local . Les règles nationales du VTC et les règles d'accès de la gare ou de l'aéroport doivent être respectées ensemble. Une réservation ne donne pas un droit général de stationnement. Les emplacements de taxis, les voies de circulation et les espaces professionnels peuvent être réservés ou soumis à des conditions particulières. Préparez l'accès avant l'arrivée."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Réservation et règles d’accès doivent être respectées.",
+              "anchor_text": "Les règles nationales"
+            },
+            {
+              "label": "À retenir",
+              "text": "La réservation n’autorise pas tout stationnement.",
+              "anchor_text": "Une réservation ne donne"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À quelle heure faut-il raisonner : arrivée du vol ou prise en charge souhaitée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Comprendre la limite d’attente",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans le champ de la règle prévue aux abords des gares et aérogares, la durée maximale de stationnement est d'une heure avant l'heure de prise en charge souhaitée. Cela ne signifie pas une heure gratuite sur n'importe quel emplacement. Un parking ou une zone de dépose peut imposer une durée plus courte. Les modifications d'horaire doivent correspondre à une évolution réelle de la réservation et de la situation du client."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Une heure dans le champ de la règle nationale.",
+              "anchor_text": "Dans le champ"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le site peut imposer une durée plus courte.",
+              "anchor_text": "Un parking ou"
+            }
+          ]
+        },
+        {
+          "title": "Préparer la rencontre",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Indiquez le terminal, la sortie, le niveau et un repère fiable. Distinguez l'heure d'arrivée du train ou du vol de l'heure où le passager pourra rejoindre le véhicule. Bagages, contrôle et trajet à pied demandent du temps. Prévoyez un moyen de contact et une solution si le client se présente à une autre sortie."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Terminal, sortie, niveau et repère.",
+              "anchor_text": "Indiquez le terminal"
+            },
+            {
+              "label": "À retenir",
+              "text": "Arrivée du vol et prise en charge sont différentes.",
+              "anchor_text": "Distinguez l'heure"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Arrivée du vol et prise en charge sont différentes.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. La prise en charge est prévue à 16 h. Arriver à 13 h et attendre dans la zone de prise en charge n'est pas justifié par la seule existence de la réservation. Il faut organiser une attente dans un lieu autorisé adapté aux règles applicables. L'existence d'une réservation ne suffit pas à justifier trois heures dans la zone de prise en charge. Choisissez une organisation compatible avec l'horaire souhaité et les règles locales. Un parking adapté peut permettre d'attendre avant l'approche. Vérifiez son accès et son coût. Vous évitez ainsi de transformer une arrivée trop précoce en stationnement irrégulier."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "La prise en charge est prévue à 16 h."
+            },
+            {
+              "label": "Raisonnement",
+              "text": "La réservation ne justifie pas une attente illimitée.",
+              "anchor_text": "L'existence d'une réservation ne suffit pas à justifier trois"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À quelle heure faut-il raisonner : arrivée du vol ou prise en charge souhaitée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un vol annoncé à 17 h arrive à 18 h 30. Le client demande une prise en charge à 19 h après récupération des bagages. La prise en charge demandée est maintenant à dix-neuf heures. Confirmez cette évolution réelle avec le client et mettez à jour l'organisation. Vérifiez le lieu autorisé et ses contraintes avant d'approcher. Ne retenez pas seulement l'heure d'atterrissage : les bagages et le déplacement jusqu'au véhicule expliquent l'écart. Informez le passager du point de rencontre convenu."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un vol annoncé à 17 h arrive à 18"
+            },
+            {
+              "label": "Décision",
+              "text": "Confirmer 19 h et vérifier les règles du site.",
+              "anchor_text": "La prise en charge demandée est maintenant à dix-neuf"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.08",
+      "title": "Organiser la fin de course",
+      "objective": "Choisir un repositionnement conforme.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "528afe2138c5a738ce02a2acdd248c89eb50d05ef62b13b32b1d324158623056",
+      "scenes": [
+        {
+          "title": "Choisir la suite de la mission",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de choisir un repositionnement conforme . Après la dépose, il faut choisir la suite du déplacement. Le Code prévoit le retour au lieu d'établissement de l'exploitant ou vers un lieu hors de la chaussée où le stationnement est autorisé, sauf nouvelle réservation préalable ou contrat avec le client final dans les conditions prévues. Il ne s'agit donc ni d'un retour systématique à une seule adresse, ni d'une liberté d'attente partout."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Retour ou lieu hors chaussée autorisé.",
+              "anchor_text": "Le Code prévoit"
+            },
+            {
+              "label": "À retenir",
+              "text": "La règle n’impose pas toujours la même adresse.",
+              "anchor_text": "Il ne s'agit donc"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle preuve permet de retenir l’exception de nouvelle réservation ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Vérifier l’exception invoquée",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un contrat général avec une plateforme n'est pas, à lui seul, un contrat avec le client final. Une simple espérance de course dans quelques minutes ne constitue pas une réservation. La décision doit reposer sur les pièces de la situation présente, pas sur une probabilité commerciale."
+            }
+          ],
+          "points": [
+            {
+              "label": "À retenir",
+              "text": "Un contrat de plateforme ne suffit pas à lui seul.",
+              "anchor_text": "Un contrat général"
+            },
+            {
+              "label": "À comprendre",
+              "text": "Une espérance de course n’est pas une réservation.",
+              "anchor_text": "Une simple espérance"
+            }
+          ]
+        },
+        {
+          "title": "Préparer le repositionnement",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Repérez des lieux autorisés, leurs horaires, leur coût et leur accessibilité. Cette préparation réduit les kilomètres inutiles et évite les arrêts improvisés. Intégrez le repositionnement au calcul économique d'une mission. Une course apparemment rentable peut l'être moins lorsque sa destination laisse le véhicule loin d'un point adapté ou de la prochaine réservation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Repérer accès, horaires et coût des lieux autorisés.",
+              "anchor_text": "Repérez des lieux"
+            },
+            {
+              "label": "À retenir",
+              "text": "Intégrer le repositionnement à l’économie de la course.",
+              "anchor_text": "Intégrez le repositionnement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Intégrer le repositionnement à l’économie de la course.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Après une dépose, une réservation confirmée prévoit un autre client à proximité. Le conducteur peut rejoindre cette mission avec son justificatif. Sans nouvelle réservation, il organise un retour ou une attente dans le cadre autorisé. La seconde réservation doit exister et pouvoir être justifiée. Si elle est confirmée, le chauffeur organise son approche en respectant aussi les règles de circulation et d'accès. Si elle n'existe pas, il applique les possibilités de retour ou de stationnement prévues. Le raisonnement s'appuie sur la situation présente, pas sur l'espoir de recevoir bientôt une notification."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Après une dépose, une réservation confirmée prévoit un autre"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "S’appuyer sur une mission réelle et justifiable.",
+              "anchor_text": "La seconde réservation doit exister et pouvoir être justifiée."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle preuve permet de retenir l’exception de nouvelle réservation ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Vous terminez une course en centre-ville. Aucun autre client n'est réservé. Un parking hors chaussée autorise le stationnement, à cinq minutes. Le parking décrit se situe hors chaussée et autorise le stationnement. Il constitue donc une possibilité à examiner dans le cadre présenté, au lieu d'attendre au bord de la rue pour chercher un client. Vérifiez ses horaires et ses conditions d'accès. Vous pouvez organiser un repositionnement conforme sans affirmer que tout conducteur doit systématiquement retourner à une adresse unique."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Vous terminez une course en centre-ville. Aucun autre client"
+            },
+            {
+              "label": "Décision",
+              "text": "Rejoindre un lieu hors chaussée autorisé.",
+              "anchor_text": "Le parking décrit se situe hors chaussée et autorise"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.09",
+      "title": "Convenir du prix et du service",
+      "objective": "Appliquer la liberté tarifaire avec une information claire.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "ee1e268557d3ae3cc857d1b8c63b52c5b37f19b95f126c9c22c4a728059c652d",
+      "scenes": [
+        {
+          "title": "Comprendre la liberté tarifaire",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de appliquer la liberté tarifaire avec une information claire . Le VTC ne reprend pas automatiquement les tarifs réglementés du taxi. Son prix est librement fixé dans le cadre applicable et doit être communiqué de façon compréhensible. L'offre peut prévoir un montant déterminé ou un calcul fondé sur des éléments annoncés. Dans les deux cas, le client doit savoir ce qui forme le prix et dans quelles situations il pourrait évoluer."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Un montant ou une méthode annoncée.",
+              "anchor_text": "L'offre peut prévoir"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le client doit comprendre ce qui forme le prix.",
+              "anchor_text": "Dans les deux cas"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Qu’est-ce qui distingue un prix estimé d’un forfait sur un trajet défini ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Encadrer les modifications",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L'attente, un arrêt supplémentaire, un péage, une annulation ou une modification de destination peuvent avoir un effet commercial. Cet effet doit être encadré avant le service autant que possible. Une prestation plus longue ne permet pas d'inventer un supplément à l'arrivée. Vérifiez les conditions convenues puis obtenez l'accord nécessaire sur une modification."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Attente, arrêt, péage ou nouvelle destination.",
+              "anchor_text": "L'attente, un arrêt"
+            },
+            {
+              "label": "À retenir",
+              "text": "Obtenir l’accord utile avant un supplément.",
+              "anchor_text": "Vérifiez les conditions"
+            }
+          ]
+        },
+        {
+          "title": "Distinguer estimation et forfait",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une estimation informe sur un montant attendu selon des hypothèses ; un forfait fixe un prix pour un périmètre déterminé. Le client doit comprendre la différence. La facture reprend la prestation réellement fournie dans le cadre accepté. En cas de désaccord, les échanges et documents permettent d'expliquer le raisonnement et de traiter la réclamation."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "L’estimation dépend d’hypothèses.",
+              "anchor_text": "Une estimation informe"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le forfait porte sur un périmètre défini.",
+              "anchor_text": "un forfait fixe"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Le forfait porte sur un périmètre défini.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un forfait accepté de 90 € TTC inclut le péage pour le trajet réservé. L'exploitant ne doit pas ajouter ce même péage une seconde fois sur la facture. Un changement de destination se discute avant d'être exécuté. Le péage fait déjà partie des quatre-vingt-dix euros acceptés. Le facturer une deuxième fois contredirait le périmètre de cet accord. Une nouvelle destination est une autre question : elle peut changer le service, mais ses conséquences doivent être expliquées avant réalisation. Relisez donc d'abord ce qui était inclus, puis ce qui a réellement changé."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Un forfait accepté de 90 € TTC inclut le"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Ne pas facturer deux fois un élément inclus.",
+              "anchor_text": "Le péage fait déjà partie des quatre-vingt-dix euros acceptés."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Qu’est-ce qui distingue un prix estimé d’un forfait sur un trajet défini ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un passager pense que le VTC doit appliquer exactement le tarif d'un taxi affiché à la gare. Expliquez calmement que le VTC fixe son prix dans le cadre convenu avec le client et ne reprend pas automatiquement le barème des taxis. Présentez le montant ou la méthode de calcul de cette réservation. L'objectif est que le passager sache ce qu'il accepte, quels frais sont inclus et dans quels cas le prix peut évoluer."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un passager pense que le VTC doit appliquer exactement"
+            },
+            {
+              "label": "Décision",
+              "text": "Expliquer le prix accepté pour cette réservation.",
+              "anchor_text": "Expliquez calmement que le VTC fixe son prix dans"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.10",
+      "title": "Remplacer un véhicule ou un conducteur",
+      "objective": "Maintenir la conformité malgré un imprévu.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "b618ed188f4b66e2f9d90a70cdbc8347a0819893732e33f85ce8dbf0ced7f161",
+      "scenes": [
+        {
+          "title": "Vérifier la voiture",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de maintenir la conformité malgré un imprévu . Une voiture prêtée, louée ou proposée par l'assistance ne peut pas être utilisée automatiquement pour transporter des clients. Contrôlez son éligibilité, son état, son assurance pour le transport rémunéré, les documents et les formalités applicables. Le caractère temporaire du remplacement n'efface pas les obligations. Une confirmation écrite de l'assureur peut être nécessaire pour lever un doute sur la garantie."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Éligibilité, assurance, état et documents.",
+              "anchor_text": "Contrôlez son éligibilité"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le remplacement temporaire ne supprime pas les règles.",
+              "anchor_text": "Le caractère temporaire"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles vérifications restent nécessaires même si le remplacement ne dure qu’une journée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Vérifier la personne",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le remplaçant doit disposer de ses propres titres valables et être autorisé dans l'organisation et les contrats concernés. Une carte professionnelle ne se prête pas. Si la mission est confiée à un autre exploitant, identifiez qui réalise la prestation, facture et traite les éventuelles réclamations. Le client doit recevoir les informations utiles pour reconnaître son chauffeur."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Le remplaçant possède ses propres titres.",
+              "anchor_text": "Le remplaçant doit"
+            },
+            {
+              "label": "À retenir",
+              "text": "La carte professionnelle ne se prête pas.",
+              "anchor_text": "Une carte professionnelle"
+            }
+          ]
+        },
+        {
+          "title": "Confirmer la reprise",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Partagez les données nécessaires à la mission avec la personne habilitée. Confirmez la reprise effective pour éviter que chacun pense que l'autre s'en charge. Le suivi doit conserver l'heure du changement et les informations communiquées. Une bonne solution de continuité repose sur une vérification préalable, pas sur la seule disponibilité d'une personne et d'une voiture."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Transmettre seulement les informations nécessaires.",
+              "anchor_text": "Partagez les données"
+            },
+            {
+              "label": "À retenir",
+              "text": "Éviter une course que personne n’a réellement reprise.",
+              "anchor_text": "Confirmez la reprise"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Éviter une course que personne n’a réellement reprise.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le frère d'un chauffeur possède un permis B mais pas de carte VTC. Il ne peut pas assurer la course payante « juste une fois » en utilisant la carte de son frère. Le caractère exceptionnel ne transforme pas la règle. Le permis de conduire et la carte professionnelle répondent à des conditions distinctes. Le frère ne peut pas utiliser l'identité professionnelle d'un autre conducteur. L'urgence ne transforme pas une solution non vérifiée en solution autorisée. Il faut chercher un remplaçant qui remplit lui-même les conditions et confirmer la reprise de la mission avec le client."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Le frère d'un chauffeur possède un permis B mais"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "L’urgence ne permet pas de prêter une carte.",
+              "anchor_text": "Le permis de conduire et la carte professionnelle répondent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelles vérifications restent nécessaires même si le remplacement ne dure qu’une journée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Votre véhicule est immobilisé. Un autre exploitant propose d'assurer le transfert déjà réservé. Identifiez l'autre exploitant et vérifiez son droit d'exercer, le conducteur prévu, le véhicule et les garanties applicables. Clarifiez qui réalise la course, facture et traite un problème. Transmettez les seules informations utiles puis confirmez le changement au client. Conservez une trace de la reprise effective pour éviter une absence de chauffeur ou une double intervention."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Votre véhicule est immobilisé. Un autre exploitant propose d'assurer"
+            },
+            {
+              "label": "Décision",
+              "text": "Vérifier les moyens puis confirmer la reprise.",
+              "anchor_text": "Identifiez l'autre exploitant et vérifiez son droit d'exercer, le"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.11",
+      "title": "Suivre le véhicule dans le temps",
+      "objective": "Relier entretien, contrôle technique et disponibilité.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "6b2d8e1fbf30425bcaae24a0c5ead379d796dfd21a54cb6ca27ac4d6ff6e53ba",
+      "scenes": [
+        {
+          "title": "Combiner trois contrôles",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de relier entretien, contrôle technique et disponibilité . Le contrôle avant départ repère les anomalies immédiates. L'entretien suit les prescriptions du constructeur, les usages et les besoins de réparation. Le contrôle technique répond à une obligation réglementaire avec une périodicité spécifique, annuelle pour les voitures concernées affectées au transport public particulier. Ces trois niveaux se complètent ; aucun ne remplace les deux autres."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Avant départ, entretien et contrôle technique.",
+              "anchor_text": "Le contrôle avant départ"
+            },
+            {
+              "label": "À retenir",
+              "text": "Chaque niveau complète les deux autres.",
+              "anchor_text": "Ces trois niveaux"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi un contrôle technique encore valide ne suffit-il pas face à une anomalie actuelle ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Garder un historique utile",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Notez le kilométrage, les dates, les interventions et les anomalies signalées. Un bruit nouveau ou un témoin intermittent mérite une trace, même s'il disparaît avant le rendez-vous au garage. L'historique aide à expliquer le problème et à anticiper l'immobilisation. Pour un véhicule partagé, chaque conducteur doit pouvoir transmettre une anomalie au responsable et connaître la décision prise."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Dates, kilométrage, interventions et anomalies.",
+              "anchor_text": "Notez le kilométrage"
+            },
+            {
+              "label": "À retenir",
+              "text": "Partager l’anomalie et la décision prise.",
+              "anchor_text": "Pour un véhicule partagé"
+            }
+          ]
+        },
+        {
+          "title": "Anticiper l’indisponibilité",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L'usure technique, l'éligibilité réglementaire et les attentes commerciales peuvent conduire à remplacer le véhicule. Anticipez le financement et la durée d'indisponibilité. Un contrôle technique favorable ne prolonge pas une limite réglementaire d'ancienneté lorsque celle-ci s'applique. Ne programmez pas des missions futures en supposant que toutes les échéances seront réglées au dernier moment."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Préparer le remplacement et son financement.",
+              "anchor_text": "Anticipez le financement"
+            },
+            {
+              "label": "À retenir",
+              "text": "Le contrôle technique ne prolonge pas l’éligibilité.",
+              "anchor_text": "Un contrôle technique favorable"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Le contrôle technique ne prolonge pas l’éligibilité.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le contrôle technique expire le 10 octobre. Fixer un rendez-vous au 20 octobre ne prolonge pas sa validité. Le planning commercial doit tenir compte de l'indisponibilité éventuelle avant le renouvellement. Un rendez-vous futur n'est pas un document qui prolonge la validité précédente. L'exploitant doit organiser le contrôle et ajuster son planning en conséquence. Ce raisonnement évite d'accepter une mission sur une période où le véhicule pourrait être indisponible. Préparer une solution vérifiée coûte généralement moins d'organisation qu'un remplacement improvisé au dernier moment."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Le contrôle technique expire le 10 octobre. Fixer un"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Un rendez-vous ne prolonge pas la validité.",
+              "anchor_text": "Un rendez-vous futur n'est pas un document qui prolonge"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Pourquoi un contrôle technique encore valide ne suffit-il pas face à une anomalie actuelle ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. La voiture a passé son contrôle il y a deux mois. Aujourd'hui, un voyant de freinage s'allume et la pédale vous paraît anormale. Le contrôle passé deux mois plus tôt ne prouve pas que le freinage est sûr aujourd'hui. Face au voyant et à une pédale anormale, ne poursuivez pas la mission comme si rien n'avait changé. Mettez le véhicule en sécurité et faites traiter le défaut. Informez l'organisation et le client, puis recherchez une solution de remplacement conforme."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "La voiture a passé son contrôle il y a"
+            },
+            {
+              "label": "Décision",
+              "text": "Traiter l’anomalie de freinage avant de reprendre.",
+              "anchor_text": "Le contrôle passé deux mois plus tôt ne prouve"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "G.12",
+      "title": "Faire une veille utile",
+      "objective": "Vérifier la règle applicable à la date de la mission.",
+      "image": "media/vtc/module-g.webp",
+      "source_sha256": "43d7a92d0e302e084af3cf0e9f54737b248349120eb6a3a3f5d963978d5581e7",
+      "scenes": [
+        {
+          "title": "Trouver la source pertinente",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cette leçon, l'objectif est de vérifier la règle applicable à la date de la mission . Une publication peut annoncer une réforme sans en préciser tous les effets. Recherchez le texte, sa version, sa date d'application et les éventuelles dispositions transitoires. Légifrance fournit le droit ; les administrations et organismes compétents expliquent les démarches ; le gestionnaire d'un site précise ses règles d'accès. Une discussion de groupe peut alerter, mais ne suffit pas à valider une procédure."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Texte, version et date d’application.",
+              "anchor_text": "Recherchez le texte"
+            },
+            {
+              "label": "À retenir",
+              "text": "Une discussion peut alerter sans valider la règle.",
+              "anchor_text": "Une discussion de groupe"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle action concrète doit suivre la découverte d’une règle modifiée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Traduire la règle en action",
+          "label": "Comprendre",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Posez trois questions : qui est concerné, à partir de quand, et quelle action doit changer ? Une réforme peut concerner seulement les nouvelles demandes ou un type de véhicule. Notez la source et la décision opérationnelle : modifier un formulaire, ajouter une pièce, changer une échéance ou informer les conducteurs. Sans cette traduction, la veille reste théorique."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Qui est concerné, quand, et que faut-il changer ?",
+              "anchor_text": "Posez trois questions"
+            },
+            {
+              "label": "À retenir",
+              "text": "Dater la source et la décision opérationnelle.",
+              "anchor_text": "Notez la source"
+            }
+          ]
+        },
+        {
+          "title": "Gérer les versions",
+          "label": "Méthode",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Archivez l'ancien modèle pour les dossiers passés et utilisez une version clairement datée pour les nouvelles missions. Une bibliothèque remplie de formulaires presque identiques crée des erreurs. Désignez le modèle actif et retirez les raccourcis vers les versions anciennes. Recontrôlez ensuite un dossier réel pour vérifier que le changement est bien appliqué."
+            }
+          ],
+          "points": [
+            {
+              "label": "À comprendre",
+              "text": "Un modèle actif clairement daté.",
+              "anchor_text": "Archivez l'ancien modèle"
+            },
+            {
+              "label": "À retenir",
+              "text": "Vérifier l’application sur un dossier réel.",
+              "anchor_text": "Recontrôlez ensuite"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Expliquez avec vos mots : Vérifier l’application sur un dossier réel.",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "Application",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une fiche de 2023 indique une ancienneté maximale ordinaire différente pour le véhicule. Vous consultez l'arrêté consolidé, puis corrigez la grille d'achat. Le fait qu'un document soit bien présenté ne prouve pas son actualité. La présentation du document ne renseigne pas sur la version juridique qu'il utilise. Retrouvez le texte consolidé et sa date d'application, puis comparez le critère dans la grille d'achat. La mise à jour doit changer la décision concrète. Archivez l'ancienne version pour comprendre des dossiers passés, mais identifiez clairement celle à utiliser pour les prochains achats."
+            }
+          ],
+          "points": [
+            {
+              "label": "Exemple du cours",
+              "text": "Repérez le besoin et les faits utiles.",
+              "anchor_text": "Une fiche de 2023 indique une ancienneté maximale ordinaire"
+            },
+            {
+              "label": "Raisonnement",
+              "text": "Vérifier la version avant de modifier une décision.",
+              "anchor_text": "La présentation du document ne renseigne pas sur la"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Quelle action concrète doit suivre la découverte d’une règle modifiée ?",
+            "kind": "reflect"
+          }
+        },
+        {
+          "title": "Passer à l’action",
+          "label": "Synthèse",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Passons à une situation de travail. Un modèle de bon de réservation ne comporte pas le SIREN et mentionne un ancien registre. Il est toujours utilisé en septembre 2026. Comparez ce bon aux mentions actuellement exigées dans le texte applicable. Corrigez le modèle actif, ses identifiants et les raccourcis utilisés par l'équipe. Informez les conducteurs puis contrôlez un nouveau justificatif réel. Ne réécrivez pas les horaires ni les faits des missions anciennes. La veille utile produit une procédure à jour et vérifiable."
+            }
+          ],
+          "points": [
+            {
+              "label": "Situation",
+              "text": "Appliquer la méthode avant de décider.",
+              "anchor_text": "Un modèle de bon de réservation ne comporte pas"
+            },
+            {
+              "label": "Décision",
+              "text": "Mettre à jour le modèle actif et vérifier son usage.",
+              "anchor_text": "Comparez ce bon aux mentions actuellement exigées dans le"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

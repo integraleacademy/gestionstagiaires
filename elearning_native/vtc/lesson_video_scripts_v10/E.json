@@ -1,0 +1,3268 @@
+{
+  "revision": 10,
+  "module": "E",
+  "lessons": [
+    {
+      "ref": "E.01",
+      "title": "Welcome on board",
+      "objective": "Saluer, se présenter et identifier le bon client.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "378cf763077014d4a41c6343c28dc53b96a4658fba02b945290bdaaa59892b3b",
+      "scenes": [
+        {
+          "title": "Choisir la bonne salutation",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour accueillir un client, choisissez une salutation adaptée au moment. Le matin, dites "
+            },
+            {
+              "lang": "en",
+              "text": "Good morning. "
+            },
+            {
+              "lang": "fr",
+              "text": "L'après-midi, dites "
+            },
+            {
+              "lang": "en",
+              "text": "Good afternoon. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le soir, dites "
+            },
+            {
+              "lang": "en",
+              "text": "Good evening. "
+            },
+            {
+              "lang": "fr",
+              "text": "La formule "
+            },
+            {
+              "lang": "en",
+              "text": "Good night. "
+            },
+            {
+              "lang": "fr",
+              "text": "sert généralement à prendre congé pour la nuit. Elle ne remplace donc pas le bonsoir d'accueil. Vous n'avez pas besoin d'une phrase longue : une salutation claire, un regard attentif et un ton calme donnent déjà un cadre professionnel à la rencontre."
+            }
+          ],
+          "points": [
+            {
+              "label": "Matin",
+              "text": "Good morning.",
+              "anchor_text": "Good morning."
+            },
+            {
+              "label": "Après-midi",
+              "text": "Good afternoon.",
+              "anchor_text": "Good afternoon."
+            },
+            {
+              "label": "Soir",
+              "text": "Good evening.",
+              "anchor_text": "Good evening."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez les trois salutations et associez chacune au bon moment.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Se présenter avec une phrase simple",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour dire qui vous êtes, utilisez le verbe être. Écoutez la forme complète : "
+            },
+            {
+              "lang": "en",
+              "text": "I am your driver. "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis sa contraction naturelle : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm your driver. "
+            },
+            {
+              "lang": "fr",
+              "text": "Les deux signifient : je suis votre chauffeur. Vous pouvez ajouter votre prénom : "
+            },
+            {
+              "lang": "en",
+              "text": "My name is Lina. "
+            },
+            {
+              "lang": "fr",
+              "text": "La contraction n'enlève pas une information ; elle rend simplement la phrase courante à l'oral. Apprenez ce modèle puis remplacez le prénom par le vôtre, sans chercher à traduire chaque mot pendant l'accueil."
+            }
+          ],
+          "points": [
+            {
+              "label": "Forme complète",
+              "text": "I am your driver.",
+              "anchor_text": "I am your driver."
+            },
+            {
+              "label": "À l’oral",
+              "text": "I'm your driver.",
+              "anchor_text": "I'm your driver."
+            },
+            {
+              "label": "Prénom",
+              "text": "My name is Lina.",
+              "anchor_text": "My name is Lina."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Dites en anglais votre prénom puis « Je suis votre chauffeur ».",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Vérifier sans divulguer",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La réservation doit être confirmée avec discrétion. Une question neutre permet d'éviter toute hésitation sur un titre de civilité : "
+            },
+            {
+              "lang": "en",
+              "text": "Is your booking under the name Green? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : votre réservation est-elle au nom annoncé ? Attendez la confirmation avant d'annoncer davantage de détails. Si la réponse n'est pas claire, demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Could you repeat that, please? "
+            },
+            {
+              "lang": "fr",
+              "text": "Parler plus fort ne résout pas une incompréhension. Une phrase plus courte et une confirmation sont souvent plus utiles."
+            }
+          ],
+          "points": [
+            {
+              "label": "Réservation",
+              "text": "Is your booking under the name Green?",
+              "anchor_text": "Is your booking under"
+            },
+            {
+              "label": "Compréhension",
+              "text": "Could you repeat that, please?",
+              "anchor_text": "Could you repeat that, please?"
+            }
+          ]
+        },
+        {
+          "title": "Écouter un accueil complet",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Voici un accueil du soir. Le chauffeur se présente : "
+            },
+            {
+              "lang": "en",
+              "text": "Good evening. My name is Alex. I'm your driver. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le passager répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Thank you. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur confirme ensuite la destination : "
+            },
+            {
+              "lang": "en",
+              "text": "We're going to the Central Hotel, is that correct? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, that's right. "
+            },
+            {
+              "lang": "fr",
+              "text": "L'ordre est simple : saluer, se présenter, puis vérifier. La destination appartient à cet exemple fictif. Dans une mission réelle, reprenez les informations de la réservation et écoutez la réponse au lieu de poursuivre automatiquement votre texte."
+            }
+          ],
+          "points": [
+            {
+              "label": "Chauffeur",
+              "text": "My name is Alex. I'm your driver.",
+              "anchor_text": "My name is Alex."
+            },
+            {
+              "label": "Destination",
+              "text": "We're going to the Central Hotel, is that correct?",
+              "anchor_text": "We're going to the Central Hotel"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la question qui permet de confirmer la destination.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Réagir si le débit est trop rapide",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Vous accueillez un voyageur qui répond très vite. Ne faites pas semblant d'avoir compris son nom ou son adresse. Dites : "
+            },
+            {
+              "lang": "en",
+              "text": "Could you speak more slowly, please? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cette demande signifie : pourriez-vous parler plus lentement, s'il vous plaît ? Puis reprenez l'information utile et attendez son accord. Vous pouvez conclure : "
+            },
+            {
+              "lang": "en",
+              "text": "Thank you. Welcome on board. "
+            },
+            {
+              "lang": "fr",
+              "text": "Un accueil réussi repose sur la bonne personne et la bonne destination, même avec un vocabulaire limité."
+            }
+          ],
+          "points": [
+            {
+              "label": "Faire ralentir",
+              "text": "Could you speak more slowly, please?",
+              "anchor_text": "Could you speak more slowly, please?"
+            },
+            {
+              "label": "Conclure",
+              "text": "Thank you. Welcome on board.",
+              "anchor_text": "Thank you. Welcome on board."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.02",
+      "title": "Check the booking",
+      "objective": "Poser les questions essentielles avant le trajet.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "314950243da8ae1015ab1d76268c659e771b314ac2c7eabf58940d0778ca9327",
+      "scenes": [
+        {
+          "title": "Poser une question précise",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une question bien choisie guide la réponse. "
+            },
+            {
+              "lang": "en",
+              "text": "Where? "
+            },
+            {
+              "lang": "fr",
+              "text": "demande où ; "
+            },
+            {
+              "lang": "en",
+              "text": "When? "
+            },
+            {
+              "lang": "fr",
+              "text": "demande quand. Pour la destination, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "Where are you going? "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour compter les voyageurs, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "How many passengers are there? "
+            },
+            {
+              "lang": "fr",
+              "text": "Ces questions ne recherchent pas la même information. Commencez par ce qui manque réellement à la mission : une adresse, une heure ou un nombre. Vous évitez ainsi un échange long qui laisserait encore la réservation imprécise."
+            }
+          ],
+          "points": [
+            {
+              "label": "Destination",
+              "text": "Where are you going?",
+              "anchor_text": "Where are you going?"
+            },
+            {
+              "label": "Voyageurs",
+              "text": "How many passengers are there?",
+              "anchor_text": "How many passengers are there?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Posez à voix haute la question sur la destination puis celle sur le nombre de passagers.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Construire la question au présent",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Avec de nombreux verbes au présent, la question commence par un auxiliaire. Écoutez : "
+            },
+            {
+              "lang": "en",
+              "text": "Do you have a booking? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : avez-vous une réservation ? Une réponse courte est : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, I do. "
+            },
+            {
+              "lang": "fr",
+              "text": "Avec une troisième personne, le modèle devient : "
+            },
+            {
+              "lang": "en",
+              "text": "Does your colleague need a receipt? "
+            },
+            {
+              "lang": "fr",
+              "text": "Après l'auxiliaire, le verbe conserve sa forme de base. Retenez surtout une phrase utile entière ; vous pourrez ensuite remplacer la personne ou l'objet demandé sans reconstruire toute la grammaire."
+            }
+          ],
+          "points": [
+            {
+              "label": "Réservation",
+              "text": "Do you have a booking?",
+              "anchor_text": "Do you have a booking?"
+            },
+            {
+              "label": "Réponse",
+              "text": "Yes, I do.",
+              "anchor_text": "Yes, I do."
+            },
+            {
+              "label": "Autre personne",
+              "text": "Does your colleague need a receipt?",
+              "anchor_text": "Does your colleague need a receipt?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la question sur la réservation et sa réponse courte.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Reprendre les informations comprises",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Demandez le nom de la réservation : "
+            },
+            {
+              "lang": "en",
+              "text": "What name is the booking under? "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis reprenez ce que vous avez compris : "
+            },
+            {
+              "lang": "en",
+              "text": "So, two passengers to Central Station, is that right? "
+            },
+            {
+              "lang": "fr",
+              "text": "La dernière partie demande confirmation. Le client peut alors corriger le nombre ou le lieu. Attention : le point où vous accueillez la personne et sa destination sont deux données différentes. Un nom d'hôtel peut également correspondre à plusieurs établissements ; vérifiez la rue ou la commune lorsque c'est nécessaire."
+            }
+          ],
+          "points": [
+            {
+              "label": "Nom",
+              "text": "What name is the booking under?",
+              "anchor_text": "What name is the booking under?"
+            },
+            {
+              "label": "Confirmation",
+              "text": "Two passengers to Central Station, is that right?",
+              "anchor_text": "two passengers to Central Station"
+            }
+          ]
+        },
+        {
+          "title": "Écouter une réservation détaillée",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le chauffeur demande : "
+            },
+            {
+              "lang": "en",
+              "text": "How many passengers are there? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Three adults. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur poursuit : "
+            },
+            {
+              "lang": "en",
+              "text": "What is the destination? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client précise : "
+            },
+            {
+              "lang": "en",
+              "text": "The Central Hotel, in Riverside Street. "
+            },
+            {
+              "lang": "fr",
+              "text": "Les deux informations utiles sont trois adultes et l'hôtel situé dans la rue indiquée. Vous ne confondez pas le nombre de voyageurs avec un numéro de chambre. La rue complète le nom du lieu et permet de vérifier la bonne adresse avant le départ."
+            }
+          ],
+          "points": [
+            {
+              "label": "Réponse",
+              "text": "Three adults.",
+              "anchor_text": "Three adults."
+            },
+            {
+              "label": "Adresse",
+              "text": "The Central Hotel, in Riverside Street.",
+              "anchor_text": "The Central Hotel, in Riverside Street."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Reformulez le nombre de voyageurs et la destination de cet exemple.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Compléter une demande incomplète",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un client annonce quatre passagers pour l'aéroport, mais ne donne pas le terminal. Vous pouvez demander : "
+            },
+            {
+              "lang": "en",
+              "text": "Which terminal are you going to? "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis confirmer : "
+            },
+            {
+              "lang": "en",
+              "text": "Four passengers to Terminal Two, is that right? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le terminal deux appartient à cette réponse d'exemple ; il faut attendre l'information réelle du client. Une confirmation utile reprend les faits obtenus. Elle ne remplit pas les blancs par une supposition, même lorsque vous faites souvent le même trajet."
+            }
+          ],
+          "points": [
+            {
+              "label": "Information manquante",
+              "text": "Which terminal are you going to?",
+              "anchor_text": "Which terminal are you going to?"
+            },
+            {
+              "label": "Vérification",
+              "text": "Four passengers to Terminal Two, is that right?",
+              "anchor_text": "Four passengers to Terminal Two"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.03",
+      "title": "Numbers, dates and times",
+      "objective": "Comprendre une heure et éviter les confusions de nombres.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "e76a0e50d993138b1421557b177a53df2787b83629147efd5531b9aaaa2793f6",
+      "scenes": [
+        {
+          "title": "Distinguer des nombres proches",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une confusion de nombre peut modifier un prix ou un horaire. Écoutez : "
+            },
+            {
+              "lang": "en",
+              "text": "Thirteen. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie treize. Puis : "
+            },
+            {
+              "lang": "en",
+              "text": "Thirty. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie trente. Écoutez aussi : "
+            },
+            {
+              "lang": "en",
+              "text": "Fifteen. Fifty. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il s'agit de quinze puis cinquante. Ne devinez pas à partir du contexte. Répétez le nombre entendu, attendez une confirmation et demandez une trace écrite si le doute persiste. Une petite pause de vérification évite une erreur plus importante dans l'organisation de la course."
+            }
+          ],
+          "points": [
+            {
+              "label": "13",
+              "text": "Thirteen.",
+              "anchor_text": "Thirteen."
+            },
+            {
+              "label": "30",
+              "text": "Thirty.",
+              "anchor_text": "Thirty."
+            },
+            {
+              "label": "15 puis 50",
+              "text": "Fifteen. Fifty.",
+              "anchor_text": "Fifteen. Fifty."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez treize, trente, quinze puis cinquante en anglais.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Lire une heure simplement",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour sept heures trente, deux formulations sont possibles : "
+            },
+            {
+              "lang": "en",
+              "text": "Seven thirty. "
+            },
+            {
+              "lang": "fr",
+              "text": "Ou : "
+            },
+            {
+              "lang": "en",
+              "text": "Half past seven. "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour sept heures quarante-cinq : "
+            },
+            {
+              "lang": "en",
+              "text": "Seven forty-five. "
+            },
+            {
+              "lang": "fr",
+              "text": "Ou : "
+            },
+            {
+              "lang": "en",
+              "text": "A quarter to eight. "
+            },
+            {
+              "lang": "fr",
+              "text": "La lecture numérique est souvent plus facile au début. Précisez le matin ou le soir si le contexte est ambigu. Le but n'est pas de choisir l'expression la plus compliquée : il est de faire comprendre exactement l'heure convenue à votre passager."
+            }
+          ],
+          "points": [
+            {
+              "label": "7 h 30",
+              "text": "Seven thirty.",
+              "anchor_text": "Seven thirty."
+            },
+            {
+              "label": "Autre forme",
+              "text": "Half past seven.",
+              "anchor_text": "Half past seven."
+            },
+            {
+              "label": "7 h 45",
+              "text": "A quarter to eight.",
+              "anchor_text": "A quarter to eight."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Dites sept heures trente puis sept heures quarante-cinq en anglais.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Séparer heure, jour et durée",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L'heure et le jour utilisent des mots différents. Écoutez : "
+            },
+            {
+              "lang": "en",
+              "text": "At eight on Monday. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie lundi à huit heures. Pour annoncer un délai à partir de maintenant, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "In twenty minutes. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie dans vingt minutes. Une durée s'exprime autrement : "
+            },
+            {
+              "lang": "en",
+              "text": "For twenty minutes. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie pendant vingt minutes. Pour une date écrite, le mois en lettres réduit les ambiguïtés entre les formats des pays. Vérifiez ensemble la date, l'heure et le moment de la journée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Rendez-vous",
+              "text": "At eight on Monday.",
+              "anchor_text": "At eight on Monday."
+            },
+            {
+              "label": "Délai",
+              "text": "In twenty minutes.",
+              "anchor_text": "In twenty minutes."
+            },
+            {
+              "label": "Durée",
+              "text": "For twenty minutes.",
+              "anchor_text": "For twenty minutes."
+            }
+          ]
+        },
+        {
+          "title": "Reformuler un rendez-vous",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le passager demande : "
+            },
+            {
+              "lang": "en",
+              "text": "Could you pick me up at a quarter to nine? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur reformule : "
+            },
+            {
+              "lang": "en",
+              "text": "At eight forty-five tomorrow morning? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client confirme : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, exactly. "
+            },
+            {
+              "lang": "fr",
+              "text": "Un quart d'heure avant neuf heures correspond bien à huit heures quarante-cinq. Le chauffeur a ajouté demain matin pour vérifier aussi le jour et la partie de la journée. Il peut ensuite confirmer par écrit. La reformulation porte sur les données utiles, pas sur la répétition mécanique de tous les mots."
+            }
+          ],
+          "points": [
+            {
+              "label": "Demande",
+              "text": "A quarter to nine.",
+              "anchor_text": "a quarter to nine?"
+            },
+            {
+              "label": "Heure confirmée",
+              "text": "Eight forty-five tomorrow morning.",
+              "anchor_text": "eight forty-five tomorrow morning?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Reformulez « a quarter to nine » avec une heure numérique.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Lire une consigne complète",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Écoutez cette demande fictive : "
+            },
+            {
+              "lang": "en",
+              "text": "Please pick us up on Friday, the twelfth of June, at half past six in the morning. There will be three passengers. "
+            },
+            {
+              "lang": "fr",
+              "text": "Les informations sont vendredi douze juin, six heures trente du matin et trois passagers. Le jour et la date sont ceux de cet exercice. Pour une mission réelle, vérifiez leur cohérence dans le calendrier et confirmez par écrit. Séparez mentalement quatre éléments : date, heure, moment de la journée et nombre de personnes."
+            }
+          ],
+          "points": [
+            {
+              "label": "Date et heure",
+              "text": "Vendredi 12 juin, 6 h 30 du matin.",
+              "anchor_text": "on Friday, the twelfth of June"
+            },
+            {
+              "label": "Voyageurs",
+              "text": "Three passengers.",
+              "anchor_text": "There will be three passengers."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.04",
+      "title": "Find the meeting point",
+      "objective": "Situer un lieu et guider le client à pied.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "b44ea07bdece5421649e2114dace586f79a267a6d99099e2a2f9c37a25076a5e",
+      "scenes": [
+        {
+          "title": "Situer un point visible",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour guider le client, commencez par un repère réel et visible. "
+            },
+            {
+              "lang": "en",
+              "text": "Next to. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie à côté de. "
+            },
+            {
+              "lang": "en",
+              "text": "Opposite. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie en face de. "
+            },
+            {
+              "lang": "en",
+              "text": "Between. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie entre. Une phrase utile est : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm next to Exit B, opposite the café. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous indiquez ainsi une sortie et un deuxième repère. Une position sur une carte ne suffit pas si le client ne peut pas rejoindre le véhicule à pied par un chemin autorisé et sûr."
+            }
+          ],
+          "points": [
+            {
+              "label": "À côté",
+              "text": "Next to.",
+              "anchor_text": "Next to."
+            },
+            {
+              "label": "En face",
+              "text": "Opposite.",
+              "anchor_text": "Opposite."
+            },
+            {
+              "label": "Repère",
+              "text": "I'm next to Exit B, opposite the café.",
+              "anchor_text": "I'm next to Exit B"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Décrivez le point de rencontre en utilisant « next to » puis « opposite ».",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Donner une instruction à la fois",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour aller tout droit, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "Go straight ahead, please. "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour tourner à gauche : "
+            },
+            {
+              "lang": "en",
+              "text": "Turn left. "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour tourner à droite : "
+            },
+            {
+              "lang": "en",
+              "text": "Turn right. "
+            },
+            {
+              "lang": "fr",
+              "text": "Si la personne est perdue, n'ajoutez pas cinq directions d'un seul coup. Donnez une étape, vérifiez le repère, puis continuez. La gauche et la droite dépendent du sens dans lequel le client regarde. Repartir d'une sortie identifiée permet de réduire cette ambiguïté avant de lui demander de se déplacer."
+            }
+          ],
+          "points": [
+            {
+              "label": "Tout droit",
+              "text": "Go straight ahead, please.",
+              "anchor_text": "Go straight ahead, please."
+            },
+            {
+              "label": "Gauche",
+              "text": "Turn left.",
+              "anchor_text": "Turn left."
+            },
+            {
+              "label": "Droite",
+              "text": "Turn right.",
+              "anchor_text": "Turn right."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez les trois directions lentement, en imaginant le mouvement.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Confirmer que le repère est trouvé",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour vérifier le lieu, demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Can you see the information desk? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : voyez-vous le comptoir d'information ? Vous pouvez ensuite proposer : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll meet you there. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous indiquez que vous rejoindrez le client à cet endroit. Vérifiez le terminal, la sortie et le niveau si plusieurs lieux se ressemblent. Les panneaux du site restent la référence pratique. Si le chemin paraît dangereux ou interdit, choisissez une autre organisation au lieu d'insister sur votre première indication."
+            }
+          ],
+          "points": [
+            {
+              "label": "Vérifier",
+              "text": "Can you see the information desk?",
+              "anchor_text": "Can you see the information desk?"
+            },
+            {
+              "label": "Rejoindre",
+              "text": "I'll meet you there.",
+              "anchor_text": "I'll meet you there."
+            }
+          ]
+        },
+        {
+          "title": "Écouter un échange au point de rencontre",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le client demande où vous êtes. Vous répondez : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm waiting at the meeting point, next to Exit B. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il demande : "
+            },
+            {
+              "lang": "en",
+              "text": "Is it opposite the café? "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous confirmez : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes. Please stay on the pavement. I'll meet you there. "
+            },
+            {
+              "lang": "fr",
+              "text": "En anglais britannique, le mot utilisé pour le trottoir évite de lui demander de rester sur la chaussée. L'échange combine un lieu vérifiable, une confirmation et une consigne de sécurité. Chaque phrase répond à la précédente."
+            }
+          ],
+          "points": [
+            {
+              "label": "Lieu",
+              "text": "I'm waiting at the meeting point, next to Exit B.",
+              "anchor_text": "I'm waiting at the meeting point"
+            },
+            {
+              "label": "Sécurité",
+              "text": "Please stay on the pavement.",
+              "anchor_text": "Please stay on the pavement."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la consigne qui demande de rester sur le trottoir.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Adapter la réponse au lieu réel",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Votre réservation indique maintenant la porte C, en face d'un café. À la question du client, répondez : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm next to Gate C, opposite the café. "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis vérifiez : "
+            },
+            {
+              "lang": "en",
+              "text": "Can you see Gate C? "
+            },
+            {
+              "lang": "fr",
+              "text": "Adaptez la lettre et le nom du repère au lieu réel. Ne récitez pas la sortie B du premier exemple si vous êtes ailleurs. Si le client ne voit pas la porte, confirmez d'abord qu'il se trouve au même terminal avant de donner une nouvelle direction."
+            }
+          ],
+          "points": [
+            {
+              "label": "Réponse adaptée",
+              "text": "I'm next to Gate C, opposite the café.",
+              "anchor_text": "I'm next to Gate C"
+            },
+            {
+              "label": "Confirmation",
+              "text": "Can you see Gate C?",
+              "anchor_text": "Can you see Gate C?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.05",
+      "title": "Luggage and assistance",
+      "objective": "Proposer de l’aide et demander l’accord du passager.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "657a69cff0e5ef9761e59012c9db834f175cfa47f3bb0f1742685500412318c3",
+      "scenes": [
+        {
+          "title": "Compter les bagages correctement",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le mot "
+            },
+            {
+              "lang": "en",
+              "text": "Luggage. "
+            },
+            {
+              "lang": "fr",
+              "text": "désigne les bagages globalement. Dans ces phrases, il ne prend pas de marque du pluriel. Pour compter deux sacs, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "Two bags. "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour deux valises : "
+            },
+            {
+              "lang": "en",
+              "text": "Two suitcases. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous pouvez aussi dire : "
+            },
+            {
+              "lang": "en",
+              "text": "Two pieces of luggage. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le choix dépend des objets que le client transporte. Pour préparer la capacité du coffre, comptez les pièces et demandez leur taille si nécessaire. Une traduction mot à mot du français peut produire une forme incorrecte."
+            }
+          ],
+          "points": [
+            {
+              "label": "Deux sacs",
+              "text": "Two bags.",
+              "anchor_text": "Two bags."
+            },
+            {
+              "label": "Deux valises",
+              "text": "Two suitcases.",
+              "anchor_text": "Two suitcases."
+            },
+            {
+              "label": "Deux pièces",
+              "text": "Two pieces of luggage.",
+              "anchor_text": "Two pieces of luggage."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez les trois façons correctes de compter les bagages.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Proposer une aide et attendre l’accord",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour proposer votre aide, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "May I help you with your luggage? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : puis-je vous aider avec vos bagages ? Le client peut accepter : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, please. "
+            },
+            {
+              "lang": "fr",
+              "text": "Ou refuser : "
+            },
+            {
+              "lang": "en",
+              "text": "No, thank you. "
+            },
+            {
+              "lang": "fr",
+              "text": "Attendez sa réponse avant de prendre l'objet. Une formulation polie ne donne pas automatiquement l'autorisation d'agir. Pour une aide à la mobilité ou un objet particulier, demandez comment procéder et respectez les indications de la personne, plutôt que d'improviser un geste technique."
+            }
+          ],
+          "points": [
+            {
+              "label": "Proposer",
+              "text": "May I help you with your luggage?",
+              "anchor_text": "May I help you with your luggage?"
+            },
+            {
+              "label": "Accepter",
+              "text": "Yes, please.",
+              "anchor_text": "Yes, please."
+            },
+            {
+              "label": "Refuser",
+              "text": "No, thank you.",
+              "anchor_text": "No, thank you."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Proposez une aide puis dites les deux réponses possibles du client.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Comprendre les contraintes",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le coffre se dit "
+            },
+            {
+              "lang": "en",
+              "text": "Boot. "
+            },
+            {
+              "lang": "fr",
+              "text": "en anglais britannique, et "
+            },
+            {
+              "lang": "en",
+              "text": "Trunk. "
+            },
+            {
+              "lang": "fr",
+              "text": "en anglais américain. Pour savoir si un sac est fragile, demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Is this bag fragile? "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous pouvez conseiller au client de garder ses objets de valeur : "
+            },
+            {
+              "lang": "en",
+              "text": "Please keep your valuables with you. "
+            },
+            {
+              "lang": "fr",
+              "text": "Ces phrases servent une décision concrète : quel objet peut être rangé, avec quelles précautions, et lequel doit rester accessible. Vérifiez le besoin avant de fermer le coffre et de préparer le départ."
+            }
+          ],
+          "points": [
+            {
+              "label": "Coffre",
+              "text": "Boot / trunk.",
+              "anchor_text": "Boot."
+            },
+            {
+              "label": "Fragile",
+              "text": "Is this bag fragile?",
+              "anchor_text": "Is this bag fragile?"
+            },
+            {
+              "label": "Objets de valeur",
+              "text": "Please keep your valuables with you.",
+              "anchor_text": "Please keep your valuables with you."
+            }
+          ]
+        },
+        {
+          "title": "Écouter une aide adaptée",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le chauffeur demande : "
+            },
+            {
+              "lang": "en",
+              "text": "May I put your suitcase in the boot? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, please. This bag is fragile. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur confirme : "
+            },
+            {
+              "lang": "en",
+              "text": "Thank you. I'll place it carefully. "
+            },
+            {
+              "lang": "fr",
+              "text": "La demande concerne une valise précise. Le client a donné son accord et ajouté une contrainte. La réponse montre que cette contrainte est comprise. Le geste doit ensuite correspondre aux paroles. Vous n'appliquez pas le même mouvement à tous les objets simplement parce qu'ils vont dans le coffre."
+            }
+          ],
+          "points": [
+            {
+              "label": "Permission",
+              "text": "May I put your suitcase in the boot?",
+              "anchor_text": "May I put your suitcase in the boot?"
+            },
+            {
+              "label": "Contrainte",
+              "text": "This bag is fragile.",
+              "anchor_text": "This bag is fragile."
+            },
+            {
+              "label": "Réponse",
+              "text": "I'll place it carefully.",
+              "anchor_text": "I'll place it carefully."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la demande d’autorisation avant de placer la valise dans le coffre.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Vérifier le besoin réel",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Deux sacs sont posés près du véhicule, mais vous ne savez pas s'ils appartiennent à votre client. Demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Are these your bags? "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis, si une aide est souhaitée : "
+            },
+            {
+              "lang": "en",
+              "text": "How can I help? "
+            },
+            {
+              "lang": "fr",
+              "text": "La première question vérifie l'appartenance ; la seconde laisse la personne préciser son besoin. Vous évitez de déplacer les affaires d'un autre voyageur ou d'imposer une aide inadaptée. Retenez l'ordre : identifier les objets, proposer, attendre l'accord et manipuler selon les indications reçues."
+            }
+          ],
+          "points": [
+            {
+              "label": "Identifier",
+              "text": "Are these your bags?",
+              "anchor_text": "Are these your bags?"
+            },
+            {
+              "label": "Adapter l’aide",
+              "text": "How can I help?",
+              "anchor_text": "How can I help?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.06",
+      "title": "Comfort and safety",
+      "objective": "Formuler une demande polie et compréhensible.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "184fcbb049652128d459f20e38f43d506096f98c09db9d05f86065feedd5709e",
+      "scenes": [
+        {
+          "title": "Formuler une demande de sécurité",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Avant le départ, une demande simple suffit : "
+            },
+            {
+              "lang": "en",
+              "text": "Please fasten your seat belt. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : veuillez attacher votre ceinture. Une autre formulation polie est : "
+            },
+            {
+              "lang": "en",
+              "text": "Could you fasten your seat belt, please? "
+            },
+            {
+              "lang": "fr",
+              "text": "Les deux demandent la même action. La politesse ne transforme pas la règle en option. Attendez que l'installation soit sûre avant de partir. Un ton calme et une phrase courte sont plus faciles à comprendre qu'une longue explication agressive ou prononcée trop rapidement."
+            }
+          ],
+          "points": [
+            {
+              "label": "Demande simple",
+              "text": "Please fasten your seat belt.",
+              "anchor_text": "Please fasten your seat belt."
+            },
+            {
+              "label": "Autre formulation",
+              "text": "Could you fasten your seat belt, please?",
+              "anchor_text": "Could you fasten your seat belt, please?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la demande de boucler la ceinture.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Vérifier le confort sans supposer",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Is the temperature comfortable? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : la température vous convient-elle ? Si la réponse est incertaine, simplifiez : "
+            },
+            {
+              "lang": "en",
+              "text": "Is it too cold? "
+            },
+            {
+              "lang": "fr",
+              "text": "Est-ce trop froid ? Ou : "
+            },
+            {
+              "lang": "en",
+              "text": "Is it too warm? "
+            },
+            {
+              "lang": "fr",
+              "text": "Est-ce trop chaud ? Ces questions permettent au passager d'exprimer un besoin. Vous n'avez pas à deviner à partir de son manteau ou de votre propre confort. Un réglage se fait seulement lorsqu'il ne détourne pas votre attention de la conduite."
+            }
+          ],
+          "points": [
+            {
+              "label": "Température",
+              "text": "Is the temperature comfortable?",
+              "anchor_text": "Is the temperature comfortable?"
+            },
+            {
+              "label": "Trop froid",
+              "text": "Is it too cold?",
+              "anchor_text": "Is it too cold?"
+            },
+            {
+              "label": "Trop chaud",
+              "text": "Is it too warm?",
+              "anchor_text": "Is it too warm?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Posez la question générale sur la température puis une question plus simple.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Comprendre une réponse courte",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le client peut dire : "
+            },
+            {
+              "lang": "en",
+              "text": "It's a little cold. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il fait un peu froid. Après un ajustement, demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Is this better? "
+            },
+            {
+              "lang": "fr",
+              "text": "Est-ce mieux ainsi ? La réponse "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, that's fine. "
+            },
+            {
+              "lang": "fr",
+              "text": "indique que cela convient. Le mot signifiant un peu nuance la demande : il n'est pas nécessaire de passer immédiatement d'un extrême à l'autre. Vérifiez l'effet du réglage. Pour une confirmation de sécurité, ne remplacez pas une réponse claire par l'interprétation d'un silence."
+            }
+          ],
+          "points": [
+            {
+              "label": "Demande",
+              "text": "It's a little cold.",
+              "anchor_text": "It's a little cold."
+            },
+            {
+              "label": "Vérification",
+              "text": "Is this better?",
+              "anchor_text": "Is this better?"
+            },
+            {
+              "label": "Accord",
+              "text": "Yes, that's fine.",
+              "anchor_text": "Yes, that's fine."
+            }
+          ]
+        },
+        {
+          "title": "Préparer une sortie sûre",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "À l'arrivée, un passager veut ouvrir alors qu'un autre usager approche. Dites : "
+            },
+            {
+              "lang": "en",
+              "text": "Please wait before opening the door. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela demande d'attendre avant d'ouvrir. Vous pouvez ajouter : "
+            },
+            {
+              "lang": "en",
+              "text": "It isn't safe yet. "
+            },
+            {
+              "lang": "fr",
+              "text": "Ce n'est pas encore sûr. L'information est courte et directement liée à l'action. Contrôlez la situation puis indiquez le moment adapté. Cette séquence montre que le vocabulaire de service ne concerne pas seulement le confort : il aide aussi à prévenir une action dangereuse."
+            }
+          ],
+          "points": [
+            {
+              "label": "Attendre",
+              "text": "Please wait before opening the door.",
+              "anchor_text": "Please wait before opening the door."
+            },
+            {
+              "label": "Expliquer",
+              "text": "It isn't safe yet.",
+              "anchor_text": "It isn't safe yet."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la phrase qui demande d’attendre avant d’ouvrir la portière.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Répondre à une objection",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un passager non attaché dit que le trajet est court. Répondez calmement : "
+            },
+            {
+              "lang": "en",
+              "text": "For your safety, please fasten your seat belt before we leave. "
+            },
+            {
+              "lang": "fr",
+              "text": "La demande signifie : pour votre sécurité, veuillez attacher votre ceinture avant notre départ. Vous expliquez l'action attendue sans entrer dans une discussion interminable. Vérifiez ensuite l'installation. Si une autre manipulation demande toute votre attention, annoncez : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll stop in a safe place first. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous placez ainsi la sécurité avant le réglage ou la recherche demandée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Avant le départ",
+              "text": "Please fasten your seat belt before we leave.",
+              "anchor_text": "please fasten your seat belt before we leave."
+            },
+            {
+              "label": "Priorité",
+              "text": "I'll stop in a safe place first.",
+              "anchor_text": "I'll stop in a safe place first."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.07",
+      "title": "Explain the route",
+      "objective": "Présenter une durée, une distance et une alternative.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "6fc78e7d7ff980d0ae2585ab6f31f5bb4ee89db101cd60055778b2e79c9a7dc9",
+      "scenes": [
+        {
+          "title": "Annoncer une estimation",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour annoncer la durée, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "The journey takes about thirty minutes. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : le trajet dure environ trente minutes. Le mot "
+            },
+            {
+              "lang": "en",
+              "text": "About. "
+            },
+            {
+              "lang": "fr",
+              "text": "marque une estimation. Vous pouvez préciser : "
+            },
+            {
+              "lang": "en",
+              "text": "Depending on traffic. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : selon la circulation. Ces mots sont utiles parce que la durée peut varier. Ne présentez pas un temps indicatif comme une garantie. Vérifiez aussi le nombre affiché : la phrase de cet exemple annonce bien trente minutes, pas vingt."
+            }
+          ],
+          "points": [
+            {
+              "label": "Durée",
+              "text": "The journey takes about thirty minutes.",
+              "anchor_text": "The journey takes about thirty minutes."
+            },
+            {
+              "label": "Estimation",
+              "text": "About = environ.",
+              "anchor_text": "About."
+            },
+            {
+              "label": "Condition",
+              "text": "Depending on traffic.",
+              "anchor_text": "Depending on traffic."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la phrase annonçant un trajet d’environ trente minutes.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Séparer durée et distance",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La question "
+            },
+            {
+              "lang": "en",
+              "text": "How long does it take? "
+            },
+            {
+              "lang": "fr",
+              "text": "demande combien de temps dure le trajet. La question "
+            },
+            {
+              "lang": "en",
+              "text": "How far is it? "
+            },
+            {
+              "lang": "fr",
+              "text": "demande la distance. Répondez avec la bonne unité : des minutes pour une durée, des kilomètres pour une distance. Une réponse chiffrée sans unité laisse une ambiguïté. Si le client demande le temps d'arrivée à un rendez-vous, intégrez aussi la dépose et la marche restante lorsque vous expliquez ce qui peut encore varier."
+            }
+          ],
+          "points": [
+            {
+              "label": "Durée",
+              "text": "How long does it take?",
+              "anchor_text": "How long does it take?"
+            },
+            {
+              "label": "Distance",
+              "text": "How far is it?",
+              "anchor_text": "How far is it?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Posez la question sur la durée puis celle sur la distance.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Comparer deux itinéraires",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour dire plus rapide, utilisez "
+            },
+            {
+              "lang": "en",
+              "text": "Faster. "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour dire plus court, utilisez "
+            },
+            {
+              "lang": "en",
+              "text": "Shorter. "
+            },
+            {
+              "lang": "fr",
+              "text": "Une phrase complète est : "
+            },
+            {
+              "lang": "en",
+              "text": "This route is faster than the other one. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cette route est plus rapide que l'autre. Une route plus courte n'est pas forcément plus rapide. Si l'option comporte un péage, annoncez-le : "
+            },
+            {
+              "lang": "en",
+              "text": "There is a toll. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client doit comprendre le compromis entre temps et coût avant d'accepter une modification de la prestation. Ne limitez pas l'explication au seul avantage."
+            }
+          ],
+          "points": [
+            {
+              "label": "Plus rapide",
+              "text": "Faster.",
+              "anchor_text": "Faster."
+            },
+            {
+              "label": "Comparaison",
+              "text": "This route is faster than the other one.",
+              "anchor_text": "This route is faster than the other one."
+            },
+            {
+              "label": "Péage",
+              "text": "There is a toll.",
+              "anchor_text": "There is a toll."
+            }
+          ]
+        },
+        {
+          "title": "Écouter un choix expliqué",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le chauffeur indique : "
+            },
+            {
+              "lang": "en",
+              "text": "There is heavy traffic in the city centre. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il explique ensuite : "
+            },
+            {
+              "lang": "en",
+              "text": "The motorway is faster, but there is a toll. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le passager demande : "
+            },
+            {
+              "lang": "en",
+              "text": "How much is the toll? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Five euros. Would you like to take that route? "
+            },
+            {
+              "lang": "fr",
+              "text": "L'information porte sur la circulation, l'alternative et son coût. Le prix de cinq euros appartient à cet exemple. La question finale arrive après l'annonce du supplément, pour permettre un choix compris."
+            }
+          ],
+          "points": [
+            {
+              "label": "Alternative",
+              "text": "The motorway is faster, but there is a toll.",
+              "anchor_text": "The motorway is faster"
+            },
+            {
+              "label": "Coût",
+              "text": "Five euros.",
+              "anchor_text": "Five euros."
+            },
+            {
+              "label": "Choix",
+              "text": "Would you like to take that route?",
+              "anchor_text": "Would you like to take that route?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la question qui permet au client de choisir l’itinéraire.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Présenter une autre situation",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le trajet habituel est estimé à quarante minutes. L'autre prend environ trente minutes avec quatre euros de péage. Vous pouvez dire : "
+            },
+            {
+              "lang": "en",
+              "text": "This route takes about thirty minutes, but there is a four-euro toll. "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis : "
+            },
+            {
+              "lang": "en",
+              "text": "Is that all right with you? "
+            },
+            {
+              "lang": "fr",
+              "text": "Adaptez toujours les nombres aux informations disponibles. La première phrase explique les conséquences ; la seconde cherche l'accord. Une réponse positive ne remplace pas une information tarifaire oubliée. Conservez une estimation honnête et une option compatible avec la sécurité."
+            }
+          ],
+          "points": [
+            {
+              "label": "Données de l’exercice",
+              "text": "Environ 30 minutes ; péage de 4 €.",
+              "anchor_text": "This route takes about thirty minutes"
+            },
+            {
+              "label": "Accord",
+              "text": "Is that all right with you?",
+              "anchor_text": "Is that all right with you?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.08",
+      "title": "Prices and quotations",
+      "objective": "Expliquer ce qui est inclus dans le tarif.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "05f6c16583cc287dbc1621026f9b710989f3f97a8805d1a4e423663eebcd3140",
+      "scenes": [
+        {
+          "title": "Distinguer prix, devis et supplément",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le prix d'un transport se dit "
+            },
+            {
+              "lang": "en",
+              "text": "Fare. "
+            },
+            {
+              "lang": "fr",
+              "text": "Un devis se dit "
+            },
+            {
+              "lang": "en",
+              "text": "Quote. "
+            },
+            {
+              "lang": "fr",
+              "text": "ou "
+            },
+            {
+              "lang": "en",
+              "text": "Quotation. "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour dire inclus, utilisez "
+            },
+            {
+              "lang": "en",
+              "text": "Included. "
+            },
+            {
+              "lang": "fr",
+              "text": "Un supplément se dit "
+            },
+            {
+              "lang": "en",
+              "text": "Extra charge. "
+            },
+            {
+              "lang": "fr",
+              "text": "Ces mots permettent d'expliquer ce que le client achète. Ils ne remplacent pas la lecture de l'accord réel. Avant de répondre, vérifiez le trajet prévu, les frais inclus et les conditions d'attente. Une traduction correcte appliquée au mauvais devis pourrait quand même annoncer un montant erroné."
+            }
+          ],
+          "points": [
+            {
+              "label": "Prix du transport",
+              "text": "Fare.",
+              "anchor_text": "Fare."
+            },
+            {
+              "label": "Devis",
+              "text": "Quote / quotation.",
+              "anchor_text": "Quote."
+            },
+            {
+              "label": "Supplément",
+              "text": "Extra charge.",
+              "anchor_text": "Extra charge."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Dites en anglais : prix de la course, devis, supplément.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Répondre avec le montant et l’unité",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le client demande : "
+            },
+            {
+              "lang": "en",
+              "text": "How much is the journey? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : combien coûte le trajet ? Vous pouvez répondre : "
+            },
+            {
+              "lang": "en",
+              "text": "It's eighty euros. "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour préciser un forfait : "
+            },
+            {
+              "lang": "en",
+              "text": "It's a fixed price. "
+            },
+            {
+              "lang": "fr",
+              "text": "L'unité compte aussi. "
+            },
+            {
+              "lang": "en",
+              "text": "Per hour. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie par heure. "
+            },
+            {
+              "lang": "en",
+              "text": "Per journey. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie par trajet. Quatre-vingts euros pour une heure et quatre-vingts euros pour toute une course ne décrivent pas la même offre. Annoncez la monnaie et le périmètre pour éviter cette confusion."
+            }
+          ],
+          "points": [
+            {
+              "label": "Question",
+              "text": "How much is the journey?",
+              "anchor_text": "How much is the journey?"
+            },
+            {
+              "label": "Montant",
+              "text": "It's eighty euros.",
+              "anchor_text": "It's eighty euros."
+            },
+            {
+              "label": "Forfait",
+              "text": "It's a fixed price.",
+              "anchor_text": "It's a fixed price."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répondez que le trajet coûte quatre-vingts euros à prix fixe.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Préciser ce qui est compris",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour annoncer un montant taxes comprises, une formulation est : "
+            },
+            {
+              "lang": "en",
+              "text": "Including tax. "
+            },
+            {
+              "lang": "fr",
+              "text": "La formule "
+            },
+            {
+              "lang": "en",
+              "text": "Including VAT. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie TVA comprise. À l'inverse : "
+            },
+            {
+              "lang": "en",
+              "text": "Excluding VAT. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie hors TVA. Adaptez votre phrase au régime réel et au document remis. Le client doit comprendre le total à payer. Si vous dites qu'une attente est comprise pour les dix premières minutes, cela doit correspondre à votre contrat : ce n'est pas une règle générale applicable à toutes les courses VTC."
+            }
+          ],
+          "points": [
+            {
+              "label": "Taxes comprises",
+              "text": "Including tax.",
+              "anchor_text": "Including tax."
+            },
+            {
+              "label": "TVA comprise",
+              "text": "Including VAT.",
+              "anchor_text": "Including VAT."
+            },
+            {
+              "label": "Hors TVA",
+              "text": "Excluding VAT.",
+              "anchor_text": "Excluding VAT."
+            }
+          ]
+        },
+        {
+          "title": "Écouter une question sur le péage",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le passager demande : "
+            },
+            {
+              "lang": "en",
+              "text": "Does the price include the toll? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, the toll is included in the agreed fare. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client poursuit : "
+            },
+            {
+              "lang": "en",
+              "text": "Are there any extra charges? "
+            },
+            {
+              "lang": "fr",
+              "text": "La réponse est : "
+            },
+            {
+              "lang": "en",
+              "text": "Not for this journey as booked. Any change would need to be agreed. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur se réfère à la course telle qu'elle a été réservée. Il ne promet pas que toutes les modifications futures seront gratuites. La précision protège la compréhension du client et la cohérence du service."
+            }
+          ],
+          "points": [
+            {
+              "label": "Question",
+              "text": "Does the price include the toll?",
+              "anchor_text": "Does the price include the toll?"
+            },
+            {
+              "label": "Réponse",
+              "text": "The toll is included in the agreed fare.",
+              "anchor_text": "the toll is included"
+            },
+            {
+              "label": "Périmètre",
+              "text": "For this journey as booked.",
+              "anchor_text": "Not for this journey as booked."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la phrase indiquant que le péage est inclus dans le prix convenu.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Répondre à partir du devis accepté",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le devis de cet exercice prévoit soixante-quinze euros taxes comprises avec le péage inclus. À la question du client, répondez : "
+            },
+            {
+              "lang": "en",
+              "text": "No, the toll is not extra. It is included in the seventy-five-euro fare. "
+            },
+            {
+              "lang": "fr",
+              "text": "Si un arrêt supplémentaire est ensuite demandé, vérifiez son effet avant d'annoncer un autre montant. Vous pouvez dire : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll check the price for the extra stop. "
+            },
+            {
+              "lang": "fr",
+              "text": "La bonne réponse combine un anglais simple et une information fidèle aux conditions réellement acceptées."
+            }
+          ],
+          "points": [
+            {
+              "label": "Devis",
+              "text": "75 € au total, péage inclus.",
+              "anchor_text": "the toll is not extra."
+            },
+            {
+              "label": "Modification",
+              "text": "I'll check the price for the extra stop.",
+              "anchor_text": "I'll check the price for the extra stop."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.09",
+      "title": "Delays and changes",
+      "objective": "Annoncer une difficulté avec une solution concrète.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "961c21b8124b11c17eb48eb8e4c0f32dcd2baae8444166b134b562511a0ca3a4",
+      "scenes": [
+        {
+          "title": "Distinguer retard et annulation",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un service retardé n'est pas forcément annulé. "
+            },
+            {
+              "lang": "en",
+              "text": "Delayed. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie retardé. "
+            },
+            {
+              "lang": "en",
+              "text": "Cancelled. "
+            },
+            {
+              "lang": "fr",
+              "text": "signifie annulé. Vous pouvez annoncer simplement : "
+            },
+            {
+              "lang": "en",
+              "text": "The flight is late. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le vol est en retard. Pour présenter des excuses, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm sorry for the delay. "
+            },
+            {
+              "lang": "fr",
+              "text": "Une excuse seule ne permet pas au client de s'organiser. Ajoutez ce qui est connu et la prochaine étape. Ne transformez pas une estimation en certitude lorsque l'horaire réel reste encore inconnu."
+            }
+          ],
+          "points": [
+            {
+              "label": "Retardé",
+              "text": "Delayed.",
+              "anchor_text": "Delayed."
+            },
+            {
+              "label": "Annulé",
+              "text": "Cancelled.",
+              "anchor_text": "Cancelled."
+            },
+            {
+              "label": "Excuse",
+              "text": "I'm sorry for the delay.",
+              "anchor_text": "I'm sorry for the delay."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la différence entre « delayed » et « cancelled ».",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Annoncer l’action prévue",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour annoncer ce que vous allez faire, utilisez une structure simple : "
+            },
+            {
+              "lang": "en",
+              "text": "I will call you. "
+            },
+            {
+              "lang": "fr",
+              "text": "Je vous appellerai. À l'oral, la contraction est : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll call you. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le verbe qui suit reste à sa forme de base. Écoutez : "
+            },
+            {
+              "lang": "en",
+              "text": "The driver will arrive. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il ne faut pas ajouter une marque de troisième personne au verbe après l'auxiliaire. Apprenez une phrase complète adaptée au service : appeler, attendre au point convenu ou informer le client de l'évolution."
+            }
+          ],
+          "points": [
+            {
+              "label": "Forme complète",
+              "text": "I will call you.",
+              "anchor_text": "I will call you."
+            },
+            {
+              "label": "Forme courante",
+              "text": "I'll call you.",
+              "anchor_text": "I'll call you."
+            },
+            {
+              "label": "Modèle",
+              "text": "The driver will arrive.",
+              "anchor_text": "The driver will arrive."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Annoncez en anglais que vous appellerez le client.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Préciser un délai ou une heure",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La phrase "
+            },
+            {
+              "lang": "en",
+              "text": "I'll arrive in ten minutes. "
+            },
+            {
+              "lang": "fr",
+              "text": "annonce une arrivée dans dix minutes à partir de maintenant. La phrase "
+            },
+            {
+              "lang": "en",
+              "text": "I'll arrive at ten. "
+            },
+            {
+              "lang": "fr",
+              "text": "annonce une arrivée à dix heures. Le petit mot change donc le sens. Si l'horaire n'est pas connu, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "I don't have an exact arrival time yet. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous pouvez ensuite préciser quand vous donnerez une mise à jour. Une information honnête et actualisée est plus utile que plusieurs promesses d'arrivée immédiate impossibles à tenir."
+            }
+          ],
+          "points": [
+            {
+              "label": "Délai",
+              "text": "I'll arrive in ten minutes.",
+              "anchor_text": "I'll arrive in ten minutes."
+            },
+            {
+              "label": "Heure",
+              "text": "I'll arrive at ten.",
+              "anchor_text": "I'll arrive at ten."
+            },
+            {
+              "label": "Incertitude",
+              "text": "I don't have an exact arrival time yet.",
+              "anchor_text": "I don't have an exact arrival time yet."
+            }
+          ]
+        },
+        {
+          "title": "Écouter un changement confirmé",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le client dit : "
+            },
+            {
+              "lang": "en",
+              "text": "Our train is delayed by twenty minutes. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Please confirm your new arrival time. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client précise : "
+            },
+            {
+              "lang": "en",
+              "text": "It should arrive at six forty. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur conclut : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll update the booking and confirm the arrangements. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le retard annoncé est de vingt minutes et l'arrivée attendue est à six heures quarante. Ce sont deux informations différentes. Le chauffeur doit vérifier les conséquences réelles pour la prise en charge, puis confirmer l'organisation au lieu de modifier seulement une heure sans prévenir."
+            }
+          ],
+          "points": [
+            {
+              "label": "Retard",
+              "text": "Twenty minutes.",
+              "anchor_text": "delayed by twenty minutes."
+            },
+            {
+              "label": "Arrivée attendue",
+              "text": "Six forty.",
+              "anchor_text": "six forty."
+            },
+            {
+              "label": "Suivi",
+              "text": "I'll update the booking and confirm the arrangements.",
+              "anchor_text": "I'll update the booking"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la demande de confirmer le nouvel horaire d’arrivée.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Corriger une confusion d’horaire",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Il est quatorze heures. Vous estimez votre arrivée dans quinze minutes, mais le client comprend quinze heures. Reformulez : "
+            },
+            {
+              "lang": "en",
+              "text": "I expect to arrive in fifteen minutes, at two fifteen this afternoon. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie une arrivée attendue à quatorze heures quinze. La phrase relie le délai à l'heure correspondante et précise l'après-midi. Puis demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Is that clear? "
+            },
+            {
+              "lang": "fr",
+              "text": "Une confirmation peut aussi être écrite lorsque vous êtes arrêté en sécurité. Le but est de corriger la compréhension, pas seulement de répéter plus fort."
+            }
+          ],
+          "points": [
+            {
+              "label": "Estimation",
+              "text": "Dans 15 minutes, vers 14 h 15.",
+              "anchor_text": "in fifteen minutes, at two fifteen"
+            },
+            {
+              "label": "Vérification",
+              "text": "Is that clear?",
+              "anchor_text": "Is that clear?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.10",
+      "title": "Payment and receipts",
+      "objective": "Accompagner le règlement et remettre le bon document.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "58d0b5721db4f205dad10d9301500d4edcd281f4ed2d2349d6a63e7bb95d6c35",
+      "scenes": [
+        {
+          "title": "Demander le mode de paiement",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour demander le moyen de règlement, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "How would you like to pay? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client peut répondre : "
+            },
+            {
+              "lang": "en",
+              "text": "By card. "
+            },
+            {
+              "lang": "fr",
+              "text": "Par carte. Ou : "
+            },
+            {
+              "lang": "en",
+              "text": "In cash. "
+            },
+            {
+              "lang": "fr",
+              "text": "En espèces. Annoncez uniquement les moyens réellement disponibles et convenus. Le vocabulaire doit correspondre à l'organisation de votre entreprise. Avant de lancer le paiement, vérifiez le total avec le client et assurez-vous que l'opération concerne bien la prestation réalisée, avec les éventuelles modifications acceptées."
+            }
+          ],
+          "points": [
+            {
+              "label": "Question",
+              "text": "How would you like to pay?",
+              "anchor_text": "How would you like to pay?"
+            },
+            {
+              "label": "Carte",
+              "text": "By card.",
+              "anchor_text": "By card."
+            },
+            {
+              "label": "Espèces",
+              "text": "In cash.",
+              "anchor_text": "In cash."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Posez la question sur le paiement puis donnez les deux réponses possibles.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Distinguer reçu et facture",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le mot "
+            },
+            {
+              "lang": "en",
+              "text": "Receipt. "
+            },
+            {
+              "lang": "fr",
+              "text": "désigne un reçu. Le mot "
+            },
+            {
+              "lang": "en",
+              "text": "Invoice. "
+            },
+            {
+              "lang": "fr",
+              "text": "désigne une facture. Pour proposer un reçu, demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Would you like a receipt? "
+            },
+            {
+              "lang": "fr",
+              "text": "Un client professionnel peut demander l'envoi d'une facture à son entreprise. Vérifiez alors les coordonnées nécessaires, notamment l'adresse de facturation. Elle peut être différente de la destination du trajet. Ne considérez pas les deux documents comme interchangeables : le vocabulaire doit permettre de comprendre ce que le client demande et ce que vous remettez réellement."
+            }
+          ],
+          "points": [
+            {
+              "label": "Reçu",
+              "text": "Receipt.",
+              "anchor_text": "Receipt."
+            },
+            {
+              "label": "Facture",
+              "text": "Invoice.",
+              "anchor_text": "Invoice."
+            },
+            {
+              "label": "Proposition",
+              "text": "Would you like a receipt?",
+              "anchor_text": "Would you like a receipt?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Prononcez « receipt », puis proposez un reçu avec la phrase complète.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Vérifier le statut de la transaction",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La phrase "
+            },
+            {
+              "lang": "en",
+              "text": "The payment has gone through. "
+            },
+            {
+              "lang": "fr",
+              "text": "indique que le paiement a abouti. À la forme négative : "
+            },
+            {
+              "lang": "en",
+              "text": "The payment has not gone through. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il n'a pas abouti. Si l'écran est incertain, vérifiez avant de demander un nouvel essai. Vous pouvez dire : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll check the payment status first. "
+            },
+            {
+              "lang": "fr",
+              "text": "Une tentative ne doit pas être traitée comme un encaissement confirmé. Cette précaution évite de multiplier les opérations et de demander au client un second paiement déjà effectué."
+            }
+          ],
+          "points": [
+            {
+              "label": "Accepté",
+              "text": "The payment has gone through.",
+              "anchor_text": "The payment has gone through."
+            },
+            {
+              "label": "Non abouti",
+              "text": "The payment has not gone through.",
+              "anchor_text": "The payment has not gone through."
+            },
+            {
+              "label": "Vérification",
+              "text": "I'll check the payment status first.",
+              "anchor_text": "I'll check the payment status first."
+            }
+          ]
+        },
+        {
+          "title": "Écouter un règlement simple",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le chauffeur annonce : "
+            },
+            {
+              "lang": "en",
+              "text": "The total is forty-eight euros. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le passager demande : "
+            },
+            {
+              "lang": "en",
+              "text": "Can I pay by card? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, of course. Please follow the instructions on the terminal. "
+            },
+            {
+              "lang": "fr",
+              "text": "Après le règlement, le client demande : "
+            },
+            {
+              "lang": "en",
+              "text": "Could I have a receipt? "
+            },
+            {
+              "lang": "fr",
+              "text": "L'échange suit l'ordre pratique : montant, moyen de paiement puis document. Le client saisit lui-même son code si le terminal le demande. Vous ne lui demandez pas de vous communiquer cette information confidentielle."
+            }
+          ],
+          "points": [
+            {
+              "label": "Total",
+              "text": "Forty-eight euros.",
+              "anchor_text": "forty-eight euros."
+            },
+            {
+              "label": "Terminal",
+              "text": "Please follow the instructions on the terminal.",
+              "anchor_text": "Please follow the instructions"
+            },
+            {
+              "label": "Reçu",
+              "text": "Could I have a receipt?",
+              "anchor_text": "Could I have a receipt?"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la consigne qui invite à suivre les instructions du terminal.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Répondre à un échec confirmé",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dans cet exercice, le terminal n'a pas accepté la transaction. Le client demande si le paiement a fonctionné. Répondez : "
+            },
+            {
+              "lang": "en",
+              "text": "No, the payment has not gone through. "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis indiquez la suite réellement possible : "
+            },
+            {
+              "lang": "en",
+              "text": "Let me check the terminal before we try again. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous annoncez une vérification avant une nouvelle tentative. Un refus ne prouve pas une mauvaise foi. Gardez un ton neutre, ne notez pas les données de carte sur un carnet et choisissez une solution conforme aux moyens de paiement de l'entreprise."
+            }
+          ],
+          "points": [
+            {
+              "label": "Réponse",
+              "text": "No, the payment has not gone through.",
+              "anchor_text": "No, the payment has not gone through."
+            },
+            {
+              "label": "Suite",
+              "text": "Let me check the terminal before we try again.",
+              "anchor_text": "Let me check the terminal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.11",
+      "title": "Handle a problem",
+      "objective": "Comprendre une demande d’aide et clarifier le besoin.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "154375ff5f6c1afa8a439b0d5c9cdb27543a745b09e6eb353271e0df2eb0d7dd",
+      "scenes": [
+        {
+          "title": "Comprendre la nature du problème",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un passager peut dire : "
+            },
+            {
+              "lang": "en",
+              "text": "I feel sick. "
+            },
+            {
+              "lang": "fr",
+              "text": "Je me sens malade. Ou : "
+            },
+            {
+              "lang": "en",
+              "text": "I've lost my phone. "
+            },
+            {
+              "lang": "fr",
+              "text": "J'ai perdu mon téléphone. Ou encore : "
+            },
+            {
+              "lang": "en",
+              "text": "I left my bag in the car. "
+            },
+            {
+              "lang": "fr",
+              "text": "J'ai oublié mon sac dans la voiture. Ces phrases appellent des actions différentes. Identifiez d'abord le besoin plutôt que de répondre automatiquement. Posez ensuite une question courte et utile. En cas de danger ou de problème de santé urgent, la sécurité et l'alerte restent prioritaires sur la qualité grammaticale de l'échange."
+            }
+          ],
+          "points": [
+            {
+              "label": "Santé",
+              "text": "I feel sick.",
+              "anchor_text": "I feel sick."
+            },
+            {
+              "label": "Téléphone",
+              "text": "I've lost my phone.",
+              "anchor_text": "I've lost my phone."
+            },
+            {
+              "label": "Objet oublié",
+              "text": "I left my bag in the car.",
+              "anchor_text": "I left my bag in the car."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Associez chacune des trois phrases au problème qu’elle décrit.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Clarifier sans inventer une cause",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour ouvrir l'échange, demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "What seems to be the problem? "
+            },
+            {
+              "lang": "fr",
+              "text": "Pour faire préciser : "
+            },
+            {
+              "lang": "en",
+              "text": "Could you explain that again, please? "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous pouvez ensuite reformuler : "
+            },
+            {
+              "lang": "en",
+              "text": "Your phone is missing, is that right? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le téléphone manque, mais cela ne prouve pas qu'il a été volé. La reformulation confirme un fait sans lui ajouter une cause. Cette prudence aide à rechercher l'objet ou à transmettre une information fiable, plutôt qu'à créer un conflit à partir d'une conclusion trop rapide."
+            }
+          ],
+          "points": [
+            {
+              "label": "Ouvrir",
+              "text": "What seems to be the problem?",
+              "anchor_text": "What seems to be the problem?"
+            },
+            {
+              "label": "Faire préciser",
+              "text": "Could you explain that again, please?",
+              "anchor_text": "Could you explain that again, please?"
+            },
+            {
+              "label": "Confirmer",
+              "text": "Your phone is missing, is that right?",
+              "anchor_text": "Your phone is missing"
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la demande de réexpliquer le problème.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Admettre une incompréhension",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Dire que vous ne comprenez pas est préférable à une réponse inventée. Ajoutez une solution : "
+            },
+            {
+              "lang": "en",
+              "text": "Could you show me the address? "
+            },
+            {
+              "lang": "fr",
+              "text": "Pourriez-vous me montrer l'adresse ? Ou : "
+            },
+            {
+              "lang": "en",
+              "text": "Could you write it down? "
+            },
+            {
+              "lang": "fr",
+              "text": "Pourriez-vous l'écrire ? Ces demandes conviennent à une information comme un lieu ou un nom. Utilisez un outil de traduction seulement lorsqu'il ne détourne pas votre attention de la conduite. La méthode consiste à rendre l'information vérifiable, puis à la confirmer avant d'agir."
+            }
+          ],
+          "points": [
+            {
+              "label": "Montrer",
+              "text": "Could you show me the address?",
+              "anchor_text": "Could you show me the address?"
+            },
+            {
+              "label": "Écrire",
+              "text": "Could you write it down?",
+              "anchor_text": "Could you write it down?"
+            }
+          ]
+        },
+        {
+          "title": "Écouter une demande d’aide médicale",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le passager dit : "
+            },
+            {
+              "lang": "en",
+              "text": "I don't feel well. Could we stop? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur répond : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll stop in a safe place. Do you need medical help? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le client répond : "
+            },
+            {
+              "lang": "en",
+              "text": "Yes, please. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur annonce : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm calling the emergency services. "
+            },
+            {
+              "lang": "fr",
+              "text": "Cet échange sert à comprendre la demande et annoncer l'action. Il ne s'agit pas de poser un diagnostic. Ne retardez pas une alerte nécessaire pour chercher une phrase parfaite. La conduite sûre et l'appel adapté passent avant la poursuite du dialogue."
+            }
+          ],
+          "points": [
+            {
+              "label": "Demande",
+              "text": "I don't feel well. Could we stop?",
+              "anchor_text": "I don't feel well."
+            },
+            {
+              "label": "Action",
+              "text": "I'll stop in a safe place.",
+              "anchor_text": "I'll stop in a safe place."
+            },
+            {
+              "label": "Alerte",
+              "text": "I'm calling the emergency services.",
+              "anchor_text": "I'm calling the emergency services."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la phrase annonçant un arrêt dans un lieu sûr.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Traiter un objet oublié",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un message signale un petit sac noir laissé dans la voiture. Répondez par une action que vous pouvez réellement effectuer : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll check the car when I can stop safely. "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis : "
+            },
+            {
+              "lang": "en",
+              "text": "I'll contact you through the booking service. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous vérifiez la course et l'objet avant d'organiser la restitution. Ne promettez pas de l'avoir trouvé tant que le contrôle n'est pas fait. Préservez les données du client et assurez-vous du bon destinataire. L'anglais accompagne une procédure fiable, sans remplacer les vérifications."
+            }
+          ],
+          "points": [
+            {
+              "label": "Vérifier",
+              "text": "I'll check the car when I can stop safely.",
+              "anchor_text": "I'll check the car"
+            },
+            {
+              "label": "Suivre",
+              "text": "I'll contact you through the booking service.",
+              "anchor_text": "I'll contact you"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "E.12",
+      "title": "Talk about the city",
+      "objective": "Donner une information simple sans inventer.",
+      "image": "media/vtc/module-e.webp",
+      "source_sha256": "347bbaf3c11cc9afd0ba724718e260acec8ece9e5335cd9a527060e77bb22997",
+      "scenes": [
+        {
+          "title": "Présenter un lieu ou plusieurs",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour présenter un seul élément, utilisez : "
+            },
+            {
+              "lang": "en",
+              "text": "There is a museum near the station. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il y a un musée près de la gare. Pour plusieurs éléments : "
+            },
+            {
+              "lang": "en",
+              "text": "There are two parks nearby. "
+            },
+            {
+              "lang": "fr",
+              "text": "Il y a deux parcs à proximité. Le début de la phrase change avec le nombre. Ces modèles suffisent pour donner une information utile avec un vocabulaire limité. Adaptez le lieu à votre territoire et évitez d'ajouter un horaire ou une disponibilité que vous n'avez pas vérifié."
+            }
+          ],
+          "points": [
+            {
+              "label": "Singulier",
+              "text": "There is a museum near the station.",
+              "anchor_text": "There is a museum near the station."
+            },
+            {
+              "label": "Pluriel",
+              "text": "There are two parks nearby.",
+              "anchor_text": "There are two parks nearby."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Présentez un musée puis deux parcs en utilisant les deux modèles.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Situer ce que le client voit",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour dire sur votre gauche : "
+            },
+            {
+              "lang": "en",
+              "text": "On your left. "
+            },
+            {
+              "lang": "fr",
+              "text": "Sur votre droite : "
+            },
+            {
+              "lang": "en",
+              "text": "On your right. "
+            },
+            {
+              "lang": "fr",
+              "text": "Dans le centre-ville : "
+            },
+            {
+              "lang": "en",
+              "text": "In the city centre. "
+            },
+            {
+              "lang": "fr",
+              "text": "Donnez un repère court, au moment où le client peut le comprendre. Une explication utile n'est pas forcément un long commentaire historique. Préparez quelques informations fiables sur les principaux lieux, leurs accès et le chemin à pied. Pendant une conduite complexe, gardez votre attention sur la route et reportez ce qui demande une recherche."
+            }
+          ],
+          "points": [
+            {
+              "label": "Gauche",
+              "text": "On your left.",
+              "anchor_text": "On your left."
+            },
+            {
+              "label": "Droite",
+              "text": "On your right.",
+              "anchor_text": "On your right."
+            },
+            {
+              "label": "Centre-ville",
+              "text": "In the city centre.",
+              "anchor_text": "In the city centre."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez les trois expressions de localisation.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Proposer sans imposer un commentaire",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Avant de commencer, demandez : "
+            },
+            {
+              "lang": "en",
+              "text": "Would you like some information about the city? "
+            },
+            {
+              "lang": "fr",
+              "text": "Cela signifie : souhaitez-vous quelques informations sur la ville ? Respectez un refus ou un besoin de calme. Si vous ne savez pas répondre, dites : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm not sure. I can check when we stop. "
+            },
+            {
+              "lang": "fr",
+              "text": "Vous exprimez une incertitude et une solution. Une ouverture ou un tarif peut changer ; connaître le bâtiment ne prouve pas que l'information du jour est correcte. La fiabilité compte davantage que la quantité de commentaires."
+            }
+          ],
+          "points": [
+            {
+              "label": "Proposition",
+              "text": "Would you like some information about the city?",
+              "anchor_text": "Would you like some information"
+            },
+            {
+              "label": "Incertitude",
+              "text": "I'm not sure. I can check when we stop.",
+              "anchor_text": "I'm not sure. I can check when we stop."
+            }
+          ]
+        },
+        {
+          "title": "Écouter une demande de restaurant",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le client demande : "
+            },
+            {
+              "lang": "en",
+              "text": "Is there a restaurant near the hotel? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur répond : "
+            },
+            {
+              "lang": "en",
+              "text": "There are several restaurants on the next street. "
+            },
+            {
+              "lang": "fr",
+              "text": "Le passager poursuit : "
+            },
+            {
+              "lang": "en",
+              "text": "Are they open tonight? "
+            },
+            {
+              "lang": "fr",
+              "text": "Le chauffeur précise : "
+            },
+            {
+              "lang": "en",
+              "text": "I'm not sure. I can help you check when we arrive. "
+            },
+            {
+              "lang": "fr",
+              "text": "La localisation est connue, mais l'ouverture de ce soir ne l'est pas. L'échange distingue ces deux niveaux d'information. Le chauffeur reste utile en proposant une vérification, sans transformer un souvenir en promesse."
+            }
+          ],
+          "points": [
+            {
+              "label": "Localisation",
+              "text": "There are several restaurants on the next street.",
+              "anchor_text": "There are several restaurants"
+            },
+            {
+              "label": "Horaire",
+              "text": "Are they open tonight?",
+              "anchor_text": "Are they open tonight?"
+            },
+            {
+              "label": "Vérification",
+              "text": "I can help you check when we arrive.",
+              "anchor_text": "I can help you check when we arrive."
+            }
+          ],
+          "pause": {
+            "seconds": 5,
+            "message": "Répétez la réponse qui propose de vérifier à l’arrivée.",
+            "kind": "repeat"
+          }
+        },
+        {
+          "title": "Répondre sur une ouverture incertaine",
+          "label": "Anglais en situation",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un visiteur demande si le musée est ouvert demain. Vous connaissez son emplacement, mais pas son calendrier. Dites : "
+            },
+            {
+              "lang": "en",
+              "text": "I know where the museum is, but I'm not sure about tomorrow's opening hours. "
+            },
+            {
+              "lang": "fr",
+              "text": "Puis proposez : "
+            },
+            {
+              "lang": "en",
+              "text": "We can check the official information when we stop. "
+            },
+            {
+              "lang": "fr",
+              "text": "La première phrase précise la limite de votre connaissance. La seconde donne une suite possible dans un cadre sûr. Vérifiez alors une source actuelle, puis distinguez ce qui est confirmé de ce qui reste à confirmer au client."
+            }
+          ],
+          "points": [
+            {
+              "label": "Limite",
+              "text": "I'm not sure about tomorrow's opening hours.",
+              "anchor_text": "I'm not sure about tomorrow's opening hours."
+            },
+            {
+              "label": "Source",
+              "text": "We can check the official information when we stop.",
+              "anchor_text": "We can check the official information"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

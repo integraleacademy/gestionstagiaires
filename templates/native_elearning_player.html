@@ -18,7 +18,7 @@
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
-        {% if block.video.required %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
+        {% if block.video.required or block.video.lesson_explainer %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
         <div class="native-video-shell">
           <video class="native-course-video" controls preload="metadata" playsinline aria-label="{{ block.video.title }}"{% if block.video.required and not preview_mode %} data-required-video="{{ block.video.id }}" data-video-duration="{{ block.video.duration_seconds }}" controlslist="nodownload noplaybackrate" disablepictureinpicture{% endif %}{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
             <source src="{{ block.video.src }}">
@@ -34,6 +34,10 @@
           </div>
           {% endif %}
         </div>
+        {% if block.video.lesson_explainer and not block.video.required %}<p>Cette vidéo accompagne le cours. Vous pouvez la regarder et revoir librement les passages utiles.</p>{% endif %}
+        {% if block.video.lesson_explainer and block.video.transcript %}
+        <details class="vtc-transcript"><summary>Lire la transcription de cette leçon</summary>{% for paragraph in block.video.transcript.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}</details>
+        {% endif %}
         {% if block.video.required and not preview_mode and course.id.startswith('academy-aps62-') %}
         <div class="native-video-pace">
           <label>Rythme de lecture
@@ -132,9 +136,9 @@
               {% for item in nav_section.activities %}
                 <li class="{% if item.current %}is-current{% endif %} {% if item.completed %}is-complete{% endif %} {% if item.locked %}is-locked{% endif %}">
                   {% if item.locked %}
-                    <span><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}{% if item.has_video %}<small class="native-nav-video">Vidéo obligatoire</small>{% endif %}</b><em>Verrouillé</em></span>
+                    <span><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}{% if item.has_video %}<small class="native-nav-video">Vidéo obligatoire</small>{% elif item.has_lesson_video %}<small class="native-nav-video">Vidéo explicative</small>{% endif %}</b><em>Verrouillé</em></span>
                   {% else %}
-                    <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}{% if item.has_video %}<small class="native-nav-video">Vidéo obligatoire</small>{% endif %}</b></a>
+                    <a href="{{ item.url }}"{% if item.current %} aria-current="page"{% endif %}><i>{{ '✓' if item.completed else loop.index }}</i><b>{{ item.title }}{% if item.has_video %}<small class="native-nav-video">Vidéo obligatoire</small>{% elif item.has_lesson_video %}<small class="native-nav-video">Vidéo explicative</small>{% endif %}</b></a>
                   {% endif %}
                 </li>
               {% endfor %}
@@ -296,7 +300,7 @@
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-aps-vtc-pacing') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-vtc-lessons') }}" defer></script>
   {% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-1') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>

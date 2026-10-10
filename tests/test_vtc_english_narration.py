@@ -71,9 +71,9 @@ def test_repair_changes_media_only_without_modifying_frozen_course_or_cache(vers
 def test_other_modules_and_older_editions_are_unchanged():
     for module in vtc.curriculum_manifest()['modules']:
         for version in [module['version'], *module['previous_versions']]:
-            if module['id'] == COURSE and version in VERSIONS:
+            if module['id'] == COURSE and version in (*VERSIONS, vtc.REQUIRED_VERSION):
                 continue
-            expected = vtc._repair_video_pacing(vtc._repair_english_listening(original(version, module['id'])))
+            expected = vtc.enrich_lessons(vtc._repair_video_pacing(vtc._repair_english_listening(original(version, module['id']))))
             assert vtc.load_bundled_course(module['id'], version) == expected
     assert vtc.load_bundled_course(COURSE, 'unreviewed-version') is None
 

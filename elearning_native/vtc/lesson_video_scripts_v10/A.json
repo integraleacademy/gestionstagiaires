@@ -1,0 +1,1422 @@
+{
+  "revision": 10,
+  "module": "A",
+  "lessons": [
+    {
+      "ref": "A.01",
+      "title": "Le transport public particulier",
+      "objective": "Identifier le régime d’une prestation avant de l’accepter.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "f64df4ffeb8d4866060380f353750e44b81afaa240c97dcfb0a6c2419726726b",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le T3P est un transport routier de personnes réalisé contre rémunération, à la demande, dans un véhicule de petite capacité. Il regroupe notamment taxis, voitures de transport avec chauffeur et véhicules motorisés à deux ou trois roues. Le mot « public » ne signifie pas que le véhicule appartient à une collectivité. Un VTC fournit une prestation convenue à l’avance. Il ne devient pas un taxi parce qu’il transporte les mêmes voyageurs ou utilise une application. Le transport collectif, le transport sanitaire et le covoiturage obéissent à d’autres règles. Le partage de frais d’un trajet personnel n’est pas un moyen de déguiser une activité professionnelle lucrative."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un transport rémunéré, à la demande, en véhicule de petite capacité.",
+              "anchor_text": "Le T3P est un transport routier de personnes"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Un VTC fournit une prestation convenue à l’avance.",
+              "anchor_text": "Un VTC fournit une prestation convenue à l’avance."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Identifier le régime d’une prestation avant de l’accepter."
+          }
+        },
+        {
+          "title": "Qualifier le service à partir des faits",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Pour reconnaître un transport, partez du besoin qui a créé le trajet. Le conducteur se déplace-t-il pour son propre compte ou parce qu’un client commande un service ? Qui choisit l’heure et la destination ? Qui rémunère la prestation ? Le nom affiché dans une application n’est pas décisif. Une réservation par téléphone peut concerner un VTC ; elle ne transforme pas le trajet en service public collectif à la demande. La taille du groupe ne suffit pas non plus à déterminer le cadre juridique."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Pour reconnaître un transport, partez du besoin qui a créé le trajet.",
+              "anchor_text": "Pour reconnaître un transport, partez du besoin qui"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Qui rémunère la prestation ?",
+              "anchor_text": "Qui rémunère la prestation ?"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Qui a demandé ce déplacement ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un hôtel commande une voiture pour deux clients. Le conducteur facture le trajet : c’est une prestation professionnelle. Un collègue partage les frais de son trajet personnel domicile-travail : le contexte est différent. La qualification dépend des faits, pas du nom choisi sur une annonce. Séparez ensuite la qualification du service et les conditions dans lesquelles il peut être réalisé. Une course peut relever du VTC et rester impossible à accepter si la réservation préalable, le conducteur ou le véhicule ne répond pas aux exigences. Deux vérifications sont donc nécessaires : identifier l’activité puis contrôler son autorisation. Garder cette distinction évite de conclure trop vite qu’un transport devient légal parce qu’on lui a donné le bon nom."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Un hôtel commande une voiture pour deux clients.",
+              "anchor_text": "Un hôtel commande une voiture pour deux clients."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Identifier l’activité, puis vérifier les conditions pour la réaliser.",
+              "anchor_text": "Séparez ensuite la qualification du service et les"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le besoin : Qui a demandé ce déplacement ? La rémunération : Un service payé ou un partage de frais ? Le métier : Appliquer le cadre du transport identifié. Le piège à éviter : Le mot « covoiturage » ne change pas la nature d’un déplacement créé pour transporter des clients payants."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le besoin",
+              "text": "Qui a demandé ce déplacement ?",
+              "anchor_text": "Le besoin : Qui a demandé ce déplacement"
+            },
+            {
+              "label": "La rémunération",
+              "text": "Un service payé ou un partage de frais ?",
+              "anchor_text": "La rémunération : Un service payé ou un"
+            },
+            {
+              "label": "Le métier",
+              "text": "Appliquer le cadre du transport identifié.",
+              "anchor_text": "Le métier : Appliquer le cadre du transport"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.02",
+      "title": "Qui fait quoi ?",
+      "objective": "Distinguer conducteur, exploitant et intermédiaire.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "6bd1730489d46e8350011920aecb792682408d6f331b85f416d0068088ab7b1a",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Le conducteur réalise le transport et doit remplir les conditions personnelles d’exercice. L’exploitant organise l’activité et figure au registre des exploitants VTC. Ces fonctions peuvent être réunies chez un indépendant, mais elles restent juridiquement distinctes. Une plateforme ou une centrale de réservation met en relation, organise ou distribue des courses selon son modèle. Son contrôle documentaire ne remplace pas vos obligations. La préfecture intervient notamment pour la carte professionnelle ; le ministère chargé des transports tient le REVTC. La CMA organise l’examen. Les formalités de création d’entreprise passent par le guichet unique."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Le conducteur réalise le transport et doit remplir les conditions personnelles d’exercice.",
+              "anchor_text": "Le conducteur réalise le transport et doit remplir"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "La plateforme met en relation ; son contrôle ne remplace pas vos obligations.",
+              "anchor_text": "Une plateforme ou une centrale de réservation met"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Distinguer conducteur, exploitant et intermédiaire."
+          }
+        },
+        {
+          "title": "Séparer les quatre dossiers professionnels",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Un indépendant peut cumuler les fonctions de conducteur et d’exploitant, mais les preuves restent distinctes. Le permis et la carte professionnelle se rattachent à une personne. Les formalités d’entreprise et le REVTC se rattachent à l’exploitant. Les caractéristiques techniques et les garanties d’usage concernent le véhicule. La réservation décrit une mission. Une anomalie dans un seul de ces dossiers peut empêcher le départ même si les trois autres sont à jour."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "L’indépendant peut cumuler deux fonctions, avec des preuves distinctes.",
+              "anchor_text": "Un indépendant peut cumuler les fonctions de conducteur"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Les caractéristiques techniques et les garanties d’usage concernent le véhicule.",
+              "anchor_text": "Les caractéristiques techniques et les garanties d’usage concernent"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Conducteur, entreprise, véhicule ou course ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Nadia conduit pour une société. Sa carte professionnelle est personnelle ; l’inscription REVTC appartient à l’exploitant. Si Nadia crée ensuite sa propre activité, sa carte ne remplace pas les démarches de sa nouvelle entreprise. Pour résoudre un problème, choisissez l’interlocuteur qui détient la décision. La plateforme peut corriger une commande ou expliquer sa commission, mais ne délivre pas la carte professionnelle. La CMA organise l’examen ; la préfecture traite le titre professionnel ; l’assureur précise les garanties du contrat. Cette répartition permet de demander une preuve précise et d’éviter les confirmations verbales trop générales."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Nadia conduit pour une société.",
+              "anchor_text": "Nadia conduit pour une société."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Pour résoudre un problème, choisissez l’interlocuteur qui détient la décision.",
+              "anchor_text": "Pour résoudre un problème, choisissez l’interlocuteur qui détient"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La pièce : Conducteur, entreprise, véhicule ou course ? L’interlocuteur : Identifier l’organisme compétent. La vérification : Lire ce que le document autorise vraiment. Le piège à éviter : Un compte actif sur une plateforme ne vaut pas autorisation administrative générale."
+            }
+          ],
+          "points": [
+            {
+              "label": "La pièce",
+              "text": "Conducteur, entreprise, véhicule ou course ?",
+              "anchor_text": "La pièce : Conducteur, entreprise, véhicule ou course"
+            },
+            {
+              "label": "L’interlocuteur",
+              "text": "Identifier l’organisme compétent.",
+              "anchor_text": "L’interlocuteur : Identifier l’organisme compétent."
+            },
+            {
+              "label": "La vérification",
+              "text": "Lire ce que le document autorise vraiment.",
+              "anchor_text": "La vérification : Lire ce que le document"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.03",
+      "title": "Accéder à la profession",
+      "objective": "Construire un parcours d’accès conforme à la situation du candidat.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "c7bebf027ae7c142fe30e7f2e2cab75b3707ead326c68ecf221a98a312744dc7",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L’accès ordinaire suppose un permis adapté dont la période probatoire est terminée, l’aptitude médicale requise, l’honorabilité professionnelle et la réussite à l’examen. Le bulletin n° 2 ne doit pas comporter les condamnations incompatibles prévues par le Code des transports. Il ne s’agit pas d’exiger, dans tous les cas, un casier entièrement vierge. Depuis le 12 août 2026, la voie nationale fondée sur l’expérience professionnelle antérieure a été supprimée pour les nouvelles demandes. Les dossiers déposés avant cette date conservent leur régime. La reconnaissance de qualifications de certains ressortissants UE/EEE relève d’une procédure distincte. Préparer l’examen ne donne pas encore le droit de transporter des clients."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Permis, aptitude, honorabilité et examen : des conditions distinctes.",
+              "anchor_text": "L’accès ordinaire suppose un permis adapté dont la"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Nouvelles demandes : fin de l’ancienne voie nationale par expérience depuis le 12 août 2026.",
+              "anchor_text": "Depuis le 12 août 2026, la voie nationale"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Construire un parcours d’accès conforme à la situation du candidat."
+          }
+        },
+        {
+          "title": "De la formation au droit d’exercer",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le parcours d’accès comporte plusieurs décisions indépendantes. S’inscrire en formation signifie apprendre. Réussir l’admissibilité signifie avoir franchi la partie théorique. Réussir l’examen complet et obtenir la carte sont encore deux étapes à distinguer. Au moment de commencer l’activité, il faut également que les conditions personnelles restent remplies. Un dossier transmis ne vaut pas décision favorable."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Le parcours d’accès comporte plusieurs décisions indépendantes.",
+              "anchor_text": "Le parcours d’accès comporte plusieurs décisions indépendantes."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Réussir l’examen complet et obtenir la carte sont encore deux étapes à distinguer.",
+              "anchor_text": "Réussir l’examen complet et obtenir la carte sont"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Vérifier la situation du candidat."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Samir reçoit son résultat favorable en théorie. Il prévoit sa pratique et les démarches de carte. Il ne commence pas entre-temps à transporter des clients sur la seule base de son relevé de notes. Vérifiez les dates des informations consultées. Depuis le 12 août 2026, la voie nationale fondée sur l’expérience antérieure a été supprimée pour les nouvelles demandes ; les demandes antérieures conservent leurs règles. La reconnaissance de certaines qualifications européennes constitue un autre cadre. Pour une situation particulière, utilisez la procédure officielle correspondant au dossier plutôt que d’appliquer une ancienne vidéo générale."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Réussir la théorie ne permet pas encore de transporter des clients.",
+              "anchor_text": "Samir reçoit son résultat favorable en théorie."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Vérifiez les dates des informations consultées.",
+              "anchor_text": "Vérifiez les dates des informations consultées."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les conditions : Vérifier la situation du candidat. Les démarches : Suivre la voie d’accès et obtenir le titre. Le premier départ : Contrôler aussi l’entreprise et le véhicule. Le piège à éviter : Une attestation de formation, un dossier en cours et une carte professionnelle n’ont pas la même portée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les conditions",
+              "text": "Vérifier la situation du candidat.",
+              "anchor_text": "Les conditions : Vérifier la situation du candidat."
+            },
+            {
+              "label": "Les démarches",
+              "text": "Suivre la voie d’accès et obtenir le titre.",
+              "anchor_text": "Les démarches : Suivre la voie d’accès et"
+            },
+            {
+              "label": "Le premier départ",
+              "text": "Contrôler aussi l’entreprise et le véhicule.",
+              "anchor_text": "Le premier départ : Contrôler aussi l’entreprise et"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.04",
+      "title": "Entretenir son droit d’exercer",
+      "objective": "Organiser les échéances qui conditionnent l’activité.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "7646aba5addacb7e58f7ab4b625c93efcb64f29d3d9597a0abd85be77c8a4d78",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Les justificatifs n’ont pas tous la même durée de validité. La carte VTC et la formation continue fonctionnent sur un cycle de cinq ans ; la formation continue réglementaire dure quatorze heures. La validité médicale suit les règles du permis professionnel, notamment selon l’âge et la décision médicale. Ne lui attribuez pas automatiquement cinq ans. Une suspension du permis, une carte retirée ou une assurance interrompue peut rendre l’activité impossible avant la date prévue de renouvellement. Utilisez un calendrier avec alerte anticipée, dépôt du dossier puis preuve de réception. Pendant l’activité professionnelle, la carte doit être apposée de façon que la photographie soit facilement visible de l’extérieur."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Les justificatifs n’ont pas tous la même durée de validité.",
+              "anchor_text": "Les justificatifs n’ont pas tous la même durée"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Un événement peut interrompre le droit d’exercer avant le renouvellement.",
+              "anchor_text": "Une suspension du permis, une carte retirée ou"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Organiser les échéances qui conditionnent l’activité."
+          }
+        },
+        {
+          "title": "Suivre une échéance jusqu’à son résultat",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une date d’alerte, une date de dépôt et une date d’expiration correspondent à trois informations différentes. L’alerte permet de préparer la démarche ; le dépôt prouve son envoi ; l’expiration décrit la validité du justificatif. Un calendrier utile comporte aussi le titulaire, la procédure engagée, les pièces manquantes et l’état réel de la décision. Deux titres qui expirent à des dates différentes doivent être suivis séparément."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Alerte, dépôt et expiration : trois dates différentes.",
+              "anchor_text": "Une date d’alerte, une date de dépôt et"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Suivre le titulaire, les pièces manquantes et la décision réelle.",
+              "anchor_text": "Un calendrier utile comporte aussi le titulaire, la"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Repérer les dates de chaque document."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Le véhicule est disponible et des clients attendent, mais la carte a expiré. Une demande en cours n’est pas à considérer spontanément comme une prolongation. Il faut vérifier le titre effectivement valable et organiser un remplacement conforme si nécessaire. La vérification ne se limite pas au renouvellement périodique. Une suspension de permis, une résiliation d’assurance ou un changement affectant l’aptitude exige une réaction immédiate. La prochaine mission déjà réservée ne crée pas de dérogation. Il faut prévenir l’exploitant, vérifier la situation et organiser une continuité de service conforme si nécessaire."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Le véhicule est disponible et des clients attendent, mais la carte a expiré.",
+              "anchor_text": "Le véhicule est disponible et des clients attendent,"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "La vérification ne se limite pas au renouvellement périodique.",
+              "anchor_text": "La vérification ne se limite pas au renouvellement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le calendrier : Repérer les dates de chaque document. L’anticipation : Préparer le renouvellement à temps. La décision : Vérifier que le droit d’exercer reste valable. Le piège à éviter : Ne cochez pas « renouvelé » simplement parce qu’un formulaire a été envoyé."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le calendrier",
+              "text": "Repérer les dates de chaque document.",
+              "anchor_text": "Le calendrier : Repérer les dates de chaque"
+            },
+            {
+              "label": "L’anticipation",
+              "text": "Préparer le renouvellement à temps.",
+              "anchor_text": "L’anticipation : Préparer le renouvellement à temps."
+            },
+            {
+              "label": "La décision",
+              "text": "Vérifier que le droit d’exercer reste valable.",
+              "anchor_text": "La décision : Vérifier que le droit d’exercer"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.05",
+      "title": "Assurer le conducteur et l’activité",
+      "objective": "Comprendre les deux protections professionnelles essentielles.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "093382f0317a4cec8ae8a9d4c622a1aa41d218555232d5cb3cd5cc1c0a757177",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "L’assurance automobile doit couvrir le transport de personnes à titre onéreux. Une assurance destinée aux déplacements privés ou au trajet domicile-travail ne suffit pas. Le conducteur doit pouvoir présenter le justificatif requis lors d’un contrôle, même après la suppression de la carte verte pour les véhicules concernés. La responsabilité civile professionnelle d’exploitation couvre, selon le contrat, des dommages liés à l’activité en dehors de la circulation. Franchise, exclusions, personnes autorisées à conduire et territoire doivent être examinés. L’assureur doit connaître l’usage réel du véhicule. Une responsabilité civile indemnise un dommage couvert ; elle n’efface ni une infraction ni une sanction pénale."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "L’assurance automobile doit couvrir le transport de personnes à titre onéreux.",
+              "anchor_text": "L’assurance automobile doit couvrir le transport de personnes"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "RC professionnelle d’exploitation : dommages liés à l’activité, selon le contrat.",
+              "anchor_text": "La responsabilité civile professionnelle d’exploitation couvre, selon le"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Comprendre les deux protections professionnelles essentielles."
+          }
+        },
+        {
+          "title": "Lire une garantie comme un périmètre",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le mot « assuré » est insuffisant. Identifiez la personne ou l’entreprise couverte, le véhicule, l’activité déclarée, la période et les garanties. L’assurance automobile de circulation et la responsabilité civile professionnelle répondent à des objets différents. Une attestation personnelle pour usage privé ne prouve pas automatiquement la couverture d’un transport de passagers contre rémunération."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Le mot « assuré » est insuffisant.",
+              "anchor_text": "Le mot « assuré » est insuffisant."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Assurance de circulation et RC professionnelle ont des objets différents.",
+              "anchor_text": "L’assurance automobile de circulation et la responsabilité civile"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Dommage au client, au véhicule ou à un tiers ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une valise tombe pendant sa manipulation par le chauffeur et endommage un objet du client. La qualification et la garantie mobilisable dépendent des circonstances et du contrat. Il faut décrire les faits précisément et déclarer le sinistre, sans promettre une indemnisation automatique. En cas de dommage, séparez la mise en sécurité, le recueil des faits et le traitement contractuel. Conservez les éléments utiles sans transformer une première impression en aveu juridique définitif. Vérifiez les délais et la procédure de déclaration de votre contrat. Le montant d’une franchise, une exclusion ou le plafond d’indemnisation se lit dans les documents applicables ; il ne se devine pas à partir d’une publicité."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Une valise tombe pendant sa manipulation par le chauffeur et endommage un objet du client.",
+              "anchor_text": "Une valise tombe pendant sa manipulation par le"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "En cas de dommage, séparez la mise en sécurité, le recueil des faits et le traitement contractuel.",
+              "anchor_text": "En cas de dommage, séparez la mise en"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le risque : Dommage au client, au véhicule ou à un tiers ? Le contrat : Vérifier l’usage professionnel déclaré. La déclaration : Transmettre les faits et les pièces utiles. Le piège à éviter : Ne promettez pas une indemnisation précise avant l’examen du dossier et des garanties."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le risque",
+              "text": "Dommage au client, au véhicule ou à un tiers ?",
+              "anchor_text": "Le risque : Dommage au client, au véhicule"
+            },
+            {
+              "label": "Le contrat",
+              "text": "Vérifier l’usage professionnel déclaré.",
+              "anchor_text": "Le contrat : Vérifier l’usage professionnel déclaré."
+            },
+            {
+              "label": "La déclaration",
+              "text": "Transmettre les faits et les pièces utiles.",
+              "anchor_text": "La déclaration : Transmettre les faits et les"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.06",
+      "title": "Accueillir sans discriminer",
+      "objective": "Fonder une décision sur des critères légitimes.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "0c7be26b936961d0c6f30d36cc8e986407571cd9d7b0814afbf631a8d013c4a4",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une discrimination consiste notamment à traiter défavorablement une personne dans une situation visée par la loi en raison d’un critère protégé. Refuser un service du fait de l’origine, du handicap, du sexe, de la religion réelle ou supposée ou de l’orientation sexuelle est interdit. Le Code pénal protège aussi de nombreux autres critères : âge, état de santé, grossesse, apparence physique, lieu de résidence, entre autres. Il faut distinguer un motif discriminatoire d’une impossibilité objective et proportionnée : véhicule matériellement inadapté, capacité dépassée, risque immédiat établi. Expliquer les faits, proposer une solution compatible et tracer la décision réduit les malentendus. Une préférence personnelle ou une demande discriminatoire d’un partenaire n’est pas un motif légitime."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un traitement défavorable fondé sur un critère protégé est interdit.",
+              "anchor_text": "Une discrimination consiste notamment à traiter défavorablement une"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Distinguer discrimination et impossibilité objective et proportionnée.",
+              "anchor_text": "Il faut distinguer un motif discriminatoire d’une impossibilité"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Fonder une décision sur des critères légitimes."
+          }
+        },
+        {
+          "title": "Décider sur des critères de service et de sécurité",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une décision professionnelle doit pouvoir s’expliquer par des faits pertinents : capacité du véhicule, équipements disponibles, comportement dangereux ou conditions réelles de la prestation. Les suppositions liées à l’origine, au handicap, à la religion ou à un autre critère protégé ne constituent pas une méthode de sélection des clients. Le conducteur évalue le besoin et recherche une solution adaptée sans imposer de justification intime inutile."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Justifier la décision par la capacité, les équipements ou un danger réel.",
+              "anchor_text": "Une décision professionnelle doit pouvoir s’expliquer par des"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Une supposition sur la personne ne constitue pas un critère de service.",
+              "anchor_text": "Les suppositions liées à l’origine, au handicap, à"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Écouter la demande sans préjugé."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un client demande cinq places passagers dans une berline n’en proposant que quatre. Refuser cette configuration répond à une limite matérielle. Refuser un client à cause de son accent répond à un préjugé : la logique n’est pas la même. Un risque réel doit être décrit précisément. « Le passager porte un objet qui ne peut pas être arrimé » n’est pas la même chose que « les gens comme lui posent problème ». Documenter les faits permet de traiter une difficulté sans généralisation. Si une prestation est matériellement impossible, expliquez la contrainte concrète et envisagez une solution appropriée avec le client ou l’exploitant."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Un client demande cinq places passagers dans une berline n’en proposant que quatre.",
+              "anchor_text": "Un client demande cinq places passagers dans une"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Un risque réel doit être décrit précisément.",
+              "anchor_text": "Un risque réel doit être décrit précisément."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le besoin : Écouter la demande sans préjugé. La possibilité : Vérifier une contrainte réelle du service. La solution : Expliquer et proposer une réponse adaptée. Le piège à éviter : Une préférence personnelle n’est pas un motif professionnel de traitement défavorable."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le besoin",
+              "text": "Écouter la demande sans préjugé.",
+              "anchor_text": "Le besoin : Écouter la demande sans préjugé."
+            },
+            {
+              "label": "La possibilité",
+              "text": "Vérifier une contrainte réelle du service.",
+              "anchor_text": "La possibilité : Vérifier une contrainte réelle du"
+            },
+            {
+              "label": "La solution",
+              "text": "Expliquer et proposer une réponse adaptée.",
+              "anchor_text": "La solution : Expliquer et proposer une réponse"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.07",
+      "title": "Prévenir les violences sexistes et sexuelles",
+      "objective": "Repérer des comportements inacceptables sans les banaliser.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "41f57f9b598cc610f0029539889411eedbe1e3c9dfa4a48daa03f796a3da47d1",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un propos ou comportement à connotation sexuelle ou sexiste peut porter atteinte à la dignité ou créer une situation intimidante, hostile ou offensante. L’outrage, le harcèlement sexuel, l’agression sexuelle et le viol correspondent à des qualifications distinctes. Le harcèlement peut notamment résulter de propos répétés ou d’une pression grave, même unique, pour obtenir un acte sexuel. Depuis novembre 2025, l’article 222-22 explicite le consentement : il doit être libre, éclairé, spécifique, préalable et révocable. Le silence ou l’absence de réaction ne suffisent pas. Dans la relation professionnelle, vous gardez une distance respectueuse : aucune remarque sur le corps, aucune sollicitation intime, aucun contact imposé. Une tenue, l’alcool ou la gentillesse d’un passager ne constituent pas un consentement."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Des propos ou comportements sexistes ou sexuels peuvent porter atteinte à la dignité.",
+              "anchor_text": "Un propos ou comportement à connotation sexuelle ou"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Consentement : libre, éclairé, spécifique, préalable et révocable.",
+              "anchor_text": "Depuis novembre 2025, l’article 222-22 explicite le consentement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Repérer des comportements inacceptables sans les banaliser."
+          }
+        },
+        {
+          "title": "Reconnaître, protéger et signaler",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Les propos sexistes, les demandes sexuelles insistantes et les contacts imposés ne relèvent pas d’un simple désaccord commercial. Le conducteur doit préserver la sécurité de la conduite et des personnes. L’objectif immédiat n’est pas de qualifier définitivement chaque fait comme un juriste, mais de reconnaître une situation inacceptable, mettre fin au risque dans la mesure du possible et mobiliser l’aide adaptée."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Les sollicitations insistantes et contacts imposés ne sont pas un désaccord commercial.",
+              "anchor_text": "Les propos sexistes, les demandes sexuelles insistantes et"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Le conducteur doit préserver la sécurité de la conduite et des personnes.",
+              "anchor_text": "Le conducteur doit préserver la sécurité de la"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Protéger la personne et éviter l’escalade."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Un client multiplie les remarques sexuelles envers une autre passagère. Son rire nerveux ne vaut pas accord. Le chauffeur peut poser une limite claire, rechercher un arrêt sûr et solliciter les secours si une menace ou une agression l’exige. Distinguez l’urgence d’un accompagnement ultérieur. Une agression en cours ou un danger immédiat nécessite une alerte adaptée ; une demande d’écoute ou d’orientation suit un autre circuit. Ne diffusez pas publiquement les données de la victime ou les messages reçus. Conservez seulement les éléments utiles pour le signalement, l’entreprise ou les autorités compétentes."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Un client multiplie les remarques sexuelles envers une autre passagère.",
+              "anchor_text": "Un client multiplie les remarques sexuelles envers une"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Distinguez l’urgence d’un accompagnement ultérieur.",
+              "anchor_text": "Distinguez l’urgence d’un accompagnement ultérieur."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. La sécurité : Protéger la personne et éviter l’escalade. La limite : Faire cesser le comportement et demander de l’aide. Le signalement : Conserver les faits utiles avec discrétion. Le piège à éviter : La notation commerciale ne doit jamais servir à imposer un comportement sexuel."
+            }
+          ],
+          "points": [
+            {
+              "label": "La sécurité",
+              "text": "Protéger la personne et éviter l’escalade.",
+              "anchor_text": "La sécurité : Protéger la personne et éviter"
+            },
+            {
+              "label": "La limite",
+              "text": "Faire cesser le comportement et demander de l’aide.",
+              "anchor_text": "La limite : Faire cesser le comportement et"
+            },
+            {
+              "label": "Le signalement",
+              "text": "Conserver les faits utiles avec discrétion.",
+              "anchor_text": "Le signalement : Conserver les faits utiles avec"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.08",
+      "title": "Aider une personne en danger",
+      "objective": "Choisir une réponse utile et proportionnée.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "284cfa741ce2a3127df6695527a2126c3858b39bcc1af6487d0b57b051ece1c3",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Votre priorité est la sécurité, pas l’enquête. Si une personne se dit menacée, écoutez sans la culpabiliser, demandez de quoi elle a besoin et évitez de la laisser dans un lieu dangereux. En circulation, stabilisez d’abord la conduite puis recherchez un arrêt sûr. N’intervenez pas physiquement si cela aggrave le risque. Pour une urgence : 17 ou 112, et 15 pour une urgence médicale. Le 114 permet notamment aux personnes sourdes ou malentendantes d’alerter ; il peut être utilisé par SMS lorsqu’il est impossible de parler. Le 3919 informe sur les violences faites aux femmes mais n’est pas un service d’intervention urgente. Le 116 006 oriente les victimes. Notez les faits utiles sans diffuser l’identité de la personne."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Votre priorité est la sécurité, pas l’enquête.",
+              "anchor_text": "Votre priorité est la sécurité, pas l’enquête."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Pour une urgence : 17 ou 112, et 15 pour une urgence médicale.",
+              "anchor_text": "Pour une urgence : 17 ou 112, et"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Choisir une réponse utile et proportionnée."
+          }
+        },
+        {
+          "title": "Transmettre une alerte exploitable",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. La première question est celle de votre sécurité et de celle des autres. N’entrez pas dans une zone dangereuse et ne créez pas un second accident. Décrivez ensuite ce que vous voyez : lieu précis, nature des faits, nombre de personnes, dangers encore présents et état apparent des victimes. Signalez ce que vous ignorez au lieu d’inventer un diagnostic."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "La première question est celle de votre sécurité et de celle des autres.",
+              "anchor_text": "La première question est celle de votre sécurité"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Décrire le lieu, les faits, les personnes et les dangers présents.",
+              "anchor_text": "Décrivez ensuite ce que vous voyez : lieu"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Repérer le danger avant de s’approcher."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une passagère demande de ne pas être déposée devant son domicile car quelqu’un l’y attend pour la menacer. Vous ne discutez pas son ressenti. Vous recherchez avec elle une solution sûre et contactez les forces de l’ordre si le danger le nécessite. L’opérateur peut poser des questions et donner des consignes. Restez disponible, répondez clairement et ne raccrochez pas de votre propre initiative si l’échange n’est pas terminé. Une localisation exploitable comporte un sens de circulation, une sortie, un repère ou un numéro lorsque cela aide les secours. La localisation d’une application complète vos informations, elle ne remplace pas votre observation."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Une passagère menacée demande un lieu de dépose sûr.",
+              "anchor_text": "Une passagère demande de ne pas être déposée"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "L’opérateur peut poser des questions et donner des consignes.",
+              "anchor_text": "L’opérateur peut poser des questions et donner des"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Se protéger : Repérer le danger avant de s’approcher. Alerter : Donner le lieu exact et ce qui est observé. Être guidé : Suivre les consignes des secours. Le piège à éviter : Prendre des images ne passe pas avant la protection ou l’alerte."
+            }
+          ],
+          "points": [
+            {
+              "label": "Se protéger",
+              "text": "Repérer le danger avant de s’approcher.",
+              "anchor_text": "Se protéger : Repérer le danger avant de"
+            },
+            {
+              "label": "Alerter",
+              "text": "Donner le lieu exact et ce qui est observé.",
+              "anchor_text": "Alerter : Donner le lieu exact et ce"
+            },
+            {
+              "label": "Être guidé",
+              "text": "Suivre les consignes des secours.",
+              "anchor_text": "Être guidé : Suivre les consignes des secours."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.09",
+      "title": "Adapter le service au handicap",
+      "objective": "Proposer de l’aide en respectant l’autonomie.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "14d6f73d1fb5708b94871ff35e97fc29eb3ad41f09b8d01a2bbd2dfa6a58bb7c",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un handicap peut être visible ou invisible. Adressez-vous au passager, même s’il est accompagné. Demandez quelle aide lui convient avant de toucher sa personne, son fauteuil ou son matériel. Les besoins de communication, de temps et d’espace sont différents ; une question ouverte vaut mieux qu’une supposition. Les chiens guides et d’assistance accompagnant les personnes concernées bénéficient d’un droit d’accès aux transports dans les conditions légales, sans supplément lié à leur présence. Un VTC classique n’est pas nécessairement équipé pour transporter une personne restant dans son fauteuil. Vérifiez les possibilités techniques dès la réservation et cherchez une solution adaptée, sans promettre une manœuvre ou un transfert que vous ne maîtrisez pas."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un handicap peut être visible ou invisible.",
+              "anchor_text": "Un handicap peut être visible ou invisible."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Chiens guides et d’assistance : droit d’accès sous conditions légales, sans supplément.",
+              "anchor_text": "Les chiens guides et d’assistance accompagnant les personnes"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Proposer de l’aide en respectant l’autonomie."
+          }
+        },
+        {
+          "title": "Adapter le service avec le passager",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Le handicap ne décrit pas à lui seul le besoin d’une personne. Demandez quelle aide est utile et attendez l’accord avant de toucher une personne ou son matériel. Un fauteuil, une canne ou un chien d’assistance ne sont pas des bagages ordinaires. La sécurité de leur installation et le respect de l’autonomie doivent être examinés avec le passager."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Le handicap ne décrit pas à lui seul le besoin d’une personne.",
+              "anchor_text": "Le handicap ne décrit pas à lui seul"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Un fauteuil, une canne ou un chien d’assistance ne sont pas des bagages ordinaires.",
+              "anchor_text": "Un fauteuil, une canne ou un chien d’assistance"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Quelle aide la personne souhaite-t-elle ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une cliente malvoyante voyage avec son chien d’assistance. Le conducteur l’accueille, lui demande comment l’accompagner et organise une installation sûre dans l’habitacle. Il ne place pas le chien dans le coffre. Adaptez aussi la communication : annoncez ce que vous faites, décrivez un obstacle, parlez face à la personne lorsque cela facilite l’échange, vérifiez la compréhension sans infantiliser. Si votre véhicule ne permet réellement pas la prestation demandée, exposez la contrainte matérielle et recherchez une solution appropriée. Ne promettez pas une accessibilité que le véhicule n’offre pas."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Une cliente malvoyante voyage avec son chien d’assistance.",
+              "anchor_text": "Une cliente malvoyante voyage avec son chien d’assistance."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Adapter les explications et la communication avec le passager.",
+              "anchor_text": "Adaptez aussi la communication : annoncez ce que"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Demander : Quelle aide la personne souhaite-t-elle ? Adapter : Préparer l’accès, les bagages et l’installation. Vérifier : Respecter le confort et l’autonomie. Le piège à éviter : Aider sans demander peut déséquilibrer la personne ou endommager son matériel."
+            }
+          ],
+          "points": [
+            {
+              "label": "Demander",
+              "text": "Quelle aide la personne souhaite-t-elle ?",
+              "anchor_text": "Demander : Quelle aide la personne souhaite-t-elle ?"
+            },
+            {
+              "label": "Adapter",
+              "text": "Préparer l’accès, les bagages et l’installation.",
+              "anchor_text": "Adapter : Préparer l’accès, les bagages et l’installation."
+            },
+            {
+              "label": "Vérifier",
+              "text": "Respecter le confort et l’autonomie.",
+              "anchor_text": "Vérifier : Respecter le confort et l’autonomie."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.10",
+      "title": "Protéger les données des passagers",
+      "objective": "Utiliser seulement les informations nécessaires au service.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "7cb4b690f6e946bab7e34d3829297ba9f185a43ad291afb8160641273981863a",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Une réservation contient des données personnelles : nom, téléphone, adresse et horaires. Définissez pourquoi vous en avez besoin, qui peut les voir et combien de temps vous les conservez. Les obligations légales, par exemple comptables, doivent être distinguées d’un carnet de prospection. Collecter une copie de pièce d’identité sans nécessité n’est pas une bonne habitude. Verrouillez les appareils, limitez les accès et évitez les captures de réservations diffusées dans des groupes. Un incident de confidentialité se documente et se traite rapidement ; selon le risque, une notification à la CNIL et aux personnes peut être nécessaire. Une caméra embarquée ne dispense pas des règles d’information et de protection des données ; n’installez pas une surveillance permanente de l’habitacle par réflexe."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Une réservation contient des données personnelles : nom, téléphone, adresse et horaires.",
+              "anchor_text": "Une réservation contient des données personnelles : nom,"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Verrouiller les appareils et limiter l’accès aux réservations.",
+              "anchor_text": "Verrouillez les appareils, limitez les accès et évitez"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Utiliser seulement les informations nécessaires au service."
+          }
+        },
+        {
+          "title": "Utiliser les données pour la bonne raison",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Une réservation nécessite certaines informations pour exécuter le service et permettre les vérifications prévues. Cela n’autorise pas tous les usages ultérieurs. Avant de collecter ou partager une donnée, identifiez la finalité, le besoin réel et le destinataire. Un collègue qui assure un remplacement peut avoir besoin des détails de la mission ; un groupe de discussion général n’en a pas nécessairement besoin."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Les données nécessaires au service ne peuvent pas servir à tous les usages.",
+              "anchor_text": "Une réservation nécessite certaines informations pour exécuter le"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Identifier la finalité, le besoin réel et le destinataire.",
+              "anchor_text": "Avant de collecter ou partager une donnée, identifiez"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Quelle donnée sert réellement à la course ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Pour retrouver un bagage oublié, vous utilisez les coordonnées de la réservation. Publier le nom du client, son hôtel et son trajet sur un réseau social exposerait inutilement sa vie privée. La durée de conservation dépend de la catégorie de document et de sa finalité. Les obligations comptables, la gestion d’un litige et la prospection commerciale ne se confondent pas. Une demande d’effacement doit donc être traitée avec discernement : supprimer les données devenues inutiles, expliquer les éléments qui doivent être conservés et sécuriser leur accès. Ne collectez pas un diagnostic médical lorsque seule une aide à l’installation est nécessaire."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Pour retrouver un bagage oublié, vous utilisez les coordonnées de la réservation.",
+              "anchor_text": "Pour retrouver un bagage oublié, vous utilisez les"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "La durée de conservation dépend de la catégorie de document et de sa finalité.",
+              "anchor_text": "La durée de conservation dépend de la catégorie"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Le besoin : Quelle donnée sert réellement à la course ? Le partage : Uniquement les personnes concernées. La conservation : Durée adaptée et accès sécurisé. Le piège à éviter : Recevoir un numéro pour une course n’autorise pas à l’utiliser librement pour une autre finalité."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le besoin",
+              "text": "Quelle donnée sert réellement à la course ?",
+              "anchor_text": "Le besoin : Quelle donnée sert réellement à"
+            },
+            {
+              "label": "Le partage",
+              "text": "Uniquement les personnes concernées.",
+              "anchor_text": "Le partage : Uniquement les personnes concernées."
+            },
+            {
+              "label": "La conservation",
+              "text": "Durée adaptée et accès sécurisé.",
+              "anchor_text": "La conservation : Durée adaptée et accès sécurisé."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.11",
+      "title": "Réagir à un contrôle",
+      "objective": "Présenter des preuves cohérentes et à jour.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "9faa7b31a62a41142cc4c20033ef32d07f5c832624583f9dbecbd664b3c2ba60",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Un contrôle peut porter sur le conducteur, le véhicule, l’exploitant et la réservation. Les agents compétents vérifient notamment la carte, les assurances, les documents du véhicule et la preuve de réservation préalable. Un écran d’application ne répond pas forcément à toutes les exigences documentaires. Préparez un dossier accessible même si le réseau tombe. Restez courtois, immobilisez-vous selon les indications reçues et répondez précisément. Vous ne devez ni fabriquer une réservation après les faits ni modifier une heure pour rendre un document cohérent. Une difficulté technique se signale ; elle ne donne pas le droit d’inventer une preuve. Conservez ensuite les références du contrôle et traitez les suites dans les délais indiqués."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "Un contrôle peut porter sur le conducteur, le véhicule, l’exploitant et la réservation.",
+              "anchor_text": "Un contrôle peut porter sur le conducteur, le"
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Restez courtois, immobilisez-vous selon les indications reçues et répondez précisément.",
+              "anchor_text": "Restez courtois, immobilisez-vous selon les indications reçues et"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Présenter des preuves cohérentes et à jour."
+          }
+        },
+        {
+          "title": "Présenter des preuves cohérentes lors d’un contrôle",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Un contrôle se prépare par un classement simple et des documents lisibles. Sachez retrouver les pièces concernant le conducteur, l’exploitant, le véhicule et la réservation. Les noms, immatriculations et dates doivent correspondre à la mission contrôlée. Un document exact mais inaccessible sur un téléphone déchargé ne permet pas de répondre aussi efficacement qu’un dossier organisé."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Un contrôle se prépare par un classement simple et des documents lisibles.",
+              "anchor_text": "Un contrôle se prépare par un classement simple"
+            },
+            {
+              "label": "Le point clé",
+              "text": "Les noms, immatriculations et dates doivent correspondre à la mission contrôlée.",
+              "anchor_text": "Les noms, immatriculations et dates doivent correspondre à"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Rassembler les documents de cette course."
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Une batterie vide empêche l’ouverture de l’application. Une solution hors ligne sécurisée aurait évité la difficulté. Elle doit rester à jour et ne pas exposer les données des autres clients lors de la présentation. Pendant le contrôle, restez factuel. Si une pièce manque ou si une information est contestée, expliquez la situation sans fabriquer de document, antidater une réservation ou modifier un justificatif. Notez ensuite ce qui doit être régularisé et l’interlocuteur à contacter. La contestation d’une mesure suit la procédure appropriée ; elle ne se remplace pas par une discussion agressive au bord de la route."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Une batterie vide empêche l’ouverture de l’application.",
+              "anchor_text": "Une batterie vide empêche l’ouverture de l’application."
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Pendant le contrôle, restez factuel.",
+              "anchor_text": "Pendant le contrôle, restez factuel."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Préparer : Rassembler les documents de cette course. Présenter : Répondre avec calme sur des faits exacts. Traiter : Comprendre l’observation et corriger l’écart. Le piège à éviter : Ne modifiez pas une preuve pour la faire correspondre après coup à une situation."
+            }
+          ],
+          "points": [
+            {
+              "label": "Préparer",
+              "text": "Rassembler les documents de cette course.",
+              "anchor_text": "Préparer : Rassembler les documents de cette course."
+            },
+            {
+              "label": "Présenter",
+              "text": "Répondre avec calme sur des faits exacts.",
+              "anchor_text": "Présenter : Répondre avec calme sur des faits"
+            },
+            {
+              "label": "Traiter",
+              "text": "Comprendre l’observation et corriger l’écart.",
+              "anchor_text": "Traiter : Comprendre l’observation et corriger l’écart."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ref": "A.12",
+      "title": "Comprendre les responsabilités",
+      "objective": "Distinguer indemnisation, sanction et mesure administrative.",
+      "image": "media/vtc/module-a.webp",
+      "source_sha256": "38daf205f926cc7f035e5551044d58fac7f317b2e9a4751863e6754ae1b22a7d",
+      "scenes": [
+        {
+          "title": "Les repères essentiels",
+          "label": "COMPRENDRE",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "La responsabilité civile concerne la réparation d’un dommage. La responsabilité pénale concerne une infraction et sa sanction. L’autorité administrative peut aussi suspendre ou retirer un titre dans les conditions prévues. Une même situation peut donc avoir plusieurs conséquences, sans qu’une assurance les couvre toutes. Le non-respect de la réservation préalable est sévèrement sanctionné. Depuis le 27 juin 2026, l’article L3124-12 prévoit, pour les faits qu’il vise, jusqu’à trois ans d’emprisonnement et 45 000 euros d’amende pour une personne physique, ainsi que des peines complémentaires. Il faut consulter la qualification exacte et la version du texte : toutes les irrégularités documentaires ne se confondent pas avec ce délit. Une réclamation client, elle, doit être traitée avec des faits et des preuves."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le repère",
+              "text": "La responsabilité civile concerne la réparation d’un dommage.",
+              "anchor_text": "La responsabilité civile concerne la réparation d’un dommage."
+            },
+            {
+              "label": "Dans la pratique",
+              "text": "Le non-respect de la réservation préalable est sévèrement sanctionné.",
+              "anchor_text": "Le non-respect de la réservation préalable est sévèrement"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "À vous : Distinguer indemnisation, sanction et mesure administrative."
+          }
+        },
+        {
+          "title": "Distinguer dommage, contrat et infraction",
+          "label": "EXPLIQUER",
+          "kind": "concept",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour bien comprendre, allons un peu plus loin. Un même événement peut avoir plusieurs conséquences. Le client peut invoquer une prestation mal exécutée ; l’assureur peut examiner un dommage ; une autorité peut rechercher une infraction. Ces questions ne s’effacent pas mutuellement. Rembourser un client ne fait pas nécessairement disparaître une éventuelle infraction, et une absence de sanction ne prouve pas qu’aucun problème contractuel n’existe."
+            }
+          ],
+          "points": [
+            {
+              "label": "Le principe",
+              "text": "Un même événement peut avoir plusieurs conséquences.",
+              "anchor_text": "Un même événement peut avoir plusieurs conséquences."
+            },
+            {
+              "label": "Le point clé",
+              "text": "Ces questions ne s’effacent pas mutuellement.",
+              "anchor_text": "Ces questions ne s’effacent pas mutuellement."
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Avant l’exemple, retenez cette question : Que s’est-il passé ? Quel dommage ?"
+          }
+        },
+        {
+          "title": "Un exemple expliqué",
+          "label": "METTRE EN PRATIQUE",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Prenons un exemple concret. Après un accident, l’assureur peut intervenir pour un dommage couvert. Une éventuelle infraction routière reste une question distincte. Le paiement d’une franchise ne remplace ni une amende ni les démarches administratives. Pour analyser la situation, construisez une chronologie : ce qui était convenu, ce qui s’est produit, ce qui peut être établi et les mesures prises. Séparez les faits observables de l’appréciation de la faute. Cette méthode facilite la réponse à l’entreprise, au client, à l’assureur ou aux autorités. Le conducteur ne doit pas promettre un résultat juridique qu’il ne maîtrise pas."
+            }
+          ],
+          "points": [
+            {
+              "label": "La situation",
+              "text": "Après un accident, l’assureur peut intervenir pour un dommage couvert.",
+              "anchor_text": "Après un accident, l’assureur peut intervenir pour un"
+            },
+            {
+              "label": "Le raisonnement",
+              "text": "Construire la chronologie des engagements, des faits et des mesures prises.",
+              "anchor_text": "Pour analyser la situation, construisez une chronologie :"
+            }
+          ],
+          "pause": {
+            "seconds": 4,
+            "message": "Dans cette situation, expliquez le piège à éviter avec vos mots."
+          }
+        },
+        {
+          "title": "La méthode à retenir",
+          "label": "RETENIR",
+          "kind": "method",
+          "segments": [
+            {
+              "lang": "fr",
+              "text": "Pour retenir la méthode, procédez en trois étapes. Les faits : Que s’est-il passé ? Quel dommage ? Les volets : Distinguer civil, pénal et administratif. Les suites : Informer le bon interlocuteur avec les preuves. Le piège à éviter : Un geste commercial ne tranche pas à lui seul toutes les responsabilités."
+            }
+          ],
+          "points": [
+            {
+              "label": "Les faits",
+              "text": "Que s’est-il passé ? Quel dommage ?",
+              "anchor_text": "Les faits : Que s’est-il passé ? Quel"
+            },
+            {
+              "label": "Les volets",
+              "text": "Distinguer civil, pénal et administratif.",
+              "anchor_text": "Les volets : Distinguer civil, pénal et administratif."
+            },
+            {
+              "label": "Les suites",
+              "text": "Informer le bon interlocuteur avec les preuves.",
+              "anchor_text": "Les suites : Informer le bon interlocuteur avec"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

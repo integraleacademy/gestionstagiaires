@@ -7,15 +7,15 @@ const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-player.js"), "utf8");
 const pacingSource = fs.readFileSync(path.join(__dirname, "../static/js/native-video-pacing.js"), "utf8");
 
-async function fixture({ watched = 0, completed = false, duration = 8, autoAdvance = false, pacing = false, pauses = [], realSeeking = false, aps = false, savedRate } = {}) {
+async function fixture({ watched = 0, completed = false, duration = 8, autoAdvance = false, pacing = false, pauses = [], realSeeking = false, aps = false, optional = false, savedRate } = {}) {
   let record = { watched_seconds: watched, completed, duration_seconds: duration };
   const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds: 300,
     startUrl: "/start", heartbeatUrl: "/heartbeat", finishUrl: "/finish", completeUrl: "/complete",
-    requiredVideos: { capsule: duration }, initialVideoProgress: { lesson: { capsule: record } },
+    requiredVideos: optional ? {} : { capsule: duration }, initialVideoProgress: { lesson: { capsule: record } },
     isLastActivity: true, hasNextModule: false, endLabel: "Retour au parcours" };
   const dom = new JSDOM(`<!doctype html><div id="nativeTrackingState"><span></span></div>
     <button id="nativeActionButton" data-mode="complete">Terminer le module</button>
-    <div id="nativeToast"></div><div class="native-video-shell"><video class="native-course-video" data-required-video="capsule"></video>
+    <div id="nativeToast"></div><div class="native-video-shell"><video class="native-course-video" ${optional ? '' : 'data-required-video="capsule"'}></video>
     ${pacing ? `<script type="application/json" data-video-pacing-config>${JSON.stringify({default_playback_rate:.85,allowed_playback_rates:[.85,1],learning_pauses:pauses})}</script>
     <select data-playback-rate><option value="0.85">0.85</option><option value="1">1</option></select>
     <div data-learning-pause hidden><p data-pause-message></p><span data-pause-countdown></span><button data-pause-resume>Reprendre</button><button data-pause-stay>Rester</button></div>` : ''}</div>
@@ -151,6 +151,26 @@ test("VTC defaults to 0.85 before completion, offers 1 and keeps 0.85 on review"
       assert.equal(f.video.playbackRate, .85);
     } finally { f.close(); }
   }
+});
+
+test("existing VTC learners get optional paced explanations with free seeking and no new blocker", async () => {
+  const f = await fixture({optional:true, pacing:true, duration:120, autoAdvance:true,
+    pauses:[{at_seconds:3.4,duration_seconds:4,message:'Retenez le principe.'}]});
+  try {
+    assert.equal(f.video.playbackRate, .85);
+    assert.equal(f.button.disabled, false);
+    await f.video.play(); await f.advance(4000);
+    assert.equal(f.video.paused, true);
+    assert.equal(f.window.document.querySelector('[data-learning-pause]').hidden, false);
+    await f.advance(5000);
+    assert.equal(f.video.paused, false);
+    f.video.currentTime = 90; f.emit('seeking'); f.emit('seeked');
+    assert.equal(f.video.currentTime, 90);
+    assert.ok(f.requests.every(request => !request.body.videos?.length));
+    f.blur(); await f.advance(5000);
+    assert.equal(f.video.paused, true);
+    assert.equal(f.button.disabled, false);
+  } finally { f.close(); }
 });
 
 test("paced viewing continues beyond idle and pedagogical pauses resume without clicks", async () => {

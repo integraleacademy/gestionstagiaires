@@ -26963,6 +26963,9 @@ def api_create_trainee(session_id: str):
     ensure_documents_schema_for_trainee(t, training_type)
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
+    from elearning_native.vtc_enrolments import mark_new_vtc_enrolment
+    mark_new_vtc_enrolment(s, t)
+
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
 

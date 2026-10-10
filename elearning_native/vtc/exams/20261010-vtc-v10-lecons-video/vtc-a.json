@@ -1,0 +1,1069 @@
+{
+  "id": "vtc-a",
+  "version": "20261010-vtc-v10-lecons-video",
+  "training_label": "VTC",
+  "title": "VTC · Exercer dans le cadre du T3P · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "exam-annales-2023-a-02",
+      "prompt": "Quelle est la périodicité du contrôle technique ou de l'attestation d'entretien des véhicules du T3P?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tous les ans pour le contrôle technique d’une voiture VTC."
+        },
+        {
+          "id": "b",
+          "text": "Tous les deux ans, comme une voiture particulière à usage privé."
+        },
+        {
+          "id": "c",
+          "text": "Uniquement lors de la revente du véhicule."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Pour une voiture VTC, le contrôle technique est annuel, avec les échéances propres à sa mise en service et à son affectation. Il ne faut pas appliquer la périodicité ordinaire de deux ans des voitures particulières utilisées à titre privé. Le sujet emploie aussi l’attestation d’entretien pour d’autres catégories du T3P.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Contrôle technique des transports de personnes · Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F22299"
+        }
+      ],
+      "lesson_refs": [
+        "A.04",
+        "G.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-02",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-a-03",
+      "prompt": "Quels types de personnalités ont voix délibérative lors de la commission locale des T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Les membres des collèges prévus par les textes ; les personnes qualifiées invitées n’ont pas voix délibérative."
+        },
+        {
+          "id": "b",
+          "text": "Tous les invités, y compris les personnes qualifiées, ont toujours un droit de vote."
+        },
+        {
+          "id": "c",
+          "text": "Seuls les professionnels votent, les représentants de l’État étant uniquement observateurs."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La commission locale comprend des représentants de l’État, des professionnels, des collectivités et, le cas échéant, des usagers ou associations prévus par les textes. Les personnes qualifiées invitées au titre de D3120-31 n’ont pas voix délibérative. Les sections disciplinaires ont une composition spécifique paritaire État/profession.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Commissions locales T3P · Code des transports",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000034084258"
+        }
+      ],
+      "lesson_refs": [
+        "A.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-03",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-a-08",
+      "prompt": "Le stage de formation continue dispensé aux conducteurs de transport public routier particulier de personnes permet d'obtenir une attestation valable :",
+      "options": [
+        {
+          "id": "a",
+          "text": "2 ans"
+        },
+        {
+          "id": "b",
+          "text": "10 ans"
+        },
+        {
+          "id": "c",
+          "text": "5 ans"
+        },
+        {
+          "id": "d",
+          "text": "1 an"
+        }
+      ],
+      "answer": "c",
+      "explanation": "La formation continue du conducteur doit être renouvelée tous les cinq ans et donne lieu à une attestation. Sa date doit être suivie séparément des autres échéances : permis, aptitude médicale, assurances et contrôle du véhicule.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Devenir chauffeur VTC · Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "A.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-08",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-a-11",
+      "prompt": "Citez 4 informations communes qui figurent sur une carte professionnelle T3P.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Nom, prénom, photographie et numéro de la carte."
+        },
+        {
+          "id": "b",
+          "text": "Nom de l’exploitant, numéro SIREN, assurance professionnelle et liste des véhicules."
+        },
+        {
+          "id": "c",
+          "text": "Numéro de réservation, horaires du client, contrat d’assurance et facture du véhicule."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Pour identifier une carte professionnelle, contrôlez notamment le nom, le prénom, la photographie et le numéro de la carte, puis sa catégorie d’activité et ses dates. Une carte d’une autre activité ou expirée n’autorise pas la mission.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Devenir chauffeur VTC · Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "A.03",
+        "A.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-11",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-a-13",
+      "prompt": "La réglementation du T3P se trouve dans le :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Code préfectoral"
+        },
+        {
+          "id": "b",
+          "text": "Code des transports"
+        },
+        {
+          "id": "c",
+          "text": "Code pénal"
+        },
+        {
+          "id": "d",
+          "text": "Code du travail"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le Code des transports contient le cadre sectoriel du transport public particulier de personnes. Il s’articule avec d’autres textes, notamment Code de la route, assurances et droit pénal. La question recherche le code organisant spécifiquement le T3P.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.01",
+        "A.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-13",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-a-14",
+      "prompt": "Dans la liste ci-dessous quels sont les véhicules qui sont autorisés à être en attente de clientèle sur la voie publique ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "VTC"
+        },
+        {
+          "id": "b",
+          "text": "taxi"
+        },
+        {
+          "id": "c",
+          "text": "VMDTR"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le taxi bénéficie de la possibilité de prise en charge et d’attente de clientèle sur la voie publique dans le périmètre et les conditions de son autorisation. Le VTC et le VMDTR ne bénéficient pas du même droit de maraude. Une réservation ou une zone autorisée pour un client identifié se distingue de l’attente indifférenciée de clientèle.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Devenir chauffeur VTC · Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "G.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-14",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-a-15",
+      "prompt": "Comment s'appelle le document sur lequel ne doivent pas figurer certaines condamnations définitives incompatibles avec l'exercice du transport public particulier de personnes ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Le bulletin n° 2 du casier judiciaire."
+        },
+        {
+          "id": "b",
+          "text": "Le bulletin n° 3 présenté par le conducteur remplace systématiquement le B2."
+        },
+        {
+          "id": "c",
+          "text": "Le relevé des points du permis de conduire."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le contrôle d’honorabilité se réfère au bulletin n° 2 du casier judiciaire et aux condamnations incompatibles prévues par les textes. Il ne faut pas remplacer cette exigence par « casier entièrement vierge », ni confondre le B2 avec le B3 remis à un particulier.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Devenir chauffeur VTC · Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "A.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-a-15",
+      "source_title": "28 mars 2023 · T3P",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-a-01",
+      "prompt": "Quel service délivre la carte professionnelle de conducteur de T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "La DREAL"
+        },
+        {
+          "id": "b",
+          "text": "La préfecture"
+        },
+        {
+          "id": "c",
+          "text": "La DIRECCTE"
+        },
+        {
+          "id": "d",
+          "text": "La mairie"
+        }
+      ],
+      "answer": "b",
+      "explanation": "La carte professionnelle relève du préfet du département de domicile, ou du préfet de police dans le cas prévu pour Paris. Le registre des exploitants et la carte du conducteur sont deux démarches distinctes : ni la mairie ni la DREAL ne délivrent cette carte.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports · obligations générales des conducteurs et commissions locales",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "lesson_refs": [
+        "A.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-01",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-02",
+      "prompt": "Qu'est-ce qu'un service de transport régulier ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un transport dont le trajet est toujours fixé uniquement par le conducteur."
+        },
+        {
+          "id": "b",
+          "text": "Un service collectif défini par un itinéraire, des arrêts, une fréquence, des horaires et des tarifs."
+        },
+        {
+          "id": "c",
+          "text": "Une course individuelle sur réservation avec trajet librement convenu."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Un service régulier transporte collectivement des voyageurs selon une organisation fixée à l’avance : itinéraire, arrêts, fréquence, horaires et tarifs. Une réservation téléphonique ne suffit pas à transformer une course VTC en ligne régulière.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-02",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-05",
+      "prompt": "Quel est le délit justifiant le refus de délivrance d'une carte professionnelle ? :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Franchissement d'un feu rouge"
+        },
+        {
+          "id": "b",
+          "text": "Non exercice régulier de la profession"
+        },
+        {
+          "id": "c",
+          "text": "Inaptitude médicale"
+        },
+        {
+          "id": "d",
+          "text": "Conduite après usage de stupéfiants"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Parmi les réponses, la conduite après usage de stupéfiants est le délit visé. L’honorabilité se vérifie à partir des condamnations incompatibles inscrites au bulletin n° 2 selon l’article R3120-8 ; toute mention au casier n’entraîne pas automatiquement une interdiction professionnelle.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports · article R3120-8, honorabilité",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000030048407/"
+        }
+      ],
+      "lesson_refs": [
+        "A.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-05",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-06",
+      "prompt": "Quelle est la signification du terme LOTI ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Loi d'observation des taxis intramuros"
+        },
+        {
+          "id": "b",
+          "text": "Loi d'orientation des transports intérieurs"
+        },
+        {
+          "id": "c",
+          "text": "Loi d'organisation du tourisme intérieur"
+        },
+        {
+          "id": "d",
+          "text": "Loi d'orientation du tourisme interne"
+        }
+      ],
+      "answer": "b",
+      "explanation": "LOTI signifie Loi d’orientation des transports intérieurs. Cet acronyme désigne la loi du 30 décembre 1982 ; ce n’est ni une loi propre aux taxis intramuros, ni une dénomination du tourisme.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-06",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-07",
+      "prompt": "Parmi ces affirmations, laquelle est vraie ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "La carte professionnelle est délivrée par le Préfet ou le Préfet de Police"
+        },
+        {
+          "id": "b",
+          "text": "La carte professionnelle mentionne le résultat à l'examen"
+        },
+        {
+          "id": "c",
+          "text": "La carte professionnelle est délivrée par la Mairie."
+        },
+        {
+          "id": "d",
+          "text": "La carte professionnelle mentionne la commune dans laquelle on est autorisé à exercer."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le préfet, ou le préfet de police dans le cas prévu, délivre la carte professionnelle. Une carte VTC ne vaut pas autorisation de stationnement taxi limitée à une commune et ne présente pas le détail des notes obtenues à l’examen.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports · obligations générales des conducteurs et commissions locales",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "lesson_refs": [
+        "A.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-07",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-09",
+      "prompt": "Quels types de personnalités peuvent être associées avec voix consultative aux travaux des membres de la commission locale des T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un collège de représentants des professionnels (syndicats, organisations professionnelles)"
+        },
+        {
+          "id": "b",
+          "text": "Les représentants des organisations professionnelles des centrales de réservation des transports publics particuliers de personnes"
+        },
+        {
+          "id": "c",
+          "text": "Un collège de représentants de l'État (ex : préfet ou son représentant, DDPP, représentant de la gendarmerie/police nationale, ….)"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Les représentants des centrales de réservation peuvent être associés avec voix consultative. Les représentants de l’État et des professionnels composent déjà des collèges de la commission ; participer à un collège et être invité à titre consultatif sont deux statuts différents.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports · obligations générales des conducteurs et commissions locales",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "lesson_refs": [
+        "A.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-09",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-10",
+      "prompt": "Quelles sont les deux assurances obligatoires qu'un conducteur de T3P doit souscrire ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Responsabilité civile circulation seule, sans assurance couvrant l’exploitation professionnelle."
+        },
+        {
+          "id": "b",
+          "text": "Responsabilité civile professionnelle seule, sans garantie du véhicule pour la circulation."
+        },
+        {
+          "id": "c",
+          "text": "Responsabilité civile circulation et responsabilité civile professionnelle."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Il faut distinguer la responsabilité civile liée à la circulation et celle liée à l’exploitation professionnelle. L’usage « transport de personnes à titre onéreux » doit être déclaré et couvert ; une assurance privée ordinaire ne suffit pas. La répartition conducteur/exploitant dépend de l’organisation et des contrats.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports · obligations générales des conducteurs et commissions locales",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "lesson_refs": [
+        "A.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-10",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-11",
+      "prompt": "Quelles sont les sanctions administratives encourues par un conducteur de T3P en cas de violation de la réglementation de la profession ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Suspension automatique du permis pour chaque réclamation commerciale."
+        },
+        {
+          "id": "b",
+          "text": "Avertissement, retrait temporaire ou retrait définitif de la carte professionnelle."
+        },
+        {
+          "id": "c",
+          "text": "Amende pénale, emprisonnement ou travail d’intérêt général prononcés par la préfecture."
+        }
+      ],
+      "answer": "b",
+      "explanation": "L’autorité administrative peut prononcer un avertissement ou retirer temporairement ou définitivement la carte professionnelle. Ces mesures sont distinctes d’une amende ou d’une peine d’emprisonnement décidées au titre pénal.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports · article L3124-11, sanctions administratives",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000033745438"
+        }
+      ],
+      "lesson_refs": [
+        "A.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-11",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-a-15",
+      "prompt": "Le stage de formation continue dispensé aux conducteurs de transport public particulier de personnes permet d'obtenir une attestation valable :",
+      "options": [
+        {
+          "id": "a",
+          "text": "5 ans"
+        },
+        {
+          "id": "b",
+          "text": "2 ans"
+        },
+        {
+          "id": "c",
+          "text": "1 an"
+        },
+        {
+          "id": "d",
+          "text": "10 ans"
+        }
+      ],
+      "answer": "a",
+      "explanation": "L’attestation de formation continue est valable cinq ans. Le conducteur doit anticiper le renouvellement ; cette durée ne permet pas de déduire automatiquement celle du contrôle médical, qui répond à d’autres règles.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports · obligations générales des conducteurs et commissions locales",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048385"
+        }
+      ],
+      "lesson_refs": [
+        "A.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-a-15",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-02",
+      "prompt": "Un conducteur sanctionné par le tribunal correctionnel pour délit de fuite peut saisir :",
+      "options": [
+        {
+          "id": "a",
+          "text": "le tribunal judiciaire pour une condamnation inférieure à 4 000 €"
+        },
+        {
+          "id": "b",
+          "text": "la cour d'appel"
+        },
+        {
+          "id": "c",
+          "text": "la cour de cassation"
+        },
+        {
+          "id": "d",
+          "text": "le tribunal correctionnel qui jugera à nouveau l'affaire"
+        }
+      ],
+      "answer": "b",
+      "explanation": "L'appel d'un jugement correctionnel permet à la cour d'appel de réexaminer l'affaire. La Cour de cassation contrôle l'application du droit dans les décisions rendues en dernier ressort ; elle ne remplace pas cet appel ordinaire.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Faire appel d’un jugement — Service Public",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F1384"
+        }
+      ],
+      "lesson_refs": [
+        "A.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-02",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-03",
+      "prompt": "Quelle est la taille minimum de la commune dans laquelle peut s'exercer une activité du T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "11000 habitants"
+        },
+        {
+          "id": "b",
+          "text": "1500 habitants"
+        },
+        {
+          "id": "c",
+          "text": "Il n'y a pas de taille minimum"
+        },
+        {
+          "id": "d",
+          "text": "20000 habitants"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le T3P n'est pas réservé aux communes dépassant un nombre minimal d'habitants. Le chauffeur doit en revanche respecter les règles propres à son activité, notamment la réservation préalable pour un VTC.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Devenir chauffeur de VTC — Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "A.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-04",
+      "prompt": "Qui agrée les organismes de formation continue des conducteurs de T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Les préfectures."
+        },
+        {
+          "id": "b",
+          "text": "Les chambres de métiers et de l’artisanat, sans décision préfectorale."
+        },
+        {
+          "id": "c",
+          "text": "Les organismes assureurs du centre."
+        }
+      ],
+      "answer": "a",
+      "explanation": "L'agrément d'un centre de formation T3P relève de l'autorité préfectorale. Il faut distinguer cet agrément du centre, la carte du conducteur et l'inscription de l'exploitant au REVTC.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports — agrément des centres, R3120-9",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGISCTA000030048387"
+        }
+      ],
+      "lesson_refs": [
+        "A.02",
+        "A.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-04",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-05",
+      "prompt": "Quelle est l'autorité qui effectue la vérification du casier judiciaire d'un candidat à la carte professionnelle de conducteur de véhicules T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "le préfet de police ou le préfet"
+        },
+        {
+          "id": "b",
+          "text": "le préfet de région"
+        },
+        {
+          "id": "c",
+          "text": "les forces de l'ordre"
+        },
+        {
+          "id": "d",
+          "text": "le ministère chargé des transports"
+        }
+      ],
+      "answer": "a",
+      "explanation": "La demande de carte professionnelle relève du préfet compétent, ou du préfet de police dans son ressort. Le contrôle de l'honorabilité ne doit pas être confondu avec la délivrance du permis de conduire ou l'immatriculation de l'entreprise.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports — article R3120-6",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000030048403/"
+        }
+      ],
+      "lesson_refs": [
+        "A.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-05",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-06",
+      "prompt": "Quelle est l'ancienneté maximum pour un véhicule hybride ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "6 ans"
+        },
+        {
+          "id": "b",
+          "text": "aucune"
+        },
+        {
+          "id": "c",
+          "text": "7 ans"
+        },
+        {
+          "id": "d",
+          "text": "2 ans"
+        }
+      ],
+      "answer": "b",
+      "explanation": "L'exception d'ancienneté vise les véhicules VTC hybrides et électriques. Elle ne supprime pas les obligations générales de sécurité, d'assurance et de contrôle technique. Il faut vérifier l'éligibilité du véhicule avec ses caractéristiques exactes.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Devenir chauffeur de VTC — Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "G.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-06",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-08",
+      "prompt": "Que devez-vous présenter aux agents susceptibles d'effectuer des contrôles pour justifier d'une réservation préalable ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Un document écrit sur papier ou support électronique."
+        },
+        {
+          "id": "b",
+          "text": "Le témoignage oral du passager suffit dans tous les cas."
+        },
+        {
+          "id": "c",
+          "text": "Un relevé des courses déjà terminées sans la commande concernée."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La réservation doit pouvoir être justifiée par un document écrit, papier ou électronique, accessible lors du contrôle. Une simple affirmation orale du chauffeur ne remplace pas cette preuve.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports — obligations des conducteurs",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGIARTI000054659821/2026-08-12"
+        },
+        {
+          "title": "Justificatif de réservation VTC — arrêté du 6 août 2025",
+          "url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000052153206/"
+        }
+      ],
+      "lesson_refs": [
+        "G.05",
+        "A.11"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-08",
+      "source_title": "Annales VTC 2021",
+      "source_page": 2,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-10",
+      "prompt": "Quelles assurances doit souscrire un professionnel effectuant du T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une assurance du véhicule couvrant le transport de personnes à titre onéreux et une responsabilité civile professionnelle."
+        },
+        {
+          "id": "b",
+          "text": "Une assurance automobile pour usage privé uniquement."
+        },
+        {
+          "id": "c",
+          "text": "Une responsabilité civile professionnelle qui dispense de toute assurance circulation."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Deux risques sont à couvrir : la circulation du véhicule utilisé pour transporter des personnes à titre onéreux et la responsabilité civile professionnelle de l'activité. Une assurance automobile pour usage privé ne remplace pas ces garanties professionnelles.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports — obligations des conducteurs",
+          "url": "https://www.legifrance.gouv.fr/codes/id/LEGIARTI000054659821/2026-08-12"
+        },
+        {
+          "title": "Assurance professionnelle VTC — Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "A.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-10",
+      "source_title": "Annales VTC 2021",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-14",
+      "prompt": "Citez deux cas dans lesquels la carte professionnelle peut être retirée à un conducteur du T3P ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "L’annulation du permis et certaines condamnations pénales incompatibles avec la profession."
+        },
+        {
+          "id": "b",
+          "text": "Le remplacement du véhicule et un changement d’assureur déclaré."
+        },
+        {
+          "id": "c",
+          "text": "Une baisse du chiffre d’affaires et la perte d’un contrat commercial."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La carte professionnelle suppose que les conditions de permis, d'aptitude et d'honorabilité restent remplies. L'annulation du permis ou certaines condamnations pénales incompatibles avec la profession peuvent ainsi conduire à sa restitution ou à son retrait.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Code des transports — article R3120-6",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000030048403/"
+        }
+      ],
+      "lesson_refs": [
+        "A.04",
+        "A.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-14",
+      "source_title": "Annales VTC 2021",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-a-15",
+      "prompt": "Quel kilométrage maximum un conducteur de T3P peut-il réaliser pour sa course ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "1000 km"
+        },
+        {
+          "id": "b",
+          "text": "500 km"
+        },
+        {
+          "id": "c",
+          "text": "300 km"
+        },
+        {
+          "id": "d",
+          "text": "pas de limitation"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Il n'existe pas de plafond kilométrique général propre à une course de T3P. Une longue prestation exige néanmoins une préparation réaliste : pauses, fatigue, autonomie, itinéraire, prix convenu et règles applicables au trajet.",
+      "module": "A",
+      "sources": [
+        {
+          "title": "Devenir chauffeur de VTC — Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F31027"
+        }
+      ],
+      "lesson_refs": [
+        "A.01",
+        "H.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-a-15",
+      "source_title": "Annales VTC 2021",
+      "source_page": 3,
+      "correction_origin": "source"
+    },
+    {
+      "id": "independent-a-01",
+      "prompt": "Une réservation nominative est déjà confirmée. En arrivant, un autre passant propose de payer le trajet à la place du client. Quelle décision respecte le fonctionnement du VTC ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Accepter le passant si le prix proposé est supérieur."
+        },
+        {
+          "id": "b",
+          "text": "Remplacer le nom du client une fois le passant installé."
+        },
+        {
+          "id": "c",
+          "text": "Conserver la mission réservée ; une autre prise en charge suppose sa propre réservation préalable."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La présence d’une réservation pour une personne ne permet pas de prendre un autre client à la volée. Une nouvelle mission exige une réservation préalable réelle.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.01"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-a-02",
+      "prompt": "Un nouveau contrat automobile porte la mention « usage privé ». Quel point bloque son utilisation pour une activité VTC rémunérée ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "La preuve de paiement de la prime suffit quel que soit l’usage déclaré."
+        },
+        {
+          "id": "b",
+          "text": "La garantie doit couvrir explicitement le transport rémunéré de personnes."
+        },
+        {
+          "id": "c",
+          "text": "Le contrat doit seulement mentionner une utilisation quotidienne."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le risque assuré doit correspondre à l’activité réelle. Un paiement à jour n’étend pas automatiquement une assurance privée au transport rémunéré.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.05"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-a-03",
+      "prompt": "Une passagère signale une difficulté à marcher et voyage sans accompagnant. Quelle première réponse prépare une aide adaptée ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Décider de la porter jusqu’au véhicule sans lui demander son accord."
+        },
+        {
+          "id": "b",
+          "text": "Demander systématiquement qu’un proche réalise le trajet avec elle."
+        },
+        {
+          "id": "c",
+          "text": "Lui demander l’aide souhaitée et convenir d’un point de prise en charge accessible."
+        }
+      ],
+      "answer": "c",
+      "explanation": "Les besoins ne se déduisent pas d’un handicap présumé. Demander l’aide souhaitée respecte l’autonomie et permet de préparer l’accès au véhicule.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.09"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-a-04",
+      "prompt": "Après une course, un chauffeur veut publier une photo de son planning pour montrer son activité. Les noms et numéros de clients sont visibles. Que faire ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Retirer ces données avant toute publication."
+        },
+        {
+          "id": "b",
+          "text": "Publier si aucun montant payé ne figure sur la photo."
+        },
+        {
+          "id": "c",
+          "text": "Conserver les noms et masquer uniquement les numéros."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Les noms et coordonnées sont des données personnelles. La promotion de l’activité ne justifie pas leur exposition ; il faut supprimer les éléments identifiants.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.10"
+      ],
+      "origin": "pedagogical-independent"
+    },
+    {
+      "id": "independent-a-05",
+      "prompt": "Lors d’un contrôle, la carte du conducteur est valide mais le justificatif de réservation est introuvable. Quelle conclusion est exacte ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "La carte dispense de produire une preuve pour chaque réservation."
+        },
+        {
+          "id": "b",
+          "text": "Une facture établie après la course prouve à elle seule l’antériorité de la réservation."
+        },
+        {
+          "id": "c",
+          "text": "La carte et la preuve de réservation répondent à deux obligations distinctes."
+        }
+      ],
+      "answer": "c",
+      "explanation": "La carte autorise le conducteur à exercer ; la réservation justifie les conditions de la mission. Un document ne remplace pas l’autre.",
+      "module": "A",
+      "sources": [],
+      "lesson_refs": [
+        "A.11"
+      ],
+      "origin": "pedagogical-independent"
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 25,
+    "original_questions": 5
+  }
+}

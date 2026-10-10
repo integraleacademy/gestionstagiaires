@@ -33,7 +33,7 @@
   ],
   "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
   "final_exam_id": "vtc-final",
-  "version": "20261010-vtc-v6-pedagogie",
+  "version": "20261010-vtc-v10-lecons-video",
   "reviewed_on": "2026-10-10",
   "planned_minutes": 5422,
   "lesson_count": 96,
@@ -41,13 +41,14 @@
   "modules": [
     {
       "id": "academy-vtc-a",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "A",
       "title": "VTC A · Exercer dans le cadre du T3P",
@@ -128,8 +129,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 21,
+        "required_videos": 13,
+        "assets": 59,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -140,7 +141,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 10,
-        "free_exercises": 60
+        "free_exercises": 60,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -171,13 +173,14 @@
     },
     {
       "id": "academy-vtc-b",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "B",
       "title": "VTC B · Gérer son entreprise",
@@ -258,8 +261,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 19,
+        "required_videos": 13,
+        "assets": 57,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -270,7 +273,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 11,
-        "free_exercises": 160
+        "free_exercises": 160,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -301,13 +305,14 @@
     },
     {
       "id": "academy-vtc-c",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "C",
       "title": "VTC C · Conduire en sécurité",
@@ -388,8 +393,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 14,
+        "required_videos": 13,
+        "assets": 52,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -400,7 +405,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 12,
-        "free_exercises": 127
+        "free_exercises": 127,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -431,13 +437,14 @@
     },
     {
       "id": "academy-vtc-d",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "D",
       "title": "VTC D · Comprendre et s’exprimer en français",
@@ -518,8 +525,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 15,
+        "required_videos": 13,
+        "assets": 53,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -530,7 +537,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 6,
-        "free_exercises": 109
+        "free_exercises": 109,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -561,13 +569,14 @@
     },
     {
       "id": "academy-vtc-e",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "E",
       "title": "VTC E · Accueillir en anglais",
@@ -648,8 +657,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 62,
+        "required_videos": 13,
+        "assets": 103,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -660,7 +669,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 12,
-        "free_exercises": 190
+        "free_exercises": 190,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -691,13 +701,14 @@
     },
     {
       "id": "academy-vtc-f",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "F",
       "title": "VTC F · Développer son activité VTC",
@@ -778,8 +789,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 19,
+        "required_videos": 13,
+        "assets": 57,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -790,7 +801,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 11,
-        "free_exercises": 120
+        "free_exercises": 120,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -821,13 +833,14 @@
     },
     {
       "id": "academy-vtc-g",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "G",
       "title": "VTC G · Appliquer les règles du VTC",
@@ -908,8 +921,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 13,
+        "required_videos": 13,
+        "assets": 51,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -920,7 +933,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 12,
-        "free_exercises": 151
+        "free_exercises": 151,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -951,13 +965,14 @@
     },
     {
       "id": "academy-vtc-h",
-      "version": "20261010-vtc-v6-pedagogie",
+      "version": "20261010-vtc-v10-lecons-video",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
         "20261007-vtc-v4-visuals",
-        "20261007-vtc-v5-annales"
+        "20261007-vtc-v5-annales",
+        "20261010-vtc-v6-pedagogie"
       ],
       "letter": "H",
       "title": "VTC H · Réaliser une mission professionnelle",
@@ -1038,8 +1053,8 @@
         "scored_activities": 0,
         "workbooks": 0,
         "interactive_workshops": 12,
-        "required_videos": 1,
-        "assets": 13,
+        "required_videos": 13,
+        "assets": 51,
         "professional_workshops": 12,
         "interactive_missions": 2,
         "diagnostics": 1,
@@ -1050,7 +1065,8 @@
         "visual_methods": 12,
         "comparison_tables": 4,
         "annales_lessons": 5,
-        "free_exercises": 147
+        "free_exercises": 147,
+        "lesson_videos": 12
       },
       "duration_breakdown": [
         {
@@ -1086,10 +1102,11 @@
     "20261006-vtc-v3-105h",
     "20261007-vtc-v4-visuals",
     "20261007-vtc-v5-annales",
-    "20261010-vtc-v6-pedagogie"
+    "20261010-vtc-v6-pedagogie",
+    "20261010-vtc-v10-lecons-video"
   ],
-  "video_count": 8,
-  "narrated_video_count": 8,
+  "video_count": 104,
+  "narrated_video_count": 104,
   "professional_workshops": 96,
   "mission_count": 16,
   "listening_count": 48,
@@ -1107,14 +1124,17 @@
   "visual_method_count": 96,
   "comparison_table_count": 32,
   "inline_manual_figure_count": 20,
-  "animated_video_count": 8,
-  "video_minutes": 70.1,
-  "video_min_seconds": 496.872,
+  "animated_video_count": 104,
+  "video_minutes": 288.5,
+  "video_min_seconds": 114.8,
   "annales_question_count": 404,
   "annales_source_count": 8,
   "annales_section_count": 26,
   "annales_active_count": 330,
   "annales_lesson_count": 79,
   "free_exercise_count": 1064,
-  "programme_file": "programme_pedagogie.json"
+  "programme_file": "programme_lecons_video_v10.json",
+  "lesson_video_count": 96,
+  "summary_video_count": 8,
+  "paced_video_minutes": 366.4
 }
