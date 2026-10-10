@@ -4,6 +4,54 @@ from functools import lru_cache
 import copy, json
 ROOT=Path(__file__).parent/'vtc'
 
+# This is a pronunciation repair, not a new learner assignment. The replacement
+# keeps every chapter boundary and the exact mandatory-viewing duration.
+_BILINGUAL_VERSIONS = frozenset({
+    '20261007-vtc-v4-visuals',
+    '20261007-vtc-v5-annales',
+    '20261010-vtc-v6-pedagogie',
+})
+
+
+@lru_cache(maxsize=1)
+def _bilingual_video():
+    return json.loads((ROOT / 'video_english_bilingual_v7.json').read_text())
+
+
+def _repair_english_narration(course):
+    """Enrich only the copied, reviewed English capsule; never write courses."""
+    if course.get('id') != 'academy-vtc-e' or course.get('version') not in _BILINGUAL_VERSIONS:
+        return course
+    try:
+        replacement = _bilingual_video()
+    except FileNotFoundError:
+        # Generation and local authoring can run before the new media is built.
+        return course
+    for section in course.get('sections', []):
+        for activity in section.get('activities', []):
+            if activity.get('id') != 'vtc-e-capsule':
+                continue
+            for block in activity.get('blocks', []):
+                video = block.get('video') or {}
+                if (video.get('id') != 'vtc-e-capsule'
+                        or video.get('src') != 'media/vtc/v4/lesson-e.mp4'
+                        or video.get('duration_seconds') != 498.15
+                        or len(video.get('chapters', [])) != 24
+                        or replacement.get('src') != 'media/vtc/v7/lesson-e.mp4'
+                        or replacement.get('captions') != 'media/vtc/v7/lesson-e.vtt'
+                        or replacement.get('duration_seconds') != video['duration_seconds']
+                        or replacement.get('chapters') != video['chapters']):
+                    continue
+                for field in ('src', 'captions', 'voice', 'rate', 'content_sha256', 'render_revision', 'transcript'):
+                    video[field] = copy.deepcopy(replacement[field])
+                activity['vtc']['transcript'] = replacement['transcript']
+                activity['vtc']['bilingual_narration'] = True
+                for asset in (video['src'], video['captions']):
+                    if asset not in course['assets']:
+                        course['assets'].append(asset)
+                course.setdefault('counts', {})['assets'] = len(course['assets'])
+    return course
+
 @lru_cache(maxsize=1)
 def _manifest():
     return json.loads((ROOT/'manifest.json').read_text())
@@ -23,7 +71,7 @@ def load_bundled_course(course_id,version=None):
     if not module:return None
     version=version or module['version']
     if version not in [module['version'],*module.get('previous_versions',[])]:return None
-    return copy.deepcopy(_course(course_id,version))
+    return _repair_english_narration(copy.deepcopy(_course(course_id,version)))
 
 def bundled_asset(course_id,version,name):
     course=load_bundled_course(course_id,version)
