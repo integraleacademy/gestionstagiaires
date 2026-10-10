@@ -22,7 +22,7 @@ class PracticeContentTests(unittest.TestCase):
     def test_all_versions_keep_progress_identity_and_remove_writing(self):
         manifest = curriculum_manifest()
         self.assertEqual(manifest['workbook_count'], 0)
-        self.assertEqual(manifest['interactive_workshop_count'], 142)
+        self.assertEqual(manifest['interactive_workshop_count'], 132 if manifest.get('production_count') else 142)
         for module in manifest['modules']:
             for version in [module['version'], *module['previous_versions']]:
                 with self.subTest(module=module['id'], version=version):

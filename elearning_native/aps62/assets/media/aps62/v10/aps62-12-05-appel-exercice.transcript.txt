@@ -1,0 +1,7 @@
+Exercice fictif.
+Agent : Poste de sécurité des Ateliers Rive, bonjour.
+Appelant : Écoutez bien. Dans vingt minutes, il y aura un grave incident dans la salle après la verrière. Faites partir les gens.
+Agent : De quelle verrière parlez-vous ? Il y en a deux sur le site.
+Appelant : Au fond. Vous avez entendu. Je ne répondrai plus.
+Agent : Pouvez-vous préciser la salle concernée ?
+[La communication est interrompue, sans autre réponse.]

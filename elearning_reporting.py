@@ -146,6 +146,15 @@ class ProgressReader:
                         rows.append({"title": activity.get("title") or "Activité", "completed": activity["id"] in ids,
                                      "current": activity["id"] == progress.get("current_activity_id"),
                                      "answer_label": ("Réponse correcte" if answer.get("correct") else "À revoir") if activity.get("scored") and answer else ""})
+                        if activity.get("production") and isinstance(answer.get("production_answers"), dict):
+                            production = activity["production"]
+                            rows[-1]["production"] = {
+                                "draft": bool(answer.get("production_draft")),
+                                "responses": [{"label": field["label"], "text": answer["production_answers"].get(field["id"], "")}
+                                              for field in production["response_fields"]],
+                                "review": [{"label": criterion["label"], "needs_help": answer.get("production_self_review", {}).get(criterion["id"]) == "needs_help"}
+                                           for criterion in production["rubric"] if answer.get("production_self_review", {}).get(criterion["id"]) in ("checked", "needs_help")],
+                            }
                     module["sections"].append({"title": section.get("title") or "Séquence", "activities": rows,
                                                "completed": sum(a["completed"] for a in rows), "total": len(rows)})
             modules.append(module)

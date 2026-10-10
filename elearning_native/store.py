@@ -313,6 +313,27 @@ class NativeElearningStore:
                         details={'passed': result['passed'], 'total': result['total'],
                                  'exercise_ids': [f['id'] for f in result['feedback']]})
 
+    def record_production(self, access, activity_id, answers, *, compared=False, self_review=None):
+        """Keep an individual draft and first submission without awarding a score."""
+        now = _utc_iso()
+        with self._transaction() as connection:
+            self._ensure_progress_row(connection, access, now_iso=now)
+            row = self._progress_row(connection, access)
+            if activity_id in _json_list(row['completed_json']):
+                return
+            stored = _json_dict(row['answers_json'])
+            saved = stored.setdefault(activity_id, {})
+            saved.update(production_answers=dict(answers), production_draft=True)
+            if compared:
+                saved.setdefault('production_first_answers', dict(answers))
+                saved.setdefault('production_first_submitted_at', now)
+                saved['production_feedback_seen'] = True
+            if self_review is not None and saved.get('production_feedback_seen'):
+                saved['production_self_review'] = dict(self_review)
+            connection.execute('''UPDATE learner_course_progress SET answers_json=?, updated_at=?
+                WHERE session_id=? AND trainee_id=? AND course_id=? AND course_version=?''',
+                (json.dumps(stored, ensure_ascii=False), now, *self._key_values(access)))
+
     def get_progress(
         self,
         access: Mapping[str, Any],
@@ -858,7 +879,8 @@ class NativeElearningStore:
             if not already_completed:
                 completed.append(activity_id)
             if answer is not None and (activity_id not in answers or
-                    (not already_completed and answers[activity_id].get('practice_draft') is True)):
+                    (not already_completed and (answers[activity_id].get('practice_draft') is True
+                                               or answers[activity_id].get('production_draft') is True))):
                 answers[activity_id] = dict(answer)
 
             completion = self._completion_values(

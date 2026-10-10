@@ -1,0 +1,13 @@
+.aps-production{background:#fff;border:1px solid #dbe5ef;border-radius:18px;padding:clamp(18px,3vw,32px);margin:24px 0;color:#203a52}
+.aps-production p{line-height:1.65;white-space:pre-line}.aps-production h2{font-size:1.55rem}.aps-production h3{font-size:1.12rem}
+.aps-production-documents{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin:22px 0}
+.aps-production .aps-evidence{min-width:0;background:#f2f6fb;border:1px solid #d9e4f0;border-radius:12px;padding:18px}
+.aps-production img{max-width:100%;height:auto}.aps-production table{border-collapse:collapse;width:100%;font-size:.94rem}
+.aps-production th,.aps-production td{padding:9px;text-align:left;border-bottom:1px solid #d2dce6;vertical-align:top}
+.aps-production-field{margin:20px 0}.aps-production label{font-weight:700;display:block;margin-bottom:8px}
+.aps-production-field>p{font-size:.95rem;color:#50667a;margin:4px 0 9px}.aps-production textarea{width:100%;box-sizing:border-box;border:1px solid #869bb0;border-radius:9px;padding:13px;font:inherit;line-height:1.55;resize:vertical;background:#fff;color:#172c40}
+.aps-production textarea:focus,.aps-production select:focus{outline:3px solid #9ad4f3;outline-offset:2px}.aps-production textarea[readonly]{background:#edf2f6}
+.aps-production-feedback{border-top:3px solid #267d81;margin-top:22px;padding-top:12px}.aps-production-feedback [data-model]{background:#eef6f4;padding:15px;border-radius:8px;white-space:pre-line}
+.aps-production-criterion{padding:14px 0;border-bottom:1px solid #dbe5ef}.aps-production-criterion select{font:inherit;padding:10px;border:1px solid #869bb0;border-radius:8px;max-width:100%;background:#fff;color:#203a52}
+.aps-production audio{width:100%;max-width:560px}.aps-production [hidden]{display:none!important}.aps-production-oral{border-left:4px solid #267d81;padding-left:14px}
+@media(max-width:600px){.aps-production-documents{display:block}.aps-production .aps-evidence{margin-bottom:14px}.aps-production table{font-size:.88rem}.aps-production th,.aps-production td{padding:7px}}

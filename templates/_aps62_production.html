@@ -1,0 +1,35 @@
+{% set production = activity.production %}
+<section class="aps-production" data-aps-production>
+  <header><span class="aps-label">À vous de produire · Dossier fictif</span><h2>Votre mission</h2>
+    <p>{{ production.brief }}</p><p>Examinez les pièces et rédigez votre réponse. Vous pourrez ensuite la comparer aux repères, l’améliorer et signaler les points à revoir avec votre formateur.</p>
+    <p class="aps-small">Ce travail est un entraînement avec autoévaluation. Il ne reçoit pas de note automatique ni de validation du formateur.</p>
+  </header>
+  {% if production.instructions %}<p>{{ production.instructions }}</p>{% endif %}
+  {% if production.audio %}<section class="aps-production-audio"><h3>{{ production.audio.title or 'Écouter la situation' }}</h3><audio controls preload="metadata" src="{{ production.audio.src }}" aria-label="{{ production.audio.title or 'Appel fictif' }}"></audio>
+    {% if production.audio.transcript %}<details><summary>Lire la transcription accessible</summary><p>{{ production.audio.transcript }}</p></details>{% endif %}
+  </section>{% endif %}
+  <div class="aps-production-documents">
+    {% for doc in production.documents %}<article class="aps-evidence"><span class="aps-label">Pièce {{ loop.index }} · Support d’exercice</span><h3>{{ doc.title }}</h3>
+      {% if doc.text %}<p>{{ doc.text }}</p>{% endif %}
+      {% if doc.image %}<img src="{{ doc.image }}" alt="{{ doc.image_alt or doc.title }}">{% endif %}
+      {% if doc.rows %}<div class="aps-table-wrap"><table><tbody>{% for row in doc.rows %}<tr>{% for cell in row %}{% if loop.first %}<th scope="row">{{ cell }}</th>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>{% endif %}
+    </article>{% endfor %}
+  </div>
+  <form id="apsProductionForm">
+    {% for field in production.response_fields %}<div class="aps-production-field"><label for="production-{{ field.id }}">{{ field.label }}</label>{% if field.help %}<p id="production-help-{{ field.id }}">{{ field.help }}</p>{% endif %}
+      <textarea id="production-{{ field.id }}" name="{{ field.id }}" data-production-field="{{ field.id }}" rows="{{ 6 if field.multiline|default(true) else 3 }}" minlength="{{ field.min_chars|default(20) }}" maxlength="{{ field.max_chars|default(3000) }}"{% if field.required|default(true) %} required{% endif %}{% if field.help %} aria-describedby="production-help-{{ field.id }}"{% endif %}{% if activity_completed %} readonly{% endif %}></textarea>
+    </div>{% endfor %}
+    {% if production.oral_prompt %}<p class="aps-production-oral">{{ production.oral_prompt }}</p>{% endif %}
+    <button type="submit" class="aps-practice-check"{% if preview_mode and not preview_can_answer %} disabled{% endif %}>Comparer mon travail aux repères</button>
+  </form>
+  <p data-production-status role="status" aria-live="polite"></p>
+  <section class="aps-production-feedback" data-production-feedback hidden aria-label="Repères de comparaison"></section>
+  <script id="apsProductionConfig" type="application/json">{{ {
+    'production': production, 'completed': activity_completed,
+    'preview': preview_mode|default(false),
+    'saved': progress.answers.get(activity.id, {}),
+    'url': preview_config.answerUrl if preview_mode else url_for('native_elearning.activity_production', activity_id=activity.id),
+    'csrfToken': preview_config.csrfToken if preview_mode else csrf_token,
+    'accessToken': access_token|default('')
+  }|tojson }}</script>
+</section>

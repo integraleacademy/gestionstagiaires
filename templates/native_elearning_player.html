@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
+{% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-production.css', v='20261010-v10') }}">{% endif %}
 </head>
 <body class="native-elearning-body{{ ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
@@ -144,7 +145,7 @@
 
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
-            <span class="native-kicker">{{ 'Question évaluée' if activity.scored else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
+            <span class="native-kicker">{{ 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
             {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} min de travail guidé</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
@@ -156,7 +157,7 @@
           {% if activity.type == 'content' %}
             <div class="native-content-flow">
               {% for block in activity.blocks %}{{ render_block(block) }}{% endfor %}
-              {% if activity.academy %}{% include '_aps62_activity.html' %}{% endif %}
+              {% if activity.academy or activity.production %}{% include '_aps62_activity.html' %}{% endif %}
               {% if activity.vtc %}{% include '_vtc_activity.html' %}{% endif %}
             </div>
           {% else %}
@@ -270,12 +271,13 @@
     'requiredVideos': required_videos|default({}),
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-menu') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-v10') }}" defer></script>
   {% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-1') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261007-6-1') }}" defer></script>{% endif %}
 {% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261010-v6') }}" defer></script>{% endif %}
+{% if activity.production %}<script src="{{ url_for('static', filename='js/aps62-production.js', v='20261010-v10') }}" defer></script>{% endif %}
 </body>
 </html>

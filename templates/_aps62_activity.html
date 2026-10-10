@@ -1,6 +1,7 @@
 {% set lesson = activity.academy %}
 <div class="aps-book" data-aps-work>
-  {% if lesson.kind == 'lesson' %}
+  {% if activity.production %}{% include '_aps62_production.html' %}
+  {% elif lesson.kind == 'lesson' %}
   {% if lesson.visual_guide %}{% include '_aps62_visual.html' %}{% endif %}
   {% if lesson.plain_course %}
   <section class="aps-plain-course" aria-label="Le cours expliqué simplement">
@@ -22,6 +23,7 @@
   {% if lesson.visual_board %}<section class="aps-visual-board"><span class="aps-label">Le module en un regard</span><h2>{{ lesson.visual_board.title }}</h2><div class="aps-board-grid">{% for step in lesson.visual_board.steps %}<article><span class="aps-board-number">{{ '%02d'|format(loop.index) }}</span><h3>{{ step.label }}</h3><p>{{ step.text }}</p></article>{% endfor %}</div></section>{% endif %}
   <section class="aps-editorial"><span class="aps-label">Le raisonnement professionnel</span><h2>Comprendre ce qui guide la décision</h2><p>{{ lesson.reason }}</p></section>
   {% if lesson.deepening %}<section class="aps-deepening"><span class="aps-label">Approfondir et comprendre les nuances</span>{% for part in lesson.deepening %}<h2>{{ part.title }}</h2>{% for paragraph in part.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}{% endfor %}</section>{% endif %}
+  {% if lesson.uniform_diagram %}<section class="aps-editorial"><h2>{{ lesson.uniform_diagram.title }}</h2><p>{{ lesson.uniform_diagram.scope }}</p><img src="{{ lesson.uniform_diagram.src }}" alt="{{ lesson.uniform_diagram.alt }}" style="max-width:100%;height:auto"><p class="aps-small">{{ lesson.uniform_diagram.caption }}</p><ul>{% for point in lesson.uniform_diagram.points %}<li><strong>{{ point.label }} - {{ point.position }} :</strong> {{ point.rule }}</li>{% endfor %}</ul><a href="{{ lesson.uniform_diagram.source_url }}" target="_blank" rel="noopener noreferrer">{{ lesson.uniform_diagram.source_title }}</a></section>{% endif %}
   {% for reference in lesson.lessons %}
   <section class="aps-manual-lesson">
     <header><span class="aps-label">Le cours illustré · Repère {{ reference.ref }}</span><h2>{{ reference.title }}</h2></header>

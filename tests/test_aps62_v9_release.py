@@ -37,7 +37,7 @@ class ImprovedReleaseTests(unittest.TestCase):
 
     def test_complete_published_courses_preserve_guided_work_and_budgets(self):
         manifest = curriculum_manifest()
-        if manifest['version'] != VERSION:
+        if manifest['version'] not in (VERSION, '20261010-aps62-v10'):
             self.assertEqual(manifest['version'], PREVIOUS)
             self.skipTest('New edition is not yet published')
         videos = read(ROOT/'video_manifest_v7.json')
@@ -45,8 +45,8 @@ class ImprovedReleaseTests(unittest.TestCase):
         self.assertEqual(set(videos), set(courses()))
         seen, minutes, practices, journals = [], 0, 0, 0
         for module in manifest['modules']:
-            self.assertEqual(module['version'], VERSION)
-            current = load_bundled_course(module['id'])
+            self.assertIn(VERSION, [module['version'], *module.get('previous_versions', [])])
+            current = load_bundled_course(module['id'], VERSION)
             previous = load_bundled_course(module['id'], PREVIOUS)
             self.assertEqual(current['interaction_revision'], VERSION)
             self.assertEqual(current['activity_order'], previous['activity_order'])

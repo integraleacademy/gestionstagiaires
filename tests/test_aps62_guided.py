@@ -34,11 +34,11 @@ class GuidedContentTests(unittest.TestCase):
                     if activity['academy']['kind'] == 'workshop':
                         self.assertEqual(len(practice['exercises']), 3)
                         for exercise in practice['exercises']:
-                            self.assertEqual(len(exercise['options']), 3 if course['version'] == '20261007-aps62-v9' else 2)
+                            self.assertEqual(len(exercise['options']), 3 if course['version'] in ('20261007-aps62-v9', '20261010-aps62-v10') else 2)
                             self.assertNotIn('Le poste doit maintenant', exercise['context'])
                             self.assertNotIn('fait établi', exercise['prompt'])
         self.assertEqual(len(seen), 62)
-        self.assertEqual((practices, journals), (142, 4))
+        self.assertEqual((practices, journals), (132 if curriculum_manifest().get('production_count') else 142, 4))
 
     def test_partial_correction_cannot_complete_the_activity(self):
         practice = load_bundled_course('academy-aps62-01')['sections'][0]['activities'][2]['practice']

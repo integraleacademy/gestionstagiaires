@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import json
+import secrets
 from functools import lru_cache
 from pathlib import Path
 
@@ -47,7 +48,7 @@ def _learning_text(value):
 def adapt_course(course):
     if course.get('source', {}).get('type') != 'academy-aps62':
         return course
-    if course.get('interaction_revision') in ('20261006-aps62-v3', '20261006-aps62-v4', '20261006-aps62-v5', '20261007-aps62-v6', '20261007-aps62-v7', '20261007-aps62-v8', '20261007-aps62-v9'):
+    if course.get('interaction_revision') in ('20261006-aps62-v3', '20261006-aps62-v4', '20261006-aps62-v5', '20261007-aps62-v6', '20261007-aps62-v7', '20261007-aps62-v8', '20261007-aps62-v9', '20261010-aps62-v10'):
         return copy.deepcopy(course)
     course = _learning_text(course)
     total = 0
@@ -100,6 +101,9 @@ def public_practice(practice):
         for public, original in zip(result['exercises'], practice['exercises']):
             public.pop('branches', None)
             public['stage'] = original.get('stage', '')
+    for exercise in result['exercises']:
+        if exercise['kind'] == 'matching':
+            secrets.SystemRandom().shuffle(exercise['options'])
     return result
 
 

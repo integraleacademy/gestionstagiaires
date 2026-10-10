@@ -1,0 +1,321 @@
+name: APS — publier les corrections et productions v10 sur TEST
+
+on:
+  push:
+    branches: [test-v2]
+    paths:
+      - scripts/aps62_v10_release.json
+  workflow_dispatch:
+
+permissions: {}
+
+# Share the v9 publication lock; generated media cannot retrigger this workflow.
+concurrency:
+  group: aps-improvements-test-v2
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Vérifier la nouvelle demande et les sources
+    if: github.repository == 'integraleacademy/gestionstagiaires' && github.ref == 'refs/heads/test-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      publish_enabled: ${{ steps.release.outputs.publish_enabled }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Contrôler la demande et interdire une édition déjà publiée
+        id: release
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          from scripts.aps62_v10.practical_cases import THREAT_CALL_AUDIO
+          root = Path('elearning_native/aps62')
+          release = json.loads(Path('scripts/aps62_v10_release.json').read_text())
+          assert release['version'] == '20261010-aps62-v10'
+          assert release['branch'] == 'test-v2' and release['enabled'] is True
+          assert release['shards'] == 4 and release['media_revision'] == 8
+          assert release['publish_enabled'] in (True, False)
+          assert not release.get('reuse_artifact_run_id'), 'Only media from this run is accepted'
+          assert json.loads((root / 'manifest.json').read_text())['version'] == '20261007-aps62-v9'
+          for path in (root / 'video_manifest_v8.json', root / 'video_scripts_v8.json',
+                       root / 'assets/media/aps62/v8', root / 'exams/20261010-aps62-v10'):
+              assert not path.exists(), f'Edition already exists: {path}'
+          assert not list((root / 'courses').glob('*/20261010-aps62-v10.json'))
+          for name in ('scripts/render_aps62_v8.py', 'scripts/build_aps62_v10.py',
+                       'scripts/aps62_v10/assessment.py', 'tests/test_aps62_v10_release.py',
+                       'tests/test_aps62_v10_content_fixes.py', 'tests/test_aps62_production.py',
+                       'tests/test_aps62_production_access.py', 'tests/test_aps62_production_ui.cjs'):
+              assert Path(name).is_file(), name
+          # The small exercise audio is a reviewed source asset, not a long-video shard.
+          folder = root / 'assets/media/aps62/v10'
+          metadata = json.loads((folder / 'aps62-12-05-appel-exercice.json').read_text())
+          assert metadata['transcript'] == THREAT_CALL_AUDIO['transcript']
+          assert metadata['spoken_text'] == 'Exercice fictif. ' + THREAT_CALL_AUDIO['narration_text']
+          assert metadata['text_sha256'] == hashlib.sha256(metadata['spoken_text'].encode()).hexdigest()
+          audio = root / 'assets' / metadata['src']
+          assert metadata['src'] == 'media/aps62/v10/aps62-12-05-appel-exercice.mp3'
+          assert audio.is_file() and audio.stat().st_size < 5 * 1024 * 1024
+          assert metadata['audio_sha256'] == hashlib.sha256(audio.read_bytes()).hexdigest()
+          assert (root / 'assets' / metadata['captions']).is_file()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('publish_enabled=' + str(release['publish_enabled']).lower() + '\n')
+          PY
+
+  render:
+    name: Produire le lot ${{ matrix.shard }} / 4
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      APS62_WORK: /tmp/aps62-v8
+      APS62_SHARD_INDEX: ${{ matrix.shard }}
+      APS62_SHARD_COUNT: '4'
+      APS62_SPEECH_WORKERS: '2'
+      APS62_RENDER_WORKERS: '2'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Installer les outils de production
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --disable-pip-version-check edge-tts==7.2.8 Pillow==12.3.0
+      - name: Produire les narrations, vidéos et sous-titres du lot
+        run: python scripts/render_aps62_v8.py
+      - name: Archiver les médias terminés et leur provenance
+        if: always()
+        run: |
+          python - <<'PY'
+          import io, json, os, tarfile
+          from pathlib import Path
+          root = Path('elearning_native/aps62')
+          manifest = root / 'video_manifest_v8.json'
+          if not manifest.exists():
+              raise SystemExit(0)
+          shard = os.environ['APS62_SHARD_INDEX']
+          output = Path(os.environ['RUNNER_TEMP']) / f'aps62-shard-{shard}.tar'
+          data = json.loads(manifest.read_text())
+          provenance = dict(version='20261010-aps62-v10', media_revision=8,
+              repository=os.environ['GITHUB_REPOSITORY'], source_sha=os.environ['GITHUB_SHA'],
+              run_id=os.environ['GITHUB_RUN_ID'], run_attempt=os.environ['GITHUB_RUN_ATTEMPT'],
+              shard=int(shard), shards=4)
+          with tarfile.open(output, 'w') as archive:
+              archive.add(manifest, arcname=f'manifests/shard-{shard}.json')
+              raw = json.dumps(provenance, sort_keys=True).encode()
+              info = tarfile.TarInfo(f'provenance/shard-{shard}.json')
+              info.size = len(raw)
+              archive.addfile(info, io.BytesIO(raw))
+              for sid, video in sorted(data.items()):
+                  for field, ext in (('src', 'mp4'), ('poster', 'jpg'), ('captions', 'vtt')):
+                      assert video[field] == f'media/aps62/v8/{sid}.{ext}'
+                      path = root / 'assets' / video[field]
+                      assert path.is_file() and not path.is_symlink(), path
+                      archive.add(path, arcname=str(path))
+          print(f'{len(data)} vidéos sauvegardées dans {output.name}')
+          PY
+      - name: Conserver le lot pour cette publication
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: aps62-v10-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/aps62-shard-${{ matrix.shard }}.tar
+          if-no-files-found: warn
+          compression-level: 0
+          retention-days: 7
+          overwrite: true
+
+  publish:
+    name: Vérifier puis publier l'édition v10 complète
+    needs: [prepare, render]
+    if: needs.prepare.outputs.publish_enabled == 'true' && needs.render.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      actions: read
+    env:
+      APS62_VERIFY_FULL_DECODE: '1'
+      PERSIST_DIR: /tmp/aps62-v10-test-data
+      SECRET_KEY: aps-v10-ci-synthetic-key-not-used-in-production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Télécharger exclusivement les quatre lots de ce lancement
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: aps62-v10-shard-*
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/aps62-lots
+          merge-multiple: true
+      - name: Vérifier la provenance et fusionner les lots sans écraser d'édition
+        run: |
+          python - <<'PY'
+          import json, os, shutil, tarfile
+          from pathlib import Path
+          from scripts.aps62_v10.video_content import courses
+          root = Path('elearning_native/aps62')
+          authored = courses()
+          merged, media = {}, set()
+          for shard in range(4):
+              path = Path(os.environ['RUNNER_TEMP']) / 'aps62-lots' / f'aps62-shard-{shard}.tar'
+              with tarfile.open(path) as archive:
+                  name, proof = f'manifests/shard-{shard}.json', f'provenance/shard-{shard}.json'
+                  provenance = json.load(archive.extractfile(proof))
+                  for key, expected in dict(version='20261010-aps62-v10', media_revision=8,
+                      repository=os.environ['GITHUB_REPOSITORY'], source_sha=os.environ['GITHUB_SHA'],
+                      run_id=os.environ['GITHUB_RUN_ID'], shard=shard, shards=4).items():
+                      assert provenance[key] == expected, (shard, key)
+                  assert 1 <= int(provenance['run_attempt']) <= int(os.environ['GITHUB_RUN_ATTEMPT'])
+                  data = json.load(archive.extractfile(name))
+                  expected = {sid for i, sid in enumerate(sorted(authored)) if i % 4 == shard}
+                  assert set(data) == expected, (shard, set(data) ^ expected)
+                  assert not (set(merged) & set(data)), 'Duplicate dossier'
+                  for sid, row in data.items():
+                      assert row['transcript'] == authored[sid]['transcript'], sid
+                      assert row['render_revision'] == 8, sid
+                      for key, ext in (('src', 'mp4'), ('poster', 'jpg'), ('captions', 'vtt')):
+                          assert row[key] == f'media/aps62/v8/{sid}.{ext}'
+                  expected_media = {str(root / 'assets' / row[key])
+                                    for row in data.values() for key in ('src', 'poster', 'captions')}
+                  members = archive.getmembers()
+                  assert len(members) == len(expected_media) + 2, 'Duplicate archive entries'
+                  assert {m.name for m in members} == expected_media | {name, proof}
+                  for member in members:
+                      assert member.isfile() and not member.issym(), member.name
+                      if member.name in (name, proof):
+                          continue
+                      assert member.name.startswith(str(root / 'assets/media/aps62/v8') + '/')
+                      assert '..' not in Path(member.name).parts and member.name not in media
+                      assert 0 < member.size < 95 * 1024 * 1024, member.name
+                      media.add(member.name)
+                      target = Path(member.name)
+                      assert not target.exists(), f'Already published: {target}'
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      with archive.extractfile(member) as source, target.open('wb') as output:
+                          shutil.copyfileobj(source, output)
+                  merged.update(data)
+          assert set(merged) == set(authored) and len(merged) == 62
+          assert not (root / 'video_manifest_v8.json').exists()
+          (root / 'video_manifest_v8.json').write_text(
+              json.dumps(dict(sorted(merged.items())), ensure_ascii=False, indent=2) + '\n')
+          PY
+      - name: Normaliser la fin des nouveaux sous-titres WebVTT
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          files = list(Path('elearning_native/aps62/assets/media/aps62/v8').glob('*.vtt'))
+          assert len(files) == 62
+          for path in files:
+              path.write_text(path.read_text(encoding='utf-8').rstrip() + '\n', encoding='utf-8')
+          PY
+      - name: Installer les outils de validation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --disable-pip-version-check -r requirements.txt pytest==9.1.1 edge-tts==7.2.8
+      - name: Vérifier le décodage réel de l'appel d'exercice
+        run: ffmpeg -nostdin -v error -xerror -i elearning_native/aps62/assets/media/aps62/v10/aps62-12-05-appel-exercice.mp3 -f null -
+      - name: Créer l'édition v10 sans modifier les éditions précédentes
+        run: python scripts/build_aps62_v10.py
+      - name: Vérifier les médias, contenus, productions et accès privés
+        run: |
+          python -m pytest tests/test_aps62_v10_*.py tests/test_aps62_production*.py tests/test_aps62_v9_questions.py tests/test_aps62_v9_remediation.py tests/test_native_elearning_video.py tests/test_native_elearning_video_presence.py tests/test_aps62_guided.py tests/test_aps62_readability.py -q
+      - name: Vérifier les parcours et lecteurs côté navigateur
+        run: |
+          npm install --prefix "$RUNNER_TEMP/aps-ui-checks" --no-audit --no-fund --ignore-scripts jsdom@26.1.0
+          NODE_PATH="$RUNNER_TEMP/aps-ui-checks/node_modules" node --test tests/test_aps62_production_ui.cjs tests/test_native_elearning_video_ui.cjs tests/test_native_elearning_player_ui.cjs tests/test_aps62_guided_ui.cjs tests/test_native_elearning_exam_ui.cjs
+      - name: Vérifier le périmètre exact du commit
+        run: |
+          git add -- elearning_native/aps62
+          python - <<'PY'
+          import re, subprocess
+          from pathlib import Path
+          root = 'elearning_native/aps62/'
+          mutable = {'manifest.json', 'regulatory_review.json'}
+          new_metadata = {'video_manifest_v8.json', 'video_scripts_v8.json'}
+          entries = subprocess.check_output(['git', 'diff', '--cached', '--name-status', '-z']).decode().split('\0')
+          changed = []
+          for status, path in zip(entries[0:-1:2], entries[1:-1:2]):
+              assert path.startswith(root) and status in ('A', 'M'), (status, path)
+              relative = path[len(root):]
+              allowed = relative in mutable | new_metadata or re.fullmatch(
+                  r'(assets/media/aps62/v8/aps62-\d{2}-\d{2}\.(mp4|jpg|vtt)|'
+                  r'courses/academy-aps62-\d{2}/20261010-aps62-v10\.json|'
+                  r'exams/20261010-aps62-v10/(module-\d{2}|final)\.json)', relative)
+              assert allowed, path
+              assert relative in mutable or status == 'A', f'Historical file modified: {path}'
+              assert Path(path).stat().st_size < 95 * 1024 * 1024, path
+              changed.append(path)
+          assert len([p for p in changed if p.endswith('.mp4')]) == 62
+          assert len([p for p in changed if '/courses/' in p]) == 15
+          assert len([p for p in changed if '/exams/' in p]) == 16
+          assert sum(Path(p).stat().st_size for p in changed) < 1.8 * 1024**3, 'Release exceeds safe Git push size'
+          print(f'{len(changed)} fichiers autorisés, anciennes éditions conservées')
+          PY
+          git diff --cached --check
+      - name: Publier sur TEST sans forcer ni écraser les changements concurrents
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Publier APS v10 : corrections, cas appliqués et productions individuelles'
+          git fetch --no-tags origin test-v2
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/test-v2
+          python - <<'PY'
+          import os, subprocess
+          paths = subprocess.check_output([
+              'git', 'diff', '--name-only', os.environ['GITHUB_SHA'], 'origin/test-v2',
+          ]).decode().splitlines()
+          protected = (
+              'elearning_native/', 'scripts/aps62', 'scripts/render_aps62',
+              'scripts/build_aps62', 'scripts/academy_videos/', 'elearning_reporting.py',
+              'elearning_orders.py', 'manuals_shop.py', 'app.py', 'requirements.txt',
+              'static/js/native-elearning', 'static/js/aps62', 'static/css/aps62',
+              'templates/native_', 'templates/_aps62', 'templates/admin_native_',
+              'templates/elearning_progress.html', '.github/workflows/aps-',
+              'tests/test_aps62', 'tests/test_native_elearning', 'tests/test_elearning',
+          )
+          touched = [p for p in paths if p.startswith(protected)]
+          assert not touched, f'APS changed during rendering; publication stopped: {touched}'
+          PY
+          if ! git rebase origin/test-v2; then
+            git rebase --abort
+            echo '::error::Changements concurrents incompatibles : les vidéos restent dans les artifacts.'
+            exit 1
+          fi
+          APS62_VERIFY_FULL_DECODE=0 python -m pytest tests/test_aps62_v10_*.py tests/test_aps62_production*.py tests/test_native_elearning_video_presence.py tests/test_aps62_guided.py tests/test_aps62_readability.py -q
+          git push origin HEAD:refs/heads/test-v2
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          videos = json.loads(Path('elearning_native/aps62/video_manifest_v8.json').read_text())
+          seconds = sum(row['duration_seconds'] for row in videos.values())
+          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f'APS v10 publié sur test-v2 : 62 vidéos, **{seconds / 3600:.2f} h** de narration et 10 productions individuelles.\n\n')
+              summary.write(f'Commit : `{commit}`. Les éditions précédentes sont conservées.\n')
+          PY

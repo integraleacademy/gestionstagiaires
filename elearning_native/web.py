@@ -43,6 +43,7 @@ from .academy import curriculum_manifest
 from . import vtc
 from .exams import ExamStore, load_exam, public_exam, grade_exam
 from .practice import public_practice, grade_practice
+from .production import public_production, production_feedback, normalize_production, normalize_self_review
 from .vtc_adaptive import select_activity as select_vtc_activity
 
 from .importer import (
@@ -559,6 +560,7 @@ def create_native_elearning_blueprint(
         activity: Mapping[str, Any],
         asset_token: str,
         course_id: str,
+        *, production_revealed: bool = False,
     ) -> Dict[str, Any]:
         public: Dict[str, Any] = {
             "id": str(activity.get("id") or ""),
@@ -572,6 +574,17 @@ def create_native_elearning_blueprint(
         }
         if activity.get('practice'):
             public['practice'] = public_practice(activity['practice'])
+        if activity.get('production'):
+            def prepare_production_media(value):
+                if isinstance(value, dict):
+                    return {key: prepare_production_media(child) for key, child in value.items()}
+                if isinstance(value, list):
+                    return [prepare_production_media(child) for child in value]
+                if isinstance(value, str) and value.startswith('media/aps62/'):
+                    return asset_url(asset_token, course_id, value)
+                return value
+            public['production'] = prepare_production_media(public_production(
+                activity['production'], reveal=production_revealed))
         if isinstance(activity.get('easy_glossary'), list):
             public['easy_glossary'] = [
                 {'term': str(entry.get('term') or ''), 'definition': str(entry.get('definition') or '')}
@@ -982,6 +995,15 @@ def create_native_elearning_blueprint(
         _require_csrf()
         course = preview_course(course_id)
         activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
+        if activity and activity.get('production'):
+            payload = request.get_json(silent=True) or {}
+            try:
+                normalize_production(activity['production'], payload.get('production_answers'))
+            except (ValueError, AttributeError) as exc:
+                return jsonify(ok=False, error=str(exc)), 400
+            response = jsonify(ok=True, feedback=production_feedback(activity['production']))
+            response.headers['Cache-Control'] = 'private, no-store'
+            return response
         if activity and activity.get('practice'):
             activity = select_vtc_activity(course, activity, {})
             payload = request.get_json(silent=True)
@@ -1332,6 +1354,24 @@ def create_native_elearning_blueprint(
                     if isinstance(row.get('answers', {}).get(item['id']), Mapping)
                     and isinstance(row['answers'][item['id']].get('reflection'), str)
                 ]
+                for section, item in _activity_pairs(row_course):
+                    production = item.get('production')
+                    saved = row.get('answers', {}).get(item['id'], {})
+                    if not production or not isinstance(saved.get('production_answers'), dict):
+                        continue
+                    def format_production(values):
+                        return '\n\n'.join(field['label'] + '\n' + str(values.get(field['id'], ''))
+                                            for field in production['response_fields'])
+                    row['written_work'].append({
+                        'activity_id': item['id'], 'title': item.get('title', ''),
+                        'dossier': section.get('title', ''), 'task': production['brief'],
+                        'reflection': format_production(saved['production_answers']),
+                        'first_reflection': format_production(saved['production_first_answers']) if saved.get('production_first_answers') else '',
+                        'draft': bool(saved.get('production_draft')), 'production': True,
+                        'self_review': [{'label': criterion['label'], 'needs_help': saved.get('production_self_review', {}).get(criterion['id']) == 'needs_help'}
+                                       for criterion in production['rubric'] if saved.get('production_self_review', {}).get(criterion['id']) in ('checked', 'needs_help')],
+                        'submitted_at': saved.get('submitted_at', saved.get('production_first_submitted_at', '')),
+                    })
             row.pop("answers", None)
         return {
             "ok": True,
@@ -1518,7 +1558,8 @@ def create_native_elearning_blueprint(
         index = order.index(requested_id)
         raw_activity = next(activity for _, activity in pairs if str(activity.get("id")) == requested_id)
         section = next(section for section, activity in pairs if str(activity.get("id")) == requested_id)
-        activity = prepare_activity(select_vtc_activity(course, raw_activity, progress), asset_token, course_id)
+        activity = prepare_activity(select_vtc_activity(course, raw_activity, progress), asset_token, course_id,
+            production_revealed=bool(progress.get('answers', {}).get(requested_id, {}).get('production_feedback_seen')))
         introduction = [
             prepare_block(block, asset_token, course_id)
             for block in (course.get("introduction") or [])
@@ -1693,6 +1734,33 @@ def create_native_elearning_blueprint(
         response.headers['Cache-Control'] = 'private, no-store'
         return response
 
+    @blueprint.post('/api/elearning/v1/activities/<activity_id>/production')
+    def activity_production(activity_id: str) -> Any:
+        access, course, _order, _scored_ids = api_context()
+        activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
+        if not activity or not activity.get('production'):
+            return jsonify(ok=False, error='Dossier de production introuvable.'), 404
+        if not can_complete(course, current_progress(access, course), activity_id):
+            return jsonify(ok=False, error='Terminez d’abord l’activité précédente.'), 409
+        payload = request.get_json(silent=True) or {}
+        stage = payload.get('stage')
+        if stage not in ('draft', 'compare'):
+            return jsonify(ok=False, error='Étape inconnue.'), 400
+        try:
+            answers = normalize_production(activity['production'], payload.get('production_answers'), draft=stage == 'draft')
+            self_review = None
+            if 'production_self_review' in payload:
+                existing = current_progress(access, course).get('answers', {}).get(activity_id, {})
+                if not existing.get('production_feedback_seen'):
+                    raise ValueError('Comparez d’abord votre travail aux repères.')
+                self_review = normalize_self_review(activity['production'], payload['production_self_review'], draft=True)
+        except ValueError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        store().record_production(access, activity_id, answers, compared=stage == 'compare', self_review=self_review)
+        response = jsonify(ok=True, **({'feedback': production_feedback(activity['production'])} if stage == 'compare' else {}))
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+
     @blueprint.post("/api/elearning/v1/activities/<activity_id>/complete")
     def activity_complete(activity_id: str) -> Any:
         access, course, order, scored_ids = api_context()
@@ -1703,7 +1771,24 @@ def create_native_elearning_blueprint(
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
         answer = None
-        if activity.get('practice'):
+        if activity.get('production'):
+            existing = current.get('answers', {}).get(activity_id, {})
+            if activity_id in current.get('completed_activity_ids', []):
+                answer = existing
+            else:
+                payload = request.get_json(silent=True) or {}
+                try:
+                    produced = normalize_production(activity['production'], payload.get('production_answers'))
+                    review = normalize_self_review(activity['production'], payload.get('production_self_review'))
+                    if not existing.get('production_feedback_seen'):
+                        raise ValueError('Comparez d’abord votre travail aux repères.')
+                except ValueError as exc:
+                    return jsonify(ok=False, error=str(exc)), 400
+                answer = {**existing, 'production_answers': produced, 'production_self_review': review,
+                    'production_draft': False, 'review_status': 'self_reviewed',
+                    'needs_trainer_help': any(value == 'needs_help' for value in review.values()),
+                    'submitted_at': dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')}
+        elif activity.get('practice'):
             if activity_id in current.get('completed_activity_ids', []):
                 # Keep prior written submissions and completed work exactly as stored.
                 answer = current.get('answers', {}).get(activity_id)

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 740" role="img" aria-labelledby="title desc">
+ <title id="title">Forum Latitude — plan pédagogique P8</title>
+ <desc id="desc">Plan fictif et non à l'échelle. Le hall A2 rejoint la Porte Est B2, le passage couvert E C2 et le point d'accueil Jardin D2. Une autre liaison mène du hall à la Porte Sud A3 puis la rampe Sud B3. L'atelier A1 et l'accès secours D3 ne sont pas des cheminements publics. Vérifier l'état actuel des passages dans les pièces horodatées.</desc>
+ <defs>
+  <style>text{font-family:Arial,sans-serif;fill:#172b4d}.coord{font-size:17px;font-weight:700;fill:#586982}.label{font-size:20px;font-weight:700}.small{font-size:17px}.note{font-size:16px}.link{stroke:#456d9f;stroke-width:9;fill:none;stroke-linecap:round}.box{fill:#fff;stroke:#90a5be;stroke-width:2}.node{font-size:16px;font-weight:700;fill:#2454a9}</style>
+ </defs>
+ <rect width="1120" height="740" rx="16" fill="#f4f7fc"/>
+ <rect width="1120" height="9" fill="#2860e8"/>
+ <text x="34" y="48" font-size="27" font-weight="700">Forum Latitude · Plan P8</text>
+ <text x="34" y="77" class="small">Dossier fictif · Schéma non à l’échelle · Les lettres et chiffres localisent les points.</text>
+ <g stroke="#d9e2ef" stroke-width="1" stroke-dasharray="5 7">
+  <path d="M82 117H1070M82 285H1070M82 453H1070M82 621H1070"/>
+  <path d="M82 117V621M329 117V621M576 117V621M823 117V621M1070 117V621"/>
+ </g>
+ <g class="coord"><text x="200" y="108">A</text><text x="447" y="108">B</text><text x="694" y="108">C</text><text x="941" y="108">D</text><text x="51" y="206">1</text><text x="51" y="374">2</text><text x="51" y="542">3</text></g>
+ <g class="link"><path d="M290 369H362M537 369H609M784 369H856M205 421V485M290 537H362"/></g>
+ <g>
+  <rect x="115" y="149" width="180" height="104" rx="12" fill="#f1f3f6" stroke="#8b97a6" stroke-width="2"/>
+  <text x="130" y="175" class="node">A1</text><text x="130" y="203" class="label">Cour atelier</text><text x="130" y="228" class="small">Non publique</text>
+  <rect x="115" y="317" width="180" height="104" rx="12" fill="#e7efff" stroke="#2860e8" stroke-width="3"/>
+  <text x="130" y="343" class="node">A2 · VOUS ÊTES ICI</text><text x="130" y="371" class="label">Hall public</text><text x="130" y="396" class="small">Votre poste</text>
+  <rect x="362" y="317" width="175" height="104" rx="12" class="box"/>
+  <text x="377" y="343" class="node">B2</text><text x="377" y="374" class="label">Porte Est</text>
+  <rect x="609" y="317" width="175" height="104" rx="12" class="box"/>
+  <text x="624" y="343" class="node">C2</text><text x="624" y="371" class="label">Passage E</text><text x="624" y="396" class="small">Couvert</text>
+  <rect x="856" y="317" width="180" height="104" rx="12" class="box"/>
+  <text x="871" y="343" class="node">D2</text><text x="871" y="371" class="label">Accueil Jardin</text><text x="871" y="396" class="small">Accessible</text>
+  <rect x="115" y="485" width="180" height="104" rx="12" class="box"/>
+  <text x="130" y="511" class="node">A3</text><text x="130" y="542" class="label">Porte Sud</text>
+  <rect x="362" y="485" width="175" height="104" rx="12" class="box"/>
+  <text x="377" y="511" class="node">B3</text><text x="377" y="539" class="label">Rampe Sud</text><text x="377" y="564" class="small">Vers le parking</text>
+  <rect x="856" y="485" width="180" height="104" rx="12" fill="#fff4e4" stroke="#ac7732" stroke-width="2"/>
+  <text x="871" y="511" class="node">D3</text><text x="871" y="539" class="label">Accès secours</text><text x="871" y="564" class="small">À préserver</text>
+ </g>
+ <path d="M38 656H97" class="link"/>
+ <text x="113" y="662" class="small">Liaison prévue au plan. Ce trait ne garantit pas qu’elle est libre maintenant.</text>
+ <text x="38" y="693" class="note">Lisez les messages de 17 h 03 et 17 h 05 pour déterminer l’état actuel et la consigne validée.</text>
+ <text x="38" y="719" class="note">Aucune liaison publique vers A1 ou D3. Ne déduisez pas un raccourci de la proximité des cases.</text>
+</svg>
