@@ -20,7 +20,7 @@ Le filigrane et les restrictions de copie/impression de la démonstration dissua
 
 La rubrique « Mon organisme » (`/admin/organisme/mon-organisme`) permet de modifier les coordonnées professionnelles et le logo. L’adresse de contact de l’organisme ne change pas l’identifiant de connexion du compte utilisateur. Les tarifs, droits, abonnements et commandes restent hors du formulaire. Les nouvelles communications stagiaires et leurs pages d’accès utilisent l’identité actuelle du centre ; les instantanés comptables sont conservés.
 
-Les logos importés sont contrôlés et réencodés en PNG. L’image seule est accessible par une URL aléatoire pour que les messageries puissent l’afficher. Les attestations utilisent uniquement le fichier local du même organisme, jamais un téléchargement arbitraire. La suppression du logo rétablit une présentation avec le nom du centre. Dans l’en-tête de l’espace organisme, le logo du centre remplace celui de la plateforme ; sans logo, son initiale et son nom sont affichés. Cet aperçu reste réservé à la session du même organisme.
+Les logos importés sont contrôlés et réencodés en PNG. L’image seule est accessible par une URL aléatoire pour que les messageries puissent l’afficher. Les attestations utilisent uniquement le fichier local du même organisme, jamais un téléchargement arbitraire. La suppression du logo rétablit une présentation avec le nom du centre. Le logo orange Intégrale Connect reste dans l’en-tête. Le logo du centre remplace le grand pictogramme bleu dans le bloc de bienvenue de l’accueil ; sans logo, son initiale et son nom sont affichés. Cet aperçu reste réservé à la session du même organisme.
 
 ## Paiement et livraison
 

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-menu') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-aps-vtc-pacing') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-1') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
@@ -25,7 +25,27 @@
             {% if block.video.captions %}<track kind="captions" src="{{ block.video.captions }}" srclang="fr" label="Français">{% endif %}
             Votre navigateur ne permet pas de lire cette vidéo.
           </video>
+          {% if block.video.default_playback_rate == 0.85 %}
+          <script type="application/json" data-video-pacing-config>{{ {'default_playback_rate': block.video.default_playback_rate, 'allowed_playback_rates': block.video.allowed_playback_rates, 'learning_pauses': block.video.learning_pauses}|tojson }}</script>
+          <div class="native-video-pace-controls"><label>Vitesse de lecture <select data-playback-rate aria-label="Vitesse de lecture"><option value="0.85" selected>0,85× · rythme conseillé</option><option value="1">1× · rythme original</option></select></label><span>Des pauses courtes vous laissent le temps d’assimiler.</span></div>
+          <div class="native-learning-pause" data-learning-pause hidden>
+            <strong>Pause pour assimiler</strong><p data-pause-message aria-live="polite"></p><span data-pause-countdown role="status" aria-live="off"></span>
+            <div><button type="button" class="native-button native-button--secondary" data-pause-stay>Rester en pause</button><button type="button" class="native-button native-button--primary" data-pause-resume>Reprendre maintenant</button></div>
+          </div>
+          {% endif %}
         </div>
+        {% if block.video.required and not preview_mode and course.id.startswith('academy-aps62-') %}
+        <div class="native-video-pace">
+          <label>Rythme de lecture
+            <select data-video-rate="{{ block.video.id }}">
+              <option value="1">Normal · 1×</option>
+              <option value="0.9">Plus lent · 0,90×</option>
+              <option value="0.85">Encore plus lent · 0,85×</option>
+            </select>
+          </label>
+          <p>Choisissez le rythme qui vous convient. Votre progression reste enregistrée.</p>
+        </div>
+        {% endif %}
         {% if block.video.required %}
         <div class="native-video-followup"{% if not preview_mode %} data-video-followup="{{ block.video.id }}"{% endif %}>
           <div><strong>{{ 'Visionnage obligatoire pour les stagiaires' if preview_mode else 'Vidéo à regarder en entier' }}</strong><span data-video-status role="status" aria-live="polite">{{ 'Lecture libre en mode aperçu' if preview_mode else 'Votre progression est enregistrée au fil de la lecture.' }}</span></div>
@@ -223,7 +243,7 @@
           {% endif %}
         </div>
         {% if not preview_mode %}
-        <p class="native-tracking-explainer">Le temps est enregistré pendant la lecture réelle d’une vidéo obligatoire à vitesse normale, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.</p>
+        <p class="native-tracking-explainer">Le temps réellement passé est enregistré pendant la lecture d’une vidéo obligatoire, au rythme proposé par le lecteur, tant que cette page reste visible et active. Vous pouvez regarder la vidéo sans bouger la souris. Une pause, un chargement ou une lecture arrêtée rétablit la règle habituelle : après 5 minutes sans interaction, le chrono se met en pause. Quitter la page arrête la lecture et le suivi. Pour ouvrir le module suivant, terminez les activités et la durée obligatoire.</p>
         {% endif %}
       </div>
     </main>
@@ -231,7 +251,8 @@
 
   {% if preview_mode %}
   <script id="nativePreviewConfig" type="application/json">{{ preview_config|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-preview.js', v='20261010-menu') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-preview.js', v='20261010-pacing') }}" defer></script>
   {% else %}
   <div class="native-duplicate-notice" id="nativeDuplicateNotice" role="alert" aria-live="assertive">
     <strong>Chrono en pause sur cet onglet</strong>
@@ -274,7 +295,8 @@
     'requiredVideos': required_videos|default({}),
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-v10') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-aps-vtc-pacing') }}" defer></script>
   {% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-1') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>

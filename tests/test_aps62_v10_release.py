@@ -51,7 +51,7 @@ class APS62V10ReleaseTests(unittest.TestCase):
 
     def test_complete_publication_keeps_navigation_budgets_and_practical_work(self):
         manifest=curriculum_manifest()
-        if manifest['version']!=VERSION:
+        if manifest['version'] not in (VERSION, '20261010-aps62-v11'):
             self.assertEqual(manifest['version'],PREVIOUS)
             self.skipTest('v10 media and courses not yet published')
         self.assertEqual(manifest['production_count'],10)
@@ -61,7 +61,7 @@ class APS62V10ReleaseTests(unittest.TestCase):
         self.assertEqual(read(ROOT/'video_scripts_v8.json'),scripts)
         productions=[];minutes=practices=activities=0
         for module in manifest['modules']:
-            new=load_bundled_course(module['id']);old=load_bundled_course(module['id'],PREVIOUS)
+            new=load_bundled_course(module['id'], VERSION);old=load_bundled_course(module['id'],PREVIOUS)
             self.assertEqual(new['version'],VERSION)
             self.assertEqual(new['activity_order'],old['activity_order'])
             self.assertEqual(new['required_minutes'],old['required_minutes'])

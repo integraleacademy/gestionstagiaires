@@ -1,7 +1,7 @@
 """Immutable VTC curriculum, independent of APS editions and learner records."""
 from pathlib import Path
 from functools import lru_cache
-import copy, hashlib, json
+import copy, hashlib, json, math
 ROOT=Path(__file__).parent/'vtc'
 
 # This is a pronunciation repair, not a new learner assignment. The replacement
@@ -113,6 +113,76 @@ def _repair_english_narration(course):
                 course.setdefault('counts', {})['assets'] = len(course['assets'])
     return course
 
+
+@lru_cache(maxsize=1)
+def _pacing_manifests():
+    return (json.loads((ROOT / 'video_pacing_v9.json').read_text()),
+            json.loads((ROOT / 'video_learning_pauses_v9.json').read_text()))
+
+
+def _repair_video_pacing(course):
+    """Replace reviewed visuals and add player pacing without moving progress."""
+    letter = str(course.get('id', '')).removeprefix('academy-vtc-').upper()
+    if letter not in 'ABCDEFGH' or len(letter) != 1 or course.get('version') not in _BILINGUAL_VERSIONS:
+        return course
+    try:
+        media, breaks = _pacing_manifests()
+    except FileNotFoundError:
+        return course
+    if (media.get('revision') != 9 or breaks.get('revision') != 9
+            or set(media.get('modules', {})) != set('ABCDEFGH')
+            or set(breaks.get('modules', {})) != set('ABCDEFGH')):
+        return course
+    replacement = media['modules'][letter]
+    pause_source = breaks['modules'][letter]
+    expected_path = f'media/vtc/v9/lesson-{letter.lower()}'
+    activity_id = f'vtc-{letter.lower()}-capsule'
+    for section in course.get('sections', []):
+        for activity in section.get('activities', []):
+            if activity.get('id') != activity_id:
+                continue
+            for block in activity.get('blocks', []):
+                video = block.get('video') or {}
+                if (video.get('id') != activity_id
+                        or replacement.get('src') != expected_path + '.mp4'
+                        or replacement.get('poster') != expected_path + '.jpg'
+                        or replacement.get('source_video') != video.get('src')
+                        or pause_source.get('source_video') != video.get('src')
+                        or replacement.get('source_content_sha256') != video.get('content_sha256')
+                        or replacement.get('source_file_sha256') != pause_source.get('source_file_sha256')
+                        or any(replacement.get(key) != video.get(key)
+                               for key in ('duration_seconds', 'chapters', 'transcript', 'captions'))
+                        or len(video.get('chapters', [])) != 24
+                        or pause_source.get('transcript_sha256') != hashlib.sha256(video.get('transcript', '').encode()).hexdigest()):
+                    continue
+                pauses = pause_source.get('pauses', [])
+                previous = 0
+                valid = len(pauses) == {'B': 13, 'D': 14, 'E': 23}.get(letter, 11)
+                for pause in pauses:
+                    at = pause.get('at_seconds')
+                    valid = valid and (isinstance(at, (int, float)) and not isinstance(at, bool)
+                        and math.isfinite(at) and previous < at < video['duration_seconds']
+                        and pause.get('duration_seconds') in (4, 5)
+                        and isinstance(pause.get('message'), str) and bool(pause['message']))
+                    if not valid:
+                        break
+                    previous = at
+                if not valid:
+                    continue
+                for field in ('src', 'poster', 'content_sha256', 'render_revision'):
+                    video[field] = copy.deepcopy(replacement[field])
+                video['default_playback_rate'] = .85
+                video['allowed_playback_rates'] = [.85, 1]
+                video['learning_pauses'] = [{key: copy.deepcopy(pause[key])
+                    for key in ('id', 'at_seconds', 'duration_seconds', 'message', 'kind')}
+                    for pause in pauses]
+                activity.setdefault('vtc', {})['paced_video'] = True
+                for asset in (video['src'], video['poster']):
+                    if asset not in course['assets']:
+                        course['assets'].append(asset)
+                course.setdefault('counts', {})['assets'] = len(course['assets'])
+    return course
+
 @lru_cache(maxsize=1)
 def _manifest():
     return json.loads((ROOT/'manifest.json').read_text())
@@ -132,7 +202,7 @@ def load_bundled_course(course_id,version=None):
     if not module:return None
     version=version or module['version']
     if version not in [module['version'],*module.get('previous_versions',[])]:return None
-    return _repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version))))
+    return _repair_video_pacing(_repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version)))))
 
 def bundled_asset(course_id,version,name):
     course=load_bundled_course(course_id,version)

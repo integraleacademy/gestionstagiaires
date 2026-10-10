@@ -36,7 +36,8 @@ def test_repair_changes_media_only_without_modifying_frozen_course_or_cache(vers
     frozen = path.read_bytes()
     frozen_course = original(version)
     before = vtc._repair_english_listening(copy.deepcopy(frozen_course))
-    repaired = vtc.load_bundled_course(COURSE, version)
+    # Exercise the pronunciation layer independently of the later visual repair.
+    repaired = vtc._repair_english_narration(copy.deepcopy(before))
     video = capsule(repaired)['blocks'][0]['video']
     previous = capsule(before)['blocks'][0]['video']
     assert (video['src'], video['captions']) == MEDIA
@@ -72,7 +73,8 @@ def test_other_modules_and_older_editions_are_unchanged():
         for version in [module['version'], *module['previous_versions']]:
             if module['id'] == COURSE and version in VERSIONS:
                 continue
-            assert vtc.load_bundled_course(module['id'], version) == vtc._repair_english_listening(original(version, module['id']))
+            expected = vtc._repair_video_pacing(vtc._repair_english_listening(original(version, module['id'])))
+            assert vtc.load_bundled_course(module['id'], version) == expected
     assert vtc.load_bundled_course(COURSE, 'unreviewed-version') is None
 
 
@@ -182,9 +184,9 @@ def test_preview_serves_new_video_and_captions_with_authenticated_range_access()
         assert response.status_code == 200
         body = response.get_data(as_text=True)
         video_url = html.unescape(re.search(r'<source src="([^"]+lesson-e\.mp4[^\"]*)"', body).group(1))
-        assert '/media/vtc/v7/lesson-e.mp4' in video_url
+        assert '/media/vtc/v9/lesson-e.mp4' in video_url
         assert '/media/vtc/v7/lesson-e.vtt' in body
-        assert '/media/vtc/v4/lesson-e.jpg' in body
+        assert '/media/vtc/v9/lesson-e.jpg' in body
         assert 'par une voix britannique' in body
         assert 'he is, she is' in body
         partial = case.client.get(video_url, headers={'Range': 'bytes=0-15'})

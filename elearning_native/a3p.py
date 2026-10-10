@@ -143,7 +143,7 @@ def load_bundled_course(course_id, version=None):
 
 def _spread(questions, count):
     """Cover the whole bank, including the final lessons of a module."""
-    return [questions[i * len(questions) // count] for i in range(count)]
+    return [questions[i * (len(questions) - 1) // (count - 1)] for i in range(count)]
 
 
 def load_exam(exam_id, version):

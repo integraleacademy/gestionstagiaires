@@ -38,7 +38,7 @@ from flask import (
 from markupsafe import Markup
 from werkzeug.exceptions import Conflict
 
-from .videos import activity_videos, course_videos, video_blocker, videos_complete
+from .videos import activity_playback_policy, activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
 from . import vtc, a3p
 from .exams import ExamStore, load_exam, public_exam, grade_exam
@@ -539,6 +539,9 @@ def create_native_elearning_blueprint(
                 "captions": asset_url(asset_token, course_id, str(video['captions'])) if video.get('captions') else '',
                 "course_only": bool(video.get("course_only")),
                 "chapters": [],
+                "default_playback_rate": video.get("default_playback_rate", 1),
+                "allowed_playback_rates": video.get("allowed_playback_rates", [1]),
+                "learning_pauses": video.get("learning_pauses", []),
             }
             duration = video.get("duration_seconds")
             chapters = video.get("chapters")
@@ -1495,6 +1498,15 @@ def create_native_elearning_blueprint(
         blocker = ""
         for item in modules:
             course = item["course"]
+            item["illustration_url"] = ""
+            if course:
+                course_id = str(course.get("id") or "")
+                aps_image = re.fullmatch(r"academy-aps62-(0[1-9]|1[0-5])", course_id)
+                vtc_image = re.fullmatch(r"academy-vtc-([a-h])", course_id)
+                if aps_image:
+                    item["illustration_url"] = url_for("static", filename=f"images/aps62/module-{aps_image.group(1)}.webp")
+                elif vtc_image:
+                    item["illustration_url"] = url_for("static", filename=f"images/vtc/module-{vtc_image.group(1)}.webp")
             item["locked"] = bool(blocker)
             item["lock_reason"] = blocker
             if not course:
@@ -1527,6 +1539,11 @@ def create_native_elearning_blueprint(
         training_label = 'VTC' if 'VTC' in str(session_obj.get('training_type') or '').upper() else 'APS'
         return render_template(
             "native_elearning_path.html", modules=modules,
+            learner_brand=session_obj.get("learner_brand") or {},
+            training_label=training_label,
+            hero_illustration_url=url_for("static", filename="images/learner-welcome-aps.webp") if any(
+                m["course"] and str(m["course"].get("id") or "").startswith("academy-aps62-") for m in modules
+            ) else "",
             path_title=session_obj.get("aps_native_path_title") or "Mon parcours " + training_label,
             session_name=session_obj.get("name") or "Formation " + training_label,
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
@@ -1691,6 +1708,7 @@ def create_native_elearning_blueprint(
                 media_playing=payload.get("media_playing") is True,
                 interaction_age_seconds=payload["interaction_age_seconds"],
                 video_requirements=course_videos(_course).get(activity_id, {}),
+                video_playback_policy=activity_playback_policy(_course, activity_id),
                 video_samples=payload.get("videos"),
             )
             result["progress"] = current_progress(access, _course)
@@ -1916,4 +1934,5 @@ def create_native_elearning_blueprint(
                       csrf_token=_csrf_token, require_csrf=_require_csrf,
                       prepare_activity=prepare_activity, asset_token_for=training_asset_token)
     return blueprint
+
 

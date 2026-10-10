@@ -35,18 +35,18 @@ class ReadabilityTests(unittest.TestCase):
     def test_all_modules_use_the_course_videos_and_defined_words(self):
         authored = courses()
         manifest = curriculum_manifest()
-        self.assertIn(manifest['version'], ('20261007-aps62-v7', '20261007-aps62-v8', '20261007-aps62-v9', '20261010-aps62-v10'))
+        self.assertIn(manifest['version'], ('20261007-aps62-v7', '20261007-aps62-v8', '20261007-aps62-v9', '20261010-aps62-v10', '20261010-aps62-v11'))
         # Keep testing the published short-video edition after the long-video
         # edition becomes current. Existing assignments must remain readable.
         for version in dict.fromkeys(('20261007-aps62-v7', manifest['version'])):
-            video_revision = {'20261007-aps62-v7':'v5', '20261007-aps62-v8':'v6', '20261007-aps62-v9':'v7', '20261010-aps62-v10':'v8'}[version]
+            video_revision = {'20261007-aps62-v7':'v5', '20261007-aps62-v8':'v6', '20261007-aps62-v9':'v7', '20261010-aps62-v10':'v8', '20261010-aps62-v11':'v9'}[version]
             videos = json.loads((ROOT/f'video_manifest_{video_revision}.json').read_text())
             self.assertEqual(set(videos), set(authored))
             for module in manifest['modules']:
                 with self.subTest(version=version, module=module['id']):
                     course = load_bundled_course(module['id'], version)
                     old = load_bundled_course(module['id'], '20261006-aps62-v4')
-                    if version == '20261010-aps62-v10':
+                    if version in ('20261010-aps62-v10', '20261010-aps62-v11'):
                         from scripts.aps62_v10.content_fixes import apply_course
                         old = apply_course(load_bundled_course(module['id'], '20261007-aps62-v9'))
                     self.assertIsNotNone(course)

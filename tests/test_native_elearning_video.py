@@ -14,11 +14,16 @@ from tests import test_native_elearning_web as web_tests
 
 
 @pytest.fixture
-def lesson():
+def lesson(request):
     case = web_tests.NativeElearningWebTests(methodName="runTest")
     case.setUp()
     course_file = case.persist_dir / "native_elearning/courses" / case.course["id"] / case.course["version"] / "course.json"
     course = json.loads(course_file.read_text())
+    if getattr(request, 'param', None) == 'aps':
+        course.update(id='academy-aps62-01', version='20261010-aps62-fixture')
+        course_file = case.persist_dir / 'native_elearning/courses' / course['id'] / course['version'] / 'course.json'
+        course_file.parent.mkdir(parents=True)
+        case.data['sessions'][0].update(aps_native_course_id=course['id'], aps_native_course_version=course['version'])
     course["settings"]["force_navigation"] = False
     course["sections"][0]["activities"][0]["blocks"].insert(0, {
         "id": "required-video", "type": "video", "video": {
@@ -66,6 +71,22 @@ def test_no_skip_by_button_direct_url_api_or_fake_ended(lesson):
     assert video_state(jumped)["watched_seconds"] == 0
     assert jumped.get_json()["video_resync"] == {"required-video": 0}
     assert c._api_post(c.config["completeUrl"], c.config).status_code == 409
+
+
+def test_client_cannot_authorize_slow_playback_for_an_unconfigured_course(lesson):
+    c = lesson
+    heartbeat(c, 0)
+    c.clock[0] += 4
+    response = c._api_post(c.config['heartbeatUrl'], c.config,
+        tracking_session_id=c.tracking, activity_id='content-1', visible=True,
+        focused=True, recent_activity=True, media_playing=True,
+        video_playback_policy={'required-video': {'rates': [.85, 1]}},
+        allowed_playback_rates=[.85, 1],
+        videos=[{'id':'required-video','position':3.4,'playing':True,'rate':.85,
+                 'allowed_playback_rates':[.85, 1]}])
+    assert response.status_code == 200
+    assert response.get_json()['video_resync'] == {'required-video': 0}
+    assert video_state(response)['watched_seconds'] == 0
 
 
 def test_complete_video_unlocks_only_after_watching_and_explicit_completion(lesson):
@@ -163,6 +184,44 @@ def test_api_accepts_advancing_receipts_after_mouse_inactivity_expires(lesson):
     assert response.get_json()['progress']['active_seconds'] == 8
 
 
+@pytest.mark.parametrize('rate', [0.85, 0.9])
+@pytest.mark.parametrize('lesson', ['aps'], indirect=True)
+def test_slow_first_viewing_records_media_prefix_and_real_elapsed_time(lesson, rate):
+    c = lesson
+    heartbeat(c, 0, rate=rate)
+    halfway = heartbeat(c, 4, seconds=4 / rate, rate=rate)
+    assert video_state(halfway)['watched_seconds'] == 4
+    assert halfway.get_json()['progress']['active_seconds'] == pytest.approx(4 / rate, abs=.01)
+    assert not halfway.get_json()['video_resync']
+    ended = heartbeat(c, 8, seconds=4 / rate, rate=rate, playing=False, ended=True)
+    assert video_state(ended)['completed'] is True
+    assert ended.get_json()['progress']['active_seconds'] == pytest.approx(8 / rate, abs=.01)
+    assert c._api_post(c.config['completeUrl'], c.config).status_code == 200
+
+
+@pytest.mark.parametrize('rate', [0, 0.5, 1.25, 2])
+@pytest.mark.parametrize('lesson', ['aps'], indirect=True)
+def test_rates_outside_offered_choices_cannot_advance_required_video(lesson, rate):
+    c = lesson
+    heartbeat(c, 0)
+    response = heartbeat(c, 4, seconds=8, rate=rate)
+    assert video_state(response)['watched_seconds'] == 0
+    assert response.get_json()['video_resync'] == {'required-video': 0}
+
+
+@pytest.mark.parametrize('rate', [0.85, 0.9])
+@pytest.mark.parametrize('lesson', ['aps'], indirect=True)
+def test_claiming_slow_playback_cannot_finish_video_at_normal_speed(lesson, rate):
+    c = lesson
+    heartbeat(c, 0, rate=rate)
+    heartbeat(c, 4, seconds=4, rate=rate)
+    response = heartbeat(c, 8, seconds=4, rate=rate, playing=False, ended=True)
+    assert not video_state(response)['completed']
+    assert video_state(response)['watched_seconds'] < 8
+    assert response.get_json()['video_resync']
+
+
+@pytest.mark.parametrize('lesson', ['aps'], indirect=True)
 def test_player_renders_valid_chapters_and_server_completion_for_review(lesson):
     c = lesson
     location = c.persist_dir / 'native_elearning/courses' / c.course['id'] / c.course['version'] / 'course.json'
@@ -181,6 +240,8 @@ def test_player_renders_valid_chapters_and_server_completion_for_review(lesson):
     assert 'Règle &lt;script&gt;exemple&lt;/script&gt;' in body
     assert 'Hors vidéo' not in body and 'Négatif' not in body
     assert 'sans bouger la souris' in body
+    assert 'data-video-rate="required-video"' in body
+    assert 'Plus lent · 0,90×' in body and 'Encore plus lent · 0,85×' in body
     heartbeat(c, 0)
     heartbeat(c, 8, seconds=8, playing=False, ended=True)
     config = c._player_config(c.client.get(c.player_url))

@@ -1,15 +1,29 @@
 <!doctype html>
 <html lang="fr">
+{% set centre_name = learner_brand.get('name') or 'Votre organisme de formation' %}
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{{ path_title }} · Intégrale Academy</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <title>{{ path_title }} · {{ centre_name }}</title>
+  {% if learner_brand.get('logo_url') %}<link rel="icon" href="{{ learner_brand.logo_url }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/learner-path-visuals.css', v='20261010-1') }}">
 </head>
 <body class="np-learner-body">
+  <header class="np-brandbar">
+    <div class="np-brandbar-inner">
+      <div class="np-brand">
+        {% if learner_brand.get('logo_url') %}<img class="np-brand-logo" src="{{ learner_brand.logo_url }}" alt="Logo {{ centre_name }}" width="144" height="60">{% else %}<span class="np-brand-initial" aria-hidden="true">{{ centre_name[0]|upper }}</span>{% endif %}
+        <div><strong>{{ centre_name }}</strong><span>Mon espace de formation</span></div>
+      </div>
+      <span class="np-brand-course">E-learning {{ training_label }}</span>
+    </div>
+  </header>
   <main class="np-shell np-learner-shell">
     <a class="np-back" href="{{ portal_url }}">← Retour à mon espace</a>
-    <header class="np-header"><div><span class="np-eyebrow">{{ session_name }}</span><h1>{{ path_title }}</h1><p>{{ learner_name }}, retrouvez ici tous vos modules de formation.</p></div>{% if resume_url %}<a class="np-button np-button--primary" href="{{ resume_url }}">{{ 'Reprendre mon parcours' if completed_activities else 'Commencer mon parcours' }} →</a>{% endif %}</header>
+    <header class="np-welcome{% if not hero_illustration_url %} np-welcome--text{% endif %}">
+      <div class="np-welcome-copy"><span class="np-eyebrow">{{ session_name }}</span><h1>{{ path_title }}</h1><p class="np-greeting">Bonjour {{ learner_name }} !</p><p>Des cours illustrés, des activités et des mises en situation pour avancer dans votre formation.</p>{% if resume_url %}<a class="np-button np-button--primary" href="{{ resume_url }}">{{ 'Reprendre mon parcours' if completed_activities else 'Commencer mon parcours' }} <span aria-hidden="true">→</span></a>{% endif %}</div>
+      {% if hero_illustration_url %}<div class="np-welcome-art"><img src="{{ hero_illustration_url }}" alt="Une stagiaire révise sa formation de sécurité sur ordinateur, avec son casque, son manuel et son carnet." width="1536" height="1024" fetchpriority="high"></div>{% endif %}
+    </header>
     <section class="np-panel np-overview" aria-label="Progression du parcours">
       <div><span>Modules terminés</span><strong>{{ completed_modules }} / {{ modules|length }}</strong></div>
       <div><span>Progression des activités</span><strong>{{ progress_percent }} %</strong><div class="np-progress"><i style="width:{{ progress_percent }}%"></i></div></div>
@@ -17,13 +31,16 @@
       <div><span>Activités terminées</span><strong>{{ completed_activities }} / {{ total_activities }}</strong></div>
     </section>
     {% if annales_url %}<section class="np-panel"><h2>Les annales VTC</h2><p>Entraînez-vous avec les sujets fournis, puis retrouvez les corrections expliquées et les leçons à réviser. Les questions anciennes qui ne peuvent plus être évaluées sont signalées.</p><a class="np-button np-button--primary" href="{{ annales_url }}">Ouvrir les annales →</a></section>{% endif %}
+    <div class="np-section-heading"><div><span class="np-eyebrow">Votre programme</span><h2>Les étapes de votre parcours</h2></div><span class="np-module-count">{{ modules|length }} modules</span></div>
     <div class="np-modules np-learner-modules">
       {% for module in modules %}
         <article class="np-panel np-learner-module{% if module.locked %} is-locked{% endif %}">
+          <div class="np-module-intro{% if not module.illustration_url %} np-module-intro--text{% endif %}">
+          {% if module.illustration_url %}<img class="np-module-illustration" src="{{ module.illustration_url }}" alt="Illustration du module : {{ module.course.title }}" width="1536" height="1024" loading="lazy" decoding="async">{% endif %}
           <div class="np-module-heading"><span class="np-number">{{ '%02d'|format(loop.index) }}</span><div>
             <span class="np-eyebrow">Module {{ loop.index }}</span>
             <h2>{{ module.course.title if module.course else (module.assignment.title or 'Module indisponible') }}</h2>
-          </div></div>
+          </div></div></div>
           {% if module.course %}
             <div class="np-totals"><span>{{ module.course.counts.sections }} séquences</span><span>{{ module.course.counts.activities }} activités</span><span>{{ module.time_label }} de temps actif</span><span>{{ module.progress.progress_percent|round|int }} % des activités terminées</span></div>
             <div class="np-progress"><i style="width:{{ module.progress.progress_percent }}%"></i></div>
@@ -40,6 +57,8 @@
     </div>
     <p class="np-hint">Terminez les activités et la durée obligatoire d’un module pour ouvrir le suivant. Le compteur fonctionne dans le lecteur, pas sur cette page, et se met en pause après 5 minutes sans interaction. Une seule activité peut être chronométrée à la fois.</p>
     {% if final_exam_url %}<section class="np-panel"><h2>Examen blanc final · 100 questions</h2><p>{{ final_exam_description }} : correction détaillée et nouvelles tentatives.</p>{% if final_exam_unlocked %}<a class="np-button np-button--primary" href="{{ final_exam_url }}">Commencer l’examen final →</a>{% else %}<p>Terminez les {{ final_module_count }} modules et leurs durées obligatoires pour ouvrir cet examen.</p>{% endif %}</section>{% endif %}
+    <footer class="np-support"><div><strong>Une question pendant votre parcours ?</strong><p>Votre organisme de formation vous accompagne.</p></div><div class="np-support-contact"><strong>{{ centre_name }}</strong>{% if learner_brand.get('email') %}<a href="mailto:{{ learner_brand.email }}">{{ learner_brand.email }}</a>{% endif %}{% if learner_brand.get('phone') %}<span>{{ learner_brand.phone }}</span>{% endif %}</div></footer>
   </main>
 </body>
 </html>
+

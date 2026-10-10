@@ -1,0 +1,1531 @@
+{
+  "revision": 9,
+  "modules": {
+    "A": {
+      "source_video": "media/vtc/v4/lesson-a.mp4",
+      "source_file_sha256": "e8ce65d13fc2799e8e7e71b26799c5191d014121d309cc52c51a83d30b00cbc5",
+      "transcript_sha256": "64ed32c71d988aeb1e66ff439a3b1f2576bf1ecdcb0ae28bd5385244e2bd9eff",
+      "pauses": [
+        {
+          "id": "a-01",
+          "at_seconds": 41.734,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Le transport public particulier.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "A.01",
+          "chapter_end_seconds": 42.552,
+          "verified_silence": {
+            "start": 41.613521,
+            "end": 42.758229
+          }
+        },
+        {
+          "id": "a-03",
+          "at_seconds": 82.472,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Qui fait quoi ?.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "A.02",
+          "chapter_end_seconds": 83.304,
+          "verified_silence": {
+            "start": 82.351708,
+            "end": 83.524833
+          }
+        },
+        {
+          "id": "a-05",
+          "at_seconds": 126.795,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Accéder à la profession.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "A.03",
+          "chapter_end_seconds": 127.608,
+          "verified_silence": {
+            "start": 126.674937,
+            "end": 127.827396
+          }
+        },
+        {
+          "id": "a-07",
+          "at_seconds": 171.262,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Entretenir son droit d’exercer.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "A.04",
+          "chapter_end_seconds": 172.152,
+          "verified_silence": {
+            "start": 171.14225,
+            "end": 172.376542
+          }
+        },
+        {
+          "id": "a-09",
+          "at_seconds": 215.792,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Assurer le conducteur et l’activité.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "A.05",
+          "chapter_end_seconds": 216.6,
+          "verified_silence": {
+            "start": 215.672438,
+            "end": 216.830854
+          }
+        },
+        {
+          "id": "a-11",
+          "at_seconds": 265.036,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Accueillir sans discriminer.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "A.06",
+          "chapter_end_seconds": 265.872,
+          "verified_silence": {
+            "start": 264.915604,
+            "end": 266.0805
+          }
+        },
+        {
+          "id": "a-13",
+          "at_seconds": 318.615,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Prévenir les violences sexistes et sexuelles.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "A.07",
+          "chapter_end_seconds": 319.416,
+          "verified_silence": {
+            "start": 318.495292,
+            "end": 319.633292
+          }
+        },
+        {
+          "id": "a-15",
+          "at_seconds": 366.864,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Aider une personne en danger.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "A.08",
+          "chapter_end_seconds": 367.68,
+          "verified_silence": {
+            "start": 366.744396,
+            "end": 367.91275
+          }
+        },
+        {
+          "id": "a-17",
+          "at_seconds": 411.139,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Adapter le service au handicap.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "A.09",
+          "chapter_end_seconds": 411.936,
+          "verified_silence": {
+            "start": 411.018896,
+            "end": 412.156083
+          }
+        },
+        {
+          "id": "a-19",
+          "at_seconds": 458.759,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Protéger les données des passagers.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "A.10",
+          "chapter_end_seconds": 459.552,
+          "verified_silence": {
+            "start": 458.639062,
+            "end": 459.772979
+          }
+        },
+        {
+          "id": "a-21",
+          "at_seconds": 503.947,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Réagir à un contrôle.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "A.11",
+          "chapter_end_seconds": 504.816,
+          "verified_silence": {
+            "start": 503.827229,
+            "end": 505.031729
+          }
+        }
+      ]
+    },
+    "B": {
+      "source_video": "media/vtc/v4/lesson-b.mp4",
+      "source_file_sha256": "bdcf5efe18110edab634d6d51148e366465984993c1f76a64f0044d29328b005",
+      "transcript_sha256": "7313b3aefd616805a26ba6e33ef6c0fb7cacd83454eb4a92fff7087612543650",
+      "pauses": [
+        {
+          "id": "b-01",
+          "at_seconds": 43.752,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Choisir un cadre juridique.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "B.01",
+          "chapter_end_seconds": 44.616,
+          "verified_silence": {
+            "start": 43.631812,
+            "end": 44.822312
+          }
+        },
+        {
+          "id": "b-03",
+          "at_seconds": 92.201,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Créer et organiser l’activité.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "B.02",
+          "chapter_end_seconds": 93.024,
+          "verified_silence": {
+            "start": 92.081229,
+            "end": 93.237437
+          }
+        },
+        {
+          "id": "b-05",
+          "at_seconds": 133.398,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Lire un bilan.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "B.03",
+          "chapter_end_seconds": 134.184,
+          "verified_silence": {
+            "start": 133.278312,
+            "end": 134.398125
+          }
+        },
+        {
+          "id": "b-07",
+          "at_seconds": 174.986,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Lire le résultat.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "B.04",
+          "chapter_end_seconds": 175.8,
+          "verified_silence": {
+            "start": 174.865625,
+            "end": 176.014542
+          }
+        },
+        {
+          "id": "b-09",
+          "at_seconds": 218.83,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Classer les coûts.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "B.05",
+          "chapter_end_seconds": 219.696,
+          "verified_silence": {
+            "start": 218.709646,
+            "end": 219.909333
+          }
+        },
+        {
+          "id": "b-10",
+          "at_seconds": 243.213,
+          "duration_seconds": 4,
+          "message": "Prenez le temps de distinguer TVA collectée et TVA déductible.",
+          "kind": "reflect",
+          "scene_index": 10,
+          "chapter_ref": "B.06",
+          "chapter_end_seconds": 244.032,
+          "verified_silence": {
+            "start": 243.093187,
+            "end": 244.244563
+          }
+        },
+        {
+          "id": "b-11",
+          "at_seconds": 264.249,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Comprendre la TVA.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "B.06",
+          "chapter_end_seconds": 265.056,
+          "verified_silence": {
+            "start": 264.129479,
+            "end": 265.279437
+          }
+        },
+        {
+          "id": "b-13",
+          "at_seconds": 309.901,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Piloter le régime micro.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "B.07",
+          "chapter_end_seconds": 310.704,
+          "verified_silence": {
+            "start": 309.780646,
+            "end": 310.911521
+          }
+        },
+        {
+          "id": "b-15",
+          "at_seconds": 352.093,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Construire la trésorerie.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "B.08",
+          "chapter_end_seconds": 352.896,
+          "verified_silence": {
+            "start": 351.972792,
+            "end": 353.120458
+          }
+        },
+        {
+          "id": "b-16",
+          "at_seconds": 370.005,
+          "duration_seconds": 4,
+          "message": "Reprenez les trois étapes : marge, taux de marge, seuil de rentabilité.",
+          "kind": "reflect",
+          "scene_index": 16,
+          "chapter_ref": "B.09",
+          "chapter_end_seconds": 370.824,
+          "verified_silence": {
+            "start": 369.884625,
+            "end": 371.040542
+          }
+        },
+        {
+          "id": "b-17",
+          "at_seconds": 388.815,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Atteindre le seuil de rentabilité.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "B.09",
+          "chapter_end_seconds": 389.712,
+          "verified_silence": {
+            "start": 388.6945,
+            "end": 389.930792
+          }
+        },
+        {
+          "id": "b-19",
+          "at_seconds": 436.763,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Financer le véhicule.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "B.10",
+          "chapter_end_seconds": 437.592,
+          "verified_silence": {
+            "start": 436.642875,
+            "end": 437.805687
+          }
+        },
+        {
+          "id": "b-21",
+          "at_seconds": 484.039,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Facturer et conserver les preuves.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "B.11",
+          "chapter_end_seconds": 484.872,
+          "verified_silence": {
+            "start": 483.919167,
+            "end": 485.084479
+          }
+        }
+      ]
+    },
+    "C": {
+      "source_video": "media/vtc/v4/lesson-c.mp4",
+      "source_file_sha256": "f54809792550638e80bc59ed0a40c9486161d91b2e54e22e2a39d9427995a14a",
+      "transcript_sha256": "ad1e76859881d29056d4fe7c6e1a9e232b9431aa965e33229cacf9f71d689a1b",
+      "pauses": [
+        {
+          "id": "c-01",
+          "at_seconds": 43.051,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Préparer le départ.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "C.01",
+          "chapter_end_seconds": 43.872,
+          "verified_silence": {
+            "start": 42.931,
+            "end": 44.084542
+          }
+        },
+        {
+          "id": "c-03",
+          "at_seconds": 93.636,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Choisir la bonne vitesse.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "C.02",
+          "chapter_end_seconds": 94.464,
+          "verified_silence": {
+            "start": 93.516458,
+            "end": 94.665833
+          }
+        },
+        {
+          "id": "c-05",
+          "at_seconds": 136.16,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Garder une marge de sécurité.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "C.03",
+          "chapter_end_seconds": 136.992,
+          "verified_silence": {
+            "start": 136.039896,
+            "end": 137.204229
+          }
+        },
+        {
+          "id": "c-07",
+          "at_seconds": 180.577,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Observer et partager la route.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "C.04",
+          "chapter_end_seconds": 181.416,
+          "verified_silence": {
+            "start": 180.457271,
+            "end": 181.621187
+          }
+        },
+        {
+          "id": "c-09",
+          "at_seconds": 223.18,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Priorités et signalisation.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "C.05",
+          "chapter_end_seconds": 223.968,
+          "verified_silence": {
+            "start": 223.06025,
+            "end": 224.183979
+          }
+        },
+        {
+          "id": "c-11",
+          "at_seconds": 265.871,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Installer les passagers.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "C.06",
+          "chapter_end_seconds": 266.712,
+          "verified_silence": {
+            "start": 265.751417,
+            "end": 266.929062
+          }
+        },
+        {
+          "id": "c-13",
+          "at_seconds": 305.175,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Prévenir la fatigue.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "C.07",
+          "chapter_end_seconds": 305.976,
+          "verified_silence": {
+            "start": 305.054667,
+            "end": 306.201479
+          }
+        },
+        {
+          "id": "c-15",
+          "at_seconds": 355.17,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Alcool, drogues et médicaments.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "C.08",
+          "chapter_end_seconds": 355.992,
+          "verified_silence": {
+            "start": 355.049771,
+            "end": 356.213146
+          }
+        },
+        {
+          "id": "c-17",
+          "at_seconds": 396.492,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Éviter les distractions.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "C.09",
+          "chapter_end_seconds": 397.296,
+          "verified_silence": {
+            "start": 396.371812,
+            "end": 397.509896
+          }
+        },
+        {
+          "id": "c-19",
+          "at_seconds": 441.263,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Conduire avec souplesse.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "C.10",
+          "chapter_end_seconds": 442.08,
+          "verified_silence": {
+            "start": 441.143333,
+            "end": 442.299146
+          }
+        },
+        {
+          "id": "c-21",
+          "at_seconds": 486.559,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Météo, nuit et adhérence.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "C.11",
+          "chapter_end_seconds": 487.392,
+          "verified_silence": {
+            "start": 486.439146,
+            "end": 487.615187
+          }
+        }
+      ]
+    },
+    "D": {
+      "source_video": "media/vtc/v4/lesson-d.mp4",
+      "source_file_sha256": "8f51beab47ef0631220ca07515752db7bbd3167f725e5cec9fb2ba53f28e3350",
+      "transcript_sha256": "e87ac7f030e53c80bba99c5b671b287aefa0eec2c89a72cbfbd35687f665f47a",
+      "pauses": [
+        {
+          "id": "d-01",
+          "at_seconds": 39.102,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Lire avec une intention.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "D.01",
+          "chapter_end_seconds": 39.912,
+          "verified_silence": {
+            "start": 38.982417,
+            "end": 40.123312
+          }
+        },
+        {
+          "id": "d-03",
+          "at_seconds": 82.747,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Trouver l’information exacte.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "D.02",
+          "chapter_end_seconds": 83.568,
+          "verified_silence": {
+            "start": 82.627187,
+            "end": 83.776104
+          }
+        },
+        {
+          "id": "d-05",
+          "at_seconds": 125.535,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Distinguer fait et interprétation.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "D.03",
+          "chapter_end_seconds": 126.384,
+          "verified_silence": {
+            "start": 125.414646,
+            "end": 126.602292
+          }
+        },
+        {
+          "id": "d-06",
+          "at_seconds": 142.064,
+          "duration_seconds": 4,
+          "message": "Repérez quel nom est repris par le pronom.",
+          "kind": "reflect",
+          "scene_index": 6,
+          "chapter_ref": "D.04",
+          "chapter_end_seconds": 142.872,
+          "verified_silence": {
+            "start": 141.943792,
+            "end": 143.089125
+          }
+        },
+        {
+          "id": "d-07",
+          "at_seconds": 163.351,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Suivre les pronoms.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "D.04",
+          "chapter_end_seconds": 164.184,
+          "verified_silence": {
+            "start": 163.230917,
+            "end": 164.406292
+          }
+        },
+        {
+          "id": "d-09",
+          "at_seconds": 204.087,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Relier les idées.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "D.05",
+          "chapter_end_seconds": 204.936,
+          "verified_silence": {
+            "start": 203.966542,
+            "end": 205.151729
+          }
+        },
+        {
+          "id": "d-10",
+          "at_seconds": 224.041,
+          "duration_seconds": 4,
+          "message": "Distinguez les nuances : au moins, au plus, certains et tous.",
+          "kind": "reflect",
+          "scene_index": 10,
+          "chapter_ref": "D.06",
+          "chapter_end_seconds": 224.856,
+          "verified_silence": {
+            "start": 223.921167,
+            "end": 225.078792
+          }
+        },
+        {
+          "id": "d-11",
+          "at_seconds": 244.656,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Comprendre les nuances.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "D.06",
+          "chapter_end_seconds": 245.448,
+          "verified_silence": {
+            "start": 244.535771,
+            "end": 245.667104
+          }
+        },
+        {
+          "id": "d-13",
+          "at_seconds": 285.464,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Enrichir le vocabulaire utile.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "D.07",
+          "chapter_end_seconds": 286.272,
+          "verified_silence": {
+            "start": 285.343813,
+            "end": 286.491333
+          }
+        },
+        {
+          "id": "d-15",
+          "at_seconds": 327.545,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Maîtriser les temps utiles.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "D.08",
+          "chapter_end_seconds": 328.344,
+          "verified_silence": {
+            "start": 327.424646,
+            "end": 328.567583
+          }
+        },
+        {
+          "id": "d-16",
+          "at_seconds": 349.093,
+          "duration_seconds": 4,
+          "message": "Reprenez mentalement un exemple d’accord avant de poursuivre.",
+          "kind": "reflect",
+          "scene_index": 16,
+          "chapter_ref": "D.09",
+          "chapter_end_seconds": 349.92,
+          "verified_silence": {
+            "start": 348.973062,
+            "end": 350.132604
+          }
+        },
+        {
+          "id": "d-17",
+          "at_seconds": 371.154,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Soigner accords et homophones.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "D.09",
+          "chapter_end_seconds": 371.976,
+          "verified_silence": {
+            "start": 371.034125,
+            "end": 372.192729
+          }
+        },
+        {
+          "id": "d-19",
+          "at_seconds": 410.995,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Répondre à une question courte.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "D.10",
+          "chapter_end_seconds": 411.84,
+          "verified_silence": {
+            "start": 410.874917,
+            "end": 412.059396
+          }
+        },
+        {
+          "id": "d-21",
+          "at_seconds": 452.199,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Écrire au client.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "D.11",
+          "chapter_end_seconds": 453.024,
+          "verified_silence": {
+            "start": 452.078688,
+            "end": 453.240854
+          }
+        }
+      ]
+    },
+    "E": {
+      "source_video": "media/vtc/v7/lesson-e.mp4",
+      "source_file_sha256": "9d6ff6dc8b1d281cd39b89e6262834bc1f7ea51e94112572eae26b6285b77063",
+      "transcript_sha256": "213cd3f5fc891d3c65618b31269652091e1ff79b58eb8be2abdf39d58dc41bae",
+      "pauses": [
+        {
+          "id": "e-00",
+          "at_seconds": 18.282,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « My name is Lina. I’m your driver. »",
+          "kind": "repeat",
+          "scene_index": 0,
+          "chapter_ref": "E.01",
+          "chapter_end_seconds": 18.96,
+          "verified_silence": {
+            "start": 18.162292,
+            "end": 19.158625
+          }
+        },
+        {
+          "id": "e-01",
+          "at_seconds": 40.71,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Welcome on board.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "E.01",
+          "chapter_end_seconds": 41.088,
+          "verified_silence": {
+            "start": 40.590479,
+            "end": 41.322312
+          }
+        },
+        {
+          "id": "e-02",
+          "at_seconds": 58.989,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « How many passengers are there? »",
+          "kind": "repeat",
+          "scene_index": 2,
+          "chapter_ref": "E.02",
+          "chapter_end_seconds": 60.216,
+          "verified_silence": {
+            "start": 58.869479,
+            "end": 60.420125
+          }
+        },
+        {
+          "id": "e-03",
+          "at_seconds": 80.743,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Check the booking.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "E.02",
+          "chapter_end_seconds": 80.904,
+          "verified_silence": {
+            "start": 80.662208,
+            "end": 81.134687
+          }
+        },
+        {
+          "id": "e-04",
+          "at_seconds": 108.127,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « a quarter to eight »",
+          "kind": "repeat",
+          "scene_index": 4,
+          "chapter_ref": "E.03",
+          "chapter_end_seconds": 108.528,
+          "verified_silence": {
+            "start": 108.00675,
+            "end": 108.8055
+          }
+        },
+        {
+          "id": "e-05",
+          "at_seconds": 130.401,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Numbers, dates and times.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "E.03",
+          "chapter_end_seconds": 130.56,
+          "verified_silence": {
+            "start": 130.321458,
+            "end": 130.825063
+          }
+        },
+        {
+          "id": "e-06",
+          "at_seconds": 152.432,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « In front of »",
+          "kind": "repeat",
+          "scene_index": 6,
+          "chapter_ref": "E.04",
+          "chapter_end_seconds": 152.592,
+          "verified_silence": {
+            "start": 152.352083,
+            "end": 152.781937
+          }
+        },
+        {
+          "id": "e-07",
+          "at_seconds": 172.174,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Find the meeting point.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "E.04",
+          "chapter_end_seconds": 172.368,
+          "verified_silence": {
+            "start": 172.0775,
+            "end": 172.60075
+          }
+        },
+        {
+          "id": "e-08",
+          "at_seconds": 193.299,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « two pieces of luggage »",
+          "kind": "repeat",
+          "scene_index": 8,
+          "chapter_ref": "E.05",
+          "chapter_end_seconds": 193.896,
+          "verified_silence": {
+            "start": 193.179479,
+            "end": 194.088042
+          }
+        },
+        {
+          "id": "e-09",
+          "at_seconds": 212.398,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Luggage and assistance.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "E.05",
+          "chapter_end_seconds": 213.0,
+          "verified_silence": {
+            "start": 212.278354,
+            "end": 213.227167
+          }
+        },
+        {
+          "id": "e-10",
+          "at_seconds": 230.349,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « Please fasten your seat belt »",
+          "kind": "repeat",
+          "scene_index": 10,
+          "chapter_ref": "E.06",
+          "chapter_end_seconds": 232.176,
+          "verified_silence": {
+            "start": 230.229437,
+            "end": 232.367792
+          }
+        },
+        {
+          "id": "e-11",
+          "at_seconds": 253.454,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Comfort and safety.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "E.06",
+          "chapter_end_seconds": 253.584,
+          "verified_silence": {
+            "start": 253.389021,
+            "end": 253.809271
+          }
+        },
+        {
+          "id": "e-12",
+          "at_seconds": 273.191,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « It takes about thirty minutes »",
+          "kind": "repeat",
+          "scene_index": 12,
+          "chapter_ref": "E.07",
+          "chapter_end_seconds": 274.32,
+          "verified_silence": {
+            "start": 273.071083,
+            "end": 274.507937
+          }
+        },
+        {
+          "id": "e-13",
+          "at_seconds": 295.367,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Explain the route.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "E.07",
+          "chapter_end_seconds": 295.584,
+          "verified_silence": {
+            "start": 295.259167,
+            "end": 295.822521
+          }
+        },
+        {
+          "id": "e-14",
+          "at_seconds": 314.802,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « The fare is sixty euros, including tax »",
+          "kind": "repeat",
+          "scene_index": 14,
+          "chapter_ref": "E.08",
+          "chapter_end_seconds": 314.976,
+          "verified_silence": {
+            "start": 314.714646,
+            "end": 315.218146
+          }
+        },
+        {
+          "id": "e-15",
+          "at_seconds": 335.459,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Prices and quotations.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "E.08",
+          "chapter_end_seconds": 336.984,
+          "verified_silence": {
+            "start": 335.338875,
+            "end": 337.230312
+          }
+        },
+        {
+          "id": "e-16",
+          "at_seconds": 354.209,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « I’m sorry for the delay »",
+          "kind": "repeat",
+          "scene_index": 16,
+          "chapter_ref": "E.09",
+          "chapter_end_seconds": 355.584,
+          "verified_silence": {
+            "start": 354.089187,
+            "end": 355.771687
+          }
+        },
+        {
+          "id": "e-17",
+          "at_seconds": 376.41,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Delays and changes.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "E.09",
+          "chapter_end_seconds": 376.584,
+          "verified_silence": {
+            "start": 376.322437,
+            "end": 376.808833
+          }
+        },
+        {
+          "id": "e-18",
+          "at_seconds": 394.575,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « The payment has gone through »",
+          "kind": "repeat",
+          "scene_index": 18,
+          "chapter_ref": "E.10",
+          "chapter_end_seconds": 395.832,
+          "verified_silence": {
+            "start": 394.455271,
+            "end": 396.023937
+          }
+        },
+        {
+          "id": "e-19",
+          "at_seconds": 413.939,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Payment and receipts.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "E.10",
+          "chapter_end_seconds": 414.384,
+          "verified_silence": {
+            "start": 413.819083,
+            "end": 414.640229
+          }
+        },
+        {
+          "id": "e-20",
+          "at_seconds": 432.084,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « I need some help »",
+          "kind": "repeat",
+          "scene_index": 20,
+          "chapter_ref": "E.11",
+          "chapter_end_seconds": 433.656,
+          "verified_silence": {
+            "start": 431.964021,
+            "end": 433.844833
+          }
+        },
+        {
+          "id": "e-21",
+          "at_seconds": 453.458,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Handle a problem.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "E.11",
+          "chapter_end_seconds": 453.648,
+          "verified_silence": {
+            "start": 453.363146,
+            "end": 453.873458
+          }
+        },
+        {
+          "id": "e-22",
+          "at_seconds": 471.991,
+          "duration_seconds": 5,
+          "message": "À vous de répéter : « There is a museum near the hotel. »",
+          "kind": "repeat",
+          "scene_index": 22,
+          "chapter_ref": "E.12",
+          "chapter_end_seconds": 473.616,
+          "verified_silence": {
+            "start": 471.871146,
+            "end": 473.807187
+          }
+        }
+      ]
+    },
+    "F": {
+      "source_video": "media/vtc/v4/lesson-f.mp4",
+      "source_file_sha256": "6ac2215845e3a0f61ca484c9c21bcd081e6e23a12372301eb9a543f987965ddd",
+      "transcript_sha256": "7e0450c885cf6c95c6619c91f51fbefc70750e81df58d7989dfe387f1c13f9a1",
+      "pauses": [
+        {
+          "id": "f-01",
+          "at_seconds": 47.994,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Comprendre son marché.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "F.01",
+          "chapter_end_seconds": 48.816,
+          "verified_silence": {
+            "start": 47.874292,
+            "end": 49.029312
+          }
+        },
+        {
+          "id": "f-03",
+          "at_seconds": 93.814,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Construire une offre lisible.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "F.02",
+          "chapter_end_seconds": 94.656,
+          "verified_silence": {
+            "start": 93.694063,
+            "end": 94.876875
+          }
+        },
+        {
+          "id": "f-05",
+          "at_seconds": 139.975,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Fixer un prix soutenable.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "F.03",
+          "chapter_end_seconds": 140.784,
+          "verified_silence": {
+            "start": 139.85525,
+            "end": 140.997917
+          }
+        },
+        {
+          "id": "f-07",
+          "at_seconds": 187.217,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Rédiger un devis clair.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "F.04",
+          "chapter_end_seconds": 188.088,
+          "verified_silence": {
+            "start": 187.09725,
+            "end": 188.302125
+          }
+        },
+        {
+          "id": "f-09",
+          "at_seconds": 229.723,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Travailler avec une plateforme.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "F.05",
+          "chapter_end_seconds": 230.544,
+          "verified_silence": {
+            "start": 229.602563,
+            "end": 230.761667
+          }
+        },
+        {
+          "id": "f-11",
+          "at_seconds": 274.837,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Prospecter avec méthode.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "F.06",
+          "chapter_end_seconds": 275.64,
+          "verified_silence": {
+            "start": 274.717,
+            "end": 275.846229
+          }
+        },
+        {
+          "id": "f-13",
+          "at_seconds": 317.011,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Créer un partenariat.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "F.07",
+          "chapter_end_seconds": 317.856,
+          "verified_silence": {
+            "start": 316.891354,
+            "end": 318.075646
+          }
+        },
+        {
+          "id": "f-15",
+          "at_seconds": 362.841,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Communiquer en ligne.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "F.08",
+          "chapter_end_seconds": 363.648,
+          "verified_silence": {
+            "start": 362.721479,
+            "end": 363.868896
+          }
+        },
+        {
+          "id": "f-17",
+          "at_seconds": 406.322,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Fidéliser avec discrétion.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "F.09",
+          "chapter_end_seconds": 407.112,
+          "verified_silence": {
+            "start": 406.201542,
+            "end": 407.330083
+          }
+        },
+        {
+          "id": "f-19",
+          "at_seconds": 449.703,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Mesurer la qualité du service.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "F.10",
+          "chapter_end_seconds": 450.552,
+          "verified_silence": {
+            "start": 449.583438,
+            "end": 450.760104
+          }
+        },
+        {
+          "id": "f-21",
+          "at_seconds": 494.06,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Traiter une réclamation.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "F.11",
+          "chapter_end_seconds": 494.856,
+          "verified_silence": {
+            "start": 493.94,
+            "end": 495.072854
+          }
+        }
+      ]
+    },
+    "G": {
+      "source_video": "media/vtc/v4/lesson-g.mp4",
+      "source_file_sha256": "de27e8f89a661e4c4429689de7325e072215bbbf555ac37d0b49c59747bcb85c",
+      "transcript_sha256": "8a73ed3b45fe7128e7996d58513450ae3082f4ad942ec580726940a060239867",
+      "pauses": [
+        {
+          "id": "g-01",
+          "at_seconds": 44.669,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : S’inscrire au REVTC.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "G.01",
+          "chapter_end_seconds": 45.528,
+          "verified_silence": {
+            "start": 44.549312,
+            "end": 45.747354
+          }
+        },
+        {
+          "id": "g-03",
+          "at_seconds": 87.941,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Justifier la capacité financière.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "G.02",
+          "chapter_end_seconds": 88.776,
+          "verified_silence": {
+            "start": 87.820875,
+            "end": 88.998542
+          }
+        },
+        {
+          "id": "g-05",
+          "at_seconds": 137.703,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Choisir un véhicule éligible.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "G.03",
+          "chapter_end_seconds": 138.504,
+          "verified_silence": {
+            "start": 137.5835,
+            "end": 138.724854
+          }
+        },
+        {
+          "id": "g-07",
+          "at_seconds": 181.528,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Afficher la bonne signalétique.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "G.04",
+          "chapter_end_seconds": 182.328,
+          "verified_silence": {
+            "start": 181.408292,
+            "end": 182.543625
+          }
+        },
+        {
+          "id": "g-09",
+          "at_seconds": 226.656,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Prouver la réservation préalable.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "G.05",
+          "chapter_end_seconds": 227.448,
+          "verified_silence": {
+            "start": 226.536271,
+            "end": 227.653979
+          }
+        },
+        {
+          "id": "g-11",
+          "at_seconds": 270.247,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Distinguer réservation et maraude.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "G.06",
+          "chapter_end_seconds": 271.08,
+          "verified_silence": {
+            "start": 270.127062,
+            "end": 271.300292
+          }
+        },
+        {
+          "id": "g-13",
+          "at_seconds": 314.195,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Accueillir en gare et à l’aéroport.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "G.07",
+          "chapter_end_seconds": 315.024,
+          "verified_silence": {
+            "start": 314.074583,
+            "end": 315.232646
+          }
+        },
+        {
+          "id": "g-15",
+          "at_seconds": 351.266,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Organiser la fin de course.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "G.08",
+          "chapter_end_seconds": 352.128,
+          "verified_silence": {
+            "start": 351.145542,
+            "end": 352.341208
+          }
+        },
+        {
+          "id": "g-17",
+          "at_seconds": 395.174,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Convenir du prix et du service.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "G.09",
+          "chapter_end_seconds": 396.0,
+          "verified_silence": {
+            "start": 395.054146,
+            "end": 396.224312
+          }
+        },
+        {
+          "id": "g-19",
+          "at_seconds": 440.864,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Remplacer un véhicule ou un conducteur.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "G.10",
+          "chapter_end_seconds": 441.648,
+          "verified_silence": {
+            "start": 440.744042,
+            "end": 441.86625
+          }
+        },
+        {
+          "id": "g-21",
+          "at_seconds": 482.719,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Suivre le véhicule dans le temps.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "G.11",
+          "chapter_end_seconds": 483.552,
+          "verified_silence": {
+            "start": 482.599,
+            "end": 483.780417
+          }
+        }
+      ]
+    },
+    "H": {
+      "source_video": "media/vtc/v4/lesson-h.mp4",
+      "source_file_sha256": "a5e065af7743e7c8906f10acebde53cf0846d11de7a472f61df894a91098959a",
+      "transcript_sha256": "47118aba1cdc2c928549c0c5320725f91a94eea51ed3725e760a62cedadbab2d",
+      "pauses": [
+        {
+          "id": "h-01",
+          "at_seconds": 41.879,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Lire la mission avant de partir.",
+          "kind": "reflect",
+          "scene_index": 1,
+          "chapter_ref": "H.01",
+          "chapter_end_seconds": 42.696,
+          "verified_silence": {
+            "start": 41.758583,
+            "end": 42.905479
+          }
+        },
+        {
+          "id": "h-03",
+          "at_seconds": 83.339,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Préparer un itinéraire.",
+          "kind": "reflect",
+          "scene_index": 3,
+          "chapter_ref": "H.02",
+          "chapter_end_seconds": 84.168,
+          "verified_silence": {
+            "start": 83.218667,
+            "end": 84.385167
+          }
+        },
+        {
+          "id": "h-05",
+          "at_seconds": 126.47,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Installer son poste de conduite.",
+          "kind": "reflect",
+          "scene_index": 5,
+          "chapter_ref": "H.03",
+          "chapter_end_seconds": 127.296,
+          "verified_silence": {
+            "start": 126.350146,
+            "end": 127.512854
+          }
+        },
+        {
+          "id": "h-07",
+          "at_seconds": 168.949,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Réussir l’accueil.",
+          "kind": "reflect",
+          "scene_index": 7,
+          "chapter_ref": "H.04",
+          "chapter_end_seconds": 169.776,
+          "verified_silence": {
+            "start": 168.829042,
+            "end": 169.989312
+          }
+        },
+        {
+          "id": "h-09",
+          "at_seconds": 210.023,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Conduire avec une attention disponible.",
+          "kind": "reflect",
+          "scene_index": 9,
+          "chapter_ref": "H.05",
+          "chapter_end_seconds": 210.84,
+          "verified_silence": {
+            "start": 209.902687,
+            "end": 211.058708
+          }
+        },
+        {
+          "id": "h-11",
+          "at_seconds": 252.928,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Manœuvrer et déposer.",
+          "kind": "reflect",
+          "scene_index": 11,
+          "chapter_ref": "H.06",
+          "chapter_end_seconds": 253.752,
+          "verified_silence": {
+            "start": 252.807646,
+            "end": 253.972833
+          }
+        },
+        {
+          "id": "h-13",
+          "at_seconds": 296.636,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Informer sur le territoire.",
+          "kind": "reflect",
+          "scene_index": 13,
+          "chapter_ref": "H.07",
+          "chapter_end_seconds": 297.456,
+          "verified_silence": {
+            "start": 296.515625,
+            "end": 297.675479
+          }
+        },
+        {
+          "id": "h-15",
+          "at_seconds": 341.722,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Gérer un imprévu de service.",
+          "kind": "reflect",
+          "scene_index": 15,
+          "chapter_ref": "H.08",
+          "chapter_end_seconds": 342.552,
+          "verified_silence": {
+            "start": 341.601812,
+            "end": 342.765667
+          }
+        },
+        {
+          "id": "h-17",
+          "at_seconds": 383.443,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Facturer pendant la pratique.",
+          "kind": "reflect",
+          "scene_index": 17,
+          "chapter_ref": "H.09",
+          "chapter_end_seconds": 384.24,
+          "verified_silence": {
+            "start": 383.322563,
+            "end": 384.453583
+          }
+        },
+        {
+          "id": "h-19",
+          "at_seconds": 426.485,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Terminer la prestation.",
+          "kind": "reflect",
+          "scene_index": 19,
+          "chapter_ref": "H.10",
+          "chapter_end_seconds": 427.32,
+          "verified_silence": {
+            "start": 426.365125,
+            "end": 427.5335
+          }
+        },
+        {
+          "id": "h-21",
+          "at_seconds": 475.647,
+          "duration_seconds": 4,
+          "message": "Prenez un instant pour retenir : Comprendre l’épreuve pratique.",
+          "kind": "reflect",
+          "scene_index": 21,
+          "chapter_ref": "H.11",
+          "chapter_end_seconds": 476.448,
+          "verified_silence": {
+            "start": 475.526792,
+            "end": 476.670521
+          }
+        }
+      ]
+    }
+  }
+}

@@ -60,6 +60,7 @@ class A3PContentTests(unittest.TestCase):
             exam = load_exam(exam_id, a3p.VERSION)
             if exam_id != 'a3p-final':
                 self.assertEqual(len(exam['questions']), 30)
+                self.assertEqual(exam['questions'][-1]['id'], [q for q in a3p._questions() if q['module'] == 'UV ' + exam_id[-2:]][-1]['id'])
             public = public_exam(exam)
             for q in public['questions']:
                 self.assertEqual(set(q), {'id', 'prompt', 'options'})
@@ -177,6 +178,21 @@ class A3PWebTests(unittest.TestCase):
             self.assertTrue(correction['lesson_links'])
             self.assertIn('/academy-a3p-',correction['lesson_links'][0]['url'])
         self.assertFalse((self.persist_dir/'native_elearning/tracking.sqlite3').exists())
+
+    def test_bundled_video_is_served_only_through_the_authenticated_preview(self):
+        if not a3p._video('02'):
+            self.skipTest('Media is checked again by the publication workflow')
+        self._admin_login()
+        page = self.preview()
+        import html
+        src = html.unescape(re.search(r'<source src="([^"]+)"', page, re.S).group(1))
+        response = self.client.get(src, headers={'Range': 'bytes=0-1023'})
+        self.assertEqual(response.status_code, 206)
+        self.assertEqual(len(response.data), 1024)
+        self.assertIn('video/mp4', response.content_type)
+        with self.client.session_transaction() as browser_session:
+            browser_session.pop('admin_logged_in')
+        self.assertEqual(self.client.get(src).status_code, 401)
 
     def test_assignment_is_rejected_on_both_admin_paths(self):
         self._admin_login()
