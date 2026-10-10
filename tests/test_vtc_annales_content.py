@@ -21,6 +21,7 @@ IMMUTABLE = {
     '20261006-vtc-v2': '96bc8ba5fe3315af0ba7cf400613ea966f08328d67b68b7e4248c1a7051498a6',
     '20261006-vtc-v3-105h': 'a71b384894990af00cc607760695f2790bcb69fa88bd1bef0704e84534a80ed1',
     '20261007-vtc-v4-visuals': '54c6f873b28af5e4f35471d3368c5227dcf859a01f1507a405c84e16b9f99fcc',
+    '20261007-vtc-v5-annales': '63e6e01bab2fafce82b6a9fa319042410b8efd28f1daa169a662a299099a56f6',
 }
 
 
@@ -108,10 +109,10 @@ class AnnalesContentTests(unittest.TestCase):
         manifest = json.loads((ROOT / 'manifest.json').read_text())
         refs = {lesson['ref'] for module in manifest['modules'] for lesson in module['lessons']}
         self.assertEqual(96, len(refs))
-        self.assertEqual(VERSION, manifest['version'])
+        self.assertIn(VERSION, manifest['exam_versions'])
         taught = {}
         for module in manifest['modules']:
-            self.assertEqual(VERSION, module['version'])
+            self.assertIn(VERSION, [module['version'], *module['previous_versions']])
             self.assertIn('20261007-vtc-v4-visuals', module['previous_versions'])
             course = json.loads((ROOT / 'courses' / module['id'] / (VERSION + '.json')).read_text())
             for section in course['sections']:

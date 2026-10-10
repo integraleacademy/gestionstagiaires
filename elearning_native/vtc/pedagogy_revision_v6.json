@@ -1,0 +1,71 @@
+{
+  "version": "20261010-vtc-v6-pedagogie",
+  "reviewed_on": "2026-10-10",
+  "modules": [
+    {
+      "id": "academy-vtc-a",
+      "restored_context_variants": 24,
+      "required_max": 167,
+      "free_exercises": 60,
+      "planned_minutes": 755,
+      "listening_dialogues": 0
+    },
+    {
+      "id": "academy-vtc-b",
+      "restored_context_variants": 28,
+      "required_max": 153,
+      "free_exercises": 160,
+      "planned_minutes": 693,
+      "listening_dialogues": 0
+    },
+    {
+      "id": "academy-vtc-c",
+      "restored_context_variants": 36,
+      "required_max": 165,
+      "free_exercises": 127,
+      "planned_minutes": 706,
+      "listening_dialogues": 0
+    },
+    {
+      "id": "academy-vtc-d",
+      "restored_context_variants": 39,
+      "required_max": 144,
+      "free_exercises": 109,
+      "planned_minutes": 618,
+      "listening_dialogues": 0
+    },
+    {
+      "id": "academy-vtc-e",
+      "restored_context_variants": 78,
+      "required_max": 164,
+      "free_exercises": 190,
+      "planned_minutes": 718,
+      "listening_dialogues": 48
+    },
+    {
+      "id": "academy-vtc-f",
+      "restored_context_variants": 20,
+      "required_max": 151,
+      "free_exercises": 120,
+      "planned_minutes": 678,
+      "listening_dialogues": 0
+    },
+    {
+      "id": "academy-vtc-g",
+      "restored_context_variants": 104,
+      "required_max": 158,
+      "free_exercises": 151,
+      "planned_minutes": 612,
+      "listening_dialogues": 0
+    },
+    {
+      "id": "academy-vtc-h",
+      "restored_context_variants": 42,
+      "required_max": 177,
+      "free_exercises": 147,
+      "planned_minutes": 642,
+      "listening_dialogues": 0
+    }
+  ],
+  "duration_method": "Estimation initiale : briefing 2 min, choix 2 min, ligne à placer 1 min, document distinct 2 min, audio distinct 1 min. Cours et vidéos inchangés. Aucun temps minimum ajouté."
+}

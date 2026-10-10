@@ -87,3 +87,6 @@ a{color:inherit}
 .native-video-chapters .native-button { width: 100%; justify-content: flex-start; white-space: normal; text-align: left; }
 .native-video-chapters button span { font-variant-numeric: tabular-nums; margin-right: 8px; }
 .native-video-chapters button:disabled { opacity: .65; cursor: not-allowed; }
+
+.native-menu-close{display:none}.native-menu-close:focus-visible,.native-menu-button:focus-visible{outline:3px solid #6740aa;outline-offset:3px}
+@media(max-width:900px){.native-sidebar{visibility:hidden}.native-sidebar.is-open{visibility:visible}.native-menu-close{display:block;min-height:44px;margin:0 0 16px auto;border:1px solid #dbe3ee;border-radius:10px;padding:10px 14px;background:#fff;color:#172033;font:inherit;font-weight:700;cursor:pointer}}

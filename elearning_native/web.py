@@ -43,6 +43,7 @@ from .academy import curriculum_manifest
 from . import vtc
 from .exams import ExamStore, load_exam, public_exam, grade_exam
 from .practice import public_practice, grade_practice
+from .vtc_adaptive import select_activity as select_vtc_activity
 
 from .importer import (
     DEFAULT_MAX_ARCHIVE_BYTES,
@@ -953,7 +954,8 @@ def create_native_elearning_blueprint(
             "native_elearning_player.html", preview_mode=True,
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course),
                     "version": course["version"], "counts": course["counts"], "training_label": course.get("training_label","APS")},
-            activity=prepare_activity(raw_activity, asset_token, course_id),
+            activity=prepare_activity(select_vtc_activity(course, raw_activity, {}), asset_token, course_id),
+            training_url=url_for('native_elearning.training_admin_catalog', course_id=course_id, version=course['version']) if course_id.startswith('academy-vtc-') else '',
             introduction=[prepare_block(block, asset_token, course_id)
                           for block in course.get("introduction") or []
                           if isinstance(block, Mapping)] if index == 0 else [],
@@ -981,6 +983,7 @@ def create_native_elearning_blueprint(
         course = preview_course(course_id)
         activity = next((item for _, item in _activity_pairs(course) if item.get("id") == activity_id), None)
         if activity and activity.get('practice'):
+            activity = select_vtc_activity(course, activity, {})
             payload = request.get_json(silent=True)
             try:
                 result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None, step=payload.get('practice_step') if isinstance(payload, dict) else None)
@@ -1515,7 +1518,7 @@ def create_native_elearning_blueprint(
         index = order.index(requested_id)
         raw_activity = next(activity for _, activity in pairs if str(activity.get("id")) == requested_id)
         section = next(section for section, activity in pairs if str(activity.get("id")) == requested_id)
-        activity = prepare_activity(raw_activity, asset_token, course_id)
+        activity = prepare_activity(select_vtc_activity(course, raw_activity, progress), asset_token, course_id)
         introduction = [
             prepare_block(block, asset_token, course_id)
             for block in (course.get("introduction") or [])
@@ -1542,6 +1545,7 @@ def create_native_elearning_blueprint(
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
             section_title=str(section.get("title") or ""),
             activity=activity,
+            training_url=url_for('native_elearning.training_learner_catalog', token=token, course_id=course_id) if course_id.startswith('academy-vtc-') else '',
             introduction=introduction,
             progress=progress,
             navigation=navigation_for(course, progress, token=token, current_activity_id=requested_id),
@@ -1674,8 +1678,10 @@ def create_native_elearning_blueprint(
         activity = next((item for _, item in _activity_pairs(course) if item.get('id') == activity_id), None)
         if not activity or not activity.get('practice'):
             return jsonify({'ok': False, 'error': 'Atelier introuvable.'}), 404
-        if not can_complete(course, current_progress(access, course), activity_id):
+        progress = current_progress(access, course)
+        if not can_complete(course, progress, activity_id):
             return jsonify({'ok': False, 'error': 'Terminez d’abord l’activité précédente.'}), 409
+        activity = select_vtc_activity(course, activity, progress)
         payload = request.get_json(silent=True)
         try:
             result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None, step=payload.get('practice_step') if isinstance(payload, dict) else None)
@@ -1702,6 +1708,7 @@ def create_native_elearning_blueprint(
                 # Keep prior written submissions and completed work exactly as stored.
                 answer = current.get('answers', {}).get(activity_id)
             else:
+                activity = select_vtc_activity(course, activity, current)
                 payload = request.get_json(silent=True)
                 try:
                     result = grade_practice(activity['practice'], payload.get('practice_answers') if isinstance(payload, dict) else None, payload.get('review_answers') if isinstance(payload, dict) else None)
@@ -1795,5 +1802,21 @@ def create_native_elearning_blueprint(
     register_annales(blueprint, admin_required=admin_required, learner_session=learner_session,
                      learner_context=learner_context, root=root, csrf_token=_csrf_token,
                      require_csrf=_require_csrf)
-    return blueprint
 
+    def training_asset_token(course, token=None, session_obj=None, trainee=None):
+        if token:
+            access = _course_access_payload(session_obj, trainee, course, public_token=token)
+            return _sign_access(_asset_access_payload(access))
+        nonce = str(session.get('native_elearning_nonce') or '')
+        if not nonce:
+            nonce = secrets.token_urlsafe(24)
+            session['native_elearning_nonce'] = nonce
+        return _sign_access({'kind': 'course_asset', 'admin_preview': True,
+            'course_id': course['id'], 'course_version': course['version'], 'nonce': nonce,
+            'expires_at': int(time.time()) + ACCESS_TOKEN_TTL_SECONDS})
+
+    from .vtc_training_web import register as register_training
+    register_training(blueprint, admin_required=admin_required, learner_context=learner_context,
+                      csrf_token=_csrf_token, require_csrf=_require_csrf,
+                      prepare_activity=prepare_activity, asset_token_for=training_asset_token)
+    return blueprint

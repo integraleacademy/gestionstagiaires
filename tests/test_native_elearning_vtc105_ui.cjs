@@ -8,8 +8,8 @@ const source=fs.readFileSync(path.join(__dirname,'../static/js/vtc-journey.js'),
 function fixture({preview=false,saved={},draft=null,adaptive=false}={}) {
   const config={courseVersion:'v3',activityId:'dossier',saved,completed:false,weakRefs:['A.02'],
     practice:{adaptive,exercises:[{id:'one',kind:'single',competency:'A.01'},{id:'two',kind:'single',competency:'A.02'}]}};
-  const fields=['one','two'].map(id=>`<fieldset data-exercise-id="${id}" hidden><input type="radio" name="${id}" value="yes"><input type="radio" name="${id}" value="no"><div data-step-feedback hidden></div></fieldset>`).join('');
-  const dom=new JSDOM(`<section data-vtc-journey><p data-vtc-priority hidden></p><progress max="2"></progress><strong data-vtc-step></strong><form>${fields}<button type="button" data-vtc-prev>previous</button><button type="submit" data-vtc-check>check</button><button type="button" data-vtc-next hidden>next</button></form><section data-vtc-review hidden><p data-vtc-summary></p><div data-vtc-weak></div><button data-vtc-retry>retry</button><button data-vtc-all>all</button><button data-vtc-verify hidden>verify</button></section><p data-vtc-message></p><section data-vtc-simulator data-config='{"cost_km":0.3}'><input type="range" data-sim-price min="20" max="200" value="100"><input type="range" data-sim-km min="10" max="150" value="50"><select data-sim-commission><option value="20">20</option></select><output data-sim-price-label></output><output data-sim-km-label></output><output data-sim-result></output></section></section><script type="application/json" id="vtcJourneyConfig">${JSON.stringify(config)}</script><script type="application/json" id="${preview?'nativePreviewConfig':'nativeElearningConfig'}">{"practiceUrl":"/practice","answerUrl":"/preview","csrfToken":"csrf","accessToken":"access"}</script>`,{url:'https://example.test/espace/alice/module',runScripts:'outside-only'});
+  const fields=['one','two'].map(id=>`<fieldset data-exercise-id="${id}" hidden><legend>Étape</legend><h3>Question ${id}</h3><input type="radio" name="${id}" value="yes"><input type="radio" name="${id}" value="no"><div data-step-feedback hidden></div></fieldset>`).join('');
+  const dom=new JSDOM(`<section data-vtc-journey><p data-vtc-priority hidden></p><progress max="2"></progress><strong data-vtc-step></strong><form>${fields}<button type="button" data-vtc-prev>previous</button><button type="submit" data-vtc-check>check</button><button type="button" data-vtc-next hidden>next</button></form><section data-vtc-review hidden><h3>Bilan</h3><p data-vtc-summary></p><div data-vtc-weak></div><button data-vtc-retry>retry</button><button data-vtc-all>all</button><button data-vtc-verify hidden>verify</button></section><p data-vtc-message></p><section data-vtc-simulator data-config='{"cost_km":0.3}'><input type="range" data-sim-price min="20" max="200" value="100"><input type="range" data-sim-km min="10" max="150" value="50"><select data-sim-commission><option value="20">20</option></select><output data-sim-price-label></output><output data-sim-km-label></output><output data-sim-result></output></section></section><script type="application/json" id="vtcJourneyConfig">${JSON.stringify(config)}</script><script type="application/json" id="${preview?'nativePreviewConfig':'nativeElearningConfig'}">{"practiceUrl":"/practice","answerUrl":"/preview","csrfToken":"csrf","accessToken":"access"}</script>`,{url:'https://example.test/espace/alice/module',runScripts:'outside-only'});
   const {window}=dom,{document}=window,calls=[];let failure=false;
   const key='vtc-journey:/espace/alice/module:v3:dossier';
   if(draft)window.sessionStorage.setItem(key,JSON.stringify(draft));
@@ -75,4 +75,17 @@ test('resume trusts only matching server-marked answers; adaptive review priorit
     assert.match(g.q('[data-sim-result]').textContent,/Contribution : 81.00/);
   }finally{g.close();}
   const h=fixture({saved});try{await h.settle();assert.equal(h.q('[data-vtc-review]').hidden,false);assert.equal(h.window.aps62Practice.collectForCompletion().one,'yes');}finally{h.close();}
+});
+
+
+test('keyboard navigation focuses each question and the review without stealing initial focus',async()=>{
+  const f=fixture({preview:true});try{
+    assert.equal(f.document.activeElement,f.document.body);
+    f.choose('one','no');await f.click('[data-vtc-check]');
+    await f.click('[data-vtc-next]');assert.equal(f.document.activeElement,f.q('[data-exercise-id=two] h3'));
+    await f.click('[data-vtc-prev]');assert.equal(f.document.activeElement,f.q('[data-exercise-id=one] h3'));
+    await f.click('[data-vtc-next]');f.choose('two','yes');await f.click('[data-vtc-check]');
+    await f.click('[data-vtc-next]');assert.equal(f.document.activeElement,f.q('[data-vtc-review] h3'));
+    await f.click('[data-vtc-retry]');assert.equal(f.document.activeElement,f.q('[data-exercise-id=one] h3'));
+  }finally{f.close();}
 });

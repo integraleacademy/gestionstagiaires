@@ -33,24 +33,25 @@
   ],
   "notice": "Parcours pédagogique de préparation : les durées sont indicatives et réglables par le centre. L’examen officiel comprend des QRC écrites et une épreuve de conduite en circulation. Les entraînements en ligne se font sans rédaction.",
   "final_exam_id": "vtc-final",
-  "version": "20261007-vtc-v5-annales",
-  "reviewed_on": "2026-10-07",
-  "planned_minutes": 6300,
+  "version": "20261010-vtc-v6-pedagogie",
+  "reviewed_on": "2026-10-10",
+  "planned_minutes": 5422,
   "lesson_count": 96,
   "workshop_count": 96,
   "modules": [
     {
       "id": "academy-vtc-a",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "A",
       "title": "VTC A · Exercer dans le cadre du T3P",
-      "planned_minutes": 840,
+      "planned_minutes": 755,
       "illustration": "images/vtc/module-a.webp",
       "mock_exam_id": "vtc-a",
       "exam": {
@@ -133,12 +134,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 200,
-        "decisions": 332,
+        "exercises": 167,
+        "decisions": 297,
         "listening_dialogues": 0,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 10
+        "annales_lessons": 10,
+        "free_exercises": 60
       },
       "duration_breakdown": [
         {
@@ -147,19 +149,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 378
+          "label": "Dossiers professionnels",
+          "minutes": 267
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 68
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -169,16 +171,17 @@
     },
     {
       "id": "academy-vtc-b",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "B",
       "title": "VTC B · Gérer son entreprise",
-      "planned_minutes": 960,
+      "planned_minutes": 693,
       "illustration": "images/vtc/module-b.webp",
       "mock_exam_id": "vtc-b",
       "exam": {
@@ -261,12 +264,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 295,
-        "decisions": 343,
+        "exercises": 153,
+        "decisions": 199,
         "listening_dialogues": 0,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 11
+        "annales_lessons": 11,
+        "free_exercises": 160
       },
       "duration_breakdown": [
         {
@@ -275,19 +279,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 474
+          "label": "Dossiers professionnels",
+          "minutes": 169
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 76
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 56
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -297,16 +301,17 @@
     },
     {
       "id": "academy-vtc-c",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "C",
       "title": "VTC C · Conduire en sécurité",
-      "planned_minutes": 840,
+      "planned_minutes": 706,
       "illustration": "images/vtc/module-c.webp",
       "mock_exam_id": "vtc-c",
       "exam": {
@@ -389,12 +394,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 256,
-        "decisions": 400,
+        "exercises": 165,
+        "decisions": 264,
         "listening_dialogues": 0,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 12
+        "annales_lessons": 12,
+        "free_exercises": 127
       },
       "duration_breakdown": [
         {
@@ -403,19 +409,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 378
+          "label": "Dossiers professionnels",
+          "minutes": 234
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 52
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -425,16 +431,17 @@
     },
     {
       "id": "academy-vtc-d",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "D",
       "title": "VTC D · Comprendre et s’exprimer en français",
-      "planned_minutes": 660,
+      "planned_minutes": 618,
       "illustration": "images/vtc/module-d.webp",
       "mock_exam_id": "vtc-d",
       "exam": {
@@ -517,12 +524,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 214,
-        "decisions": 269,
+        "exercises": 144,
+        "decisions": 199,
         "listening_dialogues": 0,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 6
+        "annales_lessons": 6,
+        "free_exercises": 109
       },
       "duration_breakdown": [
         {
@@ -531,19 +539,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 258
+          "label": "Dossiers professionnels",
+          "minutes": 196
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 56
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 58
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -553,16 +561,17 @@
     },
     {
       "id": "academy-vtc-e",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "E",
       "title": "VTC E · Accueillir en anglais",
-      "planned_minutes": 900,
+      "planned_minutes": 718,
       "illustration": "images/vtc/module-e.webp",
       "mock_exam_id": "vtc-e",
       "exam": {
@@ -645,12 +654,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 276,
-        "decisions": 324,
+        "exercises": 164,
+        "decisions": 188,
         "listening_dialogues": 48,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 12
+        "annales_lessons": 12,
+        "free_exercises": 190
       },
       "duration_breakdown": [
         {
@@ -659,19 +669,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 462
+          "label": "Dossiers professionnels",
+          "minutes": 240
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 58
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 76
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -681,16 +691,17 @@
     },
     {
       "id": "academy-vtc-f",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "F",
       "title": "VTC F · Développer son activité VTC",
-      "planned_minutes": 840,
+      "planned_minutes": 678,
       "illustration": "images/vtc/module-f.webp",
       "mock_exam_id": "vtc-f",
       "exam": {
@@ -773,12 +784,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 251,
-        "decisions": 299,
+        "exercises": 151,
+        "decisions": 199,
         "listening_dialogues": 0,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 11
+        "annales_lessons": 11,
+        "free_exercises": 120
       },
       "duration_breakdown": [
         {
@@ -787,19 +799,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 378
+          "label": "Dossiers professionnels",
+          "minutes": 186
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 76
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 48
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -809,16 +821,17 @@
     },
     {
       "id": "academy-vtc-g",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "G",
       "title": "VTC G · Appliquer les règles du VTC",
-      "planned_minutes": 660,
+      "planned_minutes": 612,
       "illustration": "images/vtc/module-g.webp",
       "mock_exam_id": "vtc-g",
       "exam": {
@@ -901,12 +914,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 205,
-        "decisions": 229,
+        "exercises": 158,
+        "decisions": 182,
         "listening_dialogues": 0,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 12
+        "annales_lessons": 12,
+        "free_exercises": 151
       },
       "duration_breakdown": [
         {
@@ -915,19 +929,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 258
+          "label": "Dossiers professionnels",
+          "minutes": 192
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 60
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -937,16 +951,17 @@
     },
     {
       "id": "academy-vtc-h",
-      "version": "20261007-vtc-v5-annales",
+      "version": "20261010-vtc-v6-pedagogie",
       "previous_versions": [
         "20261006-vtc-v1",
         "20261006-vtc-v2",
         "20261006-vtc-v3-105h",
-        "20261007-vtc-v4-visuals"
+        "20261007-vtc-v4-visuals",
+        "20261007-vtc-v5-annales"
       ],
       "letter": "H",
       "title": "VTC H · Réaliser une mission professionnelle",
-      "planned_minutes": 600,
+      "planned_minutes": 642,
       "illustration": "images/vtc/module-h.webp",
       "mock_exam_id": "vtc-h",
       "exam": {
@@ -1029,12 +1044,13 @@
         "interactive_missions": 2,
         "diagnostics": 1,
         "adaptive_reviews": 1,
-        "exercises": 282,
-        "decisions": 446,
+        "exercises": 177,
+        "decisions": 281,
         "listening_dialogues": 0,
         "visual_methods": 12,
         "comparison_tables": 4,
-        "annales_lessons": 5
+        "annales_lessons": 5,
+        "free_exercises": 147
       },
       "duration_breakdown": [
         {
@@ -1043,19 +1059,19 @@
         },
         {
           "label": "Ateliers de repères",
-          "minutes": 72
+          "minutes": 108
         },
         {
-          "label": "Dossiers professionnels et corrections",
-          "minutes": 234
+          "label": "Dossiers professionnels",
+          "minutes": 242
         },
         {
-          "label": "Deux missions filées",
-          "minutes": 80
+          "label": "Missions",
+          "minutes": 76
         },
         {
-          "label": "Bilan et révisions adaptées aux erreurs",
-          "minutes": 50
+          "label": "Bilan et révision ciblée (maximum)",
+          "minutes": 52
         },
         {
           "label": "Synthèse, vidéo et approfondissement",
@@ -1069,7 +1085,8 @@
     "20261006-vtc-v2",
     "20261006-vtc-v3-105h",
     "20261007-vtc-v4-visuals",
-    "20261007-vtc-v5-annales"
+    "20261007-vtc-v5-annales",
+    "20261010-vtc-v6-pedagogie"
   ],
   "video_count": 8,
   "narrated_video_count": 8,
@@ -1080,12 +1097,12 @@
   "diagnostic_count": 8,
   "adaptive_review_count": 8,
   "duration_status": "programme_previsionnel",
-  "duration_note": "105 h de programme pédagogique prévisionnel. La durée réellement nécessaire dépend des acquis et des reprises. Le suivi distingue le temps actif et l’achèvement ; un groupe pilote permet de calibrer les estimations.",
+  "duration_note": "Charge indicative recalculée après allègement. La durée dépend des acquis et des révisions ; elle reste à mesurer avec un groupe pilote. Les affectations existantes conservent leur durée configurée.",
   "module_exam_questions": 240,
   "final_exam_questions": 100,
   "activity_count": 336,
-  "exercise_count": 1979,
-  "decision_count": 2642,
+  "exercise_count": 1279,
+  "decision_count": 1809,
   "visual_edition_on": "2026-10-07",
   "visual_method_count": 96,
   "comparison_table_count": 32,
@@ -1097,5 +1114,7 @@
   "annales_source_count": 8,
   "annales_section_count": 26,
   "annales_active_count": 330,
-  "annales_lesson_count": 79
+  "annales_lesson_count": 79,
+  "free_exercise_count": 1064,
+  "programme_file": "programme_pedagogie.json"
 }

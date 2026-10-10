@@ -1,0 +1,944 @@
+{
+  "id": "vtc-e",
+  "version": "20261010-vtc-v6-pedagogie",
+  "training_label": "VTC",
+  "title": "Anglais VTC · 30 échanges professionnels",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "v6-module-e-01",
+      "prompt": "À l’accueil, le passager dit : “Good evening. I’m here for the shuttle booked by Northbridge Ltd.” Quelle réponse vérifie utilement son identité de réservation ?",
+      "options": [
+        {
+          "id": "choice-78bc8c3d0529",
+          "text": "“Good evening. May I have your name and booking reference, please?”"
+        },
+        {
+          "id": "choice-2ab8d6ead46a",
+          "text": "“Good evening. Which station would you like to reach?”"
+        },
+        {
+          "id": "choice-4894f02c1839",
+          "text": "“Good evening. What time would you like to return tomorrow?”"
+        }
+      ],
+      "answer": "choice-78bc8c3d0529",
+      "explanation": "Le client annonce un transport réservé par une entreprise. Le nom et la référence permettent de vérifier la mission ; la destination et l’horaire du retour ne vérifient pas, à eux seuls, son identité de réservation.",
+      "module": "E",
+      "lesson_refs": [
+        "E.01"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-02",
+      "prompt": "Vous présentez votre rôle : « Je suis le conducteur chargé de votre transfert vers le port. » Quelle phrase anglaise transmet cette information ?",
+      "options": [
+        {
+          "id": "choice-3fb1c0d76652",
+          "text": "“I am the passenger waiting at the port.”"
+        },
+        {
+          "id": "choice-eeaa1db8b681",
+          "text": "“I am the driver for your transfer to the port.”"
+        },
+        {
+          "id": "choice-c87ea9dd5561",
+          "text": "“I am driving from the port after your transfer.”"
+        }
+      ],
+      "answer": "choice-eeaa1db8b681",
+      "explanation": "Driver désigne le conducteur ; for your transfer to the port indique sa mission et sa destination. Les autres phrases changent le rôle ou le sens du déplacement.",
+      "module": "E",
+      "lesson_refs": [
+        "E.01"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-03",
+      "prompt": "Le passager précise : “We only need a one-way transfer today. Someone else will collect us tomorrow.” Que devez-vous confirmer ?",
+      "options": [
+        {
+          "id": "choice-fe804dccfff2",
+          "text": "Un aller-retour aujourd’hui assuré par le même conducteur."
+        },
+        {
+          "id": "choice-e17f0743e921",
+          "text": "Deux transferts aujourd’hui pour deux groupes différents."
+        },
+        {
+          "id": "choice-d898fa9618cd",
+          "text": "Un transfert aller simple aujourd’hui ; un autre transport est prévu pour le lendemain."
+        }
+      ],
+      "answer": "choice-d898fa9618cd",
+      "explanation": "Only et one-way limitent la demande à un trajet simple. Tomorrow situe la prise en charge par une autre personne au lendemain, pas plus tard le même jour.",
+      "module": "E",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-04",
+      "prompt": "Pour vérifier si le client veut une prise en charge à l’hôtel ou au centre d’affaires, quelle question est correctement ciblée ?",
+      "options": [
+        {
+          "id": "choice-b13a89ee919f",
+          "text": "“Would you like me to collect you at the hotel or at the business centre?”"
+        },
+        {
+          "id": "choice-27929b3ab87c",
+          "text": "“Would you like me to take you to the hotel or to the business centre?”"
+        },
+        {
+          "id": "choice-5ae5fc61cbd2",
+          "text": "“Did you come from the hotel or from the business centre yesterday?”"
+        }
+      ],
+      "answer": "choice-b13a89ee919f",
+      "explanation": "Collect you concerne la prise en charge et présente les deux lieux possibles. Les autres questions portent sur la destination ou le trajet passé, et non sur le lieu où venir chercher le client.",
+      "module": "E",
+      "lesson_refs": [
+        "E.02"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-05",
+      "prompt": "Le message reçu est : “Please collect us at noon, not at midnight.” Quelle distinction faut-il conserver ?",
+      "options": [
+        {
+          "id": "choice-1c604838e75d",
+          "text": "Minuit, et non midi."
+        },
+        {
+          "id": "choice-e64bdb2925ec",
+          "text": "Midi, et non minuit."
+        },
+        {
+          "id": "choice-ac43adc360d0",
+          "text": "Une heure indéterminée entre midi et minuit."
+        }
+      ],
+      "answer": "choice-e64bdb2925ec",
+      "explanation": "Noon désigne midi et midnight minuit. La négation écarte explicitement la deuxième heure ; il n’est pas demandé une plage de douze heures.",
+      "module": "E",
+      "lesson_refs": [
+        "E.03"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Prepositions of time ; exemples professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/prepositions-time"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-06",
+      "prompt": "Votre planning indique vendredi. Le client écrit : “Could we move the booking to the following Monday?” Quel changement demande-t-il ?",
+      "options": [
+        {
+          "id": "choice-0e2005f033f2",
+          "text": "La déplacer au lundi précédent."
+        },
+        {
+          "id": "choice-11b1da2fae08",
+          "text": "La conserver le vendredi en changeant seulement l’heure."
+        },
+        {
+          "id": "choice-98d90e1913bf",
+          "text": "Reporter la réservation au lundi suivant."
+        }
+      ],
+      "answer": "choice-98d90e1913bf",
+      "explanation": "The following Monday désigne le lundi qui suit. Move the booking demande de déplacer la réservation, sans donner dans cette phrase une nouvelle heure précise.",
+      "module": "E",
+      "lesson_refs": [
+        "E.03"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Prepositions of time ; exemples professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/prepositions-time"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-07",
+      "prompt": "Consigne reçue : “Go past the café. The entrance is on your left, opposite the lift.” Quel chemin correspond ?",
+      "options": [
+        {
+          "id": "choice-8e51e0e34e71",
+          "text": "Dépasser le café, puis chercher l’entrée à gauche, en face de l’ascenseur."
+        },
+        {
+          "id": "choice-e03d65adfa92",
+          "text": "S’arrêter avant le café et chercher l’entrée à droite, derrière l’ascenseur."
+        },
+        {
+          "id": "choice-df4969472619",
+          "text": "Entrer dans le café, puis prendre l’ascenseur à gauche."
+        }
+      ],
+      "answer": "choice-8e51e0e34e71",
+      "explanation": "Go past demande de dépasser, on your left indique la gauche et opposite signifie en face. Les trois repères doivent être associés, sans inventer une entrée dans le café.",
+      "module": "E",
+      "lesson_refs": [
+        "E.04"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-08",
+      "prompt": "Le client dit : “I’m still inside the building, next to the reception desk.” Quelle réponse l’aide à rejoindre le véhicule ?",
+      "options": [
+        {
+          "id": "choice-59e15cb2bc83",
+          "text": "“You are already outside beside my car.”"
+        },
+        {
+          "id": "choice-28304202e22d",
+          "text": "“Please stay there while I confirm the authorised pick-up point, then I’ll guide you.”"
+        },
+        {
+          "id": "choice-b80e67a46480",
+          "text": "“The reception desk is your final destination.”"
+        }
+      ],
+      "answer": "choice-28304202e22d",
+      "explanation": "Still inside signifie qu’il est encore à l’intérieur ; next to situe sa position près de la réception. La première réponse tient compte de cette position et propose une suite précise.",
+      "module": "E",
+      "lesson_refs": [
+        "E.04"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-09",
+      "prompt": "Un client vous prévient : “This bag is heavier than it looks. Can we lift it together?” Que propose-t-il ?",
+      "options": [
+        {
+          "id": "choice-d6d3d111f17c",
+          "text": "De retirer tout le contenu du sac parce qu’il est trop léger."
+        },
+        {
+          "id": "choice-29bb728c7f36",
+          "text": "De soulever le sac seul pendant que le conducteur repart."
+        },
+        {
+          "id": "choice-878342934779",
+          "text": "De soulever ensemble un sac plus lourd qu’il n’en a l’air."
+        }
+      ],
+      "answer": "choice-878342934779",
+      "explanation": "Heavier than it looks indique un poids supérieur à l’apparence. Together exprime une action à deux ; le passager ne demande ni de vider le bagage ni de rester seul.",
+      "module": "E",
+      "lesson_refs": [
+        "E.05"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-10",
+      "prompt": "Vous souhaitez demander l’autorisation de déplacer une canne pour libérer le passage. Quelle phrase respecte ce sens ?",
+      "options": [
+        {
+          "id": "choice-6883fa35dd61",
+          "text": "“May I move your walking stick so the doorway is clear?”"
+        },
+        {
+          "id": "choice-a20d08f58ef7",
+          "text": "“You must leave your walking stick at the hotel.”"
+        },
+        {
+          "id": "choice-970ac9afbba5",
+          "text": "“May I take your walking stick back to reception?”"
+        }
+      ],
+      "answer": "choice-6883fa35dd61",
+      "explanation": "May I demande une permission avant l’action ; so the doorway is clear donne le but. Les autres phrases imposent un abandon ou proposent une destination différente pour la canne.",
+      "module": "E",
+      "lesson_refs": [
+        "E.05"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-11",
+      "prompt": "Vous entendez : “Could you lower the music a little? I need to make a short call.” Quelle demande le client formule-t-il ?",
+      "options": [
+        {
+          "id": "choice-76f66a7412cd",
+          "text": "Augmenter la musique pour couvrir son appel."
+        },
+        {
+          "id": "choice-41c4c07a3701",
+          "text": "Baisser un peu la musique pour lui permettre de téléphoner."
+        },
+        {
+          "id": "choice-97aa81c90416",
+          "text": "Appeler quelqu’un à sa place depuis votre téléphone."
+        }
+      ],
+      "answer": "choice-41c4c07a3701",
+      "explanation": "Lower the music concerne le volume sonore. Le client précise qu’il passera lui-même un appel ; il ne demande pas au conducteur de téléphoner.",
+      "module": "E",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-12",
+      "prompt": "Le véhicule est à l’arrêt. Vous devez demander au passager de fermer sa porte avant le départ. Quelle formulation est polie et précise ?",
+      "options": [
+        {
+          "id": "choice-19f8e4be4d43",
+          "text": "“You closed your door after we arrived.”"
+        },
+        {
+          "id": "choice-00278f0ba211",
+          "text": "“Could you open your door while we are moving?”"
+        },
+        {
+          "id": "choice-64481447fb7b",
+          "text": "“Could you close your door before we set off, please?”"
+        }
+      ],
+      "answer": "choice-64481447fb7b",
+      "explanation": "Could you… please formule une demande. Before we set off situe la fermeture avant le départ ; la deuxième phrase raconte un passé, la troisième demande l’action opposée en mouvement.",
+      "module": "E",
+      "lesson_refs": [
+        "E.06"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-13",
+      "prompt": "Le conducteur explique : “The tunnel is closed, so we will use the bridge. The journey should take about ten minutes longer.” Quelle information est donnée ?",
+      "options": [
+        {
+          "id": "choice-06b6fa54cfe8",
+          "text": "Un détour par le pont à cause du tunnel fermé, avec environ dix minutes de plus."
+        },
+        {
+          "id": "choice-62a554ee88cc",
+          "text": "Un passage par le tunnel qui économisera exactement dix minutes."
+        },
+        {
+          "id": "choice-e71f7bba7914",
+          "text": "Une annulation obligatoire de tout transport vers la destination."
+        }
+      ],
+      "answer": "choice-06b6fa54cfe8",
+      "explanation": "So relie la fermeture à l’itinéraire de remplacement. About marque une approximation et longer une durée supplémentaire, sans garantie d’un temps exact.",
+      "module": "E",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-14",
+      "prompt": "Vous voulez vérifier si le passager préfère le trajet le plus direct ou un passage par le bord de mer. Quelle question correspond ?",
+      "options": [
+        {
+          "id": "choice-cc90de0ea1d6",
+          "text": "“Did you use the coastal route when you arrived yesterday?”"
+        },
+        {
+          "id": "choice-14b1699ec1b6",
+          "text": "“Would you prefer the direct route or the route along the coast?”"
+        },
+        {
+          "id": "choice-aa7a9ff8a351",
+          "text": "“How long did your previous journey along the coast take?”"
+        }
+      ],
+      "answer": "choice-14b1699ec1b6",
+      "explanation": "Would you prefer demande une préférence entre deux itinéraires. Along the coast signifie le long de la côte ; les deux autres phrases interrogent le trajet passé plutôt que la préférence actuelle.",
+      "module": "E",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-15",
+      "prompt": "Le tarif indique : “Parking fees are included. Admission tickets are not.” Quelle distinction faut-il expliquer ?",
+      "options": [
+        {
+          "id": "choice-418b58698927",
+          "text": "Les billets d’entrée sont inclus, mais pas le stationnement."
+        },
+        {
+          "id": "choice-f56c15fc0530",
+          "text": "Tous les frais de la visite sont inclus."
+        },
+        {
+          "id": "choice-700849e0b42e",
+          "text": "Le stationnement est inclus, les billets d’entrée ne le sont pas."
+        }
+      ],
+      "answer": "choice-700849e0b42e",
+      "explanation": "Parking fees concerne les frais de stationnement et admission tickets les billets d’entrée. Are not limite clairement ce qui est compris dans le tarif.",
+      "module": "E",
+      "lesson_refs": [
+        "E.08"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-16",
+      "prompt": "Le client demande : “Is that the total price, or will there be an extra charge for waiting?” Quelle précision attend-il ?",
+      "options": [
+        {
+          "id": "choice-81bacad41d1f",
+          "text": "Il veut savoir si l’attente entraînera un supplément au prix annoncé."
+        },
+        {
+          "id": "choice-b59b772dfdff",
+          "text": "Il demande de supprimer tout paiement pour le trajet."
+        },
+        {
+          "id": "choice-84bd7a2e726e",
+          "text": "Il demande uniquement combien de minutes le conducteur attend déjà."
+        }
+      ],
+      "answer": "choice-81bacad41d1f",
+      "explanation": "Extra charge signifie supplément facturé. La question distingue un total tout compris d’un prix auquel pourrait s’ajouter l’attente.",
+      "module": "E",
+      "lesson_refs": [
+        "E.08"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-17",
+      "prompt": "Le message dit : “The speaker has not finished yet. Please wait for our confirmation before coming to the entrance.” Quelle conduite correspond au message ?",
+      "options": [
+        {
+          "id": "choice-48625196d29f",
+          "text": "Rejoindre immédiatement l’entrée puisque l’intervention est déjà terminée."
+        },
+        {
+          "id": "choice-df49435b9258",
+          "text": "Attendre la confirmation avant de rejoindre l’entrée, car l’intervention n’est pas terminée."
+        },
+        {
+          "id": "choice-7882d72afa01",
+          "text": "Annuler la réservation parce qu’aucune confirmation ne pourra arriver."
+        }
+      ],
+      "answer": "choice-df49435b9258",
+      "explanation": "Not… yet signifie pas encore ; before impose d’attendre la confirmation. Le texte ne transforme pas cette attente en annulation définitive.",
+      "module": "E",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-18",
+      "prompt": "Vous êtes arrêté et devez annoncer : « Une route est fermée. Je vous communiquerai une nouvelle estimation dans quelques minutes. » Quelle phrase convient ?",
+      "options": [
+        {
+          "id": "choice-f0b5ed954991",
+          "text": "“The road is open. I arrived a few minutes ago.”"
+        },
+        {
+          "id": "choice-7e690b5b0108",
+          "text": "“Your arrival time is guaranteed, even if the road is closed.”"
+        },
+        {
+          "id": "choice-3c1755da4775",
+          "text": "“A road is closed. I’ll give you an updated arrival estimate in a few minutes.”"
+        }
+      ],
+      "answer": "choice-3c1755da4775",
+      "explanation": "Closed signale la fermeture, I’ll annonce l’action à venir et updated estimate une estimation révisée. La phrase ne promet pas un horaire garanti.",
+      "module": "E",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-19",
+      "prompt": "Le client dit : “The receipt is for me, but the invoice should show my employer’s name.” Quels documents demande-t-il ?",
+      "options": [
+        {
+          "id": "choice-f6a597850f14",
+          "text": "Un reçu pour lui et une facture établie avec le nom de son employeur."
+        },
+        {
+          "id": "choice-2c200d29633d",
+          "text": "Une facture personnelle pour le client et un reçu au nom de son employeur."
+        },
+        {
+          "id": "choice-32a1e25d1f30",
+          "text": "Un document unique au nom du client, sans mention de son employeur."
+        }
+      ],
+      "answer": "choice-f6a597850f14",
+      "explanation": "Receipt est le reçu ; invoice est la facture. Le possessif my renvoie au client et employer à son employeur, pas au conducteur.",
+      "module": "E",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-20",
+      "prompt": "Vous venez de rendre la monnaie et voulez vérifier que le client l’a reçue correctement. Quelle phrase correspond ?",
+      "options": [
+        {
+          "id": "choice-df9c5ddc293f",
+          "text": "“Here is your route. Could you change the destination?”"
+        },
+        {
+          "id": "choice-041cb5eb143a",
+          "text": "“Here is your change. Could you check the amount, please?”"
+        },
+        {
+          "id": "choice-a43779e49cad",
+          "text": "“Here is the remaining fare. Could you pay this amount, please?”"
+        }
+      ],
+      "answer": "choice-041cb5eb143a",
+      "explanation": "Dans ce contexte, change signifie la monnaie rendue. Check the amount demande de vérifier le montant, sans annoncer un solde qui resterait à payer.",
+      "module": "E",
+      "lesson_refs": [
+        "E.10"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-21",
+      "prompt": "Le passager dit : “I left my jacket at the restaurant, not in your car.” Quel lieu devez-vous retenir ?",
+      "options": [
+        {
+          "id": "choice-1b043f30dc30",
+          "text": "Le véhicule."
+        },
+        {
+          "id": "choice-4d8c3f3d1e1b",
+          "text": "Le bureau du transporteur."
+        },
+        {
+          "id": "choice-4fa66bd46015",
+          "text": "Le restaurant."
+        }
+      ],
+      "answer": "choice-4fa66bd46015",
+      "explanation": "La négation écarte le véhicule. Le client situe l’oubli au restaurant ; le bureau du transporteur n’apparaît pas dans l’information donnée.",
+      "module": "E",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-22",
+      "prompt": "Un client explique rapidement un problème et vous n’avez pas compris le dernier mot. Quelle réponse clarifie la demande sans prétendre l’avoir comprise ?",
+      "options": [
+        {
+          "id": "choice-0e5a44db99ea",
+          "text": "“Could you repeat the last part more slowly, please?”"
+        },
+        {
+          "id": "choice-1fee4d315e29",
+          "text": "“Everything is agreed, although I did not understand.”"
+        },
+        {
+          "id": "choice-beb742882691",
+          "text": "“Please cancel your request because it was too fast.”"
+        }
+      ],
+      "answer": "choice-0e5a44db99ea",
+      "explanation": "Demander de répéter plus lentement est une stratégie de clarification. Il vaut mieux vérifier le message que confirmer un accord non compris ou imposer une annulation.",
+      "module": "E",
+      "lesson_refs": [
+        "E.11"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-23",
+      "prompt": "Le client lit : “The exhibition is free, but advance booking is required.” Quelle information pratique doit-il retenir ?",
+      "options": [
+        {
+          "id": "choice-b0adef040825",
+          "text": "La réservation est facultative parce que l’entrée est gratuite."
+        },
+        {
+          "id": "choice-8c118b144051",
+          "text": "L’exposition est gratuite, mais une réservation à l’avance est nécessaire."
+        },
+        {
+          "id": "choice-d65c7e0a5e9e",
+          "text": "La réservation est payante parce que l’exposition est gratuite."
+        }
+      ],
+      "answer": "choice-8c118b144051",
+      "explanation": "Free concerne le prix de l’exposition ; required signifie obligatoire. La phrase ne dit pas que la réservation coûte quelque chose.",
+      "module": "E",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-24",
+      "prompt": "Vous connaissez le quartier, mais pas les horaires actualisés d’un monument. Quelle phrase exprime correctement cette limite ?",
+      "options": [
+        {
+          "id": "choice-8421e1b27276",
+          "text": "“I know where it is, so it must be open all day.”"
+        },
+        {
+          "id": "choice-b1add0a8a01d",
+          "text": "“It was open last year, so the opening hours cannot change.”"
+        },
+        {
+          "id": "choice-fc10aa5ad58b",
+          "text": "“I know where it is, but I need to check today’s opening hours.”"
+        }
+      ],
+      "answer": "choice-fc10aa5ad58b",
+      "explanation": "La première phrase distingue la localisation connue d’un horaire à vérifier. La connaissance d’un lieu ne permet pas de garantir son ouverture actuelle.",
+      "module": "E",
+      "lesson_refs": [
+        "E.12"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-25",
+      "prompt": "Le client dicte : “There are fourteen delegates, but only four are travelling in this car.” Quel nombre concerne ce véhicule ?",
+      "options": [
+        {
+          "id": "choice-2f7820a5325d",
+          "text": "Four."
+        },
+        {
+          "id": "choice-19c0fa3ff09a",
+          "text": "Fourteen."
+        },
+        {
+          "id": "choice-14c5601fdaad",
+          "text": "Eighteen."
+        }
+      ],
+      "answer": "choice-2f7820a5325d",
+      "explanation": "Le groupe total compte quatorze délégués, mais only four limite ce véhicule à quatre voyageurs. L’exercice teste le périmètre du nombre, pas seulement sa traduction.",
+      "module": "E",
+      "lesson_refs": [
+        "E.03"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-26",
+      "prompt": "Le passager écrit : “I can see your car, but there is a fence between us.” Quel obstacle décrit-il ?",
+      "options": [
+        {
+          "id": "choice-e0e7e9f845b0",
+          "text": "Une facture manquante entre deux paiements."
+        },
+        {
+          "id": "choice-c1000126844a",
+          "text": "Une clôture entre lui et la voiture."
+        },
+        {
+          "id": "choice-cb8e3e845b68",
+          "text": "Une file de voitures derrière l’hôtel."
+        }
+      ],
+      "answer": "choice-c1000126844a",
+      "explanation": "A fence désigne une clôture. Le client voit le véhicule, mais between us signale un obstacle qui empêche de supposer un accès direct.",
+      "module": "E",
+      "lesson_refs": [
+        "E.04"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-27",
+      "prompt": "Le passager dit : “I can carry the small bag myself. Could you help with the two larger ones?” Quelle aide demande-t-il ?",
+      "options": [
+        {
+          "id": "choice-6b72a255e684",
+          "text": "De porter seulement le petit bagage et de laisser les grands."
+        },
+        {
+          "id": "choice-400ed85b8a69",
+          "text": "De transporter tous les bagages sans qu’il puisse en garder un."
+        },
+        {
+          "id": "choice-6da282a0df7f",
+          "text": "De l’aide pour les deux grands bagages, en gardant lui-même le petit."
+        }
+      ],
+      "answer": "choice-6da282a0df7f",
+      "explanation": "Myself précise ce qu’il peut faire seul ; the two larger ones reprend les deux bagages plus grands. L’aide demandée est donc ciblée.",
+      "module": "E",
+      "lesson_refs": [
+        "E.05"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-28",
+      "prompt": "Le client demande : “How far is the hotel?” Quelle information répond à sa question ?",
+      "options": [
+        {
+          "id": "choice-821563d44ef3",
+          "text": "“It is about eight kilometres from here.”"
+        },
+        {
+          "id": "choice-ecad77086ea4",
+          "text": "“It usually takes twenty minutes.”"
+        },
+        {
+          "id": "choice-4762a12fa256",
+          "text": "“The hotel opens its restaurant at seven.”"
+        }
+      ],
+      "answer": "choice-821563d44ef3",
+      "explanation": "How far demande une distance. Une durée peut être utile ensuite, mais elle ne répond pas directement à la question ; les horaires du restaurant sont hors sujet.",
+      "module": "E",
+      "lesson_refs": [
+        "E.07"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Question words ; échanges professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/question-words"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-29",
+      "prompt": "Vous dites : “The quotation is valid until Thursday.” Que signifie cette limite dans la phrase ?",
+      "options": [
+        {
+          "id": "choice-3bacbb82e78b",
+          "text": "Le trajet doit obligatoirement se terminer jeudi."
+        },
+        {
+          "id": "choice-357be6c05fd3",
+          "text": "Le devis reste valable jusqu’à jeudi."
+        },
+        {
+          "id": "choice-bc56fcb6bd7f",
+          "text": "Le devis ne sera envoyé qu’après jeudi."
+        }
+      ],
+      "answer": "choice-357be6c05fd3",
+      "explanation": "Valid until concerne la durée de validité de l’offre. La phrase ne fixe ni une fin de trajet ni la date future d’envoi du devis.",
+      "module": "E",
+      "lesson_refs": [
+        "E.08"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Prepositions of time ; exemples professionnels originaux",
+          "url": "https://learnenglishteens.britishcouncil.org/grammar/a1-a2-grammar/prepositions-time"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    },
+    {
+      "id": "v6-module-e-30",
+      "prompt": "Le passager écrit : “We are running late, but we still need the car.” Quelle interprétation évite une mauvaise annulation ?",
+      "options": [
+        {
+          "id": "choice-5d78a8ba6360",
+          "text": "Les clients ont annulé définitivement la voiture."
+        },
+        {
+          "id": "choice-597df94427d5",
+          "text": "Les clients sont arrivés en avance et ne veulent plus attendre."
+        },
+        {
+          "id": "choice-6ee8d4660cd1",
+          "text": "Les clients sont en retard mais maintiennent leur besoin de transport."
+        }
+      ],
+      "answer": "choice-6ee8d4660cd1",
+      "explanation": "Running late exprime un retard ; still need confirme que le besoin demeure. Il faut préciser la suite de l’organisation sans transformer le retard en annulation.",
+      "module": "E",
+      "lesson_refs": [
+        "E.09"
+      ],
+      "sources": [
+        {
+          "title": "British Council — Repères de langue A1–A2 ; échanges professionnels originaux",
+          "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2"
+        }
+      ],
+      "origin": "pedagogical-original-v6"
+    }
+  ],
+  "notice": "Entraînement pédagogique original en anglais. Choisissez la réponse correspondant exactement à la situation. Ce questionnaire ne reproduit pas la notation de l’examen officiel.",
+  "construction": {
+    "origin": "30 échanges originaux distincts des annales et du final",
+    "reviewed_on": "2026-10-10"
+  }
+}

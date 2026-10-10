@@ -3,11 +3,12 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-preview.js"), "utf8");
+const menuSource = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-menu.js"), "utf8");
 
 async function checkQuestion(questionType, fields, fill, expected) {
   const config = { questionType, csrfToken: "csrf", answerUrl: "/api/admin/preview/answer?version=pinned" };
   const dom = new JSDOM(`<button id="nativeMenuButton" aria-expanded="false"></button>
-    <aside id="nativeSidebar"></aside><button id="nativeSidebarOverlay"></button>
+    <aside id="nativeSidebar" tabindex="-1"><button id="nativeMenuClose">Fermer</button></aside><button id="nativeSidebarOverlay"></button>
     <div class="flip-card-wrapper"></div><div class="native-block--checklistitem"></div>
     <form id="nativeQuestionForm">${fields}</form><div id="nativeAnswerFeedback"></div>
     <button id="nativePreviewAnswerButton">Tester ma réponse</button>
@@ -16,6 +17,7 @@ async function checkQuestion(questionType, fields, fill, expected) {
   const { window } = dom, { document } = window;
   const requests = [];
   let correct = false;
+  window.matchMedia = () => ({ matches: true, addEventListener() {} });
   window.setInterval = () => { throw new Error("Preview must not start a clock or heartbeat"); };
   window.fetch = async (url, options) => {
     requests.push({ url, options, body: JSON.parse(options.body) });
@@ -24,6 +26,7 @@ async function checkQuestion(questionType, fields, fill, expected) {
   const settle = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
   try {
     window.eval(source);
+    window.eval(menuSource);
     window.dispatchEvent(new window.Event("focus"));
     window.dispatchEvent(new window.Event("pagehide"));
     document.dispatchEvent(new window.Event("visibilitychange"));

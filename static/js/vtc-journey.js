@@ -3,6 +3,7 @@
   const root = document.querySelector('[data-vtc-journey]');
   if (!root) return;
   const config = JSON.parse(document.getElementById('vtcJourneyConfig').textContent);
+  const freePractice = Boolean(config.freePractice);
   const preview = Boolean(document.getElementById('nativePreviewConfig'));
   const access = JSON.parse(document.getElementById(preview ? 'nativePreviewConfig' : 'nativeElearningConfig').textContent);
   const form = root.querySelector('form'), message = root.querySelector('[data-vtc-message]');
@@ -15,18 +16,27 @@
   let answers = {...(config.saved.practice_answers || {})};
   const key = `vtc-journey:${location.pathname}:${config.courseVersion}:${config.activityId}`;
   const readOnly = check.disabled;
-  if (config.practice.adaptive && weak.size) {
+  if (config.practice.selection_summary) {
+    const selection = config.practice.selection_summary;
+    const priority = root.querySelector('[data-vtc-priority]');
+    priority.textContent = `${selection.selected_count} situations sélectionnées sur ${selection.available_count}. ` +
+      (selection.mastered_count ? 'Les acquis déjà observés allègent votre révision. ' +
+        (selection.control_count ? 'Quelques questions de contrôle restent proposées.' : 'Les situations retenues ciblent les notions à consolider.') :
+        'Les notions sans acquis suffisamment confirmés sont toutes proposées.');
+    priority.hidden = false;
+  } else if (config.practice.adaptive && weak.size) {
     sequence.sort((a,b) => Number(weak.has(definitions.get(b).competency)) - Number(weak.has(definitions.get(a).competency)));
     const priority = root.querySelector('[data-vtc-priority]');
     priority.textContent = `Les situations liées à vos premières erreurs passent en priorité : ${[...weak].join(', ')}. Toutes les notions seront ensuite révisées.`;
     priority.hidden = false;
   }
-  if (!preview && !config.completed) {
+  if ((!preview || freePractice) && !config.completed) {
     try { answers = {...answers, ...JSON.parse(sessionStorage.getItem(key) || '{}')}; } catch (_) { /* optional draft */ }
     for (const [id, item] of Object.entries(config.saved.practice_diagnostics || {})) {
       if (fields.has(id) && JSON.stringify(answers[id]) === JSON.stringify(config.saved.practice_answers?.[id])) results.set(id, {correct:item.correct});
     }
   }
+  answers = Object.fromEntries(Object.entries(answers).filter(([id]) => definitions.has(id)));
   function restore() {
     fields.forEach((el,id) => {
       el.querySelectorAll('input[type=radio]').forEach(input => { input.checked = input.value === answers[id]; });
@@ -47,10 +57,15 @@
     return Object.fromEntries(values.map(e=>[e.dataset.rowId,e.value]));
   }
   function cache() {
-    if (!preview && !config.completed) try {sessionStorage.setItem(key,JSON.stringify(answers));} catch (_) {}
+    if ((!preview || freePractice) && !config.completed) try {sessionStorage.setItem(key,JSON.stringify(answers));} catch (_) {}
   }
   function stopAudio() { root.querySelectorAll('audio').forEach(audio=>audio.pause()); }
-  function show() {
+  function focusHeading(container) {
+    const heading = container.querySelector(':scope > h3') || container.querySelector(':scope > legend') || container;
+    heading.tabIndex = -1;
+    heading.focus();
+  }
+  function show(focus = false) {
     stopAudio(); form.hidden=false; review.hidden=true; message.textContent='';
     fields.forEach(el=>{el.hidden=true;});
     const id=sequence[index]; fields.get(id).hidden=false;
@@ -59,6 +74,7 @@
     prev.disabled=busy||index===0;
     next.hidden=!results.has(id); next.disabled=busy;
     check.disabled=readOnly||busy;
+    if (focus) focusHeading(fields.get(id));
   }
   async function post(body) {
     const response=await fetch(preview?access.answerUrl:access.practiceUrl,{method:'POST',credentials:'same-origin',
@@ -72,14 +88,19 @@
     const box=fields.get(id).querySelector('[data-step-feedback]'); box.replaceChildren();box.hidden=false;
     box.dataset.correct=String(item.correct);
     const h=document.createElement('h4');h.textContent=item.correct?'Décision validée':'Cette décision est à reprendre';box.append(h);
-    for(const value of [item.consequence,item.explanation,!item.correct&&item.coaching]) {
-      if(value){const p=document.createElement('p');p.textContent=value;box.append(p);}
-    }
+    const texts=[item.consequence,item.explanation,!item.correct&&item.coaching].filter(Boolean);
+    const normalized=texts.map(value=>value.replace(/\s+/g,' ').trim());
+    texts.forEach((value,index)=>{
+      // Some older corrections already include the explanation in the outcome.
+      if(normalized.some((other,i)=>i!==index&&other.includes(normalized[index])&&(other.length>normalized[index].length||i<index)))return;
+      const p=document.createElement('p');p.textContent=value;box.append(p);
+    });
     if(!item.correct){const ul=document.createElement('ul');for(const value of item.correction||[]){const li=document.createElement('li');li.textContent=value;ul.append(li);}box.append(ul);}
   }
-  async function finish() {
+  async function finish(focus = true) {
     if(busy)return;
     stopAudio();form.hidden=true;review.hidden=false;root.querySelector('[data-vtc-step]').textContent='Bilan de l’activité';
+    if (focus) focusHeading(review);
     const wrong=[...fields.keys()].filter(id=>!results.get(id)?.correct);
     const text=root.querySelector('[data-vtc-summary]'), box=root.querySelector('[data-vtc-weak]');box.replaceChildren();
     root.querySelector('[data-vtc-retry]').hidden=!wrong.length;
@@ -95,7 +116,7 @@
       const result=await post({practice_answers:answers});
       if(!result.correct) throw new Error('Une réponse doit être revue. Reprenez les étapes.');
       verified=JSON.stringify(answers);
-      text.textContent=preview?'Activité réussie. Vous pouvez explorer la suite du parcours.':'Activité réussie. Cliquez sur « Terminer l’activité » pour enregistrer votre progression et poursuivre.';
+      text.textContent=freePractice?'Entraînement terminé. Vous pouvez choisir une autre situation ou revenir au parcours.':preview?'Activité réussie. Vous pouvez explorer la suite du parcours.':'Activité réussie. Cliquez sur « Terminer l’activité » pour enregistrer votre progression et poursuivre.';
       root.querySelector('progress').value=fields.size;
     } catch(error){verified='';text.textContent=error.message;verify.hidden=false;} finally{busy=false;}
   }
@@ -121,10 +142,10 @@
     const id=el.dataset.exerciseId;results.delete(id);verified='';next.hidden=true;el.querySelector('[data-step-feedback]').hidden=true;
     try{answers[id]=collect(id);}catch(_){delete answers[id];}cache();
   });
-  next.addEventListener('click',()=>{if(busy)return;if(index+1<sequence.length){index++;show();}else finish();});
-  prev.addEventListener('click',()=>{if(!busy&&index>0){index--;show();}});
-  root.querySelector('[data-vtc-retry]').addEventListener('click',()=>{if(busy)return;sequence=[...fields.keys()].filter(id=>!results.get(id)?.correct);index=0;show();});
-  root.querySelector('[data-vtc-all]').addEventListener('click',()=>{if(busy)return;sequence=[...fields.keys()];index=0;show();});
+  next.addEventListener('click',()=>{if(busy)return;if(index+1<sequence.length){index++;show(true);}else finish();});
+  prev.addEventListener('click',()=>{if(!busy&&index>0){index--;show(true);}});
+  root.querySelector('[data-vtc-retry]').addEventListener('click',()=>{if(busy)return;sequence=[...fields.keys()].filter(id=>!results.get(id)?.correct);index=0;show(true);});
+  root.querySelector('[data-vtc-all]').addEventListener('click',()=>{if(busy)return;sequence=[...fields.keys()];index=0;show(true);});
   root.querySelector('[data-vtc-verify]').addEventListener('click',finish);
   root.querySelectorAll('[data-audio-speed]').forEach(select=>select.addEventListener('change',()=>{select.closest('.vtc-listen').querySelector('audio').playbackRate=Number(select.value);}));
   root.querySelectorAll('[data-vtc-simulator]').forEach(sim=>{
@@ -140,5 +161,5 @@
     if(busy||verified!==JSON.stringify(answers))throw new Error('Terminez les étapes, reprenez vos erreurs et consultez le bilan avant de continuer.');
     return answers;
   }};
-  if(first===-1 && !readOnly) finish();
+  if(first===-1 && !readOnly) finish(false);
 })();

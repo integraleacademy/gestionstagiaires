@@ -53,7 +53,7 @@ class VisualMediaTests(unittest.TestCase):
             current=vtc.load_bundled_course(m['id'],VERSION)
             old=vtc.load_bundled_course(m['id'],BASE)
             self.assertEqual(current['activity_order'],old['activity_order'])
-            self.assertEqual(sum(a['planned_minutes'] for s in current['sections'] for a in s['activities']),m['planned_minutes'])
+            self.assertEqual(sum(a['planned_minutes'] for s in current['sections'] for a in s['activities']),current['planned_minutes'])
             for s in current['sections'][:12]:
                 lesson=s['activities'][0]['vtc'];refs.add(lesson['ref'])
                 self.assertEqual(len(lesson['visual_steps']),3)
@@ -70,7 +70,7 @@ class VisualMediaTests(unittest.TestCase):
             self.assertIsNotNone(vtc.bundled_asset(m['id'],BASE,oldvideo['src']))
             self.assertIsNotNone(vtc.load_exam(m['mock_exam_id'],BASE))
         self.assertEqual(len(refs),96);self.assertEqual(table_count,32)
-        self.assertEqual(sum(m['planned_minutes'] for m in manifest['modules']),6300)
+        self.assertEqual(sum(vtc.load_bundled_course(m['id'],VERSION)['planned_minutes'] for m in manifest['modules']),6300)
 
 
 class VisualWebTests(unittest.TestCase):

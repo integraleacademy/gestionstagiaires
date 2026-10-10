@@ -24,14 +24,15 @@ class Vtc105ContentTests(unittest.TestCase):
         manifest=vtc.curriculum_manifest()
         self.assertIn(VERSION, manifest['exam_versions'])
         self.assertTrue(all(VERSION in [m['version'], *m.get('previous_versions', [])] for m in manifest['modules']))
-        self.assertEqual([m['planned_minutes']//60 for m in manifest['modules']], [14,16,14,11,15,14,11,10])
-        self.assertEqual(sum(m['planned_minutes'] for m in manifest['modules']),6300)
+        pinned = [vtc.load_bundled_course(m['id'], VERSION) for m in manifest['modules']]
+        self.assertEqual([c['planned_minutes']//60 for c in pinned], [14,16,14,11,15,14,11,10])
+        self.assertEqual(sum(c['planned_minutes'] for c in pinned),6300)
         self.assertEqual(manifest['duration_status'],'programme_previsionnel')
         refs=set(); exercises=0
         for module in manifest['modules']:
             course=vtc.load_bundled_course(module['id'],VERSION)
             self.assertEqual(len(activities(course)),42)
-            self.assertEqual(sum(a['planned_minutes'] for a in activities(course)),module['planned_minutes'])
+            self.assertEqual(sum(a['planned_minutes'] for a in activities(course)),course['planned_minutes'])
             self.assertEqual(sum(d['minutes'] for d in course['duration_breakdown']),course['planned_minutes'])
             for section in course['sections'][:12]:
                 lesson, workshop, dossier=section['activities']

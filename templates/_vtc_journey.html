@@ -21,8 +21,9 @@
   </form>
   <section class="vtc-journey-review" data-vtc-review hidden><h3>Votre bilan et vos prochaines révisions</h3><p data-vtc-summary role="status"></p><div data-vtc-weak></div><button type="button" class="vtc-button" data-vtc-retry>Reprendre mes erreurs</button><button type="button" class="vtc-button" data-vtc-verify hidden>Réessayer la vérification</button><button type="button" class="vtc-button-secondary" data-vtc-all>Revoir toutes les étapes</button></section>
   <p data-vtc-message role="status" aria-live="polite"></p>
-  <p class="aps-small">{{ 'Mode aperçu : aucun résultat stagiaire n’est enregistré.' if preview_mode else 'Chaque correction enregistre vos choix. Vous pouvez quitter puis reprendre cette activité.' }}</p>
+  <p class="aps-small">{{ 'Entraînement libre : vos choix restent dans cet onglet. Aucun temps ni achèvement du parcours n’est ajouté.' if free_practice else 'Mode aperçu : aucun résultat stagiaire n’est enregistré.' if preview_mode else 'Chaque correction enregistre vos choix. Vous pouvez quitter puis reprendre cette activité.' }}</p>
+  {% if training_url and not free_practice %}<p><a class="vtc-text-link" href="{{ training_url }}">Autres situations en entraînement libre →</a></p>{% endif %}
   {% set weak = namespace(refs=[]) %}{% for aid, saved in progress.answers.items() %}{% for eid, diag in saved.get('practice_diagnostics', {}).items() %}{% if not diag.first_correct and diag.competency and diag.competency not in weak.refs %}{% set weak.refs=weak.refs+[diag.competency] %}{% endif %}{% endfor %}{% endfor %}
-  <script id="vtcJourneyConfig" type="application/json">{{ {'practice':activity.practice,'activityId':activity.id,'courseVersion':course.version,'completed':activity_completed,'saved':progress.answers.get(activity.id,{}),'weakRefs':weak.refs}|tojson }}</script>
+  <script id="vtcJourneyConfig" type="application/json">{{ {'practice':activity.practice,'activityId':activity.id,'courseVersion':course.version,'completed':activity_completed,'saved':progress.answers.get(activity.id,{}),'weakRefs':activity.practice.selection_summary.weak_refs if activity.practice.selection_summary else weak.refs,'freePractice':free_practice|default(false)}|tojson }}</script>
   <noscript>Activez JavaScript pour réaliser les décisions interactives. Les cours et les documents restent consultables.</noscript>
 </section>

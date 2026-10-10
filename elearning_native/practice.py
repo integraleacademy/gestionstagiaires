@@ -88,6 +88,8 @@ def public_practice(practice):
         result['mode'] = 'journey'
         result['purpose'] = practice.get('purpose', '')
         result['adaptive'] = bool(practice.get('adaptive'))
+        if isinstance(practice.get('selection_summary'), dict):
+            result['selection_summary'] = copy.deepcopy(practice['selection_summary'])
         for public, original in zip(result['exercises'], practice['exercises']):
             for key in ('context', 'stage', 'competency', 'documents', 'audio', 'transcript', 'translation', 'map', 'calculator'):
                 if key in original:

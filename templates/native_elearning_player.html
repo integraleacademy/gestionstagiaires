@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261007-video-presence') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-menu') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
@@ -75,7 +75,8 @@
   </header>
 
   <div class="native-layout">
-    <aside class="native-sidebar" id="nativeSidebar" aria-label="Sommaire du cours">
+    <aside class="native-sidebar" id="nativeSidebar" aria-label="Sommaire du cours" tabindex="-1">
+      <button class="native-menu-close" id="nativeMenuClose" type="button" aria-label="Fermer le sommaire">Fermer le sommaire ×</button>
       <div class="native-sidebar__learner">
         {% if preview_mode %}
         <a class="native-back-link" href="{{ portal_url }}">← Retour aux modules</a>
@@ -87,6 +88,7 @@
         <strong>{{ learner_name or 'Stagiaire' }}</strong>
         {% endif %}
       </div>
+      {% if training_url %}<p><a class="native-back-link" href="{{ training_url }}">Entraînement libre du module →</a></p>{% endif %}
       {% if not preview_mode %}
       <div class="native-progress-summary">
         <div><span>Activités terminées</span><strong id="nativeProgressLabel">{{ progress.progress_percent|round|int }} %</strong></div>
@@ -120,7 +122,7 @@
       </nav>
       <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
     </aside>
-    <button class="native-sidebar-overlay" id="nativeSidebarOverlay" type="button" aria-label="Fermer le sommaire"></button>
+    <button class="native-sidebar-overlay" id="nativeSidebarOverlay" type="button" tabindex="-1" aria-hidden="true" aria-label="Fermer le sommaire"></button>
 
     <main class="native-main">
       <div class="native-main__inner">
@@ -225,7 +227,7 @@
 
   {% if preview_mode %}
   <script id="nativePreviewConfig" type="application/json">{{ preview_config|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-preview.js', v='20261003-aps62') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-preview.js', v='20261010-menu') }}" defer></script>
   {% else %}
   <div class="native-duplicate-notice" id="nativeDuplicateNotice" role="alert" aria-live="assertive">
     <strong>Chrono en pause sur cet onglet</strong>
@@ -268,11 +270,12 @@
     'requiredVideos': required_videos|default({}),
     'initialVideoProgress': progress.get('video_progress', {})
   }|tojson }}</script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261007-video-presence') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-menu') }}" defer></script>
   {% endif %}
+<script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-1') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261007-6-1') }}" defer></script>{% endif %}
-{% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261006-105-1') }}" defer></script>{% endif %}
+{% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261010-v6') }}" defer></script>{% endif %}
 </body>
 </html>

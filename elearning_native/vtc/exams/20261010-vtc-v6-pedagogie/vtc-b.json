@@ -1,0 +1,1035 @@
+{
+  "id": "vtc-b",
+  "version": "20261010-vtc-v6-pedagogie",
+  "training_label": "VTC",
+  "title": "VTC · Gérer son entreprise · Examen blanc",
+  "pass_percent": 80,
+  "questions": [
+    {
+      "id": "exam-annales-2023-b-02",
+      "prompt": "Expliquez la différence entre une charge fixe et une charge variable.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une charge fixe dépend peu du volume de courses à court terme ; une charge variable évolue avec l’activité."
+        },
+        {
+          "id": "b",
+          "text": "Une charge fixe est toujours payée comptant ; une charge variable est toujours payée à crédit."
+        },
+        {
+          "id": "c",
+          "text": "Une charge fixe correspond à tout achat de véhicule ; une charge variable correspond à toutes les factures mensuelles."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Une charge fixe varie peu avec le nombre de courses à court terme, par exemple le loyer mensuel du véhicule. Une charge variable évolue avec l’activité, par exemple le carburant lié aux kilomètres. Une charge peut aussi comprendre une part fixe et une part variable.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-02",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-04",
+      "prompt": "L'EBE signifie :",
+      "options": [
+        {
+          "id": "a",
+          "text": "excédent bénéficiaire employé"
+        },
+        {
+          "id": "b",
+          "text": "excédent brut d'exploitation"
+        },
+        {
+          "id": "c",
+          "text": "encaissement brut excédentaire"
+        }
+      ],
+      "answer": "b",
+      "explanation": "EBE signifie excédent brut d’exploitation. Il sert à apprécier la performance de l’exploitation avant notamment amortissements et éléments financiers. Ce n’est pas le solde du compte bancaire.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-04",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-05",
+      "prompt": "Au 1er janvier N, j'achète un véhicule 20 000 € HT amortissable linéairement sur 4 ans et un ordinateur portable 600 € HT amortissable linéairement sur 3 ans. Quel sera le montant de la dotation d'amortissement déductible sur les charges d'entreprise en année N ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "5 200 €"
+        },
+        {
+          "id": "b",
+          "text": "4 198 €"
+        },
+        {
+          "id": "c",
+          "text": "10 400 €"
+        },
+        {
+          "id": "d",
+          "text": "5 300 €"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Dans les hypothèses scolaires données, l’annuité du véhicule est 20 000 ÷ 4 = 5 000 €, celle de l’ordinateur 600 ÷ 3 = 200 €, soit 5 200 €. On raisonne sur une année entière et sur les bases amortissables indiquées, hors particularités fiscales non précisées.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.03",
+        "B.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-05",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-06",
+      "prompt": "Pour une course qui s'élève à 30 € TTC, quel est le montant de la TVA ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "3,00 €"
+        },
+        {
+          "id": "b",
+          "text": "1,96 €"
+        },
+        {
+          "id": "c",
+          "text": "1,65 €"
+        },
+        {
+          "id": "d",
+          "text": "2,73 €"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Pour un transport soumis à 10 % de TVA, le prix HT est 30 ÷ 1,10 = 27,27 €. La TVA vaut 30 − 27,27 = 2,73 €. Calculer 10 % du TTC donnerait à tort 3 €. Vérifiez le taux applicable avant d’utiliser la formule.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "TVA des transports de voyageurs · BOFiP",
+          "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+        }
+      ],
+      "lesson_refs": [
+        "B.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-06",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-07",
+      "prompt": "Quelle est la durée de validité d'un chèque ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "10 ans et 8 jours"
+        },
+        {
+          "id": "b",
+          "text": "1 an et 8 jours"
+        },
+        {
+          "id": "c",
+          "text": "6 mois"
+        },
+        {
+          "id": "d",
+          "text": "3 mois et 5 jours"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Pour un chèque émis et payable en France métropolitaine, la durée d’encaissement est un an et huit jours à compter de la date inscrite. Cette durée ne doit pas être confondue avec la disponibilité réelle de la provision ni avec la durée de conservation des justificatifs.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Paiement par chèque · Service Public",
+          "url": "https://www.service-public.gouv.fr/particuliers/vosdroits/F2402"
+        }
+      ],
+      "lesson_refs": [
+        "B.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-07",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 3,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-09",
+      "prompt": "Une entreprise artisanale se caractérise notamment par :",
+      "options": [
+        {
+          "id": "a",
+          "text": "son activité"
+        },
+        {
+          "id": "b",
+          "text": "son chiffre d'affaires"
+        },
+        {
+          "id": "c",
+          "text": "sa localisation géographique"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le caractère artisanal dépend de la nature de l’activité et de ses conditions d’exercice. Le seul chiffre d’affaires ou la localisation géographique ne suffit pas. Il faut ensuite vérifier les critères d’immatriculation applicables.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-09",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-10",
+      "prompt": "Citez 2 modes de transmission d'une entreprise.",
+      "options": [
+        {
+          "id": "a",
+          "text": "La vente et la donation."
+        },
+        {
+          "id": "b",
+          "text": "L’amortissement et la déclaration de TVA."
+        },
+        {
+          "id": "c",
+          "text": "Le paiement d’un fournisseur et le retrait du dirigeant."
+        }
+      ],
+      "answer": "a",
+      "explanation": "La transmission peut être réalisée à titre onéreux par une vente ou à titre gratuit par une donation. Le décès peut aussi conduire à une transmission successorale. Distinguez la transmission d’une activité de sa cessation sans repreneur.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-10",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-12",
+      "prompt": "Qui est concerné par le « versement fiscal libératoire » ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "seulement les sociétés"
+        },
+        {
+          "id": "b",
+          "text": "toutes les entreprises au régime réel"
+        },
+        {
+          "id": "c",
+          "text": "les entreprises au régime réel simplifié"
+        },
+        {
+          "id": "d",
+          "text": "les entreprises au régime de la micro-entreprise"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Le versement fiscal libératoire est une option du régime micro, sous conditions, notamment de revenu fiscal de référence. Il ne s’applique ni automatiquement à toutes les micro-entreprises ni aux entreprises relevant du régime réel.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Régime fiscal de la micro-entreprise · Service Public",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F23267"
+        }
+      ],
+      "lesson_refs": [
+        "B.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-12",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-13",
+      "prompt": "Qu'appelle-t-on TVA collectée ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "la TVA reversée à l'état après déduction de la TVA sur les achats"
+        },
+        {
+          "id": "b",
+          "text": "la TVA acquittée par l'artisan lorsqu'il achète des biens et services"
+        },
+        {
+          "id": "c",
+          "text": "la TVA acquittée par le client lors du règlement de la prestation"
+        }
+      ],
+      "answer": "c",
+      "explanation": "La TVA collectée est la TVA facturée au client sur les ventes/prestations imposables. Pour une prestation de services, l’exigibilité suit en principe l’encaissement, sauf option ou règle particulière. TVA nette à reverser = TVA collectée exigible − TVA déductible, sous réserve des règles applicables.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "TVA des transports de voyageurs · BOFiP",
+          "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+        }
+      ],
+      "lesson_refs": [
+        "B.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-13",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-14",
+      "prompt": "Que signifie le sigle SASU ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Société A Simplification Unipersonnelle"
+        },
+        {
+          "id": "b",
+          "text": "Société par Action Simplifiée Unipersonnelle"
+        },
+        {
+          "id": "c",
+          "text": "Société par Action Simplifiée Unique"
+        },
+        {
+          "id": "d",
+          "text": "Société Anonyme Simplifiée et Unipersonnelle"
+        }
+      ],
+      "answer": "b",
+      "explanation": "SASU signifie société par actions simplifiée unipersonnelle : une société avec un seul associé. La lettre U décrit le nombre d’associés, pas un régime fiscal ni une simplification automatique de toutes les obligations.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-14",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-15",
+      "prompt": "Les achats de carburant figurent :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Au compte de résultat, dans les produits"
+        },
+        {
+          "id": "b",
+          "text": "Au bilan, à l'actif"
+        },
+        {
+          "id": "c",
+          "text": "Au compte de résultat, dans les charges"
+        },
+        {
+          "id": "d",
+          "text": "Au bilan, au passif"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le carburant consommé dans l’activité est une charge du compte de résultat. Les produits correspondent aux recettes de l’activité. Un solde bancaire, une dette ou un stock relève d’une autre lecture comptable.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.04",
+        "B.05"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-15",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-16",
+      "prompt": "Quel est le taux de TVA applicable sur le transport de personnes ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "5,5 %"
+        },
+        {
+          "id": "b",
+          "text": "20%"
+        },
+        {
+          "id": "c",
+          "text": "10 %"
+        },
+        {
+          "id": "d",
+          "text": "7 %"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le transport de voyageurs soumis à TVA relève en principe du taux de 10 % en France métropolitaine. Distinguez le taux du service et la situation d’un exploitant en franchise en base, qui ne facture pas la TVA tant que les conditions sont réunies.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "TVA des transports de voyageurs · BOFiP",
+          "url": "https://bofip.impots.gouv.fr/bofip/477-PGP.html"
+        }
+      ],
+      "lesson_refs": [
+        "B.06"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-16",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 4,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2023-b-18",
+      "prompt": "Le dirigeant d'une micro-entreprise :",
+      "options": [
+        {
+          "id": "a",
+          "text": "est soumis à l'impôt sur les sociétés"
+        },
+        {
+          "id": "b",
+          "text": "n'est pas soumis à l'impôt"
+        },
+        {
+          "id": "c",
+          "text": "est soumis à l'impôt sur le revenu"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le régime micro-entreprise relève de l’impôt sur le revenu, selon les règles de la catégorie concernée et les options autorisées. Il ne signifie pas absence d’impôt. Une option vers un autre cadre fiscal doit être distinguée du maintien dans le régime micro.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2023-b-18",
+      "source_title": "28 mars 2023 · Gestion",
+      "source_page": 5,
+      "correction_origin": "pedagogical"
+    },
+    {
+      "id": "exam-annales-2022-b-02",
+      "prompt": "Mme Sophie achète et met en service un véhicule le 1er mars 2023 pour une valeur de 24 000 € HT, amortissable de façon linéaire sur 5 ans. Ses comptes sont clôturés traditionnellement le 31 décembre de chaque année. Quelle sera la valeur comptable nette du véhicule au 31 décembre 2026 ? Détaillez vos calculs.",
+      "options": [
+        {
+          "id": "a",
+          "text": "10 400 € : 24 000 − (4 000 + 2 × 4 800)."
+        },
+        {
+          "id": "b",
+          "text": "5 600 € : 24 000 − (4 000 + 3 × 4 800)."
+        },
+        {
+          "id": "c",
+          "text": "4 800 € : 24 000 − 4 × 4 800, sans prorata la première année."
+        }
+      ],
+      "answer": "b",
+      "explanation": "L’annuité pleine vaut 24 000 ÷ 5 = 4 800 €. En 2023, le véhicule est utilisé de mars à décembre : 4 800 × 10/12 = 4 000 €. Les années 2024, 2025 et 2026 ajoutent 3 × 4 800 = 14 400 €. Amortissements cumulés : 18 400 € ; valeur nette au 31 décembre 2026 : 24 000 − 18 400 = 5 600 €. Il s’agit de la valeur comptable selon l’hypothèse du sujet, pas d’une valeur de revente.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.03",
+        "B.10"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-02",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-04",
+      "prompt": "Une entreprise individuelle :",
+      "options": [
+        {
+          "id": "a",
+          "text": "doit changer de statut juridique pour embaucher un salarié"
+        },
+        {
+          "id": "b",
+          "text": "peut embaucher des salariés"
+        },
+        {
+          "id": "c",
+          "text": "ne peut embaucher qu'un apprenti"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Une entreprise individuelle peut employer des salariés, y compris sans changer de forme juridique. « Individuelle » décrit l’exercice en nom propre, pas l’obligation de travailler seul ; l’employeur doit alors respecter les formalités et obligations sociales.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Service Public · Choisir la forme juridique de l’entreprise",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F23844?language=fr"
+        }
+      ],
+      "lesson_refs": [
+        "B.01",
+        "B.12"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-04",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-05",
+      "prompt": "Le résultat d'une entreprise est obtenu par :",
+      "options": [
+        {
+          "id": "a",
+          "text": "la différence entre produits et charges"
+        },
+        {
+          "id": "b",
+          "text": "la différence entre actif et passif"
+        },
+        {
+          "id": "c",
+          "text": "stock + créances clients - dettes fournisseurs"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le résultat d’une période se calcule par produits moins charges. L’actif moins le passif n’est pas la formule du bénéfice ; stocks et créances moins dettes fournisseurs servent à une autre analyse, celle du besoin en fonds de roulement.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-05",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-09",
+      "prompt": "Qu'est-ce qu'une créance client ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "une facture en attente de création"
+        },
+        {
+          "id": "b",
+          "text": "une facture impayée par un client"
+        },
+        {
+          "id": "c",
+          "text": "une facture réglée par un client"
+        },
+        {
+          "id": "d",
+          "text": "une facture due à un fournisseur"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Une créance client est une somme due à l’entreprise pour une vente réalisée et non encore réglée. La facture impayée constitue donc la réponse attendue. Une dette fournisseur est au contraire une somme que l’entreprise doit payer.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.03",
+        "B.08"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-09",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-11",
+      "prompt": "Vous créez seul(e) une activité de transport de personnes. Quels sont les statuts juridiques possibles ? (citez-en trois)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Micro-entreprise, régime réel simplifié et régime réel normal, présentés comme trois formes juridiques."
+        },
+        {
+          "id": "b",
+          "text": "Entreprise individuelle, EURL (SARL à associé unique), SASU."
+        },
+        {
+          "id": "c",
+          "text": "SARL à plusieurs associés, SAS à plusieurs associés, société anonyme."
+        }
+      ],
+      "answer": "b",
+      "explanation": "Pour exercer seul, les trois cadres proposés dans la source sont l’entreprise individuelle, l’EURL (SARL à associé unique) et la SASU. Le choix de forme juridique est distinct du régime fiscal, du régime social et des autorisations VTC.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Service Public · Choisir la forme juridique de l’entreprise",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F23844?language=fr"
+        }
+      ],
+      "lesson_refs": [
+        "B.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-11",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-12",
+      "prompt": "Le Président de la Chambre de Métiers et de l'Artisanat est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "un(e) salarié(e) de la fonction publique"
+        },
+        {
+          "id": "b",
+          "text": "un(e) artisan(e) en exercice"
+        },
+        {
+          "id": "c",
+          "text": "une personne nommée par le Préfet de région"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Le président d’une chambre de métiers et de l’artisanat est un élu issu du monde artisanal. Ce mandat ne se confond pas avec un emploi de fonctionnaire ni avec une nomination du préfet ; la chambre représente et accompagne les entreprises artisanales.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "CMA France · Présentation du président et de son élection",
+          "url": "https://www.artisanat.fr/nous-connaitre/joel-fourny-president-cma-france"
+        }
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-12",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-13",
+      "prompt": "Qu'est-ce qu'un chiffre d'affaires ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "l'argent qui reste en banque après avoir payé toutes les charges"
+        },
+        {
+          "id": "b",
+          "text": "la différence entre les produits et les charges"
+        },
+        {
+          "id": "c",
+          "text": "l'ensemble des commandes ou devis"
+        },
+        {
+          "id": "d",
+          "text": "l'ensemble des sommes facturées aux clients"
+        }
+      ],
+      "answer": "d",
+      "explanation": "Dans le cadre comptable du sujet, le chiffre d’affaires correspond aux ventes facturées aux clients, usuellement hors taxe. Il ne s’agit ni du bénéfice ni du solde bancaire ni des devis non acceptés. Pour la déclaration du micro-entrepreneur, il faut distinguer les sommes effectivement encaissées.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.04",
+        "B.07"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-13",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-14",
+      "prompt": "Lors de la création d'une société, la publication d'une annonce légale est :",
+      "options": [
+        {
+          "id": "a",
+          "text": "obligatoire"
+        },
+        {
+          "id": "b",
+          "text": "nécessaire pour faire de la publicité"
+        },
+        {
+          "id": "c",
+          "text": "facultative"
+        }
+      ],
+      "answer": "a",
+      "explanation": "La constitution d’une société nécessite la publication d’un avis dans un support habilité à recevoir des annonces légales. Cette formalité informe juridiquement les tiers ; elle n’a pas la même fonction qu’une publicité destinée à trouver des clients.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Service Public · Formalités d’immatriculation d’une société",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F35934"
+        }
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-14",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-15",
+      "prompt": "Un artisan exerçant en entreprise individuelle est imposé de plein droit à :",
+      "options": [
+        {
+          "id": "a",
+          "text": "l'impôt sur les sociétés et l'impôt sur le revenu des personnes physiques"
+        },
+        {
+          "id": "b",
+          "text": "l'impôt sur le revenu des personnes physiques"
+        },
+        {
+          "id": "c",
+          "text": "l'impôt sur les sociétés"
+        }
+      ],
+      "answer": "b",
+      "explanation": "L’entreprise individuelle relève de plein droit de l’impôt sur le revenu. Une option pour l’IS peut exister sous conditions, via l’assimilation à une EURL ; le mot « de plein droit » demande le régime par défaut, pas toutes les options possibles.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Service Public · Fiscalité de l’entrepreneur individuel",
+          "url": "https://entreprendre.service-public.gouv.fr/vosdroits/F36203"
+        }
+      ],
+      "lesson_refs": [
+        "B.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-15",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2022-b-17",
+      "prompt": "Quel est le code qui permet de déterminer l'activité réalisée par une entreprise ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "SIRET"
+        },
+        {
+          "id": "b",
+          "text": "SIREN"
+        },
+        {
+          "id": "c",
+          "text": "APE"
+        }
+      ],
+      "answer": "c",
+      "explanation": "Le code APE caractérise l’activité principale exercée. Le SIREN identifie l’entreprise et le SIRET identifie un établissement. L’APE est statistique et ne vaut ni carte professionnelle ni inscription au registre des exploitants VTC.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Insee · Présentation générale de la NAF et du code APE",
+          "url": "https://www.insee.fr/fr/information/3281579"
+        }
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2022-b-17",
+      "source_title": "Annales VTC 2022 · 25 octobre",
+      "source_page": 5,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-02",
+      "prompt": "Lorsque les charges d'exploitation d'une entreprise sont inférieures aux produits :",
+      "options": [
+        {
+          "id": "a",
+          "text": "il y a bénéfice d'exploitation"
+        },
+        {
+          "id": "b",
+          "text": "l'entreprise doit déposer le bilan"
+        },
+        {
+          "id": "c",
+          "text": "il y a perte d'exploitation"
+        }
+      ],
+      "answer": "a",
+      "explanation": "Le résultat d'exploitation se calcule en soustrayant les charges d'exploitation des produits d'exploitation. Si les produits sont supérieurs aux charges, le résultat est un bénéfice d'exploitation ; il ne faut pas en déduire automatiquement que la trésorerie est positive.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.04"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-02",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-03",
+      "prompt": "Quelle est la durée de vie maximum prévue par la loi pour une SARL ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "25 ans"
+        },
+        {
+          "id": "b",
+          "text": "10 ans"
+        },
+        {
+          "id": "c",
+          "text": "50 ans"
+        },
+        {
+          "id": "d",
+          "text": "99 ans"
+        }
+      ],
+      "answer": "d",
+      "explanation": "La durée fixée dans les statuts d'une société ne peut excéder 99 ans. Une prorogation décidée selon les règles applicables peut prolonger sa vie : 99 ans n'impose donc pas la disparition automatique définitive de toute société.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Code civil — article 1838",
+          "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006444089/2013-11-28"
+        }
+      ],
+      "lesson_refs": [
+        "B.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-03",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-05",
+      "prompt": "Un artisan achète un véhicule 21 000 € HT. Ce véhicule est amorti sur 3 ans. De combien sera l'amortissement linéaire annuel ? Détaillez votre calcul.",
+      "options": [
+        {
+          "id": "a",
+          "text": "21 000 ÷ 3 = 7 000 € par an."
+        },
+        {
+          "id": "b",
+          "text": "21 000 × 3 = 63 000 € par an."
+        },
+        {
+          "id": "c",
+          "text": "21 000 ÷ 36 = 583,33 € par an."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Un amortissement linéaire répartit la base amortissable de façon régulière sur la durée retenue. Avec les seules données de l'exercice, 21 000 € divisés par 3 ans donnent 7 000 € par an, soit un taux annuel de 33,33 %, hors prorata éventuel de première année.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.10"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-05",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-07",
+      "prompt": "Qui attribue le code APE d'une entreprise ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "URSSAF"
+        },
+        {
+          "id": "b",
+          "text": "SSI"
+        },
+        {
+          "id": "c",
+          "text": "CMA"
+        },
+        {
+          "id": "d",
+          "text": "INSEE"
+        }
+      ],
+      "answer": "d",
+      "explanation": "L'Insee attribue le code APE à partir de l'activité principale déclarée. Ce code permet de classer statistiquement l'entreprise ; il ne vaut pas à lui seul autorisation d'exercer une profession réglementée.",
+      "module": "B",
+      "sources": [
+        {
+          "title": "Attribution et modification du code APE — Insee",
+          "url": "https://www.insee.fr/fr/information/7614104"
+        }
+      ],
+      "lesson_refs": [
+        "B.02"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-07",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-08",
+      "prompt": "Que signifie le sigle SARL ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "société à responsabilité limitée"
+        },
+        {
+          "id": "b",
+          "text": "société anonyme à responsabilité limitée"
+        },
+        {
+          "id": "c",
+          "text": "société à régime limitée"
+        },
+        {
+          "id": "d",
+          "text": "système anonyme à responsabilité limitée"
+        }
+      ],
+      "answer": "a",
+      "explanation": "SARL signifie société à responsabilité limitée. Le sigle décrit une forme juridique de société ; il ne désigne ni un régime fiscal unique ni une société anonyme.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-08",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-09",
+      "prompt": "Dans un bilan :",
+      "options": [
+        {
+          "id": "a",
+          "text": "Si le total de l'actif est supérieur au passif il y a bénéfice"
+        },
+        {
+          "id": "b",
+          "text": "Le total de l'actif est toujours égal au total du passif"
+        },
+        {
+          "id": "c",
+          "text": "Si le total de l'actif est inférieur au passif il y a perte"
+        }
+      ],
+      "answer": "b",
+      "explanation": "Un bilan est équilibré : le total de l'actif égale le total du passif. L'actif décrit les emplois et le passif les ressources, notamment les capitaux propres et les dettes. Le bénéfice se lit dans le résultat, pas dans un déséquilibre entre les deux côtés.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.03"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-09",
+      "source_title": "Annales VTC 2021",
+      "source_page": 4,
+      "correction_origin": "source"
+    },
+    {
+      "id": "exam-annales-2021-b-10",
+      "prompt": "Qu'est-ce qu'une personne morale ?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Une entité juridique distincte de ses membres, comme une société."
+        },
+        {
+          "id": "b",
+          "text": "Toute personne physique majeure qui signe un contrat."
+        },
+        {
+          "id": "c",
+          "text": "Un dirigeant dont les dettes personnelles sont toujours celles de son entreprise."
+        }
+      ],
+      "answer": "a",
+      "explanation": "Une personne morale est une entité dotée d'une personnalité juridique distincte de celle de ses membres. Une société peut donc avoir ses propres droits et obligations ; elle peut aussi être unipersonnelle, contrairement à l'idée qu'un regroupement de plusieurs personnes serait toujours nécessaire.",
+      "module": "B",
+      "sources": [],
+      "lesson_refs": [
+        "B.01"
+      ],
+      "origin": "reviewed-annales",
+      "source_question_id": "annales-2021-b-10",
+      "source_title": "Annales VTC 2021",
+      "source_page": 5,
+      "correction_origin": "source"
+    }
+  ],
+  "notice": "Entraînement pédagogique à choix unique. Les questions historiques et celles nécessitant un visuel absent sont exclues. La correction renvoie aux leçons à revoir ; ce bilan ne remplace pas le barème de l’examen officiel.",
+  "construction": {
+    "reviewed_on": "2026-10-07",
+    "independent_of_workshops": true,
+    "annales_questions": 30,
+    "original_questions": 0
+  }
+}

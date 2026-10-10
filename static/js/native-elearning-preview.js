@@ -90,16 +90,5 @@
   document.querySelectorAll(".flip-card-wrapper")
     .forEach((card) => makeToggle(card, "is-flipped", "button", "aria-pressed"));
 
-  const menuButton = document.getElementById("nativeMenuButton");
-  const sidebar = document.getElementById("nativeSidebar");
-  const overlay = document.getElementById("nativeSidebarOverlay");
-  function setMenu(open) {
-    sidebar?.classList.toggle("is-open", open);
-    overlay?.classList.toggle("is-open", open);
-    menuButton?.setAttribute("aria-expanded", String(open));
-    document.body.style.overflow = open ? "hidden" : "";
-  }
-  menuButton?.addEventListener("click", () => setMenu(!sidebar?.classList.contains("is-open")));
-  overlay?.addEventListener("click", () => setMenu(false));
-  window.addEventListener("keydown", (event) => { if (event.key === "Escape") setMenu(false); });
+
 })();
