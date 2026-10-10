@@ -20,7 +20,7 @@ Le filigrane et les restrictions de copie/impression de la démonstration dissua
 
 La rubrique « Mon organisme » (`/admin/organisme/mon-organisme`) permet de modifier les coordonnées professionnelles et le logo. L’adresse de contact de l’organisme ne change pas l’identifiant de connexion du compte utilisateur. Les tarifs, droits, abonnements et commandes restent hors du formulaire. Les nouvelles communications stagiaires et leurs pages d’accès utilisent l’identité actuelle du centre ; les instantanés comptables sont conservés.
 
-Les logos importés sont contrôlés et réencodés en PNG. L’image seule est accessible par une URL aléatoire pour que les messageries puissent l’afficher. Les attestations utilisent uniquement le fichier local du même organisme, jamais un téléchargement arbitraire. La suppression du logo rétablit une présentation avec le nom du centre.
+Les logos importés sont contrôlés et réencodés en PNG. L’image seule est accessible par une URL aléatoire pour que les messageries puissent l’afficher. Les attestations utilisent uniquement le fichier local du même organisme, jamais un téléchargement arbitraire. La suppression du logo rétablit une présentation avec le nom du centre. Dans l’en-tête de l’espace organisme, le logo du centre remplace celui de la plateforme ; sans logo, son initiale et son nom sont affichés. Cet aperçu reste réservé à la session du même organisme.
 
 ## Paiement et livraison
 
@@ -56,3 +56,9 @@ Le lien personnel utilise une signature HMAC du secret applicatif et des identif
 
 La suite couvre les paiements incomplets, la gratuité, les doubles confirmations, les relances d'e-mails, les prix falsifiés, les changements de tarif, l'isolation des organismes, la suppression et ses courses concurrentes, la reprise de facturation, le suivi natif et l'ouverture effective des deux parcours. Qonto et Brevo sont simulés : elle n'émet aucune facture réelle et n'envoie aucun e-mail réel.
 
+
+## Actualisation du suivi et relevé PDF
+
+La fiche de suivi se met à jour automatiquement toutes les 15 secondes lorsqu’elle est visible. Les accordéons ouverts, le défilement et la lecture en cours sont préservés ; les erreurs temporaires conservent le dernier suivi reçu.
+
+L’attestation PDF comprend également un relevé détaillé de toutes les connexions enregistrées, sans la limite d’affichage de 100 lignes de la fiche. Les dates sont présentées en heure de Paris, avec le temps actif effectivement comptabilisé. Une dernière activité n’est pas présentée comme une déconnexion.

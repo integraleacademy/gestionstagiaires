@@ -15,7 +15,7 @@
       <a class="demo-brand" href="{{ url_for('manuals_shop.elearning_demo') }}"><span class="demo-monogram" aria-hidden="true">APS</span><span>Espace e-learning<small>Centre de formation exemple</small></span></a>
       <a class="demo-return" href="{{ url_for('manuals_shop.elearning_soon') if session.get('admin_logged_in') else url_for('admin_login') }}">{{ 'Mon espace organisme' if session.get('admin_logged_in') else 'Se connecter' }} <span aria-hidden="true">↗</span></a>
     </header>
-    <div class="demo-notice"><span class="demo-tag">Démonstration</span><p>Camille Martin est un stagiaire fictif à 50 %. Explorez un extrait de cours et son suivi sans modifier de données réelles.</p></div>
+    <div class="demo-notice"><span class="demo-tag">Démonstration</span><p>Camille Martin est un stagiaire fictif qui a suivi 50 % de sa formation e-learning. Explorez son espace e-learning et suivez son avancement depuis votre espace organisme de formation.</p></div>
     <nav class="demo-tabs" aria-label="Explorer la démonstration">
       <a href="{{ url_for('manuals_shop.elearning_demo') }}" {% if view in ['stagiaire','cours'] %}aria-current="page"{% endif %}><span aria-hidden="true">01</span> Côté stagiaire</a>
       <a href="{{ url_for('manuals_shop.elearning_demo', view='suivi') }}" {% if view == 'suivi' %}aria-current="page"{% endif %}><span aria-hidden="true">02</span> Côté centre · le suivi</a>

@@ -168,7 +168,16 @@ def register(host):
         return response
 
     def page(template, **context):
-        return render_template("manuals/" + template, csrf_token=csrf_token(), statuses=STATUSES, payment_labels=commerce.PAYMENT_LABELS, **context)
+        header = None
+        if session.get("admin_logged_in") and host._is_external_partner_session() and not context.get("staff"):
+            partner = context.get("partner") or {}
+            if partner.get("id") != session.get("partner_id"):
+                partner = host._current_partner(host.load_data()) or {}
+            if partner.get("id") == session.get("partner_id"):
+                header = {"name": str(partner.get("name") or "Mon organisme"),
+                          "logo_url": url_for("manuals_shop.organisme_logo_preview") if organisme_profile.logo_path(host, partner) else ""}
+        return render_template("manuals/" + template, csrf_token=csrf_token(), statuses=STATUSES, payment_labels=commerce.PAYMENT_LABELS,
+                               organisme_header=header, **context)
 
     def customer(view):
         @wraps(view)

@@ -98,6 +98,12 @@ class ProgressReader:
         total = completed = active = required = finished = 0
         starts, updates = [], []
         for assignment in order.get("modules", []):
+            assigned_key = (str(assignment.get("course_id") or ""), str(assignment.get("course_version") or ""))
+            if all(assigned_key):
+                # Historical connections remain evidence even if the purchased
+                # course files are temporarily unavailable. Do not broaden the
+                # allowlist to other editions of the same module.
+                course_titles[assigned_key] = assignment.get("title") or assigned_key[0]
             module = {"title": assignment.get("title") or assignment.get("course_id") or "Module",
                       "version": assignment.get("course_version") or "", "available": False,
                       "status_label": "Suivi indisponible", "sections": [], "module_complete": False,
@@ -105,6 +111,14 @@ class ProgressReader:
             try:
                 course = self.course(assignment)
             except (CourseImportError, OSError):
+                recorded = by_key.get(assigned_key, {})
+                recorded_seconds = max(0, float(recorded.get("active_seconds") or 0))
+                active += recorded_seconds
+                module.update(active_seconds=recorded_seconds, active_time_label=time_label(recorded_seconds))
+                if recorded.get("started_at"):
+                    starts.append(recorded["started_at"])
+                if recorded.get("updated_at"):
+                    updates.append(recorded["updated_at"])
                 required += int(assignment.get("required_minutes") or 0) * 60
                 modules.append(module)
                 continue
@@ -224,11 +238,12 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
     used only by the fictional public demonstration, not by the customer route.
     """
     from reportlab.lib import colors
+    from decimal import Decimal, InvalidOperation
     from reportlab.lib.enums import TA_LEFT
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image, PageBreak, LongTable
 
     output = io.BytesIO()
     centre_name = str(partner.get("name") or partner.get("centre") or "Organisme de formation").strip()
@@ -324,6 +339,76 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                     p("Données fictives de démonstration : ce document n’atteste d’aucune formation suivie." if specimen else
                       f"Attestation éditée pour {centre_name} à partir des traces de sa plateforme e-learning. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
                     p(f"Référence de commande : {order['id']}\nIdentifiant du stagiaire : {person['id']}", "small")])])
+
+    # Keep the integral connection evidence in the same PDF as the attestation.
+    # Table headers identify the centre and learner again on every annex page.
+    # A last heartbeat is deliberately never relabelled as a disconnection.
+    connections = report.get("connections") or []
+    story.extend([PageBreak(), p("Relevé détaillé des connexions", "title"),
+                  p(f"{len(connections)} connexion{'s' if len(connections) != 1 else ''} enregistrée{'s' if len(connections) != 1 else ''}", "heading"),
+                  p("Tous les horaires sont exprimés dans le fuseau Europe/Paris. Le temps actif correspond au travail comptabilisé par la plateforme, et non à la durée écoulée entre le début et la fin d’une connexion.", "small"),
+                  p("La dernière activité est le dernier signal enregistré. Une fin non enregistrée ne signifie pas que le stagiaire est toujours connecté.", "small"),
+                  Spacer(1, 4 * mm)])
+    specimen_identity = "SPECIMEN - DONNÉES FICTIVES\n" if specimen else ""
+    connection_identity = p(f"{specimen_identity}Organisme : {centre_name}\nStagiaire : {name} · {person.get('email', '')}\n"
+                            f"Parcours : {order['course_code'].upper()} · {order.get('group_name') or 'Accès individuel'}", "small")
+
+    def connection_seconds(connection):
+        try:
+            seconds = Decimal(str(connection.get("credited_seconds") or 0))
+            return seconds if seconds.is_finite() and seconds >= 0 else Decimal(0)
+        except (InvalidOperation, ValueError, TypeError):
+            return Decimal(0)
+
+    def connection_time(seconds):
+        # Preserve hundredths when recorded so line durations and total agree.
+        seconds = seconds.quantize(Decimal("0.01"))
+        if seconds == int(seconds):
+            return time_label(seconds)
+        hours, remaining = divmod(seconds, Decimal(3600))
+        minutes, remaining = divmod(remaining, Decimal(60))
+        remainder_label = f"{remaining:05.2f}".replace(".", ",")
+        return f"{int(hours):02d} h {int(minutes):02d} min {remainder_label} s"
+
+    total_connection_seconds = sum((connection_seconds(row) for row in connections), Decimal(0))
+    if not connections:
+        story.extend([connection_identity, Spacer(1, 3 * mm),
+                      p("Aucune connexion au parcours n’est enregistrée à la date d’édition."),
+                      p("Total du temps actif dans ce relevé : 00 h 00 min 00 s", "heading")])
+    else:
+        connection_rows = [[connection_identity, "", "", "", "", ""],
+                           [p(value, "th") for value in ("MODULE", "DÉBUT", "DERNIÈRE ACTIVITÉ", "FIN ENREGISTRÉE", "ÉTAT", "TEMPS ACTIF")]]
+        for index, connection in enumerate(connections, 1):
+            end = str(connection.get("ended_at_label") or "").strip()
+            has_end = bool(end and end not in {"—", "-", "Non enregistrée", "Non renseignée"})
+            connection_rows.append([
+                p(f"{index}. {connection.get('module') or 'Module'}", "cell"),
+                p(connection.get("started_at_label") or "Non renseigné", "cell"),
+                p(connection.get("last_seen_label") or "Non renseignée", "cell"),
+                p(end if has_end else "Non enregistrée", "cell"),
+                p("Clôturée" if has_end else "Fin non enregistrée", "cell"),
+                p(connection_time(connection_seconds(connection)), "cell"),
+            ])
+        connection_rows.append([p("TOTAL DU TEMPS ACTIF DANS CE RELEVÉ", "cell"), "", "", "", "",
+                                p(connection_time(total_connection_seconds), "cell")])
+        connection_table = LongTable(connection_rows,
+            colWidths=[43 * mm, 29 * mm, 29 * mm, 29 * mm, 20 * mm, 24 * mm],
+            repeatRows=2, hAlign="LEFT")
+        connection_table.setStyle(TableStyle([
+            ("SPAN", (0, 0), (-1, 0)), ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#edf4fb")),
+            ("BACKGROUND", (0, 1), (-1, 1), colors.HexColor("#173858")),
+            ("ROWBACKGROUNDS", (0, 2), (-1, -2), [colors.white, colors.HexColor("#f3f6fa")]),
+            ("SPAN", (0, -1), (4, -1)), ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#dceaf6")),
+            ("NOSPLIT", (0, -2), (-1, -1)),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ]))
+        story.append(connection_table)
+    story.extend([Spacer(1, 5 * mm),
+                  p(f"Relevé édité le {report['generated_at_label']} (heure de Paris).", "small"),
+                  p(f"Référence de commande : {order['id']} · Identifiant du stagiaire : {person['id']}", "small")])
+
     def footer(canvas, document):
         canvas.saveState()
         if specimen:
@@ -340,7 +425,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         canvas.line(18 * mm, 15 * mm, 192 * mm, 15 * mm)
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(colors.HexColor("#526579"))
-        footer_name = centre_name
+        footer_name = ("SPECIMEN - " if specimen else "") + centre_name
         while canvas.stringWidth(footer_name + " - Suivi e-learning", "Helvetica", 8) > 145 * mm:
             footer_name = footer_name[:-2].rstrip()
         canvas.drawString(18 * mm, 10 * mm, footer_name + " - Suivi e-learning")
@@ -380,7 +465,7 @@ def register_routes(host, bp, *, page, customer, partner_data):
         from organisme_profile import logo_path
 
         partner, order, person, _ = context(oid, learner_id)
-        report = ProgressReader(host).report(order, person, detailed=False)
+        report = ProgressReader(host).report(order, person, detailed=True)
         filename = secure_filename(f"attestation-suivi-{person.get('last_name', '')}-{person.get('first_name', '')}.pdf")
         return Response(certificate_pdf(report, partner, order, person, logo_path=logo_path(host, partner)), mimetype="application/pdf",
                         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
