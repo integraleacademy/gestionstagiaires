@@ -22,7 +22,7 @@
   <details><summary>1 · Quel est l’objectif de l’agent ?</summary><p>{{ activity.a3p.objective }}</p></details>
   <details><summary>2 · Quelle règle guide la décision ?</summary><p>{{ activity.a3p.points[0] }}</p></details>
   <details><summary>3 · Quel repère réutiliser dans une autre situation ?</summary><p>{{ activity.a3p.points[-1] }}</p></details></div>
-  <p class="a3p-source">Exemple adapté du manuel · page {{ activity.a3p.example.page }}. Poursuivez avec le questionnaire du chapitre.</p>
+  <p class="a3p-source">{{ 'Repères de l’arrêté · annexe XI.' if activity.a3p.example.page == 'XI' else 'Exemple adapté du manuel · page ' ~ activity.a3p.example.page ~ '.' }} Poursuivez avec le questionnaire du chapitre.</p>
 {% elif activity.a3p.kind == 'recap' %}
   <span class="a3p-eyebrow">La fiche à conserver</span><h2>Les repères essentiels de cette leçon</h2><div class="a3p-memory-cards">{% for point in activity.a3p.points %}<article><b>{{ '%02d'|format(loop.index) }}</b><p>{{ point }}</p></article>{% endfor %}</div>
   <section class="a3p-objective"><span class="a3p-eyebrow">L’objectif à savoir expliquer</span><p>{{ activity.a3p.objective }}</p></section>

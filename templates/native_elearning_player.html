@@ -14,7 +14,7 @@
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
 {% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-production.css', v='20261010-v10') }}">{% endif %}
 </head>
-<body class="native-elearning-body{{ ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
+<body class="native-elearning-body{{ ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
@@ -82,7 +82,7 @@
       </div>
     </div>
     {% if preview_mode %}
-    <span class="native-preview-badge">{{ 'Mode aperçu' }}</span>
+    <span class="native-preview-badge">{{ 'Révisions complémentaires' if resource_mode else 'Mode aperçu' }}</span>
     {% else %}
     <div class="native-live-metrics" aria-label="Suivi de la session">
       <div class="native-tracking-state" id="nativeTrackingState" data-state="connecting">
@@ -102,7 +102,7 @@
       <div class="native-sidebar__learner">
         {% if preview_mode %}
         <a class="native-back-link" href="{{ portal_url }}">← Retour aux modules</a>
-        <span>Aperçu administrateur</span>
+        <span>{{ 'Réviser librement' if resource_mode else 'Aperçu administrateur' }}</span>
         <strong>{{ course.counts.sections }} séquences · {{ activity_count }} activités</strong>
         {% else %}
         <a class="native-back-link" href="{{ path_url }}">← Tous mes modules</a>
@@ -110,6 +110,7 @@
         <strong>{{ learner_name or 'Stagiaire' }}</strong>
         {% endif %}
       </div>
+      {% if a3p_resources_url %}<p><a class="native-back-link" href="{{ a3p_resources_url }}">Vidéos et préparations du présentiel →</a></p>{% endif %}
       {% if training_url %}<p><a class="native-back-link" href="{{ training_url }}">Entraînement libre du module →</a></p>{% endif %}
       {% if not preview_mode %}
       <div class="native-progress-summary">
@@ -149,8 +150,8 @@
       <div class="native-main__inner">
         {% if preview_mode %}
         <section class="native-preview-notice" aria-label="Mode aperçu">
-          <strong>Visualisation du contenu</strong>
-          <p>Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.</p>
+          <strong>{{ 'Ressources complémentaires' if resource_mode else 'Visualisation du contenu' }}</strong>
+          <p>{{ 'Ces révisions, vidéos et préparations du présentiel restent en accès libre. Elles ne sont pas comptées dans votre temps à distance et ne valident aucun geste pratique.' if resource_mode else 'Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.' }}</p>
         </section>
         {% endif %}
         <div class="native-breadcrumb"><span>{{ section_title }}</span><b>Activité {{ activity_position }} sur {{ activity_count }}</b></div>

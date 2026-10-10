@@ -1569,6 +1569,62 @@ def create_native_elearning_blueprint(
             final_exam_description="Les 8 unités A3P" if training_label == "A3P" else "Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
         )
 
+    def a3p_resource_context(token: str, course_id: str):
+        session_obj, trainee, assigned = learner_context(token, course_id)
+        if assigned.get("training_label") != "A3P" or assigned["version"] != a3p.VERSION:
+            abort(404)
+        course = catalog().load_course(course_id, assigned["version"])
+        sections = [section for section in course["sections"] if section.get("delivery") != "distance"]
+        course = {**course, "sections": sections, "required_minutes": 0,
+                  "activity_order": [a["id"] for section in sections for a in section["activities"]]}
+        course["counts"] = {**course["counts"], "sections": len(sections)}
+        return session_obj, trainee, assigned, course
+
+    @blueprint.get("/espace/<token>/elearning/<course_id>/ressources")
+    def a3p_resources(token: str, course_id: str) -> Any:
+        session_obj, trainee, assigned, course = a3p_resource_context(token, course_id)
+        order = course["activity_order"]
+        activity_id = request.args.get("activity") or ("a3p-" + course_id[-2:] + "-video")
+        if activity_id not in order:
+            abort(404)
+        index = order.index(activity_id)
+        section, activity = next((section, activity) for section, activity in _activity_pairs(course) if activity["id"] == activity_id)
+        access = _course_access_payload(session_obj, trainee, assigned, public_token=token)
+        asset_token = _sign_access(_asset_access_payload(access))
+        def resource_url(aid):
+            return url_for("native_elearning.a3p_resources", token=token, course_id=course_id, activity=aid)
+        navigation = navigation_for(course, {}, token=token, current_activity_id=activity_id, preview=True)
+        for nav, raw in zip(navigation, course["sections"]):
+            for item, raw_activity in zip(nav["activities"], raw["activities"]):
+                item["url"] = resource_url(raw_activity["id"])
+        return render_template("native_elearning_player.html", preview_mode=True, resource_mode=True,
+            course={"id": course_id, "title": course["title"], "theme": _safe_theme(course), "version": course["version"], "counts": course["counts"], "training_label": "A3P"},
+            activity=prepare_activity(activity, asset_token, course_id), introduction=[],
+            section_title=section["title"], progress=project_progress({}, course), activity_completed=False,
+            navigation=navigation, activity_position=index + 1, activity_count=len(order),
+            previous_url=resource_url(order[index - 1]) if index else "",
+            next_url=resource_url(order[index + 1]) if index + 1 < len(order) else "",
+            portal_url=url_for("native_elearning.course_player", token=token, course_id=course_id),
+            preview_can_answer=True,
+            preview_config={"questionType": activity.get("question_type") or "", "csrfToken": _csrf_token(),
+                "answerUrl": url_for("native_elearning.a3p_resource_answer", token=token, course_id=course_id, activity_id=activity_id)})
+
+    @blueprint.post("/api/elearning/a3p/<token>/<course_id>/ressources/<activity_id>/answer")
+    def a3p_resource_answer(token: str, course_id: str, activity_id: str) -> Any:
+        _require_csrf()
+        _session_obj, _trainee, _assigned, course = a3p_resource_context(token, course_id)
+        activity = next((a for _s, a in _activity_pairs(course) if a["id"] == activity_id), None)
+        if not activity or not activity.get("scored"):
+            abort(404)
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get("answer"), dict):
+            return jsonify(ok=False, error="Réponse invalide."), 400
+        try:
+            correct, _ = _evaluate_answer(activity, payload["answer"])
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        return jsonify(ok=True, correct=correct, explanation=activity.get("explanation", ""))
+
     @blueprint.get("/espace/<token>/elearning/<course_id>")
     def course_player(token: str, course_id: str) -> Any:
         if not public_is_authed(token):
@@ -1627,6 +1683,7 @@ def create_native_elearning_blueprint(
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
             section_title=str(section.get("title") or ""),
             activity=activity,
+            a3p_resources_url=url_for('native_elearning.a3p_resources', token=token, course_id=course_id) if course.get('training_label') == 'A3P' else '',
             training_url=url_for('native_elearning.training_learner_catalog', token=token, course_id=course_id) if course_id.startswith('academy-vtc-') else '',
             introduction=introduction,
             progress=progress,

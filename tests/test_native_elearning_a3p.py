@@ -194,6 +194,25 @@ class A3PWebTests(unittest.TestCase):
         r=self._api_post('/api/elearning/v1/activities/'+q['id']+'/answer',config,answer={'groups':correct})
         self.assertTrue(r.json['correct']);self.assertIn(q['id'],r.json['progress']['completed_activity_ids'])
 
+    def test_complementary_resources_never_write_distance_progress(self):
+        self.assign('06');self._public_login()
+        with patch('elearning_native.web.NativeElearningStore',side_effect=AssertionError('resource wrote tracking')):
+            page=self.client.get('/espace/public-token/elearning/academy-a3p-06/ressources?activity=a3p-06-12-cours')
+            self.assertEqual(page.status_code,200)
+            self.assertIn('Ressources complémentaires',page.text)
+            self.assertNotIn('nativeElearningConfig',page.text)
+            self.assertNotIn('/admin/elearning/courses/',page.text)
+            self.assertEqual(self.client.get('/espace/public-token/elearning/academy-a3p-06/ressources?activity=a3p-06-01-cours').status_code,404)
+            page=self.client.get('/espace/public-token/elearning/academy-a3p-06/ressources?activity=a3p-06-12-quiz')
+            self.assertEqual(page.status_code,200)
+            q=a3p.load_bundled_course('academy-a3p-06')['sections'][11]['activities'][2]
+            answer={'answer':{'groups':{g['id']:next(o['id'] for o in g['answers'] if o['is_correct']) for g in q['answer_groups']}}}
+            config=json.loads(re.search(r'<script id="nativePreviewConfig" type="application/json">(.*?)</script>',page.text,re.S).group(1))
+            self.assertEqual(self.client.post(config['answerUrl'],json=answer).status_code,403)
+            r=self.client.post(config['answerUrl'],json=answer,headers={'X-Elearning-CSRF':self.csrf()})
+            self.assertTrue(r.json['correct'])
+        self.assertFalse((self.persist_dir/'native_elearning/tracking.sqlite3').exists())
+
     def test_anonymous_and_old_editions_remain_protected(self):
         self.assertEqual(self.client.get('/admin/elearning/a3p').status_code,302)
         self.assertEqual(self.client.post('/api/admin/elearning/exams/a3p-final',json={}).status_code,401)
