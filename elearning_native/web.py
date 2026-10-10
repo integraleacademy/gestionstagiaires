@@ -40,7 +40,7 @@ from werkzeug.exceptions import Conflict
 
 from .videos import activity_playback_policy, activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
-from . import vtc
+from . import vtc, a3p
 from .exams import ExamStore, load_exam, public_exam, grade_exam
 from .practice import public_practice, grade_practice
 from .production import public_production, production_feedback, normalize_production, normalize_self_review
@@ -603,6 +603,9 @@ def create_native_elearning_blueprint(
             public['vtc'] = prepare_vtc(activity['vtc'])
             if public.get('practice', {}).get('mode') == 'journey':
                 public['practice'] = prepare_vtc(public['practice'])
+        if isinstance(activity.get('a3p'), Mapping):
+            # Authored structured text; Jinja autoescaping remains enabled.
+            public['a3p'] = dict(activity['a3p'])
         if isinstance(activity.get('academy'), Mapping):
             # Structured content stays autoescaped by Jinja. Only declared media
             # paths are converted to the usual signed, session-bound asset URLs.
@@ -778,6 +781,7 @@ def create_native_elearning_blueprint(
                 except OSError:
                     pass
 
+    @blueprint.get("/admin/elearning/a3p", endpoint="admin_a3p_catalog")
     @blueprint.get("/admin/elearning/vtc", endpoint="admin_vtc_catalog")
     @blueprint.get("/admin/elearning")
     @admin_required
@@ -813,11 +817,12 @@ def create_native_elearning_blueprint(
             upload_chunk_mb=UPLOAD_CHUNK_BYTES // (1024 * 1024),
             csrf_token=_csrf_token(),
             academy_manifest=curriculum_manifest(),
-            selected_curriculum="vtc" if request.path.endswith("/vtc") else "aps",
+            selected_curriculum="a3p" if request.path.endswith("/a3p") else "vtc" if request.path.endswith("/vtc") else "aps",
+            a3p_manifest=a3p.curriculum_manifest(),
             vtc_manifest=vtc.curriculum_manifest(),
             vtc_courses=[c for c in courses if c.get("source",{}).get("type")=="academy-vtc"],
             academy_courses=[c for c in courses if c.get('source', {}).get('type') == 'academy-aps62'],
-            imported_courses=[c for c in courses if c.get('source', {}).get('type') not in {'academy-aps62','academy-vtc'}],
+            imported_courses=[c for c in courses if c.get('source', {}).get('type') not in {'academy-aps62','academy-vtc','academy-a3p'}],
         )
 
     def preview_course(course_id: str) -> Dict[str, Any]:
@@ -886,10 +891,14 @@ def create_native_elearning_blueprint(
         for correction in result['corrections']:
             links = []
             for ref in questions.get(correction['id'], {}).get('lesson_refs', []):
-                if not re.fullmatch(r'[A-H]\.\d{2}', ref):
+                if exam['id'].startswith('a3p-') and re.fullmatch(r'0[2-9]\.\d{2}', ref):
+                    cid = 'academy-a3p-' + ref[:2]
+                    activity = 'a3p-' + ref.replace('.', '-') + '-cours'
+                elif re.fullmatch(r'[A-H]\.\d{2}', ref):
+                    cid = 'academy-vtc-' + ref[0].lower()
+                    activity = 'vtc-' + ref.lower().replace('.', '-') + '-cours'
+                else:
                     continue
-                cid = 'academy-vtc-' + ref[0].lower()
-                activity = 'vtc-' + ref.lower().replace('.', '-') + '-cours'
                 url = (url_for('native_elearning.course_player',token=token,course_id=cid,activity=activity)
                        if token else url_for('native_elearning.admin_preview',course_id=cid,version=exam['version'],activity=activity))
                 links.append({'ref': ref, 'url': url})
@@ -899,16 +908,16 @@ def create_native_elearning_blueprint(
     @blueprint.get('/admin/elearning/exams/<exam_id>')
     @admin_required
     def admin_exam(exam_id):
-        exam = load_exam(exam_id, request.args.get('version') or (vtc.curriculum_manifest()['version'] if exam_id.startswith('vtc-') else curriculum_manifest()['version']))
+        exam = load_exam(exam_id, request.args.get('version') or (a3p.VERSION if exam_id.startswith('a3p-') else vtc.curriculum_manifest()['version'] if exam_id.startswith('vtc-') else curriculum_manifest()['version']))
         if not exam:
             abort(404)
-        return exam_page(exam, url_for('native_elearning.admin_vtc_catalog' if exam_id.startswith('vtc-') else 'native_elearning.admin_catalog'),
+        return exam_page(exam, url_for('native_elearning.admin_a3p_catalog' if exam_id.startswith('a3p-') else 'native_elearning.admin_vtc_catalog' if exam_id.startswith('vtc-') else 'native_elearning.admin_catalog'),
             url_for('native_elearning.admin_exam_submit', exam_id=exam_id, version=exam['version']), preview=True)
 
     @blueprint.post('/api/admin/elearning/exams/<exam_id>')
     @admin_required
     def admin_exam_submit(exam_id):
-        exam = load_exam(exam_id, request.args.get('version') or (vtc.curriculum_manifest()['version'] if exam_id.startswith('vtc-') else curriculum_manifest()['version']))
+        exam = load_exam(exam_id, request.args.get('version') or (a3p.VERSION if exam_id.startswith('a3p-') else vtc.curriculum_manifest()['version'] if exam_id.startswith('vtc-') else curriculum_manifest()['version']))
         if not exam:
             abort(404)
         try:
@@ -981,7 +990,7 @@ def create_native_elearning_blueprint(
             activity_position=index + 1, activity_count=len(order),
             previous_url=activity_url(order[index - 1]) if index else "",
             next_url=activity_url(order[index + 1]) if index + 1 < len(order) else "",
-            portal_url=url_for("native_elearning.admin_vtc_catalog" if course.get("training_label") == "VTC" else "native_elearning.admin_catalog"),
+            portal_url=url_for("native_elearning.admin_a3p_catalog" if course.get("training_label") == "A3P" else "native_elearning.admin_vtc_catalog" if course.get("training_label") == "VTC" else "native_elearning.admin_catalog"),
             preview_config={
                 "questionType": raw_activity.get("question_type") or "",
                 "csrfToken": _csrf_token(),
@@ -1039,7 +1048,7 @@ def create_native_elearning_blueprint(
         if not session_obj or not _is_aps_training(session_obj):
             abort(404)
         modules = load_path(session_obj)
-        outlines = {(course["id"], course["version"]): course_outline(course) for course in catalog().list_courses()}
+        outlines = {(course["id"], course["version"]): course_outline(course) for course in catalog().list_courses() if not course.get("preview_only")}
         for item in modules:
             if item["outline"]:
                 outline = item["outline"]
@@ -1289,6 +1298,8 @@ def create_native_elearning_blueprint(
                 course = catalog().load_course(course_id)
             except CourseImportError:
                 abort(404)
+            if course.get("preview_only"):
+                abort(409, "Le parcours A3P est disponible uniquement en aperçu pédagogique.")
             session_obj["aps_native_course_id"] = course["id"]
             session_obj["aps_native_course_version"] = course["version"]
             flash(f"Cours « {course.get('title')} » affecté à la session.", "success")
@@ -1923,4 +1934,5 @@ def create_native_elearning_blueprint(
                       csrf_token=_csrf_token, require_csrf=_require_csrf,
                       prepare_activity=prepare_activity, asset_token_for=training_asset_token)
     return blueprint
+
 

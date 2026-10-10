@@ -1,0 +1,42 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-1') }}">
+<section class="a3p-catalog" aria-labelledby="a3p-title">
+  <header class="a3p-hero">
+    <div><span class="a3p-eyebrow">Protection physique des personnes</span><h2 id="a3p-title">Préparer chaque décision.<br>Protéger avec méthode.</h2>
+      <p>Le parcours A3P du manuel Intégrale Academy : comprendre le cadre, préparer la mission, analyser les risques et organiser le relais.</p>
+      <div class="a3p-stats"><span><strong>{{ a3p_manifest.lesson_count }}</strong> leçons</span><span><strong>{{ a3p_manifest.question_count }}</strong> questions corrigées</span><span><strong>{{ a3p_manifest.case_count }}</strong> études de cas</span>{% if a3p_manifest.video_count %}<span><strong>{{ a3p_manifest.video_count }}</strong> synthèses vidéo</span>{% endif %}</div>
+      <a class="a3p-button a3p-button--light" href="{{ url_for('native_elearning.admin_preview', course_id='academy-a3p-02', version=a3p_manifest.version) }}">Ouvrir la première leçon →</a>
+    </div>
+    <img src="{{ url_for('static', filename='manuals/a3p.jpg') }}" alt="Couverture du manuel A3P Intégrale Academy" width="200" height="280">
+  </header>
+
+  <aside class="a3p-notice"><strong>Édition de préparation · ouverture certifiante suspendue</strong>
+    <p>{{ a3p_manifest.notice }}</p><a href="#a3p-reglementation">Voir les sources et les modalités à valider ↓</a>
+  </aside>
+
+  <div class="a3p-section-head"><div><span class="a3p-eyebrow">Le parcours</span><h3>8 unités pour travailler les fondamentaux</h3></div><span>UV 02 à 09 · structure du manuel</span></div>
+  <div class="a3p-module-grid">
+    {% for module in a3p_manifest.modules %}
+    <article class="a3p-module">
+      <div class="a3p-module-top"><span class="a3p-uv">UV {{ module.uv }}</span><span>{{ module.lesson_count }} leçons</span></div>
+      <h4>{{ module.title }}</h4><p>{{ module.objective }}</p>
+      <div class="a3p-module-meta">{{ module.question_count }} questions corrigées · 1 étude de cas{% if module.video_minutes %} · vidéo Henri {{ module.video_minutes }} min{% endif %}</div>
+      <div class="a3p-actions"><a class="a3p-button" href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version) }}">Consulter les cours</a><a class="a3p-text-link" href="{{ url_for('native_elearning.admin_exam', exam_id=module.exam_id, version=module.version) }}">QCM · 30 questions →</a></div>
+      <details class="a3p-syllabus"><summary>Sommaire des {{ module.lesson_count }} leçons</summary><ol>{% for lesson in module.lessons %}<li><a href="{{ url_for('native_elearning.admin_preview', course_id=module.id, version=module.version, activity=lesson.activity) }}"><b>{{ lesson.ref }}</b> {{ lesson.title }}</a></li>{% endfor %}</ol></details>
+    </article>
+    {% endfor %}
+  </div>
+
+{% if a3p_manifest.video_count %}<p class="a3p-source">{{ a3p_manifest.video_count }} synthèses vidéo avec la voix Henri, sous-titres intégrés et piste de sous-titres disponible. Durée cumulée des vidéos : {{ a3p_manifest.video_minutes }} minutes. Cette durée mesurée ne correspond pas à des heures certifiantes.</p>{% endif %}
+  <section class="a3p-exam-card"><div><span class="a3p-eyebrow">Faire le point</span><h3>Examen blanc transversal</h3><p>100 questions issues des 8 unités, correction expliquée et retour à la leçon concernée. Seuil pédagogique interne : 80 %. Cet entraînement ne remplace pas l’examen officiel.</p></div><a class="a3p-button" href="{{ url_for('native_elearning.admin_exam', exam_id=a3p_manifest.final_exam_id, version=a3p_manifest.version) }}">Tester l’examen blanc →</a></section>
+
+  <section class="a3p-regulatory" id="a3p-reglementation" aria-labelledby="a3p-reg-title">
+    <span class="a3p-eyebrow">Cadre de réalisation · vérification du 10 octobre 2026</span><h3 id="a3p-reg-title">Des contenus de préparation, des pratiques à encadrer</h3>
+    <p>L’arrêté du 1er septembre 2025 et les règles du certificateur doivent être appliqués ensemble. Cette édition reste accessible aux administrateurs pour revue pédagogique. Elle ne peut pas être affectée à une session certifiante et ne génère ni temps validé ni attestation.</p>
+    <div class="a3p-reg-grid"><div><h4>À organiser en présentiel</h4><ul>{% for item in a3p_manifest.regulatory_review.in_person %}<li>{{ item }}</li>{% endfor %}</ul></div><div><h4>Avant une ouverture stagiaire</h4><ol>{% for item in a3p_manifest.regulatory_review.release_requirements %}<li>{{ item }}</li>{% endfor %}</ol></div></div>
+    <details><summary>Sources, périmètre et limites de cette édition</summary><ul>{% for note in a3p_manifest.regulatory_review.notes %}<li>{{ note }}</li>{% endfor %}</ul><ul>{% for source in a3p_manifest.regulatory_review.sources %}<li><a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.title }} ↗</a></li>{% endfor %}</ul></details>
+    <details><summary>Lire les objectifs marqués « OUI » dans les annexes II et XI</summary>
+      <p>La somme de leurs durées minimales est de <strong>157 h 30</strong> (27 h + 130 h 30). Elle ne constitue pas une autorisation ADEF pour le TFP A3P, une promesse de durée en ligne ou des heures réalisées. <strong>Heures certifiantes délivrées par cette édition : 0.</strong> Les correspondances UV ci-dessous sont des repères thématiques à valider, pas une attestation de couverture intégrale du référentiel.</p>
+      <div class="a3p-table-scroll" role="region" aria-label="Correspondance réglementaire" tabindex="0"><table><caption>Repères de lecture — durées minimales des objectifs éligibles selon l’arrêté</caption><thead><tr><th>Annexe</th><th>Objectif</th><th>Durée minimale</th><th>UV concernées</th></tr></thead><tbody>{% for row in a3p_manifest.regulatory_review.eligible_objectives %}<tr><td>{{ row.annex }}</td><td>{{ row.objective }}</td><td>{{ row.minimum_minutes // 60 }} h {{ '%02d'|format(row.minimum_minutes % 60) }}</td><td>{{ row.modules }}</td></tr>{% endfor %}</tbody></table></div>
+    </details>
+  </section>
+</section>

@@ -33,6 +33,8 @@ def path_revision(session_obj: Mapping[str, Any]) -> str:
 
 def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict[str, Any]:
     """Select/order sequences without changing activity IDs, content or answers."""
+    if course.get("preview_only"):
+        raise CourseImportError("Le parcours A3P est en préparation pédagogique. Son affectation certifiante nécessite une validation du certificateur.")
     required_minutes = module.get("required_minutes", 0)
     if type(required_minutes) is not int or not 0 <= required_minutes <= MAX_REQUIRED_MINUTES:
         raise CourseImportError("La durée obligatoire doit être un nombre entier de minutes, entre 0 et 1 000 heures.")
@@ -144,3 +146,4 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
                                      for video_id, duration in videos.items()),
         "completed_at": progress.get("completed_at") if finished and duration_met else None,
     }
+

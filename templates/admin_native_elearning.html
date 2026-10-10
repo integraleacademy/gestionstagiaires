@@ -16,9 +16,10 @@
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="nel-flash nel-flash--{{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
-  <nav class="curriculum-tabs" aria-label="Choisir une formation"><a href="{{ url_for('native_elearning.admin_catalog') }}"{% if selected_curriculum == 'aps' %} aria-current="page"{% endif %}>Sécurité privée · APS</a><a href="{{ url_for('native_elearning.admin_vtc_catalog') }}"{% if selected_curriculum == 'vtc' %} aria-current="page"{% endif %}>Chauffeur · VTC</a></nav>
-  {% if selected_curriculum == 'vtc' %}{% include '_vtc_catalog.html' %}{% elif academy_courses %}{% include '_aps62_catalog.html' %}{% endif %}
+  <nav class="curriculum-tabs" aria-label="Choisir une formation"><a href="{{ url_for('native_elearning.admin_catalog') }}"{% if selected_curriculum == 'aps' %} aria-current="page"{% endif %}>Sécurité privée · APS</a><a href="{{ url_for('native_elearning.admin_vtc_catalog') }}"{% if selected_curriculum == 'vtc' %} aria-current="page"{% endif %}>Chauffeur · VTC</a><a href="{{ url_for('native_elearning.admin_a3p_catalog') }}"{% if selected_curriculum == 'a3p' %} aria-current="page"{% endif %}>Protection des personnes · A3P</a></nav>
+  {% if selected_curriculum == 'a3p' %}{% include '_a3p_catalog.html' %}{% elif selected_curriculum == 'vtc' %}{% include '_vtc_catalog.html' %}{% elif academy_courses %}{% include '_aps62_catalog.html' %}{% endif %}
 
+  {% if selected_curriculum != 'a3p' %}
   <div class="nel-grid">
     <section class="nel-card">
       <h2>Importer un cours</h2>
@@ -77,6 +78,7 @@
       </div>
     {% else %}<div class="nel-empty">Aucune session APS disponible.</div>{% endif %}
   </section>
+  {% endif %}
 </div>
 
 <script id="nativeAdminUploadConfig" type="application/json">{{ {
@@ -86,3 +88,4 @@
 }|tojson }}</script>
 <script src="{{ url_for('static', filename='js/native-elearning-admin.js', v='20260907-1') }}" defer></script>
 {% endblock %}
+

@@ -1,0 +1,121 @@
+name: A3P — produire les huit synthèses Henri sous-titrées
+on:
+  push:
+    branches: [codex/a3p-preparation-20261010]
+    paths:
+      - scripts/render_a3p_v1.py
+      - elearning_native/a3p_resources/manual.json
+      - elearning_native/a3p_resources/cases.json
+      - .github/workflows/a3p-media-v1.yml
+permissions: {}
+concurrency:
+  group: a3p-media-v1
+  cancel-in-progress: true
+jobs:
+  render:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        uv: ['02','03','04','05','06','07','08','09']
+    env:
+      A3P_UV: ${{ matrix.uv }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/render_a3p_v1.py
+            /scripts/aps62_v5/captions.py
+            /scripts/academy_videos/assets/
+            /elearning_native/a3p_resources/manual.json
+            /elearning_native/a3p_resources/cases.json
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Installer les outils de synthèse
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --disable-pip-version-check edge-tts==7.2.8 Pillow==12.3.0
+      - name: Produire et décoder intégralement la synthèse
+        run: python scripts/render_a3p_v1.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: a3p-uv-${{ matrix.uv }}
+          path: elearning_native/a3p_resources/assets/media/a3p/v1/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+  publish:
+    needs: render
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      actions: read
+    env:
+      PERSIST_DIR: /tmp/a3p-media-ci-synthetic
+      SECRET_KEY: a3p-ci-synthetic-key-not-used-in-production
+      A3P_REQUIRE_MEDIA: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: a3p-uv-*
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+          path: elearning_native/a3p_resources/assets/media/a3p/v1
+          merge-multiple: true
+      - name: Vérifier les huit médias et leur provenance
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root=Path('elearning_native/a3p_resources')
+          folder=root/'assets/media/a3p/v1'
+          expected={f'uv-{uv:02}.{ext}' for uv in range(2,10) for ext in ('mp4','jpg','vtt','json')}
+          assert {p.name for p in folder.iterdir()} == expected
+          signature=hashlib.sha256((root/'manual.json').read_bytes()+(root/'cases.json').read_bytes()).hexdigest()
+          for uv in range(2,10):
+              row=json.loads((folder/f'uv-{uv:02}.json').read_text())
+              assert row['source_sha256']==signature
+              assert row['voice']=='fr-FR-HenriNeural' and row['burned_captions']
+              assert row['video_sha256']==hashlib.sha256((folder/f'uv-{uv:02}.mp4').read_bytes()).hexdigest()
+              assert row['duration_seconds']>=120 and row['narration_seconds']>=120
+              assert (folder/f'uv-{uv:02}.mp4').stat().st_size < 95*1024*1024
+              for key,ext in [('src','mp4'),('poster','jpg'),('captions','vtt')]:
+                  assert row[key]==f'media/a3p/v1/uv-{uv:02}.{ext}'
+          PY
+      - name: Installer et exécuter les contrôles fonctionnels
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements.txt pytest playwright
+          python -m pytest tests/test_native_elearning_a3p.py tests/test_native_elearning_web.py tests/test_native_elearning_exams.py -q
+          python -m playwright install --with-deps chromium
+          python scripts/check_a3p_ui.py
+      - name: Publier les médias sur la branche A3P uniquement
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- elearning_native/a3p_resources/assets/media/a3p/v1
+          git diff --cached --check
+          git commit -m 'Ajouter les 8 synthèses A3P avec Henri et sous-titres synchronisés'
+          git fetch origin codex/a3p-preparation-20261010
+          test "$(git rev-parse origin/codex/a3p-preparation-20261010)" = "$GITHUB_SHA"
+          git push origin HEAD:refs/heads/codex/a3p-preparation-20261010
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: a3p-media-ui-review
+          path: /tmp/a3p-ui/*.png
+          if-no-files-found: warn
+          retention-days: 7
