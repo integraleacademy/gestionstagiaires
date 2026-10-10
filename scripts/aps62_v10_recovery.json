@@ -1,0 +1,46 @@
+{
+  "version": "20261010-aps62-v10",
+  "branch": "test-v2",
+  "enabled": true,
+  "publish_enabled": true,
+  "shards": 4,
+  "media_revision": 8,
+  "source_run_id": 38024849922,
+  "source_run_attempt": 1,
+  "source_sha": "9f144f72768f5ddeedf7a9fc1c4766fcf40e9425",
+  "reviewed_base_sha": "ab31ed34ca0e86606b6db4ad33f8e91f48091628",
+  "request_revision": 1,
+  "request": "Reprendre la publication APS v10 avec les quatre lots déjà rendus, après conservation et validation des changements des accès apprenants et des mails sur TEST.",
+  "source_render_job_ids": {
+    "0": 114133631271,
+    "1": 114133631259,
+    "2": 114133631329,
+    "3": 114133631212
+  },
+  "source_artifacts": [
+    {
+      "id": 11659193308,
+      "name": "aps62-v10-shard-0",
+      "size_in_bytes": 168755348,
+      "digest": "sha256:345d27a4f97b4a2cdc3b2140eb73357165c4571c8b263e09bfd0c984827d8543"
+    },
+    {
+      "id": 11659433163,
+      "name": "aps62-v10-shard-1",
+      "size_in_bytes": 168417428,
+      "digest": "sha256:e277ddac683c2de8dc5bf419917b04a616ad3e42e80541ebf409b6436ef40894"
+    },
+    {
+      "id": 11659883864,
+      "name": "aps62-v10-shard-2",
+      "size_in_bytes": 159785108,
+      "digest": "sha256:e08027141e3b19254ea30b3c5b555e486f2984e4742ccc7678e20c2169976c26"
+    },
+    {
+      "id": 11659644200,
+      "name": "aps62-v10-shard-3",
+      "size_in_bytes": 161362068,
+      "digest": "sha256:4f47364fb03b0d3d78d75d5e366108d799c521f7380d40dafcfdfc7b6767fdfd"
+    }
+  ]
+}
