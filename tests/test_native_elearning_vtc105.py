@@ -64,7 +64,14 @@ class Vtc105ContentTests(unittest.TestCase):
         self.assertEqual(len(listening),48)
         course=vtc.load_bundled_course('academy-vtc-e',VERSION)
         mp3=[a for a in course['assets'] if a.endswith('.mp3')]
-        self.assertEqual(len(mp3),48)
+        # A corrected dialogue can retain its historical file in the asset registry.
+        # The course still references exactly 48 distinct listening recordings.
+        listening_sources={e['audio'] for section in course['sections']
+                           for activity in section['activities']
+                           for e in activity.get('practice',{}).get('exercises',[])
+                           if e.get('audio')}
+        self.assertEqual(len(listening_sources),48)
+        self.assertTrue(listening_sources.issubset(set(mp3)))
         for name in mp3:
             self.assertGreater(vtc.bundled_asset(course['id'],VERSION,name).stat().st_size,10000)
         self.assertGreater(sum(a['duration_seconds'] for a in listening.values()),1800)

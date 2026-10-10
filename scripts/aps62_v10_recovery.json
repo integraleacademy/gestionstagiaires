@@ -8,9 +8,9 @@
   "source_run_id": 38024849922,
   "source_run_attempt": 1,
   "source_sha": "9f144f72768f5ddeedf7a9fc1c4766fcf40e9425",
-  "reviewed_base_sha": "ab31ed34ca0e86606b6db4ad33f8e91f48091628",
-  "request_revision": 1,
-  "request": "Reprendre la publication APS v10 avec les quatre lots déjà rendus, après conservation et validation des changements des accès apprenants et des mails sur TEST.",
+  "reviewed_base_sha": "883fcd731b5aee06bce8ffc81caa875e87bb182c",
+  "request_revision": 2,
+  "request": "Reprendre la publication APS v10 avec les quatre lots déjà rendus, après conservation et validation des changements des accès apprenants, des mails et du dialogue VTC sur TEST.",
   "source_render_job_ids": {
     "0": 114133631271,
     "1": 114133631259,
