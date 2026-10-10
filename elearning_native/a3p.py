@@ -1,166 +1,229 @@
-"""Versioned A3P preparation resources. Not assignable as TFP distance hours.
-
-The legal eligibility of an objective is separate from the certificate body's
-approval of the delivery mode. Keep this edition in administrator preview.
-"""
+"""A3P: structured lessons and a distance path scoped to the ministerial order."""
 from __future__ import annotations
 import copy
+import html
 import json
 import re
 from functools import lru_cache
-from pathlib import Path
+from . import a3p_v1 as legacy
 
-ROOT = Path(__file__).parent / 'a3p_resources'
-VERSION = '20261010-a3p-v1'
-NOTICE = ('Préparation pédagogique A3P · aperçu administrateur. Aucune heure certifiante ni validation '
-          'pratique. Selon les informations ADEF consultées le 10/10/2026, seuls les TFP APS et DSP '
-          'comportent des séquences autorisées à distance. L’ouverture A3P nécessite la confirmation '
-          'écrite du certificateur et la validation du dispositif par l’organisme de formation.')
-MODULES = {
-    '02': ('Cadre juridique et déontologie', 'Qualifier une demande, poser une limite et justifier une décision.', ['Qualifier les faits', 'Vérifier le droit', 'Décider dans ses limites', 'Rendre compte']),
-    '03': ('Gestion des conflits', 'Prévenir l’escalade et adapter sa communication à la situation.', ['Observer', 'Écouter', 'Poser une limite', 'Organiser le relais']),
-    '04': ('Consignes et transmissions', 'Transformer des observations en informations opérationnelles fiables.', ['Recueillir', 'Hiérarchiser', 'Transmettre', 'Confirmer']),
-    '05': ('Prévention du risque terroriste', 'Repérer une situation préoccupante, se protéger et alerter.', ['Observer les faits', 'Réduire l’exposition', 'Alerter', 'Faciliter les secours']),
-    '06': ('Protection physique des personnes', 'Préparer une mission et coordonner l’accompagnement dans ses limites.', ['Analyser le besoin', 'Préparer les options', 'Briefer l’équipe', 'Réévaluer']),
-    '07': ('Techniques professionnelles et capacités', 'Identifier les exigences physiques, techniques et informationnelles du métier.', ['Évaluer les risques', 'Préparer le cadre', 'S’exercer avec un formateur', 'Débriefer']),
-    '08': ('Gestion des risques et situations dégradées', 'Adapter l’organisation face aux risques du site, du transport ou d’un événement.', ['Identifier les dangers', 'Prévoir une alternative', 'Coordonner la réponse', 'Actualiser les consignes']),
-    '09': ('Secourisme tactique d’urgence', 'Comprendre les priorités et préparer une transmission aux secours.', ['Considérer la menace', 'Protéger et alerter', 'Agir dans ses compétences', 'Réévaluer et transmettre']),
+ROOT = legacy.ROOT
+VERSION = '20261010-a3p-v2'
+MODULES = legacy.MODULES
+NOTICE = ('Parcours fondé sur les annexes II et XI de l’arrêté du 1er septembre 2025. '
+          'Les objectifs marqués OUI constituent le parcours à distance ; les autres ressources '
+          'préparent les séances présentielles et ne les remplacent pas.')
+_manual = legacy._manual
+_questions = legacy._questions
+_video = legacy._video
+curriculum_ids = legacy.curriculum_ids
+
+# Explicit lesson scope: never count the theoretical part of a NON row as OUI.
+DISTANCE = {
+    '02': list(range(1, 11)), '03': list(range(1, 7)), '04': list(range(1, 7)),
+    '05': [1, 2, 3, 4, 7],
+    '06': [*range(1, 12), 16, 21, 22, 23, 24, 25, 26],
+    '07': [5, 6, 7, 8], '08': list(range(4, 11)), '09': [],
 }
 
 
-@lru_cache(maxsize=1)
-def _manual():
-    return json.loads((ROOT / 'manual.json').read_text(encoding='utf-8'))
+def _mode(ref):
+    if ref == '09.15':
+        return 'distance'
+    if ref[:2] == '06' and int(ref[3:]) >= 27:
+        return 'complement'
+    return 'distance' if int(ref[3:]) in DISTANCE[ref[:2]] else 'presentiel'
 
 
 @lru_cache(maxsize=1)
-def _questions():
-    lessons = {l['ref']: l for l in _manual()['lessons']}
-    result = []
-    for index, line in enumerate((ROOT / 'questions.txt').read_text(encoding='utf-8').splitlines()):
-        if not line.strip():
-            continue
-        ref, prompt, correct, wrong1, wrong2, explanation = line.split('|')
-        lesson = lessons[ref]
-        texts = [correct, wrong1, wrong2]
-        shift = index % 3
-        texts = texts[shift:] + texts[:shift]
-        options = [{'id': chr(97 + i), 'text': text} for i, text in enumerate(texts)]
-        result.append({'id': f'a3p-q-{index + 1:03}', 'prompt': prompt, 'options': options,
-                       'answer': next(o['id'] for o in options if o['text'] == correct),
-                       'explanation': explanation, 'module': 'UV ' + ref[:2], 'lesson_refs': [ref],
-                       'sources': [f"Manuel A3P, leçon {ref}, p. {', '.join(map(str, lesson['source_pages']))}"]})
-    return result
+def _review():
+    return json.loads((ROOT / 'regulatory_review.json').read_text(encoding='utf-8'))
 
 
-def curriculum_ids():
-    return ['academy-a3p-' + uv for uv in MODULES]
+def _rows(ref):
+    return [r for r in _review()['eligible_objectives'] if ref in r['lesson_refs']]
 
 
-def _video(uv):
-    path = ROOT / 'assets' / 'media' / 'a3p' / 'v1' / ('uv-' + uv + '.json')
-    return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else None
+def _minutes(uv):
+    return sum(r['minimum_minutes'] for r in _review()['eligible_objectives'] if r['delivery_module'] == uv)
 
 
-def bundled_asset(course_id, version, name):
-    course = load_bundled_course(course_id, version)
-    if course is None or name not in course.get('assets', []):
-        return None
-    root = (ROOT / 'assets').resolve()
-    path = (root / name).resolve()
-    return path if root in path.parents and path.is_file() else None
+def _recap(lesson):
+    paragraphs = [c['text'] for p in lesson['pages'] for c in p['components'] if c['kind'] == 'paragraph']
+    points = []
+    for page in lesson['pages']:
+        candidates = [c['text'] for c in page['components'] if c['kind'] == 'paragraph']
+        if candidates:
+            value = candidates[-1]
+            if value not in points and value != lesson['objective']:
+                points.append(value)
+    return points[-3:] or paragraphs[-1:]
 
 
-def curriculum_manifest():
-    manual = _manual()
-    review = json.loads((ROOT / 'regulatory_review.json').read_text(encoding='utf-8'))
-    modules = []
-    for uv, (title, objective, flow) in MODULES.items():
-        lessons = [l for l in manual['lessons'] if l['ref'].startswith(uv + '.')]
-        modules.append({'id': 'academy-a3p-' + uv, 'uv': uv, 'title': title,
-                        'objective': objective, 'flow': flow, 'version': VERSION,
-                        'video_minutes': round((_video(uv) or {}).get('duration_seconds', 0) / 60, 1),
-                        'lesson_count': len(lessons), 'lessons': [
-                            {'ref': l['ref'], 'title': l['title'], 'activity': 'a3p-' + l['ref'].replace('.', '-') + '-cours'} for l in lessons],
-                        'question_count': sum(q['module'] == 'UV ' + uv for q in _questions()),
-                        'exam_id': 'a3p-module-' + uv})
-    return {'version': VERSION, 'training_label': 'A3P', 'preview_only': True, 'notice': NOTICE,
-            'modules': modules, 'lesson_count': len(manual['lessons']), 'question_count': len(_questions()),
-            'reading_page_count': sum(len(l['pages']) for l in manual['lessons']),
-            'case_count': len(MODULES), 'video_count': sum(bool(_video(uv)) for uv in MODULES),
-            'video_minutes': round(sum((_video(uv) or {}).get('duration_seconds', 0) for uv in MODULES) / 60, 1), 'final_exam_id': 'a3p-final', 'regulatory_review': review}
+def _application(lesson):
+    """Use the manual's actual worked example, preserving source and full meaning."""
+    for page in lesson['pages']:
+        for index, item in enumerate(page['components']):
+            if item['kind'] == 'heading' and item['text'] == 'UN EXEMPLE':
+                paragraphs = []
+                for component in page['components'][index + 1:]:
+                    if component['kind'] == 'heading':
+                        break
+                    if component['kind'] == 'paragraph':
+                        paragraphs.append(component['text'])
+                if paragraphs:
+                    # The complete scenario stays visible, including qualifications.
+                    return {'paragraphs': paragraphs, 'page': page['page']}
+    page = lesson['pages'][-1]
+    return {'paragraphs': [c['text'] for c in page['components'] if c['kind'] == 'paragraph'][-2:], 'page': page['page']}
+
+
+def _quiz(lesson, questions):
+    prefix = 'a3p-' + lesson['ref'].replace('.', '-')
+    fields, groups = [], []
+    for number, q in enumerate(questions, 1):
+        opts = ''.join('<option value="%s">%s</option>' % (o['id'], html.escape(o['text'])) for o in q['options'])
+        fields.append('<p><strong>%s. %s</strong></p><p><select class="native-elearning-blank" data-group-id="%s" aria-label="%s"><option value="">Choisissez une réponse…</option>%s</select></p>' % (number, html.escape(q['prompt']), q['id'], html.escape(q['prompt'], quote=True), opts))
+        groups.append({'id': q['id'], 'mode': 'choice', 'answers': [{**o, 'is_correct': o['id'] == q['answer']} for o in q['options']]})
+    return {'id': prefix + '-quiz', 'title': 'QCM · ' + lesson['title'], 'type': 'question',
+            'question_type': 'fill_blank', 'scored': True, 'prompt': 'Choisissez une réponse à chaque question, puis validez le questionnaire.',
+            'prompt_html': ''.join(fields), 'answer_groups': groups,
+            'a3p': {'kind': 'quiz', 'ref': lesson['ref'], 'question_count': len(questions)},
+            'explanation': '\n\n'.join(str(i) + '. ' + q['explanation'] for i, q in enumerate(questions, 1))}
+
+
+def _injuries_lesson():
+    return {
+        'ref': '09.15', 'title': 'Reconnaître les blessures spécifiques',
+        'objective': 'Identifier les familles de blessures et les informations à transmettre, sans pratiquer de geste invasif.',
+        'source_pages': [],
+        'pages': [{'page': 'XI', 'kind': 'COURS DÉTAILLÉ', 'components': [
+            {'kind': 'heading', 'text': 'OBSERVER SANS POSER DE DIAGNOSTIC'},
+            {'kind': 'paragraph', 'text': 'L’objectif de cette séquence est la reconnaissance des blessures prévue à l’annexe XI (30 minutes, réalisable à distance). La mise en œuvre des gestes, le matériel et les scénarios pratiques de secours tactique se travaillent en présentiel. Une observation ne remplace ni le bilan d’un professionnel de santé ni les consignes des secours.'},
+            {'kind': 'table', 'rows': [
+                ['Famille de blessures', 'Informations utiles à transmettre'],
+                ['Hémorragie', 'Localisation, saignement visible et évolution observée.'],
+                ['Détresse respiratoire', 'Difficulté à respirer, conscience et changement constaté.'],
+                ['Plaie par projectile ou arme blanche', 'Localisation visible et circonstances connues, sans explorer la plaie.'],
+                ['Explosion', 'Exposition au souffle, projections, brûlures et plaintes exprimées.'],
+                ['Brûlure', 'Cause présumée, localisation et étendue visible.'],
+                ['Fracture suspectée', 'Zone douloureuse, mécanisme connu et impossibilité de mouvement rapportée.'],
+                ['Hypothermie', 'Exposition au froid, vêtements mouillés et évolution de l’état de la personne.']]},
+            {'kind': 'heading', 'text': 'NE PAS AGGRAVER LA SITUATION'},
+            {'kind': 'paragraph', 'text': 'Ne pas entrer dans une zone dangereuse pour examiner une victime. Ne pas retirer un objet fiché, explorer une plaie, tenter une réduction de fracture ou effectuer un geste invasif hors de ses compétences. Protéger, alerter et suivre les instructions des services de secours. Les soins et déplacements de victimes s’apprennent avec un formateur dans le cadre adapté.'},
+            {'kind': 'heading', 'text': 'TRANSMETTRE DES FAITS'},
+            {'kind': 'paragraph', 'text': 'Indiquer le lieu et l’accès, le danger encore présent, le nombre de victimes et les signes observables. Distinguer ce qui est vu, ce que la victime dit et ce qui reste inconnu. Informer les secours de toute évolution. Éviter un diagnostic affirmatif fondé sur la seule apparence.'},
+        ]}],
+    }
+
+
+def _injury_questions():
+    rows = [
+        ('Après une explosion, que transmettez-vous aux secours ?', 'Les circonstances connues et les signes observables.', 'Un diagnostic certain de toutes les lésions.', 'Seulement le nom de la victime.', 'Les observations et circonstances guident les secours ; des lésions peuvent ne pas être visibles.'),
+        ('Un objet est fiché dans une plaie : quelle limite faut-il reconnaître ?', 'Ne pas le retirer ; alerter et suivre les consignes des secours.', 'Le retirer pour inspecter la profondeur.', 'Explorer la plaie avec le matériel disponible.', 'Cette séquence porte sur la reconnaissance. Retirer un objet fiché ou explorer la plaie peut aggraver la situation.'),
+        ('Quel élément doit être distingué dans la transmission ?', 'Les faits vus, les propos de la victime et les inconnues.', 'Le diagnostic supposé et le nom du client uniquement.', 'Les avis des témoins sans vérification.', 'Un bilan utile distingue l’observation directe, les déclarations et les informations non confirmées.'),
+    ]
+    return [{'id': 'a3p-theorie-blessures-' + str(i), 'prompt': row[0], 'options': [{'id': chr(97+j), 'text': row[j+1]} for j in range(3)], 'answer': 'a', 'explanation': row[4]} for i, row in enumerate(rows, 1)]
+
+
+def _section(lesson):
+    ref = lesson['ref']; prefix = 'a3p-' + ref.replace('.', '-')
+    questions = [q for q in _questions() if ref in q['lesson_refs']] if ref != '09.15' else _injury_questions()
+    mode = _mode(ref)
+    common = {'ref': ref, 'delivery': mode, 'objective': lesson['objective'],
+              'regulatory_objectives': [r['objective'] for r in _rows(ref)]}
+    def content(suffix, title, kind, **payload):
+        return {'id': prefix + '-' + suffix, 'title': title + ' · ' + lesson['title'],
+                'type': 'content', 'scored': False, 'blocks': [], 'a3p': {**common, 'kind': kind, **payload}}
+    quiz = _quiz(lesson, questions)
+    quiz['a3p'].update(common)
+    return {'id': prefix, 'title': ref + ' · ' + lesson['title'], 'delivery': mode,
+            'activities': [
+                content('cours', 'Comprendre', 'lesson', pages=lesson['pages'], source_pages=lesson['source_pages']),
+                content('application', 'Appliquer', 'application', example=_application(lesson), points=_recap(lesson)),
+                quiz,
+                content('retenir', 'À retenir', 'recap', points=_recap(lesson)),
+            ]}
 
 
 @lru_cache(maxsize=8)
 def _course(uv):
     title, objective, flow = MODULES[uv]
-    cases = json.loads((ROOT / 'cases.json').read_text(encoding='utf-8'))
-    sections = []
-    for lesson in (l for l in _manual()['lessons'] if l['ref'].startswith(uv + '.')):
-        ref = lesson['ref']
-        prefix = 'a3p-' + ref.replace('.', '-')
-        course_activity = {'id': prefix + '-cours', 'title': lesson['title'], 'type': 'content',
-                           'scored': False, 'blocks': [], 'a3p': {
-                               'kind': 'lesson', 'ref': ref, 'objective': lesson['objective'],
-                               'pages': lesson['pages'], 'source_pages': lesson['source_pages'],
-                               'practice_notice': uv in {'03', '05', '06', '07', '08', '09'}}}
-        questions = []
-        for q in (q for q in _questions() if ref in q['lesson_refs']):
-            questions.append({'id': q['id'], 'type': 'question', 'question_type': 'single_choice',
-                              'title': 'Vérifier mes connaissances · ' + ref, 'prompt': q['prompt'],
-                              'scored': True, 'explanation': q['explanation'],
-                              'options': [{**o, 'is_correct': o['id'] == q['answer']} for o in q['options']]})
-        sections.append({'id': prefix, 'title': ref + ' · ' + lesson['title'],
-                         'activities': [course_activity, *questions]})
-    sections.append({'id': 'a3p-' + uv + '-atelier', 'title': 'Étude de cas · UV ' + uv,
-                     'activities': [{'id': 'a3p-' + uv + '-cas', 'title': cases[uv]['title'],
-                                     'type': 'content', 'scored': False, 'blocks': [],
-                                     'a3p': {'kind': 'case', 'case': cases[uv], 'flow': flow}}]})
-    video = _video(uv)
-    assets = []
+    lessons = [l for l in _manual()['lessons'] if l['ref'].startswith(uv + '.')]
+    if uv == '09':
+        lessons = [_injuries_lesson(), *lessons]
+    sections = [_section(l) for l in lessons]
+    video = _video(uv); assets = []
     if video:
-        assets = [video[key] for key in ('src', 'poster', 'captions')]
-        sections[0]['activities'][0]['blocks'].append(
-            {'id': video['id'], 'type': 'video', 'html': '', 'children': [], 'video': video})
+        video = {**video, 'required': False}
+        assets = [video[k] for k in ('src', 'poster', 'captions')]
+        # The synthesis also covers practical preparation: supplementary, never
+        # included in the distance time requirement or mandatory learner path.
+        sections.append({'id': 'a3p-' + uv + '-video', 'title': 'Synthèse vidéo · ' + title, 'delivery': 'complement',
+                         'activities': [{'id': 'a3p-' + uv + '-video', 'title': 'Le module en vidéo · ' + title,
+                            'type': 'content', 'scored': False, 'a3p': {'kind': 'video', 'delivery': 'complement'},
+                            'blocks': [{'id': video['id'], 'type': 'video', 'html': '', 'children': [], 'video': video}]}]})
+    case = json.loads((ROOT / 'cases.json').read_text(encoding='utf-8'))[uv]
+    sections.append({'id': 'a3p-' + uv + '-atelier', 'title': 'Cas de synthèse · ' + title, 'delivery': 'complement',
+                     'activities': [{'id': 'a3p-' + uv + '-cas', 'title': case['title'], 'type': 'content', 'scored': False,
+                        'blocks': [], 'a3p': {'kind': 'case', 'case': case, 'flow': flow, 'delivery': 'complement'}}]})
     activities = [a for s in sections for a in s['activities']]
     return {'id': 'academy-a3p-' + uv, 'version': VERSION, 'format_version': 1,
-            'title': 'A3P · UV ' + uv + ' · ' + title, 'training_label': 'A3P',
-            'preview_only': True, 'required_minutes': 0, 'planned_minutes': 0,
+            'title': 'A3P · UV ' + uv + ' · ' + title, 'training_label': 'A3P', 'preview_only': False,
+            'required_minutes': _minutes(uv), 'planned_minutes': _minutes(uv),
             'description': objective, 'source': {'type': 'academy-a3p', 'sha256': _manual()['source']['text_sha256']},
             'mock_exam_id': 'a3p-module-' + uv, 'assets': assets, 'import_warnings': [],
+            'regulation': {'scope': 'distance', 'reference': 'Arrêté du 1er septembre 2025 · annexes II et XI',
+                           'objectives': [r for r in _review()['eligible_objectives'] if r['delivery_module'] == uv]},
             'theme': {'main_color': '#135846', 'button_color': '#135846', 'text_color': '#172f29'},
-            'settings': {'mastery_score': 80, 'require_correct_answers': True},
-            'introduction': [], 'sections': sections, 'activity_order': [a['id'] for a in activities],
-            'counts': {'sections': len(sections), 'activities': len(activities),
-                       'scored_activities': sum(bool(a['scored']) for a in activities), 'assets': len(assets), 'required_videos': 0}}
+            'settings': {'mastery_score': 80, 'require_correct_answers': True, 'force_navigation': True}, 'introduction': [],
+            'sections': sections, 'activity_order': [a['id'] for a in activities],
+            'counts': {'sections': len(sections), 'activities': len(activities), 'scored_activities': sum(a['scored'] for a in activities), 'assets': len(assets), 'required_videos': 0}}
 
 
 def load_bundled_course(course_id, version=None):
+    if version == legacy.VERSION:
+        return legacy.load_bundled_course(course_id, version)
     if course_id not in curriculum_ids() or version not in (None, VERSION):
         return None
     return copy.deepcopy(_course(course_id.rsplit('-', 1)[1]))
 
 
-def _spread(questions, count):
-    """Cover the whole bank, including the final lessons of a module."""
-    return [questions[i * (len(questions) - 1) // (count - 1)] for i in range(count)]
+def bundled_asset(course_id, version, name):
+    if version == legacy.VERSION:
+        return legacy.bundled_asset(course_id, version, name)
+    course = load_bundled_course(course_id, version)
+    if course is None or name not in course['assets']:
+        return None
+    root = (ROOT / 'assets').resolve(); path = (root / name).resolve()
+    return path if root in path.parents and path.is_file() else None
+
+
+def curriculum_manifest():
+    modules = []
+    for uv, (title, objective, flow) in MODULES.items():
+        course = _course(uv)
+        lessons = [s for s in course['sections'] if s['activities'][0].get('a3p', {}).get('kind') == 'lesson']
+        modules.append({'id': course['id'], 'uv': uv, 'title': title, 'objective': objective, 'flow': flow,
+            'version': VERSION, 'planned_minutes': _minutes(uv), 'lesson_count': len(lessons),
+            'distance_lesson_count': sum(s['delivery'] == 'distance' for s in lessons),
+            'video_minutes': round((_video(uv) or {}).get('duration_seconds', 0)/60, 1),
+            'lessons': [{'ref': s['activities'][0]['a3p']['ref'], 'title': s['title'].split(' · ', 1)[1], 'activity': s['activities'][0]['id'], 'delivery': s['delivery']} for s in lessons],
+            'question_count': sum(q['module'] == 'UV ' + uv for q in _questions()), 'exam_id': 'a3p-module-' + uv})
+    return {'version': VERSION, 'training_label': 'A3P', 'preview_only': False, 'notice': NOTICE,
+            'modules': modules, 'lesson_count': 95, 'question_count': 245, 'reading_page_count': 337,
+            'case_count': 8, 'application_count': 95, 'video_count': sum(bool(_video(uv)) for uv in MODULES),
+            'video_minutes': round(sum((_video(uv) or {}).get('duration_seconds', 0) for uv in MODULES)/60, 1),
+            'final_exam_id': 'a3p-final', 'regulatory_review': copy.deepcopy(_review())}
 
 
 def load_exam(exam_id, version):
+    if version == legacy.VERSION:
+        return legacy.load_exam(exam_id, version)
     if version != VERSION:
         return None
-    if exam_id == 'a3p-final':
-        questions = []
-        for index, uv in enumerate(MODULES):
-            questions.extend(_spread([q for q in _questions() if q['module'] == 'UV ' + uv], 13 if index < 4 else 12))
-        title = 'A3P · Examen blanc transversal · 100 questions'
-    elif re.fullmatch(r'a3p-module-0[2-9]', str(exam_id)):
-        uv = exam_id[-2:]
-        questions = _spread([q for q in _questions() if q['module'] == 'UV ' + uv], 30)
-        title = 'A3P · UV ' + uv + ' · ' + MODULES[uv][0]
-    else:
-        return None
-    return copy.deepcopy({'id': exam_id, 'version': VERSION, 'title': title,
-                          'training_label': 'A3P', 'pass_percent': 80,
-                          'notice': 'Entraînement pédagogique : seuil interne de 80 %, sans valeur d’examen officiel ni validation pratique. ' + NOTICE,
-                          'questions': questions})
+    exam = legacy.load_exam(exam_id, legacy.VERSION)
+    if exam:
+        exam['version'] = VERSION
+        exam['notice'] = 'Examen blanc : seuil pédagogique de 80 %. Il ne valide pas les gestes ni les séquences présentielles.'
+    return exam

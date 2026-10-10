@@ -8,13 +8,13 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-aps-vtc-pacing') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
-  {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-1') }}">{% endif %}
+  {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-2') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
 {% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-production.css', v='20261010-v10') }}">{% endif %}
 </head>
-<body class="native-elearning-body{{ ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
+<body class="native-elearning-body{{ ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
@@ -86,7 +86,7 @@
       </div>
     </div>
     {% if preview_mode %}
-    <span class="native-preview-badge">{{ 'A3P · préparation pédagogique' if course.training_label == 'A3P' else 'Mode aperçu' }}</span>
+    <span class="native-preview-badge">{{ 'Révisions complémentaires' if resource_mode else 'Mode aperçu' }}</span>
     {% else %}
     <div class="native-live-metrics" aria-label="Suivi de la session">
       <div class="native-tracking-state" id="nativeTrackingState" data-state="connecting">
@@ -106,7 +106,7 @@
       <div class="native-sidebar__learner">
         {% if preview_mode %}
         <a class="native-back-link" href="{{ portal_url }}">← Retour aux modules</a>
-        <span>Aperçu administrateur</span>
+        <span>{{ 'Réviser librement' if resource_mode else 'Aperçu administrateur' }}</span>
         <strong>{{ course.counts.sections }} séquences · {{ activity_count }} activités</strong>
         {% else %}
         <a class="native-back-link" href="{{ path_url }}">← Tous mes modules</a>
@@ -114,6 +114,7 @@
         <strong>{{ learner_name or 'Stagiaire' }}</strong>
         {% endif %}
       </div>
+      {% if a3p_resources_url %}<p><a class="native-back-link" href="{{ a3p_resources_url }}">Vidéos et préparations du présentiel →</a></p>{% endif %}
       {% if training_url %}<p><a class="native-back-link" href="{{ training_url }}">Entraînement libre du module →</a></p>{% endif %}
       {% if not preview_mode %}
       <div class="native-progress-summary">
@@ -130,8 +131,7 @@
       {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
-          <section>
-            <h2>{{ nav_section.title }}</h2>
+          {% if course.training_label == 'A3P' %}<details class="a3p-nav-chapter"{% if nav_section.activities|selectattr('current')|list %} open{% endif %}><summary>{{ nav_section.title }}</summary>{% else %}<section><h2>{{ nav_section.title }}</h2>{% endif %}
             <ol>
               {% for item in nav_section.activities %}
                 <li class="{% if item.current %}is-current{% endif %} {% if item.completed %}is-complete{% endif %} {% if item.locked %}is-locked{% endif %}">
@@ -143,7 +143,7 @@
                 </li>
               {% endfor %}
             </ol>
-          </section>
+          {% if course.training_label == 'A3P' %}</details>{% else %}</section>{% endif %}
         {% endfor %}
       </nav>
       <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
@@ -152,10 +152,10 @@
 
     <main class="native-main">
       <div class="native-main__inner">
-        {% if preview_mode and course.training_label != 'A3P' %}
+        {% if preview_mode %}
         <section class="native-preview-notice" aria-label="Mode aperçu">
-          <strong>Visualisation du contenu</strong>
-          <p>Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.</p>
+          <strong>{{ 'Ressources complémentaires' if resource_mode else 'Visualisation du contenu' }}</strong>
+          <p>{{ 'Ces révisions, vidéos et préparations du présentiel restent en accès libre. Elles ne sont pas comptées dans votre temps à distance et ne valident aucun geste pratique.' if resource_mode else 'Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.' }}</p>
         </section>
         {% endif %}
         <div class="native-breadcrumb"><span>{{ section_title }}</span><b>Activité {{ activity_position }} sur {{ activity_count }}</b></div>
@@ -168,10 +168,10 @@
           </section>
         {% endif %}
 
-        {% if course.training_label == 'A3P' %}<aside class="a3p-notice" role="note"><strong>Aperçu pédagogique A3P</strong><p>Ce travail ne délivre aucune heure certifiante. Les compétences pratiques doivent être formées et évaluées en présentiel. <a href="{{ portal_url }}#a3p-reglementation">Consulter le cadre réglementaire et le statut ADEF</a>.</p></aside>{% endif %}
+
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
-            <span class="native-kicker">{{ 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
+            <span class="native-kicker">{{ 'Questionnaire du chapitre' if activity.a3p and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
             {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} min de travail guidé</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
@@ -213,8 +213,8 @@
                   {% endfor %}
                 </div>
               {% elif activity.question_type == 'fill_blank' %}
-                <p class="native-question__instruction">Complétez la phrase.</p>
-                <div class="native-fill-blank">{{ activity.prompt_html }}</div>
+                <p class="native-question__instruction">{{ "Répondez à toutes les questions du chapitre." if activity.a3p else "Complétez la phrase." }}</p>
+                <div class="native-fill-blank{{ ' a3p-grouped-quiz' if activity.a3p else '' }}">{{ activity.prompt_html }}</div>
               {% else %}
                 <div class="native-alert native-alert--warning">Ce format de question doit être vérifié par l’équipe pédagogique.</div>
               {% endif %}
@@ -302,12 +302,12 @@
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
   <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-vtc-lessons') }}" defer></script>
   {% endif %}
-<script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-1') }}" defer></script>
+<script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>
 {% if activity.practice and activity.practice.mode == 'guided' %}<script src="{{ url_for('static', filename='js/aps62-guided.js', v='20261007-6-1') }}" defer></script>{% endif %}
 {% if activity.practice and activity.practice.mode == 'journey' %}<script src="{{ url_for('static', filename='js/vtc-journey.js', v='20261010-v6') }}" defer></script>{% endif %}
-{% if activity.a3p and activity.a3p.kind == 'case' %}<script src="{{ url_for('static', filename='js/a3p-elearning.js', v='20261010-1') }}" defer></script>{% endif %}
+{% if activity.a3p and activity.a3p.kind == 'case' %}<script src="{{ url_for('static', filename='js/a3p-elearning.js', v='20261010-2') }}" defer></script>{% endif %}
 {% if activity.production %}<script src="{{ url_for('static', filename='js/aps62-production.js', v='20261010-v10') }}" defer></script>{% endif %}
 </body>
 </html>

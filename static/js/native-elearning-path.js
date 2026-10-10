@@ -116,6 +116,17 @@
     if (modules.length === 8 && additions.length === 8) title.value = 'VTC · Le parcours illustré';
     changed();renderModules();renderLibrary();
   });
+  document.getElementById('a3pAddPath')?.addEventListener('click', () => {
+    if (readonly()) return;
+    const additions = config.catalog.filter(course => course.a3p && !modules.some(item => item.course_id === course.course_id));
+    if (modules.length + additions.length > 100) return;
+    additions.sort((a,b) => a.course_id.localeCompare(b.course_id)).forEach(course => {
+      modules.push({course_id:course.course_id,course_version:course.course_version,title:'',
+        required_minutes:course.planned_minutes,section_ids:course.sections.map(section => section.id)});
+    });
+    if (modules.length === 8) title.value = 'A3P · Objectifs à distance · 157 h 30';
+    changed();renderModules();renderLibrary();
+  });
   function renderModules() {
     moduleList.replaceChildren();
     modules.forEach((item, index) => {

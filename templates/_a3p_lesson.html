@@ -1,11 +1,12 @@
 <div class="a3p-lesson">
+{% if activity.a3p.delivery %}<span class="a3p-delivery a3p-delivery--{{ activity.a3p.delivery }}">{{ {'distance':'Objectif à distance · annexes II / XI','presentiel':'Préparation du présentiel · hors volume à distance','complement':'Ressource complémentaire · hors volume à distance'}[activity.a3p.delivery] }}</span>{% endif %}
 {% if activity.a3p.kind == 'lesson' %}
   <div class="a3p-objective"><span class="a3p-eyebrow">Objectif · Leçon {{ activity.a3p.ref }}</span><p>{{ activity.a3p.objective }}</p></div>
-  {% if activity.a3p.practice_notice %}<p class="a3p-practice-note">Cette lecture prépare la compréhension. Les gestes, déplacements, matériels et mises en situation se travaillent avec un formateur ; ils ne sont pas validés à l’écran.</p>{% endif %}
-  <nav class="a3p-page-index" aria-label="Parties de la leçon">{% for page in activity.a3p.pages %}<a href="#a3p-page-{{ page.page }}">{{ loop.index }} · {{ 'Découvrir' if page.kind == 'COURS ILLUSTRÉ' else 'Approfondir' if page.kind == 'APPROFONDISSEMENT' else 'Comprendre' }}</a>{% endfor %}</nav>
+  {% if activity.a3p.delivery == 'presentiel' %}<p class="a3p-practice-note">Cette lecture prépare la compréhension. Les gestes, déplacements, matériels et mises en situation se travaillent avec un formateur ; ils ne sont pas validés à l’écran.</p>{% endif %}
+  <nav class="a3p-page-index" aria-label="Parties de la leçon">{% for page in activity.a3p.pages %}<a href="#a3p-page-{{ page.page }}">{{ loop.index }} · {{ (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') }}</a>{% endfor %}</nav>
   {% for page in activity.a3p.pages %}
   <section class="a3p-reading" id="a3p-page-{{ page.page }}" aria-labelledby="a3p-page-title-{{ page.page }}">
-    <header><span class="a3p-reading-number">{{ '%02d'|format(loop.index) }}</span><div><h2 id="a3p-page-title-{{ page.page }}">{{ 'Découvrir les repères' if page.kind == 'COURS ILLUSTRÉ' else 'Approfondir et appliquer' if page.kind == 'APPROFONDISSEMENT' else 'Comprendre en détail' }}</h2><span>Manuel A3P · page {{ page.page }}</span></div></header>
+    <header><span class="a3p-reading-number">{{ '%02d'|format(loop.index) }}</span><div><h2 id="a3p-page-title-{{ page.page }}">{{ (page.components|selectattr('kind', 'equalto', 'heading')|map(attribute='text')|list|first)|default('Repères du cours') }}</h2><span>{{ 'Arrêté · annexe XI' if page.page == 'XI' else 'Manuel A3P · page ' ~ page.page }}</span></div></header>
     {% for component in page.components %}
       {% if component.kind == 'heading' %}<h3>{{ component.text }}</h3>
       {% elif component.kind == 'table' %}<div class="a3p-table-scroll" role="region" aria-label="Repères de la page {{ page.page }}" tabindex="0"><table><caption>Repères du cours · page {{ page.page }}</caption><tbody>{% for row in component.rows %}{% set header_row = loop.first %}<tr>{% for cell in row %}{% if header_row %}<th scope="col">{{ cell }}</th>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>
@@ -13,7 +14,21 @@
     {% endfor %}
   </section>
   {% endfor %}
-  <footer class="a3p-source">Source pédagogique : manuel A3P fourni par Intégrale Academy, édition octobre 2026, leçon {{ activity.a3p.ref }}. Les titres et le texte ont été adaptés pour la lecture à l’écran. Les questions suivantes permettent de vérifier les connaissances.</footer>
+  <footer class="a3p-source">{% if activity.a3p.ref == '09.15' %}Source : arrêté du 1er septembre 2025, annexe XI, reconnaissance des blessures spécifiques.{% else %}Source : manuel A3P Intégrale Academy, leçon {{ activity.a3p.ref }}. Le cours est suivi d’une application, d’un QCM regroupé et d’une synthèse.{% endif %}</footer>
+{% elif activity.a3p.kind == 'application' %}
+  <span class="a3p-eyebrow">Mettre le cours en relation avec le terrain</span><h2>Observer la situation et expliquer la décision</h2>
+  <section class="a3p-case-context">{% for paragraph in activity.a3p.example.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}</section>
+  <div class="a3p-reasoning"><h3>Trois angles pour relire l’exemple</h3><p>Avant d’ouvrir chaque repère, formulez votre réponse mentalement. Aucune rédaction n’est demandée.</p>
+  <details><summary>1 · Quel est l’objectif de l’agent ?</summary><p>{{ activity.a3p.objective }}</p></details>
+  <details><summary>2 · Quelle règle guide la décision ?</summary><p>{{ activity.a3p.points[0] }}</p></details>
+  <details><summary>3 · Quel repère réutiliser dans une autre situation ?</summary><p>{{ activity.a3p.points[-1] }}</p></details></div>
+  <p class="a3p-source">{{ 'Repères de l’arrêté · annexe XI.' if activity.a3p.example.page == 'XI' else 'Exemple adapté du manuel · page ' ~ activity.a3p.example.page ~ '.' }} Poursuivez avec le questionnaire du chapitre.</p>
+{% elif activity.a3p.kind == 'recap' %}
+  <span class="a3p-eyebrow">La fiche à conserver</span><h2>Les repères essentiels de cette leçon</h2><div class="a3p-memory-cards">{% for point in activity.a3p.points %}<article><b>{{ '%02d'|format(loop.index) }}</b><p>{{ point }}</p></article>{% endfor %}</div>
+  <section class="a3p-objective"><span class="a3p-eyebrow">L’objectif à savoir expliquer</span><p>{{ activity.a3p.objective }}</p></section>
+  {% if activity.a3p.regulatory_objectives %}<details class="a3p-case-feedback"><summary>Correspondance avec l’arrêté</summary><ul>{% for objective in activity.a3p.regulatory_objectives %}<li>{{ objective }}</li>{% endfor %}</ul></details>{% endif %}
+{% elif activity.a3p.kind == 'video' %}
+  <p>Une synthèse avec Henri pour revoir les thèmes du module. Les sous-titres sont intégrés à l’image. Cette ressource complémentaire ne remplace pas les cours, les questionnaires et les séances présentielles.</p>
 {% elif activity.a3p.kind == 'case' %}
   {% set case = activity.a3p.case %}
   <ol class="a3p-flow" aria-label="Démarche de raisonnement">{% for step in activity.a3p.flow %}<li><b>{{ loop.index }}</b><span>{{ step }}</span></li>{% endfor %}</ol>

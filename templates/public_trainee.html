@@ -1019,6 +1019,15 @@
       </div>
     {% endif %}
 
+    {% if 'A3P' in (session.training_type or '')|upper and (session.aps_native_modules or session.aps_native_course_id) %}
+      <section class="card aps-elearning-card" aria-labelledby="a3pElearningTitle">
+        <div class="aps-elearning-content"><h2 id="a3pElearningTitle">Espace e-learning A3P</h2>
+          <p>Vos cours, applications, questionnaires et fiches de synthèse. Le parcours est accessible à partir du {{ session.date_start|frdate }}.</p>
+          <div class="aps-elearning-actions"><a class="btn" href="{{ url_for('native_elearning.learner_path', token=token_safe) }}">Accéder à mon parcours A3P</a><span class="aps-elearning-copy-status">Progression, réponses et temps actif enregistrés</span></div>
+        </div>
+      </section>
+    {% endif %}
+
     {% if aps_elearning_enabled %}
       {% set aps_link = (trainee.aps_elearning_login or '')|trim %}
       {% set aps_link_is_valid = aps_link[:8] == 'https://' %}

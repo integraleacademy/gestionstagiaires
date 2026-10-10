@@ -23,7 +23,8 @@ def register_native_elearning(legacy_app: ModuleType) -> None:
             session_trainees=legacy_app._session_trainees_list,
             public_is_authed=legacy_app._public_is_authed,
             is_aps_elearning_session=lambda s: legacy_app._is_aps_elearning_session(s) or (
-                'VTC' in str(s.get('training_type') or '').upper() and bool(s.get('aps_elearning_enabled'))),
+                'VTC' in str(s.get('training_type') or '').upper() and bool(s.get('aps_elearning_enabled'))) or (
+                'A3P' in str(s.get('training_type') or '').upper() and bool(s.get('aps_native_modules') or s.get('aps_native_course_id'))),
             session_start_date=legacy_app._session_start_date,
         )
     )
