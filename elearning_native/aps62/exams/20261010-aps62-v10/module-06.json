@@ -1,0 +1,940 @@
+{
+  "id": "module-06",
+  "version": "20261010-aps62-v10",
+  "title": "Déontologie au quotidien",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-q-06-01",
+      "prompt": "Un fournisseur offre un cadeau pour éviter un contrôle. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accepter le cadeau en conservant une partie des vérifications"
+        },
+        {
+          "id": "2",
+          "text": "Refuser le cadeau et signaler la tentative selon le circuit prévu"
+        },
+        {
+          "id": "3",
+          "text": "Accepter le cadeau après avoir demandé l’accord du fournisseur"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’avantage proposé compromet l’impartialité de la mission et doit être traité avec transparence.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-02",
+      "prompt": "Une information confidentielle est demandée par un proche. Que répondre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Raconter les faits sans citer l’entreprise"
+        },
+        {
+          "id": "2",
+          "text": "Les raconter oralement en demandant le secret"
+        },
+        {
+          "id": "3",
+          "text": "Ne pas divulguer l’information en dehors du cadre autorisé"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La confidentialité ne disparaît ni dans la vie privée ni en changeant le support.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-03",
+      "prompt": "Comment apprécier le professionnalisme d'une intervention à l'accueil ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Par la crainte obtenue et le silence immédiat du public."
+        },
+        {
+          "id": "2",
+          "text": "Par la maîtrise, la légalité et le respect dans l'action."
+        },
+        {
+          "id": "3",
+          "text": "Par la rapidité du résultat, indépendamment des moyens employés."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une posture d’intimidation peut aggraver le risque et dégrader la qualité de la mission.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-04",
+      "prompt": "Un collègue souhaite utiliser le poste vidéo pour suivre son ex-partenaire. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accepter la recherche si aucune image n’est copiée ni partagée"
+        },
+        {
+          "id": "2",
+          "text": "Accepter la recherche pendant une période sans activité au poste"
+        },
+        {
+          "id": "3",
+          "text": "Refuser cet usage et signaler le détournement du dispositif"
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les moyens professionnels ne servent pas une surveillance personnelle.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-05",
+      "prompt": "Un agent constate sa propre erreur. Quelle réponse déontologique ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Signaler l’erreur, la corriger et garder une trace adaptée"
+        },
+        {
+          "id": "1",
+          "text": "Corriger discrètement l’erreur avant la relève"
+        },
+        {
+          "id": "3",
+          "text": "Attendre les questions du responsable pour expliquer"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Reconnaître un écart permet de réduire ses conséquences et d’éviter sa répétition.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-06",
+      "prompt": "Un collègue propose un selfie avec une personne interpellée. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Refuser et préserver sa dignité et la confidentialité."
+        },
+        {
+          "id": "2",
+          "text": "Accepter si la publication attend la fin de l'intervention."
+        },
+        {
+          "id": "3",
+          "text": "Accepter en masquant le nom du site sur l'uniforme."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La situation d’intervention ne constitue pas une autorisation de communication personnelle.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-07",
+      "prompt": "Une consigne écrite prévoit une humiliation. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L’appliquer puisque l’ordre engage son auteur"
+        },
+        {
+          "id": "2",
+          "text": "Refuser la consigne et alerter le responsable prévu"
+        },
+        {
+          "id": "3",
+          "text": "Faire exécuter la consigne par un collègue"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le support écrit ne donne aucune valeur à une instruction contraire à la dignité.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-08",
+      "prompt": "Pourquoi maintenir ses compétences ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Pour agir de manière adaptée aux missions réellement confiées"
+        },
+        {
+          "id": "1",
+          "text": "Pour pouvoir remplacer toute procédure par son expérience"
+        },
+        {
+          "id": "3",
+          "text": "Pour prendre seul en charge des interventions hors habilitation"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La compétence soutient une action sûre, sans modifier le cadre juridique.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-09",
+      "prompt": "Un agent se sent incapable d’assurer son poste en sécurité. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Rester en poste sans rien dire tant qu’aucun incident ne survient"
+        },
+        {
+          "id": "2",
+          "text": "Alerter le responsable afin d’organiser la continuité du poste"
+        },
+        {
+          "id": "3",
+          "text": "Quitter le poste après avoir envoyé un message à un collègue"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’anticipation permet d’organiser le remplacement et la protection du site.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-10",
+      "prompt": "Un visiteur propose de payer l’agent pour passer devant la file. Quelle réponse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accepter l’argent si le passage ne retarde aucun autre visiteur"
+        },
+        {
+          "id": "3",
+          "text": "Accepter l’argent en le partageant avec le reste de l’équipe"
+        },
+        {
+          "id": "2",
+          "text": "Refuser l’argent et appliquer les règles d’accès prévues"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une décision d’accès ne doit pas être achetée au bénéfice personnel de l’agent.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-11",
+      "prompt": "Un supérieur demande un rapport arrangé pour protéger l'entreprise. Quel principe appliquer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Modifier les faits si le supérieur valide la version finale."
+        },
+        {
+          "id": "2",
+          "text": "Omettre les écarts sans mentir explicitement sur les horaires."
+        },
+        {
+          "id": "3",
+          "text": "Rapporter fidèlement les faits malgré cette demande."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une information fidèle protège le suivi et la responsabilité de chacun.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-12",
+      "prompt": "Un récit du poste reste identifiable malgré le retrait des noms. Comment le traiter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le publier si les fonctions des personnes remplacent leurs noms."
+        },
+        {
+          "id": "2",
+          "text": "Le partager dans un groupe fermé en demandant la discrétion."
+        },
+        {
+          "id": "3",
+          "text": "Préserver sa confidentialité même dans un récit anonymisé."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le contexte peut révéler une identité et la confidentialité porte aussi sur les faits connus professionnellement.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-13",
+      "prompt": "Quelle attitude adopter face à un collègue en difficulté ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Prendre toutes les décisions à sa place sans l’en informer"
+        },
+        {
+          "id": "3",
+          "text": "Attendre sa demande explicite même si la situation se dégrade"
+        },
+        {
+          "id": "2",
+          "text": "Apporter un appui adapté et demander le relais nécessaire"
+        }
+      ],
+      "answer": "2",
+      "explanation": "L’entraide professionnelle vise la sécurité et la continuité du service.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-14",
+      "prompt": "Un agent reçoit un ordre au-delà de ses habilitations techniques. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Essayer l’intervention si un collègue reste à proximité"
+        },
+        {
+          "id": "2",
+          "text": "Limiter son action et solliciter une personne compétente"
+        },
+        {
+          "id": "3",
+          "text": "Intervenir après avoir averti le client que l’on n’est pas habilité"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La demande hiérarchique ne remplace pas la compétence ou l’habilitation requise.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-15",
+      "prompt": "Pourquoi distinguer fermeté et agressivité ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Augmenter progressivement les menaces pour obtenir l’obéissance"
+        },
+        {
+          "id": "1",
+          "text": "Rappeler la règle sans aggraver inutilement le conflit"
+        },
+        {
+          "id": "3",
+          "text": "Éviter de préciser la règle pour conserver une marge de négociation"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une consigne peut être ferme, claire et respectueuse à la fois.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-16",
+      "prompt": "Une personne inconnue demande les codes d’accès par téléphone. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Vérifier l’identité et l’habilitation par le circuit prévu"
+        },
+        {
+          "id": "1",
+          "text": "Transmettre les codes si l’appelant connaît le nom du client"
+        },
+        {
+          "id": "3",
+          "text": "Envoyer les codes sur le numéro donné pendant l’appel"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La connaissance d’un détail du site ne prouve pas une autorisation.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-17",
+      "prompt": "Un objet trouvé de valeur doit être traité comment ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Garder l’objet au poste sans inscription jusqu’à une réclamation"
+        },
+        {
+          "id": "2",
+          "text": "Confier l’objet à un collègue qui dit connaître son propriétaire"
+        },
+        {
+          "id": "3",
+          "text": "Conserver et remettre l’objet selon une procédure traçable"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La traçabilité protège le propriétaire, l’agent et l’organisation.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-18",
+      "prompt": "Le client demande une prestation incompatible avec les règles professionnelles. Que privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Exécuter la demande après confirmation orale du client"
+        },
+        {
+          "id": "3",
+          "text": "Exécuter la demande puis en parler lors de la prochaine relève"
+        },
+        {
+          "id": "2",
+          "text": "Expliquer la limite et proposer une solution conforme"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La relation commerciale doit rester compatible avec les obligations professionnelles.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-19",
+      "prompt": "Une rumeur concerne la vie privée d’un salarié. Quelle place dans la relève ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Ne transmettre que des faits vérifiables nécessaires à la mission"
+        },
+        {
+          "id": "2",
+          "text": "Transmettre la rumeur en précisant qu’elle reste à confirmer"
+        },
+        {
+          "id": "3",
+          "text": "Transmettre la rumeur si plusieurs collègues la connaissent déjà"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La relève transmet des faits utiles, pas la curiosité ou les jugements sur la vie privée.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-20",
+      "prompt": "Un visiteur demande si l'agent est policier. Quelle présentation convient ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Indiquer exactement sa qualité d'agent de sécurité privée."
+        },
+        {
+          "id": "1",
+          "text": "Laisser l'ambiguïté si elle facilite le respect du contrôle."
+        },
+        {
+          "id": "2",
+          "text": "Se présenter comme auxiliaire de police à la demande du client."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L’identification claire prévient la confusion sur les prérogatives.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-21",
+      "prompt": "Quelle réponse convient à une demande d’explication après un contrôle ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Renvoyer sans explication vers l’affichage"
+        },
+        {
+          "id": "1",
+          "text": "Expliquer la règle appliquée et le recours prévu"
+        },
+        {
+          "id": "3",
+          "text": "Prolonger le contrôle si la contestation dure"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une décision professionnelle doit pouvoir être expliquée dans les limites de la confidentialité.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-22",
+      "prompt": "Une image de victime devient populaire dans l’équipe. Que faire ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Faire cesser le partage et signaler l’usage inapproprié"
+        },
+        {
+          "id": "1",
+          "text": "Conserver l’image dans le groupe en interdisant son transfert"
+        },
+        {
+          "id": "3",
+          "text": "Retirer le nom de la victime avant de laisser circuler l’image"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La circulation informelle aggrave l’atteinte à la dignité et à la confidentialité.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-23",
+      "prompt": "Un conflit d’intérêts concerne un ami contrôlé. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Durcir le contrôle de l’ami pour démontrer son impartialité"
+        },
+        {
+          "id": "2",
+          "text": "Traiter l’ami plus rapidement tout en remplissant le même registre"
+        },
+        {
+          "id": "3",
+          "text": "Signaler le lien personnel et demander un relais si nécessaire"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La transparence et un relais adapté évitent la faveur comme la surenchère injustifiée.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-24",
+      "prompt": "Un écart de procédure n'a causé aucun incident visible. Quelle suite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Classer l'écart sans suite puisque le résultat est favorable."
+        },
+        {
+          "id": "3",
+          "text": "Examiner le risque et faire corriger la procédure."
+        },
+        {
+          "id": "2",
+          "text": "Attendre qu'un dommage confirme la nécessité de le signaler."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le retour d’expérience sert à prévenir les incidents avant qu’ils ne produisent un dommage.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-25",
+      "prompt": "Que faire avant de quitter un poste non relevé ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Laisser les clés à l’accueil puis noter l’heure de départ"
+        },
+        {
+          "id": "3",
+          "text": "Partir à l’heure prévue après avoir tenté un appel sans réponse"
+        },
+        {
+          "id": "2",
+          "text": "Suivre la procédure et prévenir le responsable de l’absence de relève"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La continuité doit être organisée ; une absence de relève exige un relais identifié.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-26",
+      "prompt": "Pourquoi éviter de commenter publiquement une enquête en cours ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Préserver la confidentialité et la fiabilité des faits transmis"
+        },
+        {
+          "id": "2",
+          "text": "Attendre de connaître la version des médias avant tout signalement"
+        },
+        {
+          "id": "3",
+          "text": "Limiter également les informations remises aux autorités habilitées"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La communication externe suit les responsabilités prévues sans faire obstacle au relais légal.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-27",
+      "prompt": "Un contrôle se déroule devant une foule. Quel point reste essentiel ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Limiter l’exposition de la personne et préserver sa dignité"
+        },
+        {
+          "id": "1",
+          "text": "Laisser les témoins se rapprocher pour garantir la transparence"
+        },
+        {
+          "id": "3",
+          "text": "Demander au public de confirmer collectivement que le contrôle est juste"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le public ne transforme pas l’intervention en spectacle.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-28",
+      "prompt": "Que vaut une procédure réellement inconnue de l’agent ?",
+      "options": [
+        {
+          "id": "2",
+          "text": "Appliquer ce qui semble logique puis demander une validation ensuite"
+        },
+        {
+          "id": "1",
+          "text": "Demander les explications nécessaires avant de l’appliquer en sécurité"
+        },
+        {
+          "id": "3",
+          "text": "La remplacer par une procédure déjà connue sur un autre site"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La compétence opérationnelle suppose une compréhension effective des consignes.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-29",
+      "prompt": "Deux agents ont effectué des actions différentes. Comment rédiger le rapport ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attribuer les actions au rédacteur pour simplifier le document."
+        },
+        {
+          "id": "3",
+          "text": "Attribuer fidèlement les actions à leur auteur."
+        },
+        {
+          "id": "2",
+          "text": "Employer « nous » pour masquer les différences d'intervention."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La précision ne consiste pas à harmoniser artificiellement les témoignages.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    },
+    {
+      "id": "aps62-q-06-30",
+      "prompt": "Quel choix protège durablement la confiance ?",
+      "options": [
+        {
+          "id": "3",
+          "text": "Des faits établis, des limites claires et un suivi des engagements"
+        },
+        {
+          "id": "1",
+          "text": "Des assurances rassurantes même si les moyens restent incertains"
+        },
+        {
+          "id": "2",
+          "text": "Une présentation positive laissant de côté les difficultés du service"
+        }
+      ],
+      "answer": "3",
+      "explanation": "La fiabilité tient à la cohérence entre l’action, les faits rapportés et les engagements tenables.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ]
+    }
+  ],
+  "reviewed_on": "2026-10-10",
+  "assessment_revision": "20261010-aps62-v10"
+}

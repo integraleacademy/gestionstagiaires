@@ -1,0 +1,3310 @@
+{
+  "id": "final",
+  "version": "20261010-aps62-v10",
+  "title": "Examen blanc final APS",
+  "pass_percent": 75,
+  "questions": [
+    {
+      "id": "aps62-final-v10-01-perimetre",
+      "prompt": "Une usine ferme son portail à 22 h. Le client veut que l'agent quitte le poste pour surveiller pendant une heure le domicile d'un salarié absent. Aucun danger immédiat n'est signalé. Quelle réponse préparer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accepter si le client confirme la demande par un courriel nominatif."
+        },
+        {
+          "id": "2",
+          "text": "Organiser la surveillance avec le collègue de relève pour maintenir le portail."
+        },
+        {
+          "id": "3",
+          "text": "Signaler que cette surveillance sort de la mission et demander un relais adapté."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une demande du client ne suffit pas à autoriser une surveillance privée hors du périmètre confié. Le courriel ou la présence d'un collègue ne corrige pas ce défaut.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "perimetre",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-01-titres",
+      "prompt": "À la prise de poste, un remplaçant présente son attestation de formation et un badge interne. La validité de sa carte professionnelle n'a pas été vérifiée. Quelle information manque avant son affectation ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La validité du titre autorisant effectivement l'activité confiée."
+        },
+        {
+          "id": "2",
+          "text": "L'accord du client sur la couleur de son badge interne."
+        },
+        {
+          "id": "3",
+          "text": "Le nombre de mois travaillés sur un site similaire."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La formation et le badge d'accès ne remplacent pas la vérification du titre professionnel adapté à l'activité.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "titres",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-01-mission_locale",
+      "prompt": "Une nouvelle consigne ajoute une patrouille dans une zone absente du plan remis. Deux accès y sont interdits aux prestataires. Que doit clarifier l'agent ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le parcours le plus court afin de tenir l'horaire de ronde prévu."
+        },
+        {
+          "id": "2",
+          "text": "Le périmètre autorisé et les modalités de la ronde avant son exécution."
+        },
+        {
+          "id": "3",
+          "text": "Le nombre de passages nécessaire pour remplacer la surveillance des accès."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le plan et les droits d'accès ne concordent pas avec la nouvelle mission. Le périmètre doit être clarifié avant de choisir un trajet.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "mission_locale",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-01-qualite",
+      "prompt": "Au téléphone, un fournisseur demande « la police du centre commercial ». Il parle à un APS qui doit traiter une demande d'accès. Quelle présentation convient ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "« Police du centre ; je vais vérifier les droits de votre livraison. »"
+        },
+        {
+          "id": "2",
+          "text": "« Poste de sécurité privée du centre ; quel accès concerne votre demande ? »"
+        },
+        {
+          "id": "3",
+          "text": "« Service de police interne ; nous dépendons du responsable du centre. »"
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une identification exacte permet de traiter la demande sans entretenir la confusion avec un service de police.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "qualite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-01-instruction_illicite",
+      "prompt": "Pour dissuader les retards, un chef veut que l'agent conserve les papiers d'identité des livreurs jusqu'au déchargement. Aucune base adaptée n'est fournie. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Demander aux livreurs de signer une décharge puis garder les documents."
+        },
+        {
+          "id": "2",
+          "text": "Limiter la rétention aux livreurs déjà arrivés en retard auparavant."
+        },
+        {
+          "id": "3",
+          "text": "Faire vérifier et corriger cette consigne avant de l'appliquer."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le besoin d'organiser les livraisons ne crée pas un droit de retenir un document. Une décharge ou une sélection des personnes ne fournit pas la base manquante.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "instruction_illicite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-01-continuite",
+      "prompt": "La ronde prévue obligerait l'unique agent à abandonner un accès devant rester tenu. Les deux tâches sont exigées à la même heure. Quel élément faire arbitrer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La priorité et les moyens permettant d'assurer les deux obligations."
+        },
+        {
+          "id": "2",
+          "text": "La durée minimale d'absence qui pourrait passer inaperçue à l'accueil."
+        },
+        {
+          "id": "3",
+          "text": "Le choix personnel de l'agent entre la ronde et le contrôle d'accès."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le conflit entre deux missions simultanées doit être transmis pour organiser la continuité ; il ne se résout pas par une absence dissimulée.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "continuite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-01-carte_acces",
+      "prompt": "Un intervenant habilité à entrer dans les locaux techniques veut remplacer l'APS au contrôle des visiteurs pendant une pause. Que faut-il distinguer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Son ancienneté sur le site et sa connaissance des visiteurs habituels."
+        },
+        {
+          "id": "2",
+          "text": "Son autorisation d'accès et son droit d'exercer l'activité proposée."
+        },
+        {
+          "id": "3",
+          "text": "La durée de la pause et le nombre prévisible de visiteurs entrants."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un droit d'accès technique ne vaut pas autorisation d'assurer une mission de sécurité privée, même pour un remplacement bref.",
+      "module": "01 · Le cadre de la sécurité privée",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "carte_acces",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-02-actualite",
+      "prompt": "Un individu cesse de pousser un agent, recule et laisse libre la sortie. Le collègue veut le plaquer « pour finir l'intervention ». Quel changement doit guider la décision ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La cessation de l'atteinte et le besoin réel d'une nouvelle contrainte."
+        },
+        {
+          "id": "2",
+          "text": "L'engagement de l'intervention, qui doit aller jusqu'à l'immobilisation."
+        },
+        {
+          "id": "3",
+          "text": "L'humiliation ressentie par l'agent devant les personnes présentes."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une réponse doit rester liée à la situation actuelle. Le début d'une agression ne justifie pas automatiquement chaque geste ultérieur.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "actualite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-02-necessite",
+      "prompt": "Un chariot incontrôlé menace des personnes. Une commande d'arrêt accessible permet de stopper sa course sans exposer l'agent. Quelle décision est la plus adaptée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Actionner l'arrêt accessible et alerter sur la situation."
+        },
+        {
+          "id": "2",
+          "text": "Pousser une personne contre un mur pour dégager le trajet."
+        },
+        {
+          "id": "3",
+          "text": "Attendre l'encadrant pour éviter toute initiative sur le matériel."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le moyen immédiatement disponible supprime le danger sans créer l'atteinte évitable proposée. La nécessité s'apprécie avec les alternatives réellement accessibles.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "necessite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-02-responsabilite",
+      "prompt": "Un rapport indique : « J'ai appliqué l'ordre du chef, je n'ai donc pas à expliquer mon geste. » Quelle lacune faut-il corriger ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le nom du chef, seul élément nécessaire pour transférer la responsabilité."
+        },
+        {
+          "id": "2",
+          "text": "La signature du client, suffisante pour valider rétroactivement le geste."
+        },
+        {
+          "id": "3",
+          "text": "Le fondement de l'acte et les circonstances de sa mise en œuvre."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L'exécution d'un ordre ne dispense pas d'examiner la licéité d'un acte ni d'en rendre compte fidèlement.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "responsabilite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-02-qualification",
+      "prompt": "Un salarié traverse une zone interne malgré une interdiction de circulation. Aucun autre fait n'est établi. Que peut écrire l'agent sans dépasser les faits ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Un délit d'intrusion établi par le seul franchissement de la ligne."
+        },
+        {
+          "id": "2",
+          "text": "Une tentative de vol démontrée par le non-respect de la consigne."
+        },
+        {
+          "id": "3",
+          "text": "Un franchissement contraire à la consigne, à traiter selon le cadre applicable."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une règle interne enfreinte ne suffit pas à établir les éléments d'une infraction pénale différente.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "qualification",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-02-proportion",
+      "prompt": "Un agent justifie un geste violent par la seule phrase « j'ai eu très peur ». Quelle information permet réellement de l'analyser ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les signes de danger observés, le moment du geste et les autres moyens disponibles."
+        },
+        {
+          "id": "2",
+          "text": "Le degré de peur déclaré après l'événement et l'accord des collègues."
+        },
+        {
+          "id": "3",
+          "text": "L'absence finale de plainte et la bonne réputation habituelle de l'agent."
+        }
+      ],
+      "answer": "1",
+      "explanation": "L'analyse doit relier le danger et la réponse à leurs circonstances concrètes. La peur seule ou l'issue favorable ne démontre pas leur conformité.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "proportion",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-02-imprudence",
+      "prompt": "Une barrière de protection a été retirée par erreur et une personne chute. Le rapport conclut « involontaire, donc sans responsabilité possible ». Quelle correction est nécessaire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Examiner les obligations de prudence et le lien avec le dommage."
+        },
+        {
+          "id": "2",
+          "text": "Clore l'analyse dès que l'absence d'intention est confirmée."
+        },
+        {
+          "id": "3",
+          "text": "Remplacer l'analyse par la seule recherche d'une faute volontaire."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Certaines responsabilités peuvent résulter d'une imprudence. L'absence d'intention ne suffit pas à écarter toute analyse juridique.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "imprudence",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-02-faits_nouveaux",
+      "prompt": "À 18 h, un agent intervient sur les faits qu'il observe. À 19 h, il apprend une menace ancienne. Comment présenter la décision initiale ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Intégrer la menace ancienne parmi les raisons initiales de l'intervention."
+        },
+        {
+          "id": "2",
+          "text": "Omettre la menace ancienne parce qu'elle arrive après la première décision."
+        },
+        {
+          "id": "3",
+          "text": "Séparer les informations connues à 18 h de celles obtenues ensuite."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une information ultérieure peut éclairer la suite sans être présentée comme une justification connue au moment initial.",
+      "module": "02 · Responsabilité et droit pénal",
+      "sources": [
+        [
+          "Code pénal",
+          "https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070719/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "faits_nouveaux",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-03-flagrance",
+      "prompt": "Un client accuse une personne présente d'avoir volé la veille, sur la base d'une simple ressemblance. Il exige sa rétention. Quelle réponse convient ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Retenir la personne pour permettre au client de rechercher les images d'hier."
+        },
+        {
+          "id": "2",
+          "text": "Transmettre les éléments et vérifier le cadre sans retenir sur cette seule accusation."
+        },
+        {
+          "id": "3",
+          "text": "Faire confirmer la ressemblance par un second salarié avant de la retenir."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La seule ressemblance associée à une accusation ancienne n'établit pas les conditions d'une appréhension au titre de l'article 73.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "flagrance",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-03-relais",
+      "prompt": "Les conditions d'une appréhension sont réunies. Le responsable propose d'attendre la fermeture pour appeler la police afin d'éviter la présence du public. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attendre la fermeture en installant la personne dans un bureau confortable."
+        },
+        {
+          "id": "2",
+          "text": "Organiser le relais vers l'autorité compétente sans retard injustifié."
+        },
+        {
+          "id": "3",
+          "text": "Demander à la personne de signer un accord autorisant l'attente imposée."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le confort du bureau et l'intérêt commercial ne justifient pas de différer le relais aux autorités.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "relais",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-03-dignite",
+      "prompt": "Une personne appréhendée demande à s'asseoir. La situation est maîtrisée et aucune nécessité de sécurité ne s'y oppose. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attendre l'accord du directeur avant de modifier sa posture d'attente."
+        },
+        {
+          "id": "2",
+          "text": "Maintenir la personne debout pour éviter de modifier le dispositif initial."
+        },
+        {
+          "id": "3",
+          "text": "Permettre une attente digne en conservant les mesures nécessaires."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les mesures servent la sécurité et le relais légal ; elles ne servent pas à punir ou à obtenir des aveux.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "dignite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-03-limite_fouille",
+      "prompt": "Après une appréhension, un agent veut consulter le contenu du portefeuille « pour compléter le dossier ». Quel raisonnement appliquer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Considérer l'appréhension comme autorisant tout inventaire de la personne."
+        },
+        {
+          "id": "2",
+          "text": "Vérifier la base de cet acte distinct, l'appréhension ne suffisant pas."
+        },
+        {
+          "id": "3",
+          "text": "Demander au client de valider l'inventaire à la place de l'autorité."
+        }
+      ],
+      "answer": "2",
+      "explanation": "L'article 73 ne crée pas un pouvoir général de fouille ou d'enquête. Chaque acte supplémentaire doit avoir son propre cadre.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "limite_fouille",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-03-fait_refus",
+      "prompt": "À l'entrée, une personne refuse la fouille de son sac puis demande à repartir. Aucun autre fait n'est constaté. Quelle analyse retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le refus ne démontre pas à lui seul un flagrant délit."
+        },
+        {
+          "id": "2",
+          "text": "Le refus permet de retenir jusqu'à l'arrivée du responsable du magasin."
+        },
+        {
+          "id": "3",
+          "text": "La volonté de partir constitue une preuve complémentaire suffisante de vol."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le refus d'un contrôle et la volonté de repartir ne suffisent pas à établir l'infraction flagrante exigée pour une appréhension.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "fait_refus",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-03-civil_penal",
+      "prompt": "Un réparateur réclame le paiement d'une facture contestée. Le client demande à l'APS de le retenir jusqu'à règlement du différend. Quel cadre manque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Des faits remplissant les conditions légales d'une appréhension."
+        },
+        {
+          "id": "2",
+          "text": "Une copie signée de la facture pour établir le montant en litige."
+        },
+        {
+          "id": "3",
+          "text": "L'accord du service comptable sur la somme à obtenir."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un différend civil de facturation ne donne pas, à lui seul, un droit de retenir une personne pour obtenir un règlement.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "civil_penal",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-03-contrainte",
+      "prompt": "Une personne appréhendée coopère et attend le relais sous contrôle. Un collègue propose une contrainte supplémentaire pour éviter tout risque hypothétique. Quelle vérification prime ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La possibilité matérielle de l'appliquer avec le personnel disponible."
+        },
+        {
+          "id": "2",
+          "text": "L'habitude de pratiquer cette mesure sur toutes les appréhensions."
+        },
+        {
+          "id": "3",
+          "text": "La nécessité actuelle de cette mesure dans les circonstances observées."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une mesure de contrainte ne se justifie pas par une routine ou un risque seulement abstrait ; son besoin doit être apprécié concrètement.",
+      "module": "03 · Flagrance et article 73",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "contrainte",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-04-finalite_video",
+      "prompt": "Le directeur souhaite utiliser les caméras prévues pour la sûreté afin de mesurer les pauses individuelles. Quelle vérification est prioritaire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La résolution de l'image permettant de reconnaître chaque salarié."
+        },
+        {
+          "id": "2",
+          "text": "La finalité autorisée et la compatibilité de cette nouvelle utilisation."
+        },
+        {
+          "id": "3",
+          "text": "La capacité du logiciel à calculer automatiquement les durées de pause."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une fonctionnalité technique ne suffit pas à légitimer une nouvelle finalité de surveillance.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ],
+      "competency": "finalite_video",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-04-minimisation",
+      "prompt": "Un prestataire doit recevoir la référence d'un incident technique. Le fichier joint comprend aussi les adresses personnelles de témoins. Que préparer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le fichier complet avec une mention demandant de ne pas le diffuser."
+        },
+        {
+          "id": "2",
+          "text": "Une transmission limitée aux données nécessaires par le canal autorisé."
+        },
+        {
+          "id": "3",
+          "text": "Une capture du fichier complet pour empêcher sa modification par le prestataire."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La nécessité des données doit guider la transmission ; un avertissement ou un format image ne réduit pas l'information exposée.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ],
+      "competency": "minimisation",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-04-habilitation_images",
+      "prompt": "Un ancien agent demande des images via sa messagerie personnelle pour aider un collègue. Quelle démarche adopter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Transmettre une courte séquence puisqu'il connaissait déjà le dispositif."
+        },
+        {
+          "id": "2",
+          "text": "Envoyer les images sans son pour limiter les informations communiquées."
+        },
+        {
+          "id": "3",
+          "text": "Vérifier l'habilitation actuelle et orienter vers la procédure d'accès prévue."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une ancienne fonction n'établit pas un droit actuel d'accès. La durée de la séquence et l'absence de son ne remplacent pas cette vérification.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ],
+      "competency": "habilitation_images",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-04-information_public",
+      "prompt": "L'affiche de vidéoprotection est placée après la zone filmée, dans un couloir fermé au public. Quel défaut faut-il signaler ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'affiche doit seulement être plus grande pour remplir sa fonction."
+        },
+        {
+          "id": "2",
+          "text": "L'information peut rester ainsi si un agent répond aux questions éventuelles."
+        },
+        {
+          "id": "3",
+          "text": "L'information n'est pas accessible aux personnes concernées par la surveillance."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L'information doit pouvoir être rencontrée et comprise par les personnes concernées ; sa présence matérielle dans un local inaccessible ne suffit pas.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ],
+      "competency": "information_public",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-04-conservation",
+      "prompt": "Un responsable propose de conserver toutes les images « au cas où », sans échéance. Quelle décision préparer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Augmenter le stockage et différer la suppression jusqu'à saturation du disque."
+        },
+        {
+          "id": "2",
+          "text": "Vérifier la durée autorisée et les éventuelles conservations liées à un besoin précis."
+        },
+        {
+          "id": "3",
+          "text": "Conserver indéfiniment les séquences où aucun incident n'a encore été identifié."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La conservation est encadrée par la finalité et les règles du dispositif, pas par une disponibilité indéfinie du stockage.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ],
+      "competency": "conservation",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-04-inspection_fouille",
+      "prompt": "Lors d'une inspection visuelle consentie, le visiteur ouvre son sac. L'agent veut saisir une pochette fermée à l'intérieur. Que doit-il reconnaître ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'ouverture du sac autorise automatiquement toute manipulation intérieure."
+        },
+        {
+          "id": "2",
+          "text": "La présence d'une caméra autorise la manipulation pour éviter une contestation."
+        },
+        {
+          "id": "3",
+          "text": "Il envisage un acte différent dont les conditions restent à vérifier."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L'inspection visuelle ne se transforme pas automatiquement en fouille. La vidéosurveillance ne crée pas l'autorisation manquante.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ],
+      "competency": "inspection_fouille",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-04-identification",
+      "prompt": "Un compte rendu retiré du registre n'affiche plus de nom mais mentionne un poste unique et une photo. Quelle analyse retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La personne peut encore être identifiable par ces éléments combinés."
+        },
+        {
+          "id": "2",
+          "text": "Le document devient anonyme dès que le nom n'apparaît plus."
+        },
+        {
+          "id": "3",
+          "text": "La diffusion devient libre si le document reste dans un groupe professionnel."
+        }
+      ],
+      "answer": "1",
+      "explanation": "L'identification peut résulter d'un visage ou du croisement des éléments de contexte, même sans nom.",
+      "module": "04 · Libertés et données personnelles",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ]
+      ],
+      "competency": "identification",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-05-critere_objectif",
+      "prompt": "Deux visiteurs disposent des mêmes droits. Un collègue veut contrôler davantage celui dont l'accent lui paraît inhabituel, sans autre fait. Que rappeler ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les contrôles doivent reposer sur des critères professionnels justifiés."
+        },
+        {
+          "id": "2",
+          "text": "L'impression de l'agent suffit si le contrôle reste poli."
+        },
+        {
+          "id": "3",
+          "text": "Le contrôle supplémentaire est permis dès qu'un collègue le confirme."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un accent ne constitue pas, à lui seul, un motif professionnel pertinent pour différencier les contrôles.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "critere_objectif",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-05-accessibilite",
+      "prompt": "Le portillon habituel est inaccessible à un visiteur en fauteuil. Un trajet adapté validé existe avec le même contrôle. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Demander au visiteur d'utiliser le portillon ordinaire pour appliquer la même règle."
+        },
+        {
+          "id": "2",
+          "text": "Laisser passer sans contrôle pour compenser la difficulté du portillon."
+        },
+        {
+          "id": "3",
+          "text": "Mettre en œuvre le trajet adapté avec les vérifications prévues."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L'égalité d'accès peut nécessiter un aménagement effectif ; elle n'impose ni obstacle identique ni suppression de toute vérification.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "accessibilite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-05-opinion",
+      "prompt": "Un visiteur porte un message politique licite et respecte les règles du site. Une plainte vise uniquement ce message. Quel élément manque pour une mesure de sûreté ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Un fait pertinent justifiant la mesure dans le cadre applicable."
+        },
+        {
+          "id": "2",
+          "text": "L'accord de plusieurs usagers pour confirmer leur désaccord politique."
+        },
+        {
+          "id": "3",
+          "text": "La préférence du responsable concernant les opinions affichées."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une opinion licite ne suffit pas à elle seule à fonder une mesure de suspicion ou d'exclusion.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "opinion",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-05-neutralite",
+      "prompt": "Une note locale interdit une tenue religieuse en invoquant seulement « la neutralité du lieu ». Le cadre applicable n'a pas été vérifié. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Appliquer la note partout puisque le mot neutralité figure dans le texte."
+        },
+        {
+          "id": "2",
+          "text": "Faire vérifier la règle applicable avant d'imposer cette interdiction."
+        },
+        {
+          "id": "3",
+          "text": "Étendre la règle du personnel aux visiteurs pour harmoniser le contrôle."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La portée des obligations dépend du contexte juridique. Une formule générale ou une consultation du public ne suffit pas à créer une interdiction.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "neutralite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-05-comportement",
+      "prompt": "Un visiteur menace réellement une autre personne. Un agent hésite à agir de peur d'être accusé de discrimination. Quelle base retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les faits menaçants observés et les mesures proportionnées qu'ils justifient."
+        },
+        {
+          "id": "2",
+          "text": "L'absence d'action tant que l'origine des deux personnes n'est pas connue."
+        },
+        {
+          "id": "3",
+          "text": "Le groupe supposé du visiteur pour choisir le niveau de contrainte."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le traitement égal n'interdit pas une réponse à des comportements dangereux établis ; la réponse doit rester fondée sur les faits.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "comportement",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-05-communication_accessible",
+      "prompt": "Une personne malentendante ne répond pas à l'appel oral au contrôle. Aucun refus n'est établi. Quelle adaptation convient ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Répéter plus fort puis noter un refus si elle ne répond toujours pas."
+        },
+        {
+          "id": "2",
+          "text": "Se rendre visible et utiliser un moyen de communication accessible."
+        },
+        {
+          "id": "3",
+          "text": "Demander au visiteur suivant d'expliquer publiquement sa difficulté médicale."
+        }
+      ],
+      "answer": "2",
+      "explanation": "L'absence de réponse ne prouve pas un refus. Une communication accessible permet de réaliser le contrôle sans exposition inutile d'informations personnelles.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "communication_accessible",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-05-dignite_retenue",
+      "prompt": "Pendant une intervention légale, un collègue décrit la personne avec des termes dégradants dans la radio. Que corriger ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Réserver les termes dégradants au canal radio interne plutôt qu'au public."
+        },
+        {
+          "id": "2",
+          "text": "Employer une description utile, factuelle et respectueuse de la personne."
+        },
+        {
+          "id": "3",
+          "text": "Supprimer toute description, même nécessaire à l'identification sur place."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La dignité demeure applicable pendant une intervention. Une description utile reste possible sans propos humiliants.",
+      "module": "05 · République, égalité et dignité",
+      "sources": [
+        [
+          "Code pénal, article 225-1",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045391831"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "dignite_retenue",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-06-cadeau",
+      "prompt": "Un fournisseur propose des places de concert à l'agent qui accepte de ne pas enregistrer son retard. Quelle décision est adaptée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accepter les places mais transmettre oralement le retard à la relève."
+        },
+        {
+          "id": "2",
+          "text": "Refuser la contrepartie et consigner les faits selon la procédure."
+        },
+        {
+          "id": "3",
+          "text": "Partager les places avec l'équipe pour éviter un avantage personnel."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le cadeau est lié à une faveur sur la mission. Le partage ou une trace orale ne neutralisent pas cette influence.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "cadeau",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-06-confidentialite",
+      "prompt": "Un agent prépare un témoignage public sur un incident. Les noms sont changés mais le site, l'heure et les fonctions permettent d'identifier les personnes. Que doit-il faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Préserver les informations confidentielles et utiliser le circuit autorisé."
+        },
+        {
+          "id": "2",
+          "text": "Publier puisque les noms réels ne figurent plus dans le récit."
+        },
+        {
+          "id": "3",
+          "text": "Attendre quelques jours pour que le récit devienne automatiquement anonyme."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le changement des noms ou le temps écoulé ne supprime pas nécessairement l'identification ni la confidentialité.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "confidentialite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-06-integrite_rapport",
+      "prompt": "Le responsable veut retirer une omission du rapport pour éviter une remarque du client. Quelle proposition reste professionnelle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Retirer l'omission puis en parler uniquement pendant la prochaine réunion."
+        },
+        {
+          "id": "2",
+          "text": "Attribuer l'omission à une panne non vérifiée pour expliquer le résultat."
+        },
+        {
+          "id": "3",
+          "text": "Maintenir les faits et ajouter les actions correctives effectivement décidées."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La correction d'une méthode peut être décrite sans falsifier le déroulement de l'événement.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "integrite_rapport",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-06-auteur_actions",
+      "prompt": "Un collègue a effectué l'appel aux secours pendant que vous protégiez l'accès. Quelle trace restitue correctement l'action ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Écrire que vous avez tout coordonné et effectué, puisque vous rédigez."
+        },
+        {
+          "id": "2",
+          "text": "Nommer les rôles : appel du collègue et protection de l'accès par vous."
+        },
+        {
+          "id": "3",
+          "text": "Omettre l'auteur de l'appel pour éviter de distinguer les responsabilités."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une attribution exacte permet de comprendre l'organisation et de retrouver les informations auprès de la bonne personne.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "auteur_actions",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-06-controle",
+      "prompt": "Un contrôleur habilité demande un document présentant un écart. Le chef propose de montrer seulement la version corrigée du lendemain. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Retarder la remise jusqu'à ce que toute anomalie ait disparu."
+        },
+        {
+          "id": "2",
+          "text": "Préserver les pièces et coopérer dans le cadre du contrôle."
+        },
+        {
+          "id": "3",
+          "text": "Présenter la version future comme celle applicable au jour contrôlé."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La coopération ne consiste pas à substituer un document futur à la situation réellement contrôlée.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "controle",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-06-erreur",
+      "prompt": "Un agent a omis une vérification. Aucun dommage n'est constaté et il propose de ne rien signaler. Quelle suite utile retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attendre une nouvelle omission pour déterminer si la première était significative."
+        },
+        {
+          "id": "2",
+          "text": "Évaluer l'écart, le signaler selon la procédure et prévenir sa répétition."
+        },
+        {
+          "id": "3",
+          "text": "Valider rétroactivement la vérification afin de compléter la liste de contrôle."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un résultat sans dommage ne prouve pas l'absence de risque. La traçabilité et l'amélioration ne nécessitent pas d'inventer un contrôle.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "erreur",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-06-conflit_interets",
+      "prompt": "Au contrôle, un agent reconnaît le responsable de son activité secondaire qui demande une exception. Quelle vigilance particulière s'impose ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accorder une exception discrète pour protéger la relation professionnelle extérieure."
+        },
+        {
+          "id": "2",
+          "text": "Faire traiter la demande par un ami sans expliquer la situation au responsable."
+        },
+        {
+          "id": "3",
+          "text": "Appliquer les critères prévus et signaler le conflit d'intérêts si nécessaire."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La relation personnelle ou économique ne doit pas déterminer la décision de contrôle. Un relais doit rester transparent et conforme.",
+      "module": "06 · Déontologie au quotidien",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "conflit_interets",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-07-reformulation",
+      "prompt": "Une visiteuse dit : « On me confirme mon rendez-vous et vous me faites attendre. » Le service est en cours de vérification. Quelle réponse apaise sans promettre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "« Vous avez une confirmation ; je vérifie l'écart avec le service qui vous attend. »"
+        },
+        {
+          "id": "2",
+          "text": "« Avec cette confirmation, vous entrerez forcément dès que le service répondra. »"
+        },
+        {
+          "id": "3",
+          "text": "« La liste est la seule preuve valable ; votre confirmation ne change donc rien. »"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La réponse adaptée reconnaît le problème concret et annonce une démarche vérifiable sans garantir une autorisation encore inconnue.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "reformulation",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-07-distance",
+      "prompt": "Deux collègues rejoignent l'agent et entourent un usager déjà tendu. La sortie latérale reste disponible. Quel ajustement est prioritaire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Faire parler chaque collègue pour que l'usager entende plusieurs fois la règle."
+        },
+        {
+          "id": "2",
+          "text": "Réduire l'encerclement et garder un interlocuteur principal avec une distance adaptée."
+        },
+        {
+          "id": "3",
+          "text": "Fermer la sortie latérale pour obliger l'usager à écouter jusqu'au bout."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La multiplication des interlocuteurs et la sensation d'encerclement peuvent aggraver la tension. Une organisation lisible préserve la sécurité.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "distance",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-07-limite",
+      "prompt": "Un usager insulte l'agent mais attend encore une explication sur son refus d'accès. Quelle phrase cible le comportement ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "« Je peux préciser le motif ; je vous demande de cesser les insultes. »"
+        },
+        {
+          "id": "2",
+          "text": "« Avec votre attitude, vous prouvez que vous n'avez rien à faire ici. »"
+        },
+        {
+          "id": "3",
+          "text": "« Présentez des excuses et je pourrai envisager une exception pour vous. »"
+        }
+      ],
+      "answer": "1",
+      "explanation": "La réponse adaptée pose une limite sur les propos sans qualifier la personne ni marchander la règle d'accès.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "limite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-07-ecoute",
+      "prompt": "Un livreur répète sa plainte de plus en plus vite. L'agent n'a pas compris quel accès lui a été indiqué. Quelle action aide le diagnostic ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Reformuler le point compris puis demander quel accès précis lui a été annoncé."
+        },
+        {
+          "id": "2",
+          "text": "Reprendre toute la consigne depuis le début en évitant de laisser une interruption."
+        },
+        {
+          "id": "3",
+          "text": "Faire confirmer au livreur qu'il a tort avant de contacter son entreprise."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une question ciblée après reformulation permet de recueillir l'information manquante et de traiter le problème réel.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "ecoute",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-07-relais",
+      "prompt": "Après plusieurs explications calmes, la tension augmente et l'agent peine à maintenir sa distance. Quelle suite privilégier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Poursuivre seul jusqu'à obtenir un accord pour ne pas perdre sa crédibilité."
+        },
+        {
+          "id": "2",
+          "text": "Promettre une entrée immédiate afin de diminuer la tension sur le moment."
+        },
+        {
+          "id": "3",
+          "text": "Chercher le relais prévu en conservant une position et une issue sûres."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le relais est un moyen de sécurité lorsque l'échange se dégrade. Il ne suppose ni promesse injustifiée ni défi personnel.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "relais",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-07-suivi_conflit",
+      "prompt": "Le conflit est terminé, mais deux affiches donnent toujours des horaires d'accueil différents. Quelle action évite la répétition ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Demander aux agents d'expliquer à chaque visiteur que l'affiche est trompeuse."
+        },
+        {
+          "id": "2",
+          "text": "Faire corriger la contradiction par le responsable et vérifier sa mise en œuvre."
+        },
+        {
+          "id": "3",
+          "text": "Retirer les deux affiches sans validation pour supprimer toute contradiction."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La cause organisationnelle doit être traitée par le circuit responsable, puis sa correction vérifiée.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "suivi_conflit",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-07-emotion",
+      "prompt": "Un agent sent sa colère monter après des provocations. Un collègue disponible connaît la procédure. Quelle conduite est adaptée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Organiser un relais clair avant que l'émotion ne dégrade l'intervention."
+        },
+        {
+          "id": "2",
+          "text": "Rester seul au contact pour montrer qu'il maîtrise nécessairement la situation."
+        },
+        {
+          "id": "3",
+          "text": "Faire accélérer la file pour terminer l'échange sans transmettre d'information."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Reconnaître une difficulté et transmettre au collègue préserve la continuité et limite le risque de réaction inadaptée.",
+      "module": "07 · Comprendre et apaiser les conflits",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "emotion",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-08-version_consigne",
+      "prompt": "Une note valide autorise les livraisons au quai 2 de 8 h à 10 h. À 11 h, un transporteur présente cette note pour déroger au quai habituel. Que vérifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'authenticité de la note, suffisante pour prolonger son créneau."
+        },
+        {
+          "id": "2",
+          "text": "L'autorisation applicable hors du créneau prévu par la note."
+        },
+        {
+          "id": "3",
+          "text": "La taille du véhicule pour décider seul d'étendre la dérogation."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une note authentique reste limitée par son objet et son créneau. L'agent doit retrouver la règle applicable à 11 h.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "version_consigne",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-08-radio",
+      "prompt": "Le PC connaît déjà le défaut de fermeture de la porte F. Vous devez accompagner le technicien tout en maintenant l'accès contrôlé. Il demande : « De quoi avez-vous besoin maintenant ? » Quelle réponse est la plus opérationnelle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "« La porte F ferme mal depuis ce matin ; plusieurs personnes l'ont signalé. »"
+        },
+        {
+          "id": "2",
+          "text": "« Un relais à F pour maintenir l'accès pendant mon accompagnement du technicien. »"
+        },
+        {
+          "id": "3",
+          "text": "« Le défaut paraît mécanique ; le technicien pourra sans doute le confirmer. »"
+        }
+      ],
+      "answer": "2",
+      "explanation": "La demande du PC porte sur le besoin actuel. Répéter l'historique ou un diagnostic supposé ne précise pas le relais nécessaire.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "radio",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-08-chronologie",
+      "prompt": "À 14 h 12, l'agent voit une fuite. Il appelle à 14 h 15 et saisit à 14 h 27. Quelle chronologie est fidèle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Constat et appel 14 h 12, puis régularisation à 14 h 27."
+        },
+        {
+          "id": "2",
+          "text": "Constat 14 h 12, appel 14 h 15, saisie 14 h 27."
+        },
+        {
+          "id": "3",
+          "text": "Fuite et appel à 14 h 27, heure de création de l'entrée."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Les heures des faits, des actions et de la saisie ont des fonctions distinctes et doivent rester reconnaissables.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "chronologie",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-08-source",
+      "prompt": "Une salariée dit avoir entendu un choc vers 6 h 50. L'agent ne constate qu'une fissure à 7 h 05. Quelle formulation convient ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "« Fissure constatée à 7 h 05 ; choc entendu vers 6 h 50 selon la salariée. »"
+        },
+        {
+          "id": "2",
+          "text": "« Choc ayant fissuré la vitre à 6 h 50, constaté ensuite par l'agent. »"
+        },
+        {
+          "id": "3",
+          "text": "« Vitre fissurée à 7 h 05, heure certaine du choc à l'origine du dommage. »"
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le lien causal et l'heure de formation de la fissure ne sont pas établis. La source du bruit doit être distinguée du constat.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "source",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-08-releve",
+      "prompt": "À la relève, une issue reste sous protection provisoire. La maintenance a accusé réception mais n'a annoncé aucun retour. Quelle information transmettre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'appel reçu par la maintenance, qui permet de considérer le dossier comme terminé."
+        },
+        {
+          "id": "2",
+          "text": "Le seul numéro de ticket pour que la relève retrouve elle-même toutes les mesures."
+        },
+        {
+          "id": "3",
+          "text": "Le danger, la protection maintenue, l'appel effectué et le suivi encore attendu."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La relève doit savoir quoi maintenir et quoi suivre. Un accusé de réception ne démontre pas la résolution du danger.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "releve",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-08-accuse_reception",
+      "prompt": "Un message radio sur un passage obstrué reste sans réponse et le risque continue. Quelle suite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Considérer le message reçu puisqu'aucun défaut radio n'est affiché."
+        },
+        {
+          "id": "2",
+          "text": "Vérifier la réception par le moyen de secours prévu et maintenir la protection."
+        },
+        {
+          "id": "3",
+          "text": "Répéter le message à la prochaine relève pour éviter de saturer le canal."
+        }
+      ],
+      "answer": "2",
+      "explanation": "L'absence de confirmation impose de vérifier le relais effectif sans abandonner la protection du risque en cours.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "accuse_reception",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-08-citation",
+      "prompt": "Un témoin rapporte avoir entendu exactement : « Je reviendrai casser cette porte. » Comment l'intégrer utilement ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attribuer la citation au témoin et distinguer le propos rapporté du constat."
+        },
+        {
+          "id": "2",
+          "text": "Écrire que l'auteur a décidé avec certitude de revenir dégrader la porte."
+        },
+        {
+          "id": "3",
+          "text": "Présenter la citation comme personnellement entendue par l'agent rédacteur."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une citation utile doit conserver sa source. Elle ne devient ni un constat direct de l'agent ni une certitude sur l'action future.",
+      "module": "08 · Consignes et comptes rendus",
+      "sources": [
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ],
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ]
+      ],
+      "competency": "citation",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-09-reevaluation",
+      "prompt": "Une fuite menace un accès. Une protection est posée, puis l'eau atteint un second passage non protégé. Que doit modifier l'analyse ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Seulement l'heure du prochain contrôle, puisque la fuite a déjà été signalée."
+        },
+        {
+          "id": "2",
+          "text": "Le nouveau périmètre exposé et les protections ou relais devenus nécessaires."
+        },
+        {
+          "id": "3",
+          "text": "Le statut du premier passage, qui peut être rouvert pour compenser le second."
+        }
+      ],
+      "answer": "2",
+      "explanation": "L'évolution change l'exposition réelle. Le signalement initial ne dispense pas de réévaluer les mesures.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "reevaluation",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-09-information_tardive",
+      "prompt": "À 9 h, une décision se fonde sur deux faits. À midi, une image contredit l'un d'eux. Quelle analyse est correcte ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Dater l'image reçue, réexaminer les suites et conserver le raisonnement initial connu."
+        },
+        {
+          "id": "2",
+          "text": "Réécrire la décision de 9 h comme si l'image avait été consultée avant d'agir."
+        },
+        {
+          "id": "3",
+          "text": "Écarter l'image pour préserver la cohérence du rapport déjà transmis."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La trace doit distinguer ce qui était connu au départ et ce qui justifie une réévaluation ultérieure.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "information_tardive",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-09-alternatives",
+      "prompt": "Deux moyens protègent un passage : une déviation sûre déjà ouverte, ou une retenue physique prolongée du public. Quel point comparer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La mesure donnant à l'agent l'apparence la plus ferme."
+        },
+        {
+          "id": "2",
+          "text": "La mesure la plus contraignante pour éviter toute critique ultérieure."
+        },
+        {
+          "id": "3",
+          "text": "L'efficacité et les contraintes des moyens réellement disponibles."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le choix se raisonne à partir des alternatives effectives et des atteintes nécessaires, pas de l'image donnée.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "alternatives",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-09-vulnerabilite",
+      "prompt": "Un périmètre de protection coupe l'accès au cheminement accessible d'une personne. Que réévaluer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une solution sûre permettant l'assistance ou un trajet accessible validé."
+        },
+        {
+          "id": "2",
+          "text": "La seule visibilité du ruban pour que l'interdiction soit compréhensible."
+        },
+        {
+          "id": "3",
+          "text": "Le retrait immédiat du périmètre, sans examiner le danger qu'il protège."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La protection doit intégrer les personnes concernées et leurs besoins sans supprimer à l'aveugle la maîtrise du danger.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "vulnerabilite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-09-indicateur",
+      "prompt": "Après un mois sans accident, les agents signalent plusieurs passages très proches entre piétons et engins. Quelle conclusion retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'absence d'accident démontre que la séparation actuelle est suffisante."
+        },
+        {
+          "id": "2",
+          "text": "Les signalements doivent attendre un dommage pour entrer dans le bilan."
+        },
+        {
+          "id": "3",
+          "text": "Ces presque-accidents justifient d'examiner la prévention malgré l'absence de dommage."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un résultat favorable n'efface pas les signes d'exposition. Les presque-accidents donnent des éléments utiles à la prévention.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "indicateur",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-09-necessite_continue",
+      "prompt": "Un appui technique neutralise la source d'un danger. Une restriction d'accès subsiste sans autre motif identifié. Quelle décision préparer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Maintenir la restriction jusqu'à la fin du service pour respecter la décision initiale."
+        },
+        {
+          "id": "2",
+          "text": "Vérifier le risque résiduel et adapter la restriction à la situation actualisée."
+        },
+        {
+          "id": "3",
+          "text": "Retirer toute protection sans attendre la confirmation de neutralisation effective."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une mesure doit rester justifiée au fil de l'évolution ; son adaptation exige une information fiable sur le risque résiduel.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "necessite_continue",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-09-debrief",
+      "prompt": "Le bilan d'un incident attribue sa réussite au « bon réflexe », sans décrire les signes détectés. Que faut-il ajouter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Les indices repérés, le raisonnement et les conditions ayant permis l'action."
+        },
+        {
+          "id": "2",
+          "text": "Une appréciation positive de l'agent pour renforcer la conclusion du bilan."
+        },
+        {
+          "id": "3",
+          "text": "Le seul résultat final, puisque la méthode a déjà montré son efficacité."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Un retour d'expérience utile explique une décision reproductible et ses limites, au lieu de se limiter au résultat.",
+      "module": "09 · Justifier ses décisions",
+      "sources": [
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "debrief",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-10-coactivite",
+      "prompt": "Une intervention prévue sans circulation d'engins commence pendant une livraison imprévue. Les badges sont valides. Que faire avant de poursuivre ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Poursuivre puisque la validité des badges confirme toutes les conditions d'accès."
+        },
+        {
+          "id": "2",
+          "text": "Faire réévaluer la coactivité et les protections avec les responsables concernés."
+        },
+        {
+          "id": "3",
+          "text": "Remplacer le balisage par des gilets pour conserver le planning initial."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le changement des circulations modifie les conditions de prévention ; l'identification des intervenants ne suffit pas à le couvrir.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ],
+      "competency": "coactivite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-10-travail_isole",
+      "prompt": "Un dispositif d'alerte émet correctement, mais aucun poste n'est chargé de recevoir les appels la nuit. Quel défaut est prioritaire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le manque d'une seconde batterie dans la poche de l'agent."
+        },
+        {
+          "id": "2",
+          "text": "L'absence d'organisation assurant la réception et le traitement de l'alerte."
+        },
+        {
+          "id": "3",
+          "text": "La nécessité de demander à l'agent de déclencher moins souvent des tests."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une alerte technique sans destinataire opérationnel ne permet pas d'organiser efficacement les secours.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ],
+      "competency": "travail_isole",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-10-produit",
+      "prompt": "Un bidon fuit. La fiche disponible concerne une autre référence du même fabricant. Quelle conduite est adaptée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Appliquer la fiche disponible, puisque le fabricant est identique."
+        },
+        {
+          "id": "2",
+          "text": "Sentir le produit à proximité pour confirmer la famille chimique."
+        },
+        {
+          "id": "3",
+          "text": "Protéger la zone et faire identifier le produit et sa fiche correspondante."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le fabricant commun ne garantit pas des risques identiques. Il faut éviter l'exposition et obtenir l'information adaptée.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ],
+      "competency": "produit",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-10-epi_collectif",
+      "prompt": "Un passage dangereux a perdu sa barrière. Le responsable propose un casque à chaque passant. Quelle limite rappeler ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'EPI ne rétablit pas automatiquement la protection collective nécessaire."
+        },
+        {
+          "id": "2",
+          "text": "Le casque suffit dès lors que chaque passant confirme l'avoir ajusté."
+        },
+        {
+          "id": "3",
+          "text": "Une présence d'agent dispense d'étudier le maintien du passage ouvert."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Les protections ne sont pas interchangeables par principe. La maîtrise du passage doit être réévaluée au regard du danger.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ],
+      "competency": "epi_collectif",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-10-permis_feu",
+      "prompt": "Un permis concerne une soudure dans l'atelier A. Le prestataire veut effectuer ensuite un travail chaud au local B. Que vérifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'autorisation et les mesures adaptées à la nouvelle opération et au nouveau lieu."
+        },
+        {
+          "id": "2",
+          "text": "La validité du badge, suffisante pour étendre le permis à tout le bâtiment."
+        },
+        {
+          "id": "3",
+          "text": "La quantité de travail restante pour décider si le déplacement reste mineur."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le permis encadre une opération et ses conditions. Un autre lieu peut présenter des risques différents nécessitant une nouvelle vérification.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ],
+      "competency": "permis_feu",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-10-atex",
+      "prompt": "Un technicien arrive dans une zone ATEX avec une lampe dont la compatibilité n'est pas documentée. Quelle suite préparer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Autoriser l'entrée si la lampe reste éteinte jusqu'au lieu d'intervention."
+        },
+        {
+          "id": "2",
+          "text": "Accepter la lampe si son boîtier ne présente aucun dommage visible."
+        },
+        {
+          "id": "3",
+          "text": "Faire vérifier la compatibilité avant d'introduire l'équipement dans la zone."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le bon état et l'extinction momentanée ne démontrent pas l'adéquation de l'équipement à la zone et à ses risques.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ],
+      "competency": "atex",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-10-protection_issue",
+      "prompt": "Pour interdire une zone humide, un ruban barre la seule issue utilisable. Quel ajustement faut-il faire valider ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le maintien du ruban jusqu'au séchage complet, quel que soit le besoin d'évacuation."
+        },
+        {
+          "id": "2",
+          "text": "Une protection du danger qui maintienne une évacuation sûre."
+        },
+        {
+          "id": "3",
+          "text": "La suppression de tout balisage pour rendre l'issue de nouveau visible."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Il faut traiter simultanément le risque de chute et celui lié à l'évacuation, sans supprimer l'une des deux protections nécessaires.",
+      "module": "10 · Prévention et risques industriels",
+      "sources": [
+        [
+          "INRS, évaluation des risques",
+          "https://www.inrs.fr/demarche/evaluation-risques-professionnels/ce-qu-il-faut-retenir"
+        ],
+        [
+          "INRS, entreprises extérieures",
+          "https://www.inrs.fr/risques/entreprises-exterieures/ce-qu-il-faut-retenir.html"
+        ]
+      ],
+      "competency": "protection_issue",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-11-titre",
+      "prompt": "Un salarié formé l'an dernier est affecté à une opération différente. Il ne dispose que de son certificat de stage. Que vérifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'habilitation délivrée et son adéquation à la nouvelle opération."
+        },
+        {
+          "id": "2",
+          "text": "L'ancienneté du formateur pour confirmer la valeur du certificat."
+        },
+        {
+          "id": "3",
+          "text": "L'accord du collègue qui réalisait auparavant cette opération."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La formation est une composante ; elle ne vaut pas à elle seule habilitation pour n'importe quelle tâche.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ],
+      "competency": "titre",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-11-residuel",
+      "prompt": "Un équipement est débranché, mais un système de secours peut encore l'alimenter. Quel raisonnement retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le câble retiré suffit à conclure à l'absence de danger électrique."
+        },
+        {
+          "id": "2",
+          "text": "Seuls les voyants allumés permettent de savoir si une énergie subsiste."
+        },
+        {
+          "id": "3",
+          "text": "Toutes les sources et énergies doivent être prises en compte avant intervention."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le retrait d'une alimentation ne maîtrise pas automatiquement les sources de secours ou l'énergie stockée.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ],
+      "competency": "residuel",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-11-victime",
+      "prompt": "Une personne est au sol près d'un câble détérioré. L'absence de contact actuel n'est pas certaine. Quelle priorité adopter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Empêcher une nouvelle exposition et faire sécuriser la zone en alertant."
+        },
+        {
+          "id": "2",
+          "text": "Tirer la personne par son vêtement avant de rechercher l'origine du câble."
+        },
+        {
+          "id": "3",
+          "text": "Approcher avec des gants de manutention pour vérifier si le câble est chaud."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le secours ne doit pas créer une nouvelle victime. Un gant ordinaire ou un vêtement ne démontrent pas une protection électrique adaptée.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ],
+      "competency": "victime",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-11-b0",
+      "prompt": "Le titulaire d'une habilitation B0 reçoit une demande de remplacement d'un composant dans un coffret. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Réaliser le remplacement si le composant se retire sans outil spécialisé."
+        },
+        {
+          "id": "2",
+          "text": "Réaliser le remplacement après une démonstration rapide du client."
+        },
+        {
+          "id": "3",
+          "text": "Faire intervenir la personne autorisée pour cette opération électrique."
+        }
+      ],
+      "answer": "3",
+      "explanation": "B0 ne donne pas un pouvoir général de réparation électrique. La simplicité apparente ne remplace pas le domaine d'habilitation requis.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ],
+      "competency": "b0",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-11-signalement",
+      "prompt": "Un agent constate un crépitement et une odeur près d'une armoire fermée. Quel message est le plus utile ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Annoncer un court-circuit confirmé puis demander un réarmement immédiat."
+        },
+        {
+          "id": "2",
+          "text": "Signaler une panne probable sans préciser le lieu tant que l'armoire reste fermée."
+        },
+        {
+          "id": "3",
+          "text": "Indiquer l'armoire, les signes constatés, l'état de protection et l'appui demandé."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un signalement opérationnel transmet les observations et le besoin sans inventer un diagnostic ni exposer l'agent à une vérification inadaptée.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ],
+      "competency": "signalement",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-11-arc",
+      "prompt": "Une consigne réduit le danger électrique au seul contact avec un conducteur. Quelle lacune doit être corrigée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'obligation de toucher le conducteur pour vérifier l'existence du danger."
+        },
+        {
+          "id": "2",
+          "text": "La prise en compte des effets d'un arc, notamment chaleur et projections."
+        },
+        {
+          "id": "3",
+          "text": "La possibilité de se protéger entièrement par la seule distance d'un bras."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Un arc peut causer des blessures sans contact direct. Une consigne limitée au toucher laisse donc une partie du risque sans traitement.",
+      "module": "11 · Sensibilisation au risque électrique",
+      "sources": [
+        [
+          "INRS, prévention du risque électrique",
+          "https://www.inrs.fr/risques/electriques/prevention-risque-electrique"
+        ],
+        [
+          "INRS, habilitation électrique",
+          "https://www.inrs.fr/risques/electriques/habilitation-electrique"
+        ]
+      ],
+      "competency": "arc",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-12-information",
+      "prompt": "Une capture annonçant une menace locale circule à nouveau. Sa date d'origine remonte à plusieurs mois. Que vérifier avant de l'utiliser comme information actuelle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La source originale, le contexte et une confirmation par le circuit prévu."
+        },
+        {
+          "id": "2",
+          "text": "Le nombre de partages récents, qui suffit à rendre l'alerte actuelle."
+        },
+        {
+          "id": "3",
+          "text": "La présence d'un logo officiel, qui dispense de retrouver la date initiale."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La date de republication et un logo ne prouvent pas l'actualité ni l'authenticité de l'information.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ],
+      "competency": "information",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-12-objet",
+      "prompt": "Un sac a déclenché la procédure objet suspect. Une personne se présente comme propriétaire, sans vérification achevée. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Lui faire ouvrir le sac immédiatement pour lever le doute devant les agents."
+        },
+        {
+          "id": "2",
+          "text": "Laisser repartir la personne avec le sac pour libérer rapidement le passage."
+        },
+        {
+          "id": "3",
+          "text": "Transmettre ce nouvel élément et suivre les consignes sans manipuler le sac."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L'annonce d'un propriétaire est une information à intégrer au circuit ; elle ne suffit pas à justifier une manipulation ou une levée spontanée des mesures.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ],
+      "competency": "objet",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-12-faits",
+      "prompt": "Une personne tente trois fois une porte réservée malgré une orientation donnée. Quelle description doit parvenir au PC ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Une intention terroriste certaine déduite des trois tentatives d'ouverture."
+        },
+        {
+          "id": "2",
+          "text": "Un simple visiteur perdu, sans mentionner les essais répétés sur la porte."
+        },
+        {
+          "id": "3",
+          "text": "Le lieu, les tentatives observées et la réaction aux consignes données."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Les faits observables doivent être transmis sans qualification certaine non établie ni minimisation qui les ferait disparaître.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ],
+      "competency": "faits",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-12-appel_menacant",
+      "prompt": "Pendant un appel menaçant, une phrase est couverte par du bruit. Comment préparer la transmission ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Compléter la phrase à partir du type de menace le plus courant."
+        },
+        {
+          "id": "2",
+          "text": "Supprimer toute mention de l'appel tant que la phrase n'est pas complète."
+        },
+        {
+          "id": "3",
+          "text": "Restituer les mots entendus et signaler précisément le passage incertain."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L'incertitude doit être conservée et localisée. Elle ne justifie ni invention ni absence de signalement des éléments utiles.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ],
+      "competency": "appel_menacant",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-12-situation_evolutive",
+      "prompt": "Après un mouvement inquiétant, le hall semble calme mais aucune consigne fiable de fin d'alerte n'est reçue. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Rétablir l'accès normal puisque le public ne manifeste plus d'inquiétude."
+        },
+        {
+          "id": "2",
+          "text": "Envoyer le visiteur le plus proche vérifier la zone masquée à l'agent."
+        },
+        {
+          "id": "3",
+          "text": "Maintenir les mesures adaptées et rechercher une information confirmée."
+        }
+      ],
+      "answer": "3",
+      "explanation": "L'absence momentanée de signe visible ne démontre pas la fin du danger. La conduite doit rester guidée par des informations fiables.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ],
+      "competency": "situation_evolutive",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-12-surete_evacuation",
+      "prompt": "Une mesure de sûreté proposée réduit la capacité des issues de secours. Quel arbitrage préparer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Retenir la mesure de sûreté dès qu'elle augmente le nombre de contrôles."
+        },
+        {
+          "id": "2",
+          "text": "Supprimer les contrôles pour éviter toute contrainte sur les cheminements."
+        },
+        {
+          "id": "3",
+          "text": "Faire valider une organisation conciliant prévention de l'intrusion et évacuation."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La protection contre une menace ne doit pas créer un danger d'évacuation ; les deux exigences doivent être examinées ensemble.",
+      "module": "12 · Prévenir la menace terroriste",
+      "sources": [
+        [
+          "SGDSN, plan Vigipirate actualisé",
+          "https://www.sgdsn.gouv.fr/vigipirate"
+        ],
+        [
+          "Consignes publiques en cas d’attaque",
+          "https://www.info.gouv.fr/risques/reagir-en-cas-dattaque-terroriste"
+        ]
+      ],
+      "competency": "surete_evacuation",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-13-correction",
+      "prompt": "À 12 h 40, l'agent découvre qu'une entrée validée à 12 h 10 mentionne le quai C au lieu du quai D. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Modifier silencieusement C en D pour préserver une lecture simple."
+        },
+        {
+          "id": "2",
+          "text": "Ajouter une rectification datée, reliée à l'entrée initiale et attribuée."
+        },
+        {
+          "id": "3",
+          "text": "Créer un incident supplémentaire au quai D sans indiquer l'erreur initiale."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La correction doit rester visible et rattachée au fait corrigé afin de conserver un historique compréhensible.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "correction",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-13-reprise_panne",
+      "prompt": "Pendant une panne, une action est notée sur papier. Après reprise, l'événement existe déjà dans le logiciel. Quelle démarche retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Compléter l'entrée existante en référençant le support et les heures des faits."
+        },
+        {
+          "id": "2",
+          "text": "Créer un second incident identique pour donner une existence au document papier."
+        },
+        {
+          "id": "3",
+          "text": "Détruire le papier dès que le logiciel fonctionne sans vérifier la transcription."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La reprise doit préserver les sources et éviter un doublon qui ferait croire à deux événements distincts.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "reprise_panne",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-13-identifiants",
+      "prompt": "Un agent ne peut ouvrir sa session ; un collègue lui propose son compte pour saisir une intervention. Quelle solution rechercher ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le mode dégradé prévu permettant une attribution fidèle de la saisie."
+        },
+        {
+          "id": "2",
+          "text": "Le compte du collègue avec une promesse de corriger l'auteur ultérieurement."
+        },
+        {
+          "id": "3",
+          "text": "Un compte commun choisi pour que toute l'équipe puisse compléter l'entrée."
+        }
+      ],
+      "answer": "1",
+      "explanation": "L'identité du rédacteur participe à la traçabilité. Un accès partagé ou emprunté brouille cette attribution.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "identifiants",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-13-statut",
+      "prompt": "Une fuite est signalée au service technique. Le service accuse réception mais aucun retour de réparation n'existe. Quel statut est fidèle ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Incident résolu puisque le service compétent a accepté la demande."
+        },
+        {
+          "id": "2",
+          "text": "Incident à supprimer parce que le service technique en assure désormais le suivi."
+        },
+        {
+          "id": "3",
+          "text": "Signalement reçu ; résolution non confirmée et suivi à maintenir."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La réception d'une demande n'atteste pas la disparition du danger ni la fin des mesures provisoires.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "statut",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-13-heure",
+      "prompt": "Une entrée a été saisie avec dix minutes de retard. Un chef propose de modifier l'heure de saisie pour respecter l'objectif. Que conserver ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "L'heure prévue par la procédure pour permettre la comparaison des indicateurs."
+        },
+        {
+          "id": "2",
+          "text": "L'heure réelle des faits et de la saisie, avec une correction traçable si nécessaire."
+        },
+        {
+          "id": "3",
+          "text": "Une heure moyenne entre le constat et la saisie afin de réduire l'écart."
+        }
+      ],
+      "answer": "2",
+      "explanation": "La fidélité des horaires permet d'analyser les délais. Un indicateur attendu ne justifie pas leur réécriture.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "heure",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-13-transmission",
+      "prompt": "Une demande de copie complète du registre arrive d'un interlocuteur dont l'habilitation n'est pas connue. Que vérifier d'abord ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Le demandeur, le cadre de transmission et les données nécessaires."
+        },
+        {
+          "id": "2",
+          "text": "La capacité de sa messagerie à recevoir toutes les pièces jointes."
+        },
+        {
+          "id": "3",
+          "text": "L'absence de mots sensibles dans le titre du fichier exporté."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La protection du registre repose sur le droit d'accès et le besoin réel, pas sur les caractéristiques du fichier envoyé.",
+      "module": "13 · La main courante numérique",
+      "sources": [
+        [
+          "CNIL, vidéoprotection au travail",
+          "https://www.cnil.fr/fr/la-videosurveillance-videoprotection-au-travail"
+        ],
+        [
+          "Code de déontologie de la sécurité privée",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000029656360/"
+        ]
+      ],
+      "competency": "transmission",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-14-image_limitee",
+      "prompt": "Une vidéo montre une personne près d'un présentoir, puis une coupure de vingt secondes. Le paiement n'est pas visible. Quelle conclusion est soutenue ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La séquence ne permet pas, seule, d'établir ce qui s'est passé pendant la coupure."
+        },
+        {
+          "id": "2",
+          "text": "La coupure confirme que la personne a profité de l'angle mort pour voler."
+        },
+        {
+          "id": "3",
+          "text": "La présence près du présentoir suffit à conclure à l'absence de paiement."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Le compte rendu doit conserver les limites de l'image au lieu de remplir la période manquante par une hypothèse.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "image_limitee",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-14-source_directe",
+      "prompt": "Deux témoins disent avoir entendu un choc ; aucun n'a vu le geste. Comment qualifier leur apport ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Deux témoignages directs établissant l'identité de la personne responsable."
+        },
+        {
+          "id": "2",
+          "text": "Une preuve certaine de dégradation volontaire grâce au nombre de témoins."
+        },
+        {
+          "id": "3",
+          "text": "Deux récits du bruit entendu, sans observation directe de l'auteur du geste."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La concordance sur un bruit n'établit ni auteur ni intention. Il faut décrire précisément ce que chacun a perçu.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "source_directe",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-14-objet_deplace",
+      "prompt": "Pour éviter une chute, un agent déplace un débris avant l'arrivée des autorités. Que doit-il tracer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Uniquement la position finale afin de présenter une scène simple à comprendre."
+        },
+        {
+          "id": "2",
+          "text": "La position initiale connue, le déplacement, son auteur et le motif de protection."
+        },
+        {
+          "id": "3",
+          "text": "Une reconstitution à l'identique réalisée sans mentionner le déplacement effectué."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une modification nécessaire de la scène doit être expliquée. Sa dissimulation ou une reconstitution non déclarée nuit à la fiabilité des éléments.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "objet_deplace",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-14-changement_priorite",
+      "prompt": "Pendant un litige d'accès maîtrisé, un signal incendie survient ailleurs. Un collègue peut garder l'accueil. Que faire ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Finir tout le litige avant de signaler l'alarme afin de ne pas interrompre une tâche."
+        },
+        {
+          "id": "2",
+          "text": "Organiser le relais et appliquer les priorités et alertes prévues sur le site."
+        },
+        {
+          "id": "3",
+          "text": "Quitter le poste sans transmission pour atteindre plus vite la zone signalée."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Le changement de priorité demande une coordination effective, afin de traiter l'alarme tout en maintenant la continuité de l'accueil.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "changement_priorite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-14-piece_absente",
+      "prompt": "Le rapport fait référence à une image qui n'a pas encore été retrouvée. Quelle mention est honnête ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Image jointe au dossier parce que son existence a été annoncée oralement."
+        },
+        {
+          "id": "2",
+          "text": "Image confirmant les faits selon le souvenir non vérifié du responsable."
+        },
+        {
+          "id": "3",
+          "text": "Image recherchée et non disponible à ce stade, avec les démarches engagées."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Une pièce annoncée ou supposée ne doit pas être présentée comme détenue et vérifiée.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "piece_absente",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-14-refus_soin",
+      "prompt": "Après un malaise, une personne refuse l'assistance proposée mais garde des signes inquiétants. Quelle démarche retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Classer l'événement puisque le refus supprime tout besoin de transmission."
+        },
+        {
+          "id": "2",
+          "text": "Conditionner l'appel à la signature d'un formulaire de décharge par la personne."
+        },
+        {
+          "id": "3",
+          "text": "Informer les secours du refus et des signes, puis suivre leurs indications."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Le refus fait partie des informations à transmettre ; il ne remplace pas l'évaluation et les consignes du relais compétent.",
+      "module": "14 · Décider face à une infraction",
+      "sources": [
+        [
+          "CPP, article 73",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000029000766"
+        ],
+        [
+          "Code pénal, article 122-5",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006417218"
+        ]
+      ],
+      "competency": "refus_soin",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-15-capacite",
+      "prompt": "La configuration d'une manifestation change : une clôture réduit un cheminement prévu pour les arrivées. Les effectifs restent identiques. Que réévaluer ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Uniquement le nombre de billets vendus, puisque les agents sont inchangés."
+        },
+        {
+          "id": "2",
+          "text": "La couleur de la signalétique pour conserver le plan initial sans modification."
+        },
+        {
+          "id": "3",
+          "text": "Les flux, la capacité utile, les issues et les positions des agents."
+        }
+      ],
+      "answer": "3",
+      "explanation": "Un changement physique peut créer une congestion ou compromettre une évacuation même avec le même public et les mêmes effectifs.",
+      "module": "15 · Sécuriser un événement",
+      "sources": [
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ],
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ]
+      ],
+      "competency": "capacite",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-15-accreditation",
+      "prompt": "Un badge autorise un photographe en zone média de 17 h à 19 h. Il demande la zone technique à 20 h. Quelle vérification manque ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "La lisibilité de la photo, suffisante pour prolonger tous ses droits."
+        },
+        {
+          "id": "2",
+          "text": "Une autorisation couvrant cette zone et ce créneau précis."
+        },
+        {
+          "id": "3",
+          "text": "La présence de son matériel professionnel, suffisante pour accéder aux coulisses."
+        }
+      ],
+      "answer": "2",
+      "explanation": "Une accréditation comporte un périmètre et une temporalité. Sa seule authenticité ne répond pas à une demande hors de ces limites.",
+      "module": "15 · Sécuriser un événement",
+      "sources": [
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ],
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ]
+      ],
+      "competency": "accreditation",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-15-compression",
+      "prompt": "La file A est courte mais déborde sur une issue ; la file B est plus longue et reste dégagée. Quelle priorité traiter ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Accélérer d'abord B pour réduire le nombre total de personnes en attente."
+        },
+        {
+          "id": "2",
+          "text": "Maintenir les files puisqu'une file courte ne présente pas de risque important."
+        },
+        {
+          "id": "3",
+          "text": "Dégager l'issue et coordonner la réorganisation du flux concerné."
+        }
+      ],
+      "answer": "3",
+      "explanation": "La longueur n'est pas le seul indicateur ; une issue obstruée constitue une contrainte de sécurité à traiter.",
+      "module": "15 · Sécuriser un événement",
+      "sources": [
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ],
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ]
+      ],
+      "competency": "compression",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-15-billetterie",
+      "prompt": "Après un redémarrage, plusieurs billets auparavant acceptés sont rejetés par le même lecteur. Quelle première démarche évite une conclusion prématurée ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Vérifier le matériel et utiliser le contrôle secondaire prévu."
+        },
+        {
+          "id": "2",
+          "text": "Considérer tous les titulaires comme fraudeurs jusqu'à preuve du contraire."
+        },
+        {
+          "id": "3",
+          "text": "Ouvrir l'accès sans contrôle jusqu'à ce que le lecteur redevienne stable."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une anomalie répétée du lecteur impose une vérification du dispositif et un mode prévu, sans accusation collective ni abandon du contrôle.",
+      "module": "15 · Sécuriser un événement",
+      "sources": [
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ],
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ]
+      ],
+      "competency": "billetterie",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-15-exception",
+      "prompt": "Un organisateur connu réclame oralement une dérogation qui concerne une zone réservée. L'agent ignore s'il est habilité à l'accorder. Que vérifier ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Son pouvoir de validation, le périmètre de la dérogation et sa traçabilité."
+        },
+        {
+          "id": "2",
+          "text": "Sa notoriété auprès du public, suffisante pour confirmer cette autorité."
+        },
+        {
+          "id": "3",
+          "text": "Son accès habituel à la zone, qui permet d'étendre les droits d'autres personnes."
+        }
+      ],
+      "answer": "1",
+      "explanation": "Une habitude d'accès ou une fonction visible ne prouvent pas la compétence pour autoriser une exception.",
+      "module": "15 · Sécuriser un événement",
+      "sources": [
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ],
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ]
+      ],
+      "competency": "exception",
+      "assessment_origin": "independent-final-v10"
+    },
+    {
+      "id": "aps62-final-v10-15-retour_public",
+      "prompt": "Après une évacuation, un responsable technique donne seulement une information partielle sur la zone. Le public veut revenir. Quelle conduite retenir ?",
+      "options": [
+        {
+          "id": "1",
+          "text": "Attendre une autorisation fiable et organiser le retour selon les consignes."
+        },
+        {
+          "id": "2",
+          "text": "Rouvrir les accès si aucune fumée n'est visible depuis le poste d'entrée."
+        },
+        {
+          "id": "3",
+          "text": "Laisser revenir les premiers groupes pour vérifier que le trajet est praticable."
+        }
+      ],
+      "answer": "1",
+      "explanation": "La réintégration demande une autorisation et une organisation. Une observation partielle ou un essai avec le public ne remplace pas cette décision.",
+      "module": "15 · Sécuriser un événement",
+      "sources": [
+        [
+          "CSI, article L613-2 (édition août 2026)",
+          "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054725427"
+        ],
+        [
+          "CSI, livre VI",
+          "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000025503132/LEGISCTA000025506179/"
+        ]
+      ],
+      "competency": "retour_public",
+      "assessment_origin": "independent-final-v10"
+    }
+  ],
+  "reviewed_on": "2026-10-10",
+  "assessment_revision": "20261010-aps62-v10"
+}
