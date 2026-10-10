@@ -1541,9 +1541,11 @@ def create_native_elearning_blueprint(
             "native_elearning_path.html", modules=modules,
             learner_brand=session_obj.get("learner_brand") or {},
             training_label=training_label,
-            hero_illustration_url=url_for("static", filename="images/learner-welcome-aps.webp") if any(
-                m["course"] and str(m["course"].get("id") or "").startswith("academy-aps62-") for m in modules
-            ) else "",
+            hero_illustration_url=url_for("static", filename="images/learner-welcome-vtc.webp") if training_label == "VTC" else (
+                url_for("static", filename="images/learner-welcome-aps.webp") if any(
+                    m["course"] and str(m["course"].get("id") or "").startswith("academy-aps62-") for m in modules
+                ) else ""
+            ),
             path_title=session_obj.get("aps_native_path_title") or "Mon parcours " + training_label,
             session_name=session_obj.get("name") or "Formation " + training_label,
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
