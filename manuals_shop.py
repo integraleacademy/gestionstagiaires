@@ -25,6 +25,8 @@ import manuals_commerce as commerce
 import elearning_orders
 import elearning_groups
 import elearning_reporting
+import organisme_profile
+import elearning_demo
 from manuals_presentation import presentation_books
 
 
@@ -39,7 +41,8 @@ CATALOGUE = (
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
-CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS
+PUBLIC_ENDPOINTS |= organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS
+CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
 SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
 MAX_LOGO_BYTES = 5 * 1024 * 1024
 
@@ -643,6 +646,8 @@ def register(host):
     elearning_orders.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     elearning_groups.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, kick_worker=kick_worker)
     elearning_reporting.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data)
+    organisme_profile.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf)
+    elearning_demo.register_routes(host, bp)
     app.register_blueprint(bp)
 
 

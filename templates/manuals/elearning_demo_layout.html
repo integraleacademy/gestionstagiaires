@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>{% block title %}Découvrir l’e-learning APS{% endblock %} · Démonstration</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-demo.css', v='20261010-1') }}">
+  <script defer src="{{ url_for('static', filename='js/elearning-demo.js', v='20261010-1') }}"></script>
+</head>
+<body class="demo-body">
+  <a class="demo-skip" href="#demo-main">Aller au contenu</a>
+  <div class="demo-print-notice">DÉMONSTRATION APS — Données fictives. L’impression de cet extrait n’est pas disponible.</div>
+  <div class="demo-screen">
+    <header class="demo-header">
+      <a class="demo-brand" href="{{ url_for('manuals_shop.elearning_demo') }}"><span class="demo-monogram" aria-hidden="true">APS</span><span>Espace e-learning<small>Centre de formation exemple</small></span></a>
+      <a class="demo-return" href="{{ url_for('manuals_shop.elearning_soon') if session.get('admin_logged_in') else url_for('admin_login') }}">{{ 'Mon espace organisme' if session.get('admin_logged_in') else 'Se connecter' }} <span aria-hidden="true">↗</span></a>
+    </header>
+    <div class="demo-notice"><span class="demo-tag">Démonstration</span><p>Camille Martin est un stagiaire fictif à 50 %. Explorez un extrait de cours et son suivi sans modifier de données réelles.</p></div>
+    <nav class="demo-tabs" aria-label="Explorer la démonstration">
+      <a href="{{ url_for('manuals_shop.elearning_demo') }}" {% if view in ['stagiaire','cours'] %}aria-current="page"{% endif %}><span aria-hidden="true">01</span> Côté stagiaire</a>
+      <a href="{{ url_for('manuals_shop.elearning_demo', view='suivi') }}" {% if view == 'suivi' %}aria-current="page"{% endif %}><span aria-hidden="true">02</span> Côté centre · le suivi</a>
+    </nav>
+    <main id="demo-main" class="demo-main">{% block content %}{% endblock %}</main>
+    <footer class="demo-footer"><span>Démonstration APS · Extrait de cours avec filigrane</span><a href="{{ url_for('manuals_shop.register_account') }}">Créer mon espace organisme <span aria-hidden="true">↗</span></a></footer>
+    <div class="demo-watermarks" aria-hidden="true"><span>DÉMONSTRATION APS</span><span>DÉMONSTRATION APS</span><span>DÉMONSTRATION APS</span></div>
+  </div>
+</body>
+</html>

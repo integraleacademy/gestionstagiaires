@@ -12,6 +12,16 @@
 - Le tarif APS initial reprend les 59 € déjà affichés dans l'espace organisme. Le tarif VTC doit être défini par l'administrateur.
 - Renseigner la TVA e-learning dans les réglages de facturation existants avant la première commande payante. La connexion Qonto, l'IBAN et l'autorisation de paiement restent ceux de la plateforme marchande.
 
+## Démonstration et identité du centre
+
+La démonstration publique `/e-learning/demo/aps` présente Camille Martin, un stagiaire fictif à 50 %, avec une vue apprenant et une vue de suivi. Elle utilise les titres du programme APS et un extrait de cours autorisé. Ses données restent séparées des commandes et de la base de suivi : aucune facture, activation, connexion ou attestation réelle n’est créée. Le PDF d’exemple porte la mention SPÉCIMEN. Les liens sont disponibles sur la connexion, l’accueil organisme et le tableau de bord e-learning.
+
+Le filigrane et les restrictions de copie/impression de la démonstration dissuadent la réutilisation. Ils ne peuvent pas empêcher une capture réalisée par le système d’exploitation, un autre appareil ou un navigateur modifié.
+
+La rubrique « Mon organisme » (`/admin/organisme/mon-organisme`) permet de modifier les coordonnées professionnelles et le logo. L’adresse de contact de l’organisme ne change pas l’identifiant de connexion du compte utilisateur. Les tarifs, droits, abonnements et commandes restent hors du formulaire. Les nouvelles communications stagiaires et leurs pages d’accès utilisent l’identité actuelle du centre ; les instantanés comptables sont conservés.
+
+Les logos importés sont contrôlés et réencodés en PNG. L’image seule est accessible par une URL aléatoire pour que les messageries puissent l’afficher. Les attestations utilisent uniquement le fichier local du même organisme, jamais un téléchargement arbitraire. La suppression du logo rétablit une présentation avec le nom du centre.
+
 ## Paiement et livraison
 
 Une commande payante émet sa facture Qonto avant le paiement. Le traitement vérifie la référence, le client, la devise et le montant de la facture. Un retour navigateur ou un montant envoyé par le formulaire ne débloque jamais un accès. Le statut payé, le paiement intégral et un solde nul sont nécessaires. Une commande gratuite utilise le tarif accordé par l'administrateur à la confirmation, sans Qonto.

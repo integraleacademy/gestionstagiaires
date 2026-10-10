@@ -216,18 +216,26 @@ def group_progress(host, group):
     return result
 
 
-def certificate_pdf(report, partner, order, person):
-    """Issue an accurate follow-up record, never a claim of unearned hours."""
+def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=False):
+    """Issue the centre's follow-up record from real tracking evidence.
+
+    ``logo_path`` is an optional trusted local Path resolved by the tenant's
+    profile helper, never a request parameter or a remote URL. ``specimen`` is
+    used only by the fictional public demonstration, not by the customer route.
+    """
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_LEFT
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether, Image
 
     output = io.BytesIO()
+    centre_name = str(partner.get("name") or partner.get("centre") or "Organisme de formation").strip()
     doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=18 * mm, leftMargin=18 * mm,
-                            topMargin=18 * mm, bottomMargin=20 * mm, title="Attestation de suivi e-learning")
+                            topMargin=18 * mm, bottomMargin=20 * mm,
+                            title="SPECIMEN - Attestation de suivi e-learning" if specimen else "Attestation de suivi e-learning",
+                            author=centre_name)
     styles = {name: ParagraphStyle(name, fontName=font, fontSize=size, leading=leading,
               textColor=colors.HexColor(color), spaceAfter=after, alignment=TA_LEFT) for name, font, size, leading, color, after in (
         ("brand", "Helvetica-Bold", 12, 15, "#2265a8", 16),
@@ -239,13 +247,56 @@ def certificate_pdf(report, partner, order, person):
         ("th", "Helvetica-Bold", 8, 11, "#ffffff", 0))}
     def p(value, style="body"):
         return Paragraph(escape(str(value)).replace("\n", "<br/>"), styles[style])
+    issuer = [p(centre_name, "brand")]
+    address = ", ".join(str(partner.get(key) or "").strip() for key in ("address", "address_extra") if str(partner.get(key) or "").strip())
+    city = " ".join(str(partner.get(key) or "").strip() for key in ("postal_code", "city") if str(partner.get(key) or "").strip())
+    contact = " · ".join(str(partner.get(key) or "").strip() for key in ("email", "phone") if str(partner.get(key) or "").strip())
+    for line in (address, city, contact, "SIRET : " + str(partner["siret"]) if partner.get("siret") else ""):
+        if line:
+            issuer.append(p(line, "small"))
+    logo = None
+    if isinstance(logo_path, Path):
+        # Decode local image bytes ourselves. ReportLab never receives a URL or
+        # a filesystem string that could trigger its remote image loader.
+        from PIL import Image as PillowImage, UnidentifiedImageError
+        try:
+            if logo_path.is_file() and logo_path.stat().st_size <= 5 * 1024 * 1024:
+                with logo_path.open("rb") as source:
+                    image_data = source.read(5 * 1024 * 1024 + 1)
+                with PillowImage.open(io.BytesIO(image_data)) as source_image:
+                    width, height = source_image.size
+                    if source_image.format in {"PNG", "JPEG", "WEBP"} and 0 < width * height <= 16_000_000:
+                        normalized = source_image.convert("RGBA")
+                        normalized.thumbnail((1200, 600))
+                        image_buffer = io.BytesIO()
+                        normalized.save(image_buffer, format="PNG")
+                        image_buffer.seek(0)
+                        scale = min(48 * mm / width, 22 * mm / height)
+                        logo = Image(image_buffer, width=width * scale, height=height * scale)
+                        logo.hAlign = "LEFT"
+        except (OSError, ValueError, UnidentifiedImageError, PillowImage.DecompressionBombError):
+            logo = None
+    if logo is not None:
+        heading = Table([[logo, issuer]], colWidths=[55 * mm, 119 * mm], hAlign="LEFT")
+        heading.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+        story = [heading]
+    else:
+        story = issuer
+    story.append(Spacer(1, 7 * mm))
+    if specimen:
+        story.extend([p("SPECIMEN - DONNÉES FICTIVES", "heading"),
+                      p("Exemple de document. Ce spécimen ne prouve aucun suivi de formation et ne constitue pas une attestation délivrée à un stagiaire.", "small")])
     name = f"{person.get('first_name', '')} {person.get('last_name', '')}".strip()
-    story = [p("INTÉGRALE ACADEMY  /  E-LEARNING", "brand"), p("Attestation de suivi", "title"),
+    story.extend([p("Attestation de suivi", "title"),
              p("Parcours e-learning terminé" if report["complete"] else "Relevé de suivi partiel - parcours non terminé", "heading"),
              p(f"Stagiaire : {name}"), p(f"Adresse e-mail : {person.get('email', '')}"),
-             p(f"Organisme de formation : {partner.get('name') or partner.get('centre') or 'Organisme partenaire'}"),
+             p(f"Organisme de formation : {centre_name}"),
              p(f"Formation : {learning.COURSES[order['course_code']]['title']} ({order['course_code'].upper()})"),
-             p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}"), Spacer(1, 4 * mm)]
+             p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}"), Spacer(1, 4 * mm)])
     metrics = [[p("TEMPS ACTIF ENREGISTRÉ", "small"), p("MODULES TERMINÉS", "small")],
                [p(report["active_time_label"], "heading"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading")],
                [p("DURÉE PRÉVUE DU PARCOURS", "small"), p("ACTIVITÉS TERMINÉES", "small")],
@@ -270,15 +321,29 @@ def certificate_pdf(report, partner, order, person):
                               ("BOTTOMPADDING", (0, 0), (-1, -1), 9)]))
     story.extend([p("Détail du parcours", "heading"), table, Spacer(1, 6 * mm),
                   KeepTogether([p(f"Édité le {report['generated_at_label']} (heure de Paris).", "small"),
-                    p("Attestation établie à partir des traces de la plateforme Intégrale Academy. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
+                    p("Données fictives de démonstration : ce document n’atteste d’aucune formation suivie." if specimen else
+                      f"Attestation éditée pour {centre_name} à partir des traces de sa plateforme e-learning. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
                     p(f"Référence de commande : {order['id']}\nIdentifiant du stagiaire : {person['id']}", "small")])])
     def footer(canvas, document):
         canvas.saveState()
+        if specimen:
+            canvas.saveState()
+            canvas.setFillColor(colors.HexColor("#e1e8ef"))
+            canvas.translate(A4[0] / 2, A4[1] / 2)
+            canvas.rotate(40)
+            canvas.setFont("Helvetica-Bold", 66)
+            canvas.drawCentredString(0, 0, "SPECIMEN")
+            canvas.setFont("Helvetica-Bold", 16)
+            canvas.drawCentredString(0, -28, "DONNÉES FICTIVES")
+            canvas.restoreState()
         canvas.setStrokeColor(colors.HexColor("#d6e1ec"))
         canvas.line(18 * mm, 15 * mm, 192 * mm, 15 * mm)
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(colors.HexColor("#526579"))
-        canvas.drawString(18 * mm, 10 * mm, "Intégrale Academy - Suivi e-learning")
+        footer_name = centre_name
+        while canvas.stringWidth(footer_name + " - Suivi e-learning", "Helvetica", 8) > 145 * mm:
+            footer_name = footer_name[:-2].rstrip()
+        canvas.drawString(18 * mm, 10 * mm, footer_name + " - Suivi e-learning")
         canvas.drawRightString(192 * mm, 10 * mm, f"Page {document.page}")
         canvas.restoreState()
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
@@ -312,10 +377,12 @@ def register_routes(host, bp, *, page, customer, partner_data):
     @bp.get(base + "/attestation.pdf")
     @customer
     def elearning_progress_certificate(oid, learner_id):
+        from organisme_profile import logo_path
+
         partner, order, person, _ = context(oid, learner_id)
         report = ProgressReader(host).report(order, person, detailed=False)
         filename = secure_filename(f"attestation-suivi-{person.get('last_name', '')}-{person.get('first_name', '')}.pdf")
-        return Response(certificate_pdf(report, partner, order, person), mimetype="application/pdf",
+        return Response(certificate_pdf(report, partner, order, person, logo_path=logo_path(host, partner)), mimetype="application/pdf",
                         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
     @bp.get(base + "/connexions.csv")

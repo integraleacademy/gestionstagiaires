@@ -275,12 +275,13 @@ def test_learner_email_uses_centre_identity_and_reply_to_without_platform_contac
     monkeypatch.setattr(host, "ELEARNING_SENDER_EMAIL", "learning@verified-sender.example.test", raising=False)
     def brand(data):
         current = commerce._find(data, order["partner_id"], order["id"])
-        current["centre"].update(name="École Horizon", email="contact@horizon.example.test", contact_email="pedagogie@horizon.example.test")
+        current["centre"].update(name="Ancien nom du centre", email="facturation@horizon.example.test", contact_email="ancien-contact@horizon.example.test")
         # Older snapshots lack the phone field. Resolve only this exact tenant.
         current["centre"].pop("phone", None)
-        host._partner_or_404(data, order["partner_id"])["phone"] = "01 84 00 22 33"
+        host._partner_or_404(data, order["partner_id"]).update(name="École Horizon", email="contact@horizon.example.test", contact_email="pedagogie@horizon.example.test", phone="01 84 00 22 33")
         return {}
     host._atomic_update_data(brand, partner_id=order["partner_id"])
+    historical_centre = copy.deepcopy(latest(shop)["centre"])
     run(order)
     messages = [mail for mail in shop["mails"] if mail[0][0] in {"camille@example.test", "alex@example.test"}]
     assert len(messages) == 2
@@ -288,20 +289,22 @@ def test_learner_email_uses_centre_identity_and_reply_to_without_platform_contac
         assert args[1] == "Votre accès personnel APS · École Horizon"
         assert kwargs["sender_name"] == "École Horizon"
         assert kwargs["sender_email"] == "learning@verified-sender.example.test"
-        assert kwargs["reply_to"] == {"email": "pedagogie@horizon.example.test", "name": "École Horizon"}
+        assert kwargs["reply_to"] == {"email": "contact@horizon.example.test", "name": "École Horizon"}
         for content in (args[2], kwargs["text_content"]):
             assert "École Horizon" in content
-            assert "pedagogie@horizon.example.test" in content
+            assert "contact@horizon.example.test" in content
+            assert "pedagogie@horizon.example.test" not in content
             assert "01 84 00 22 33" in content
             assert "clement@integraleacademy.com" not in content
             assert "04 22 47 07 68" not in content
             assert "INTÉGRALE ACADEMY" not in content and "Intégrale Academy" not in content
-    merchant_messages = [mail for mail in shop["mails"] if mail[0][0] == "contact@horizon.example.test"]
+    merchant_messages = [mail for mail in shop["mails"] if mail[0][0] == "facturation@horizon.example.test"]
     assert merchant_messages
     for args, kwargs in merchant_messages:
         assert "Intégrale Academy" in args[1]
         assert "clement@integraleacademy.com" in args[2]
         assert not {"sender_name", "sender_email", "reply_to"} & kwargs.keys()
+    assert latest(shop)["centre"] == historical_centre
     # Existing delivery idempotency is unchanged by the new presentation.
     previous = len(shop["mails"])
     retry(order)
@@ -312,7 +315,9 @@ def test_learner_brand_fallback_is_tenant_scoped_and_validates_contacts():
     order = {"partner_id": "own", "centre": {"name": "Centre conservé", "email": "bad\r\nBcc: attacker@example.test"}}
     data = {"partners": [{"id": "other", "name": "Autre organisme", "email": "other@example.test", "phone": "09 00 00 00 00"},
                          {"id": "own", "name": "Centre actuel", "email": "centre@example.test", "phone": "01 00 00 00 00"}]}
-    assert learning.learner_brand(data, order) == {"name": "Centre conservé", "email": "centre@example.test", "phone": "01 00 00 00 00"}
+    snapshot = copy.deepcopy(order["centre"])
+    assert learning.learner_brand(data, order) == {"name": "Centre actuel", "email": "centre@example.test", "phone": "01 00 00 00 00"}
+    assert order["centre"] == snapshot
     assert learning.learner_brand({"partners": data["partners"][:1]}, {"partner_id": "own", "centre": {}}) == {
         "name": "Votre organisme de formation", "email": "", "phone": ""}
     assert learning.centre_snapshot(data["partners"][1])["phone"] == "01 00 00 00 00"

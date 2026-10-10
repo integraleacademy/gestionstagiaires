@@ -1,9 +1,9 @@
 {% extends 'manuals/layout.html' %}
-{% from 'manuals/_elearning_ui.html' import icon, group_title, steps, errors_box, learner_row %}
+{% from 'manuals/_elearning_ui.html' import icon, group_title, errors_box, learner_row %}
 {% block title %}{{ group_title(group) }} · E-learning{% endblock %}
 {% block extra_styles %}<link rel="stylesheet" href="{{ url_for('static',filename='css/elearning-orders.css',v='20261010-3') }}"><script src="{{ url_for('static',filename='js/elearning-orders.js',v='20261010-3') }}" defer></script>{% endblock %}
 {% block content %}<div class="el-wrap">
-  <a class="text-link el-back" href="{{ url_for('manuals_shop.elearning_soon') }}">← Mes espaces e-learning</a>{{ steps(2) }}
+  <a class="text-link el-back" href="{{ url_for('manuals_shop.elearning_soon') }}">← Mes espaces e-learning</a>
   <div class="el-detail-heading"><div><div class="el-inline-tags"><span class="el-course-badge" style="--course-color:{{ courses[group.course_code].color }}">{{ group.course_code|upper }}</span><span class="el-kind">{{ icon('user' if group.mode == 'individual' else 'users') }} {{ 'Accès individuel' if group.mode == 'individual' else 'Groupe' }}</span></div><h1>{{ group_title(group) }}</h1><p class="muted">Complétez votre liste, enregistrez-la et revenez quand vous voulez.</p></div><span class="el-saved" id="el-save-status" role="status">{{ icon('check') }} {{ 'Accès enregistré' if group.mode == 'individual' else 'Groupe enregistré' }}</span></div>
   {{ errors_box(errors) }}
   {% set progress = group.get('progress',{}) %}

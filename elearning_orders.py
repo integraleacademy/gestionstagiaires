@@ -120,23 +120,28 @@ def centre_snapshot(partner):
     return {key: partner.get(key, "") for key in ("name", "siret", "email", "contact_first_name", "contact_last_name", "phone", "contact_email")}
 
 
-def learner_brand(data, order):
+def learner_brand(data, order, host=None):
     """Learner messages use this centre only, never platform contact defaults."""
     snapshot = order.get("centre") or {}
     partner = next((record for record in data.get("partners", []) if record.get("id") == order.get("partner_id")), {})
     def clean(value, limit):
         return " ".join(str(value or "").split())[:limit]
-    name = clean(snapshot.get("name") or partner.get("name"), 160) or "Votre organisme de formation"
+    name = clean(partner.get("name") or snapshot.get("name"), 160) or "Votre organisme de formation"
     email = ""
-    for candidate in (snapshot.get("contact_email"), snapshot.get("email"), partner.get("contact_email"), partner.get("email")):
+    # The editable organisation profile address takes precedence over legacy contacts.
+    for candidate in (partner.get("email"), partner.get("contact_email"), snapshot.get("contact_email"), snapshot.get("email")):
         candidate = str(candidate or "").strip()
         if len(candidate) <= 254 and not any(ord(char) < 32 or char in "?#&" for char in candidate) and re.fullmatch(r"[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+", candidate):
             email = candidate
             break
-    phone = clean(snapshot.get("phone") or partner.get("phone"), 50)
-    return {"name": name, "email": email, "phone": phone}
+    phone = clean(partner.get("phone") if "phone" in partner else snapshot.get("phone"), 50)
+    brand = {"name": name, "email": email, "phone": phone}
+    if host is not None:
+        from organisme_profile import logo_url
+        brand["logo_url"] = logo_url(host, partner, _external=True) if partner else ""
+    return brand
 
-def learner_context(data, token):
+def learner_context(data, token, host=None):
     if not re.fullmatch(r"el_[A-Za-z0-9_-]{40,100}", str(token or "")):
         return None, None
     digest = hashlib.sha256(token.encode()).hexdigest()
@@ -150,7 +155,7 @@ def learner_context(data, token):
             virtual_session = {"id": "el-" + order["id"], "partner_id": order["partner_id"], "name": order.get("group_name") or "Parcours " + order["course_code"].upper(),
                                "training_type": order["course_code"].upper(), "date_start": person["activated_at"][:10], "aps_elearning_enabled": True,
                                "aps_native_modules": copy.deepcopy(order["modules"]), "aps_native_path_title": "Mon parcours " + order["course_code"].upper(),
-                               "learner_brand": learner_brand(data, order)}
+                               "learner_brand": learner_brand(data, order, host=host)}
             return virtual_session, {**person, "public_token": token, "partner_id": order["partner_id"]}
     return None, None
 
@@ -193,7 +198,7 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     paid = entitled(order)
     title = "Votre formation vous attend" if person else ("Vos accès sont activés" if paid else "Votre commande e-learning")
     link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
-    brand = learner_brand(host.load_data(run_background_tasks=False), order) if person else None
+    brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
     subject = ("Votre accès personnel " if person else "Commande e-learning ") + order["course_code"].upper() + " · " + (brand["name"] if person else "Intégrale Academy")
     if invoice:
         subject = ("Facture acquittée " if paid else "Facture à régler ") + state.get("invoice_number", "") + " · E-learning"
@@ -436,7 +441,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
     @bp.route("/apprendre/<token>", methods=["GET", "POST"])
     def elearning_access(token):
         data = host.load_data(run_background_tasks=False)
-        training, person = learner_context(data, token)
+        training, person = learner_context(data, token, host=host)
         if not person:
             abort(404, "Cet accès n’est pas disponible. Contactez votre organisme de formation.")
         if request.method == "POST":

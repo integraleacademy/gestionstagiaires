@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from PIL import Image
 from pypdf import PdfReader
 
 import app as host
@@ -178,3 +179,90 @@ def test_required_video_evidence_cannot_be_replaced_by_legacy_completion(shop):
     report = reporting.ProgressReader(host).report(order, order["learners"][0])
     assert report["progress_percent"] == 50 and not report["complete"]
     assert report["modules"][0]["total_videos"] == 1 and report["modules"][0]["completed_videos"] == 0
+
+
+def certificate_fixture():
+    return ({"complete": False, "available": True, "active_time_label": "00 h 23 min 14 s",
+             "required_time_label": "62 h 00 min 00 s", "completed_modules": 0, "total_modules": 1,
+             "completed_activities": 2, "total_activities": 8,
+             "started_at_label": "10/10/2026 à 09:00", "updated_at_label": "10/10/2026 à 09:25",
+             "generated_at_label": "10/10/2026 à 09:30", "modules": [{"title": "Le cadre de la sécurité privée",
+                 "available": True, "progress_percent": 25, "active_time_label": "00 h 23 min 14 s", "status_label": "En cours"}]},
+            {"name": "Centre & Formation Partenaire", "email": "contact@centre.example", "phone": "01 23 45 67 89",
+             "address": "12 rue de la Formation", "address_extra": "Bâtiment B", "postal_code": "75001", "city": "Paris",
+             "siret": "73282932000074"},
+            {"id": "commande-exemple", "course_code": "aps", "group_name": "APS septembre 2026"},
+            {"id": "participant-exemple", "first_name": "Camille", "last_name": "Martin", "email": "camille@example.test"})
+
+
+@pytest.mark.parametrize("dimensions", [(900, 120), (80, 450), (1, 1)])
+def test_certificate_uses_centre_identity_and_embeds_local_logo_without_distortion(tmp_path, dimensions):
+    report, partner, order, person = certificate_fixture()
+    logo = tmp_path / "centre.png"
+    Image.new("RGBA", dimensions, (10, 95, 160, 255)).save(logo)
+    document = PdfReader(io.BytesIO(reporting.certificate_pdf(report, partner, order, person, logo_path=logo)))
+    text = "\n".join(page.extract_text() for page in document.pages)
+    for value in (partner["name"], partner["email"], partner["phone"], partner["address"], partner["siret"], "00 h 23 min 14 s"):
+        assert value in text
+    assert "Intégrale Academy" not in text and "04 22 47 07 68" not in text
+    assert "Relevé de suivi partiel" in text
+    images = [value.get_object() for page in document.pages for value in page.get("/Resources", {}).get("/XObject", {}).values()
+              if value.get_object().get("/Subtype") == "/Image"]
+    assert len(images) == 1
+    assert images[0]["/Width"] / images[0]["/Height"] == pytest.approx(dimensions[0] / dimensions[1])
+    assert document.metadata.author == partner["name"]
+
+
+@pytest.mark.parametrize("kind", ["missing", "corrupt", "remote"])
+def test_certificate_optional_logo_fails_cleanly_without_remote_loading(tmp_path, monkeypatch, kind):
+    report, partner, order, person = certificate_fixture()
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *args, **kwargs: pytest.fail("PDF must never download a logo"))
+    logo = tmp_path / "logo.png"
+    if kind == "corrupt":
+        logo.write_bytes(b"This is not an image")
+    if kind == "remote":
+        logo = "https://untrusted.example/logo.png"
+    result = reporting.certificate_pdf(report, partner, order, person, logo_path=logo)
+    document = PdfReader(io.BytesIO(result))
+    assert partner["name"] in document.pages[0].extract_text()
+    assert not document.pages[0].get("/Resources", {}).get("/XObject", {})
+
+
+def test_sample_certificate_is_marked_fictional_on_every_page():
+    report, partner, order, person = certificate_fixture()
+    report["modules"] = [dict(report["modules"][0], title=f"Module de démonstration {index}") for index in range(1, 20)]
+    report["total_modules"] = len(report["modules"])
+    document = PdfReader(io.BytesIO(reporting.certificate_pdf(report, partner, order, person, specimen=True)))
+    assert len(document.pages) >= 2
+    assert "SPECIMEN" in document.metadata.title
+    for page in document.pages:
+        text = page.extract_text()
+        assert "SPECIMEN" in text and "DONNÉES FICTIVES" in text
+    text = "\n".join(page.extract_text() for page in document.pages)
+    assert "Ce spécimen ne prouve aucun suivi" in text and "n’atteste d’aucune formation suivie" in text
+
+
+def test_customer_certificate_resolves_current_own_profile_and_ignores_logo_query(shop, monkeypatch):
+    import organisme_profile
+
+    order = activated(shop)
+    logo = Path(host.PERSIST_DIR) / "own-logo.png"
+    Image.new("RGB", (120, 40), "blue").save(logo)
+    def update(data):
+        partner = next(p for p in data["partners"] if p["id"] == order["partner_id"])
+        partner.update(name="Mon Centre Actuel", phone="01 00 00 00 09", address="9 rue du Centre")
+    host._atomic_update_data(update, partner_id=order["partner_id"])
+    calls = []
+    def resolve(app, partner):
+        calls.append(partner["id"])
+        return logo
+    monkeypatch.setattr(organisme_profile, "logo_path", resolve)
+    response = shop["client"].get(report_url(order) + "/attestation.pdf?partner_id=foreign&logo_path=/etc/passwd&specimen=true")
+    assert response.status_code == 200
+    document = PdfReader(io.BytesIO(response.data))
+    text = "\n".join(page.extract_text() for page in document.pages)
+    assert calls == [order["partner_id"]]
+    assert "Mon Centre Actuel" in text and "9 rue du Centre" in text and "01 00 00 00 09" in text
+    assert "SPECIMEN" not in text and "Intégrale Academy" not in text
+    assert document.pages[0]["/Resources"]["/XObject"]
