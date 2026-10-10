@@ -1,0 +1,26 @@
+<div class="a3p-lesson">
+{% if activity.a3p.kind == 'lesson' %}
+  <div class="a3p-objective"><span class="a3p-eyebrow">Objectif · Leçon {{ activity.a3p.ref }}</span><p>{{ activity.a3p.objective }}</p></div>
+  {% if activity.a3p.practice_notice %}<p class="a3p-practice-note">Cette lecture prépare la compréhension. Les gestes, déplacements, matériels et mises en situation se travaillent avec un formateur ; ils ne sont pas validés à l’écran.</p>{% endif %}
+  <nav class="a3p-page-index" aria-label="Parties de la leçon">{% for page in activity.a3p.pages %}<a href="#a3p-page-{{ page.page }}">{{ loop.index }} · {{ 'Découvrir' if page.kind == 'COURS ILLUSTRÉ' else 'Approfondir' if page.kind == 'APPROFONDISSEMENT' else 'Comprendre' }}</a>{% endfor %}</nav>
+  {% for page in activity.a3p.pages %}
+  <section class="a3p-reading" id="a3p-page-{{ page.page }}" aria-labelledby="a3p-page-title-{{ page.page }}">
+    <header><span class="a3p-reading-number">{{ '%02d'|format(loop.index) }}</span><div><h2 id="a3p-page-title-{{ page.page }}">{{ 'Découvrir les repères' if page.kind == 'COURS ILLUSTRÉ' else 'Approfondir et appliquer' if page.kind == 'APPROFONDISSEMENT' else 'Comprendre en détail' }}</h2><span>Manuel A3P · page {{ page.page }}</span></div></header>
+    {% for component in page.components %}
+      {% if component.kind == 'heading' %}<h3>{{ component.text }}</h3>
+      {% elif component.kind == 'table' %}<div class="a3p-table-scroll" role="region" aria-label="Repères de la page {{ page.page }}" tabindex="0"><table><caption>Repères du cours · page {{ page.page }}</caption><tbody>{% for row in component.rows %}{% set header_row = loop.first %}<tr>{% for cell in row %}{% if header_row %}<th scope="col">{{ cell }}</th>{% else %}<td>{{ cell }}</td>{% endif %}{% endfor %}</tr>{% endfor %}</tbody></table></div>
+      {% else %}<p>{{ component.text }}</p>{% endif %}
+    {% endfor %}
+  </section>
+  {% endfor %}
+  <footer class="a3p-source">Source pédagogique : manuel A3P fourni par Intégrale Academy, édition octobre 2026, leçon {{ activity.a3p.ref }}. Les titres et le texte ont été adaptés pour la lecture à l’écran. Les questions suivantes permettent de vérifier les connaissances.</footer>
+{% elif activity.a3p.kind == 'case' %}
+  {% set case = activity.a3p.case %}
+  <ol class="a3p-flow" aria-label="Démarche de raisonnement">{% for step in activity.a3p.flow %}<li><b>{{ loop.index }}</b><span>{{ step }}</span></li>{% endfor %}</ol>
+  <section class="a3p-case-context"><span class="a3p-eyebrow">Situation fictive</span><p>{{ case.situation }}</p></section>
+  <h2>Construire votre réponse</h2>
+  <p>Rédigez votre raisonnement avant d’ouvrir la proposition de correction. Le brouillon ci-dessous reste dans cette page et n’est pas enregistré.</p>
+  <ol class="a3p-tasks">{% for task in case.tasks %}<li><label for="a3p-case-answer-{{ loop.index }}">{{ task }}</label><textarea id="a3p-case-answer-{{ loop.index }}" rows="4" maxlength="5000" placeholder="Votre analyse…"></textarea></li>{% endfor %}</ol>
+  <details class="a3p-case-feedback"><summary>Comparer avec les critères et la proposition de réponse</summary><h3>Critères de relecture</h3><ul>{% for criterion in case.criteria %}<li>{{ criterion }}</li>{% endfor %}</ul><h3>Une réponse possible</h3><p>{{ case.example }}</p><p class="a3p-practice-note">{{ case.debrief }}</p></details>
+{% endif %}
+</div>

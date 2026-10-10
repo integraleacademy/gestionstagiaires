@@ -8,6 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-menu') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
+  {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-1') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
@@ -61,7 +62,7 @@
       </div>
     </div>
     {% if preview_mode %}
-    <span class="native-preview-badge">Mode aperçu</span>
+    <span class="native-preview-badge">{{ 'A3P · préparation pédagogique' if course.training_label == 'A3P' else 'Mode aperçu' }}</span>
     {% else %}
     <div class="native-live-metrics" aria-label="Suivi de la session">
       <div class="native-tracking-state" id="nativeTrackingState" data-state="connecting">
@@ -143,6 +144,7 @@
           </section>
         {% endif %}
 
+        {% if course.training_label == 'A3P' %}<aside class="a3p-notice" role="note"><strong>Aperçu pédagogique A3P</strong><p>Ce travail ne délivre aucune heure certifiante. Les compétences pratiques doivent être formées et évaluées en présentiel. <a href="{{ portal_url }}#a3p-reglementation">Consulter le cadre réglementaire et le statut ADEF</a>.</p></aside>{% endif %}
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
             <span class="native-kicker">{{ 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
@@ -159,6 +161,7 @@
               {% for block in activity.blocks %}{{ render_block(block) }}{% endfor %}
               {% if activity.academy or activity.production %}{% include '_aps62_activity.html' %}{% endif %}
               {% if activity.vtc %}{% include '_vtc_activity.html' %}{% endif %}
+              {% if activity.a3p %}{% include '_a3p_lesson.html' %}{% endif %}
             </div>
           {% else %}
             {% set saved_answer = progress.answers.get(activity.id, {}) %}
@@ -281,3 +284,4 @@
 {% if activity.production %}<script src="{{ url_for('static', filename='js/aps62-production.js', v='20261010-v10') }}" defer></script>{% endif %}
 </body>
 </html>
+

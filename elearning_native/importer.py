@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 
 from .videos import bundled_asset_path, enrich_course
 from .academy import load_bundled_course, curriculum_ids, bundled_asset
-from . import vtc
+from . import vtc, a3p
 
 try:
     import fcntl
@@ -946,6 +946,11 @@ class CourseCatalog:
             return bundled
         if bundled := vtc.load_bundled_course(course_id, version):
             return bundled
+        if course_id in a3p.curriculum_ids():
+            bundled = a3p.load_bundled_course(course_id, version)
+            if bundled is None:
+                raise CourseImportError("Version A3P introuvable.")
+            return bundled
         if version is None:
             try:
                 pointer = json.loads((course_root / "current.json").read_text(encoding="utf-8"))
@@ -966,11 +971,11 @@ class CourseCatalog:
 
     def list_courses(self) -> List[Dict[str, Any]]:
         courses_root = self.root / "courses"
-        courses: List[Dict[str, Any]] = [self.load_course(course_id) for course_id in curriculum_ids() + vtc.curriculum_ids()]
+        courses: List[Dict[str, Any]] = [self.load_course(course_id) for course_id in curriculum_ids() + vtc.curriculum_ids() + a3p.curriculum_ids()]
         for course_dir in sorted(courses_root.iterdir() if courses_root.is_dir() else [], key=lambda item: item.name):
             if not course_dir.is_dir() or not _SAFE_COURSE_ID_RE.fullmatch(course_dir.name):
                 continue
-            if course_dir.name in curriculum_ids() + vtc.curriculum_ids():
+            if course_dir.name in curriculum_ids() + vtc.curriculum_ids() + a3p.curriculum_ids():
                 continue
             try:
                 course = self.load_course(course_dir.name)
@@ -999,3 +1004,4 @@ class CourseCatalog:
         if expected_root not in resolved.parents or not resolved.is_file():
             raise CourseImportError("Média introuvable.")
         return resolved
+

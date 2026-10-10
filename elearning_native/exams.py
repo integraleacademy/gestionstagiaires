@@ -12,7 +12,7 @@ import sqlite3
 from functools import lru_cache
 from pathlib import Path
 from .academy import ROOT, curriculum_manifest
-from . import vtc
+from . import vtc, a3p
 
 
 @lru_cache(maxsize=64)
@@ -26,6 +26,8 @@ def _load(exam_id, version):
 
 
 def load_exam(exam_id, version):
+    if str(exam_id).startswith('a3p-'):
+        return a3p.load_exam(exam_id, version)
     if str(exam_id).startswith('vtc-'):
         return vtc.load_exam(exam_id,version)
     return copy.deepcopy(_load(exam_id, version))
@@ -99,3 +101,4 @@ class ExamStore:
                 (str(session_id), str(trainee_id), exam['id'], exam['version'])).fetchall()
         return [{'attempt_id': r['attempt_id'], 'submitted_at': r['submitted_at'],
                  **{k: json.loads(r['result_json'])[k] for k in ('score','total','percent','passed')}} for r in rows]
+
