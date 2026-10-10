@@ -44,7 +44,7 @@ jobs:
           expected = dict(version='20261010-aps62-v10', branch='test-v2', enabled=True,
               publish_enabled=True, shards=4, media_revision=8, source_run_id=38024849922,
               source_run_attempt=1, source_sha='9f144f72768f5ddeedf7a9fc1c4766fcf40e9425',
-              reviewed_base_sha='883fcd731b5aee06bce8ffc81caa875e87bb182c', request_revision=2)
+              reviewed_base_sha='3d9b85e096e3db2065ff81011ca1cb299623dcb5', request_revision=3)
           for key, value in expected.items():
               assert release[key] == value, (key, release.get(key))
           source, reviewed, launch = release['source_sha'], release['reviewed_base_sha'], os.environ['GITHUB_SHA']
@@ -53,21 +53,48 @@ jobs:
           subprocess.run(['git', 'merge-base', '--is-ancestor', source, reviewed], check=True)
           subprocess.run(['git', 'merge-base', '--is-ancestor', reviewed, launch], check=True)
           concurrent = {
-              'app.py', 'docs/elearning-orders.md', 'elearning_groups.py',
-              'elearning_native/web.py', 'elearning_orders.py',
-              'templates/manuals/elearning_access.html', 'templates/manuals/elearning_email.html',
-              'tests/test_elearning_learner_redirect.py', 'tests/test_elearning_mail_identity.py',
-              'tests/test_elearning_orders.py',
-              'docs/vtc-english-audio.md', 'elearning_native/vtc.py',
+              'app.py',
+              'docs/elearning-orders.md',
+              'docs/vtc-english-audio.md',
+              'elearning_demo.py',
+              'elearning_groups.py',
+              'elearning_native/vtc.py',
               'elearning_native/vtc/assets/media/vtc/v8/audio/e-01-2.mp3',
               'elearning_native/vtc/listening_corrections_v8.json',
-              'elearning_native/vtc_training_web.py', 'scripts/vtc/render_green_dialogue.py',
-              'tests/test_vtc_english_narration.py', 'tests/test_vtc_green_dialogue.py',
+              'elearning_native/vtc_training_web.py',
+              'elearning_native/web.py',
+              'elearning_orders.py',
+              'elearning_reporting.py',
+              'manuals_shop.py',
+              'organisme_profile.py',
+              'scripts/vtc/render_green_dialogue.py',
+              'static/css/elearning-demo.css',
+              'static/css/organisme-profile.css',
+              'static/js/elearning-demo.js',
+              'templates/admin_login.html',
+              'templates/manuals/elearning_access.html',
+              'templates/manuals/elearning_catalogue.html',
+              'templates/manuals/elearning_demo.html',
+              'templates/manuals/elearning_demo_layout.html',
+              'templates/manuals/elearning_demo_lesson.html',
+              'templates/manuals/elearning_email.html',
+              'templates/manuals/elearning_group.html',
+              'templates/manuals/home.html',
+              'templates/manuals/layout.html',
+              'templates/manuals/organisme_profile.html',
+              'tests/test_elearning_demo.py',
+              'tests/test_elearning_learner_redirect.py',
+              'tests/test_elearning_mail_identity.py',
+              'tests/test_elearning_orders.py',
+              'tests/test_elearning_reporting.py',
+              'tests/test_native_elearning_vtc105.py',
+              'tests/test_organisme_branding.py',
+              'tests/test_organisme_profile.py',
+              'tests/test_vtc_english_narration.py',
+              'tests/test_vtc_green_dialogue.py',
           }
-          prior_recovery = {'.github/workflows/aps-content-v10-recovery.yml', 'scripts/aps62_v10_recovery.json'}
-          recovery = prior_recovery | {'tests/test_native_elearning_vtc105.py'}
-          # The reviewed base already contains the first recovery workflow/config.
-          assert set(git('diff', '--name-only', source, reviewed).splitlines()) == concurrent | prior_recovery
+          recovery = {'.github/workflows/aps-content-v10-recovery.yml', 'scripts/aps62_v10_recovery.json'}
+          assert set(git('diff', '--name-only', source, reviewed).splitlines()) == concurrent | recovery
           assert set(git('diff', '--name-only', reviewed, launch).splitlines()) == recovery
           assert set(git('diff', '--name-only', source, launch).splitlines()) == concurrent | recovery
           # Every approved runtime change must be exactly the reviewed blob, not just a permitted path.
@@ -141,6 +168,13 @@ jobs:
               assert job['head_sha'] == release['source_sha'] and job['run_attempt'] == attempt
               shard = job['name'].removeprefix('Produire le lot ').removesuffix(' / 4')
               assert job['id'] == release['source_render_job_ids'][shard]
+          # The immutable source workflow decoded every frame of these exact artifacts.
+          validators = [job for job in jobs if job['name'] == "Vérifier puis publier l'édition v10 complète"]
+          assert len(validators) == 1
+          verified = {step['name']: step for step in validators[0]['steps']}
+          for name in ('Vérifier les médias, contenus, productions et accès privés',
+                       'Vérifier les parcours et lecteurs côté navigateur'):
+              assert verified[name]['status'] == 'completed' and verified[name]['conclusion'] == 'success', name
           artifacts = pages(f'/runs/{run_id}/artifacts', 'artifacts')
           names = {f'aps62-v10-shard-{shard}' for shard in range(4)}
           selected = [artifact for artifact in artifacts if artifact['name'] in names]
@@ -170,7 +204,7 @@ jobs:
       contents: write
       actions: read
     env:
-      APS62_VERIFY_FULL_DECODE: '1'
+      APS62_VERIFY_FULL_DECODE: '0'
       PERSIST_DIR: /tmp/aps62-v10-test-data
       SECRET_KEY: aps-v10-ci-synthetic-key-not-used-in-production
     steps:
@@ -262,7 +296,7 @@ jobs:
         run: python scripts/build_aps62_v10.py
       - name: Vérifier les médias, contenus, productions et accès privés
         run: |
-          python -m pytest tests/test_aps62_v10_*.py tests/test_aps62_production*.py tests/test_aps62_v9_questions.py tests/test_aps62_v9_remediation.py tests/test_native_elearning_video.py tests/test_native_elearning_video_presence.py tests/test_aps62_guided.py tests/test_aps62_readability.py tests/test_elearning_mail_identity.py tests/test_elearning_learner_redirect.py tests/test_elearning_orders.py tests/test_native_elearning_web.py tests/test_native_elearning_exams.py tests/test_native_elearning_practice.py tests/test_elearning_reporting.py tests/test_vtc_green_dialogue.py tests/test_vtc_english_narration.py tests/test_vtc_training_web.py tests/test_native_elearning_vtc105.py -q
+          python -m pytest tests/test_aps62_v10_*.py tests/test_aps62_production*.py tests/test_aps62_v9_questions.py tests/test_aps62_v9_remediation.py tests/test_native_elearning_video.py tests/test_native_elearning_video_presence.py tests/test_aps62_guided.py tests/test_aps62_readability.py tests/test_elearning_mail_identity.py tests/test_elearning_learner_redirect.py tests/test_elearning_orders.py tests/test_native_elearning_web.py tests/test_native_elearning_exams.py tests/test_native_elearning_practice.py tests/test_elearning_reporting.py tests/test_vtc_green_dialogue.py tests/test_vtc_english_narration.py tests/test_vtc_training_web.py tests/test_native_elearning_vtc105.py tests/test_elearning_demo.py tests/test_organisme_branding.py tests/test_organisme_profile.py tests/test_manuals_shop.py -q
       - name: Vérifier les parcours et lecteurs côté navigateur
         run: |
           npm install --prefix "$RUNNER_TEMP/aps-ui-checks" --no-audit --no-fund --ignore-scripts jsdom@26.1.0
@@ -309,27 +343,24 @@ jobs:
           paths = subprocess.check_output([
               'git', 'diff', '--name-only', os.environ['GITHUB_SHA'], 'origin/test-v2',
           ]).decode().splitlines()
+          # Rebase independent runtime/UI changes, then run all integration tests again.
+          # Authored course/video inputs must remain identical to the validated artifacts.
           protected = (
-              'elearning_native/', 'scripts/aps62', 'scripts/render_aps62',
-              'scripts/build_aps62', 'scripts/academy_videos/', 'elearning_reporting.py',
-              'elearning_orders.py', 'elearning_groups.py', 'manuals_shop.py', 'app.py', 'requirements.txt',
-              'static/js/native-elearning', 'static/js/aps62', 'static/css/aps62',
-              'templates/native_', 'templates/_aps62', 'templates/admin_native_',
-              'templates/elearning_progress.html', 'templates/manuals/elearning_', '.github/workflows/aps-',
-              'tests/test_aps62', 'tests/test_native_elearning', 'tests/test_elearning',
+              'elearning_native/aps62/', 'scripts/aps62', 'scripts/render_aps62',
+              'scripts/build_aps62', 'scripts/academy_videos/',
+              '.github/workflows/aps-content-v10.yml',
+              '.github/workflows/aps-content-v10-recovery.yml',
           )
-          def is_protected(path):
-              isolated_vtc = path in ('elearning_native/vtc.py', 'elearning_native/vtc_training_web.py') or path.startswith('elearning_native/vtc/')
-              return path.startswith(protected) and not isolated_vtc
-          touched = [p for p in paths if is_protected(p)]
-          assert not touched, f'Protected files changed after recovery launch; publication stopped: {touched}'
+          touched = [p for p in paths if p.startswith(protected)]
+          assert not touched, f'APS content inputs changed after recovery launch; publication stopped: {touched}'
           PY
           if ! git rebase origin/test-v2; then
             git rebase --abort
             echo '::error::Changements concurrents incompatibles : les vidéos restent dans les artifacts.'
             exit 1
           fi
-          APS62_VERIFY_FULL_DECODE=0 python -m pytest tests/test_aps62_v10_*.py tests/test_aps62_production*.py tests/test_native_elearning_video_presence.py tests/test_aps62_guided.py tests/test_aps62_readability.py tests/test_elearning_mail_identity.py tests/test_elearning_learner_redirect.py tests/test_elearning_orders.py tests/test_native_elearning_web.py tests/test_native_elearning_exams.py tests/test_native_elearning_practice.py tests/test_elearning_reporting.py tests/test_vtc_green_dialogue.py tests/test_vtc_english_narration.py tests/test_vtc_training_web.py tests/test_native_elearning_vtc105.py -q
+          APS62_VERIFY_FULL_DECODE=0 python -m pytest tests/test_aps62_v10_*.py tests/test_aps62_production*.py tests/test_native_elearning_video_presence.py tests/test_aps62_guided.py tests/test_aps62_readability.py tests/test_elearning_mail_identity.py tests/test_elearning_learner_redirect.py tests/test_elearning_orders.py tests/test_native_elearning_web.py tests/test_native_elearning_exams.py tests/test_native_elearning_practice.py tests/test_elearning_reporting.py tests/test_vtc_green_dialogue.py tests/test_vtc_english_narration.py tests/test_vtc_training_web.py tests/test_native_elearning_vtc105.py tests/test_elearning_demo.py tests/test_organisme_branding.py tests/test_organisme_profile.py tests/test_manuals_shop.py -q
+          NODE_PATH="$RUNNER_TEMP/aps-ui-checks/node_modules" node --test tests/test_aps62_production_ui.cjs tests/test_native_elearning_video_ui.cjs tests/test_native_elearning_player_ui.cjs tests/test_aps62_guided_ui.cjs tests/test_native_elearning_exam_ui.cjs
           git push origin HEAD:refs/heads/test-v2
           python - <<'PY'
           import json, os, subprocess

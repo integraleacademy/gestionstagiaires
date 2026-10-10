@@ -8,9 +8,9 @@
   "source_run_id": 38024849922,
   "source_run_attempt": 1,
   "source_sha": "9f144f72768f5ddeedf7a9fc1c4766fcf40e9425",
-  "reviewed_base_sha": "883fcd731b5aee06bce8ffc81caa875e87bb182c",
-  "request_revision": 2,
-  "request": "Reprendre la publication APS v10 avec les quatre lots déjà rendus, après conservation et validation des changements des accès apprenants, des mails et du dialogue VTC sur TEST.",
+  "reviewed_base_sha": "3d9b85e096e3db2065ff81011ca1cb299623dcb5",
+  "request_revision": 3,
+  "request": "Publier APS v10 avec les lots validés, conserver les mises à jour des accès, du VTC, de la démonstration et de l’identité du centre, puis retester l’ensemble après intégration.",
   "source_render_job_ids": {
     "0": 114133631271,
     "1": 114133631259,
