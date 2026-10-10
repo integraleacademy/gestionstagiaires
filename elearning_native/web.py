@@ -1584,6 +1584,8 @@ def create_native_elearning_blueprint(
         if not order:
             abort(404)
         requested_id = str(request.args.get("activity") or progress.get("current_activity_id") or "")
+        if course.get("training_label") == "A3P" and request.args.get("activity") and requested_id not in order:
+            abort(404, "Cette ressource ne fait pas partie des objectifs à distance affectés.")
         if requested_id not in order:
             requested_id = _next_incomplete(order, progress.get("completed_activity_ids") or []) or order[0]
         completed = set(progress.get("completed_activity_ids") or [])

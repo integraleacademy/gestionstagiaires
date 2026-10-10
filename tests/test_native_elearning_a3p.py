@@ -166,7 +166,10 @@ class A3PWebTests(unittest.TestCase):
         r=self.client.post('/api/admin/sessions/session-aps/elearning/path',json={'revision':path_revision(s),'title':'A3P','modules':[module]},headers={'X-Elearning-CSRF':self.csrf()})
         self.assertEqual(r.status_code,200)
         page=self.client.get('/admin/sessions/session-aps/elearning');self.assertIn('a3pAddPath',page.text)
-        self._public_login();page=self.client.get('/espace/public-token/elearning/academy-a3p-06')
+        self._public_login()
+        portal=self.client.get('/espace/public-token')
+        self.assertEqual(portal.status_code,200);self.assertIn('Accéder à mon parcours A3P',portal.text)
+        page=self.client.get('/espace/public-token/elearning/academy-a3p-06')
         self.assertEqual(page.status_code,200);self.assertIn('nativeElearningConfig',page.text)
         self.assertNotIn('06.12 ·',page.text);self.assertNotIn('06.27 ·',page.text)
         self.assertEqual(self.client.get('/espace/public-token/elearning/academy-a3p-06?activity=a3p-06-12-cours').status_code,404)
@@ -180,6 +183,8 @@ class A3PWebTests(unittest.TestCase):
             r=self._api_post('/api/elearning/v1/activities/'+aid+'/complete',config)
             self.assertEqual(r.status_code,200)
         q=c['sections'][0]['activities'][2]
+        blocked=self._api_post('/api/elearning/v1/activities/a3p-02-02-cours/complete',config)
+        self.assertEqual(blocked.status_code,409)
         wrong={g['id']:next(o['id'] for o in g['answers'] if not o['is_correct']) for g in q['answer_groups']}
         r=self._api_post('/api/elearning/v1/activities/'+q['id']+'/answer',config,answer={'groups':wrong})
         self.assertEqual(r.status_code,200);self.assertTrue(r.json['retry_required'])

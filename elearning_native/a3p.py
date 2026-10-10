@@ -176,7 +176,7 @@ def _course(uv):
             'regulation': {'scope': 'distance', 'reference': 'Arrêté du 1er septembre 2025 · annexes II et XI',
                            'objectives': [r for r in _review()['eligible_objectives'] if r['delivery_module'] == uv]},
             'theme': {'main_color': '#135846', 'button_color': '#135846', 'text_color': '#172f29'},
-            'settings': {'mastery_score': 80, 'require_correct_answers': True}, 'introduction': [],
+            'settings': {'mastery_score': 80, 'require_correct_answers': True, 'force_navigation': True}, 'introduction': [],
             'sections': sections, 'activity_order': [a['id'] for a in activities],
             'counts': {'sections': len(sections), 'activities': len(activities), 'scored_activities': sum(a['scored'] for a in activities), 'assets': len(assets), 'required_videos': 0}}
 

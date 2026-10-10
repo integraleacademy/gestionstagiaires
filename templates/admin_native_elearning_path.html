@@ -5,7 +5,7 @@
   <a class="np-back" href="{{ url_for('native_elearning.admin_a3p_catalog' if training_label == 'A3P' else 'native_elearning.admin_vtc_catalog' if training_label == 'VTC' else 'native_elearning.admin_catalog') }}">← Bibliothèque et sessions</a>
   <header class="np-header">
     <div><span class="np-eyebrow">Ingénierie pédagogique · {{ training_label }}</span><h1>Composer le parcours</h1><p>{{ training_session.name or training_session.id }} · {{ training_session.date_start or 'Date à renseigner' }}</p></div>
-    <span class="np-badge">{{ 'E-learning activé' if training_session.aps_elearning_enabled else 'E-learning à activer dans la session' }}</span>
+    <span class="np-badge">{{ 'Accès ouvert après affectation et à la date de début' if training_label == 'A3P' else 'E-learning activé' if training_session.aps_elearning_enabled else 'E-learning à activer dans la session' }}</span>
   </header>
   <div class="np-layout">
     <aside class="np-library np-panel">
