@@ -7,13 +7,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261006-3') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css') }}">
   {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-2') }}">{% endif %}
-  <style>.organisme-logo{display:flex;align-items:center;gap:10px;max-width:210px;text-decoration:none;color:var(--ink)}.organisme-logo-initial{display:grid;place-items:center;width:44px;height:44px;flex-shrink:0;border-radius:10px;background:#edf1f5;font-weight:800;font-size:22px}.organisme-logo-name{font-size:13px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}.organisme-logo img{max-width:180px;max-height:56px;object-fit:contain}@media(max-width:700px){.site-header nav{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px}.site-header nav a{font-size:11px;padding:8px 9px}.site-header nav .logout{margin-left:auto}}@media(max-width:390px){.site-header nav a{padding:7px 6px;font-size:10px}.site-header nav .logout{margin-left:0}}</style>
+  <style>@media(max-width:700px){.site-header nav{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px}.site-header nav a{font-size:11px;padding:8px 9px}.site-header nav .logout{margin-left:auto}}@media(max-width:390px){.site-header nav a{padding:7px 6px;font-size:10px}.site-header nav .logout{margin-left:0}}</style>
   {% block extra_styles %}{% endblock %}
   <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261006-3') }}" defer></script>
 </head>
 <body>
   <header class="site-header">
-    <a class="logo{{ ' organisme-logo' if organisme_header }}" href="{{ url_for('manuals_shop.home') if session.get('admin_logged_in') else url_for('admin_login') }}"{% if organisme_header %} aria-label="{{ organisme_header.name }} — Mon espace"{% endif %}>{% if organisme_header %}{% if organisme_header.logo_url %}<img src="{{ organisme_header.logo_url }}" alt="{{ organisme_header.name }}">{% else %}<span class="organisme-logo-initial" aria-hidden="true">{{ organisme_header.name[:1]|upper }}</span><span class="organisme-logo-name">{{ organisme_header.name }}</span>{% endif %}{% else %}<img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect">{% endif %}</a>
+    <a class="logo" href="{{ url_for('manuals_shop.home') if session.get('admin_logged_in') else url_for('admin_login') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
     <span class="header-label">L’espace des organismes de formation</span>
     <nav aria-label="Navigation principale">
     {% if staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a><a href="{{ url_for('manuals_shop.elearning_admin') }}">E-learning</a>
