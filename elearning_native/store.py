@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence
 
 from .videos import videos_complete, vtc_pacing_enabled
+from .vtc_video_quality import compatible_record
 
 
 HEARTBEAT_MAX_CREDIT_SECONDS = 20.0
@@ -686,7 +687,7 @@ class NativeElearningStore:
             rate = sample.get("rate", 1)
             prior_rate = before.get("rate", 1)
             duration = requirements[video_id]
-            record = saved.get(video_id) or {}
+            record = compatible_record(video_id, saved.get(video_id) or {}, duration)
             completed = videos_complete({video_id: record}, {video_id: duration})
             frontier = float(record.get("watched_seconds") or 0) if record.get("duration_seconds") == duration else 0
             policy = playback.get(video_id, {})
@@ -753,10 +754,11 @@ class NativeElearningStore:
             rates = policy.get("rates", (1,))
             normal_rate = sample.get("rate", 1) in rates
             rate = sample.get("rate", 1)
-            record = activity_saved.get(video_id) or {}
+            record = compatible_record(video_id, activity_saved.get(video_id) or {}, duration)
             if record.get("duration_seconds") != duration:
                 record = {"duration_seconds": duration, "watched_seconds": 0.0, "completed": False}
             if videos_complete({video_id: record}, {video_id: duration}):
+                activity_saved[video_id] = record
                 next_samples[video_id] = {
                     "position": min(float(sample["position"]), duration),
                     "rate": rate,

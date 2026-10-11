@@ -216,6 +216,7 @@ def _course_access_payload(
         "section_ids": [str(section["id"]) for section in course.get("sections") or []],
         "module_title": str(course.get("title") or ""),
         "required_minutes": int(course.get("required_minutes") or 0),
+        **({"vtc_media_revision": course["vtc_media_revision"]} if course.get("vtc_media_revision") else {}),
     }
 
 
@@ -549,6 +550,7 @@ def create_native_elearning_blueprint(
                 "learning_pauses": video.get("learning_pauses", []),
                 "lesson_explainer": bool(video.get("lesson_explainer")),
                 "transcript": str(video.get("transcript") or '') if video.get("lesson_explainer") else '',
+                "presentation": video.get("presentation") if course_id in {f"academy-vtc-{letter}" for letter in "abcdefgh"} else None,
             }
             duration = video.get("duration_seconds")
             chapters = video.get("chapters")
@@ -1747,6 +1749,11 @@ def create_native_elearning_blueprint(
             abort(400)
         access = _verify_access(payload.get("access_token"))
         course = course_for_access(access)
+        # An old tab may still close its tracking session on reload. Finishing
+        # records no media sample and releases its active-tab slot normally.
+        if (request.endpoint != "native_elearning.tracking_finish" and course.get("vtc_media_revision")
+                and access.get("vtc_media_revision") != course["vtc_media_revision"]):
+            abort(409, "Les vidéos ont été améliorées. Rechargez la page : votre progression enregistrée est conservée.")
         order = [str(value) for value in course.get("activity_order") or []]
         return access, course, order, _scored_activity_ids(course)
 

@@ -22,6 +22,13 @@ CAPSULE = 'vtc-e-capsule'
 MEDIA = ('media/vtc/v7/lesson-e.mp4', 'media/vtc/v7/lesson-e.vtt')
 
 
+@pytest.fixture(autouse=True)
+def historical_bilingual_release():
+    # Test the immutable v7/v9 contracts separately from the current v11 release.
+    with patch.object(vtc, 'repair_video_quality', side_effect=lambda course: course):
+        yield
+
+
 def original(version, course_id=COURSE):
     return json.loads((vtc.ROOT / 'courses' / course_id / (version + '.json')).read_text())
 

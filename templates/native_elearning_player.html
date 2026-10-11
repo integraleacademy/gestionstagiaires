@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261010-aps-vtc-pacing') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-2') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
@@ -19,12 +19,31 @@
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
         {% if block.video.required or block.video.lesson_explainer %}<h2 class="native-video-title">{{ block.video.title }}</h2>{% endif %}
-        <div class="native-video-shell">
-          <video class="native-course-video" controls preload="metadata" playsinline aria-label="{{ block.video.title }}"{% if block.video.required and not preview_mode %} data-required-video="{{ block.video.id }}" data-video-duration="{{ block.video.duration_seconds }}" controlslist="nodownload noplaybackrate" disablepictureinpicture{% endif %}{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
+        {% set readable_video = course.training_label == 'VTC' and block.video.presentation %}
+        <div class="native-video-shell{% if readable_video %} vtc-readable-video{% endif %}"{% if readable_video %} data-vtc-video-reader{% endif %}>
+          {% if readable_video %}
+          <div class="vtc-video-toolbar" data-video-reader-toolbar hidden>
+            <span>Lecture avec repères et sous-titres</span>
+            <button type="button" class="native-button native-button--secondary" data-video-reader-expand aria-expanded="false">Agrandir la lecture</button>
+          </div>
+          <div class="vtc-video-picture">
+          {% endif %}
+          <video class="native-course-video" controls preload="metadata" playsinline aria-label="{{ block.video.title }}"{% if block.video.required and not preview_mode %} data-required-video="{{ block.video.id }}" data-video-duration="{{ block.video.duration_seconds }}" controlslist="nodownload noplaybackrate{% if readable_video %} nofullscreen{% endif %}" disablepictureinpicture{% elif readable_video %} controlslist="nofullscreen"{% endif %}{% if block.video.poster %} poster="{{ block.video.poster }}"{% endif %}>
             <source src="{{ block.video.src }}">
             {% if block.video.captions %}<track kind="captions" src="{{ block.video.captions }}" srclang="fr" label="Français">{% endif %}
             Votre navigateur ne permet pas de lire cette vidéo.
           </video>
+          {% if readable_video %}
+          </div>
+          <script type="application/json" data-vtc-video-presentation>{{ block.video.presentation|tojson }}</script>
+          <section class="vtc-video-companion" aria-label="Repères synchronisés avec la vidéo" aria-live="off" data-video-companion hidden>
+            <div class="vtc-video-caption-heading"><strong>Texte de la voix</strong><label><input type="checkbox" data-video-caption-toggle checked> Afficher</label></div>
+            <p class="vtc-video-caption" data-video-caption></p>
+            <div class="vtc-video-scene"><span data-video-scene-number></span><h3 data-video-scene-title></h3></div>
+            <ul class="vtc-video-points" data-video-points></ul>
+            <p class="vtc-video-points-wait" data-video-points-wait>Les repères apparaissent au fil de l’explication.</p>
+          </section>
+          {% endif %}
           {% if block.video.default_playback_rate == 0.85 %}
           <script type="application/json" data-video-pacing-config>{{ {'default_playback_rate': block.video.default_playback_rate, 'allowed_playback_rates': block.video.allowed_playback_rates, 'learning_pauses': block.video.learning_pauses}|tojson }}</script>
           <div class="native-video-pace-controls"><label>Vitesse de lecture <select data-playback-rate aria-label="Vitesse de lecture"><option value="0.85" selected>0,85× · rythme conseillé</option><option value="1">1× · rythme original</option></select></label><span>Des pauses courtes vous laissent le temps d’assimiler.</span></div>
@@ -302,6 +321,7 @@
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
   <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-vtc-lessons') }}" defer></script>
   {% endif %}
+{% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261011-readable-video') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>

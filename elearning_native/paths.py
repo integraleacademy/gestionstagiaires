@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Mapping
 
 from .importer import CourseCatalog, CourseImportError
 from .videos import course_videos, videos_complete
+from .vtc_video_quality import compatible_progress
 
 
 MAX_PATH_MODULES = 100
@@ -123,7 +124,7 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
     order = course.get("activity_order") or []
     completed = set(progress.get("completed_activity_ids") or []) & set(order)
     requirements = course_videos(course)
-    video_progress = progress.get("video_progress") or {}
+    video_progress = compatible_progress(progress.get("video_progress") or {}, requirements)
     for activity_id, videos in requirements.items():
         if not videos_complete(video_progress.get(activity_id, {}), videos):
             completed.discard(activity_id)

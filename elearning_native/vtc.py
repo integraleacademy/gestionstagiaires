@@ -3,6 +3,7 @@ from pathlib import Path
 from functools import lru_cache
 import copy, hashlib, json, math
 from .vtc_lesson_videos import enrich_lessons, REQUIRED_VERSION
+from .vtc_video_quality import repair_course as repair_video_quality
 ROOT=Path(__file__).parent/'vtc'
 
 # This is a pronunciation repair, not a new learner assignment. The replacement
@@ -204,7 +205,7 @@ def load_bundled_course(course_id,version=None):
     if not module:return None
     version=version or module['version']
     if version not in [module['version'],*module.get('previous_versions',[])]:return None
-    return enrich_lessons(_repair_video_pacing(_repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version))))))
+    return repair_video_quality(enrich_lessons(_repair_video_pacing(_repair_english_listening(_repair_english_narration(copy.deepcopy(_course(course_id,version)))))))
 
 def bundled_asset(course_id,version,name):
     course=load_bundled_course(course_id,version)

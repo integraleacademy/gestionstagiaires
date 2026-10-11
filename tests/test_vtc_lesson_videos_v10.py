@@ -124,7 +124,8 @@ def test_actual_learner_page_enforces_only_assigned_video_and_serves_authorized_
                 assert not forged.json['progress']['video_progress'][config['activityId']][video_id]['completed']
                 ping(0)
                 position = 0
-                for pause in lessons.lesson_manifest()['A.01']['learning_pauses'] + [dict(at_seconds=duration, duration_seconds=0)]:
+                current_video = activities(vtc.load_bundled_course('academy-vtc-a', version))[0]['blocks'][0]['video']
+                for pause in current_video['learning_pauses'] + [dict(at_seconds=duration, duration_seconds=0)]:
                     target = pause['at_seconds']
                     while position < target:
                         step = min(3.4, target-position)

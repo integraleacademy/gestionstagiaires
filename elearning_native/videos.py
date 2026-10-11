@@ -10,6 +10,7 @@ import json
 import math
 from pathlib import Path
 from typing import Any, Mapping
+from .vtc_video_quality import compatible_record
 
 
 ACADEMY_VIDEOS = ({
@@ -127,7 +128,7 @@ def activity_playback_policy(course: Mapping[str, Any], activity_id: str) -> dic
 
 
 def videos_complete(saved: Mapping[str, Any], requirements: Mapping[str, float]) -> bool:
-    return all(isinstance((state := saved.get(video_id)), Mapping)
+    return all(isinstance((state := compatible_record(video_id, saved.get(video_id), duration)), Mapping)
                and state.get("completed") is True
                and state.get("duration_seconds") == duration
                and float(state.get("watched_seconds") or 0) >= duration - .25

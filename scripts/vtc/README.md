@@ -74,3 +74,43 @@ Existing assignments keep their version. The new curriculum retains the same
 activity IDs, order and 6,300 planned minutes. Longer videos replace part of
 the existing 20-minute module synthesis slot; they do not add artificial time.
 The 105-hour programme remains provisional pending learner pilot calibration.
+
+## Quality repair v11 (104 videos)
+
+`render_quality_videos_v11.py` builds the corrected narration, captions and
+visuals under the new immutable `media/vtc/v11` namespace. It does not replace
+the published v4/v7/v9/v10 files or their manifests. Current lesson authoring
+is read from `lesson_video_scripts_v10`; the corrected eight summary scripts
+live separately in `video_synthesis_scripts_v11.json`.
+
+The complete `video_quality_v11.json` contains 96 `lessons` and eight `modules`.
+Every entry records its previous media URL, hash, duration and chapter IDs,
+plus the corrected word timings and inline responsive presentation. Four- or
+five-second pauses remain in verified silent tails. The player rate stays
+0.85; French Henri and British English Ryan keep their native voice tempo.
+
+Captions are regrouped losslessly using original spoken-word timings. At the
+default 0.85 playback rate, every cue lasts at least one second, stays at or
+below 20 characters per second and occupies at most two 44-character lines.
+These are internal comfort targets. The renderer fails if the words cannot
+meet them; it never conceals a failure by reporting invented timing.
+
+```sh
+python scripts/vtc/render_quality_videos_v11.py --plan-only
+python scripts/vtc/render_quality_videos_v11.py
+python scripts/vtc/validate_quality_videos_v11.py --captures
+python -m pytest tests/test_vtc_quality_renderer_v11.py -q
+```
+
+Speech is cached by exact voice, rate and text in `/tmp/vtc-lessons-v10/speech`.
+Fresh video intermediates and the provisional manifest live in
+`/tmp/vtc-quality-v11`; publication of the application manifest is atomic and
+requires all 104 current signatures. `--only E.07` selects a single lesson;
+`--only E` selects its twelve lessons and module summary. A partial build can
+be inspected with `validate_quality_videos_v11.py --manifest
+/tmp/vtc-quality-v11/manifest.partial.json --only E.07 --captures`.
+
+Validation decodes every H.264 frame and every AAC sample, verifies frame
+continuity, duration, media hashes, quiet pauses, source-bound captions,
+unclipped card geometry and responsive presentation timings. One full-size
+capture per scene and module contact sheets support manual visual review.

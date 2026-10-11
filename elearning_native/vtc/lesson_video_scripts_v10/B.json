@@ -134,7 +134,7 @@
           "segments": [
             {
               "lang": "fr",
-              "text": "Le projet commence par une estimation réaliste du marché, des coûts et des financements. Les formalités d’entreprise se réalisent par le guichet unique. L’immatriculation et les identifiants ne remplacent pas les autorisations propres au transport. Un dossier VTC comprend donc un volet entreprise et un volet métier. Le SIREN identifie l’entreprise ; le SIRET identifie un établissement. Le code APE décrit l’activité principale à des fins statistiques, sans constituer une autorisation d’exercer. Classez les contrats, attestations, identifiants et accès professionnels. Les organismes ont des rôles différents : INPI pour le guichet, Urssaf pour le social, administration fiscale pour les impôts, CMA pour l’accompagnement artisanal et l’examen."
+              "text": "Le projet commence par une estimation réaliste du marché, des coûts et des financements. Les formalités d’entreprise se réalisent par le guichet unique. L’immatriculation et les identifiants ne remplacent pas les autorisations propres au transport. Un dossier VTC comprend donc un volet entreprise et un volet métier. Le numéro S, I, R, E, N identifie l’entreprise ; le numéro S, I, R, E, T identifie un établissement. Le code APE décrit l’activité principale à des fins statistiques, sans constituer une autorisation d’exercer. Classez les contrats, attestations, identifiants et accès professionnels. Les organismes ont des rôles différents : INPI pour le guichet, Urssaf pour le social, administration fiscale pour les impôts, CMA pour l’accompagnement artisanal et l’examen."
             }
           ],
           "points": [
@@ -146,7 +146,7 @@
             {
               "label": "Dans la pratique",
               "text": "Le SIREN identifie l’entreprise ; le SIRET identifie un établissement.",
-              "anchor_text": "Le SIREN identifie l’entreprise ; le SIRET identifie"
+              "anchor_text": "Le numéro S, I, R, E, N identifie l’entreprise"
             }
           ],
           "pause": {

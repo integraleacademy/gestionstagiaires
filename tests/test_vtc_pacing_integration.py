@@ -15,6 +15,14 @@ from tests import test_native_elearning_web as web_tests
 VERSIONS = ('20261007-vtc-v4-visuals', '20261007-vtc-v5-annales', '20261010-vtc-v6-pedagogie')
 
 
+@pytest.fixture(autouse=True)
+def historical_pacing_release():
+    # Keep the immutable v9 repair covered independently. Current v11 media,
+    # progress migration and access are exercised by test_vtc_quality_release_v11.
+    with patch.object(vtc, 'repair_video_quality', side_effect=lambda course: course):
+        yield
+
+
 def old_course(letter, version):
     return json.loads((vtc.ROOT/'courses'/f'academy-vtc-{letter.lower()}'/(version+'.json')).read_text())
 
