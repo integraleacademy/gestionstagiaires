@@ -15,6 +15,12 @@ MAX_PATH_MODULES = 100
 MAX_REQUIRED_MINUTES = 60_000
 
 
+def allows_free_module_navigation(session_obj: Mapping[str, Any]) -> bool:
+    """VTC learners may open assigned modules in any order, without completing them."""
+    training_type = str(session_obj.get("training_type") or session_obj.get("type_formation") or "")
+    return "VTC" in training_type.upper()
+
+
 def assigned_modules(session_obj: Mapping[str, Any]) -> List[Dict[str, Any]]:
     # An explicit empty path must not fall back to the old single-course field.
     if isinstance(session_obj.get("aps_native_modules"), list):

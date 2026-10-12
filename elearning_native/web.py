@@ -55,7 +55,7 @@ from .importer import (
 )
 from .store import IDLE_TIMEOUT_SECONDS, NativeElearningStore, TrackingError
 from .paths import (
-    assigned_modules, course_outline, path_revision, project_course,
+    allows_free_module_navigation, assigned_modules, course_outline, path_revision, project_course,
     project_progress, validate_modules,
 )
 
@@ -433,7 +433,7 @@ def create_native_elearning_blueprint(
         module = next((item for item in modules if item.get("course_id") == course_id), None)
         if module is None:
             abort(403)
-        previous_modules = modules[:modules.index(module)]
+        previous_modules = [] if allows_free_module_navigation(session_obj) else modules[:modules.index(module)]
         if previous_modules:
             rows = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
             progress_by_key = {(item["course_id"], item["course_version"]): item for item in rows}
@@ -1518,6 +1518,7 @@ def create_native_elearning_blueprint(
         raw_progress = store().learner_progress(str(session_obj["id"]), str(trainee.get("id") or trainee.get("trainee_id")))
         progress_by_key = {(item["course_id"], item["course_version"]): item for item in raw_progress}
         modules = load_path(session_obj)
+        free_module_navigation = allows_free_module_navigation(session_obj)
         total = completed = seconds = finished = 0
         resume_url = ""
         blocker = ""
@@ -1532,10 +1533,11 @@ def create_native_elearning_blueprint(
                     item["illustration_url"] = url_for("static", filename=f"images/aps62/module-{aps_image.group(1)}.webp")
                 elif vtc_image:
                     item["illustration_url"] = url_for("static", filename=f"images/vtc/module-{vtc_image.group(1)}.webp")
-            item["locked"] = bool(blocker)
-            item["lock_reason"] = blocker
+            item["locked"] = bool(blocker) and not free_module_navigation
+            item["lock_reason"] = blocker if item["locked"] else ""
             if not course:
-                blocker = blocker or "Un module précédent est indisponible. Contactez l’équipe pédagogique."
+                if not free_module_navigation:
+                    blocker = blocker or "Un module précédent est indisponible. Contactez l’équipe pédagogique."
                 continue
             progress = project_progress(progress_by_key.get((course["id"], course["version"]), {}), course)
             item["progress"] = progress
@@ -1551,7 +1553,7 @@ def create_native_elearning_blueprint(
             finished += int(item["complete"])
             if not resume_url and not item["complete"] and not item["locked"]:
                 resume_url = item["url"]
-            if not blocker and not item["complete"]:
+            if not free_module_navigation and not blocker and not item["complete"]:
                 blocker = f"Terminez d’abord le module « {course['title']} »."
                 if progress["remaining_seconds"]:
                     blocker += f" Temps actif restant : {item['remaining_time_label']}."
@@ -1566,6 +1568,7 @@ def create_native_elearning_blueprint(
             "native_elearning_path.html", modules=modules,
             learner_brand=session_obj.get("learner_brand") or {},
             training_label=training_label,
+            free_module_navigation=free_module_navigation,
             hero_illustration_url=url_for("static", filename="images/learner-welcome-vtc.webp") if training_label == "VTC" else (
                 url_for("static", filename="images/learner-welcome-aps.webp") if any(
                     m["course"] and str(m["course"].get("id") or "").startswith("academy-aps62-") for m in modules

@@ -32,6 +32,7 @@
     </section>
     {% if annales_url %}<section class="np-panel"><h2>Les annales VTC</h2><p>Entraînez-vous avec les sujets fournis, puis retrouvez les corrections expliquées et les leçons à réviser. Les questions anciennes qui ne peuvent plus être évaluées sont signalées.</p><a class="np-button np-button--primary" href="{{ annales_url }}">Ouvrir les annales →</a></section>{% endif %}
     <div class="np-section-heading"><div><span class="np-eyebrow">Votre programme</span><h2>Les étapes de votre parcours</h2></div><span class="np-module-count">{{ modules|length }} modules</span></div>
+    {% if free_module_navigation %}<p class="np-hint">Tous vos modules VTC sont accessibles. Vous pouvez les consulter dans l’ordre de votre choix et passer de l’un à l’autre sans terminer le précédent. Votre progression est conservée dans chaque module.</p>{% endif %}
     <div class="np-modules np-learner-modules">
       {% for module in modules %}
         <article class="np-panel np-learner-module{% if module.locked %} is-locked{% endif %}">
@@ -55,7 +56,7 @@
         </article>
       {% else %}<section class="np-panel np-empty"><h2>Votre parcours est en préparation</h2><p>Les modules apparaîtront ici dès leur affectation par l’équipe pédagogique.</p></section>{% endfor %}
     </div>
-    <p class="np-hint">Terminez les activités et la durée obligatoire d’un module pour ouvrir le suivant. Le compteur fonctionne dans le lecteur, pas sur cette page, et se met en pause après 5 minutes sans interaction. Une seule activité peut être chronométrée à la fois.</p>
+    <p class="np-hint">{% if free_module_navigation %}Chaque module est validé lorsque ses activités et sa durée obligatoire sont terminées.{% else %}Terminez les activités et la durée obligatoire d’un module pour ouvrir le suivant.{% endif %} Le compteur fonctionne dans le lecteur, pas sur cette page, et se met en pause après 5 minutes sans interaction. Une seule activité peut être chronométrée à la fois.</p>
     {% if final_exam_url %}<section class="np-panel"><h2>Examen blanc final · 100 questions</h2><p>{{ final_exam_description }} : correction détaillée et nouvelles tentatives.</p>{% if final_exam_unlocked %}<a class="np-button np-button--primary" href="{{ final_exam_url }}">Commencer l’examen final →</a>{% else %}<p>Terminez les {{ final_module_count }} modules et leurs durées obligatoires pour ouvrir cet examen.</p>{% endif %}</section>{% endif %}
     <footer class="np-support"><div><strong>Une question pendant votre parcours ?</strong><p>Votre organisme de formation vous accompagne.</p></div><div class="np-support-contact"><strong>{{ centre_name }}</strong>{% if learner_brand.get('email') %}<a href="mailto:{{ learner_brand.email }}">{{ learner_brand.email }}</a>{% endif %}{% if learner_brand.get('phone') %}<span>{{ learner_brand.phone }}</span>{% endif %}</div></footer>
   </main>

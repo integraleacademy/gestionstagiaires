@@ -35,7 +35,15 @@ La hiérarchie est **session → parcours → modules importés → séquences �
 Le nom du parcours et les noms de ses modules sont personnalisables. Les activités
 d’une séquence restent dans leur ordre d’origine et les règles de navigation du
 module sont conservées. Le passage au module suivant nécessite la validation des
-activités précédentes et de leur durée obligatoire.
+activités précédentes et de leur durée obligatoire, sauf pour les parcours VTC.
+
+Dans une session VTC, tous les modules affectés sont accessibles dès l’ouverture
+de l’accès stagiaire, y compris leurs examens thématiques et entraînements libres.
+Le stagiaire choisit l’ordre des modules sans devoir terminer le précédent.
+Cette règle s’applique également aux accès VTC activés par un organisme de
+formation. La validation des activités, les vidéos obligatoires, les durées et
+les conditions d’accès à l’examen final restent applicables. Les parcours APS
+et A3P conservent leur progression séquentielle.
 
 Le champ `aps_native_modules` de la session contient la liste ordonnée des
 références (`course_id`, `course_version`, `title`, `section_ids`).

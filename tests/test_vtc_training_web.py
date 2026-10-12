@@ -149,7 +149,7 @@ class VtcTrainingWebTests(unittest.TestCase):
         self.assertEqual(self.client.get(base + '/' + self.ids[0]).status_code, 403)
         self.assertEqual(self.post(config).status_code, 403)
 
-    def test_partial_assignment_excludes_unselected_dossiers_and_prerequisites_hold(self):
+    def test_partial_assignment_excludes_unselected_dossiers_with_free_module_navigation(self):
         session = self.assign(partial=True); self._public_login()
         base = '/espace/public-token/elearning/vtc/entrainement/academy-vtc-a'
         response = self.client.get(base)
@@ -161,9 +161,11 @@ class VtcTrainingWebTests(unittest.TestCase):
         self.assertEqual(self.post(excluded).status_code, 404)
         session['aps_native_modules'].insert(0, {'course_id': 'academy-vtc-b',
             'course_version': vtc.load_bundled_course('academy-vtc-b')['version']})
-        self.assertEqual(self.client.get(base).status_code, 403)
-        self.assertEqual(self.client.get(base + '/' + self.ids[0]).status_code, 403)
-        self.assertEqual(self.post(config).status_code, 403)
+        self.assertEqual(self.client.get(base).status_code, 200)
+        self.assertEqual(self.client.get(base + '/' + self.ids[0]).status_code, 200)
+        self.assertEqual(self.post(config).status_code, 200)
+        self.assertEqual(self.client.get(base + '/' + self.ids[1]).status_code, 404)
+        self.assertEqual(self.post(excluded).status_code, 404)
 
     def test_old_course_uses_supplements_without_changing_saved_progress(self):
         version = '20261006-vtc-v3-105h'
