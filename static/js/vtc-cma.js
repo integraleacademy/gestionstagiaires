@@ -189,7 +189,7 @@
     box.append(el('p', `QCM : ${number(row.qcm_score)} points · QRC : ${number(row.qrc_score)} points · Minimum : ${row.minimum}/20`));
     if (row.status === 'needs_human_review') {
       box.append(el('p', 'La correction nécessite une vérification humaine. La note éventuelle est provisoire et ne permet pas de conclure à l’admissibilité simulée. Contactez votre formateur depuis votre espace habituel.', 'cma-alert'));
-      (row.ai_feedback?.human_review_reasons || []).forEach(reason => box.append(el('p', reason, 'cma-note')));
+      (row.ai_feedback?.human_review_reasons || []).forEach(reason => box.append(el('p', /^Le correcteur .+ demande une relecture du formateur[.]$/.test(reason) ? 'Une relecture du formateur est nécessaire pour confirmer certains points.' : reason, 'cma-note')));
     }
     if (row.status === 'pending_correction') box.append(el('p', row.grading_error || (row.grading_status === 'working' ? 'La correction rédigée est en cours.' : 'La copie est remise. La correction des réponses rédigées reste à effectuer.'), 'cma-note'));
     if (row.subject === 'D') {

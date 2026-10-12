@@ -6,16 +6,17 @@ const fs = require("node:fs");
 const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../static/js/native-elearning-player.js"), "utf8");
 
-async function fixture({ lastActivity = false, question = false } = {}) {
+async function fixture({ lastActivity = false, question = false, optional = false } = {}) {
   const initial = lastActivity ? 14398 : 0;
   const config = { accessToken: "signed", csrfToken: "csrf", activityId: "lesson", idleSeconds: 300,
     heartbeatSeconds: 15, startUrl: "/start", heartbeatUrl: "/heartbeat", finishUrl: "/finish",
     initialActiveSeconds: initial, initialRemainingSeconds: 14400 - initial, initialModuleComplete: false,
     isLastActivity: lastActivity, hasNextModule: true, endLabel: "Module suivant", endUrl: "/next",
-    questionType: question ? 'single_choice' : '', answerUrl: '/answer' };
+    activityOptional: optional, questionType: question ? 'single_choice' : '', answerUrl: '/answer' };
   const dom = new JSDOM(`<!doctype html><strong id="nativeActiveTimer"></strong>
     <div id="nativeTrackingState"><span></span></div><div id="nativeDuplicateNotice"></div>
-    <button id="nativeActionButton" data-mode="${question ? 'answer' : 'navigate'}">Continuer</button>
+    <button id="nativeActionButton" data-mode="${optional ? 'complete' : question ? 'answer' : 'navigate'}">Continuer</button>
+    ${optional ? '<a id="vtcOptionalSkip" href="/next">Passer cet atelier facultatif →</a>' : ''}
     ${question ? '<form id="nativeQuestionForm"><input type="radio" name="answer" value="bad" checked><input type="radio" name="answer" value="good"></form><div id="nativeAnswerFeedback"></div>' : ''}
     <div id="nativeCourseResult"><strong></strong><span></span></div>
     <strong id="nativeRemainingTime"></strong><span id="nativeDurationStatus"></span>
@@ -119,6 +120,22 @@ async function fixture({ lastActivity = false, question = false } = {}) {
     assert.equal(document.querySelector("#nativeRemainingTime").textContent, "00:00:00");
     assert.equal(document.querySelector("#nativeCourseResult strong").textContent, "Module terminé");
   } finally { locked.close(); }
+  const optional = await fixture({ lastActivity: true, optional: true });
+  try {
+    const document = optional.window.document, button = document.getElementById('nativeActionButton');
+    assert.equal(button.textContent, 'Valider cet atelier →');
+    assert.equal(button.disabled, false);
+    await optional.advance(15000);
+    assert.equal(button.textContent, 'Valider cet atelier →');
+    assert.equal(button.disabled, false);
+    assert.equal(document.getElementById('vtcOptionalSkip').getAttribute('href'), '/next');
+    // A voluntary validation may still show the remaining module hours, while the skip link stays free.
+    button.dataset.mode = 'navigate';
+    await optional.advance(15000);
+    assert.equal(button.disabled, true);
+    assert.match(button.textContent, /temps actif/);
+    assert.equal(document.getElementById('vtcOptionalSkip').getAttribute('aria-disabled'), null);
+  } finally { optional.close(); }
   const question = await fixture({question:true});
   try {
     const document = question.window.document, button = document.getElementById('nativeActionButton');
@@ -132,5 +149,5 @@ async function fixture({ lastActivity = false, question = false } = {}) {
     assert.equal(button.dataset.mode, 'navigate');
     assert.equal(document.querySelector('input[value=good]').disabled, true);
   } finally { question.close(); }
-  console.log("PASS: active-time controls, server-confirmed unlock and retry before question completion.");
+  console.log("PASS: active-time controls, server-confirmed unlock, optional workshop label and retry before question completion.");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

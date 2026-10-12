@@ -1,6 +1,6 @@
 {% if ai_feedback %}
 <section class="vtc-work-feedback" style="border:1px solid #d9c8e9;background:#faf7fe;border-radius:12px;padding:18px;margin:16px 0">
-  <h3>{{ 'Retour du formateur' if ai_feedback.trainer_review else 'Correction pédagogique par IA' }}{% if ai_feedback.score is defined %} · {{ ai_feedback.score }} / {{ ai_feedback.max_score }}{% endif %}</h3>
+  <h3>{{ 'Retour du formateur' if ai_feedback.trainer_review else 'Correction détaillée' }}{% if ai_feedback.score is defined %} · {{ ai_feedback.score }} / {{ ai_feedback.max_score }}{% endif %}</h3>
   {% if ai_feedback.needs_human_review %}<p><strong>Une relecture du formateur est nécessaire.</strong></p>{% endif %}
   {% if ai_feedback.summary %}<p>{{ ai_feedback.summary }}</p>{% endif %}
   {% if ai_feedback.strengths %}<h4>Points forts</h4><ul>{% for item in ai_feedback.strengths %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
@@ -9,6 +9,6 @@
   {% if ai_feedback.model_response %}<details><summary>Réponses de référence</summary>{% for field_id, answer in ai_feedback.model_response.items() %}<p style="white-space:pre-wrap">{{ answer }}</p>{% endfor %}</details>{% endif %}
   {% if ai_feedback.next_steps %}<h4>Conseils pour progresser</h4><ul>{% for item in ai_feedback.next_steps %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
   {% if ai_feedback.trainer_review %}<p style="white-space:pre-wrap"><strong>Relecture pédagogique :</strong> {{ ai_feedback.trainer_review.comment }}</p><p>{{ ai_feedback.trainer_review.reviewed_at }}</p>{% endif %}
-  <p class="muted">{{ ai_feedback.notice|default('Retour pédagogique sur cet exercice. Ce résultat est distinct de l’examen officiel.') }}</p>
+  <p class="muted">Retour pédagogique sur cet atelier facultatif. Ce résultat est distinct de l’examen officiel.</p>
 </section>
 {% endif %}

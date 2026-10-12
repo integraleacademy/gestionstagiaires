@@ -4180,7 +4180,7 @@
       "url": "https://www.legifrance.gouv.fr/loda/article_lc/LEGIARTI000049335667"
     }
   ],
-  "notice": "Sujet pédagogique Intégrale Academy conforme à la composition et aux règles de notation des sept matières d’admissibilité. Il ne s’agit pas d’un sujet officiel CMA ni d’une décision d’admissibilité. Les QRC sont évaluées par IA selon un barème explicite ; un doute de correction appelle une vérification humaine. La pratique de conduite relève d’une épreuve distincte.",
+  "notice": "Sujet pédagogique Intégrale Academy conforme à la composition et aux règles de notation des sept matières d’admissibilité. Il ne s’agit pas d’un sujet officiel CMA ni d’une décision d’admissibilité. Les QRC sont évaluées selon un barème explicite ; un doute de correction appelle une vérification par l’équipe pédagogique. La pratique de conduite relève d’une épreuve distincte.",
   "qcm_scoring_notice": "Dans ce sujet, chaque QCM demande une seule réponse : la bonne réponse rapporte les points annoncés ; une réponse fausse ou absente rapporte zéro. Les QRC sont notées selon les éléments attendus et peuvent recevoir des points partiels. Aucun document ni aide extérieure pendant les épreuves.",
   "timing_notice": "Chaque matière dispose de son propre temps serveur. Fermer ou recharger la page ne suspend pas le chronomètre. À l’échéance, la dernière sauvegarde serveur constitue votre copie. Une pause est possible entre deux matières, avant de démarrer la suivante. Les 3 h 50 correspondent à la somme des temps maximaux d’épreuve.",
   "extra_training": true

@@ -18,7 +18,7 @@ from pathlib import Path
 import sqlite3
 
 from .importer import CourseImportError
-from .paths import assigned_modules, allows_free_module_navigation, path_revision, project_course, project_progress
+from .paths import assigned_modules, allows_free_module_navigation, path_revision, project_course, project_progress, required_activity_order
 from .store import NativeElearningStore, _json_dict, _json_list, _utc_iso
 from .videos import course_videos
 from .vtc_productions import BASE_VERSION, MODULE_MINUTES, NOTICE, VERSION
@@ -167,6 +167,7 @@ def _copy_progress(connection, source, target_course):
     completion = NativeElearningStore._completion_values(
         completed, answers,
         activity_order=target_course["activity_order"], scored_activity_ids=scored,
+        required_activity_ids=required_activity_order(target_course),
         mastery_score=float(target_course.get("settings", {}).get("mastery_score", 80)),
         active_seconds=float(source["active_seconds"] or 0),
         required_seconds=int(target_course["required_minutes"]) * 60,

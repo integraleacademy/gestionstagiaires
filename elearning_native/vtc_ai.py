@@ -30,7 +30,7 @@ _MAX_RESPONSE_BYTES = 196_608
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}\Z")
 CORRECTION_REVISION = "vtc-written-excerpt-refs-v1"
 NOTICE = (
-    "Correction pédagogique formative réalisée avec l’IA. Elle peut être revue "
+    "Correction pédagogique formative. Elle peut être revue "
     "par votre formateur et ne constitue ni une décision de jury ni un résultat officiel CMA."
 )
 
@@ -76,6 +76,13 @@ réponse sans la présenter comme le travail du stagiaire. Vouvoie le stagiaire,
 reste précis et respectueux ; ne prétends pas attribuer un diplôme ou une note de
 jury. Les explications sont en français ; une réponse demandée en anglais reste
 en anglais. revision_ids ne contient que des identifiants de révision fournis.
+Dans tous les textes destinés au stagiaire, parle uniquement du travail, du
+barème, de la correction et des conseils. N'évoque ni IA, intelligence artificielle,
+ChatGPT, OpenAI, modèle informatique ni technologie de correction. Ne prétends
+jamais qu'un formateur ou une personne a relu la copie. Une relecture par le
+formateur peut être proposée lorsqu'elle est nécessaire. Pour une production,
+présente les améliorations comme des conseils pour cet atelier facultatif ;
+ne conditionne jamais la poursuite du parcours à sa réalisation ou à sa note.
 
 Si spelling_review=true, relis tous les champs pour les fautes d'orthographe
 lexicale et grammaticale (accords et conjugaisons). Ne compte pas les préférences
@@ -97,11 +104,11 @@ class VtcAIError(RuntimeError):
     """A safe, displayable error. No provider response body or answer is retained."""
 
     _MESSAGES = {
-        "not_configured": "La correction IA n’est pas disponible pour le moment. Votre travail peut être conservé et corrigé plus tard.",
+        "not_configured": "La correction n’est pas disponible pour le moment. Votre travail peut être conservé et corrigé plus tard.",
         "busy": "Plusieurs corrections sont en cours. Réessayez dans quelques instants.",
         "timeout": "La correction a pris trop de temps. Réessayez dans quelques instants ; aucune note n’a été attribuée.",
         "rate_limited": "Le service de correction est momentanément sollicité. Réessayez plus tard ; aucune note n’a été attribuée.",
-        "refused": "La correction automatique n’a pas pu être réalisée. Demandez une relecture à votre formateur.",
+        "refused": "La correction n’a pas pu être réalisée. Demandez une relecture à votre formateur.",
         "invalid_response": "La correction reçue n’a pas pu être vérifiée. Réessayez ou demandez une relecture à votre formateur.",
         "unavailable": "Le service de correction est momentanément indisponible. Réessayez plus tard ; aucune note n’a été attribuée.",
     }
@@ -392,7 +399,7 @@ def _validate_feedback(raw, assignment, answers, model):
     if raw["assessment"] == "ambiguous" or (raw["assessment"] == "off_topic" and not cma):
         reasons.append("La pertinence ou le sens de la copie nécessite une relecture du formateur.")
     if raw["needs_human_review"] and not reasons:
-        reasons.append("Le correcteur IA demande une relecture du formateur.")
+        reasons.append("Une relecture du formateur est nécessaire pour confirmer certains points.")
     criteria = {}
     for row in raw["criteria"]:
         _keys(row, ("id", "points", "status", "feedback", "evidence_id", "improvement"))

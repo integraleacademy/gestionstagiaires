@@ -18,18 +18,25 @@ ROOT = Path(__file__).parent / "vtc"
 BANK_PATH = ROOT / "productions" / "20261012-vtc-v12.json"
 MODULE_MINUTES = dict(zip("ABCDEFGH", (840, 840, 780, 720, 840, 780, 720, 780)))
 BASE_MINUTES = dict(zip("ABCDEFGH", (755, 693, 706, 618, 718, 678, 612, 642)))
-PRODUCTION_MINUTES = {letter: MODULE_MINUTES[letter] - BASE_MINUTES[letter] for letter in MODULE_MINUTES}
+INDEPENDENT_STUDY_MINUTES = {letter: MODULE_MINUTES[letter] - BASE_MINUTES[letter] for letter in MODULE_MINUTES}
+# The authored optional subjects offer one way to use the study allocation.
+# Their estimates never impose submissions or grant tracked study time.
+PRODUCTION_MINUTES = dict(INDEPENDENT_STUDY_MINUTES)
 TOTAL_MINUTES = 6300
 NOTICE = (
-    "Parcours pédagogique VTC de 105 heures avec productions personnelles corrigées. "
+    "Parcours pédagogique VTC de 105 heures minimum : cours et activités, avec "
+    "approfondissements au choix parmi les exercices, missions et révisions. "
+    "Les productions personnelles sont facultatives. "
     "La simulation CMA de 3 h 50 est proposée en complément ; les examens de module "
     "restent des bilans pédagogiques. La préparation écrite ne remplace pas "
     "l'entraînement à la conduite ni l'épreuve pratique en circulation."
 )
+INDEPENDENT_STUDY_LABEL = "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives"
+OPTIONAL_NOTE = "Cette production est facultative. Vous pouvez poursuivre le module sans la remettre."
 PUBLIC_KEYS = (
     "id", "version", "module", "course_id", "title", "brief", "documents",
     "response_fields", "estimated_minutes", "work_phases", "instructions",
-    "sources", "revision_targets", "grading_mode", "pass_points", "max_points",
+    "sources", "revision_targets", "pass_points", "max_points",
 )
 
 
@@ -94,7 +101,7 @@ def _validate_bank(value):
             raise ValueError("Le barème VTC doit totaliser 20 points et couvrir les réponses.")
         minutes[letter] += duration
     if minutes != PRODUCTION_MINUTES or sum(minutes.values()) != 878:
-        raise ValueError("La répartition des productions doit compléter le parcours à 105 heures.")
+        raise ValueError("Les estimations des productions facultatives doivent correspondre aux étapes de travail prévues.")
     return value
 
 
@@ -126,6 +133,8 @@ def productions_for_module(course_id, version=VERSION):
 def public_production(production, *, reveal=False):
     """Expose the task and point allocation, withholding all marking answers."""
     result = {key: copy.deepcopy(production[key]) for key in PUBLIC_KEYS if key in production}
+    result["optional"] = True
+    result["optional_note"] = OPTIONAL_NOTE
     result["rubric_preview"] = [{key: copy.deepcopy(criterion[key]) for key in ("id", "label", "max_points")}
                                 for criterion in production["rubric"]]
     if reveal:
@@ -135,7 +144,7 @@ def public_production(production, *, reveal=False):
 
 
 def compose_course(base):
-    """Add four authored assignments after lessons 3/6/9/12 to a repaired V10 copy."""
+    """Add four optional assignments after lessons 3/6/9/12 to a repaired V10 copy."""
     if (not isinstance(base, dict) or base.get("version") != BASE_VERSION
             or not re.fullmatch(r"academy-vtc-[a-h]", str(base.get("id", "")))):
         raise ValueError("La nouvelle édition VTC doit dériver du cours V10 vérifié.")
@@ -151,6 +160,7 @@ def compose_course(base):
             raise ValueError("Séquence source manquante pour la production VTC.")
         target["activities"].append({
             "id": production["id"], "title": production["title"], "type": "content", "scored": False,
+            "optional": True,
             "planned_minutes": production["estimated_minutes"], "blocks": [],
             "vtc": {"kind": "production", "module": letter, "ref": production["id"],
                     "objective": production["brief"]},
@@ -162,6 +172,8 @@ def compose_course(base):
     course["planned_minutes"] = MODULE_MINUTES[letter]
     course["required_minutes"] = MODULE_MINUTES[letter]
     course["programme_minutes"] = TOTAL_MINUTES
+    course["independent_study_minutes"] = INDEPENDENT_STUDY_MINUTES[letter]
+    course["productions_optional"] = True
     course["duration_note"] = _bank()["duration_note"]
     for section in course["sections"]:
         for activity in section["activities"]:
@@ -169,10 +181,11 @@ def compose_course(base):
                 activity["vtc"]["notice"] = NOTICE
     course["activity_order"] = [activity["id"] for section in course["sections"] for activity in section["activities"]]
     course["counts"] = {**course["counts"], "activities": len(course["activity_order"]),
-                        "productions": len(productions), "production_minutes": PRODUCTION_MINUTES[letter]}
+                        "productions": len(productions), "optional_productions": len(productions),
+                        "production_minutes": PRODUCTION_MINUTES[letter]}
     course["duration_breakdown"] = [*course["duration_breakdown"],
-                                     {"label": "Productions personnelles et reprise des corrections",
-                                      "minutes": PRODUCTION_MINUTES[letter]}]
+                                     {"label": INDEPENDENT_STUDY_LABEL,
+                                      "minutes": INDEPENDENT_STUDY_MINUTES[letter]}]
     actual = sum(activity.get("planned_minutes", 0) for section in course["sections"] for activity in section["activities"])
     if actual != course["planned_minutes"] or len(set(course["activity_order"])) != len(course["activity_order"]):
         raise ValueError("Le programme VTC composé est incohérent.")

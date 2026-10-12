@@ -19,7 +19,7 @@ from werkzeug.utils import secure_filename
 
 import elearning_orders as learning
 from elearning_native.importer import CourseCatalog, CourseImportError
-from elearning_native.paths import project_course, project_progress
+from elearning_native.paths import project_course, project_progress, required_activity_order
 from elearning_native.store import NativeElearningStore
 from elearning_native.vtc_105_migration import read_transition_session, lineage_versions
 from elearning_native.vtc_cma import learner_attempt_summaries
@@ -104,7 +104,7 @@ class ProgressReader:
         raw_rows = self.rows("progress", session_id, learner_id)
         by_key = {(r["course_id"], r["course_version"]): r for r in raw_rows}
         modules, exam_keys, course_titles = [], set(), {}
-        total = completed = active = required = finished = 0
+        total = completed = active = required = finished = optional_total = 0
         starts, updates = [], []
         for assignment in session_view.get('aps_native_modules', []):
             assigned_key = (str(assignment.get("course_id") or ""), str(assignment.get("course_version") or ""))
@@ -139,11 +139,15 @@ class ProgressReader:
             access = {"session_id": session_id, "trainee_id": learner_id,
                       "course_id": key[0], "course_version": key[1]}
             ids = set(progress["completed_activity_ids"])
+            required_ids = set(required_activity_order(course))
+            required_completed = progress["completed_required_activities"]
+            required_total = progress["required_activity_count"]
             activities = [a for section in course["sections"] for a in section.get("activities", [])]
-            questions = [a for a in activities if a.get("scored")]
+            questions = [a for a in activities if a.get("scored") and a["id"] in required_ids]
             answered = sum(a["id"] in progress.get("answers", {}) for a in questions)
-            total += len(course["activity_order"])
-            completed += len(ids)
+            total += required_total
+            completed += required_completed
+            optional_total += progress["optional_activity_count"]
             active += progress["active_seconds"]
             required += progress["required_seconds"]
             finished += int(progress["module_complete"])
@@ -158,7 +162,8 @@ class ProgressReader:
                           remaining_time_label=time_label(progress["remaining_seconds"]),
                           module_complete=progress["module_complete"], status=progress["status"],
                           status_label=STATUS_LABELS.get(progress["status"], "En cours"),
-                          completed_activities=len(ids), total_activities=len(course["activity_order"]),
+                          completed_activities=required_completed, total_activities=required_total,
+                          optional_activity_count=progress["optional_activity_count"],
                           score_percent=progress["score_percent"] if answered else None,
                           assessment_summary=progress.get("assessment_summary") or {},
                           assessment_diagnostics=progress.get("assessment_diagnostics") or {},
@@ -175,6 +180,7 @@ class ProgressReader:
                     for activity in section.get("activities", []):
                         answer = progress.get("answers", {}).get(activity["id"], {})
                         rows.append({"title": activity.get("title") or "Activité", "completed": activity["id"] in ids,
+                                     "optional": activity["id"] not in required_ids,
                                      "current": activity["id"] == progress.get("current_activity_id"),
                                      "answer_label": ("Réponse correcte" if answer.get("correct") else "À revoir") if activity.get("scored") and answer else ""})
                         if activity.get("production") and isinstance(answer.get("production_answers"), dict):
@@ -194,8 +200,11 @@ class ProgressReader:
                             if activity.get("vtc", {}).get("kind") != "production" and self.ai_path.is_file():
                                 from elearning_native.production_ai import read_analyses
                                 rows[-1]["production"]["ai"] = read_analyses(self.ai_path, access, activity["id"])
+                    required_rows = [row for row in rows if not row["optional"]]
                     module["sections"].append({"title": section.get("title") or "Séquence", "activities": rows,
-                                               "completed": sum(a["completed"] for a in rows), "total": len(rows)})
+                                               "completed": sum(a["completed"] for a in required_rows),
+                                               "total": len(required_rows),
+                                               "optional_activity_count": len(rows) - len(required_rows)})
             modules.append(module)
         versions = {m["version"] for m in modules if m["available"]}
         if len(versions) == 1:
@@ -204,6 +213,7 @@ class ProgressReader:
         available = bool(modules) and all(m["available"] for m in modules)
         report = {"available": available, "modules": modules, "completed_modules": finished, "total_modules": len(modules),
                   "completed_activities": completed, "total_activities": total,
+                  "optional_activity_count": optional_total,
                   "progress_percent": round(completed / total * 100, 1) if total and available else None,
                   "active_seconds": round(active, 2), "active_time_label": time_label(active),
                   "required_seconds": required, "required_time_label": time_label(required), "complete": complete,
@@ -353,7 +363,8 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
              p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}"), Spacer(1, 4 * mm)])
     metrics = [[p("TEMPS ACTIF ENREGISTRÉ", "small"), p("MODULES TERMINÉS", "small")],
                [p(report["active_time_label"], "heading"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading")],
-               [p("DURÉE PRÉVUE DU PARCOURS", "small"), p("ACTIVITÉS TERMINÉES", "small")],
+               [p("DURÉE PRÉVUE DU PARCOURS", "small"),
+                p("ACTIVITÉS OBLIGATOIRES TERMINÉES" if report.get("optional_activity_count") else "ACTIVITÉS TERMINÉES", "small")],
                [p(report["required_time_label"], "body"), p(f"{report['completed_activities']} / {report['total_activities']}" if report["available"] else "Données partielles", "body")]]
     box = Table(metrics, colWidths=[87 * mm, 87 * mm])
     box.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#edf4fb")),
@@ -361,7 +372,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                             ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
     story.extend([box, Spacer(1, 6 * mm), p(f"Première activité : {report['started_at_label']}"),
                   p(f"Dernière activité : {report['updated_at_label']}"),
-                  p("Le temps indiqué correspond exclusivement au temps actif comptabilisé par la plateforme. La durée prévue n’est pas une durée automatiquement acquise. Un module est terminé lorsque ses activités et sa durée obligatoire sont accomplies.", "small"),
+                  p("Le temps indiqué correspond exclusivement au temps actif comptabilisé par la plateforme. La durée prévue n’est pas une durée automatiquement acquise. Un module est terminé lorsque les activités obligatoires et le temps de suivi requis sont accomplis.", "small"),
                   Spacer(1, 5 * mm)])
     table_rows = [[p(value, "th") for value in ("MODULE", "PROGRESSION", "TEMPS ACTIF", "ÉTAT")]]
     for module in report["modules"]:

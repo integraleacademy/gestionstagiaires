@@ -39,6 +39,14 @@ def path_revision(session_obj: Mapping[str, Any]) -> str:
     return hashlib.sha256(json.dumps(raw, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
+def required_activity_order(course: Mapping[str, Any]) -> List[str]:
+    """Keep optional work accessible without making it a completion condition."""
+    optional = {str(activity["id"]) for section in course.get("sections") or []
+                for activity in section.get("activities") or [] if activity.get("optional") is True}
+    return [str(activity_id) for activity_id in course.get("activity_order") or []
+            if str(activity_id) not in optional]
+
+
 def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict[str, Any]:
     """Select/order sequences without changing activity IDs, content or answers."""
     if course.get("preview_only"):
@@ -69,18 +77,24 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
     if not activities:
         raise CourseImportError("Le module doit contenir au moins une activité.")
     if course.get('version') == '20261012-vtc-v12-cma-105h':
-        # The authored workload is mandatory in this 105-hour programme. Credit
-        # still comes exclusively from the server's active-time heartbeats.
+        # Preserve the 105-hour study envelope, including practice chosen by the
+        # learner. Optional submissions are not completion requirements, and
+        # time still comes exclusively from active-time heartbeats.
         required_minutes = max(required_minutes, sum(int(item.get('planned_minutes') or 0) for item in activities))
+    required = [str(activity["id"]) for activity in activities if activity.get("optional") is not True]
     return {
         **course,
         "title": str(module.get("title") or course.get("title") or "Module"),
         "required_minutes": required_minutes,
         "sections": sections,
         "activity_order": [str(activity["id"]) for activity in activities],
+        "required_activity_ids": required,
         "counts": {**course.get("counts", {}), "sections": len(sections),
                    "activities": len(activities),
-                   "scored_activities": sum(bool(activity.get("scored")) for activity in activities)},
+                   "required_activities": len(required),
+                   "optional_activities": len(activities) - len(required),
+                   "scored_activities": sum(bool(activity.get("scored")) for activity in activities
+                                            if activity.get("optional") is not True)},
     }
 
 
@@ -125,7 +139,8 @@ def course_outline(course: Mapping[str, Any]) -> Dict[str, Any]:
         "sections": [{
             "id": str(section["id"]), "title": str(section.get("title") or "Séquence"),
             "activities": [{"title": str(activity.get("title") or "Activité"),
-                            "scored": bool(activity.get("scored"))}
+                            "scored": bool(activity.get("scored")),
+                            "optional": activity.get("optional") is True}
                            for activity in section.get("activities") or []],
         } for section in course.get("sections") or [] if course.get("training_label") != "A3P" or section.get("delivery") == "distance"],
     }
@@ -134,6 +149,8 @@ def course_outline(course: Mapping[str, Any]) -> Dict[str, Any]:
 def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> Dict[str, Any]:
     """Compute completion against the current selection, retaining stored history."""
     order = course.get("activity_order") or []
+    required = required_activity_order(course)
+    required_set = set(required)
     completed = set(progress.get("completed_activity_ids") or []) & set(order)
     requirements = course_videos(course)
     video_progress = compatible_progress(progress.get("video_progress") or {}, requirements)
@@ -141,14 +158,16 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
         if not videos_complete(video_progress.get(activity_id, {}), videos):
             completed.discard(activity_id)
     scored = [activity["id"] for section in course.get("sections") or []
-              for activity in section.get("activities") or [] if activity.get("scored")]
+              for activity in section.get("activities") or []
+              if activity.get("scored") and activity["id"] in required_set]
     answers = {key: value for key, value in (progress.get("answers") or {}).items() if key in order}
     raw_diagnostics = progress.get('assessment_diagnostics') or {}
     diagnostics = {kind: {key: value for key, value in (raw_diagnostics.get(kind) or {}).items() if key in order}
                    for kind in ('question', 'practice')}
     correct = sum(bool(answers.get(key, {}).get("correct")) for key in scored)
     score = round(correct / len(scored) * 100, 2) if scored else 100.0
-    finished = bool(order) and len(completed) == len(order)
+    completed_required = [key for key in required if key in completed]
+    finished = bool(order) and len(completed_required) == len(required)
     active_seconds = float(progress.get("active_seconds") or 0)
     required_seconds = int(course.get("required_minutes") or 0) * 60
     remaining_seconds = max(0, math.ceil(required_seconds - active_seconds))
@@ -160,16 +179,22 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
     return {
         **progress, "answers": answers, "completed_activity_ids": [key for key in order if key in completed],
         "assessment_diagnostics": diagnostics, "assessment_summary": summary_for(diagnostics),
-        "progress_percent": round(len(completed) / len(order) * 100, 2) if order else 0,
+        "completed_required_activity_ids": completed_required,
+        "required_activity_count": len(required),
+        "completed_required_activities": len(completed_required),
+        "optional_activity_count": len(order) - len(required),
+        "progress_percent": round(len(completed_required) / len(required) * 100, 2) if required else (100 if order else 0),
         "score_percent": score, "correct_answers": correct, "scored_activities": len(scored),
         "status": status, "active_seconds": active_seconds,
         "required_seconds": required_seconds, "remaining_seconds": remaining_seconds,
         "duration_met": duration_met, "activities_completed": finished,
         "module_complete": finished and duration_met,
         "video_progress": video_progress,
-        "required_video_count": sum(len(videos) for videos in requirements.values()),
+        "required_video_count": sum(len(videos) for activity_id, videos in requirements.items()
+                                    if activity_id in required_set),
         "completed_video_count": sum(videos_complete(video_progress.get(activity_id, {}), {video_id: duration})
                                      for activity_id, videos in requirements.items()
+                                     if activity_id in required_set
                                      for video_id, duration in videos.items()),
         "completed_at": progress.get("completed_at") if finished and duration_met else None,
     }

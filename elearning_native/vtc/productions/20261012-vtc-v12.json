@@ -3,12 +3,12 @@
   "version": "20261012-vtc-v12-cma-105h",
   "base_version": "20261010-vtc-v10-lecons-video",
   "reviewed_on": "2026-10-12",
-  "duration_note": "Parcours de 105 heures : cours, mises en situation et 32 productions personnelles avec reprise des corrections. Les budgets d’activité sont prévisionnels ; le temps de travail réellement suivi reste enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
+  "duration_note": "Le parcours prévoit au moins 105 heures de travail suivi. Vous complétez les cours et activités du module par des approfondissements au choix : exercices, missions, reprise des cours ou révisions ciblées. Les 32 productions personnelles sont facultatives ; vous pouvez en choisir certaines, toutes ou aucune. Les durées indiquées sont prévisionnelles : seul votre temps de travail réellement suivi est enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
   "production_minutes": 878,
   "programme_minutes": 6300,
   "purpose": "Écrire, calculer, décider et améliorer des productions professionnelles à partir de dossiers fictifs.",
   "authorship": "Cas et réponses modèles originaux ; les sources réglementaires sont indiquées dans chaque dossier concerné.",
-  "duration_method": "Chaque budget comprend lecture des pièces, raisonnement, première réponse et relecture/reprise après correction ; aucune durée n’est créditée par la seule soumission.",
+  "duration_method": "Chaque durée estimée concerne une production facultative et comprend la lecture des pièces, le raisonnement, la première réponse et la relecture après correction. Vous pouvez choisir ces productions pour approfondir les cours, ou privilégier les exercices, missions et révisions du module. Le suivi retient uniquement votre temps de travail réel ; la remise d’une copie ne crédite aucune durée.",
   "productions": [
     {
       "id": "vtc-a-production-01",
@@ -4833,7 +4833,7 @@
         "cloture": "À l’issue d’Alpha, je vérifie l’habitacle et sécurise la housse trouvée. J’utilise le canal de contact lié à la réservation pour informer le client et convenir d’une restitution, sans annoncer qu’elle a déjà eu lieu. Je consigne l’objet, le lieu et l’heure de découverte ainsi que les actions réellement effectuées ; je ne diffuse ni identité ni réservation dans un groupe public. Je vérifie le détail de facturation manquant et prépare une correction conforme aux pièces de la mission. Je remercie le client, recueille son retour de façon professionnelle et range les éléments utiles au suivi dans le dossier habilité.",
         "bareme": "Alpha totalise 2+7+4+1=14/20. Ses 24 minutes dépassent la durée minimale de 20 minutes de conduite en circulation. Sur les seules données fournies, le total franchit 12/20 et aucune intervention éliminatoire n’est rapportée ; c’est cependant un bilan d’entraînement, pas une réussite officielle délivrée par le jury. Bêta totalise arithmétiquement 3+8+4+2=17/20, mais ce total ne compense pas l’action de l’examinateur sur le volant. Dans l’épreuve officielle, cette intervention entraîne l’arrêt et l’ajournement. Le barème VTC est bien 3/10/5/2 ; il ne faut pas utiliser les répartitions propres à un autre métier ni confondre les deux bilans.",
         "priorites": "Priorité 1 : anticiper les contrôles latéraux avant toute manœuvre, car une observation tardive concerne directement la sécurité et les autres usagers ; un bon total ne supprime pas ce risque. Priorité 2 : établir une facture explicitant l’attente et les conditions réellement acceptées, point précisément absent du bilan. Priorité 3 : mieux préparer et expliquer le parcours, en conservant l’acquis du guidage réglé à l’arrêt et de l’information sur le détour. Je ne prétends pas que le dossier établit une erreur de parcours précise : la note de 2/3 appelle une clarification avec le formateur. L’accueil obtient 4/5 et sera consolidé, sans inventer un défaut non observé.",
-        "plan": "Exercice 1, manœuvre supervisée dans des conditions adaptées : observer avant de décider de bouger, vérifier l’environnement au bon moment et interrompre l’action si un usager entre dans la zone. Le formateur note l’ordre et le moment des contrôles ainsi que toute intervention nécessaire ; tant qu’un risque persiste, nous reprenons l’exercice avec ses consignes. Exercice 2, facture d’une mission fictive avec attente : établir les lignes et vérifier qu’elles correspondent aux horaires et à l’accord fournis ; réussite pédagogique attendue, calcul exact et aucune prestation inventée, puis comparaison au corrigé. Exercice 3, préparation et réalisation d’un parcours avec détour : programmer à l’arrêt, justifier un trajet autorisé et annoncer une estimation prudente ; le formateur observe l’autonomie, la conduite et l’information du client. Nous comparons les observations avant/après pour décider d’un nouvel entraînement. Une réponse écrite ou un score IA ne valide pas à lui seul la compétence de conduite réelle."
+        "plan": "Exercice 1, manœuvre supervisée dans des conditions adaptées : observer avant de décider de bouger, vérifier l’environnement au bon moment et interrompre l’action si un usager entre dans la zone. Le formateur note l’ordre et le moment des contrôles ainsi que toute intervention nécessaire ; tant qu’un risque persiste, nous reprenons l’exercice avec ses consignes. Exercice 2, facture d’une mission fictive avec attente : établir les lignes et vérifier qu’elles correspondent aux horaires et à l’accord fournis ; réussite pédagogique attendue, calcul exact et aucune prestation inventée, puis comparaison au corrigé. Exercice 3, préparation et réalisation d’un parcours avec détour : programmer à l’arrêt, justifier un trajet autorisé et annoncer une estimation prudente ; le formateur observe l’autonomie, la conduite et l’information du client. Nous comparons les observations avant/après pour décider d’un nouvel entraînement. Une réponse écrite ou un score pédagogique ne valide pas à lui seul la compétence de conduite réelle."
       },
       "rubric": [
         {
@@ -4873,7 +4873,7 @@
           "id": "critere-4",
           "label": "Construire trois exercices vérifiables",
           "max_points": 5,
-          "expected": "Trois exercices correspondant aux priorités, chacun avec situation, comportement observable et critère de relecture/progression par le formateur. L’écrit/IA ne remplace pas l’observation de la conduite en circulation.",
+          "expected": "Trois exercices correspondant aux priorités, chacun avec situation, comportement observable et critère de relecture/progression par le formateur. L’écrit et sa correction ne remplacent pas l’observation de la conduite en circulation.",
           "partial_guidance": "5 : trois exercices observables et limite explicite ; 3–4 : deux exercices complets ou critères partiels ; 1–2 : plan vague mais supervisé ; 0 : validation automatique de la conduite à partir du score écrit.",
           "field_ids": [
             "plan"
@@ -4938,5 +4938,9 @@
         }
       ]
     }
-  ]
+  ],
+  "productions_optional": true,
+  "optional_production_count": 32,
+  "required_production_count": 0,
+  "independent_study_minutes": 878
 }

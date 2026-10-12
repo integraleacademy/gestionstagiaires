@@ -107,6 +107,10 @@
       actionButton.textContent = "Regardez la vidéo jusqu’à la fin";
       return;
     }
+    if (config.activityOptional === true && actionButton.dataset.mode === "complete" && !state.saving) {
+      actionButton.textContent = "Valider cet atelier →";
+      return;
+    }
     if (requiredVideos.length && !state.saving && !blocked) {
       actionButton.textContent = actionButton.dataset.mode === "navigate"
         ? `${config.isLastActivity ? (config.endLabel || 'Retour au parcours') : 'Continuer'} →`

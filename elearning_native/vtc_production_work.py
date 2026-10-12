@@ -209,12 +209,12 @@ class VtcWrittenWork:
                 AND content_hash=? AND status IN ('corrected','trainer_reviewed')
                 ORDER BY updated_epoch DESC LIMIT 1''', (*self._key(access, activity_id), digest)).fetchone()
         if not row:
-            raise WrittenWorkError('Faites corriger cette version de votre travail avant de continuer. Une copie signalée doit être revue par le formateur.')
+            raise WrittenWorkError('Pour valider cet atelier, faites corriger cette version de votre travail. Une copie signalée doit être revue par le formateur.')
         feedback = _json_dict(row['feedback_json'])
         if row['status'] != 'trainer_reviewed' and float(feedback.get('score') or 0) < float(activity['production'].get('pass_points') or 12):
-            raise WrittenWorkError('Reprenez votre réponse avec les conseils de correction pour atteindre l’objectif de 12/20 avant de continuer.')
+            raise WrittenWorkError('Pour valider cet atelier, reprenez votre réponse avec les conseils de correction pour atteindre l’objectif de 12/20. Vous pouvez poursuivre le parcours sans valider cet atelier facultatif.')
         if answers != existing.get('production_answers'):
-            raise WrittenWorkError('Votre brouillon a changé. Enregistrez et faites corriger la copie actuelle avant de continuer.', 409)
+            raise WrittenWorkError('Votre brouillon a changé. Enregistrez et faites corriger la copie actuelle avant de valider cet atelier.', 409)
         return {**existing, 'production_answers': answers, 'production_draft': False,
                 'production_ai_feedback': feedback, 'production_ai_hash': digest,
                 'production_ai_attempt': row['id'], 'production_feedback_seen': True,

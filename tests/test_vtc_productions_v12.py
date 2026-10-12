@@ -1,6 +1,7 @@
 """The authored 105-hour edition is additive, private, and internally teachable."""
 import copy
 import json
+import re
 
 import pytest
 
@@ -22,6 +23,9 @@ def test_composed_course_keeps_all_existing_activities_and_videos(letter):
     assert base == before
     assert current['version'] == productions.VERSION
     assert current['planned_minutes'] == current['required_minutes'] == productions.MODULE_MINUTES[letter]
+    assert current['productions_optional'] is True
+    assert current['counts']['optional_productions'] == 4
+    assert current['independent_study_minutes'] == productions.INDEPENDENT_STUDY_MINUTES[letter]
     assert sum(a['planned_minutes'] for a in activities(current)) == current['planned_minutes']
     assert sum(row['minutes'] for row in current['duration_breakdown']) == current['planned_minutes']
     assert len(current['activity_order']) == 46
@@ -32,7 +36,9 @@ def test_composed_course_keeps_all_existing_activities_and_videos(letter):
     for activity in activities(current):
         if activity['id'] in added:
             assert activity['vtc']['kind'] == 'production'
+            assert activity['optional'] is True
             assert activity['planned_minutes'] == activity['production']['estimated_minutes']
+            assert activity['production'] == productions.get_production(activity['id'])
             continue
         expected = copy.deepcopy(old_activities[activity['id']])
         if expected.get('vtc', {}).get('kind') == 'supplements':
@@ -74,6 +80,9 @@ def test_public_subject_does_not_disclose_any_marking_answers():
     before = copy.deepcopy(assignment)
     public = productions.public_production(assignment)
     assert 'model_response' not in public and 'rubric' not in public and 'feedback' not in public
+    assert 'grading_mode' not in public
+    assert public['optional'] is True
+    assert public['optional_note'] == productions.OPTIONAL_NOTE
     assert all(set(c) == {'id', 'label', 'max_points'} for c in public['rubric_preview'])
     assert public['work_phases'] == assignment['work_phases']
     assert public['documents'] == assignment['documents']
@@ -89,8 +98,11 @@ def test_catalogue_and_programme_total_105_hours_with_cma_additional():
     programme = json.loads((vtc.ROOT / manifest['programme_file']).read_text())
     assert manifest['version'] == programme['version'] == productions.VERSION
     assert manifest['planned_minutes'] == programme['planned_minutes'] == 6300
+    assert manifest['required_minutes'] == programme['required_minutes'] == 6300
     assert sum(m['planned_minutes'] for m in manifest['modules']) == 6300
     assert sum(m['planned_minutes'] for m in programme['modules']) == 6300
+    assert sum(m['required_minutes'] for m in manifest['modules']) == 6300
+    assert sum(m['required_minutes'] for m in programme['modules']) == 6300
     assert sum(m['base_minutes'] for m in programme['modules']) == 5422
     assert sum(m['production_minutes'] for m in programme['modules']) == 878
     assert manifest['activity_count'] == 368
@@ -99,6 +111,51 @@ def test_catalogue_and_programme_total_105_hours_with_cma_additional():
     assert programme['additional_simulation']['included_in_105_hours'] is False
     assert programme['validation']['real_learners_tested'] == 0
     assert programme['validation']['measured_median_minutes'] is None
+
+
+def test_optional_work_and_study_allocation_are_consistent_without_requiring_copies():
+    bank = productions.production_bank()
+    manifest = vtc.curriculum_manifest()
+    programme = json.loads((vtc.ROOT / manifest['programme_file']).read_text())
+    for data in (bank, manifest, programme):
+        assert data['productions_optional'] is True
+        assert data['optional_production_count'] == 32
+        assert data['required_production_count'] == 0
+        assert data['independent_study_minutes'] == 878
+        assert data['duration_note'] == bank['duration_note']
+        assert 'toutes ou aucune' in data['duration_note']
+    for module in programme['modules']:
+        letter = module['letter']
+        course = vtc.load_bundled_course('academy-vtc-' + letter.lower())
+        catalogue_module = next(m for m in manifest['modules'] if m['letter'] == letter)
+        assert module['productions_optional'] is catalogue_module['productions_optional'] is True
+        assert module['independent_study_minutes'] == course['independent_study_minutes']
+        assert module['base_minutes'] + module['independent_study_minutes'] == module['required_minutes']
+        assert module['breakdown'] == course['duration_breakdown'] == catalogue_module['duration_breakdown']
+        assert module['breakdown'][-1]['label'] == productions.INDEPENDENT_STUDY_LABEL
+        assert all(row['optional'] is True for row in module['productions'])
+        # Skipping a production retains its identity and the offered work;
+        # it must never remove a lesson or alter its completion requirement.
+        required = [a for a in activities(course) if not a.get('optional')]
+        base = vtc.load_bundled_course(course['id'], productions.BASE_VERSION)
+        assert [a['id'] for a in required] == base['activity_order']
+        assert course['duration_note'] == bank['duration_note']
+
+
+def test_public_production_and_programme_text_use_the_requested_neutral_wording():
+    bank = productions.production_bank()
+    manifest = vtc.curriculum_manifest()
+    programme = json.loads((vtc.ROOT / manifest['programme_file']).read_text())
+    public_payloads = [productions.public_production(row, reveal=reveal)
+                       for row in bank['productions'] for reveal in (False, True)]
+    cma = json.loads((vtc.ROOT / 'cma' / '20261012-cma-v1.json').read_text())
+    public_payloads.extend((manifest, programme, productions.NOTICE, cma['notice']))
+    text = json.dumps(public_payloads, ensure_ascii=False)
+    assert not re.search(r'\b(?:IA|ChatGPT|OpenAI)\b|intelligence artificielle', text, re.I)
+    updated_guidance = ' '.join((bank['duration_note'], bank['duration_method'],
+                                programme['estimation_method'], programme['historical_progress'],
+                                productions.NOTICE, productions.OPTIONAL_NOTE))
+    assert not re.search(r'\b(?:tu|ton|ta|tes|toi)\b', updated_guidance, re.I)
 
 
 @pytest.mark.parametrize('exam_id', [f'vtc-{letter}' for letter in 'abcdefgh'] + ['vtc-final'])

@@ -3,12 +3,24 @@ const {JSDOM}=require('jsdom');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const {execFileSync}=require('node:child_process');
 const root=path.join(__dirname,'..');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'elearning_native/vtc/manifest.json'),'utf8'));
-const catalog=manifest.modules.map(m=>{
- const c=JSON.parse(fs.readFileSync(path.join(root,'elearning_native/vtc/courses',m.id,m.version+'.json'),'utf8'));
- return {course_id:c.id,course_version:c.version,title:c.title,vtc:true,planned_minutes:c.planned_minutes,sections:c.sections};
-});
+// Current editions are composed in Python rather than stored as derived course JSON.
+const catalog=JSON.parse(execFileSync(process.env.PYTHON||'python3',['-c',`
+import json, sys
+from elearning_native import vtc
+catalog = []
+for module in json.load(sys.stdin)['modules']:
+    course = vtc.load_bundled_course(module['id'], module['version'])
+    catalog.append({'course_id': course['id'], 'course_version': course['version'],
+                    'title': course['title'], 'vtc': True,
+                    'planned_minutes': course['planned_minutes'], 'sections': course['sections']})
+print(json.dumps(catalog, ensure_ascii=False))
+`],{cwd:root,input:JSON.stringify(manifest),encoding:'utf8',maxBuffer:32*1024*1024}));
+const activities=catalog.flatMap(course=>course.sections.flatMap(section=>section.activities));
+assert.equal(activities.filter(activity=>activity.optional!==true).length,336);
+assert.equal(activities.filter(activity=>activity.optional===true).length,32);
 catalog.unshift({course_id:'academy-aps62-01',course_version:'aps-version',title:'APS',academy:true,planned_minutes:240,sections:[]});
 const config={catalog,modules:[],revision:'initial',csrfToken:'csrf',saveUrl:'/save',readOnly:false};
 const dom=new JSDOM(`<div id="nativeModuleLibrary"></div><div id="nativePathModules"></div><input id="nativeModuleSearch"><input id="nativePathTitle" value="Parcours VTC"><div id="nativePathTotals"></div><button id="vtcAddPath">Ajouter</button><button id="nativePathSave">Enregistrer</button><strong id="nativePathSaveState"></strong><script id="nativePathConfig" type="application/json">${JSON.stringify(config)}</script>`,{runScripts:'outside-only',url:'https://test.invalid/'});
@@ -21,7 +33,7 @@ const d=dom.window.document;
  assert.equal(d.querySelectorAll('#nativePathModules > details').length,8);
  assert.equal(saved,undefined);
  const planned=manifest.planned_minutes;
- assert(d.getElementById('nativePathTotals').textContent.includes(`336 activités${Math.floor(planned/60)} h ${String(planned%60).padStart(2,'0')} min`));
+ assert(d.getElementById('nativePathTotals').textContent.includes(`${activities.length} activités${Math.floor(planned/60)} h ${String(planned%60).padStart(2,'0')} min`));
  assert.equal(d.getElementById('nativePathTitle').value,'VTC · Le parcours illustré');
  d.getElementById('vtcAddPath').click();
  assert.equal(d.querySelectorAll('#nativePathModules > details').length,8);

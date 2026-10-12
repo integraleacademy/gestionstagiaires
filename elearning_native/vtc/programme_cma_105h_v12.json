@@ -4,8 +4,8 @@
   "planned_minutes": 6300,
   "required_minutes": 6300,
   "status": "programme_previsionnel",
-  "duration_note": "Parcours de 105 heures : cours, mises en situation et 32 productions personnelles avec reprise des corrections. Les budgets d’activité sont prévisionnels ; le temps de travail réellement suivi reste enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
-  "estimation_method": "Base pédagogique V10 de 5422 minutes conservée ; 878 minutes ajoutées pour 32 productions originales, ventilées par étapes et livrables. La durée réellement constatée reste à évaluer sur un groupe pilote.",
+  "duration_note": "Le parcours prévoit au moins 105 heures de travail suivi. Vous complétez les cours et activités du module par des approfondissements au choix : exercices, missions, reprise des cours ou révisions ciblées. Les 32 productions personnelles sont facultatives ; vous pouvez en choisir certaines, toutes ou aucune. Les durées indiquées sont prévisionnelles : seul votre temps de travail réellement suivi est enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
+  "estimation_method": "Le socle de cours et d’activités conserve son budget prévisionnel de 5 422 minutes. L’objectif de 6 300 minutes comprend une enveloppe de 878 minutes d’approfondissement au choix : reprise des cours, exercices, missions et révisions. Les 32 productions facultatives constituent une possibilité dans cette enveloppe ; leurs estimations par étapes totalisent 878 minutes si vous choisissez de toutes les réaliser. Cette répartition n’impose aucune copie et ne crédite aucune durée. Le temps réellement observé reste à évaluer sur un groupe pilote.",
   "modules": [
     {
       "letter": "A",
@@ -40,7 +40,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 85
         }
       ],
@@ -71,7 +71,8 @@
               "minutes": 3,
               "deliverable": "Corriger les confusions entre personne, entreprise et autorisation"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-a-production-02",
@@ -99,7 +100,8 @@
               "minutes": 3,
               "deliverable": "Améliorer les formulations et les vérifications"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-a-production-03",
@@ -127,7 +129,8 @@
               "minutes": 3,
               "deliverable": "Retirer les suppositions et données inutiles"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-a-production-04",
@@ -155,9 +158,12 @@
               "minutes": 4,
               "deliverable": "Vérifier exactitude des faits et confidentialité"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 85
     },
     {
       "letter": "B",
@@ -192,7 +198,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 147
         }
       ],
@@ -223,7 +229,8 @@
               "minutes": 6,
               "deliverable": "Revoir les confusions entre résultat, cash et statut"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-b-production-02",
@@ -251,7 +258,8 @@
               "minutes": 6,
               "deliverable": "Vérifier les arrondis et distinguer contribution du revenu"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-b-production-03",
@@ -279,7 +287,8 @@
               "minutes": 6,
               "deliverable": "Vérifier le cumul et les limites de période"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-b-production-04",
@@ -307,9 +316,12 @@
               "minutes": 7,
               "deliverable": "Tester les hypothèses et corriger les comparaisons"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 147
     },
     {
       "letter": "C",
@@ -344,7 +356,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 74
         }
       ],
@@ -375,7 +387,8 @@
               "minutes": 3,
               "deliverable": "Revoir arrondis et limites"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-c-production-02",
@@ -403,7 +416,8 @@
               "minutes": 3,
               "deliverable": "Vérifier la protection des usagers vulnérables"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-c-production-03",
@@ -431,7 +445,8 @@
               "minutes": 4,
               "deliverable": "Corriger promesses et divulgations inutiles"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-c-production-04",
@@ -459,9 +474,12 @@
               "minutes": 4,
               "deliverable": "Retirer toute cause ou promesse inventée"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 74
     },
     {
       "letter": "D",
@@ -496,7 +514,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 102
         }
       ],
@@ -527,7 +545,8 @@
               "minutes": 4,
               "deliverable": "Vérifier fidélité, chronologie et langue"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-d-production-02",
@@ -555,7 +574,8 @@
               "minutes": 4,
               "deliverable": "Éliminer ambiguïtés et fausses certitudes"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-d-production-03",
@@ -583,7 +603,8 @@
               "minutes": 5,
               "deliverable": "Relire les accords et le degré de confirmation"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-d-production-04",
@@ -611,9 +632,12 @@
               "minutes": 5,
               "deliverable": "Relire fidélité, concision et orthographe"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 102
     },
     {
       "letter": "E",
@@ -648,7 +672,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 122
         }
       ],
@@ -679,7 +703,8 @@
               "minutes": 6,
               "deliverable": "Check times, clarity and corrected wording"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-e-production-02",
@@ -707,7 +732,8 @@
               "minutes": 6,
               "deliverable": "Check landmarks, consent and simple English"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-e-production-03",
@@ -735,7 +761,8 @@
               "minutes": 6,
               "deliverable": "Correct numbers and uncertainty language"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-e-production-04",
@@ -763,9 +790,12 @@
               "minutes": 7,
               "deliverable": "Check status, dates and natural simple English"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 122
     },
     {
       "letter": "F",
@@ -800,7 +830,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 102
         }
       ],
@@ -831,7 +861,8 @@
               "minutes": 4,
               "deliverable": "Contrôler chiffres et promesses"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-f-production-02",
@@ -859,7 +890,8 @@
               "minutes": 4,
               "deliverable": "Vérifier chiffres, dates et absence de promesses"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-f-production-03",
@@ -887,7 +919,8 @@
               "minutes": 5,
               "deliverable": "Retirer données et engagements non autorisés"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-f-production-04",
@@ -915,9 +948,12 @@
               "minutes": 5,
               "deliverable": "Contrôler dénominateurs et responsabilités"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 102
     },
     {
       "letter": "G",
@@ -952,7 +988,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 108
         }
       ],
@@ -983,7 +1019,8 @@
               "minutes": 5,
               "deliverable": "Vérifier seuils, unités et réserves"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-g-production-02",
@@ -1011,7 +1048,8 @@
               "minutes": 5,
               "deliverable": "Vérifier authenticité et exception de contact"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-g-production-03",
@@ -1039,7 +1077,8 @@
               "minutes": 5,
               "deliverable": "Vérifier authenticité, délais et stationnement"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-g-production-04",
@@ -1067,9 +1106,12 @@
               "minutes": 6,
               "deliverable": "Contrôler sources, réserves et responsabilités"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 108
     },
     {
       "letter": "H",
@@ -1104,7 +1146,7 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 138
         }
       ],
@@ -1135,7 +1177,8 @@
               "minutes": 6,
               "deliverable": "Vérifier les calculs et reprendre les conseils de correction"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-h-production-02",
@@ -1163,7 +1206,8 @@
               "minutes": 7,
               "deliverable": "Écarter les formulations ambiguës et préparer l’exercice avec le formateur"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-h-production-03",
@@ -1191,7 +1235,8 @@
               "minutes": 7,
               "deliverable": "Vérifier accord, bases HT/TTC et absence de frais inventés"
             }
-          ]
+          ],
+          "optional": true
         },
         {
           "id": "vtc-h-production-04",
@@ -1219,9 +1264,12 @@
               "minutes": 8,
               "deliverable": "Vérifier le barème et rendre les objectifs observables avec le formateur"
             }
-          ]
+          ],
+          "optional": true
         }
-      ]
+      ],
+      "productions_optional": true,
+      "independent_study_minutes": 138
     }
   ],
   "additional_simulation": {
@@ -1234,5 +1282,9 @@
     "measured_median_minutes": null,
     "status": "a_valider_avec_un_groupe_pilote"
   },
-  "historical_progress": "Les éditions antérieures restent disponibles ; toute montée d’édition conserve les activités, réponses, vidéos et temps acquis et ajoute les productions restant à réaliser. Les parcours certifiés ne sont pas réécrits."
+  "historical_progress": "Les éditions antérieures restent disponibles ; tout changement d’édition conserve les activités, réponses, vidéos et temps acquis. Les productions restent accessibles à titre facultatif, y compris pour reprendre une copie déjà remise. Les parcours certifiés ne sont pas réécrits.",
+  "productions_optional": true,
+  "optional_production_count": 32,
+  "required_production_count": 0,
+  "independent_study_minutes": 878
 }

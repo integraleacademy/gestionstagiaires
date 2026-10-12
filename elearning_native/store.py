@@ -224,12 +224,18 @@ class NativeElearningStore:
         *,
         activity_order: Sequence[str] = (),
         scored_activity_ids: Sequence[str] = (),
+        required_activity_ids: Optional[Sequence[str]] = None,
     ) -> Dict[str, Any]:
         completed = [str(value) for value in _json_list(row["completed_json"])]
         answers = _json_dict(row["answers_json"])
         assessment_diagnostics = _json_dict(row['assessment_diagnostics_json'])
-        total = len(activity_order)
-        progress_percent = round((len(set(completed)) / total) * 100, 2) if total else 0.0
+        required_set = set(activity_order if required_activity_ids is None else required_activity_ids)
+        required = [activity_id for activity_id in activity_order if activity_id in required_set]
+        completed_set = set(completed)
+        completed_required = [activity_id for activity_id in required if activity_id in completed_set]
+        scored_activity_ids = [activity_id for activity_id in scored_activity_ids if activity_id in required]
+        total = len(required)
+        progress_percent = round(len(completed_required) / total * 100, 2) if total else (100.0 if activity_order else 0.0)
         correct_count = sum(
             1
             for activity_id in scored_activity_ids
@@ -242,6 +248,10 @@ class NativeElearningStore:
             "course_version": row["course_version"],
             "current_activity_id": row["current_activity_id"],
             "completed_activity_ids": completed,
+            "completed_required_activity_ids": completed_required,
+            "required_activity_count": total,
+            "completed_required_activities": len(completed_required),
+            "optional_activity_count": len(activity_order) - total,
             "answers": answers,
             "assessment_diagnostics": assessment_diagnostics,
             "assessment_summary": assessment.summary_for(assessment_diagnostics),
@@ -372,6 +382,7 @@ class NativeElearningStore:
         *,
         activity_order: Sequence[str] = (),
         scored_activity_ids: Sequence[str] = (),
+        required_activity_ids: Optional[Sequence[str]] = None,
         mastery_score: float = 80,
         required_seconds: int = 0,
         video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
@@ -389,6 +400,7 @@ class NativeElearningStore:
                 completion = self._completion_values(
                     _json_list(row["completed_json"]), _json_dict(row["answers_json"]),
                     activity_order=activity_order, scored_activity_ids=scored_activity_ids,
+                    required_activity_ids=required_activity_ids,
                     mastery_score=mastery_score, active_seconds=float(row["active_seconds"] or 0),
                     required_seconds=required_seconds,
                     video_requirements=video_requirements,
@@ -409,6 +421,7 @@ class NativeElearningStore:
                 row,
                 activity_order=activity_order,
                 scored_activity_ids=scored_activity_ids,
+                required_activity_ids=required_activity_ids,
             )
 
     def start_tracking(
@@ -899,6 +912,7 @@ class NativeElearningStore:
         activity_order: Sequence[str],
         scored_activity_ids: Sequence[str],
         mastery_score: float,
+        required_activity_ids: Optional[Sequence[str]] = None,
         active_seconds: float = 0,
         required_seconds: int = 0,
         video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
@@ -909,13 +923,16 @@ class NativeElearningStore:
             if not videos_complete((video_progress or {}).get(activity_id, {}), videos):
                 completed_set.discard(activity_id)
         ordered_completed = [activity_id for activity_id in activity_order if activity_id in completed_set]
+        required_set = set(activity_order if required_activity_ids is None else required_activity_ids)
+        required = [activity_id for activity_id in activity_order if activity_id in required_set]
+        scored_activity_ids = [activity_id for activity_id in scored_activity_ids if activity_id in required_set]
         correct = sum(
             1
             for activity_id in scored_activity_ids
             if isinstance(answers.get(activity_id), Mapping) and answers[activity_id].get("correct") is True
         )
         score = round((correct / len(scored_activity_ids)) * 100, 2) if scored_activity_ids else 100.0
-        activities_complete = bool(activity_order) and len(ordered_completed) == len(activity_order)
+        activities_complete = bool(activity_order) and all(activity_id in completed_set for activity_id in required)
         all_complete = activities_complete and active_seconds >= required_seconds
         if all_complete:
             status = "passed" if score >= float(mastery_score) else "failed"
@@ -924,8 +941,8 @@ class NativeElearningStore:
         else:
             status = "in_progress"
         next_activity = next(
-            (activity_id for activity_id in activity_order if activity_id not in completed_set),
-            activity_order[-1] if activity_order else "",
+            (activity_id for activity_id in required if activity_id not in completed_set),
+            required[-1] if required else (activity_order[-1] if activity_order else ""),
         )
         return {
             "completed": ordered_completed,
@@ -943,6 +960,7 @@ class NativeElearningStore:
         activity_order: Sequence[str],
         scored_activity_ids: Sequence[str],
         mastery_score: float,
+        required_activity_ids: Optional[Sequence[str]] = None,
         required_seconds: int = 0,
         answer: Optional[Mapping[str, Any]] = None,
         video_requirements: Optional[Mapping[str, Mapping[str, float]]] = None,
@@ -974,7 +992,7 @@ class NativeElearningStore:
                 saved_production = answers.get(activity_id)
                 if (not isinstance(saved_production, Mapping)
                         or saved_production.get("production_answers") != answer.get("production_answers")):
-                    raise TrackingError("Votre brouillon a changé. Rechargez la page et faites corriger la copie actuelle avant de continuer.")
+                    raise TrackingError("Votre brouillon a changé. Rechargez la page et faites corriger la copie actuelle avant de valider cet atelier.")
             if assessment_attempt is not None and not already_completed:
                 try:
                     assessment.record_attempt(connection, access, activity_id=activity_id,
@@ -994,6 +1012,7 @@ class NativeElearningStore:
                 answers,
                 activity_order=activity_order,
                 scored_activity_ids=scored_activity_ids,
+                required_activity_ids=required_activity_ids,
                 mastery_score=mastery_score,
                 active_seconds=float(row["active_seconds"] or 0), required_seconds=required_seconds,
                 video_requirements=video_requirements, video_progress=video_progress,
@@ -1028,7 +1047,7 @@ class NativeElearningStore:
                     at=now_iso,
                     details={"correct": answer.get("correct") if answer else None},
                 )
-                if completion["all_complete"]:
+                if completion["all_complete"] and not row["completed_at"]:
                     self._event(
                         connection,
                         access,
@@ -1042,6 +1061,7 @@ class NativeElearningStore:
                 updated,
                 activity_order=activity_order,
                 scored_activity_ids=scored_activity_ids,
+                required_activity_ids=required_activity_ids,
             )
             result["already_completed"] = already_completed
             return result

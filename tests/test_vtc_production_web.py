@@ -45,7 +45,9 @@ class VtcProductionWebTests(unittest.TestCase):
         page, config = self.open()
         self.assertIn('vtc-production.js', page.text)
         self.assertNotIn('MODÈLE PRIVÉ', page.text)
-        self.assertIn('Objectif de cet atelier', page.text)
+        self.assertIn('Repère pour progresser dans cet atelier', page.text)
+        self.assertIn('Cette production est facultative.', page.text)
+        self.assertIn('sans rédiger ni demander de correction', page.text)
         url='/api/elearning/v1/activities/content-1/complete'
         early=self._api_post(url,config,production_answers=ANSWERS,production_reviewed=True,score=20)
         self.assertEqual(early.status_code,400)

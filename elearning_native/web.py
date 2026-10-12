@@ -64,7 +64,7 @@ from .importer import (
 from .store import IDLE_TIMEOUT_SECONDS, NativeElearningStore, TrackingError
 from .paths import (
     allows_free_module_navigation, assigned_modules, course_outline, path_revision, project_course,
-    project_progress, validate_modules,
+    project_progress, required_activity_order, validate_modules,
 )
 
 try:
@@ -195,7 +195,7 @@ def _scored_activity_ids(course: Mapping[str, Any]) -> List[str]:
     return [
         str(activity.get("id"))
         for _, activity in _activity_pairs(course)
-        if activity.get("scored")
+        if activity.get("scored") and activity.get("optional") is not True
     ]
 
 
@@ -553,6 +553,7 @@ def create_native_elearning_blueprint(
     def current_progress(access: Mapping[str, Any], course: Mapping[str, Any]) -> Dict[str, Any]:
         raw = store().get_progress(access, activity_order=course.get("activity_order") or [],
                                    scored_activity_ids=_scored_activity_ids(course),
+                                   required_activity_ids=required_activity_order(course),
                                    mastery_score=float(course.get("settings", {}).get("mastery_score", 80)),
                                    required_seconds=int(course.get("required_minutes") or 0) * 60,
                                    video_requirements=course_videos(course))
@@ -652,6 +653,7 @@ def create_native_elearning_blueprint(
             "type": str(activity.get("type") or "content"),
             "question_type": str(activity.get("question_type") or ""),
             "scored": bool(activity.get("scored")),
+            "optional": activity.get("optional") is True,
             "planned_minutes": int(activity.get("planned_minutes") or 0),
             "prompt": str(activity.get("prompt") or ""),
             "workbook": dict(activity.get("workbook") or {}),
@@ -746,7 +748,7 @@ def create_native_elearning_blueprint(
     ) -> List[Dict[str, Any]]:
         completed = set(progress.get("completed_activity_ids") or [])
         order = [str(value) for value in course.get("activity_order") or []]
-        first_incomplete = _next_incomplete(order, list(completed))
+        first_incomplete = _next_incomplete(required_activity_order(course), list(completed))
         first_incomplete_index = order.index(first_incomplete) if first_incomplete in order else len(order)
         force_navigation = not preview and bool(course.get("settings", {}).get("force_navigation"))
         result: List[Dict[str, Any]] = []
@@ -766,6 +768,7 @@ def create_native_elearning_blueprint(
                         "id": activity_id,
                         "title": str(activity.get("title") or ""),
                         "completed": activity_id in completed,
+                        "optional": activity.get("optional") is True,
                         "current": activity_id == current_activity_id,
                         "has_video": bool(activity_videos(activity)),
                         "has_lesson_video": any((b.get('video') or {}).get('lesson_explainer')
@@ -1090,6 +1093,8 @@ def create_native_elearning_blueprint(
             return url_for("native_elearning.admin_preview", course_id=course_id,
                            version=course["version"], activity=activity_id)
 
+        next_required = next((activity_id for activity_id in order[index + 1:]
+                              if activity_id in required_activity_order(course)), "")
         return render_template(
             "native_elearning_player.html", preview_mode=True,
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course),
@@ -1105,6 +1110,7 @@ def create_native_elearning_blueprint(
             activity_position=index + 1, activity_count=len(order),
             previous_url=activity_url(order[index - 1]) if index else "",
             next_url=activity_url(order[index + 1]) if index + 1 < len(order) else "",
+            optional_skip_url=activity_url(next_required) if next_required else "",
             portal_url=url_for("native_elearning.admin_macaps_catalog" if course.get("training_label") == "MAC APS" else "native_elearning.admin_a3p_catalog" if course.get("training_label") == "A3P" else "native_elearning.admin_vtc_catalog" if course.get("training_label") == "VTC" else "native_elearning.admin_catalog"),
             preview_config={
                 "questionType": raw_activity.get("question_type") or "",
@@ -1523,13 +1529,11 @@ def create_native_elearning_blueprint(
                 str(activity.get("id")): str(activity.get("title") or "")
                 for _, activity in _activity_pairs(row_course)
             }
-            total = len(row_course.get("activity_order") or [])
             row.update(identities.get((row["session_id"], row["trainee_id"]), {}))
             row["trainee_name"] = row.get("trainee_name") or row["trainee_id"]
             row["session_name"] = row.get("session_name") or row["session_id"]
             row["activity_title"] = activity_titles.get(row.get("current_activity_id"), "")
-            completed_count = len(set(row.get("completed_activity_ids") or []) & set(row_course.get("activity_order") or []))
-            row["progress_percent"] = round((completed_count / total) * 100, 1) if total else 0
+            row["progress_percent"] = round(row["progress_percent"], 1)
             row["active_time_label"] = _format_seconds(row.get("active_seconds"))
             row["required_time_label"] = _format_seconds(row["required_seconds"])
             row["remaining_time_label"] = _format_seconds(row["remaining_seconds"])
@@ -1782,8 +1786,8 @@ def create_native_elearning_blueprint(
             item["required_time_label"] = _format_seconds(progress["required_seconds"])
             item["remaining_time_label"] = _format_seconds(progress["remaining_seconds"])
             item["complete"] = progress["module_complete"]
-            total += len(course["activity_order"])
-            completed += len(progress["completed_activity_ids"])
+            total += progress["required_activity_count"]
+            completed += progress["completed_required_activities"]
             seconds += progress["active_seconds"]
             finished += int(item["complete"])
             if not resume_url and not item["complete"] and not item["locked"]:
@@ -1892,17 +1896,19 @@ def create_native_elearning_blueprint(
         csrf = _csrf_token()
         order = [str(value) for value in course.get("activity_order") or []]
         scored_ids = _scored_activity_ids(course)
+        required_order = required_activity_order(course)
         progress = current_progress(access, course)
         if not order:
             abort(404)
         requested_id = str(request.args.get("activity") or progress.get("current_activity_id") or "")
         if course.get("training_label") == "A3P" and request.args.get("activity") and requested_id not in order:
             abort(404, "Cette ressource ne fait pas partie des objectifs à distance affectés.")
-        if requested_id not in order:
-            requested_id = _next_incomplete(order, progress.get("completed_activity_ids") or []) or order[0]
+        if requested_id not in order or (not request.args.get("activity") and requested_id not in required_order):
+            requested_id = (_next_incomplete(required_order, progress.get("completed_activity_ids") or [])
+                            or (required_order[-1] if required_order else order[0]))
         completed = set(progress.get("completed_activity_ids") or [])
         requested_id = video_blocker(course, progress, requested_id) or requested_id
-        first_incomplete = _next_incomplete(order, list(completed))
+        first_incomplete = _next_incomplete(required_order, list(completed))
         if course.get("settings", {}).get("force_navigation") and first_incomplete in order:
             if order.index(requested_id) > order.index(first_incomplete) and requested_id not in completed:
                 requested_id = first_incomplete
@@ -1923,9 +1929,11 @@ def create_native_elearning_blueprint(
             if index > 0
             else ""
         )
+        next_required = next((activity_id for activity_id in order[index + 1:]
+                              if activity_id in required_order), "")
         next_url = (
-            url_for("native_elearning.course_player", token=token, course_id=course_id, activity=order[index + 1])
-            if index + 1 < len(order)
+            url_for("native_elearning.course_player", token=token, course_id=course_id, activity=next_required)
+            if next_required
             else url_for("native_elearning.course_player", token=token, course_id=course_id, activity=requested_id)
         )
         modules = assigned_modules(session_obj)
@@ -1953,6 +1961,7 @@ def create_native_elearning_blueprint(
             videos_completed=videos_complete(progress.get("video_progress", {}).get(requested_id, {}), activity_videos(raw_activity)),
             previous_url=previous_url,
             next_url=next_url,
+            optional_skip_url=next_url if next_required else path_url,
             portal_url=url_for("manuals_shop.elearning_access" if token.startswith("el_") else "public_trainee_space", token=token),
             path_url=path_url, end_url=end_url,
             end_label="Module suivant" if next_module else "Retour au parcours",
@@ -1965,7 +1974,7 @@ def create_native_elearning_blueprint(
             production_ai_config=production_ai_config(course, requested_id, access_token=access_token) if raw_activity.get('production') and not is_vtc_production(course, raw_activity) else None,
             heartbeat_seconds=CLIENT_HEARTBEAT_SECONDS,
             idle_seconds=CLIENT_IDLE_SECONDS,
-            is_last_activity=index + 1 == len(order),
+            is_last_activity=not next_required,
             exam_url=url_for('native_elearning.learner_exam',token=token,exam_id=course['mock_exam_id']) if course.get('mock_exam_id') else '',
         )
 
@@ -2073,7 +2082,8 @@ def create_native_elearning_blueprint(
         if not course.get("settings", {}).get("force_navigation"):
             return True
         completed = set(progress.get("completed_activity_ids") or [])
-        return all(previous in completed for previous in order[: order.index(activity_id)])
+        required = set(required_activity_order(course))
+        return all(previous in completed for previous in order[: order.index(activity_id)] if previous in required)
 
     @blueprint.post('/api/elearning/v1/activities/<activity_id>/practice')
     def activity_practice(activity_id: str) -> Any:
@@ -2256,6 +2266,7 @@ def create_native_elearning_blueprint(
         try:
             result = store().complete_activity(
                 access, activity_id, activity_order=order, scored_activity_ids=scored_ids,
+                required_activity_ids=required_activity_order(course),
                 mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
                 required_seconds=int(course.get("required_minutes") or 0) * 60,
                 video_requirements=course_videos(course),
@@ -2307,6 +2318,7 @@ def create_native_elearning_blueprint(
         try:
             result = store().complete_activity(
                 access, activity_id, activity_order=order, scored_activity_ids=scored_ids,
+                required_activity_ids=required_activity_order(course),
                 mastery_score=float(course.get("settings", {}).get("mastery_score") or 80),
                 required_seconds=int(course.get("required_minutes") or 0) * 60,
                 answer=answer, video_requirements=course_videos(course),

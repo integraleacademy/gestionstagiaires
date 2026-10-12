@@ -31,7 +31,7 @@
       "url": "https://modules.securite-routiere.gouv.fr/jsrt/Fatigue/Fatigue.html"
     }
   ],
-  "notice": "Parcours pédagogique VTC de 105 heures avec productions personnelles corrigées. La simulation CMA de 3 h 50 est proposée en complément ; les examens de module restent des bilans pédagogiques. La préparation écrite ne remplace pas l'entraînement à la conduite ni l'épreuve pratique en circulation.",
+  "notice": "Parcours pédagogique VTC de 105 heures minimum : cours et activités, avec approfondissements au choix parmi les exercices, missions et révisions. Les productions personnelles sont facultatives. La simulation CMA de 3 h 50 est proposée en complément ; les examens de module restent des bilans pédagogiques. La préparation écrite ne remplace pas l'entraînement à la conduite ni l'épreuve pratique en circulation.",
   "final_exam_id": "vtc-final",
   "version": "20261012-vtc-v12-cma-105h",
   "reviewed_on": "2026-10-12",
@@ -145,7 +145,8 @@
         "free_exercises": 60,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 85
+        "production_minutes": 85,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -173,11 +174,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 85
         }
       ],
-      "required_minutes": 840
+      "required_minutes": 840,
+      "productions_optional": true,
+      "independent_study_minutes": 85
     },
     {
       "id": "academy-vtc-b",
@@ -285,7 +288,8 @@
         "free_exercises": 160,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 147
+        "production_minutes": 147,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -313,11 +317,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 147
         }
       ],
-      "required_minutes": 840
+      "required_minutes": 840,
+      "productions_optional": true,
+      "independent_study_minutes": 147
     },
     {
       "id": "academy-vtc-c",
@@ -425,7 +431,8 @@
         "free_exercises": 127,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 74
+        "production_minutes": 74,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -453,11 +460,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 74
         }
       ],
-      "required_minutes": 780
+      "required_minutes": 780,
+      "productions_optional": true,
+      "independent_study_minutes": 74
     },
     {
       "id": "academy-vtc-d",
@@ -565,7 +574,8 @@
         "free_exercises": 109,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 102
+        "production_minutes": 102,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -593,11 +603,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 102
         }
       ],
-      "required_minutes": 720
+      "required_minutes": 720,
+      "productions_optional": true,
+      "independent_study_minutes": 102
     },
     {
       "id": "academy-vtc-e",
@@ -705,7 +717,8 @@
         "free_exercises": 190,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 122
+        "production_minutes": 122,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -733,11 +746,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 122
         }
       ],
-      "required_minutes": 840
+      "required_minutes": 840,
+      "productions_optional": true,
+      "independent_study_minutes": 122
     },
     {
       "id": "academy-vtc-f",
@@ -845,7 +860,8 @@
         "free_exercises": 120,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 102
+        "production_minutes": 102,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -873,11 +889,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 102
         }
       ],
-      "required_minutes": 780
+      "required_minutes": 780,
+      "productions_optional": true,
+      "independent_study_minutes": 102
     },
     {
       "id": "academy-vtc-g",
@@ -985,7 +1003,8 @@
         "free_exercises": 151,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 108
+        "production_minutes": 108,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -1013,11 +1032,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 108
         }
       ],
-      "required_minutes": 720
+      "required_minutes": 720,
+      "productions_optional": true,
+      "independent_study_minutes": 108
     },
     {
       "id": "academy-vtc-h",
@@ -1125,7 +1146,8 @@
         "free_exercises": 147,
         "lesson_videos": 12,
         "productions": 4,
-        "production_minutes": 138
+        "production_minutes": 138,
+        "optional_productions": 4
       },
       "duration_breakdown": [
         {
@@ -1153,11 +1175,13 @@
           "minutes": 20
         },
         {
-          "label": "Productions personnelles et reprise des corrections",
+          "label": "Approfondissement au choix : cours, exercices, missions, révisions ou productions facultatives",
           "minutes": 138
         }
       ],
-      "required_minutes": 780
+      "required_minutes": 780,
+      "productions_optional": true,
+      "independent_study_minutes": 138
     }
   ],
   "exam_versions": [
@@ -1179,7 +1203,7 @@
   "diagnostic_count": 8,
   "adaptive_review_count": 8,
   "duration_status": "programme_previsionnel",
-  "duration_note": "Parcours de 105 heures : cours, mises en situation et 32 productions personnelles avec reprise des corrections. Les budgets d’activité sont prévisionnels ; le temps de travail réellement suivi reste enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
+  "duration_note": "Le parcours prévoit au moins 105 heures de travail suivi. Vous complétez les cours et activités du module par des approfondissements au choix : exercices, missions, reprise des cours ou révisions ciblées. Les 32 productions personnelles sont facultatives ; vous pouvez en choisir certaines, toutes ou aucune. Les durées indiquées sont prévisionnelles : seul votre temps de travail réellement suivi est enregistré. La simulation CMA de 3 h 50 est proposée en complément.",
   "module_exam_questions": 240,
   "final_exam_questions": 100,
   "activity_count": 368,
@@ -1208,5 +1232,9 @@
   "production_count": 32,
   "production_minutes": 878,
   "cma_simulation_minutes": 230,
-  "cma_simulation_is_additional": true
+  "cma_simulation_is_additional": true,
+  "productions_optional": true,
+  "optional_production_count": 32,
+  "required_production_count": 0,
+  "independent_study_minutes": 878
 }

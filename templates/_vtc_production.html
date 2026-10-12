@@ -1,12 +1,13 @@
 {% set production = activity.production %}
 <section class="vtc-production" data-aps-production data-vtc-production>
   <header class="vtc-production-intro">
-    <span class="vtc-eyebrow">Votre atelier professionnel · {{ production.estimated_minutes }} minutes prévues</span>
+    <span class="vtc-eyebrow">Atelier facultatif · {{ production.estimated_minutes }} minutes prévues</span>
     <h2>{{ production.title }}</h2>
     <p>{{ production.brief }}</p>
     <p>{{ production.instructions }}</p>
-    <p class="vtc-production-note">Rédigez votre propre réponse à partir du dossier fictif. Une correction pédagogique par intelligence artificielle vous aidera à comprendre vos erreurs et à améliorer votre travail. Votre formateur peut la relire.</p>
-    <p class="vtc-production-note">Objectif de cet atelier : {{ production.pass_points }} / {{ production.max_points }}. Vous pouvez améliorer votre copie et la soumettre à nouveau.</p>
+    <p class="vtc-production-note"><strong>Cette production est facultative.</strong> Vous pouvez passer à la suite du parcours sans rédiger ni demander de correction.</p>
+    <p class="vtc-production-note">Si vous choisissez cet atelier, rédigez votre propre réponse à partir du dossier fictif. La correction détaillée vous aide à comprendre vos erreurs et à améliorer votre travail. Votre formateur peut la relire.</p>
+    <p class="vtc-production-note">Repère pour progresser dans cet atelier : {{ production.pass_points }} / {{ production.max_points }}. Vous pouvez améliorer votre copie et la soumettre à nouveau à votre rythme.</p>
   </header>
   {% if production.work_phases %}<section class="vtc-production-phases" aria-label="Étapes du travail">
     {% for phase in production.work_phases %}<article><span>{{ loop.index }} · {{ phase.minutes }} min</span><h3>{{ phase.title }}</h3><p>{{ phase.deliverable }}</p></article>{% endfor %}
@@ -24,7 +25,7 @@
         {% if field.required|default(true) %}required{% endif %}{% if field.help %} aria-describedby="vtc-production-help-{{ field.id }}"{% endif %}
         {% if activity_completed %}readonly{% endif %}></textarea>
     </div>{% endfor %}
-    <p class="vtc-production-note">Utilisez les noms et les données fictives du dossier. Votre réponse et la consigne sont transmises à OpenAI pour la correction ; vos identifiants de connexion ne sont pas transmis.</p>
+    <p class="vtc-production-note">Utilisez les noms et les données fictives du dossier. La correction s’appuie sur votre réponse, les documents fournis et le barème de l’atelier.</p>
     <div class="vtc-production-actions"><button type="submit" class="vtc-button"{% if activity_completed or (preview_mode and not preview_can_answer) %} disabled{% endif %}>Obtenir ma correction détaillée</button><span data-vtc-save-status role="status" aria-live="polite"></span></div>
   </form>
   <p data-vtc-production-status role="status" aria-live="polite"></p>

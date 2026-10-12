@@ -44,7 +44,7 @@ class Vtc105MigrationTests(unittest.TestCase):
         if version == migration.VERSION:
             for number in range(1, 5):
                 course["sections"][(number - 1) % 2]["activities"].append({
-                    "id": f"vtc-{letter}-production-{number:02}", "type": "content", "scored": False,
+                    "id": f"vtc-{letter}-production-{number:02}", "type": "content", "scored": False, "optional": True,
                     "production": {"id": f"vtc-{letter}-production-{number:02}"}, "blocks": [],
                 })
         course["activity_order"] = [activity["id"] for section in course["sections"] for activity in section["activities"]]
@@ -104,8 +104,8 @@ class Vtc105MigrationTests(unittest.TestCase):
         self.assertEqual(target["active_seconds"], 125.125)
         self.assertIsNone(target["completed_at"])
         self.assertEqual(original["completed_at"], before["completed_at"])
-        self.assertEqual(target["status"], "in_progress")
-        self.assertIn("production", target["current_activity_id"])
+        self.assertEqual(target["status"], "awaiting_time")
+        self.assertEqual(target["current_activity_id"], "a-quiz")
         self.assertFalse(any("production" in activity_id for activity_id in json.loads(target["completed_json"])))
         effective_course = self.course("academy-vtc-a", migration.VERSION)
         effective_course["required_minutes"] = assigned_modules(view)[0]["required_minutes"]
