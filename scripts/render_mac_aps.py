@@ -363,7 +363,16 @@ def source_signature(module):
 async def speech(text, folder, scene_index, slots):
     import edge_tts
     import edge_tts.communicate as communication
+    from edge_tts.constants import TRUSTED_CLIENT_TOKEN
     communication._SSL_CTX.load_verify_locations(cafile="/etc/ssl/certs/ca-certificates.crt")
+    # Microsoft moved Edge's synthesis service in October 2026. Keep the
+    # installed client's voice, authentication and timing implementation; only
+    # use the current service address (upstream edge-tts PR #491 / issue #490).
+    # https://github.com/rany2/edge-tts/pull/491
+    communication.WSS_URL = (
+        "wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1"
+        "?Ocp-Apim-Subscription-Key=" + TRUSTED_CLIENT_TOKEN
+    )
     signature = hashlib.sha256((VOICE + RATE + text).encode()).hexdigest()[:20]
     audio = folder / f"scene-{scene_index:02}-{signature}.mp3"
     timing = audio.with_suffix(".json")
@@ -395,7 +404,8 @@ async def speech(text, folder, scene_index, slots):
             except Exception as error:
                 if attempt == 3:
                     # Avoid including service URL parameters in build output.
-                    raise RuntimeError(f"Narration failed for scene {scene_index}: {type(error).__name__}") from None
+                    status = getattr(error, "status", None)
+                    raise RuntimeError(f"Narration failed for scene {scene_index}: {type(error).__name__}, HTTP {status}") from None
                 await asyncio.sleep(2 * (attempt + 1))
 
 
