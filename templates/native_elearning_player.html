@@ -8,13 +8,14 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
+  {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-1') }}">{% endif %}
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-2') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
 {% if course.training_label == 'VTC' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vtc-journey.css', v='20261006-105-1') }}">{% endif %}
 {% if activity.production %}<link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-production.css', v='20261010-v10') }}">{% endif %}
 </head>
-<body class="native-elearning-body{{ ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
+<body class="native-elearning-body{{ ' macaps-course' if course.training_label == 'MAC APS' else ' a3p-course' if course.training_label == 'A3P' else ' vtc-course' if course.training_label == 'VTC' else '' }}" style="--course-accent:{{ course.theme.main_color|default('#4f46e5') }};--course-button:{{ course.theme.button_color|default('#ff6b1a') }};--course-text:{{ course.theme.text_color|default('#172033') }}">
   {% macro render_block(block) %}
     <section class="native-block native-block--{{ block.type|lower }}" data-native-block="{{ block.type }}">
       {% if block.video and block.video.src %}
@@ -57,7 +58,7 @@
         {% if block.video.lesson_explainer and block.video.transcript %}
         <details class="vtc-transcript"><summary>Lire la transcription de cette leçon</summary>{% for paragraph in block.video.transcript.split('\n\n') %}<p>{{ paragraph }}</p>{% endfor %}</details>
         {% endif %}
-        {% if block.video.required and not preview_mode and course.id.startswith('academy-aps62-') %}
+        {% if block.video.required and not preview_mode and (course.id.startswith('academy-aps62-') or course.training_label == 'MAC APS') %}
         <div class="native-video-pace">
           <label>Rythme de lecture
             <select data-video-rate="{{ block.video.id }}">
@@ -150,7 +151,7 @@
       {% if exam_url %}<a class="aps-exam-link" href="{{ exam_url }}"><strong>Mon examen blanc →</strong><span>30 questions · correction · nouvelles tentatives</span></a>{% endif %}
       <nav class="native-course-nav">
         {% for nav_section in navigation %}
-          {% if course.training_label == 'A3P' %}<details class="a3p-nav-chapter"{% if nav_section.activities|selectattr('current')|list %} open{% endif %}><summary>{{ nav_section.title }}</summary>{% else %}<section><h2>{{ nav_section.title }}</h2>{% endif %}
+          {% if course.training_label in ['A3P', 'MAC APS'] %}<details class="a3p-nav-chapter"{% if nav_section.activities|selectattr('current')|list %} open{% endif %}><summary>{{ nav_section.title }}</summary>{% else %}<section><h2>{{ nav_section.title }}</h2>{% endif %}
             <ol>
               {% for item in nav_section.activities %}
                 <li class="{% if item.current %}is-current{% endif %} {% if item.completed %}is-complete{% endif %} {% if item.locked %}is-locked{% endif %}">
@@ -162,7 +163,7 @@
                 </li>
               {% endfor %}
             </ol>
-          {% if course.training_label == 'A3P' %}</details>{% else %}</section>{% endif %}
+          {% if course.training_label in ['A3P', 'MAC APS'] %}</details>{% else %}</section>{% endif %}
         {% endfor %}
       </nav>
       <a class="native-back-link" href="{{ portal_url }}">{{ '← Retour aux modules' if preview_mode else '← Retour à mon espace' }}</a>
@@ -177,6 +178,7 @@
           <p>{{ 'Ces révisions, vidéos et préparations du présentiel restent en accès libre. Elles ne sont pas comptées dans votre temps à distance et ne valident aucun geste pratique.' if resource_mode else 'Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.' }}</p>
         </section>
         {% endif %}
+        {% if course.training_label == 'MAC APS' %}<p class="macaps-scope">Parcours pédagogique MAC APS · Le suivi numérique accompagne votre stage. Les gestes et les mises en situation pratiques se valident avec votre formateur.</p>{% endif %}
         <div class="native-breadcrumb"><span>{{ section_title }}</span><b>Activité {{ activity_position }} sur {{ activity_count }}</b></div>
 
         {% if introduction %}
@@ -190,7 +192,7 @@
 
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
-            <span class="native-kicker">{{ 'Questionnaire du chapitre' if activity.a3p and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
+            <span class="native-kicker">{{ 'Questionnaire du chapitre' if (activity.a3p or activity.macaps) and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
             {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} min de travail guidé</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
@@ -205,8 +207,10 @@
               {% if activity.academy or activity.production %}{% include '_aps62_activity.html' %}{% endif %}
               {% if activity.vtc %}{% include '_vtc_activity.html' %}{% endif %}
               {% if activity.a3p %}{% include '_a3p_lesson.html' %}{% endif %}
+              {% if activity.macaps %}{% include '_macaps_lesson.html' %}{% endif %}
             </div>
           {% else %}
+            {% if activity.macaps %}{% include '_macaps_lesson.html' %}{% endif %}
             {% set saved_answer = progress.answers.get(activity.id, {}) %}
             {% if activity.prompt %}<div class="aps-question-prompt">{{ activity.prompt }}</div>{% endif %}
             <form class="native-question" id="nativeQuestionForm" data-question-type="{{ activity.question_type }}">
@@ -232,8 +236,8 @@
                   {% endfor %}
                 </div>
               {% elif activity.question_type == 'fill_blank' %}
-                <p class="native-question__instruction">{{ "Répondez à toutes les questions du chapitre." if activity.a3p else "Complétez la phrase." }}</p>
-                <div class="native-fill-blank{{ ' a3p-grouped-quiz' if activity.a3p else '' }}">{{ activity.prompt_html }}</div>
+                <p class="native-question__instruction">{{ "Répondez à toutes les questions du chapitre." if (activity.a3p or activity.macaps) else "Complétez la phrase." }}</p>
+                <div class="native-fill-blank{{ ' mac-grouped-quiz' if activity.macaps else ' a3p-grouped-quiz' if activity.a3p else '' }}">{% if activity.macaps %}{% include '_macaps_questions.html' %}{% else %}{{ activity.prompt_html }}{% endif %}</div>
               {% else %}
                 <div class="native-alert native-alert--warning">Ce format de question doit être vérifié par l’équipe pédagogique.</div>
               {% endif %}
@@ -322,6 +326,7 @@
   <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261010-vtc-lessons') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261011-readable-video') }}" defer></script>{% endif %}
+{% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}
 <script src="{{ url_for('static', filename='js/native-elearning-menu.js', v='20261010-2') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62.js', v='20261007-6') }}" defer></script>
 <script src="{{ url_for('static', filename='js/aps62-practice.js', v='20261007-6') }}" defer></script>

@@ -97,6 +97,11 @@ def vtc_pacing_enabled(course_id: str, version: str) -> bool:
     }
 
 
+def mac_aps_pacing_enabled(course_id: str, version: str) -> bool:
+    from .mac_aps import VERSION, curriculum_ids
+    return version == VERSION and course_id in curriculum_ids()
+
+
 def activity_playback_policy(course: Mapping[str, Any], activity_id: str) -> dict[str, dict]:
     """Read reviewed pacing rules from the authenticated course, never a receipt."""
     if not vtc_pacing_enabled(str(course.get("id")), str(course.get("version"))):

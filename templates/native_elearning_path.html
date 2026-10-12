@@ -7,6 +7,7 @@
   {% if learner_brand.get('logo_url') %}<link rel="icon" href="{{ learner_brand.logo_url }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning-path.css', v='20260908-2') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/learner-path-visuals.css', v='20261010-1') }}">
+  {% if training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-1') }}">{% endif %}
 </head>
 <body class="np-learner-body">
   <header class="np-brandbar">
@@ -22,8 +23,9 @@
     <a class="np-back" href="{{ portal_url }}">← Retour à mon espace</a>
     <header class="np-welcome{% if not hero_illustration_url %} np-welcome--text{% endif %}">
       <div class="np-welcome-copy"><span class="np-eyebrow">{{ session_name }}</span><h1>{{ path_title }}</h1><p class="np-greeting">Bonjour {{ learner_name }} !</p><p>Des cours illustrés, des activités et des mises en situation pour avancer dans votre formation.</p>{% if resume_url %}<a class="np-button np-button--primary" href="{{ resume_url }}">{{ 'Reprendre mon parcours' if completed_activities else 'Commencer mon parcours' }} <span aria-hidden="true">→</span></a>{% endif %}</div>
-      {% if hero_illustration_url %}<div class="np-welcome-art"><img src="{{ hero_illustration_url }}" alt="{{ 'Un futur chauffeur VTC révise sur ordinateur avec son manuel, son carnet et un véhicule visible en arrière-plan.' if training_label == 'VTC' else 'Une stagiaire révise sa formation de sécurité sur ordinateur, avec son casque, son manuel et son carnet.' }}" width="1536" height="1024" fetchpriority="high"></div>{% endif %}
+      {% if hero_illustration_url %}<div class="np-welcome-art"><img src="{{ hero_illustration_url }}" alt="{{ 'Des agents de sécurité révisent les situations professionnelles du MAC APS avec leur formateur.' if training_label == 'MAC APS' else 'Un futur chauffeur VTC révise sur ordinateur avec son manuel, son carnet et un véhicule visible en arrière-plan.' if training_label == 'VTC' else 'Une stagiaire révise sa formation de sécurité sur ordinateur, avec son casque, son manuel et son carnet.' }}" width="1536" height="1024" fetchpriority="high"></div>{% endif %}
     </header>
+    {% if training_label == 'MAC APS' %}<p class="macaps-scope">Ce parcours numérique accompagne votre formation MAC APS. Votre organisme organise les séquences pratiques et délivre l’attestation réglementaire après vérification du stage complet.</p>{% endif %}
     <section class="np-panel np-overview" aria-label="Progression du parcours">
       <div><span>Modules terminés</span><strong>{{ completed_modules }} / {{ modules|length }}</strong></div>
       <div><span>Progression des activités</span><strong>{{ progress_percent }} %</strong><div class="np-progress"><i style="width:{{ progress_percent }}%"></i></div></div>

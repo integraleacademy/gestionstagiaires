@@ -116,6 +116,7 @@ def course_outline(course: Mapping[str, Any]) -> Dict[str, Any]:
         "academy": course.get("source", {}).get("type") == "academy-aps62",
         "vtc": course.get("source", {}).get("type") == "academy-vtc",
         "a3p": course.get("source", {}).get("type") == "academy-a3p",
+        "macaps": course.get("source", {}).get("type") == "academy-macaps",
         "sections": [{
             "id": str(section["id"]), "title": str(section.get("title") or "Séquence"),
             "activities": [{"title": str(activity.get("title") or "Activité"),

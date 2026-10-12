@@ -127,6 +127,17 @@
     if (modules.length === 8) title.value = 'A3P · Objectifs à distance · 157 h 30';
     changed();renderModules();renderLibrary();
   });
+  document.getElementById('macapsAddPath')?.addEventListener('click', () => {
+    if (readonly()) return;
+    const additions = config.catalog.filter(course => course.macaps && !modules.some(item => item.course_id === course.course_id));
+    if (modules.length + additions.length > 100) { status.textContent = 'Le parcours ne peut pas dépasser 100 modules.'; return; }
+    additions.sort((a,b) => a.course_id.localeCompare(b.course_id)).forEach(course => {
+      modules.push({course_id:course.course_id,course_version:course.course_version,title:'',
+        required_minutes:course.planned_minutes,section_ids:course.sections.map(section => section.id)});
+    });
+    if (modules.length === 5 && modules.every(item => item.course_id.startsWith('academy-macaps-'))) title.value = 'MAC APS · Le parcours pédagogique';
+    changed();renderModules();renderLibrary();
+  });
   function renderModules() {
     moduleList.replaceChildren();
     modules.forEach((item, index) => {

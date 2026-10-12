@@ -12,7 +12,7 @@ import sqlite3
 from functools import lru_cache
 from pathlib import Path
 from .academy import ROOT, curriculum_manifest
-from . import vtc, a3p
+from . import vtc, a3p, mac_aps
 
 
 @lru_cache(maxsize=64)
@@ -26,6 +26,8 @@ def _load(exam_id, version):
 
 
 def load_exam(exam_id, version):
+    if str(exam_id).startswith('macaps-'):
+        return mac_aps.load_exam(exam_id, version)
     if str(exam_id).startswith('a3p-'):
         return a3p.load_exam(exam_id, version)
     if str(exam_id).startswith('vtc-'):

@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import ModuleType
 
 from .web import create_native_elearning_blueprint
+from .mac_aps import is_training as is_mac_aps_training
 from elearning_orders import learner_context
 
 
@@ -24,7 +25,8 @@ def register_native_elearning(legacy_app: ModuleType) -> None:
             public_is_authed=legacy_app._public_is_authed,
             is_aps_elearning_session=lambda s: legacy_app._is_aps_elearning_session(s) or (
                 'VTC' in str(s.get('training_type') or '').upper() and bool(s.get('aps_elearning_enabled'))) or (
-                'A3P' in str(s.get('training_type') or '').upper() and bool(s.get('aps_native_modules') or s.get('aps_native_course_id'))),
+                'A3P' in str(s.get('training_type') or '').upper() and bool(s.get('aps_native_modules') or s.get('aps_native_course_id'))) or (
+                is_mac_aps_training(s) and bool(s.get('aps_native_modules') or s.get('aps_native_course_id'))),
             session_start_date=legacy_app._session_start_date,
         )
     )

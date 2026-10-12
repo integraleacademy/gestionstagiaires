@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence
 
-from .videos import videos_complete, vtc_pacing_enabled
+from .videos import videos_complete, vtc_pacing_enabled, mac_aps_pacing_enabled
 from .vtc_video_quality import compatible_record
 
 
@@ -470,8 +470,8 @@ class NativeElearningStore:
         interactive_active = bool(visible and focused and recent_activity and age < IDLE_TIMEOUT_SECONDS)
         key = self._key_values(access)
         playback = (video_playback_policy or {}) if vtc_pacing_enabled(key[2], key[3]) else {}
-        if key[2] in APS_PACED_COURSES:
-            # APS speed choices are authorized by the authenticated module,
+        if key[2] in APS_PACED_COURSES or mac_aps_pacing_enabled(key[2], key[3]):
+            # Reviewed APS/MAC APS speeds are authorized by the authenticated module,
             # never by a policy supplied in a browser heartbeat.
             playback = {video_id: {"rates": VIDEO_PLAYBACK_RATES, "conservative_rate_changes": True}
                         for video_id in (video_requirements or {})}

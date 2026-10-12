@@ -12783,7 +12783,7 @@ def _log_charles_hebergement_trace(scope: str, message: str, **kwargs: Any) -> N
 # UI enums (for template)
 # =========================
 
-FORMATION_TYPES = ["APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
+FORMATION_TYPES = ["APS", "MAC APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
 TSHIRT_SIZES = {"S", "M", "L", "XL", "XXL"}
 AFC_DECISION_OPTIONS = ["RETENU", "NON RETENU"]
 AFC_REFUSAL_REASONS = [
@@ -16652,6 +16652,8 @@ def partner_has_module(module_key: str, partner: Optional[Dict[str, Any]] = None
 
 def _module_for_training_type(training_type: str) -> str:
     raw = (training_type or "").strip().upper()
+    if raw.startswith("MAC APS"):
+        return "training_aps"
     if raw.startswith("APS"):
         return "training_aps"
     if raw.startswith("A3P"):
