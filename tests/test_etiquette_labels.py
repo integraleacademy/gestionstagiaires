@@ -50,7 +50,7 @@ class EtiquetteLabelsTests(unittest.TestCase):
             (False, "Carte vitale"), (False, "Photo d’identité"),
             (True, "Certificat médical de moins de 3 mois"),
             (True, "Attestation secourisme (PSC1 ou SST)"),
-            (False, "Fiche CNIL signée"), (False, "Dossier examen"),
+            (False, "Dossier examen"),
         ]
         data = {"sessions": [self._ssiap_session(trainee)]}
         client = self._admin_client()
@@ -64,6 +64,7 @@ class EtiquetteLabelsTests(unittest.TestCase):
             self.assertIn("FORMATION SSIAP 1", page)
             self.assertNotIn("Autorisation préalable CNAPS", page)
             self.assertNotIn("Test de français", page)
+            self.assertNotIn("CNIL", page)
 
             word_response = client.get(route + ".docx")
             self.assertEqual(word_response.status_code, 200)
@@ -76,6 +77,7 @@ class EtiquetteLabelsTests(unittest.TestCase):
             self.assertIn("11/02/2027 → 26/02/2027", all_text)
             self.assertNotIn("APS", all_text)
             self.assertNotIn("CNAPS", all_text)
+            self.assertNotIn("CNIL", all_text)
             self.assertNotIn("{{", all_text)
             for section in doc.sections:
                 source = section._sectPr.find(qn("w:paperSrc"))
@@ -90,7 +92,7 @@ class EtiquetteLabelsTests(unittest.TestCase):
             response = client.get("/admin/sessions/SS1/stagiaires/TSSIAP/etiquette")
         self.assertEqual(response.status_code, 200)
         page = response.get_data(as_text=True)
-        self.assertEqual(page.count('class="checklist-prefix">○</span>'), 8)
+        self.assertEqual(page.count('class="checklist-prefix">○</span>'), 7)
         self.assertIn("Certificat médical de moins de 3 mois", page)
         self.assertIn("Attestation secourisme (PSC1 ou SST)", page)
 
@@ -107,7 +109,8 @@ class EtiquetteLabelsTests(unittest.TestCase):
                 doc = Document(BytesIO(archive.read(filename)))
                 text = "\n".join(doc.element.xpath(".//w:t/text()"))
                 self.assertIn("FORMATION SSIAP 1", text)
-                self.assertEqual(text.count("○"), 8)
+                self.assertEqual(text.count("○"), 7)
+                self.assertNotIn("CNIL", text)
                 self.assertNotIn("{{", text)
 
     def test_print_page_displays_expected_checklist_for_a3p_and_vae(self):

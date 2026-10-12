@@ -31317,11 +31317,8 @@ def _ssiap_etiquette_checklist(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
     ):
         status = ((docs_by_key.get(key) or {}).get("status") or "").strip().upper()
         checklist.append({"label": label, "checked": status == "CONFORME"})
-    # These paper-only items remain available for manual checking, as on APS labels.
-    checklist.extend([
-        {"label": "Fiche CNIL signée", "checked": False},
-        {"label": "Dossier examen", "checked": False},
-    ])
+    # The paper exam dossier remains available for manual checking.
+    checklist.append({"label": "Dossier examen", "checked": False})
     return checklist
 
 
