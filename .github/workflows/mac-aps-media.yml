@@ -1,0 +1,142 @@
+name: MAC APS — produire les cinq synthèses Henri
+
+on:
+  push:
+    branches: [codex/mac-aps-20261012]
+    paths:
+      - scripts/render_mac_aps.py
+      - elearning_native/mac_aps/assets/illustrations/**
+      - .github/workflows/mac-aps-media.yml
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: mac-aps-media-20261012
+  cancel-in-progress: false
+
+jobs:
+  render:
+    name: Produire la synthèse du module ${{ matrix.module }}
+    if: github.repository == 'integraleacademy/gestionstagiaires' && github.ref == 'refs/heads/codex/mac-aps-20261012'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        module: ['01', '02', '03', '04', '05']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/render_mac_aps.py
+            /scripts/academy_videos/assets/Manrope-600.ttf
+            /scripts/academy_videos/assets/Manrope-800.ttf
+            /elearning_native/mac_aps/assets/illustrations/
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Installer les outils de production
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --disable-pip-version-check edge-tts==7.2.8 Pillow==12.3.0
+      - name: Produire et décoder la narration sous-titrée
+        run: python scripts/render_mac_aps.py --module '${{ matrix.module }}' --verify
+      - name: Conserver la synthèse et sa provenance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: mac-aps-module-${{ matrix.module }}
+          path: elearning_native/mac_aps/assets/media/mac-aps/v1/module-${{ matrix.module }}.*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  publish:
+    name: Vérifier puis publier les cinq médias
+    needs: render
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /scripts/render_mac_aps.py
+            /scripts/academy_videos/assets/Manrope-600.ttf
+            /scripts/academy_videos/assets/Manrope-800.ttf
+            /elearning_native/mac_aps/
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: mac-aps-module-*
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+          path: elearning_native/mac_aps/assets/media/mac-aps/v1
+          merge-multiple: true
+      - name: Installer les outils de validation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --disable-pip-version-check Pillow==12.3.0
+      - name: Vérifier la narration, les sous-titres, les durées et les sources
+        run: |
+          python scripts/render_mac_aps.py --merge --verify
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          root = Path('elearning_native/mac_aps')
+          folder = root / 'assets/media/mac-aps/v1'
+          expected = {f'module-{module:02}.{ext}' for module in range(1, 6) for ext in ('mp4', 'jpg', 'vtt', 'json')}
+          assert {p.name for p in folder.iterdir()} == expected
+          manifest = json.loads((root / 'media_manifest.json').read_text())
+          assert set(manifest['videos']) == {'01', '02', '03', '04', '05'}
+          assert manifest['total_duration_seconds'] >= 1500
+          assert sum(p.stat().st_size for p in folder.iterdir()) < 400 * 1024 * 1024
+          print('5 vidéos parlées de plus de 5 minutes, décodées intégralement et sous-titrées.')
+          PY
+      - name: Publier uniquement les médias sur la branche dédiée
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- elearning_native/mac_aps/media_manifest.json elearning_native/mac_aps/assets/media/mac-aps/v1
+          git diff --cached --check
+          python - <<'PY'
+          import re, subprocess
+          allowed = re.compile(r'elearning_native/mac_aps/(media_manifest\.json|assets/media/mac-aps/v1/module-0[1-5]\.(mp4|jpg|vtt|json))')
+          paths = subprocess.check_output(['git', 'diff', '--cached', '--name-only']).decode().splitlines()
+          assert all(allowed.fullmatch(p) for p in paths), paths
+          PY
+          if git diff --cached --quiet; then
+            echo 'Les cinq médias sont déjà publiés avec ces sources.'
+            exit 0
+          fi
+          git commit -m 'Ajouter les cinq synthèses MAC APS avec Henri et sous-titres synchronisés'
+          git fetch --no-tags origin codex/mac-aps-20261012
+          test "$(git rev-parse origin/codex/mac-aps-20261012)" = "$GITHUB_SHA"
+          git push origin HEAD:refs/heads/codex/mac-aps-20261012
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          manifest = json.loads(Path('elearning_native/mac_aps/media_manifest.json').read_text())
+          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as report:
+              report.write(f"Cinq synthèses MAC APS publiées sur la branche dédiée : {manifest['total_duration_seconds'] / 60:.1f} minutes de vidéo.\n\n")
+              for module, video in manifest['videos'].items():
+                  report.write(f"- Module {module} : {video['duration_seconds'] / 60:.1f} min, {video['caption_cues']} sous-titres, voix Henri.\n")
+              report.write(f'\nCommit : `{commit}`.\n')
+          PY
