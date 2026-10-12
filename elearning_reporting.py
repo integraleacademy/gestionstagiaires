@@ -23,6 +23,7 @@ from elearning_native.paths import project_course, project_progress, required_ac
 from elearning_native.store import NativeElearningStore
 from elearning_native.vtc_105_migration import read_transition_session, lineage_versions
 from elearning_native.vtc_cma import learner_attempt_summaries
+from elearning_native.module_signatures import MAC_APS_NOTICE
 
 
 CUSTOMER_ENDPOINTS = {"manuals_shop." + name for name in (
@@ -91,10 +92,13 @@ class ProgressReader:
             for row in records:
                 row.setdefault("video_progress_json", "{}")
                 row.setdefault("assessment_diagnostics_json", "{}")
+                row.setdefault("activity_seconds_json", "{}")
             return [NativeElearningStore._serialize_progress(row) for row in records]
         return records
 
     def report(self, order, person, *, detailed=True):
+        is_mac_aps = order["course_code"] == "mac-aps"
+        course_label = "MAC APS" if is_mac_aps else order["course_code"].upper()
         session_id, learner_id = "el-" + order["id"], str(person["id"])
         session_view = read_transition_session({
             'id': session_id, 'training_type': order['course_code'].upper(),
@@ -103,38 +107,48 @@ class ProgressReader:
         }, person, self.database_path)
         raw_rows = self.rows("progress", session_id, learner_id)
         by_key = {(r["course_id"], r["course_version"]): r for r in raw_rows}
-        modules, exam_keys, course_titles = [], set(), {}
+        modules, complement_modules, exam_keys, course_titles, course_scopes, exam_scopes, exam_titles = [], [], set(), {}, {}, {}, {}
         total = completed = active = required = finished = optional_total = 0
         starts, updates = [], []
         for assignment in session_view.get('aps_native_modules', []):
             assigned_key = (str(assignment.get("course_id") or ""), str(assignment.get("course_version") or ""))
+            complementary = is_mac_aps and assigned_key[0].startswith("academy-macaps-complement-")
+            scope = "complement" if complementary else "principal"
+            target_modules = complement_modules if complementary else modules
             if all(assigned_key):
                 # Historical connections remain evidence even if the purchased
                 # course files are temporarily unavailable. Do not broaden the
                 # allowlist to other editions of the same module.
                 course_titles[assigned_key] = assignment.get("title") or assigned_key[0]
+                course_scopes[assigned_key] = scope
             module = {"title": assignment.get("title") or assignment.get("course_id") or "Module",
+                      "course_id": assigned_key[0], "pedagogical_scope": scope,
                       "version": assignment.get("course_version") or "", "available": False,
                       "status_label": "Suivi indisponible", "sections": [], "module_complete": False,
+                      "required_seconds": int(assignment.get("required_minutes") or 0) * 60,
                       "required_time_label": time_label(int(assignment.get("required_minutes") or 0) * 60)}
             try:
                 course = self.course(assignment)
             except (CourseImportError, OSError):
                 recorded = by_key.get(assigned_key, {})
                 recorded_seconds = max(0, float(recorded.get("active_seconds") or 0))
-                active += recorded_seconds
+                if not complementary:
+                    active += recorded_seconds
                 module.update(active_seconds=recorded_seconds, active_time_label=time_label(recorded_seconds))
-                if recorded.get("started_at"):
+                if recorded.get("started_at") and not complementary:
                     starts.append(recorded["started_at"])
-                if recorded.get("updated_at"):
+                if recorded.get("updated_at") and not complementary:
                     updates.append(recorded["updated_at"])
-                required += int(assignment.get("required_minutes") or 0) * 60
-                modules.append(module)
+                if not complementary:
+                    required += module["required_seconds"]
+                target_modules.append(module)
                 continue
             key = (course["id"], course["version"])
             course_titles[key] = course["title"]
+            course_scopes[key] = scope
             for historical_version in lineage_versions(session_view, course['id']):
                 course_titles[(course['id'], historical_version)] = course['title']
+                course_scopes[(course['id'], historical_version)] = scope
             progress = project_progress(by_key.get(key, {}), course)
             access = {"session_id": session_id, "trainee_id": learner_id,
                       "course_id": key[0], "course_version": key[1]}
@@ -145,19 +159,21 @@ class ProgressReader:
             activities = [a for section in course["sections"] for a in section.get("activities", [])]
             questions = [a for a in activities if a.get("scored") and a["id"] in required_ids]
             answered = sum(a["id"] in progress.get("answers", {}) for a in questions)
-            total += required_total
-            completed += required_completed
-            optional_total += progress["optional_activity_count"]
-            active += progress["active_seconds"]
-            required += progress["required_seconds"]
-            finished += int(progress["module_complete"])
-            if progress.get("started_at"):
+            if not complementary:
+                total += required_total
+                completed += required_completed
+                optional_total += progress["optional_activity_count"]
+                active += progress["active_seconds"]
+                required += progress["required_seconds"]
+                finished += int(progress["module_complete"])
+            if progress.get("started_at") and not complementary:
                 starts.append(progress["started_at"])
-            if progress.get("updated_at"):
+            if progress.get("updated_at") and not complementary:
                 updates.append(progress["updated_at"])
             module.update(title=course["title"], version=course["version"], available=True,
                           progress_percent=progress["progress_percent"], active_seconds=progress["active_seconds"],
                           active_time_label=time_label(progress["active_seconds"]),
+                          required_seconds=progress["required_seconds"],
                           required_time_label=time_label(progress["required_seconds"]),
                           remaining_time_label=time_label(progress["remaining_seconds"]),
                           module_complete=progress["module_complete"], status=progress["status"],
@@ -167,13 +183,22 @@ class ProgressReader:
                           score_percent=progress["score_percent"] if answered else None,
                           assessment_summary=progress.get("assessment_summary") or {},
                           assessment_diagnostics=progress.get("assessment_diagnostics") or {},
+                          timed_objectives=[{**objective, "active_time_label": time_label(objective.get("active_seconds")),
+                                             "required_time_label": time_label(objective.get("required_seconds")),
+                                             "remaining_time_label": time_label(objective.get("remaining_seconds"))}
+                                            for objective in progress.get("timed_objectives") or []],
+                          objectives_duration_met=progress.get("objectives_duration_met"),
                           assessment_attempts=self.assessment_attempts(access, course) if detailed else [],
                           answered_questions=answered, total_questions=len(questions),
                           completed_videos=progress["completed_video_count"], total_videos=progress["required_video_count"],
                           started_at_label=date_label(progress.get("started_at")), updated_at_label=date_label(progress.get("updated_at")))
             if course.get("mock_exam_id"):
                 for historical_version in lineage_versions(session_view, course['id']):
-                    exam_keys.add((course["mock_exam_id"], historical_version))
+                    exam_key = (course["mock_exam_id"], historical_version)
+                    exam_keys.add(exam_key)
+                    exam_scopes[exam_key] = scope
+                    if is_mac_aps:
+                        exam_titles[exam_key] = "Examen blanc MAC APS - " + course["title"]
             if detailed:
                 for section in course["sections"]:
                     rows = []
@@ -202,16 +227,30 @@ class ProgressReader:
                                 rows[-1]["production"]["ai"] = read_analyses(self.ai_path, access, activity["id"])
                     required_rows = [row for row in rows if not row["optional"]]
                     module["sections"].append({"title": section.get("title") or "Séquence", "activities": rows,
+                                               "objective_id": section.get("objective_id"),
+                                               "required_seconds": section.get("required_seconds"),
                                                "completed": sum(a["completed"] for a in required_rows),
                                                "total": len(required_rows),
                                                "optional_activity_count": len(rows) - len(required_rows)})
-            modules.append(module)
+            target_modules.append(module)
         versions = {m["version"] for m in modules if m["available"]}
         if len(versions) == 1:
-            exam_keys.add(("vtc-final" if order["course_code"] == "vtc" else "final", next(iter(versions))))
+            final_id = "macaps-final" if is_mac_aps else "vtc-final" if order["course_code"] == "vtc" else "final"
+            final_key = (final_id, next(iter(versions)))
+            exam_keys.add(final_key)
+            exam_scopes[final_key] = "principal"
+            if is_mac_aps:
+                exam_titles[final_key] = "Examen blanc final MAC APS"
         complete = bool(modules) and finished == len(modules)
         available = bool(modules) and all(m["available"] for m in modules)
         report = {"available": available, "modules": modules, "completed_modules": finished, "total_modules": len(modules),
+                  "course_label": course_label, "course_code": order["course_code"],
+                  "versions": sorted({m["version"] for m in modules if m["version"]}),
+                  "pedagogical_scope": "pedagogical_support" if is_mac_aps else "learning_record",
+                  "regulatory_notice": MAC_APS_NOTICE if is_mac_aps else "",
+                  "complement_modules": complement_modules,
+                  "complement_active_time_label": time_label(sum(m.get("active_seconds", 0) for m in complement_modules)),
+                  "complement_required_time_label": time_label(sum(m.get("required_seconds", 0) for m in complement_modules)),
                   "completed_activities": completed, "total_activities": total,
                   "optional_activity_count": optional_total,
                   "progress_percent": round(completed / total * 100, 1) if total and available else None,
@@ -221,7 +260,7 @@ class ProgressReader:
                   "started_at_label": date_label(min(starts)) if starts else "Pas encore commencé",
                   "updated_at_label": date_label(max(updates)) if updates else "Aucune activité enregistrée",
                   "generated_at_label": date_label(dt.datetime.now(dt.timezone.utc).isoformat()),
-                  "connections": [], "exams": [], "cma_attempts": []}
+                  "connections": [], "complement_connections": [], "exams": [], "complement_exams": [], "cma_attempts": []}
         if detailed:
             if order['course_code'] == 'vtc':
                 report['cma_attempts'] = learner_attempt_summaries(self.database_path, session_id, learner_id)
@@ -229,7 +268,9 @@ class ProgressReader:
                 key = (connection["course_id"], connection["course_version"])
                 if key not in course_titles:
                     continue
-                report["connections"].append({"module": course_titles[key],
+                destination = "complement_connections" if course_scopes.get(key) == "complement" else "connections"
+                report[destination].append({"module": course_titles[key], "course_id": key[0], "version": key[1],
+                    "pedagogical_scope": course_scopes.get(key, "principal"),
                     "started_at_label": date_label(connection["created_at"]),
                     "last_seen_label": date_label(connection["last_seen_at"]),
                     "ended_at_label": date_label(connection["ended_at"]),
@@ -244,8 +285,11 @@ class ProgressReader:
                     row = {k: result[k] for k in ("score", "total", "percent", "passed")}
                 except (ValueError, KeyError, TypeError):
                     continue
-                title = "Examen blanc final" if attempt["exam_id"] in {"final", "vtc-final"} else "Examen blanc " + attempt["exam_id"].replace("vtc-", "").replace("module-", "module ")
-                report["exams"].append({**row, "title": title, "date_label": date_label(attempt["submitted_at"])})
+                exam_key = (attempt["exam_id"], attempt["version"])
+                title = exam_titles.get(exam_key) or ("Examen blanc final" if attempt["exam_id"] in {"final", "vtc-final"} else "Examen blanc " + attempt["exam_id"].replace("vtc-", "").replace("module-", "module "))
+                destination = "complement_exams" if exam_scopes.get(exam_key) == "complement" else "exams"
+                report[destination].append({**row, "id": attempt["exam_id"], "version": attempt["version"],
+                    "title": title, "date_label": date_label(attempt["submitted_at"])})
         return report
 
     def assessment_attempts(self, access, course):
@@ -296,9 +340,12 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
 
     output = io.BytesIO()
     centre_name = str(partner.get("name") or partner.get("centre") or "Organisme de formation").strip()
+    is_mac_aps = order["course_code"] == "mac-aps"
+    course_label = "MAC APS" if is_mac_aps else order["course_code"].upper()
+    document_title = "Relevé de suivi numérique MAC APS" if is_mac_aps else "Attestation de suivi e-learning"
     doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=18 * mm, leftMargin=18 * mm,
                             topMargin=18 * mm, bottomMargin=20 * mm,
-                            title="SPECIMEN - Attestation de suivi e-learning" if specimen else "Attestation de suivi e-learning",
+                            title=("SPECIMEN - " if specimen else "") + document_title,
                             author=centre_name)
     styles = {name: ParagraphStyle(name, fontName=font, fontSize=size, leading=leading,
               textColor=colors.HexColor(color), spaceAfter=after, alignment=TA_LEFT) for name, font, size, leading, color, after in (
@@ -309,6 +356,21 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         ("small", "Helvetica", 8, 11, "#526579", 4),
         ("cell", "Helvetica", 8, 11, "#263d55", 0),
         ("th", "Helvetica-Bold", 8, 11, "#ffffff", 0))}
+    if is_mac_aps:
+        styles["body"].fontSize, styles["body"].leading, styles["body"].spaceAfter = 9, 13, 5
+        styles["brand"].spaceAfter = 9
+        styles["title"].fontSize, styles["title"].leading = 21, 25
+        # Embed a Unicode font for the French labels and objective titles.
+        # Historical APS/VTC document typography is left to its own template.
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        font_root = Path("/usr/share/fonts/truetype/dejavu")
+        if (font_root / "DejaVuSans.ttf").is_file() and (font_root / "DejaVuSans-Bold.ttf").is_file():
+            if "MACReport" not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont("MACReport", str(font_root / "DejaVuSans.ttf")))
+                pdfmetrics.registerFont(TTFont("MACReportBold", str(font_root / "DejaVuSans-Bold.ttf")))
+            for style in styles.values():
+                style.fontName = "MACReportBold" if style.fontName == "Helvetica-Bold" else "MACReport"
     def p(value, style="body"):
         return Paragraph(escape(str(value)).replace("\n", "<br/>"), styles[style])
     issuer = [p(centre_name, "brand")]
@@ -355,12 +417,21 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
         story.extend([p("SPECIMEN - DONNÉES FICTIVES", "heading"),
                       p("Exemple de document. Ce spécimen ne prouve aucun suivi de formation et ne constitue pas une attestation délivrée à un stagiaire.", "small")])
     name = f"{person.get('first_name', '')} {person.get('last_name', '')}".strip()
-    story.extend([p("Attestation de suivi", "title"),
-             p("Parcours e-learning terminé" if report["complete"] else "Relevé de suivi partiel - parcours non terminé", "heading"),
-             p(f"Stagiaire : {name}"), p(f"Adresse e-mail : {person.get('email', '')}"),
-             p(f"Organisme de formation : {centre_name}"),
-             p(f"Formation : {learning.COURSES[order['course_code']]['title']} ({order['course_code'].upper()})"),
-             p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}"), Spacer(1, 4 * mm)])
+    identity_lines = [p(f"Stagiaire : {name}"), p(f"Adresse e-mail : {person.get('email', '')}"),
+                      p(f"Organisme de formation : {centre_name}"),
+                      p(f"Formation : {learning.COURSES[order['course_code']]['title']} ({course_label})"),
+                      p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}")]
+    if is_mac_aps:
+        identity_lines = [p(f"Stagiaire : {name} · {person.get('email', '')}"),
+                          p(f"Formation : {learning.COURSES[order['course_code']]['title']} ({course_label})"),
+                          p(f"Groupe / accès : {order.get('group_name') or 'Accès individuel'}")]
+    story.extend([p("Relevé de suivi numérique" if is_mac_aps else "Attestation de suivi", "title"),
+             p("Parcours numérique terminé" if report["complete"] and is_mac_aps else "Parcours e-learning terminé" if report["complete"] else "Relevé de suivi partiel - parcours non terminé", "heading"),
+             *identity_lines, Spacer(1, 4 * mm)])
+    if is_mac_aps:
+        versions = report.get("versions") or sorted({m.get("version", "") for m in report["modules"] if m.get("version")})
+        story.extend([p("Édition(s) suivie(s) : " + (", ".join(versions) or "Non renseignée"), "small"),
+                      p(MAC_APS_NOTICE, "small"), Spacer(1, 3 * mm)])
     metrics = [[p("TEMPS ACTIF ENREGISTRÉ", "small"), p("MODULES TERMINÉS", "small")],
                [p(report["active_time_label"], "heading"), p(f"{report['completed_modules']} / {report['total_modules']}", "heading")],
                [p("DURÉE PRÉVUE DU PARCOURS", "small"),
@@ -372,23 +443,90 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                             ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 5)]))
     story.extend([box, Spacer(1, 6 * mm), p(f"Première activité : {report['started_at_label']}"),
                   p(f"Dernière activité : {report['updated_at_label']}"),
-                  p("Le temps indiqué correspond exclusivement au temps actif comptabilisé par la plateforme. La durée prévue n’est pas une durée automatiquement acquise. Un module est terminé lorsque les activités obligatoires et le temps de suivi requis sont accomplis.", "small"),
+                  p(("Le temps indiqué est le temps actif comptabilisé par la plateforme. La durée cible n'est pas acquise automatiquement. L'état terminé décrit les conditions pédagogiques de cette édition du parcours numérique."
+                     if is_mac_aps else "Le temps indiqué correspond exclusivement au temps actif comptabilisé par la plateforme. La durée prévue n’est pas une durée automatiquement acquise. Un module est terminé lorsque les activités obligatoires et le temps de suivi requis sont accomplis."), "small"),
                   Spacer(1, 5 * mm)])
-    table_rows = [[p(value, "th") for value in ("MODULE", "PROGRESSION", "TEMPS ACTIF", "ÉTAT")]]
+    headers = ("MODULE / ÉDITION", "ACTIVITÉS", "TEMPS ACTIF", "DURÉE CIBLE", "ÉTAT") if is_mac_aps else ("MODULE", "PROGRESSION", "TEMPS ACTIF", "ÉTAT")
+    table_rows = [[p(value, "th") for value in headers]]
     for module in report["modules"]:
-        table_rows.append([p(module["title"], "cell"), p(f"{module['progress_percent']:g} %" if module["available"] else "Indisponible", "cell"),
-                           p(module.get("active_time_label", "Indisponible"), "cell"), p(module["status_label"], "cell")])
-    table = Table(table_rows, colWidths=[67 * mm, 31 * mm, 36 * mm, 40 * mm], repeatRows=1, hAlign="LEFT")
+        row = [p(module["title"] + ("\n" + (module.get("version") or "Édition inconnue") if is_mac_aps else ""), "cell"),
+               p(f"{module['progress_percent']:g} %" if module["available"] else "Indisponible", "cell"),
+               p(module.get("active_time_label", "Indisponible"), "cell")]
+        if is_mac_aps:
+            row.append(p(module.get("required_time_label", "Non renseignée"), "cell"))
+        row.append(p(module["status_label"], "cell"))
+        table_rows.append(row)
+    widths = [56, 23, 33, 33, 29] if is_mac_aps else [67, 31, 36, 40]
+    table = Table(table_rows, colWidths=[w * mm for w in widths], repeatRows=1, hAlign="LEFT")
     table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173858")),
                               ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fa")]),
                               ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 8),
                               ("RIGHTPADDING", (0, 0), (-1, -1), 8), ("TOPPADDING", (0, 0), (-1, -1), 9),
                               ("BOTTOMPADDING", (0, 0), (-1, -1), 9)]))
-    story.extend([p("Détail du parcours", "heading"), table, Spacer(1, 6 * mm),
+    story.extend([p("Détail du parcours", "heading"), table])
+    # MAC edition/date/order/learner metadata already appears in the annexes.
+    # Do not strand a duplicate reference block on a nearly empty summary page.
+    if not is_mac_aps:
+        story.extend([Spacer(1, 6 * mm),
                   KeepTogether([p(f"Édité le {report['generated_at_label']} (heure de Paris).", "small"),
                     p("Données fictives de démonstration : ce document n’atteste d’aucune formation suivie." if specimen else
+                      f"Relevé édité pour {centre_name} à partir des traces de sa plateforme. Ce document ne constitue ni une attestation de stage MAC APS ni une attestation SST." if is_mac_aps else
                       f"Attestation éditée pour {centre_name} à partir des traces de sa plateforme e-learning. Elle décrit le suivi pédagogique constaté à la date d’édition ; elle ne vaut ni diplôme ni certification professionnelle.", "small"),
                     p(f"Référence de commande : {order['id']}\nIdentifiant du stagiaire : {person['id']}", "small")])])
+
+    def detail_table(rows, widths):
+        value = LongTable(rows, colWidths=[width * mm for width in widths], repeatRows=1, hAlign="LEFT")
+        value.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#173858")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f3f6fa")]),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ]))
+        return value
+
+    if is_mac_aps:
+        identity = f"Organisme : {centre_name}\nStagiaire : {name} · {person.get('email', '')}"
+        story.extend([PageBreak(), p("Objectifs et temps enregistrés", "title"), p(identity, "small"),
+                      p("Chaque objectif conserve son propre temps actif. Les excédents d'un objectif et les compléments ne remplacent pas le temps prévu pour un autre objectif.", "small")])
+        for module in report["modules"]:
+            story.extend([Spacer(1, 3 * mm), p(module["title"], "heading"),
+                          p("Édition : " + (module.get("version") or "Non renseignée"), "small")])
+            objectives = module.get("timed_objectives") or []
+            if objectives:
+                rows = [[p(value, "th") for value in ("OBJECTIF", "TEMPS ACTIF", "DURÉE CIBLE", "ÉTAT")]]
+                for objective in objectives:
+                    rows.append([p(objective["title"], "cell"), p(time_label(objective.get("active_seconds")), "cell"),
+                                 p(time_label(objective.get("required_seconds")), "cell"),
+                                 p("Terminé" if objective.get("complete") else "Activités à compléter" if objective.get("duration_met") else "Temps à compléter", "cell")])
+                story.append(detail_table(rows, [76, 34, 34, 30]))
+            else:
+                story.append(p("Aucun relevé de temps par objectif n'est disponible pour cette édition. Aucun temps antérieur n'est reconstitué.", "small"))
+        story.extend([PageBreak(), p("Résultats pédagogiques MAC APS", "title"), p(identity, "small"),
+                      p("Les examens blancs sont des entraînements distincts du suivi des activités. Leurs résultats ne constituent pas une validation réglementaire du stage.", "small")])
+        quiz_rows = [[p(value, "th") for value in ("MODULE", "PREMIER ESSAI", "SCORE GLOBAL APRÈS REPRISES", "ESSAIS ENREGISTRÉS")]]
+        for module in report["modules"]:
+            summary = module.get("assessment_summary") or {}
+            first = summary.get("first_attempt_score_percent")
+            score = module.get("score_percent")
+            quiz_rows.append([p(module["title"], "cell"), p(f"{first:g} %" if isinstance(first, (int, float)) else "Non disponible", "cell"),
+                              p(f"{score:g} %" if isinstance(score, (int, float)) else "Non disponible", "cell"),
+                              p(str(summary.get("attempt_count", 0)), "cell")])
+        story.extend([p("Questionnaires du parcours", "heading"),
+                      p("Premier essai : activités réussies dès la première réponse parmi les activités déjà essayées. "
+                        "Score global après reprises : activités actuellement réussies parmi toutes les activités évaluables du module, "
+                        "y compris celles restant à réaliser. Les deux pourcentages ont donc des bases différentes lorsque le module est en cours.", "small"),
+                      detail_table(quiz_rows, [71, 32, 35, 36]),
+                      Spacer(1, 5 * mm), p("Examens blancs soumis", "heading")])
+        if report.get("exams"):
+            exam_rows = [[p(value, "th") for value in ("EXAMEN / ÉDITION", "DATE", "SCORE", "RÉSULTAT")]]
+            for exam in report["exams"]:
+                exam_rows.append([p(exam["title"] + "\n" + (exam.get("version") or "Édition non renseignée"), "cell"),
+                                  p(exam["date_label"], "cell"), p(f"{exam['percent']:g} %\n{exam['score']} / {exam['total']}", "cell"),
+                                  p("Objectif pédagogique atteint" if exam["passed"] else "À retravailler", "cell")])
+            story.append(detail_table(exam_rows, [70, 38, 28, 38]))
+        else:
+            story.append(p("Aucun examen blanc n'a encore été soumis pour cette édition du parcours."))
 
     # Keep the integral connection evidence in the same PDF as the attestation.
     # Table headers identify the centre and learner again on every annex page.
@@ -401,7 +539,7 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
                   Spacer(1, 4 * mm)])
     specimen_identity = "SPECIMEN - DONNÉES FICTIVES\n" if specimen else ""
     connection_identity = p(f"{specimen_identity}Organisme : {centre_name}\nStagiaire : {name} · {person.get('email', '')}\n"
-                            f"Parcours : {order['course_code'].upper()} · {order.get('group_name') or 'Accès individuel'}", "small")
+                            f"Parcours : {course_label} · {order.get('group_name') or 'Accès individuel'}", "small")
 
     def connection_seconds(connection):
         try:
@@ -458,6 +596,27 @@ def certificate_pdf(report, partner, order, person, *, logo_path=None, specimen=
     story.extend([Spacer(1, 5 * mm),
                   p(f"Relevé édité le {report['generated_at_label']} (heure de Paris).", "small"),
                   p(f"Référence de commande : {order['id']} · Identifiant du stagiaire : {person['id']}", "small")])
+
+    if is_mac_aps and report.get("complement_modules"):
+        story.extend([PageBreak(), p("Compléments pédagogiques", "title"), p(identity, "small"),
+                      p("Ces ressources et leurs temps sont séparés du parcours principal. Ils ne sont pas ajoutés à sa durée cible ni à son avancement.", "small")])
+        rows = [[p(value, "th") for value in ("COMPLÉMENT / ÉDITION", "TEMPS ACTIF", "DURÉE PRÉVUE", "ÉTAT")]]
+        for module in report["complement_modules"]:
+            rows.append([p(module["title"] + "\n" + module.get("version", ""), "cell"),
+                         p(module.get("active_time_label", "Non disponible"), "cell"),
+                         p(module.get("required_time_label", "Non disponible"), "cell"), p(module["status_label"], "cell")])
+        story.extend([detail_table(rows, [72, 35, 35, 32]), Spacer(1, 5 * mm), p("Connexions aux compléments", "heading")])
+        supplementary = report.get("complement_connections") or []
+        if supplementary:
+            rows = [[p(value, "th") for value in ("COMPLÉMENT", "DÉBUT / DERNIÈRE ACTIVITÉ", "FIN ENREGISTRÉE", "TEMPS ACTIF")]]
+            for connection in supplementary:
+                rows.append([p(connection["module"], "cell"), p(connection["started_at_label"] + "\n" + connection["last_seen_label"], "cell"),
+                             p(connection["ended_at_label"] if connection["ended_at_label"] != "—" else "Non enregistrée", "cell"),
+                             p(connection_time(connection_seconds(connection)), "cell")])
+            story.append(detail_table(rows, [55, 48, 38, 33]))
+            story.append(p("Temps actif des compléments : " + connection_time(sum((connection_seconds(row) for row in supplementary), Decimal(0))), "small"))
+        else:
+            story.append(p("Aucune connexion aux compléments n'est enregistrée."))
 
     def footer(canvas, document):
         canvas.saveState()
@@ -516,7 +675,8 @@ def register_routes(host, bp, *, page, customer, partner_data):
 
         partner, order, person, _ = context(oid, learner_id)
         report = ProgressReader(host).report(order, person, detailed=True)
-        filename = secure_filename(f"attestation-suivi-{person.get('last_name', '')}-{person.get('first_name', '')}.pdf")
+        prefix = "releve-suivi-mac-aps" if order["course_code"] == "mac-aps" else "attestation-suivi"
+        filename = secure_filename(f"{prefix}-{person.get('last_name', '')}-{person.get('first_name', '')}.pdf")
         return Response(certificate_pdf(report, partner, order, person, logo_path=logo_path(host, partner)), mimetype="application/pdf",
                         headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
@@ -527,9 +687,12 @@ def register_routes(host, bp, *, page, customer, partner_data):
         report = ProgressReader(host).report(order, person)
         output = io.StringIO(newline="")
         writer = csv.writer(output, delimiter=";")
-        writer.writerow(["Module", "Connexion (Paris)", "Dernière activité (Paris)", "Fin (Paris)", "Temps actif", "Temps actif (secondes)"])
-        for row in report["connections"]:
+        mac_aps = order["course_code"] == "mac-aps"
+        writer.writerow((["Périmètre", "Édition"] if mac_aps else []) + ["Module", "Connexion (Paris)", "Dernière activité (Paris)", "Fin (Paris)", "Temps actif", "Temps actif (secondes)"])
+        for row in report["connections"] + (report.get("complement_connections", []) if mac_aps else []):
             values = [row[k] for k in ("module", "started_at_label", "last_seen_label", "ended_at_label", "active_time_label", "credited_seconds")]
+            if mac_aps:
+                values = ["Complément" if row.get("pedagogical_scope") == "complement" else "Parcours principal", row.get("version", "")] + values
             writer.writerow(["'" + str(value) if str(value).lstrip().startswith(("=", "+", "-", "@")) else value for value in values])
         return Response("\ufeff" + output.getvalue(), content_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": 'attachment; filename="releve-connexions.csv"'})

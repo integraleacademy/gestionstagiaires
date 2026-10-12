@@ -1,4 +1,4 @@
-"""Immutable, tenant-scoped evidence and two-party signatures of native APS modules.
+"""Immutable, tenant-scoped evidence and two-party signatures of native modules.
 
 Preparing a snapshot never contacts Yousign. Sending requires a separate explicit
 action. Provider mutations have durable checkpoints; an uncertain request is
@@ -18,6 +18,7 @@ import time
 import uuid
 import zipfile
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 class SignatureError(ValueError):
@@ -25,6 +26,36 @@ class SignatureError(ValueError):
 
 
 CLOSED_STATUSES = {"expired", "declined", "canceled", "rejected", "deleted"}
+MAC_APS_NOTICE = (
+    "Ce document décrit uniquement le suivi factuel du parcours numérique MAC APS. "
+    "Il ne constitue ni une attestation de stage MAC APS ni une attestation SST. "
+    "Les heures et résultats enregistrés n'ouvrent aucun crédit réglementaire automatique "
+    "et ne prouvent pas le renouvellement de la carte professionnelle."
+)
+
+
+def signature_training_code(course_id):
+    """Keep complementary resources out of the principal-module signature flow."""
+    course_id = str(course_id or "")
+    if re.fullmatch(r"academy-macaps-0[1-5]", course_id):
+        return "mac-aps"
+    if course_id.startswith("academy-aps62-"):
+        return "aps"
+    return None
+
+
+def signature_training_label(evidence):
+    return "MAC APS" if signature_training_code(evidence.get("course_id")) == "mac-aps" else "APS"
+
+
+def signature_filename(record):
+    code = signature_training_code(record.get("course_id")) or "aps"
+    return "tableau-" + code + "-module-" + record["id"] + ".pdf"
+
+
+def signature_external_id(record):
+    code = signature_training_code(record.get("course_id")) or "aps"
+    return "native-" + code + "-module-" + record["id"]
 
 
 def utcnow():
@@ -74,8 +105,9 @@ def build_evidence(*, tenant_id, session_obj, trainee, provider, course, progres
                    connections, attempts, responsible, cnaps_number, session_end, origin):
     """Freeze factual traces only. Never manufacture old attempts or signatures."""
     from .assessment import describe_history
-    if not str(course.get("id", "")).startswith("academy-aps62-"):
-        raise SignatureError("Ce tableau est réservé aux modules du parcours natif APS.")
+    training_code = signature_training_code(course.get("id"))
+    if not training_code or course.get("pedagogical_scope") == "complement":
+        raise SignatureError("Ce tableau est réservé aux modules principaux des parcours natifs APS et MAC APS.")
     if not progress.get("module_complete") or progress.get("status") != "passed":
         raise SignatureError("Terminez les activités, les questionnaires et la durée du module avant de préparer son tableau.")
     learner = normalize_signer(trainee, "stagiaire")
@@ -90,6 +122,36 @@ def build_evidence(*, tenant_id, session_obj, trainee, provider, course, progres
     active = float(progress.get("active_seconds") or 0)
     if not math.isfinite(active) or active < 0:
         raise SignatureError("Le temps actif enregistré est invalide.")
+    if training_code == "mac-aps":
+        required = float(progress.get("required_seconds") or 0)
+        if (not math.isfinite(required) or required < int(course.get("required_minutes") or 0) * 60
+                or active < required):
+            raise SignatureError("Le temps actif enregistré ne permet pas de déclarer ce module numérique terminé.")
+        if course.get("timed_objectives") and (not progress.get("objectives_duration_met")
+                or not progress.get("timed_objectives")
+                or {item["id"] for item in course["timed_objectives"]} != {item.get("id") for item in progress.get("timed_objectives") or []}
+                or not all(item.get("complete") for item in progress["timed_objectives"])):
+            raise SignatureError("Terminez les activités et les temps cibles de chaque objectif avant de préparer le tableau.")
+        # A manually supplied end date must not shorten preservation by placing
+        # the end before this learner's actual evidence or the assigned session.
+        retention_date(session_end)
+        end = dt.date.fromisoformat(str(session_end))
+        recorded_dates = [session_obj.get("date_start"), session_obj.get("date_end"),
+                          progress.get("started_at"), progress.get("updated_at"), progress.get("completed_at")]
+        recorded_dates.extend(connection.get(key) for connection in connections or []
+                              for key in ("created_at", "last_seen_at", "ended_at"))
+        for value in recorded_dates:
+            if not value:
+                continue
+            try:
+                parsed = dt.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                if parsed.tzinfo is not None:
+                    parsed = parsed.astimezone(ZoneInfo("Europe/Paris"))
+                observed = parsed.date()
+            except (ValueError, TypeError):
+                continue
+            if end < observed:
+                raise SignatureError("La fin du suivi numérique ne peut pas précéder la session ou les dernières activités enregistrées.")
     identity = {"tenant_id": _text(tenant_id), "session_id": _text(session_obj["id"]),
                 "trainee_id": _text(trainee.get("id") or trainee.get("trainee_id")),
                 "course_id": _text(course["id"]), "course_version": _text(course["version"])}
@@ -104,8 +166,8 @@ def build_evidence(*, tenant_id, session_obj, trainee, provider, course, progres
              "answer": progress.get("answers", {}).get(a["id"], {}),
              "completed": a["id"] in progress.get("completed_activity_ids", [])}
             for a in section.get("activities", [])]})
-    return {"schema_version": 1, **identity, "origin": origin,
-            "session": {"name": _text(session_obj.get("name") or "Parcours APS"),
+    evidence = {"schema_version": 1, **identity, "origin": origin,
+            "session": {"name": _text(session_obj.get("name") or ("Parcours MAC APS" if training_code == "mac-aps" else "Parcours APS")),
                         "date_start": str(session_obj.get("date_start") or ""), "date_end": str(session_end)},
             "retention_until": retention_date(session_end),
             "learner": {**learner, "cnaps_number": cnaps_number,
@@ -121,6 +183,19 @@ def build_evidence(*, tenant_id, session_obj, trainee, provider, course, progres
                           "assessment_summary", "assessment_diagnostics")},
             "assessment_attempts": describe_history(course, list(attempts or [])), "connections": list(connections or []),
             "notice": "Historique figé lors de la préparation. Les tentatives antérieures non enregistrées ne sont pas reconstituées."}
+    if training_code == "mac-aps":
+        evidence.update(training_code="mac-aps", training_label="MAC APS", pedagogical_scope="principal",
+                        regulation={"scope": "pedagogical_support", "automatic_stage_credit": False,
+                                    "automatic_certificate": False}, regulatory_notice=MAC_APS_NOTICE)
+        evidence["course"]["planned_minutes"] = int(course.get("planned_minutes") or course.get("required_minutes") or 0)
+        evidence["course"]["timed_objectives"] = course.get("timed_objectives") or []
+        for key in ("activity_seconds", "timed_objectives", "objectives_duration_met"):
+            evidence["progress"][key] = progress.get(key)
+        for frozen, source in zip(sections, course.get("sections", [])):
+            for key in ("objective_id", "planned_minutes", "required_minutes", "required_seconds"):
+                if key in source:
+                    frozen[key] = source[key]
+    return evidence
 
 
 class ModuleSignatureStore:
@@ -374,7 +449,7 @@ class YousignModuleSignatures:
         if not document.get("id") or (expected_id and document["id"] != expected_id):
             raise SignatureError("Le document Yousign a été remplacé. Le tableau préparé ne peut pas être signé ou archivé à sa place.")
         filename = document.get("filename") or document.get("name")  # Older adapters used name.
-        if filename != "tableau-aps-module-" + record["id"] + ".pdf" or document.get("nature") != "signable_document":
+        if filename != signature_filename(record) or document.get("nature") != "signable_document":
             raise SignatureError("Le document Yousign ne correspond pas au tableau PDF préparé.")
         # Once signatures have been applied, the bytes (and potentially the
         # provider's hash) change. The original hash was checked before sending;
@@ -407,13 +482,13 @@ class YousignModuleSignatures:
                     return self._refresh(record, owner, state)
                 if record["status"] in CLOSED_STATUSES:
                     raise SignatureError("Cette demande est clôturée. Son tableau et ses preuves restent consultables ; une nouvelle demande nécessite une nouvelle édition du tableau.")
-                external_id = "native-aps-module-" + snapshot_id
+                external_id = signature_external_id(record)
                 state["external_id"] = external_id
                 if not state.get("request_id"):
                     request_obj = self._recover_request(external_id)
                     if not request_obj:
                         request_obj = self._mutation(record, owner, state, "create", lambda: self._json("POST", "/signature_requests", json={
-                            "name": ("Suivi APS - " + evidence["course"]["title"] + " - " + evidence["learner"]["last_name"])[:128],
+                            "name": ("Suivi " + signature_training_label(evidence) + " - " + evidence["course"]["title"] + " - " + evidence["learner"]["last_name"])[:128],
                             "delivery_mode": "email", "ordered_signers": False, "timezone": "Europe/Paris",
                             "external_id": external_id, "audit_trail_locale": "fr"}))
                     if not request_obj.get("id"):
@@ -427,7 +502,7 @@ class YousignModuleSignatures:
                     raise SignatureError("La demande Yousign ne correspond pas à ce tableau.")
                 if remote.get("status") != "draft":
                     return self._refresh(record, owner, state, remote=remote)
-                filename = "tableau-aps-module-" + snapshot_id + ".pdf"
+                filename = signature_filename(record)
                 docs = _items(self._json("GET", f"/signature_requests/{request_id}/documents"))
                 doc = self._verified_document(record, state, docs, check_original_hash=True) if docs else None
                 if state.get("document_id") and not doc:
@@ -502,15 +577,15 @@ class YousignModuleSignatures:
     def _refresh(self, record, owner, state, remote=None):
         request_id = state.get("request_id")
         if not request_id:
-            found = self._recover_request("native-aps-module-" + record["id"])
+            found = self._recover_request(signature_external_id(record))
             if not found:
                 return record
             request_id = state["request_id"] = found["id"]
-            state["external_id"] = "native-aps-module-" + record["id"]
+            state["external_id"] = signature_external_id(record)
             self._reconciled(state, "create")
             self._checkpoint(record, owner, state)
         remote = remote or self._json("GET", f"/signature_requests/{request_id}")
-        if remote.get("external_id") != "native-aps-module-" + record["id"]:
+        if remote.get("external_id") != signature_external_id(record):
             raise SignatureError("La demande Yousign ne correspond pas à ce tableau.")
         status = str(remote.get("status") or "")
         if status not in {"draft", "ongoing", "done", "expired", "declined", "canceled", "rejected", "deleted", "approval"}:

@@ -942,7 +942,7 @@ class CourseCatalog:
 
     def load_course(self, course_id: str, version: Optional[str] = None) -> Dict[str, Any]:
         course_root = self._course_root(course_id)
-        if course_id in mac_aps.curriculum_ids():
+        if course_id in mac_aps.bundled_course_ids():
             bundled = mac_aps.load_bundled_course(course_id, version)
             if bundled is None:
                 raise CourseImportError("Version MAC APS introuvable.")
@@ -980,7 +980,7 @@ class CourseCatalog:
         for course_dir in sorted(courses_root.iterdir() if courses_root.is_dir() else [], key=lambda item: item.name):
             if not course_dir.is_dir() or not _SAFE_COURSE_ID_RE.fullmatch(course_dir.name):
                 continue
-            if course_dir.name in curriculum_ids() + vtc.curriculum_ids() + a3p.curriculum_ids() + mac_aps.curriculum_ids():
+            if course_dir.name in curriculum_ids() + vtc.curriculum_ids() + a3p.curriculum_ids() + mac_aps.bundled_course_ids():
                 continue
             try:
                 course = self.load_course(course_dir.name)

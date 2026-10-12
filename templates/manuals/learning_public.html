@@ -1,6 +1,39 @@
 {% extends 'manuals/layout.html' %}
+{% set is_mac = course and course.code == 'mac-aps' %}
 {% block title %}{{ 'E-learning ' ~ course.name if course else 'Parcours e-learning pour les organismes de formation' }}{% endblock %}
 {% block description %}{{ (course.title ~ ' : programme, durée pédagogique et accès pour vos stagiaires.') if course else 'Découvrez les parcours e-learning disponibles, leur programme et le suivi de progression pour votre organisme.' }}{% endblock %}
-{% block content %}<div class="shop-wrap"><nav class="manual-breadcrumb" aria-label="Fil d’Ariane"><a href="/">Accueil</a> / <a href="/e-learning">E-learning</a>{% if course %} / {{ course.name }}{% endif %}</nav><section class="catalogue-hero"><div><span class="eyebrow">LES PARCOURS EN LIGNE</span><h1>{{ course.title if course else 'Apprendre à son rythme. Suivre chaque progression.' }}</h1><p>Des accès individuels ou en groupe, des activités pédagogiques et un espace de suivi pour votre organisme.</p></div></section>
-{% if course %}<div class="form-grid"><section class="form-card"><h2>{{ course.name }} · {{ course.duration_label }}</h2><p>Durée pédagogique prévue pour le parcours proposé sur cette plateforme. Elle ne représente pas à elle seule la durée réglementaire totale d’une formation certifiante.</p><p class="price">{% if course.unit_cents is not none %}<strong>{{ course.unit_cents|manuals_money }} TTC / stagiaire</strong>{% else %}<strong>Tarif sur devis pour votre organisme</strong>{% endif %}</p><p>Votre tarif applicable est présenté dans votre espace avant confirmation. Les accès sont créés après validation du paiement.</p><a class="button primary" href="{{ url_for('manuals_shop.elearning_soon') }}">Préparer un groupe →</a>{% if course.unit_cents is none %}<p><a class="text-link" href="mailto:clement@integraleacademy.com?subject=Devis%20e-learning%20{{ course.name|urlencode }}">Demander un devis {{ course.name }} →</a></p>{% endif %}{% if course.code == 'aps' %}<p><a href="{{ url_for('manuals_shop.elearning_demo') }}">Essayer la démonstration APS</a></p>{% endif %}</section><section class="form-card"><h2>Ce qui est inclus</h2><ul><li>Un espace personnel par stagiaire.</li><li>Cours, activités et évaluations selon le programme.</li><li>Reprise du parcours et suivi de progression.</li><li>Relevés de connexion et documents de suivi dans l’espace organisme.</li></ul><h3>Accès et accompagnement</h3><p>Un navigateur récent et une connexion Internet sont nécessaires. L’organisme organise l’accompagnement pédagogique de ses stagiaires. Les modalités de fin d’accès ou une durée spécifique sont à préciser avec notre équipe avant la commande.</p><p>La délivrance d’un accès ne vaut pas inscription à un examen, certification ni autorisation d’exercer.</p></section></div><section class="form-card"><h2>Programme du parcours</h2>{% for module in modules %}<details class="course-module"><summary>{{ module.title }}</summary><p>{{ (module.required_minutes // 60) }} h {{ '%02d'|format(module.required_minutes % 60) }} min de durée pédagogique prévue.</p></details>{% endfor %}</section>
-{% else %}<div class="compact-grid">{% for code,item in courses.items() %}<article class="form-card"><span class="eyebrow blue">{{ item.duration_label }}</span><h2>{{ item.name }}</h2><p>{{ item.title }}</p><strong>{{ item.unit_cents|manuals_money ~ ' TTC / stagiaire' if item.unit_cents is not none else 'Tarif sur devis' }}</strong><p><a class="button primary" href="{{ url_for('manuals_shop.public_course',code=code) }}">Programme et modalités →</a></p></article>{% endfor %}</div>{% endif %}</div>{% endblock %}
+{% block content %}
+<div class="shop-wrap">
+  <nav class="manual-breadcrumb" aria-label="Fil d’Ariane"><a href="/">Accueil</a> / <a href="/e-learning">E-learning</a>{% if course %} / {{ course.name }}{% endif %}</nav>
+  <section class="catalogue-hero"><div><span class="eyebrow">LES PARCOURS EN LIGNE</span><h1>{{ 'MAC APS · Actualiser ses repères professionnels.' if is_mac else course.title if course else 'Apprendre à son rythme. Suivre chaque progression.' }}</h1><p>Des accès individuels ou en groupe, des activités pédagogiques et un espace de suivi pour votre organisme.</p></div></section>
+  {% if course %}
+  <div class="form-grid">
+    <section class="form-card">
+      {% if is_mac %}<img class="mac-public-cover" src="{{ url_for('static', filename='images/mac-aps-cover.webp') }}" width="640" height="420" alt="Un formateur accompagne des agents de sécurité dans leur formation MAC APS">{% endif %}
+      <h2>{{ course.name }} · {{ course.duration_label }}</h2>
+      <p>Durée pédagogique prévue pour le parcours proposé sur cette plateforme. Elle ne représente pas à elle seule la durée réglementaire totale d’une formation certifiante.</p>
+      <p class="price">{% if course.unit_cents is not none %}<strong>{{ course.unit_cents|manuals_money }} TTC / stagiaire</strong>{% else %}<strong>Tarif sur devis pour votre organisme</strong>{% endif %}</p>
+      {% if is_mac %}<p>Tarif unique pour tous les organismes. Commandez un accès individuel, un groupe ou de nouveaux participants ajoutés ultérieurement. Les accès sont activés après vérification du paiement intégral.</p>{% include 'manuals/_mac_aps_scope.html' %}
+      {% else %}<p>Votre tarif applicable est présenté dans votre espace avant confirmation. Les accès sont créés après validation du paiement.</p>{% endif %}
+      <div class="mac-public-actions">
+        <a class="button primary" href="{{ url_for('manuals_shop.elearning_group_create', course='mac-aps') if is_mac else url_for('manuals_shop.elearning_soon') }}">{{ 'Préparer mes accès MAC APS' if is_mac else 'Préparer un groupe' }} →</a>
+        {% if is_mac %}<a class="text-link" href="{{ url_for('manuals_shop.mac_aps_demo') }}">Essayer la démonstration MAC APS →</a>{% endif %}
+      </div>
+      {% if course.unit_cents is none %}<p><a class="text-link" href="mailto:clement@integraleacademy.com?subject=Devis%20e-learning%20{{ course.name|urlencode }}">Demander un devis {{ course.name }} →</a></p>{% endif %}
+      {% if course.code == 'aps' %}<p><a href="{{ url_for('manuals_shop.elearning_demo') }}">Essayer la démonstration APS</a></p>{% endif %}
+    </section>
+    <section class="form-card">
+      <h2>Ce qui est inclus</h2>
+      <ul><li>Un espace personnel par stagiaire.</li><li>Cours, activités et évaluations selon le programme.</li><li>Reprise du parcours et suivi de progression.</li><li>Relevés de connexion et documents de suivi dans l’espace organisme.</li></ul>
+      <h3>Accès et accompagnement</h3>
+      <p>Un navigateur récent et une connexion Internet sont nécessaires. L’organisme organise l’accompagnement pédagogique de ses stagiaires. Les modalités de fin d’accès ou une durée spécifique sont à préciser avec notre équipe avant la commande.</p>
+      <p>La délivrance d’un accès ne vaut pas inscription à un examen, certification ni autorisation d’exercer.</p>
+      {% if is_mac %}<h3>Découvrir le suivi</h3><p>La démonstration présente un stagiaire fictif à 50 % des activités, ses temps d’apprentissage et un relevé PDF spécimen.</p><a class="text-link" href="{{ url_for('manuals_shop.mac_aps_demo', view='suivi') }}">Consulter le suivi de démonstration →</a>{% endif %}
+    </section>
+  </div>
+  <section class="form-card mac-public-programme"><h2>Programme du parcours</h2>{% for module in modules %}<details class="course-module"><summary>{{ module.title }}</summary><p>{{ (module.required_minutes // 60) }} h {{ '%02d'|format(module.required_minutes % 60) }} min de durée pédagogique prévue.</p></details>{% endfor %}</section>
+  {% else %}
+  <div class="compact-grid">{% for code,item in courses.items() %}<article class="form-card"><span class="eyebrow blue">{{ item.duration_label }}</span><h2>{{ item.name }}</h2><p>{{ item.title }}</p><strong>{{ item.unit_cents|manuals_money ~ ' TTC / stagiaire' if item.unit_cents is not none else 'Tarif sur devis' }}</strong>{% if code == 'mac-aps' %}<p>Tarif unique pour tous les organismes.</p>{% endif %}<p><a class="button primary" href="{{ url_for('manuals_shop.public_course',code=code) }}">Programme et modalités →</a></p>{% if code == 'mac-aps' %}<a class="text-link" href="{{ url_for('manuals_shop.mac_aps_demo') }}">Démonstration MAC APS →</a>{% endif %}</article>{% endfor %}</div>
+  {% endif %}
+</div>
+{% endblock %}

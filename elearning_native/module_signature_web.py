@@ -10,7 +10,8 @@ from pathlib import Path
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
 from .importer import CourseCatalog, CourseImportError
-from .module_signatures import CLOSED_STATUSES, ModuleSignatureStore, SignatureError, YousignModuleSignatures, build_evidence
+from .module_signatures import (CLOSED_STATUSES, MAC_APS_NOTICE, ModuleSignatureStore, SignatureError,
+                                YousignModuleSignatures, build_evidence, signature_training_code)
 from .module_signature_pdf import date_label, duration
 from .paths import assigned_modules, project_course, project_progress
 from .store import NativeElearningStore
@@ -25,6 +26,13 @@ STATUS_LABELS = {"prepared": "Tableau préparé", "preparing": "Envoi à reprend
                  "signed_pending_archive": "Deux signatures reçues - archivage à compléter", "signed": "Signé et archivé",
                  "expired": "Demande expirée", "declined": "Signature refusée", "canceled": "Demande annulée",
                  "rejected": "Demande rejetée", "deleted": "Demande supprimée"}
+
+
+def _training_code(value):
+    normalized = " ".join(str(value or "").upper().replace("-", " ").replace("_", " ").split())
+    if normalized == "MACAPS" or normalized.startswith("MAC APS"):
+        return "mac-aps"
+    return "aps" if normalized.startswith("APS") else None
 
 
 def capture_module(database_path, access, course):
@@ -43,6 +51,7 @@ def capture_module(database_path, access, course):
             row = dict(raw)
             row.setdefault("video_progress_json", "{}")
             row.setdefault("assessment_diagnostics_json", "{}")
+            row.setdefault("activity_seconds_json", "{}")
             progress = project_progress(NativeElearningStore._serialize_progress(row), course)
         else:
             progress = project_progress({}, course)
@@ -113,7 +122,7 @@ def register_module_signatures(host):
                 abort(403)
             sess = host.find_session(data, identifier)
             if (not sess or str(sess.get("partner_id") or host.INTEGRALE_PARTNER_ID) != tenant_id()
-                    or not str(sess.get("training_type", "")).upper().startswith("APS")):
+                    or not _training_code(sess.get("training_type"))):
                 abort(404)
             person = next((p for p in host._session_trainees_list(sess) if str(p.get("id") or p.get("trainee_id")) == trainee_id), None)
             if not person or str(person.get("partner_id") or sess.get("partner_id") or host.INTEGRALE_PARTNER_ID) != tenant_id():
@@ -122,7 +131,8 @@ def register_module_signatures(host):
             origin = {"kind": "session", "id": str(identifier)}
         elif kind == "order":
             order = next((o for o in data.get("manual_orders", []) if str(o.get("id")) == identifier
-                          and o.get("partner_id") == tenant_id() and learning.is_order(o) and o.get("course_code") == "aps"), None)
+                          and o.get("partner_id") == tenant_id() and learning.is_order(o)
+                          and o.get("course_code") in {"aps", "mac-aps"}), None)
             if not order:
                 abort(404)
             person = next((p for p in order.get("learners", []) if str(p.get("id")) == trainee_id), None)
@@ -130,9 +140,10 @@ def register_module_signatures(host):
                 abort(404)
             if require_active and (not learning.entitled(order) or not person.get("activated_at")):
                 abort(403, "Cet accès e-learning n'est pas actif.")
-            sess = {"id": "el-" + order["id"], "partner_id": tenant_id(), "name": order.get("group_name") or "Parcours APS",
+            label = "MAC APS" if order["course_code"] == "mac-aps" else "APS"
+            sess = {"id": "el-" + order["id"], "partner_id": tenant_id(), "name": order.get("group_name") or "Parcours " + label,
                     "date_start": str(person.get("activated_at") or "")[:10], "date_end": order.get("date_end") or "",
-                    "training_type": "APS", "aps_native_modules": order.get("modules", [])}
+                    "training_type": label, "aps_native_modules": order.get("modules", [])}
             origin = {"kind": "order", "id": str(identifier)}
         else:
             abort(404)
@@ -141,12 +152,15 @@ def register_module_signatures(host):
         if require_active and cancelled:
             abort(403, "L'inscription de ce stagiaire est annulée.")
         person = {**person, "id": str(person.get("id") or person.get("trainee_id"))}
+        training_code = _training_code(sess.get("training_type"))
         return {"provider": provider, "session": sess, "person": person, "origin": origin,
+                "training_code": training_code, "training_label": "MAC APS" if training_code == "mac-aps" else "APS",
                 "modules": assigned_modules(sess), "tenant_id": tenant_id()}
 
     def module_course(ctx, course_id):
         assignment = next((m for m in ctx["modules"] if m.get("course_id") == course_id), None)
-        if not assignment or not course_id.startswith("academy-aps62-") or not assignment.get("course_version"):
+        if (not assignment or signature_training_code(course_id) != ctx["training_code"]
+                or not assignment.get("course_version")):
             abort(404)
         try:
             course = project_course(CourseCatalog(root()).load_course(course_id, assignment["course_version"]), assignment)
@@ -173,7 +187,8 @@ def register_module_signatures(host):
             session["module_signatures_csrf"] = secrets.token_urlsafe(32)
         return render_template("native_module_signatures.html", csrf_token=session["module_signatures_csrf"],
                                read_only=session.get("admin_role") == "viewer", status_labels=STATUS_LABELS,
-                               date_label=date_label, duration=duration, closed_statuses=CLOSED_STATUSES, **kwargs)
+                               date_label=date_label, duration=duration, closed_statuses=CLOSED_STATUSES,
+                               mac_aps_notice=MAC_APS_NOTICE, **kwargs)
 
     @bp.get("/admin/elearning/signatures-modules")
     @admin
@@ -184,28 +199,32 @@ def register_module_signatures(host):
         if not session.get("manuals_only") and provider.get("account_type") != "manuals_only":
             for sess in data.get("sessions", []):
                 if (str(sess.get("partner_id") or host.INTEGRALE_PARTNER_ID) != tenant_id()
-                        or not str(sess.get("training_type", "")).upper().startswith("APS")
-                        or not any(str(m.get("course_id", "")).startswith("academy-aps62-") for m in assigned_modules(sess))):
+                        or not _training_code(sess.get("training_type"))
+                        or not any(signature_training_code(m.get("course_id")) == _training_code(sess.get("training_type"))
+                                   for m in assigned_modules(sess))):
                     continue
                 people = [{"name": " ".join(str(p.get(k) or "") for k in ("first_name", "last_name")),
                            "url": url_for("native_module_signatures.session_modules", session_id=sess["id"], trainee_id=p["id"])}
                           for p in host._session_trainees_list(sess) if p.get("id")
                           and str(p.get("partner_id") or sess.get("partner_id") or host.INTEGRALE_PARTNER_ID) == tenant_id()]
-                groups.append({"name": sess.get("name") or "Session APS", "people": people})
+                label = "MAC APS" if _training_code(sess.get("training_type")) == "mac-aps" else "APS"
+                groups.append({"name": sess.get("name") or "Session " + label, "training_label": label, "people": people})
         for order in data.get("manual_orders", []):
-            if order.get("partner_id") != tenant_id() or not learning.is_order(order) or order.get("course_code") != "aps":
+            if (order.get("partner_id") != tenant_id() or not learning.is_order(order)
+                    or order.get("course_code") not in {"aps", "mac-aps"}):
                 continue
             people = [{"name": " ".join(str(p.get(k) or "") for k in ("first_name", "last_name")),
                        "url": url_for("native_module_signatures.order_modules", oid=order["id"], trainee_id=p["id"])}
                       for p in order.get("learners", []) if p.get("id")]
-            groups.append({"name": order.get("group_name") or "Accès APS", "people": people})
+            label = "MAC APS" if order["course_code"] == "mac-aps" else "APS"
+            groups.append({"name": order.get("group_name") or "Accès " + label, "training_label": label, "people": people})
         return page(provider=provider, groups=groups, ctx=None, modules=[], records=[], defaults={}, ready=False)
 
     def detail(ctx):
         modules = []
         for assignment in ctx["modules"]:
             cid = str(assignment.get("course_id", ""))
-            if not cid.startswith("academy-aps62-"):
+            if signature_training_code(cid) != ctx["training_code"]:
                 continue
             try:
                 course, progress, _, _ = module_course(ctx, cid)
@@ -277,6 +296,19 @@ def register_module_signatures(host):
         except SignatureError:
             abort(404)
 
+    def active_snapshot_context(record):
+        origin = record["evidence"]["origin"]
+        ctx = context(origin["kind"], origin["id"], record["trainee_id"], require_active=True)
+        if (str(ctx["session"]["id"]) != record["session_id"]
+                or signature_training_code(record["course_id"]) != ctx["training_code"]
+                or not any(m.get("course_id") == record["course_id"] and m.get("course_version") == record["course_version"]
+                           for m in ctx["modules"])):
+            abort(403, "Cette édition du module n'est plus affectée à cet accès. Son tableau reste consultable.")
+        return ctx
+
+    def document_code(record):
+        return signature_training_code(record["course_id"]) or "aps"
+
     def pdf_response(content, filename):
         return Response(content, mimetype="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
@@ -284,7 +316,7 @@ def register_module_signatures(host):
     @admin
     def snapshot_pdf(snapshot_id):
         record = owned(snapshot_id)
-        return pdf_response(bytes(record["pdf"]), "tableau-aps-" + record["id"] + ".pdf")
+        return pdf_response(bytes(record["pdf"]), "tableau-" + document_code(record) + "-" + record["id"] + ".pdf")
 
     @bp.post("/admin/elearning/signatures-modules/tableaux/<snapshot_id>/envoyer")
     @admin
@@ -292,8 +324,7 @@ def register_module_signatures(host):
         record = owned(snapshot_id)
         if request.form.get("confirm_send") != "yes":
             abort(400, "Vérifiez les deux destinataires et confirmez l'envoi.")
-        origin = record["evidence"]["origin"]
-        context(origin["kind"], origin["id"], record["trainee_id"], require_active=True)
+        active_snapshot_context(record)
         try:
             result = YousignModuleSignatures(host, signature_store()).send(tenant_id(), snapshot_id, actor=actor())
             flash("Demande envoyée aux deux signataires." if result["status"] == "ongoing" else STATUS_LABELS.get(result["status"], "Demande actualisée."), "success")
@@ -317,8 +348,7 @@ def register_module_signatures(host):
     @admin
     def reissue(snapshot_id):
         record = owned(snapshot_id)
-        origin = record["evidence"]["origin"]
-        context(origin["kind"], origin["id"], record["trainee_id"], require_active=True)
+        active_snapshot_context(record)
         try:
             replacement = signature_store().reissue(tenant_id(), snapshot_id, actor=actor())
             flash("Une nouvelle édition reprend les traces et destinataires du tableau clôturé. Vérifiez son PDF puis confirmez son envoi.", "success")
@@ -334,14 +364,14 @@ def register_module_signatures(host):
         content = signature_store().artifact(tenant_id(), snapshot_id, "tableau-signe")
         if not content or not record["state"].get("two_signatures_confirmed_at"):
             abort(404)
-        return pdf_response(content, "tableau-aps-" + record["id"] + "-signe.pdf")
+        return pdf_response(content, "tableau-" + document_code(record) + "-" + record["id"] + "-signe.pdf")
 
     @bp.get("/admin/elearning/signatures-modules/tableaux/<snapshot_id>/archive.zip")
     @admin
     def audit_archive(snapshot_id):
         record = owned(snapshot_id)
         return Response(signature_store().archive(tenant_id(), snapshot_id), mimetype="application/zip",
-                        headers={"Content-Disposition": f'attachment; filename="preuves-module-aps-{record["id"]}.zip"'})
+                        headers={"Content-Disposition": f'attachment; filename="preuves-module-{document_code(record)}-{record["id"]}.zip"'})
 
     host.app.register_blueprint(bp)
     host.app.config["NATIVE_MODULE_SIGNATURES_ENABLED"] = True

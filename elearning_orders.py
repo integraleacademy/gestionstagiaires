@@ -1,8 +1,9 @@
 """Partner e-learning orders, using the existing tenant store and merchant queue.
 
 An entitlement is never inferred from a browser return URL or a posted price.
-Only a fully paid, verified invoice (or an administrator's free price snapshot)
-can activate it. Learner records stay outside administrative trainee sessions.
+Only a fully paid, verified invoice (or an allowed free price snapshot) can
+activate it. Fixed-price courses never allow a free or discounted entitlement.
+Learner records stay outside administrative trainee sessions.
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ import manuals_commerce as commerce
 
 COURSES = {
     "aps": {"name": "APS", "title": "Agent de prévention et de sécurité", "color": "#2468b3", "default_cents": 5900, "folder": "aps62"},
+    "mac-aps": {"name": "MAC APS", "title": "Maintien et actualisation des compétences APS", "color": "#173c5b", "default_cents": 6000, "fixed_cents": 6000},
     "vtc": {"name": "VTC", "title": "Chauffeur VTC", "color": "#7951a8", "default_cents": None, "folder": "vtc"},
 }
 CUSTOMER_ENDPOINTS = {"manuals_shop.elearning_checkout", "manuals_shop.elearning_order", "manuals_shop.elearning_confirm", "manuals_shop.elearning_refresh", "manuals_shop.elearning_status", "manuals_shop.elearning_invoice"}
@@ -39,19 +41,25 @@ def is_record(order):
     return order.get("order_type") in {"elearning", "elearning_group"}
 
 
+def course_label(code):
+    """Keep stored product keys separate from names shown to learners and centres."""
+    return COURSES.get(code, {}).get("name", str(code or "").upper())
+
+
 def prices(partner):
     saved = partner.get("elearning_pricing") or {}
     result = {}
     for code, course in COURSES.items():
         cfg = saved.get(code) or {}
-        free = cfg.get("free") is True
-        cents = cfg.get("unit_cents", course["default_cents"])
+        fixed = course.get("fixed_cents")
+        free = fixed is None and cfg.get("free") is True
+        cents = fixed if fixed is not None else cfg.get("unit_cents", course["default_cents"])
         if cents is not None and (type(cents) is not int or not 1 <= cents <= 10000000):
             cents = None
         minutes = sum(module["required_minutes"] for module in curriculum(code))
         hours, remaining = divmod(minutes, 60)
         duration_label = f"{hours} h" + (f" {remaining:02d} min" if remaining else "")
-        result[code] = {**course, "code": code, "free": free, "unit_cents": 0 if free else cents,
+        result[code] = {**course, "code": code, "free": free, "fixed_price": fixed is not None, "unit_cents": 0 if free else cents,
                         "configured": free or cents is not None, "planned_minutes": minutes,
                         "hours": minutes / 60, "duration_label": duration_label}
     return result
@@ -59,7 +67,9 @@ def prices(partner):
 
 def parse_prices(form):
     result = {}
-    for code in COURSES:
+    for code, course in COURSES.items():
+        if course.get("fixed_cents") is not None:
+            continue
         raw = str(form.get(code + "_price", "")).strip().replace(",", ".")
         cents = None
         if raw:
@@ -93,13 +103,21 @@ def parse_learners(form):
 
 
 def curriculum(code):
-    manifest = json.loads((Path(__file__).parent / "elearning_native" / COURSES[code]["folder"] / "manifest.json").read_text(encoding="utf-8"))
+    if code == "mac-aps":
+        from elearning_native.mac_aps import curriculum_manifest
+        manifest = curriculum_manifest()
+    else:
+        manifest = json.loads((Path(__file__).parent / "elearning_native" / COURSES[code]["folder"] / "manifest.json").read_text(encoding="utf-8"))
     return [{"course_id": m["id"], "course_version": m["version"], "title": m["title"], "required_minutes": m["planned_minutes"] if "planned_minutes" in m else int(Decimal(str(m["hours"])) * 60)} for m in manifest["modules"]]
 
 
 def entitled(order):
     state = order.get("commerce") or {}
     if not is_order(order) or order.get("status") in {"draft", "cancelled"} or order.get("cancellation_requested_at"):
+        return False
+    fixed = COURSES.get(order.get("course_code"), {}).get("fixed_cents")
+    if fixed is not None and (order.get("free_snapshot") is not False or order.get("unit_cents") != fixed
+                              or not order.get("learners") or order.get("total_cents") != fixed * len(order["learners"])):
         return False
     if order.get("free_snapshot") is True and order.get("total_cents") == 0:
         return True
@@ -152,9 +170,9 @@ def learner_context(data, token, host=None):
         for person in order.get("learners", []):
             if not person.get("activated_at") or not hmac.compare_digest(person.get("token_hash", ""), digest):
                 continue
-            virtual_session = {"id": "el-" + order["id"], "partner_id": order["partner_id"], "name": order.get("group_name") or "Parcours " + order["course_code"].upper(),
-                               "training_type": order["course_code"].upper(), "date_start": person["activated_at"][:10], "aps_elearning_enabled": True,
-                               "aps_native_modules": copy.deepcopy(order["modules"]), "aps_native_path_title": "Mon parcours " + order["course_code"].upper(),
+            virtual_session = {"id": "el-" + order["id"], "partner_id": order["partner_id"], "name": order.get("group_name") or "Parcours " + course_label(order["course_code"]),
+                               "training_type": course_label(order["course_code"]), "date_start": person["activated_at"][:10], "aps_elearning_enabled": True,
+                               "aps_native_modules": copy.deepcopy(order["modules"]), "aps_native_path_title": "Mon parcours " + course_label(order["course_code"]),
                                "learner_brand": learner_brand(data, order, host=host)}
             return virtual_session, {**person, "public_token": token, "partner_id": order["partner_id"]}
     return None, None
@@ -199,11 +217,13 @@ def send_message(host, order, key, recipient, *, person=None, invoice=False):
     title = "Votre formation vous attend" if person else ("Vos accès sont activés" if paid else "Votre commande e-learning")
     link = base_url(host) + ("/apprendre/" + access_token(host, order, person) if person else "/admin/organisme/e-learning/commandes/" + order["id"])
     brand = learner_brand(host.load_data(run_background_tasks=False), order, host=host) if person else None
-    subject = ("Votre accès personnel " if person else "Commande e-learning ") + order["course_code"].upper() + " · " + (brand["name"] if person else "Intégrale Academy")
+    subject = ("Votre accès personnel " if person else "Commande e-learning ") + course_label(order["course_code"]) + " · " + (brand["name"] if person else "Intégrale Academy")
     if invoice:
         subject = ("Facture acquittée " if paid else "Facture à régler ") + state.get("invoice_number", "") + " · E-learning"
     body = host.app.jinja_env.get_template("manuals/elearning_email.html").render(order=order, person=person, title=title, link=link, paid=paid, invoice=invoice, money=money, learner_brand=brand)
-    plain = (f"Bonjour {person['first_name']},\nVotre accès personnel au parcours {order['course_code'].upper()} est activé.\n" if person else f"Commande {order['reference']} : {len(order['learners'])} accès {order['course_code'].upper()}.\nTotal : {money(order['total_cents'])} TTC.\n" + ("Accès activés.\n" if paid else "Les accès seront activés uniquement après règlement intégral de la facture.\n"))
+    plain = (f"Bonjour {person['first_name']},\nVotre accès personnel au parcours {course_label(order['course_code'])} est activé.\n" if person else f"Commande {order['reference']} : {len(order['learners'])} accès {course_label(order['course_code'])}.\nTotal : {money(order['total_cents'])} TTC.\n" + ("Accès activés.\n" if paid else "Les accès seront activés uniquement après règlement intégral de la facture.\n"))
+    if order["course_code"] == "mac-aps":
+        plain += "Ce programme numérique de préparation et de révision ne délivre pas à lui seul l’attestation réglementaire de stage MAC APS.\n"
     plain += "Ouvrir mon espace : " + link
     send_options = {}
     if person:
@@ -305,7 +325,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         rows = [{"last_name": l, "first_name": f, "email": e} for l, f, e in zip(request.form.getlist("last_name"), request.form.getlist("first_name"), request.form.getlist("email"))]
         try:
             if code not in COURSES:
-                raise ValueError("Choisissez le parcours APS ou VTC.")
+                raise ValueError("Choisissez un parcours APS, MAC APS ou VTC.")
             price = prices(partner)[code]
             if not price["configured"]:
                 raise ValueError("Contactez-nous pour définir votre tarif pour ce parcours.")
@@ -326,7 +346,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             order = {"id": oid, "order_type": "elearning", "partner_id": partner["id"], "created_by": session.get("user_id"), "status": "draft", "created_at": host._now_iso(),
                      "request_id": token, "course_code": code, "group_name": group_name, "learners": people, "modules": modules, "billing": billing,
                      "free_snapshot": price["free"], "unit_cents": unit, "total_cents": unit * quantity, "shipping_cents": 0,
-                     "items": [{"kind": "elearning", "code": code, "label": "Accès e-learning " + code.upper(), "quantity": quantity, "unit_cents": unit, "total_cents": unit * quantity}],
+                     "items": [{"kind": "elearning", "code": code, "label": "Accès e-learning " + course_label(code), "quantity": quantity, "unit_cents": unit, "total_cents": unit * quantity}],
                      "centre": centre_snapshot(partner)}
             def persist(current):
                 existing = next((o for o in current.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("request_id") == token), None)

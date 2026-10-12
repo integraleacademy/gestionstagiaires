@@ -52,6 +52,7 @@
       remaining_seconds: Number(config.initialRemainingSeconds || 0),
       module_complete: Boolean(config.initialModuleComplete),
       video_progress: config.initialVideoProgress || {},
+      timed_objectives: config.initialTimedObjectives || [],
     },
   };
 
@@ -99,10 +100,28 @@
 
   function updateAction() {
     if (!actionButton) return;
+    const objective = (state.progress.timed_objectives || []).find(item => item.activity_ids.includes(config.activityId));
+    const timedBlocked = objective && objective.activity_ids[objective.activity_ids.length - 1] === config.activityId && !objective.duration_met;
+    const active = document.getElementById('macObjectiveActive');
+    const remaining = document.getElementById('macObjectiveRemaining');
+    if (objective && active) active.textContent = formatSeconds(objective.active_seconds);
+    if (objective && remaining) remaining.textContent = objective.duration_met
+      ? 'Durée de cet objectif atteinte.'
+      : `Encore ${formatSeconds(objective.remaining_seconds)} d’étude active sur cet objectif. Vous pouvez reprendre ses lectures et ses activités avant de valider le questionnaire de clôture.`;
     const blocked = actionButton.dataset.mode === "navigate" && config.isLastActivity
       && config.hasNextModule && !state.progress.module_complete;
     const videoBlocked = requiredVideos.some((video) => !videoCompleted(video));
-    actionButton.disabled = state.saving || blocked || videoBlocked;
+    actionButton.disabled = state.saving || blocked || videoBlocked || Boolean(timedBlocked);
+    if (timedBlocked && !state.saving) {
+      actionButton.dataset.timingBlocked = 'true';
+      actionButton.textContent = `Encore ${formatSeconds(objective.remaining_seconds)} sur cet objectif`;
+      return;
+    }
+    if (actionButton.dataset.timingBlocked === 'true' && !state.saving) {
+      delete actionButton.dataset.timingBlocked;
+      actionButton.textContent = actionButton.dataset.mode === 'answer' ? 'Valider ma réponse →'
+        : actionButton.dataset.mode === 'navigate' ? 'Continuer →' : 'Terminer et continuer →';
+    }
     if (videoBlocked && !state.saving) {
       actionButton.textContent = "Regardez la vidéo jusqu’à la fin";
       return;

@@ -1,14 +1,15 @@
 <!doctype html>
 <html lang="fr">
+{% set player_brand = (learner_brand|default({})) if course.training_label == 'MAC APS' else {} %}
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#172033">
   <title>{{ activity.title }} · {{ course.title }}</title>
-  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  {% if player_brand.get('logo_url') %}<link rel="icon" href="{{ player_brand.logo_url }}">{% else %}<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-elearning.css', v='20261011-vtc-readable-video') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62.css', v='20261007-6') }}">
-  {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-1') }}">{% endif %}
+  {% if course.training_label == 'MAC APS' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-elearning.css', v='20261012-2') }}">{% endif %}
   {% if course.training_label == 'A3P' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/a3p-elearning.css', v='20261010-2') }}">{% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/aps62-practice.css', v='20261007-6') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/vtc-elearning.css',v='20261007-visuals') }}">
@@ -99,9 +100,9 @@
   <header class="native-topbar">
     <div class="native-topbar__brand">
       <button class="native-menu-button" id="nativeMenuButton" type="button" aria-label="Afficher le sommaire" aria-controls="nativeSidebar" aria-expanded="false">☰</button>
-      <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+      {% if player_brand.get('logo_url') %}<img src="{{ player_brand.logo_url }}" alt="{{ player_brand.get('name') or 'Votre organisme de formation' }}">{% elif player_brand.get('name') %}<span class="mac-brand-initial" aria-hidden="true">{{ player_brand.name[0]|upper }}</span>{% else %}<img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">{% endif %}
       <div>
-        <span>Formation {{ course.training_label|default('APS') }}</span>
+        <span>{{ player_brand.get('name') or ('Formation ' ~ course.training_label|default('APS')) }}</span>
         <strong>{{ course.title }}</strong>
       </div>
     </div>
@@ -175,10 +176,11 @@
         {% if preview_mode %}
         <section class="native-preview-notice" aria-label="Mode aperçu">
           <strong>{{ 'Ressources complémentaires' if resource_mode else 'Visualisation du contenu' }}</strong>
-          <p>{{ 'Ces révisions, vidéos et préparations du présentiel restent en accès libre. Elles ne sont pas comptées dans votre temps à distance et ne valident aucun geste pratique.' if resource_mode else 'Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.' }}</p>
+          <p>{{ 'Ces révisions et vidéos sont accessibles séparément, hors des 14 heures du parcours principal. Aucun temps ni résultat n’est crédité et aucun geste pratique n’est validé.' if resource_mode and course.training_label == 'MAC APS' else 'Ces révisions, vidéos et préparations du présentiel restent en accès libre. Elles ne sont pas comptées dans votre temps à distance et ne valident aucun geste pratique.' if resource_mode else 'Parcourez librement les séquences et testez les questions. Aucun temps, score ou résultat stagiaire n’est enregistré.' }}</p>
         </section>
         {% endif %}
-        {% if course.training_label == 'MAC APS' %}<p class="macaps-scope">Parcours pédagogique MAC APS · Le suivi numérique accompagne votre stage. Les gestes et les mises en situation pratiques se valident avec votre formateur.</p>{% endif %}
+        {% if course.training_label == 'MAC APS' %}<p class="macaps-scope">Support de préparation et de révision MAC APS. L’ouverture temporaire au distanciel prévue par l’arrêté du 27 janvier 2025 se terminait le 31 décembre 2025. Ce suivi numérique ne vaut pas attestation réglementaire de stage.</p>{% endif %}
+        {% if timed_objective and not preview_mode %}<section class="mac-objective-time" aria-label="Durée de l’objectif en cours"><span class="mac-eyebrow">Objectif en cours</span><h2>{{ timed_objective.title }}</h2><p><strong id="macObjectiveActive">{{ (timed_objective.active_seconds / 60)|round(0, 'floor')|int }} min</strong> sur <strong>{{ timed_objective.required_seconds // 60 }} min</strong> d’étude active.</p><p id="macObjectiveRemaining">{% if timed_objective.duration_met %}Durée de cet objectif atteinte.{% else %}Poursuivez les lectures et les activités de cet objectif. Son questionnaire de clôture se valide après la durée prévue.{% endif %}</p></section>{% endif %}
         <div class="native-breadcrumb"><span>{{ section_title }}</span><b>Activité {{ activity_position }} sur {{ activity_count }}</b></div>
 
         {% if introduction %}
@@ -192,7 +194,7 @@
 
         <article class="native-activity" data-activity-id="{{ activity.id }}" data-activity-type="{{ activity.type }}">
           <header class="native-activity__header">
-            <span class="native-kicker">{{ 'Atelier facultatif' if activity.optional else 'Questionnaire du chapitre' if (activity.a3p or activity.macaps) and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
+            <span class="native-kicker">{{ 'Atelier facultatif' if activity.optional else 'Questionnaire de fin d’objectif' if activity.macaps and activity.macaps.is_objective_assessment else 'Questionnaire du chapitre' if (activity.a3p or activity.macaps) and activity.scored else 'Question évaluée' if activity.scored else 'Production personnelle' if activity.production else 'Atelier interactif' if activity.practice else 'Cours' }}</span>
             {% if activity.planned_minutes %}<span class="aps-minute-badge">{{ activity.planned_minutes }} {{ 'min conseillées' if activity.optional else 'min de travail guidé' }}</span>{% endif %}
             <h1>{{ activity.title }}</h1>
           </header>
@@ -323,10 +325,11 @@
     'initialStatus': progress.status,
     'savedAnswer': progress.answers.get(activity.id, {}),
     'requiredVideos': required_videos|default({}),
-    'initialVideoProgress': progress.get('video_progress', {})
+    'initialVideoProgress': progress.get('video_progress', {}),
+    'initialTimedObjectives': progress.get('timed_objectives', [])
   }|tojson }}</script>
   <script src="{{ url_for('static', filename='js/native-video-pacing.js', v='20261010-pacing') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261012-optional') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/native-elearning-player.js', v='20261012-macaps-v2') }}" defer></script>
   {% endif %}
 {% if course.training_label == 'VTC' %}<script src="{{ url_for('static', filename='js/vtc-video-companion.js', v='20261011-readable-video') }}" defer></script>{% endif %}
 {% if course.training_label == 'MAC APS' %}<script src="{{ url_for('static', filename='js/mac-aps-elearning.js', v='20261012-1') }}" defer></script>{% endif %}

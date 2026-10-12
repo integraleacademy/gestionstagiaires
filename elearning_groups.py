@@ -398,7 +398,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             try:
                 mode, code = values.get("mode", "group"), values.get("course_code", "")
                 if mode not in {"group", "individual"} or code not in learning.COURSES:
-                    raise ValueError("Choisissez un accès individuel ou un groupe, puis le parcours APS ou VTC.")
+                    raise ValueError("Choisissez un accès individuel ou un groupe, puis un parcours APS, MAC APS ou VTC.")
                 name = _name(values.get("group_name"), mode)
                 token = values.get("request_id", "")
                 if not re.fullmatch(r"[a-f0-9]{32}", token):
@@ -501,7 +501,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             name = _name(request.form.get("group_name"), group["mode"])
             code = request.form.get("course_code", group["course_code"])
             if code not in learning.COURSES:
-                raise ValueError("Choisissez le parcours APS ou VTC.")
+                raise ValueError("Choisissez un parcours APS, MAC APS ou VTC.")
             if code != group["course_code"] and not view["can_change_course"]:
                 raise ValueError("Le parcours d’un groupe déjà commandé ne peut plus être modifié.")
             locked = [p for p in group["learners"] if p["id"] in {r["id"] for r in view["learners"] if r["locked"]}]
@@ -556,6 +556,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             abort(400, "Le récapitulatif est invalide. Revenez au groupe et réessayez.")
         if not isinstance(quote, dict) or quote.get("group_id") != gid or quote.get("partner_id") != partner["id"] or quote.get("request_id") != request.form.get("request_id"):
             abort(400, "Le récapitulatif ne correspond pas à ce groupe.")
+        from manuals_public import acceptance
+        terms = acceptance(host)
         expected = _revision(request.form)
         if expected != quote.get("revision"):
             abort(400, "Le récapitulatif ne correspond pas à cette version du groupe.")
@@ -591,9 +593,10 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
                      "reference": "EL-" + str(dt.date.today().year) + "-" + oid[:8].upper(),
                      "request_id": quote["request_id"], "course_code": current_group["course_code"],
                      "group_name": current_group["group_name"], "learners": people,
+                     "terms_acceptance": terms,
                      "modules": learning.curriculum(current_group["course_code"]), "billing": copy.deepcopy(billing),
                      "free_snapshot": price["free"], "unit_cents": unit, "total_cents": unit * quantity, "shipping_cents": 0,
-                     "items": [{"kind": "elearning", "code": current_group["course_code"], "label": "Accès e-learning " + current_group["course_code"].upper(),
+                     "items": [{"kind": "elearning", "code": current_group["course_code"], "label": "Accès e-learning " + learning.course_label(current_group["course_code"]),
                                 "quantity": quantity, "unit_cents": unit, "total_cents": unit * quantity}],
                      "centre": learning.centre_snapshot(current_partner),
                      "commerce": {"queued": True, "status": "pending", "flow": "elearning_invoice_first", "attempts": 0, "emails": {}}}

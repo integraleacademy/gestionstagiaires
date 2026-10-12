@@ -37,6 +37,7 @@ def _answer_label(value):
 
 
 def render_module_pdf(snapshot):
+    from .module_signatures import MAC_APS_NOTICE, signature_training_label
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_LEFT
     from reportlab.lib.pagesizes import A4
@@ -77,6 +78,8 @@ def render_module_pdf(snapshot):
         value.setStyle(TableStyle(rules))
         return value
     learner, provider, responsible, progress = (snapshot[k] for k in ("learner", "provider", "responsible", "progress"))
+    training_label = signature_training_label(snapshot)
+    is_mac_aps = training_label == "MAC APS"
     learner_name = learner["first_name"] + " " + learner["last_name"]
     responsible_name = responsible["first_name"] + " " + responsible["last_name"]
     fields = {}
@@ -118,10 +121,13 @@ def render_module_pdf(snapshot):
     out = io.BytesIO()
     doc = SimpleDocTemplate(out, pagesize=A4, leftMargin=18 * mm, rightMargin=18 * mm,
                             topMargin=19 * mm, bottomMargin=20 * mm,
-                            title="Tableau de suivi APS - " + snapshot["course"]["title"], author=provider["name"])
-    story = [p(provider["name"], "sub"), p("Tableau de suivi de la formation à distance", "title"),
+                            title="Tableau de suivi " + training_label + " - " + snapshot["course"]["title"], author=provider["name"])
+    story = [p(provider["name"], "sub"), p("Tableau de suivi du parcours numérique" if is_mac_aps else "Tableau de suivi de la formation à distance", "title"),
              p(snapshot["course"]["title"], "sub"),
-             p("Formation APS asynchrone - tableau individuel par module", "body"), Spacer(1, 3 * mm)]
+             p(("MAC APS - suivi pédagogique individuel par module" if is_mac_aps else
+                "Formation APS asynchrone - tableau individuel par module"), "body"), Spacer(1, 3 * mm)]
+    if is_mac_aps:
+        story.extend([p(MAC_APS_NOTICE, "small"), Spacer(1, 3 * mm)])
     if snapshot.get("reissued_from"):
         story.append(p("Réédition du tableau " + snapshot["reissued_from"] + ". Traces initialement figées le " +
                        date_label(snapshot.get("source_captured_at")) + ".", "small"))
@@ -133,7 +139,7 @@ def render_module_pdf(snapshot):
            " ".join(provider.get(k, "") for k in ("address", "postal_code", "city")), "cell")],
         [p("Carte professionnelle / autorisation préalable\n" + learner["cnaps_number"], "cell"),
          p("Responsable : " + responsible_name + "\n" + responsible["email"], "cell")],
-        [p("Session : " + snapshot["session"]["name"] + "\nFin de session : " + snapshot["session"]["date_end"], "cell"),
+        [p("Session : " + snapshot["session"]["name"] + ("\nFin du suivi numérique : " if is_mac_aps else "\nFin de session : ") + snapshot["session"]["date_end"], "cell"),
          p("Module : " + snapshot["course_id"] + "\nÉdition : " + snapshot["course_version"], "cell")],
     ]
     story.extend([table(identity_rows, [87, 87]), Spacer(1, 5 * mm), p("Synthèse du module", "h")])
@@ -144,7 +150,7 @@ def render_module_pdf(snapshot):
                    ("question enregistrée)" if question_count == 1 else "questions enregistrées)")) if isinstance(first_score, (int, float)) else "Non disponible pour les tentatives anciennes"
     practice = summary.get("practice") or {}
     metrics = [
-        [p("TEMPS ACTIF ENREGISTRÉ", "th"), p("DURÉE OBLIGATOIRE", "th"), p("ACTIVITÉS TERMINÉES", "th")],
+        [p("TEMPS ACTIF ENREGISTRÉ", "th"), p("DURÉE CIBLE NUMÉRIQUE" if is_mac_aps else "DURÉE OBLIGATOIRE", "th"), p("ACTIVITÉS TERMINÉES", "th")],
         [p(duration(progress.get("active_seconds")), "cell"), p(duration(progress.get("required_seconds")), "cell"),
          p(str(len(progress.get("completed_activity_ids") or [])), "cell")],
     ]
@@ -159,7 +165,17 @@ def render_module_pdf(snapshot):
                   p("Début du module : " + date_label(progress.get("started_at"))),
                   p("Tableau figé le : " + date_label(snapshot["frozen_at"])),
                   p("Conservation prévue jusqu'au : " + snapshot["retention_until"] + " (trois ans après la fin de la session).", "small"),
-                  p("Ce tableau décrit les traces du module ; il ne vaut ni diplôme ni certification professionnelle.", "small")])
+                  p("La durée cible du module n'est pas un crédit de formation réglementaire." if is_mac_aps else "Ce tableau décrit les traces du module ; il ne vaut ni diplôme ni certification professionnelle.", "small")])
+    if is_mac_aps and progress.get("timed_objectives"):
+        story.extend([PageBreak(), p("Suivi du temps par objectif", "title"), p(snapshot["course"]["title"], "sub"),
+                      p("Les temps proviennent des activités effectivement suivies. Un excédent sur un objectif ne complète pas un autre objectif.", "small")])
+        objective_rows = [[p(x, "th") for x in ("OBJECTIF", "TEMPS ACTIF", "DURÉE CIBLE", "ÉTAT")]]
+        for objective in progress["timed_objectives"]:
+            objective_rows.append([p(objective["title"], "cell"), p(duration(objective.get("active_seconds")), "cell"),
+                                   p(duration(objective.get("required_seconds")), "cell"),
+                                   p("Terminé" if objective.get("complete") else "Activités à compléter" if objective.get("duration_met") else "Temps à compléter", "cell")])
+        story.extend([table(objective_rows, [76, 34, 34, 30]), Spacer(1, 4 * mm),
+                      p("Les signatures portent sur ces données figées de suivi numérique, sans validation réglementaire du stage MAC APS.", "small")])
     story.extend([PageBreak(), p("Résultats des évaluations", "title"), p(snapshot["course"]["title"], "sub")])
     activity_titles = {a["id"]: a["title"] for s in snapshot["course"]["sections"] for a in s["activities"]}
     activity_rows = [[p(x, "th") for x in ("SÉQUENCE / ACTIVITÉ", "ÉTAT", "RÉSULTAT ENREGISTRÉ")]]
@@ -217,9 +233,11 @@ def render_module_pdf(snapshot):
                   Spacer(1, 8 * mm), SignatureFields(), Spacer(1, 7 * mm),
                   p("Référence du tableau : " + snapshot["snapshot_id"], "small"),
                   p("Empreinte des données sources : " + snapshot["source_hash"], "small"),
-                  p("Référence : article 8 de l'arrêté du 23 octobre 2024 relatif aux conditions matérielles et pédagogiques de la formation aux activités privées de sécurité.", "small"),
+                  p(("Les signatures confirment la prise de connaissance des traces numériques. Elles ne valident ni les gestes pratiques, ni le présentiel, ni la conformité d'un stage réglementaire MAC APS."
+                     if is_mac_aps else "Référence : article 8 de l'arrêté du 23 octobre 2024 relatif aux conditions matérielles et pédagogiques de la formation aux activités privées de sécurité."), "small"),
                   p("Les traces, ce tableau et les preuves de signature sont conservés jusqu'au " + snapshot["retention_until"] +
-                    ". Leur finalité est le suivi pédagogique et la justification de la formation. Les droits relatifs aux données personnelles s'exercent auprès du prestataire.", "small")])
+                    (". Leur finalité est le suivi factuel du parcours numérique." if is_mac_aps else ". Leur finalité est le suivi pédagogique et la justification de la formation.") +
+                    " Les droits relatifs aux données personnelles s'exercent auprès du prestataire.", "small")])
 
     def footer(canvas, document):
         canvas.saveState()
@@ -227,7 +245,7 @@ def render_module_pdf(snapshot):
         canvas.line(18 * mm, 15 * mm, 192 * mm, 15 * mm)
         canvas.setFont(font, 7)
         canvas.setFillColor(muted)
-        canvas.drawString(18 * mm, 10 * mm, "Suivi APS - " + snapshot["snapshot_id"][:16])
+        canvas.drawString(18 * mm, 10 * mm, "Suivi " + training_label + " - " + snapshot["snapshot_id"][:16])
         canvas.drawRightString(192 * mm, 10 * mm, f"Page {document.page}")
         canvas.restoreState()
     doc.build(story, onFirstPage=footer, onLaterPages=footer)

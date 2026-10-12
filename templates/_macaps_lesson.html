@@ -11,13 +11,13 @@
   {% elif lesson.kind == 'application' %}
     <section class="mac-example"><span class="mac-eyebrow">Exemple professionnel</span><h2>{{ lesson.example.title }}</h2>{% for paragraph in lesson.example.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}</section>
     <section class="mac-situation"><span class="mac-eyebrow">À vous de décider</span><p>{{ lesson.situation }}</p></section>
-    <p class="mac-question-note">Trois décisions à prendre. Choisissez votre réponse à chaque étape, puis validez pour lire la correction. Vous pourrez réessayer sans travail à rédiger.</p>
+    <p class="mac-question-note">{{ lesson.question_count }} décisions à prendre. Choisissez votre réponse à chaque étape, puis validez pour lire la correction. Vous pourrez réessayer sans travail à rédiger.</p>
   {% elif lesson.kind == 'quiz' %}
-    <div class="mac-objective"><span class="mac-eyebrow">Vérifier l’acquis du chapitre</span><p>{{ lesson.objective }}</p></div>
+    <div class="mac-objective"><span class="mac-eyebrow">{{ 'Clôturer cet objectif' if lesson.is_objective_assessment else 'Vérifier l’acquis du chapitre' }}</span><p>{{ lesson.objective }}</p></div>
   {% elif lesson.kind == 'recap' %}
     <span class="mac-eyebrow">Votre fiche de révision</span><h2>Les réflexes à conserver</h2><div class="mac-memory">{% for point in lesson.takeaways %}<article><b>{{ '%02d'|format(loop.index) }}</b><p>{{ point }}</p></article>{% endfor %}</div><div class="mac-objective"><span class="mac-eyebrow">L’objectif à savoir expliquer</span><p>{{ lesson.objective }}</p></div>
     <p class="mac-recall">Sans relire le cours, expliquez mentalement la règle principale et imaginez une situation de votre site où elle s’applique.</p>
   {% elif lesson.kind == 'video' %}
-    <p class="mac-video-note">Retrouvez les points clés avec Henri et les sous-titres. Vous pouvez reprendre un chapitre de la vidéo et ralentir la lecture. Le visionnage complet fait partie de votre parcours pédagogique.</p>
+    <p class="mac-video-note">Retrouvez les points clés avec Henri et les sous-titres. Vous pouvez reprendre un chapitre de la vidéo et ralentir la lecture. {{ 'Cette vidéo est un complément, hors des 14 heures du parcours principal.' if lesson.pedagogical_scope == 'complement' else 'Le visionnage complet fait partie de votre parcours pédagogique.' }}</p>
   {% endif %}
 </div>

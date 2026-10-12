@@ -98,8 +98,8 @@ def vtc_pacing_enabled(course_id: str, version: str) -> bool:
 
 
 def mac_aps_pacing_enabled(course_id: str, version: str) -> bool:
-    from .mac_aps import VERSION, curriculum_ids
-    return version == VERSION and course_id in curriculum_ids()
+    from .mac_aps import SUPPORTED_VERSIONS, curriculum_ids
+    return version in SUPPORTED_VERSIONS and course_id in curriculum_ids(version)
 
 
 def activity_playback_policy(course: Mapping[str, Any], activity_id: str) -> dict[str, dict]:

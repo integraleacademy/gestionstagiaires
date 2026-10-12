@@ -150,6 +150,8 @@ class NativeElearningStore:
                 progress_columns = {row["name"] for row in connection.execute("PRAGMA table_info(learner_course_progress)")}
                 if "video_progress_json" not in progress_columns:
                     connection.execute("ALTER TABLE learner_course_progress ADD COLUMN video_progress_json TEXT NOT NULL DEFAULT '{}'")
+                if "activity_seconds_json" not in progress_columns:
+                    connection.execute("ALTER TABLE learner_course_progress ADD COLUMN activity_seconds_json TEXT NOT NULL DEFAULT '{}'")
                 assessment.ensure_schema(connection)
             _INITIALIZED_DATABASES.add(key)
 
@@ -256,6 +258,7 @@ class NativeElearningStore:
             "assessment_diagnostics": assessment_diagnostics,
             "assessment_summary": assessment.summary_for(assessment_diagnostics),
             "video_progress": _json_dict(row["video_progress_json"]),
+            "activity_seconds": _json_dict(row["activity_seconds_json"]) if "activity_seconds_json" in row.keys() else {},
             "active_seconds": math.floor(float(row["active_seconds"] or 0) * 100) / 100,
             "score_percent": round(float(row["score_percent"] or 0), 2),
             "correct_answers": correct_count,
@@ -592,6 +595,21 @@ class NativeElearningStore:
             elif owns_slot:
                 next_owner_id = None
                 next_owner_seen = None
+
+            # Credit the activity open during the preceding confirmed interval,
+            # never the newly requested activity. A navigation heartbeat must not
+            # transfer seconds from one MAC APS objective to the next one.
+            from .mac_aps_timing import is_timed_key
+            if credited > 0 and is_timed_key(key[2], key[3]):
+                previous_activity_id = str(tracking["current_activity_id"] or "")
+                if previous_activity_id:
+                    ledger = _json_dict(progress["activity_seconds_json"])
+                    ledger[previous_activity_id] = float(ledger.get(previous_activity_id) or 0) + credited
+                    connection.execute(
+                        "UPDATE learner_course_progress SET activity_seconds_json = ? "
+                        "WHERE session_id = ? AND trainee_id = ? AND course_id = ? AND course_version = ?",
+                        (json.dumps(ledger, ensure_ascii=False), *key),
+                    )
 
             connection.execute(
                 """

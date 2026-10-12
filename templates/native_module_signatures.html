@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Tableaux de suivi APS · {{ provider.name }}</title>
+  <title>Tableaux de suivi {{ ctx.training_label if ctx else 'APS et MAC APS' }} · {{ provider.name }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/native-module-signatures.css') }}">
 </head>
 <body>
@@ -14,7 +14,7 @@
   </header>
   <main class="page">
     <nav class="breadcrumb" aria-label="Fil d’Ariane">
-      <a href="{{ url_for('native_module_signatures.index') }}">Tableaux de suivi APS</a>
+      <a href="{{ url_for('native_module_signatures.index') }}">Tableaux de suivi APS et MAC APS</a>
       {% if ctx %}<span aria-hidden="true">/</span><span>{{ ctx.person.first_name }} {{ ctx.person.last_name }}</span>{% endif %}
     </nav>
     {% for category, message in get_flashed_messages(with_categories=true) %}
@@ -22,16 +22,17 @@
     {% endfor %}
 
     <section class="intro">
-      <p class="eyebrow">Formation APS à distance</p>
+      <p class="eyebrow">{{ 'Parcours numérique MAC APS' if ctx and ctx.training_code == 'mac-aps' else 'Formation APS à distance' if ctx else 'Suivi des parcours APS et MAC APS' }}</p>
       <h1>Un tableau signé pour chaque module</h1>
       <p>Retrouvez les temps de suivi, les réponses enregistrées et les preuves de signature du stagiaire et du responsable de l’organisme.</p>
+      {% if ctx and ctx.training_code == 'mac-aps' %}<p class="notice">{{ mac_aps_notice }}</p>{% endif %}
     </section>
 
     {% if not ctx %}
       <section class="group-grid" aria-label="Sessions et stagiaires">
         {% for group in groups %}
           <article class="card">
-            <h2>{{ group.name }}</h2>
+            <p class="eyebrow">{{ group.training_label }}</p><h2>{{ group.name }}</h2>
             {% if group.people %}
               <ul class="people">
                 {% for person in group.people %}<li><a href="{{ person.url }}">{{ person.name or 'Stagiaire' }} <span aria-hidden="true">→</span></a></li>{% endfor %}
@@ -39,7 +40,7 @@
             {% else %}<p class="muted">Aucun stagiaire dans cette session.</p>{% endif %}
           </article>
         {% else %}
-          <div class="card empty"><h2>Aucun parcours APS natif affecté</h2><p>Les stagiaires apparaîtront ici lorsque des modules APS natifs seront affectés à leur session ou à leur accès e-learning.</p></div>
+          <div class="card empty"><h2>Aucun parcours APS ou MAC APS natif affecté</h2><p>Les stagiaires apparaîtront ici lorsque des modules principaux APS ou MAC APS natifs seront affectés à leur session ou à leur accès e-learning.</p></div>
         {% endfor %}
       </section>
     {% else %}
@@ -72,10 +73,15 @@
               {% set summary = module.progress.assessment_summary or {} %}
               <dl class="metrics">
                 <div><dt>Activités terminées</dt><dd>{{ module.progress.progress_percent|round(1) }} %</dd></div>
-                <div><dt>Temps actif / obligatoire</dt><dd class="time">{{ duration(module.progress.active_seconds) }}<small>/ {{ duration(module.progress.required_seconds) }}</small></dd></div>
+                <div><dt>{{ 'Temps actif / cible numérique' if ctx.training_code == 'mac-aps' else 'Temps actif / obligatoire' }}</dt><dd class="time">{{ duration(module.progress.active_seconds) }}<small>/ {{ duration(module.progress.required_seconds) }}</small></dd></div>
                 <div><dt>Premier essai enregistré</dt><dd>{% if summary.first_attempt_score_percent is defined and summary.first_attempt_score_percent is not none %}{{ summary.first_attempt_score_percent|round(1) }} %<small>{{ summary.assessed_items }} question{% if summary.assessed_items != 1 %}s{% endif %} suivie{% if summary.assessed_items != 1 %}s{% endif %}</small>{% else %}<span class="unavailable">Historique non disponible</span>{% endif %}</dd></div>
                 <div><dt>Après correction</dt><dd>{{ module.progress.score_percent|round(1) }} %<small>{{ summary.incorrect_attempt_count or 0 }} erreur{% if (summary.incorrect_attempt_count or 0) != 1 %}s{% endif %} enregistrée{% if (summary.incorrect_attempt_count or 0) != 1 %}s{% endif %} aux questions</small></dd></div>
               </dl>
+              {% if ctx.training_code == 'mac-aps' and module.progress.timed_objectives %}
+                <details><summary>Temps enregistrés par objectif</summary><ul>
+                  {% for objective in module.progress.timed_objectives %}<li><strong>{{ objective.title }}</strong> : {{ duration(objective.active_seconds) }} / {{ duration(objective.required_seconds) }} · {{ 'Terminé' if objective.complete else 'Activités à compléter' if objective.duration_met else 'Temps à compléter' }}</li>{% endfor %}
+                </ul></details>
+              {% endif %}
               {% if module.progress.module_complete and module.progress.status == 'passed' and not read_only %}
                 <details class="prepare">
                   <summary>Préparer le tableau de ce module</summary>
@@ -86,7 +92,7 @@
                       <legend>Stagiaire et session</legend>
                       <div class="field-grid">
                         <label>Carte professionnelle ou autorisation préalable CNAPS<input name="cnaps_number" value="{{ defaults.cnaps_number }}" maxlength="160" required><small>Le NUB seul ne remplace pas ce numéro.</small></label>
-                        <label>Fin de la session de formation<input type="date" name="session_end" value="{{ defaults.session_end }}" required><small>La conservation est calculée jusqu’à trois ans après cette date.</small></label>
+                        <label>{{ 'Fin du suivi numérique' if ctx.training_code == 'mac-aps' else 'Fin de la session de formation' }}<input type="date" name="session_end" value="{{ defaults.session_end }}" required><small>La conservation est calculée jusqu’à trois ans après cette date.</small></label>
                       </div>
                     </fieldset>
                     <fieldset>
@@ -104,7 +110,7 @@
               {% elif not module.progress.module_complete %}<p class="muted prerequisite">Le tableau sera disponible après validation des activités, des questionnaires et de la durée obligatoire de ce module.</p>{% endif %}
             {% endif %}
           </article>
-        {% else %}<p class="card empty">Aucun module APS natif n’est affecté à cet accès.</p>{% endfor %}
+        {% else %}<p class="card empty">Aucun module principal {{ ctx.training_label }} natif n’est affecté à cet accès.</p>{% endfor %}
         </div>
       </section>
 
@@ -159,7 +165,7 @@
         {% else %}<div class="card empty"><h3>Aucun tableau préparé</h3><p>Préparez le tableau d’un module terminé pour pouvoir le vérifier et le transmettre aux deux signataires.</p></div>{% endfor %}
         </div>
       </section>
-      <p class="legal-note">Les tableaux et preuves de signature sont conservés trois ans à compter de la fin de session. Les anciennes tentatives absentes du suivi restent indiquées comme inconnues. Ces documents décrivent le suivi pédagogique ; ils ne constituent pas une certification professionnelle.</p>
+      <p class="legal-note">Les tableaux et preuves de signature sont conservés trois ans à compter de la fin de session renseignée. Les anciennes tentatives absentes du suivi restent indiquées comme inconnues. {{ mac_aps_notice if ctx.training_code == 'mac-aps' else 'Ces documents décrivent le suivi pédagogique ; ils ne constituent pas une certification professionnelle.' }}</p>
     {% endif %}
   </main>
 </body>

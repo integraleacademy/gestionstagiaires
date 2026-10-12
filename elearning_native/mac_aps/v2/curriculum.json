@@ -1,0 +1,31 @@
+{
+  "schema_version": 2,
+  "version": "20261012-macaps-v2",
+  "reviewed_on": "2026-10-12",
+  "pedagogical_scope": "principal",
+  "total_minutes": 840,
+  "source_url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000051058748/",
+  "stage_source_url": "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000034104578/",
+  "reference_period_end": "2025-12-31",
+  "current_distance_authorization_claimed": false,
+  "automatic_stage_credit": false,
+  "notice": "Support numérique de préparation et de révision de 14 heures, structuré selon les dix objectifs que l’arrêté du 27 janvier 2025 ouvrait temporairement au distanciel jusqu’au 31 décembre 2025. Cette organisation pédagogique ne vaut pas autorisation de FOAD en 2026, attestation de stage MAC APS ou validation des gestes pratiques.",
+  "duration_method": "Chaque objectif possède un budget propre. Les durées des lectures, analyses de cas, questionnaires, rappels et vidéos le décomposent exactement. Le suivi retient l’activité réellement effectuée ; une durée prévue n’est jamais attribuée automatiquement. Les questionnaires de fin d’objectif servent de clôture pédagogique. Les compléments de préparation au présentiel restent hors des 840 minutes.",
+  "objectives": [
+    {"id":"macaps-republique","module":"02","title":"Connaître les principes de la République française","minimum_minutes":180,"lesson_minutes":26,"lesson_refs":["macaps-02-01","macaps-02-02","macaps-02-03","macaps-02-04","macaps-02-05","macaps-02-06"],"video_module":"02","video_minutes":7,"assessment_minutes":17,"assessment_question_count":12},
+    {"id":"macaps-cadre-juridique","module":"03","title":"Actualisation des connaissances relatives aux grands principes encadrant le métier d’agent privé de sécurité et la déontologie professionnelle","minimum_minutes":240,"lesson_minutes":27,"lesson_refs":["macaps-03-01","macaps-03-02","macaps-03-03","macaps-03-04","macaps-03-05","macaps-03-06","macaps-03-07","macaps-03-08"],"video_module":"03","video_minutes":7,"assessment_minutes":17,"assessment_question_count":12},
+    {"id":"macaps-terrorisme-menaces","module":"05","title":"Définir les risques terroristes et connaître les différentes menaces terroristes","minimum_minutes":90,"lesson_minutes":26,"lesson_refs":["macaps-05-01","macaps-05-11","macaps-05-12"],"assessment_minutes":12,"assessment_question_count":8},
+    {"id":"macaps-terrorisme-niveaux","module":"05","title":"Connaître les niveaux de risque associés","minimum_minutes":60,"lesson_minutes":25,"lesson_refs":["macaps-05-02","macaps-05-13"],"assessment_minutes":10,"assessment_question_count":6},
+    {"id":"macaps-terrorisme-materiels","module":"05","title":"Connaître les différents matériels terroristes","minimum_minutes":60,"lesson_minutes":25,"lesson_refs":["macaps-05-03","macaps-05-14"],"assessment_minutes":10,"assessment_question_count":6},
+    {"id":"macaps-terrorisme-reflexes","module":"05","title":"Savoir développer ses réflexes en matière de prévention et de sécurité face aux menaces terroristes","minimum_minutes":60,"lesson_minutes":25,"lesson_refs":["macaps-05-04","macaps-05-15"],"assessment_minutes":10,"assessment_question_count":6},
+    {"id":"macaps-terrorisme-detection","module":"05","title":"Détecter et prévenir : les bons réflexes face aux menaces terroristes","minimum_minutes":60,"lesson_minutes":25,"lesson_refs":["macaps-05-05","macaps-05-16"],"assessment_minutes":10,"assessment_question_count":6},
+    {"id":"macaps-terrorisme-culture","module":"05","title":"Savoir entretenir sa culture de la sécurité","minimum_minutes":30,"lesson_minutes":20,"lesson_refs":["macaps-05-06"],"assessment_minutes":10,"assessment_question_count":6},
+    {"id":"macaps-terrorisme-blessures","module":"05","title":"Identifier le risque de blessures en rapport avec le danger","minimum_minutes":30,"lesson_minutes":20,"lesson_refs":["macaps-05-09"],"assessment_minutes":10,"assessment_question_count":6},
+    {"id":"macaps-terrorisme-secours","module":"05","title":"Alerter les secours","minimum_minutes":30,"lesson_minutes":20,"lesson_refs":["macaps-05-10"],"assessment_minutes":10,"assessment_question_count":6}
+  ],
+  "complements": [
+    {"number":"01","id":"academy-macaps-complement-01","title":"Premiers secours : préparer les ateliers avec le formateur","lesson_refs":["macaps-01-01","macaps-01-02","macaps-01-03","macaps-01-04"],"video_module":"01","reference_stage_minutes":420,"principal_minutes":0,"delivery":"presentiel_preparation"},
+    {"number":"04","id":"academy-macaps-complement-04","title":"Conflits et filtrage : préparer les mises en situation","lesson_refs":["macaps-04-01","macaps-04-02","macaps-04-03","macaps-04-04","macaps-04-05","macaps-04-06"],"video_module":"04","reference_stage_minutes":420,"principal_minutes":0,"delivery":"presentiel_preparation"},
+    {"number":"05","id":"academy-macaps-complement-05","title":"Protection, forces de l’ordre et secours tactique : préparer la pratique","lesson_refs":["macaps-05-07","macaps-05-08","macaps-05-10"],"video_module":"05","reference_stage_minutes":360,"principal_minutes":0,"delivery":"presentiel_preparation"}
+  ]
+}

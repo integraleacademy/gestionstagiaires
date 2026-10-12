@@ -27,6 +27,7 @@ import elearning_groups
 import elearning_reporting
 import organisme_profile
 import elearning_demo
+import mac_aps_demo
 import manuals_accounts
 import manuals_public
 import manuals_fulfillment
@@ -39,7 +40,7 @@ from manuals_catalogue import CATALOGUE, CATEGORIES
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"home", "manuals_shop.public_presentation", "manuals_shop.public_manual_detail", "manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
-PUBLIC_ENDPOINTS |= manuals_public.PUBLIC_ENDPOINTS | manuals_accounts.PUBLIC_ENDPOINTS | organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS
+PUBLIC_ENDPOINTS |= manuals_public.PUBLIC_ENDPOINTS | manuals_accounts.PUBLIC_ENDPOINTS | organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS | mac_aps_demo.PUBLIC_ENDPOINTS
 CUSTOMER_ENDPOINTS |= manuals_metrics.CUSTOMER_ENDPOINTS | manuals_fulfillment.CUSTOMER_ENDPOINTS | elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
 CUSTOMER_ENDPOINTS |= {'native_module_signatures.' + name for name in (
     'index', 'order_modules', 'prepare_order', 'reissue', 'snapshot_pdf', 'send', 'refresh', 'signed_pdf', 'audit_archive')}
@@ -167,11 +168,14 @@ def register(host):
     host.PARTNER_VISIBLE_FIELDS.add("elearning_pricing")
     bp = Blueprint("manuals_shop", __name__)
     app.add_template_filter(money, "manuals_money")
+    app.add_template_filter(elearning_orders.course_label, "elearning_label")
+    app.jinja_env.globals["elearning_courses"] = elearning_orders.COURSES
     kick_worker = commerce.install_worker(host)
 
     @app.before_request
     def start_order_worker():
-        kick_worker(notify=False)
+        if request.endpoint != "static" and request.endpoint not in mac_aps_demo.PUBLIC_ENDPOINTS:
+            kick_worker(notify=False)
 
     @bp.after_request
     def private_pages(response):
@@ -240,7 +244,7 @@ def register(host):
             login_url = base_url(host) + url_for("admin_login", next=url_for("manuals_shop.home"))
             body = render_template("manuals/welcome_email.html", partner=partner, user=user, login_url=login_url)
             result = host.brevo_send_email(user["email"], "Votre espace organisme de formation est créé", body,
-                text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos commandes et vos accès e-learning APS et VTC.\nIntégrale Academy — 04 22 47 07 68",
+                text_content=f"Bonjour {user['first_name']},\nVotre espace organisme de formation {partner['name']} a bien été créé.\nConnectez-vous avec votre adresse e-mail et le mot de passe choisi : {login_url}\nRetrouvez vos manuels personnalisés, vos commandes et vos accès e-learning APS, MAC APS et VTC.\nIntégrale Academy — 04 22 47 07 68",
                 metadata={"partner_id": partner_id, "user_id": user_id, "purpose": "manuals_welcome"})
         except Exception:
             app.logger.exception("manuals_welcome_failed partner_id=%s", partner_id)
@@ -693,6 +697,7 @@ def register(host):
     elearning_reporting.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data)
     organisme_profile.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf)
     elearning_demo.register_routes(host, bp)
+    mac_aps_demo.register_routes(host, bp)
     manuals_fulfillment.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, find_order=find_order, save_logo=save_logo, quote_items=quote_items, base_url=base_url)
     manuals_metrics.register_routes(host, bp, page=page, customer=customer, check_csrf=check_csrf)
     manuals_public.register_routes(host, bp, page=page)

@@ -129,13 +129,19 @@
   });
   document.getElementById('macapsAddPath')?.addEventListener('click', () => {
     if (readonly()) return;
-    const additions = config.catalog.filter(course => course.macaps && !modules.some(item => item.course_id === course.course_id));
-    if (modules.length + additions.length > 100) { status.textContent = 'Le parcours ne peut pas dépasser 100 modules.'; return; }
+    const additions = config.catalog.filter(course => course.macaps_fixed);
+    const previous = modules.filter(item => item.course_id.startsWith('academy-macaps-'));
+    const changesEdition = previous.some(item => !additions.some(course => key(course) === key(item)));
+    if (changesEdition && !window.confirm('Affecter la nouvelle édition de 14 heures à cette session ? Les progressions de l’ancienne édition restent conservées, sans transfert automatique de temps ou de résultats. L’enregistrement du parcours confirmera ce changement.')) return;
+    if (modules.length - previous.length + additions.length > 100) { status.textContent = 'Le parcours ne peut pas dépasser 100 modules.'; return; }
+    for (let i = modules.length - 1; i >= 0; i -= 1) {
+      if (modules[i].course_id.startsWith('academy-macaps-')) modules.splice(i, 1);
+    }
     additions.sort((a,b) => a.course_id.localeCompare(b.course_id)).forEach(course => {
       modules.push({course_id:course.course_id,course_version:course.course_version,title:'',
-        required_minutes:course.planned_minutes,section_ids:course.sections.map(section => section.id)});
+        required_minutes:course.fixed_minutes,section_ids:course.sections.map(section => section.id)});
     });
-    if (modules.length === 5 && modules.every(item => item.course_id.startsWith('academy-macaps-'))) title.value = 'MAC APS · Le parcours pédagogique';
+    if (modules.length === 3 && modules.every(item => item.course_id.startsWith('academy-macaps-'))) title.value = 'MAC APS · Parcours de révision · 14 h';
     changed();renderModules();renderLibrary();
   });
   function renderModules() {
@@ -187,7 +193,7 @@
       const minutesLabel = textNode("label", "np-field", "Minutes");
       const hours = document.createElement("input"), minutes = document.createElement("input");
       [hours, minutes].forEach((field) => {
-        field.type = "number"; field.min = "0"; field.step = "1"; field.required = true; field.disabled = readonly();
+        field.type = "number"; field.min = "0"; field.step = "1"; field.required = true; field.disabled = readonly() || outline.macaps_fixed;
       });
       hours.max = "1000"; minutes.max = "59";
       hours.dataset.duration = "hours"; minutes.dataset.duration = "minutes";
@@ -200,13 +206,15 @@
         changed();
       }));
       hoursLabel.append(hours); minutesLabel.append(minutes); duration.append(hoursLabel, minutesLabel);
-      duration.append(textNode("p", "np-hint", "Exemple : 4 h 00 min. Le stagiaire doit terminer les activités et atteindre ce temps actif pour débloquer le module suivant. 0 h 00 min signifie aucun minimum de temps."));
+      duration.append(textNode("p", "np-hint", outline.macaps_fixed
+        ? "Durée fixée pour cette édition : chaque objectif possède son propre minimum de temps actif et son questionnaire obligatoire. Les compléments sont accessibles séparément, hors des 14 heures."
+        : "Exemple : 4 h 00 min. Le stagiaire doit terminer les activités et atteindre ce temps actif pour débloquer le module suivant. 0 h 00 min signifie aucun minimum de temps."));
       body.append(duration);
       const bulk = textNode("div", "np-sequence-tools");
       bulk.append(textNode("strong", "", "Séquences du module"), button("Tout inclure", () => {
         item.section_ids.push(...outline.sections.map((section) => section.id).filter((id) => !item.section_ids.includes(id)));
         changed(); renderModules();
-      }));
+      }, outline.macaps_fixed));
       body.append(bulk);
       const sections = new Map(outline.sections.map((section) => [section.id, section]));
       const displayOrder = [...item.section_ids, ...outline.sections.map((section) => section.id).filter((id) => !item.section_ids.includes(id))];
@@ -219,7 +227,7 @@
         const rowHead = textNode("div", "np-sequence-heading");
         const checkboxLabel = textNode("label", "np-check");
         const check = document.createElement("input");
-        check.type = "checkbox"; check.checked = selected; check.disabled = readonly();
+        check.type = "checkbox"; check.checked = selected; check.disabled = readonly() || outline.macaps_fixed;
         check.addEventListener("change", () => {
           if (check.checked) item.section_ids.push(section.id);
           else item.section_ids.splice(selectedIndex, 1);
@@ -228,9 +236,9 @@
         checkboxLabel.append(check, textNode("span", "", `${selected ? selectedIndex + 1 + '. ' : ''}${section.title}`));
         rowHead.append(checkboxLabel);
         const actions = textNode("div", "np-sequence-controls");
-        const moveUp = button("↑", () => move(item.section_ids, selectedIndex, -1), !selected || selectedIndex === 0);
+        const moveUp = button("↑", () => move(item.section_ids, selectedIndex, -1), outline.macaps_fixed || !selected || selectedIndex === 0);
         moveUp.setAttribute("aria-label", `Monter la séquence ${section.title}`);
-        const moveDown = button("↓", () => move(item.section_ids, selectedIndex, 1), !selected || selectedIndex === item.section_ids.length - 1);
+        const moveDown = button("↓", () => move(item.section_ids, selectedIndex, 1), outline.macaps_fixed || !selected || selectedIndex === item.section_ids.length - 1);
         moveDown.setAttribute("aria-label", `Descendre la séquence ${section.title}`);
         actions.append(moveUp, moveDown); rowHead.append(actions); row.append(rowHead);
         const activities = textNode("details", "np-activities");

@@ -41,6 +41,7 @@ from werkzeug.exceptions import Conflict
 from .videos import activity_playback_policy, activity_videos, course_videos, video_blocker, videos_complete
 from .academy import curriculum_manifest
 from . import vtc, a3p, mac_aps
+from .mac_aps_timing import completion_blocker as macaps_completion_blocker
 from .exams import ExamStore, load_exam, public_exam, grade_exam
 from .practice import public_practice, grade_practice
 from .production import public_production, production_feedback, normalize_production, normalize_self_review
@@ -694,7 +695,8 @@ def create_native_elearning_blueprint(
             # The authored payload contains lesson text only. Answer groups and
             # rationales remain server-side until the learner submits a choice.
             allowed = {'kind', 'ref', 'module', 'title', 'objective', 'mode', 'source_urls',
-                       'sections', 'table', 'flow', 'takeaways', 'example', 'situation', 'question_count', 'questions'}
+                       'sections', 'table', 'flow', 'takeaways', 'example', 'situation', 'question_count', 'questions',
+                       'objective_id', 'pedagogical_scope', 'is_objective_assessment'}
             public['macaps'] = {key: value for key, value in activity['macaps'].items() if key in allowed}
         if isinstance(activity.get('academy'), Mapping):
             # Structured content stays autoescaped by Jinja. Only declared media
@@ -796,7 +798,7 @@ def create_native_elearning_blueprint(
 
     def _training_label(session_obj):
         ids = [item.get('course_id', '') for item in assigned_modules(session_obj)]
-        if mac_aps.is_training(session_obj) or (ids and all(cid in mac_aps.curriculum_ids() for cid in ids)):
+        if mac_aps.is_training(session_obj) or (ids and all(cid in mac_aps.bundled_course_ids() for cid in ids)):
             return 'MAC APS'
         value = str(session_obj.get('training_type') or '').upper()
         return 'A3P' if 'A3P' in value else 'VTC' if 'VTC' in value else 'APS'
@@ -920,6 +922,8 @@ def create_native_elearning_blueprint(
             academy_manifest=curriculum_manifest(),
             selected_curriculum="macaps" if request.path.endswith("/mac-aps") else "a3p" if request.path.endswith("/a3p") else "vtc" if request.path.endswith("/vtc") else "aps",
             macaps_manifest=mac_aps.curriculum_manifest(),
+            macaps_complements=mac_aps.complement_manifest(),
+            macaps_objectives=mac_aps.legal_objectives(),
             a3p_manifest=a3p.curriculum_manifest(),
             vtc_manifest=vtc.curriculum_manifest(),
             vtc_courses=[c for c in courses if c.get("source",{}).get("type")=="academy-vtc"],
@@ -960,7 +964,14 @@ def create_native_elearning_blueprint(
             session_obj, trainee = learner_session(token)
             modules = load_path(session_obj)
             is_vtc = exam_id == 'vtc-final'
-            final_manifest = mac_aps.curriculum_manifest() if exam_id == 'macaps-final' else a3p.curriculum_manifest() if exam_id == 'a3p-final' else vtc.curriculum_manifest() if is_vtc else curriculum_manifest()
+            if exam_id == 'macaps-final':
+                mac_versions = {m['course']['version'] for m in modules if m['course']
+                    and m['course']['id'] in mac_aps.curriculum_ids(mac_aps.LEGACY_VERSION)}
+                if len(mac_versions) != 1 or next(iter(mac_versions)) not in mac_aps.SUPPORTED_VERSIONS:
+                    abort(403, 'Les modules du MAC APS doivent appartenir à la même édition.')
+                final_manifest = mac_aps.curriculum_manifest(next(iter(mac_versions)))
+            else:
+                final_manifest = a3p.curriculum_manifest() if exam_id == 'a3p-final' else vtc.curriculum_manifest() if is_vtc else curriculum_manifest()
             expected = {m['id'] for m in final_manifest['modules']}
             academy = [m for m in modules if m['course'] and m['course']['id'] in expected]
             if {m['course']['id'] for m in academy} != expected:
@@ -1770,7 +1781,7 @@ def create_native_elearning_blueprint(
                     item["illustration_url"] = url_for("static", filename=f"images/aps62/module-{aps_image.group(1)}.webp")
                 elif vtc_image:
                     item["illustration_url"] = url_for("static", filename=f"images/vtc/module-{vtc_image.group(1)}.webp")
-                elif course_id in mac_aps.curriculum_ids():
+                elif course_id in mac_aps.bundled_course_ids():
                     item["illustration_url"] = url_for("static", filename=f"images/mac-aps/module-{course_id[-2:]}.webp")
             item["locked"] = bool(blocker) and not free_module_navigation
             item["lock_reason"] = blocker if item["locked"] else ""
@@ -1797,16 +1808,25 @@ def create_native_elearning_blueprint(
                 if progress["remaining_seconds"]:
                     blocker += f" Temps actif restant : {item['remaining_time_label']}."
         exam_modules = [m for m in modules if m['course'] and m['course'].get('mock_exam_id')]
-        matched_manifest = next((candidate for candidate in [curriculum_manifest(),vtc.curriculum_manifest(),a3p.curriculum_manifest(),mac_aps.curriculum_manifest()]
-            if {m['course']['id'] for m in exam_modules} == {m['id'] for m in candidate['modules']}),None)
+        matched_manifest = next((candidate for candidate in [curriculum_manifest(),vtc.curriculum_manifest(),a3p.curriculum_manifest(),mac_aps.curriculum_manifest(),mac_aps.curriculum_manifest(mac_aps.LEGACY_VERSION)]
+            if {m['course']['id'] for m in exam_modules} == {m['id'] for m in candidate['modules']}
+            and (candidate.get('final_exam_id') != 'macaps-final' or {m['course']['version'] for m in exam_modules} == {candidate['version']})),None)
         final_available = bool(matched_manifest and len({m['course']['version'] for m in exam_modules}) == 1)
         final_ready = final_available and all(m.get('complete') and set(m['course']['activity_order']) ==
             set(project_course(catalog().load_course(m['course']['id'],m['course']['version']), {'required_minutes': m['course']['required_minutes']})['activity_order']) for m in exam_modules)
         training_label = _training_label(session_obj)
+        macaps_v2 = any(m['course'] and m['course']['id'] in mac_aps.curriculum_ids()
+            and m['course']['version'] == mac_aps.VERSION for m in modules)
+        macaps_full_path = (len(modules) == 3 and macaps_v2
+            and {m['course']['id'] for m in modules if m['course']} == set(mac_aps.curriculum_ids())
+            and all(m['course'] and m['course']['version'] == mac_aps.VERSION for m in modules))
+        macaps_complements = [{**item, 'url': url_for('native_elearning.macaps_resources', token=token, course_id=item['id'])}
+            for item in mac_aps.complement_manifest()['modules']] if macaps_v2 else []
         return render_template(
             "native_elearning_path.html", modules=modules,
             learner_brand=session_obj.get("learner_brand") or {},
             training_label=training_label,
+            macaps_v2=macaps_v2, macaps_full_path=macaps_full_path, macaps_complements=macaps_complements,
             free_module_navigation=free_module_navigation,
             hero_illustration_url=url_for("static", filename="images/mac-aps-cover.webp") if training_label == "MAC APS" else url_for("static", filename="images/learner-welcome-vtc.webp") if training_label == "VTC" else (
                 url_for("static", filename="images/learner-welcome-aps.webp") if any(
@@ -1826,8 +1846,69 @@ def create_native_elearning_blueprint(
             final_exam_unlocked=final_ready,
             final_module_count=len(exam_modules),
             annales_url=url_for('native_elearning.annales_learner_catalog',token=token) if any(m['course'] and m['course']['id'].startswith('academy-vtc-') for m in modules) else '',
-            final_exam_description="Les 5 parties du MAC APS" if training_label == "MAC APS" else "Les 8 unités A3P" if training_label == "A3P" else "Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
+            final_exam_description=("Les 10 objectifs du parcours MAC APS de 14 heures" if macaps_v2 else "Les 5 parties de votre édition MAC APS") if training_label == "MAC APS" else "Les 8 unités A3P" if training_label == "A3P" else "Les sept matières théoriques VTC" if training_label == "VTC" else "Les 15 modules APS",
         )
+
+    def macaps_resource_context(token: str, course_id: str):
+        session_obj, trainee = learner_session(token)
+        assignments = assigned_modules(session_obj)
+        if not any(item.get('course_id') in mac_aps.curriculum_ids()
+                   and item.get('course_version') == mac_aps.VERSION for item in assignments):
+            abort(403)
+        if course_id not in {item['id'] for item in mac_aps.complement_manifest()['modules']}:
+            abort(404)
+        return session_obj, trainee, catalog().load_course(course_id, mac_aps.VERSION)
+
+    @blueprint.get('/espace/<token>/elearning/mac-aps/complements/<course_id>')
+    def macaps_resources(token: str, course_id: str) -> Any:
+        if not public_is_authed(token):
+            return redirect(url_for('manuals_shop.elearning_access' if token.startswith('el_') else 'public_trainee_login', token=token))
+        session_obj, trainee, course = macaps_resource_context(token, course_id)
+        order = course['activity_order']
+        activity_id = request.args.get('activity') or order[0]
+        if activity_id not in order:
+            abort(404)
+        index = order.index(activity_id)
+        section, activity = next((s, a) for s, a in _activity_pairs(course) if a['id'] == activity_id)
+        access = _course_access_payload(session_obj, trainee, course, public_token=token)
+        asset_token = _sign_access(_asset_access_payload(access))
+        def resource_url(aid):
+            return url_for('native_elearning.macaps_resources', token=token, course_id=course_id, activity=aid)
+        navigation = navigation_for(course, {}, token=token, current_activity_id=activity_id, preview=True)
+        for nav, raw in zip(navigation, course['sections']):
+            for item, raw_activity in zip(nav['activities'], raw['activities']):
+                item['url'] = resource_url(raw_activity['id'])
+        return render_template('native_elearning_player.html', preview_mode=True, resource_mode=True,
+            learner_brand=session_obj.get('learner_brand') or {},
+            course={'id': course_id, 'title': course['title'], 'theme': _safe_theme(course),
+                    'version': course['version'], 'counts': course['counts'], 'training_label': 'MAC APS'},
+            activity=prepare_activity(activity, asset_token, course_id), introduction=[],
+            section_title=section['title'], progress=project_progress({}, course), activity_completed=False,
+            navigation=navigation, activity_position=index + 1, activity_count=len(order),
+            previous_url=resource_url(order[index - 1]) if index else '',
+            next_url=resource_url(order[index + 1]) if index + 1 < len(order) else '',
+            portal_url=url_for('native_elearning.learner_path', token=token), preview_can_answer=True,
+            preview_config={'questionType': activity.get('question_type') or '', 'csrfToken': _csrf_token(),
+                'answerUrl': url_for('native_elearning.macaps_resource_answer', token=token,
+                                     course_id=course_id, activity_id=activity_id)})
+
+    @blueprint.post('/api/elearning/mac-aps/<token>/complements/<course_id>/<activity_id>/answer')
+    def macaps_resource_answer(token: str, course_id: str, activity_id: str) -> Any:
+        _require_csrf()
+        _session_obj, _trainee, course = macaps_resource_context(token, course_id)
+        activity = next((a for _s, a in _activity_pairs(course) if a['id'] == activity_id), None)
+        if not activity or not activity.get('scored'):
+            abort(404)
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or not isinstance(payload.get('answer'), dict):
+            return jsonify(ok=False, error='Réponse invalide.'), 400
+        try:
+            correct, _ = _evaluate_answer(activity, payload['answer'])
+        except TrackingError as exc:
+            return jsonify(ok=False, error=str(exc)), 400
+        response = jsonify(ok=True, correct=correct, explanation=activity.get('explanation', ''))
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
 
     def a3p_resource_context(token: str, course_id: str):
         session_obj, trainee, assigned = learner_context(token, course_id)
@@ -1946,12 +2027,14 @@ def create_native_elearning_blueprint(
             course={"id": course["id"], "title": course["title"], "theme": _safe_theme(course), "version": course['version'], "training_label": course.get("training_label","APS")},
             learner_name=f"{trainee.get('first_name', '')} {trainee.get('last_name', '')}".strip(),
             section_title=str(section.get("title") or ""),
+            learner_brand=session_obj.get('learner_brand') or {},
             activity=activity,
             vtc_production_history=VtcWrittenWork(store()).history(access, requested_id) if is_vtc_production(course, raw_activity) else [],
             a3p_resources_url=url_for('native_elearning.a3p_resources', token=token, course_id=course_id) if course.get('training_label') == 'A3P' else '',
             training_url=url_for('native_elearning.training_learner_catalog', token=token, course_id=course_id) if course_id.startswith('academy-vtc-') else '',
             introduction=introduction,
             progress=progress,
+            timed_objective=next((item for item in progress.get('timed_objectives', []) if requested_id in item['activity_ids']), None),
             navigation=navigation_for(course, progress, token=token, current_activity_id=requested_id),
             activity_position=index + 1,
             activity_count=len(order),
@@ -2035,8 +2118,8 @@ def create_native_elearning_blueprint(
         activity_id = str(payload.get("activity_id") or "")
         if activity_id not in order:
             return jsonify({"ok": False, "error": "Activité inconnue."}), 400
-        if video_blocker(_course, current_progress(access, _course), activity_id):
-            return jsonify({"ok": False, "error": "Regardez la vidéo précédente avant de continuer."}), 409
+        if not can_complete(_course, current_progress(access, _course), activity_id):
+            return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente et ses vidéos."}), 409
         if payload.get("interaction_age_seconds") is None:
             return jsonify({"ok": False, "error": "Rechargez le lecteur pour activer le suivi d’inactivité."}), 409
         try:
@@ -2204,6 +2287,8 @@ def create_native_elearning_blueprint(
         current = current_progress(access, course)
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
+        if objective := macaps_completion_blocker(course, current, activity_id):
+            return jsonify(ok=False, error=f"Poursuivez l’étude de cet objectif : {_format_seconds(objective['remaining_seconds'])} de temps actif restent à effectuer avant sa validation.", progress=current), 409
         answer = None
         if is_vtc_production(course, activity):
             try:
@@ -2285,6 +2370,8 @@ def create_native_elearning_blueprint(
         current = current_progress(access, course)
         if not can_complete(course, current, activity_id):
             return jsonify({"ok": False, "error": "Terminez d’abord l’activité précédente."}), 409
+        if objective := macaps_completion_blocker(course, current, activity_id):
+            return jsonify(ok=False, error=f"Poursuivez l’étude de cet objectif : {_format_seconds(objective['remaining_seconds'])} de temps actif restent à effectuer avant sa validation.", progress=current), 409
         existing = current.get("answers", {}).get(activity_id)
         if isinstance(existing, Mapping):
             return jsonify({"ok": True, "already_answered": True, "correct": bool(existing.get("correct")), "progress": current,

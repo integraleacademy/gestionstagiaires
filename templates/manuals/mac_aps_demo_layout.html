@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <title>{% block title %}Découvrir l’e-learning MAC APS{% endblock %} · Démonstration</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/elearning-demo.css', v='20261010-1') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mac-aps-demo.css', v='20261012-1') }}">
+  <script defer src="{{ url_for('static', filename='js/mac-aps-demo.js', v='20261012-1') }}"></script>
+</head>
+<body class="demo-body mac-demo-body">
+  <a class="demo-skip" href="#demo-main">Aller au contenu</a>
+  <div class="demo-print-notice">DÉMONSTRATION MAC APS — Données fictives. Le relevé PDF spécimen est disponible dans le suivi.</div>
+  <div class="demo-screen">
+    <header class="demo-header">
+      <a class="demo-brand" href="{{ url_for('manuals_shop.mac_aps_demo') }}"><span class="demo-monogram" aria-hidden="true">MAC<br>APS</span><span>Espace e-learning<small>Centre de formation exemple</small></span></a>
+      <a class="demo-return" href="{{ url_for('manuals_shop.elearning_soon') if session.get('admin_logged_in') else url_for('admin_login') }}">{{ 'Mon espace organisme' if session.get('admin_logged_in') else 'Se connecter' }} ↗</a>
+    </header>
+    <div class="demo-notice"><span class="demo-tag">Démonstration</span><p><strong>Camille Martin est un stagiaire fictif.</strong> Il a terminé 50 % des activités du parcours de 14 h. Le temps suivi est affiché séparément. Le cours et les questions sont des extraits pédagogiques ; vos essais ne modifient aucun suivi.</p></div>
+    <nav class="demo-tabs" aria-label="Explorer la démonstration MAC APS">
+      <a href="{{ url_for('manuals_shop.mac_aps_demo') }}" {% if view in ['stagiaire','cours'] %}aria-current="page"{% endif %}><span aria-hidden="true">01</span> Côté stagiaire</a>
+      <a href="{{ url_for('manuals_shop.mac_aps_demo', view='suivi') }}" {% if view == 'suivi' %}aria-current="page"{% endif %}><span aria-hidden="true">02</span> Côté centre · le suivi</a>
+    </nav>
+    <main id="demo-main" class="demo-main">{% block content %}{% endblock %}</main>
+    <footer class="demo-footer"><span>Démonstration MAC APS · Progression et relevé fictifs</span><a href="{{ url_for('manuals_shop.register_account') }}">Créer mon espace organisme ↗</a></footer>
+    <div class="demo-watermarks" aria-hidden="true"><span>DÉMONSTRATION MAC APS</span><span>DÉMONSTRATION MAC APS</span><span>DÉMONSTRATION MAC APS</span></div>
+  </div>
+</body>
+</html>

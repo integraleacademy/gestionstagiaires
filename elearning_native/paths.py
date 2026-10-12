@@ -10,6 +10,7 @@ from .importer import CourseCatalog, CourseImportError
 from .videos import course_videos, videos_complete
 from .vtc_video_quality import compatible_progress
 from .assessment import summary_for
+from .mac_aps_timing import FIXED_MINUTES, is_timed_course, objective_progress
 
 
 MAX_PATH_MODULES = 100
@@ -51,6 +52,8 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
     """Select/order sequences without changing activity IDs, content or answers."""
     if course.get("preview_only"):
         raise CourseImportError("Le parcours A3P est en préparation pédagogique. Son affectation certifiante nécessite une validation du certificateur.")
+    if course.get('training_label') == 'MAC APS' and course.get('pedagogical_scope') == 'complement':
+        raise CourseImportError("Les compléments MAC APS sont accessibles séparément depuis le parcours ; ils ne s’ajoutent pas aux modules obligatoires de 14 heures.")
     required_minutes = module.get("required_minutes", 0)
     if type(required_minutes) is not int or not 0 <= required_minutes <= MAX_REQUIRED_MINUTES:
         raise CourseImportError("La durée obligatoire doit être un nombre entier de minutes, entre 0 et 1 000 heures.")
@@ -72,6 +75,12 @@ def project_course(course: Mapping[str, Any], module: Mapping[str, Any]) -> Dict
         raise CourseImportError("Séquences invalides : choisissez au moins une séquence par module.")
     if a3p_distance and set(section_ids) != set(by_id):
         raise CourseImportError("Le module A3P doit conserver toutes ses fractions à distance et leurs questionnaires.")
+    if is_timed_course(course):
+        minimum = FIXED_MINUTES[course["id"]]
+        if required_minutes != minimum:
+            raise CourseImportError(f"La durée de cette édition MAC APS est fixée à {minimum} minutes, réparties par objectif.")
+        if section_ids != list(by_id):
+            raise CourseImportError("Cette édition MAC APS conserve tous ses objectifs, leurs questionnaires et leur ordre pédagogique.")
     sections = [by_id[value] for value in section_ids]
     activities = [activity for section in sections for activity in section.get("activities") or []]
     if not activities:
@@ -124,6 +133,9 @@ def validate_modules(raw: Any, catalog: CourseCatalog) -> List[Dict[str, Any]]:
             "required_minutes": projected["required_minutes"],
             "section_ids": [str(section["id"]) for section in projected["sections"]],
         })
+    mac_versions = {item['course_version'] for item in validated if item['course_id'].startswith('academy-macaps-')}
+    if len(mac_versions) > 1:
+        raise CourseImportError("Un parcours MAC APS doit conserver une seule édition. Utilisez le bouton de l’édition 14 heures pour remplacer les anciens modules sans transférer leurs résultats.")
     return validated
 
 
@@ -136,6 +148,9 @@ def course_outline(course: Mapping[str, Any]) -> Dict[str, Any]:
         "vtc": course.get("source", {}).get("type") == "academy-vtc",
         "a3p": course.get("source", {}).get("type") == "academy-a3p",
         "macaps": course.get("source", {}).get("type") == "academy-macaps",
+        "macaps_fixed": is_timed_course(course),
+        "pedagogical_scope": course.get("pedagogical_scope") or "",
+        "fixed_minutes": FIXED_MINUTES.get(course["id"]) if is_timed_course(course) else None,
         "sections": [{
             "id": str(section["id"]), "title": str(section.get("title") or "Séquence"),
             "activities": [{"title": str(activity.get("title") or "Activité"),
@@ -171,7 +186,11 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
     active_seconds = float(progress.get("active_seconds") or 0)
     required_seconds = int(course.get("required_minutes") or 0) * 60
     remaining_seconds = max(0, math.ceil(required_seconds - active_seconds))
-    duration_met = remaining_seconds == 0
+    timed_objectives = objective_progress(course, {**progress, "completed_activity_ids": list(completed)})
+    objectives_duration_met = (bool(timed_objectives) and all(item["duration_met"] for item in timed_objectives)) if is_timed_course(course) else True
+    if timed_objectives:
+        remaining_seconds = max(remaining_seconds, sum(item["remaining_seconds"] for item in timed_objectives))
+    duration_met = remaining_seconds == 0 and objectives_duration_met
     status = ("passed" if score >= float(course.get("settings", {}).get("mastery_score", 80)) else "failed") if finished and duration_met else (
         "awaiting_time" if finished else
         "in_progress" if progress.get("started_at") else "not_started"
@@ -188,6 +207,7 @@ def project_progress(progress: Mapping[str, Any], course: Mapping[str, Any]) -> 
         "status": status, "active_seconds": active_seconds,
         "required_seconds": required_seconds, "remaining_seconds": remaining_seconds,
         "duration_met": duration_met, "activities_completed": finished,
+        "timed_objectives": timed_objectives, "objectives_duration_met": objectives_duration_met,
         "module_complete": finished and duration_met,
         "video_progress": video_progress,
         "required_video_count": sum(len(videos) for activity_id, videos in requirements.items()
