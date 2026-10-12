@@ -49,6 +49,11 @@
       // Searching inside the order form must not submit the customer's basket.
       if (event.key === 'Enter') event.preventDefault();
     });
+    catalogue.addEventListener('catalogue:reveal', event => {
+      category = event.detail?.category || '';
+      search.value = '';
+      filter();
+    });
     tools.hidden = false;
     filter();
   });

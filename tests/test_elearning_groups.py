@@ -321,7 +321,7 @@ def test_quote_tampering_and_duplicate_email_never_create_purchase(shop):
 
 
 def deletion_fields(shop, url):
-    return {"csrf_token": csrf(shop["client"], url), "revision": str(record(shop, url)["revision"]), "confirm": "yes"}
+    return {"csrf_token": csrf(shop["client"], url), "revision": str(record(shop, url)["revision"]), "confirm": "yes", "terms_version": "2026-10-12"}
 
 
 @pytest.mark.parametrize("mode", ["group", "individual"])

@@ -5,25 +5,31 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="{% block description %}Manuels de formation personnalisés, supports PowerPoint sur clé USB et accès e-learning pour les organismes de formation. Découvrez la collection Intégrale Academy.{% endblock %}">
   <title>{% block title %}Espace organisme{% endblock %} · Intégrale Connect</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261006-3') }}">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  <meta name="robots" content="{{ 'index, follow' if page_indexable else 'noindex, follow' }}">
+  {% if public %}<link rel="canonical" href="{{ canonical_url }}"><meta property="og:type" content="website"><meta property="og:locale" content="fr_FR"><meta property="og:site_name" content="Intégrale Connect"><meta property="og:title" content="{{ self.title() }} · Intégrale Connect"><meta property="og:description" content="{{ self.description() }}"><meta property="og:url" content="{{ canonical_url }}"><meta property="og:image" content="{{ public_origin }}{{ url_for('static', filename='manuals/previews/supports-formateurs.webp') }}"><meta name="twitter:card" content="summary_large_image">{% endif %}
+  {% block structured_data %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261012-experience') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css', v='20261012-collection') }}">
   {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-2') }}">{% endif %}
   <style>@media(max-width:700px){.site-header nav{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px}.site-header nav a{font-size:11px;padding:8px 9px}.site-header nav .logout{margin-left:auto}}@media(max-width:390px){.site-header nav a{padding:7px 6px;font-size:10px}.site-header nav .logout{margin-left:0}}</style>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-storefront.css', v='20261012-categories') }}">
-  <script src="{{ url_for('static', filename='js/manuals-catalogue.js', v='20261012-categories') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-storefront.css', v='20261012-experience') }}">
+  <script src="{{ url_for('static', filename='js/manuals-catalogue.js', v='20261012-experience') }}" defer></script>
   {% block extra_styles %}{% endblock %}
-  <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261006-3') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261012-experience') }}" defer></script>
 </head>
 <body{% if public %} class="public-storefront"{% endif %}>
+  {% if cart_completed_key %}<div hidden data-cart-complete="{{ cart_completed_key }}"></div>{% endif %}
   <a class="skip-link" href="#main-content">Aller au contenu</a>
   <header class="site-header">
-    <a class="logo" href="{{ url_for('home') if public or not session.get('admin_logged_in') else url_for('manuals_shop.home') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
+    <a class="logo" href="{{ url_for('home') if public or not session.get('admin_logged_in') else url_for('manuals_shop.home') }}"><img src="{{ url_for('static', filename='logoic.webp') }}" alt="Intégrale Connect"></a>
     <span class="header-label">L’espace des organismes de formation</span>
-    <nav aria-label="Navigation principale">
+    <button class="navigation-toggle" data-navigation-toggle type="button" aria-controls="primary-navigation" aria-expanded="false" hidden>Menu</button>
+    <nav id="primary-navigation" aria-label="Navigation principale">
     {% if public %}
       <a href="{{ url_for('manuals_shop.public_presentation') }}" {% if request.endpoint in ['manuals_shop.public_presentation','manuals_shop.public_manual_detail'] %}aria-current="page"{% endif %}>Manuels</a>
-      <a href="{{ url_for('home') }}#supports">Clés USB</a>
-      <a href="{{ url_for('home') }}#elearning">E-learning</a>
+      <a href="{{ url_for('manuals_shop.usb_catalogue') }}">Clés USB</a>
+      <a href="{{ url_for('manuals_shop.public_elearning') }}">E-learning</a>
       <a href="{{ url_for('home') }}#contact">Contact</a>
       {% if session.get('admin_logged_in') %}<a class="nav-account" href="{{ url_for('manuals_shop.home') }}">Mon espace →</a>{% else %}<a href="{{ url_for('admin_login', next=url_for('manuals_shop.home')) }}">Connexion</a><a class="nav-account" href="{{ url_for('manuals_shop.register_account') }}">Créer mon espace →</a>{% endif %}
     {% elif staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a><a href="{{ url_for('manuals_shop.elearning_admin') }}">E-learning</a>
@@ -38,6 +44,7 @@
   {% else %}
   <footer class="site-footer"><span>Intégrale Academy · Des supports pour transmettre.</span><a href="mailto:clement@integraleacademy.com">clement@integraleacademy.com</a><a href="tel:+33422470768">04 22 47 07 68</a></footer>
   {% endif %}
+  <nav class="legal-links" aria-label="Informations pratiques"><a href="/personnalisation-livraison">Personnalisation et livraison</a><a href="/mentions-legales">Mentions légales</a><a href="/conditions-de-vente">Conditions de vente</a><a href="/confidentialite">Confidentialité</a></nav>
 </body>
 </html>
 

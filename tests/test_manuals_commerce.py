@@ -18,7 +18,7 @@ def submitted(shop, **fields):
     signup(c)
     login(c)
     location = c.post("/admin/manuels/recapitulatif", data=order_form(c, **fields)).location
-    response = c.post(location + "/confirmer", data={"csrf_token": csrf(c, location), "confirm": "yes"})
+    response = c.post(location + "/confirmer", data={"csrf_token": csrf(c, location), "confirm": "yes", "terms_version": "2026-10-12"})
     assert response.status_code == 303
     return all_data(shop)["manual_orders"][0]
 

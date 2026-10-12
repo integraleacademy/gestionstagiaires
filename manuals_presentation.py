@@ -178,5 +178,11 @@ def presentation_books(catalogue):
         defaults = {"specimen": None, "preview_labels": [],
                     "audience": book["category_name"], "intro": book["description"],
                     "tags": [title for title, _ in editorial["features"]]}
-        result.append({**book, **defaults, **editorial})
+        result.append({**book, **defaults, **editorial, "specs": PRODUCT_SPECS.get(book["code"], {})})
     return result
+
+# Extraits authentiques issus des manuels fournis, préparés le 12 octobre 2026.
+for _code in ('ssiap2', 'bs_be', 'mac_sst', 'h0b0', 'ssiap1_recyclage', 'mac_aps'):
+    PRESENTATIONS[_code]["specimen"] = "manuals/specimens/" + _code + ".pdf"
+
+PRODUCT_SPECS = {'ssiap2': {'pages': 264, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'bs_be': {'pages': 64, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'mac_sst': {'pages': 24, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'h0b0': {'pages': 32, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'ssiap1_recyclage': {'pages': 64, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}, 'mac_aps': {'pages': 64, 'format': 'A5 (148 × 210 mm)', 'edition': 'Octobre 2026'}}

@@ -358,6 +358,8 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
         if request.form.get("confirm") != "yes":
             abort(400)
         _, partner = partner_data()
+        from manuals_public import acceptance
+        terms = acceptance(host)
         def confirm(data):
             order = find(data, oid)
             if order["status"] != "draft":
@@ -366,6 +368,7 @@ def register_routes(host, bp, *, page, customer, partner_data, check_csrf, kick_
             price = prices(current)[order["course_code"]]
             if (price["unit_cents"], price["free"]) != (order["unit_cents"], order["free_snapshot"]):
                 abort(409, "Votre tarif a changé. Préparez une nouvelle commande pour consulter le nouveau total.")
+            order["terms_acceptance"] = terms
             order.update(status="received", reference="EL-" + str(dt.date.today().year) + "-" + oid[:8].upper(), submitted_at=host._now_iso(),
                          commerce={"queued": True, "status": "pending", "flow": "elearning_invoice_first", "attempts": 0, "emails": {}})
             return {}

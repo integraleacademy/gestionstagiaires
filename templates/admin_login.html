@@ -14,7 +14,7 @@
   <main class="login-shell" aria-labelledby="portal-title">
     <section class="login-brand" aria-label="Votre espace organisme de formation">
       <a class="brand-logo-link" href="{{ url_for('home') }}" aria-label="Intégrale Connect — accueil">
-        <img class="brand-logo" src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect" loading="eager">
+        <img class="brand-logo" src="{{ url_for('static', filename='logoic.webp') }}" alt="Intégrale Connect" loading="eager">
       </a>
       <div class="brand-copy"><a href="{{ url_for('home') }}" style="color:inherit;text-decoration:underline;font-size:13px">← Découvrir nos offres</a>
         <p class="brand-kicker">Les ressources de votre centre</p>
@@ -35,9 +35,9 @@
             <p>Commandez vos manuels illustrés, personnalisés avec le logo de votre organisme.</p>
           </div>
           <div class="service-books" aria-hidden="true">
-            <img src="{{ url_for('static', filename='manuals/aps.jpg') }}" alt="" width="48" height="68" loading="eager">
-            <img src="{{ url_for('static', filename='manuals/ssiap1.jpg') }}" alt="" width="48" height="68" loading="eager">
-            <img src="{{ url_for('static', filename='manuals/a3p.jpg') }}" alt="" width="48" height="68" loading="eager">
+            <img src="{{ url_for('static', filename='manuals/aps.webp') }}" alt="" width="48" height="68" loading="eager">
+            <img src="{{ url_for('static', filename='manuals/ssiap1.webp') }}" alt="" width="48" height="68" loading="eager">
+            <img src="{{ url_for('static', filename='manuals/a3p.webp') }}" alt="" width="48" height="68" loading="eager">
           </div>
         </li>
         <li class="portal-service portal-service-elearning">
@@ -103,6 +103,7 @@
           </div>
         </div>
 
+        <p><a href="{{ url_for('manuals_shop.forgot_password') }}">Mot de passe oublié ?</a></p>
         <button class="login-submit" type="submit" data-submit-button>
           <span class="button-spinner" aria-hidden="true"></span>
           <span data-submit-text>Accéder à mon espace</span>
@@ -111,7 +112,7 @@
 
         <div class="signup-callout">
           <p>Vous n’avez pas encore de compte ?</p>
-          <a href="{{ url_for('manuals_shop.register_account') }}">Créer mon espace organisme <span aria-hidden="true">→</span></a>
+          <a href="{{ url_for('manuals_shop.register_account', next=next_url) }}">Créer mon espace organisme <span aria-hidden="true">→</span></a>
           <small>Inscription gratuite pour votre organisme.<br>Commandez vos manuels et vos accès e-learning.</small>
         </div>
 

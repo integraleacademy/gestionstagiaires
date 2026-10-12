@@ -27,6 +27,10 @@ import elearning_groups
 import elearning_reporting
 import organisme_profile
 import elearning_demo
+import manuals_accounts
+import manuals_public
+import manuals_fulfillment
+import manuals_metrics
 from manuals_presentation import presentation_books
 
 
@@ -35,8 +39,8 @@ from manuals_catalogue import CATALOGUE, CATEGORIES
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
 PUBLIC_ENDPOINTS = {"home", "manuals_shop.public_presentation", "manuals_shop.public_manual_detail", "manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
-PUBLIC_ENDPOINTS |= organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS
-CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
+PUBLIC_ENDPOINTS |= manuals_public.PUBLIC_ENDPOINTS | manuals_accounts.PUBLIC_ENDPOINTS | organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS
+CUSTOMER_ENDPOINTS |= manuals_metrics.CUSTOMER_ENDPOINTS | manuals_fulfillment.CUSTOMER_ENDPOINTS | elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
 CUSTOMER_ENDPOINTS |= {'native_module_signatures.' + name for name in (
     'index', 'order_modules', 'prepare_order', 'reissue', 'snapshot_pdf', 'send', 'refresh', 'signed_pdf', 'audit_archive')}
 SAFE_ENDPOINTS = {"static", "admin_login", "admin_login_post", "admin_logout", "manuals_shop.elearning_access"} | PUBLIC_ENDPOINTS | CUSTOMER_ENDPOINTS
@@ -73,6 +77,10 @@ def guard_request(host):
         return None
     auth = host._load_partner_auth_data()
     partner = next((p for p in auth.get("partners", []) if p.get("id") == session.get("partner_id")), None)
+    user = next((u for u in auth.get("users", []) if u.get("id") == session.get("user_id") and u.get("partner_id") == session.get("partner_id")), None)
+    if user and user.get("password_changed_at") and str(session.get(host.SESSION_ISSUED_AT_KEY) or "") < user["password_changed_at"]:
+        session.clear()
+        return redirect(url_for("admin_login", password_reset="1"))
     restricted = session.get("manuals_only") or (partner or {}).get("account_type") == "manuals_only"
     if not restricted:
         return None
@@ -181,14 +189,14 @@ def register(host):
             if partner.get("id") == session.get("partner_id"):
                 header = {"name": str(partner.get("name") or "Mon organisme"),
                           "logo_url": url_for("manuals_shop.organisme_logo_preview") if organisme_profile.logo_path(host, partner) else ""}
-        return render_template("manuals/" + template, csrf_token=csrf_token(), statuses=STATUSES, payment_labels=commerce.PAYMENT_LABELS,
+        return render_template("manuals/" + template, csrf_token=("" if context.get("public") and request.endpoint in manuals_public.CACHEABLE else csrf_token()), statuses=STATUSES, payment_labels=commerce.PAYMENT_LABELS,
                                organisme_header=header, categories=CATEGORIES, **context)
 
     def customer(view):
         @wraps(view)
         def wrapped(*args, **kwargs):
             if not session.get("admin_logged_in"):
-                return redirect(url_for("admin_login", next=url_for("manuals_shop.home")))
+                return redirect(url_for("admin_login", next=request.full_path.rstrip("?")))
             if not host._is_external_partner_session():
                 if host._is_super_admin_session():
                     if view.__name__.startswith("elearning"):
@@ -248,13 +256,14 @@ def register(host):
     def register_account():
         if session.get("admin_logged_in"):
             return redirect(url_for("manuals_shop.home"))
+        next_url = host._safe_local_redirect_target(request.values.get("next", ""), url_for("manuals_shop.home"))
         values = {k: (request.form.get(k) or "").strip() for k in ("centre", "siret", "first_name", "last_name", "email")}
         errors = []
         status = 200
         if request.method == "POST":
             check_csrf()
             if host._partner_login_is_rate_limited("registration:" + values["email"].lower()):
-                return page("register.html", values=values, errors=["Trop de tentatives. Patientez quelques minutes avant de réessayer."]), 429
+                return page("register.html", next_url=next_url, values=values, errors=["Trop de tentatives. Patientez quelques minutes avant de réessayer."]), 429
             values["email"] = values["email"].lower()
             values["siret"] = re.sub(r"\s", "", values["siret"])
             password = request.form.get("password", "")
@@ -291,12 +300,13 @@ def register(host):
                 except host.PartnerPostgresDuplicateEmail:
                     errors.append("Cette adresse e-mail est déjà utilisée. Connectez-vous à votre espace.")
                 else:
+                    manuals_metrics.increment(host, "account_created")
                     session.clear()
-                    session["manuals_registration"] = {"partner_id": pid, "user_id": uid, "name": values["centre"], "email": values["email"]}
+                    session["manuals_registration"] = {"partner_id": pid, "user_id": uid, "name": values["centre"], "email": values["email"], "next": next_url}
                     session["manuals_welcome_sent"] = send_welcome(pid, uid)
                     return redirect(url_for("manuals_shop.registration_complete"), code=303)
             status = 400
-        return page("register.html", values=values, errors=errors), status
+        return page("register.html", values=values, errors=errors, next_url=next_url), status
 
     @bp.get("/espace-cree")
     def registration_complete():
@@ -370,6 +380,11 @@ def register(host):
         data, partner = partner_data()
         orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("created_at", ""), reverse=True)
         values = {}
+        if request.args.get("article"):
+            article = request.args["article"]
+            allowed = {f"{kind}_{b['code']}": (50 if kind == 'manual' else 1) for b in CATALOGUE for kind in ('manual', 'usb') if kind == 'manual' or b['usb_price']}
+            if article in allowed:
+                values[article] = allowed[article]
         if request.args.get("draft"):
             draft = find_order(data, request.args["draft"])
             if draft["status"] != "draft":
@@ -508,14 +523,17 @@ def register(host):
         check_csrf()
         if request.form.get("confirm") != "yes":
             abort(400, "Confirmez avoir vérifié les quantités et les coordonnées.")
+        terms = manuals_public.acceptance(host)
         def confirm(data):
             order = find_order(data, order_id)
             if order["status"] != "draft":
                 return {"created": False, "id": order_id}
+            order["terms_acceptance"] = terms
             order.update(status="received", reference="MAN-" + dt.datetime.now().strftime("%Y") + "-" + order_id[:8].upper(), submitted_at=host._now_iso(), commerce={"queued": True, "status": "pending", "flow": "payment_first", "attempts": 0, "emails": {}})
             host._append_activity_log(data, "manual_order_submitted", "manual_order", order_id, order["partner_id"], {"reference": order["reference"], "total_cents": order["total_cents"]})
             return {"created": True, "id": order_id}
         host._atomic_update_data(confirm)
+        session["manuals_cart_completed"] = order_id
         kick_worker()
         return redirect(url_for("manuals_shop.order_payment", order_id=order_id), code=303)
 
@@ -579,6 +597,7 @@ def register(host):
                     abort(404)
                 if status == "cancelled" and order.get("commerce", {}).get("status") == "processing":
                     abort(409, "Patientez jusqu’à la fin de la préparation de la facture avant d’annuler la commande.")
+                manuals_fulfillment.validate_status(order, status)
                 order["status"] = status
                 if status == "cancelled" and order.get("commerce"):
                     order["commerce"]["queued"] = False
@@ -674,6 +693,10 @@ def register(host):
     elearning_reporting.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data)
     organisme_profile.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf)
     elearning_demo.register_routes(host, bp)
+    manuals_fulfillment.register_routes(host, bp, page=page, customer=customer, partner_data=partner_data, check_csrf=check_csrf, find_order=find_order, save_logo=save_logo, quote_items=quote_items, base_url=base_url)
+    manuals_metrics.register_routes(host, bp, page=page, customer=customer, check_csrf=check_csrf)
+    manuals_public.register_routes(host, bp, page=page)
+    manuals_accounts.register_routes(host, bp, page=page, check_csrf=check_csrf, base_url=base_url)
     app.register_blueprint(bp)
 
 

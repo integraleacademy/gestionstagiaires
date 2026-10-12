@@ -18,7 +18,7 @@
 <article class="discovery-card" data-catalogue-card data-category="{{ book.category }}" data-search="{{ book.name }} {{ book.title }} {{ book.category_name }}" style="--book-color:{{ book.color }}">
   <a class="discovery-cover" href="{{ url_for('manuals_shop.public_manual_detail', code=book.code) }}" aria-label="Découvrir le manuel {{ book.name }}">
     <span class="discovery-ribbon">PERSONNALISABLE</span>
-    <img src="{{ url_for('static', filename='manuals/' ~ book.code ~ '.jpg') }}" alt="Couverture du manuel {{ book.name }} avec l’emplacement de votre logo" width="212" height="300" loading="lazy">
+    <img src="{{ url_for('static', filename='manuals/' ~ book.code ~ '.webp') }}" alt="Couverture du manuel {{ book.name }} avec l’emplacement de votre logo" width="212" height="300" loading="lazy">
   </a>
   <div class="discovery-body">
     <span class="manual-code">{{ book.name }}</span><h3>{{ book.title }}</h3><p>{{ book.description }}</p>

@@ -6,7 +6,7 @@
     <span class="eyebrow">BIENVENUE DANS VOTRE ESPACE</span>
     <h1>Vos formations.<br> Vos ressources.<br> <em>Votre espace.</em></h1>
     <p>Un espace pour commander vos manuels personnalisés et les accès e-learning de vos stagiaires.</p>
-    <div class="book-stack" aria-hidden="true">{% for code in ['ssiap1','aps','a3p'] %}<img src="{{ url_for('static', filename='manuals/' ~ code ~ '.jpg') }}" alt="">{% endfor %}</div>
+    <div class="book-stack" aria-hidden="true">{% for code in ['ssiap1','aps','a3p'] %}<img src="{{ url_for('static', filename='manuals/' ~ code ~ '.webp') }}" alt="">{% endfor %}</div>
     <div class="story-benefits"><span>01 <strong>Des manuels à votre image</strong></span><span>02 <strong>E-learning APS et VTC</strong></span><span>03 <strong>Vos commandes et vos factures</strong></span></div>
     <p class="small">Création de compte gratuite · Accès immédiat à la commande de manuels</p>
   </section>
@@ -14,7 +14,7 @@
     <span class="eyebrow blue">VOTRE ORGANISME DE FORMATION</span><h2>Créons votre espace.</h2><p class="muted">Quelques informations suffisent pour commencer.</p>
     {% if errors %}<div class="error-box" role="alert"><strong>Vérifiez les informations suivantes</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
     <form method="post" action="{{ url_for('manuals_shop.register_account') }}" data-register-form>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ next_url }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="honeypot" aria-hidden="true"><label>Site web<input name="website_url" tabindex="-1" autocomplete="off"></label></div>
       <label for="centre">Nom du centre de formation <span>*</span></label><input id="centre" name="centre" value="{{ values.centre }}" required minlength="2" maxlength="160" autocomplete="organization" placeholder="Nom de votre organisme">
       <label for="siret">SIRET <span>*</span></label><input id="siret" name="siret" value="{{ values.siret }}" required maxlength="20" inputmode="numeric" placeholder="Les 14 chiffres de votre SIRET" aria-describedby="siret-help"><small id="siret-help">Le numéro de l’établissement pour lequel vous créez cet espace.</small>
@@ -24,7 +24,7 @@
       <label for="password_confirmation">Confirmer le mot de passe <span>*</span></label><div class="password-field"><input id="password_confirmation" type="password" name="password_confirmation" required minlength="12" maxlength="128" autocomplete="new-password"><button type="button" data-toggle-password="password_confirmation" aria-label="Afficher la confirmation du mot de passe" aria-pressed="false">Afficher</button></div>
       <p class="form-note">Vos coordonnées servent à gérer votre espace et vos commandes. Votre mot de passe est protégé et ne vous sera jamais envoyé par e-mail.</p>
       <button type="submit" class="button primary full" data-submit>Créer mon espace <span aria-hidden="true">→</span></button>
-      <p class="form-bottom">Déjà inscrit ? <a href="{{ url_for('admin_login') }}">Se connecter</a></p>
+      <p class="form-bottom">Déjà inscrit ? <a href="{{ url_for('admin_login', next=next_url) }}">Se connecter</a></p>
     </form>
   </section>
 </div>

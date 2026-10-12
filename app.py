@@ -3278,6 +3278,8 @@ def admin_login():
         "rate_limited": "Trop de tentatives de connexion. Patientez quelques minutes avant de réessayer.",
     }
     activated_message = "Votre compte est activé. Vous pouvez maintenant vous connecter." if request.args.get("activated") == "1" else ""
+    if request.args.get("password_reset") == "1":
+        activated_message = "Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe."
     return render_template(
         "admin_login.html",
         next_url=next_url,
@@ -4037,7 +4039,7 @@ def _store_partner_auth_index(
     auth_path = os.path.abspath(path or DATA_FILE)
     user_fields = {
         "id", "partner_id", "email", "role", "active", "password_hash",
-        "invitation_activated_at", "last_login_at",
+        "invitation_activated_at", "last_login_at", "password_changed_at",
     }
     partner_fields = {"id", "name", "status", "account_type"}
     invitation_fields = {
