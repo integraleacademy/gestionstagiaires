@@ -88,6 +88,95 @@ PRESENTATIONS = {
 }
 
 
+PRESENTATIONS.update({
+    "mac_aps": {
+        "lead": "Actualiser les pratiques et retrouver les bons réflexes.",
+        "features": [
+            ("Gestion des conflits", "Reprendre les situations de tension et les réponses professionnelles adaptées."),
+            ("Posture professionnelle", "Travailler les repères du métier et la conduite à tenir dans les situations de terrain."),
+            ("Fiches réflexes", "Conserver un support condensé de 64 pages. Les premiers secours sont traités dans le manuel dédié."),
+        ],
+        "preview_labels": ["Gestion des conflits", "Posture professionnelle", "Fiches réflexes"],
+    },
+    "ssiap2": {
+        "lead": "Organiser, transmettre et coordonner.",
+        "features": [
+            ("Animation de l’équipe", "Accompagner les agents et travailler la transmission des consignes."),
+            ("Organisation des missions", "Relier l’organisation du service aux situations rencontrées par le chef d’équipe."),
+            ("Outils de management", "264 pages de cours, de schémas et de situations pour accompagner les apprentissages."),
+        ],
+        "preview_labels": ["Animation de l’équipe", "Organisation des missions", "Outils de management"],
+    },
+    "ssiap3": {
+        "lead": "Analyser les risques, conseiller et piloter le service.",
+        "features": [
+            ("Comprendre le bâtiment et ses risques", "Relier la prévention, les installations et l’organisation à la réalité de l’établissement."),
+            ("Conseiller et préparer les décisions", "Structurer l’analyse et les dossiers utiles au suivi de la sécurité incendie."),
+            ("Piloter un service de sécurité", "Organiser les moyens humains, les priorités de maintenance et le suivi budgétaire."),
+        ],
+    },
+    "ssiap1_recyclage": {
+        "lead": "Un même support pour le recyclage et la remise à niveau.",
+        "features": [
+            ("Prévention et évacuation", "Réactiver les connaissances et les repères de prévention de l’agent."),
+            ("Situations illustrées", "Reprendre les pratiques à partir de situations concrètes."),
+            ("Moyens de secours", "Retrouver les repères opérationnels dans un manuel de 64 pages."),
+        ],
+        "preview_labels": ["Prévention et évacuation", "Situations illustrées", "Moyens de secours"],
+    },
+    "ssiap2_recyclage": {
+        "lead": "Reprendre les missions du chef d’équipe et la coordination du service.",
+        "features": [
+            ("Réactiver le rôle du chef d’équipe", "Reprendre l’organisation du travail, les transmissions et les responsabilités de l’encadrement."),
+            ("Coordonner depuis le poste de sécurité", "Relier la gestion des alarmes, les consignes et l’action de l’équipe sur le terrain."),
+            ("Animer et faire progresser l’équipe", "Travailler la communication, l’animation pédagogique et le retour d’expérience."),
+        ],
+    },
+    "ssiap3_recyclage": {
+        "lead": "Actualiser la lecture des risques et les méthodes de pilotage.",
+        "features": [
+            ("Actualiser les repères réglementaires", "Situer les évolutions utiles à la prévention et à la préparation des dossiers de sécurité."),
+            ("Analyser les risques de l’établissement", "Mettre en relation les bâtiments, les usages, les travaux et les mesures de prévention."),
+            ("Piloter le service et ses moyens", "Revoir l’organisation, les priorités, la maintenance et le suivi des actions du service."),
+        ],
+    },
+    "h0b0": {
+        "lead": "Comprendre le risque électrique et les limites de sa mission.",
+        "features": [
+            ("Situations de travail", "Identifier le risque électrique dans des situations illustrées."),
+            ("Zones et limites", "Repérer les limites des opérations d’ordre non électrique."),
+            ("Fiches réflexes", "32 pages de prévention et de repères pratiques pour le personnel non électricien."),
+        ],
+        "preview_labels": ["Situations de travail", "Zones et limites", "Fiches réflexes"],
+    },
+    "bs_be": {
+        "lead": "Distinguer les interventions BS et les manœuvres BE.",
+        "features": [
+            ("Deux missions distinctes", "Comprendre la différence entre une intervention élémentaire et une manœuvre."),
+            ("Interventions et manœuvres", "Accompagner les explications du formateur avec des situations illustrées."),
+            ("Repères opérationnels", "64 pages pour travailler la préparation, les opérations et leurs limites."),
+        ],
+        "preview_labels": ["Deux missions distinctes", "Interventions et manœuvres", "Repères opérationnels"],
+    },
+    "mac_sst": {
+        "lead": "Réviser et garder un pense-bête à portée de main.",
+        "features": [
+            ("Prévention au travail", "Réactiver les repères à partir des retours d’expérience."),
+            ("Repères de secours", "Revoir les points essentiels avec le formateur lors du maintien et de l’actualisation des compétences."),
+            ("Pense-bête à conserver", "Un format de 24 pages pour retrouver les réflexes essentiels après la formation."),
+        ],
+        "preview_labels": ["Prévention au travail", "Repères de secours", "Pense-bête à conserver"],
+    },
+})
+
+
 def presentation_books(catalogue):
     """Join editorial material onto the existing, authoritative price catalogue."""
-    return [dict(book, **PRESENTATIONS[book["code"]]) for book in catalogue]
+    result = []
+    for book in catalogue:
+        editorial = PRESENTATIONS[book["code"]]
+        defaults = {"specimen": None, "preview_labels": [],
+                    "audience": book["category_name"], "intro": book["description"],
+                    "tags": [title for title, _ in editorial["features"]]}
+        result.append({**book, **defaults, **editorial})
+    return result

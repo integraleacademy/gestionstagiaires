@@ -3185,7 +3185,7 @@ def protect_sensitive_routes():
 
 @app.context_processor
 def inject_read_only():
-    if (request.endpoint or "").startswith("manuals_shop."):
+    if request.endpoint == "home" or (request.endpoint or "").startswith("manuals_shop."):
         return {}
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
@@ -14608,7 +14608,7 @@ def find_session_by_name(data: Dict[str, Any], session_name: str) -> Optional[Di
 
 @app.get("/")
 def home():
-    return redirect(url_for("admin_wedof_requests"))
+    return manuals_shop.public_home()
 
 
 @app.get("/test-positionnement")

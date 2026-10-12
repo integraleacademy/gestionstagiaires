@@ -30,16 +30,10 @@ import elearning_demo
 from manuals_presentation import presentation_books
 
 
-CATALOGUE = (
-    {"code": "ssiap1", "name": "SSIAP 1", "title": "Sécurité incendie et assistance à personnes", "description": "Des schémas et des situations illustrées pour rendre la sécurité incendie concrète.", "color": "#c64042", "price": 1700, "bulk_price": 1500},
-    {"code": "aps", "name": "APS", "title": "Agent de prévention et de sécurité", "description": "Des situations professionnelles pour relier les cours aux missions quotidiennes de l’agent.", "color": "#2468b3", "price": 2000, "bulk_price": 1800},
-    {"code": "a3p", "name": "A3P", "title": "Protection physique des personnes", "description": "Des missions illustrées et des schémas pour travailler les méthodes de protection.", "color": "#28795f", "price": 2200, "bulk_price": 2000},
-    {"code": "vtc", "name": "VTC", "title": "Voiture de transport avec chauffeur", "description": "Un support structuré pour organiser les révisions et travailler les situations professionnelles.", "color": "#7951a8", "price": 2200, "bulk_price": 2000},
-    {"code": "dssp", "name": "DSSP", "title": "Dirigeant d’une société de sécurité privée", "description": "Des méthodes, calculs expliqués et fiches pour aborder la gestion d’une société de sécurité.", "color": "#d77824", "price": 2200, "bulk_price": 2000},
-    {"code": "sst", "name": "SST", "title": "Sauveteur secouriste du travail", "description": "Des situations illustrées pour comprendre la prévention et accompagner l’apprentissage des premiers secours.", "color": "#558538", "price": 1200, "bulk_price": 1000},
-)
+from manuals_catalogue import CATALOGUE, CATEGORIES
+
 STATUSES = {"received": "Reçue", "confirmed": "Confirmée", "production": "En préparation", "shipped": "Expédiée", "cancelled": "Annulée"}
-PUBLIC_ENDPOINTS = {"manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
+PUBLIC_ENDPOINTS = {"home", "manuals_shop.public_presentation", "manuals_shop.public_manual_detail", "manuals_shop.register_account", "manuals_shop.registration_complete", "manuals_shop.resend_welcome"}
 CUSTOMER_ENDPOINTS = {"manuals_shop.home", "manuals_shop.elearning_soon", "manuals_shop.presentation", "manuals_shop.manual_detail", "manuals_shop.refresh_order", "manuals_shop.catalogue", "manuals_shop.checkout", "manuals_shop.confirm_order", "manuals_shop.order_detail", "manuals_shop.order_logo", "manuals_shop.order_payment", "manuals_shop.order_payment_status"}
 PUBLIC_ENDPOINTS |= organisme_profile.PUBLIC_ENDPOINTS | elearning_demo.PUBLIC_ENDPOINTS
 CUSTOMER_ENDPOINTS |= elearning_orders.CUSTOMER_ENDPOINTS | elearning_groups.CUSTOMER_ENDPOINTS | elearning_reporting.CUSTOMER_ENDPOINTS | organisme_profile.CUSTOMER_ENDPOINTS
@@ -49,6 +43,13 @@ MAX_LOGO_BYTES = 5 * 1024 * 1024
 
 def money(cents):
     return f"{int(cents) / 100:,.2f}".replace(",", "\u202f").replace(".", ",") + " €"
+
+
+def public_home():
+    """Public editorial content only: no partner, order or negotiated-price data."""
+    return render_template("manuals/storefront.html", public=True, staff=False,
+                           books=CATALOGUE, categories=CATEGORIES,
+                           courses=elearning_orders.COURSES)
 
 
 def csrf_token():
@@ -101,7 +102,9 @@ def quote_items(form):
                 continue
             if (kind == "manual" and not 50 <= qty <= 10000) or (kind == "usb" and not 1 <= qty <= 100):
                 raise ValueError(f"{book['name']} : choisissez de 50 à 10 000 manuels, ou de 1 à 100 clés USB.")
-            price = (book["bulk_price"] if qty >= 100 else book["price"]) if kind == "manual" else (9900 if book["code"] == "sst" else 19900)
+            if kind == "usb" and book["usb_price"] is None:
+                raise ValueError(f"Le support USB {book['name']} n’est pas proposé dans le catalogue.")
+            price = (book["bulk_price"] if qty >= 100 else book["price"]) if kind == "manual" else book["usb_price"]
             lines.append({"code": book["code"], "kind": kind, "label": ("Manuel " if kind == "manual" else "PowerPoint sur clé USB — ") + book["name"], "quantity": qty, "unit_cents": price, "total_cents": qty * price})
     if not lines:
         raise ValueError("Choisissez au moins un manuel ou un support PowerPoint.")
@@ -169,7 +172,7 @@ def register(host):
 
     def page(template, **context):
         header = None
-        if session.get("admin_logged_in") and host._is_external_partner_session() and not context.get("staff"):
+        if not context.get("public") and session.get("admin_logged_in") and host._is_external_partner_session() and not context.get("staff"):
             partner = context.get("partner") or {}
             if partner.get("id") != session.get("partner_id"):
                 partner = host._current_partner(host.load_data()) or {}
@@ -177,7 +180,7 @@ def register(host):
                 header = {"name": str(partner.get("name") or "Mon organisme"),
                           "logo_url": url_for("manuals_shop.organisme_logo_preview") if organisme_profile.logo_path(host, partner) else ""}
         return render_template("manuals/" + template, csrf_token=csrf_token(), statuses=STATUSES, payment_labels=commerce.PAYMENT_LABELS,
-                               organisme_header=header, **context)
+                               organisme_header=header, categories=CATEGORIES, **context)
 
     def customer(view):
         @wraps(view)
@@ -313,7 +316,7 @@ def register(host):
     def home():
         data, partner = partner_data()
         orders = sorted((o for o in data.get("manual_orders", []) if o.get("partner_id") == partner["id"] and o.get("status") != "draft" and not elearning_orders.is_record(o)), key=lambda o: o.get("submitted_at", ""), reverse=True)
-        return page("home.html", partner=partner, orders=orders, order_count=len(orders), elearning_prices=elearning_orders.prices(partner))
+        return page("home.html", partner=partner, orders=orders, order_count=len(orders), elearning_prices=elearning_orders.prices(partner), books=CATALOGUE)
 
     @bp.get("/admin/organisme/e-learning")
     @customer
@@ -332,6 +335,18 @@ def register(host):
                 abort(403)
             partner_data()
         return {"staff": staff, "books": presentation_books(CATALOGUE)}
+
+    @bp.get("/manuels")
+    def public_presentation():
+        return page("presentation.html", public=True, staff=False, books=presentation_books(CATALOGUE))
+
+    @bp.get("/manuels/<code>")
+    def public_manual_detail(code):
+        books = presentation_books(CATALOGUE)
+        book = next((b for b in books if b["code"] == code), None)
+        if not book:
+            abort(404)
+        return page("manual_detail.html", public=True, staff=False, book=book, books=books)
 
     @bp.get("/admin/manuels/presentation")
     @host.admin_login_required

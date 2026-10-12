@@ -13,10 +13,10 @@
 <body class="admin-login-page">
   <main class="login-shell" aria-labelledby="portal-title">
     <section class="login-brand" aria-label="Votre espace organisme de formation">
-      <a class="brand-logo-link" href="{{ url_for('admin_login', next=next_url) }}" aria-label="Intégrale Connect — accueil de connexion">
+      <a class="brand-logo-link" href="{{ url_for('home') }}" aria-label="Intégrale Connect — accueil">
         <img class="brand-logo" src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect" loading="eager">
       </a>
-      <div class="brand-copy">
+      <div class="brand-copy"><a href="{{ url_for('home') }}" style="color:inherit;text-decoration:underline;font-size:13px">← Découvrir nos offres</a>
         <p class="brand-kicker">Les ressources de votre centre</p>
         <h1 id="portal-title">Espace organismes<br>de formation<span class="title-dot">.</span></h1>
         <p class="brand-text">Commandez vos manuels de formation et créez les accès e-learning APS et VTC de vos stagiaires. Tous vos services réunis dans un même espace.</p>

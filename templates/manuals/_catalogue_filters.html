@@ -1,0 +1,10 @@
+<div class="catalogue-tools" data-catalogue-tools hidden>
+  <label for="catalogue-search">Rechercher un manuel</label>
+  <input type="search" id="catalogue-search" placeholder="APS, SSIAP 2, H0B0…" data-catalogue-search autocomplete="off">
+  <div class="catalogue-filters" role="group" aria-label="Filtrer les manuels par domaine">
+    <button type="button" data-category-filter="" aria-pressed="true">Tous les manuels</button>
+    {% for code, label in categories %}<button type="button" data-category-filter="{{ code }}" aria-pressed="false">{{ label }}</button>{% endfor %}
+  </div>
+  <p class="small" data-catalogue-count aria-live="polite">{{ books|length }} manuels</p>
+</div>
+<p data-catalogue-empty hidden>Aucun manuel ne correspond à votre recherche. Essayez un autre titre ou un autre domaine.</p>

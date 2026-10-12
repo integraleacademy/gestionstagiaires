@@ -6,13 +6,26 @@ from manuals_shop import CATALOGUE, quote_items
 
 
 def test_brochure_2026_exact_totals():
-    prices = {'ssiap1': (1700,1500), 'aps': (2000,1800), 'a3p': (2200,2000), 'dssp': (2200,2000), 'vtc': (2200,2000), 'sst': (1200,1000)}
+    prices = {
+        'aps': (2000,1800), 'mac_aps': (1200,1000), 'a3p': (2200,2000),
+        'dssp': (2200,2000), 'ssiap1': (1700,1500), 'ssiap2': (1700,1500),
+        'ssiap3': (2200,2000), 'ssiap1_recyclage': (1200,1000),
+        'ssiap2_recyclage': (1200,1000), 'ssiap3_recyclage': (1200,1000),
+        'h0b0': (900,800), 'bs_be': (1200,1000), 'vtc': (2200,2000),
+        'sst': (1200,1000), 'mac_sst': (900,800),
+    }
+    assert {book['code'] for book in CATALOGUE} == set(prices)
+    premium_usb = {'aps', 'a3p', 'dssp', 'ssiap1', 'ssiap2', 'ssiap3', 'vtc'}
     for code, (regular, bulk) in prices.items():
         for qty, price in [(50,regular),(99,regular),(100,bulk),(101,bulk)]:
             line = quote_items({'manual_'+code: str(qty)})[0]
             assert line['unit_cents'] == price
             assert line['total_cents'] == qty * price
-        assert quote_items({'usb_'+code:'1'})[0]['total_cents'] == (9900 if code == 'sst' else 19900)
+        if code == 'mac_sst':
+            with pytest.raises(ValueError):
+                quote_items({'usb_'+code:'1'})
+        else:
+            assert quote_items({'usb_'+code:'1'})[0]['total_cents'] == (19900 if code in premium_usb else 9900)
     mixed = quote_items({'manual_aps':'50', 'manual_sst':'50'})
     assert sum(i['total_cents'] for i in mixed) == 160000  # 100 mixed copies do not trigger a per-title reduction.
 

@@ -1,28 +1,38 @@
 <!doctype html>
 <html lang="fr">
-{% set show_organisme_identity = not staff and request.endpoint != "manuals_shop.elearning_access" %}
+{% set show_organisme_identity = not public and not staff and request.endpoint != "manuals_shop.elearning_access" %}
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="{% block description %}Manuels de formation personnalisés, supports PowerPoint sur clé USB et accès e-learning pour les organismes de formation. Découvrez la collection Intégrale Academy.{% endblock %}">
   <title>{% block title %}Espace organisme{% endblock %} · Intégrale Connect</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-shop.css', v='20261006-3') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-presentation.css', v='20261012-collection') }}">
   {% if show_organisme_identity %}<link rel="stylesheet" href="{{ url_for('static', filename='css/organisme-identity.css', v='20261010-2') }}">{% endif %}
   <style>@media(max-width:700px){.site-header nav{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:4px}.site-header nav a{font-size:11px;padding:8px 9px}.site-header nav .logout{margin-left:auto}}@media(max-width:390px){.site-header nav a{padding:7px 6px;font-size:10px}.site-header nav .logout{margin-left:0}}</style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/manuals-storefront.css', v='20261012-1') }}">
+  <script src="{{ url_for('static', filename='js/manuals-catalogue.js', v='20261012-1') }}" defer></script>
   {% block extra_styles %}{% endblock %}
   <script src="{{ url_for('static', filename='js/manuals-shop.js', v='20261006-3') }}" defer></script>
 </head>
-<body>
+<body{% if public %} class="public-storefront"{% endif %}>
+  <a class="skip-link" href="#main-content">Aller au contenu</a>
   <header class="site-header">
-    <a class="logo" href="{{ url_for('manuals_shop.home') if session.get('admin_logged_in') else url_for('admin_login') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
+    <a class="logo" href="{{ url_for('home') if public or not session.get('admin_logged_in') else url_for('manuals_shop.home') }}"><img src="{{ url_for('static', filename='logoic.png') }}" alt="Intégrale Connect"></a>
     <span class="header-label">L’espace des organismes de formation</span>
     <nav aria-label="Navigation principale">
-    {% if staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a><a href="{{ url_for('manuals_shop.elearning_admin') }}">E-learning</a>
+    {% if public %}
+      <a href="{{ url_for('manuals_shop.public_presentation') }}" {% if request.endpoint in ['manuals_shop.public_presentation','manuals_shop.public_manual_detail'] %}aria-current="page"{% endif %}>Manuels</a>
+      <a href="{{ url_for('home') }}#supports">Clés USB</a>
+      <a href="{{ url_for('home') }}#elearning">E-learning</a>
+      <a href="{{ url_for('home') }}#contact">Contact</a>
+      {% if session.get('admin_logged_in') %}<a class="nav-account" href="{{ url_for('manuals_shop.home') }}">Mon espace →</a>{% else %}<a href="{{ url_for('admin_login', next=url_for('manuals_shop.home')) }}">Connexion</a><a class="nav-account" href="{{ url_for('manuals_shop.register_account') }}">Créer mon espace →</a>{% endif %}
+    {% elif staff %}<a href="{{ url_for('admin_sessions') }}">Administration</a><a href="{{ url_for('admin_partners') }}">Organismes</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail'] %}aria-current="page"{% endif %}>Présentation des manuels</a><a href="{{ url_for('manuals_shop.admin_orders') }}">Commandes reçues</a><a href="{{ url_for('manuals_shop.elearning_admin') }}">E-learning</a>
     {% elif session.get('admin_logged_in') %}<a href="{{ url_for('manuals_shop.home') }}" {% if request.endpoint == 'manuals_shop.home' %}aria-current="page"{% endif %}>Mon espace</a><a href="{{ url_for('manuals_shop.presentation') }}" {% if request.endpoint in ['manuals_shop.presentation','manuals_shop.manual_detail','manuals_shop.catalogue'] %}aria-current="page"{% endif %}>Manuels</a><a href="{{ url_for('manuals_shop.elearning_soon') }}" {% if request.endpoint and request.endpoint.startswith('manuals_shop.elearning_') %}aria-current="page"{% endif %}>E-learning</a><a href="{{ url_for('manuals_shop.organisme_profile') }}" {% if request.endpoint == 'manuals_shop.organisme_profile' %}aria-current="page"{% endif %}>Mon organisme</a>
     {% else %}<a href="{{ url_for('admin_login') }}">J’ai déjà un compte <span aria-hidden="true">↗</span></a>{% endif %}
-    {% if session.get('admin_logged_in') %}<a class="logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>{% endif %}
+    {% if session.get('admin_logged_in') and not public %}<a class="logout" href="{{ url_for('admin_logout') }}">Déconnexion</a>{% endif %}
     </nav>
   </header>
-  <main>{% for category,message in get_flashed_messages(with_categories=true) %}<div class="notice">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
+  <main id="main-content">{% for category,message in get_flashed_messages(with_categories=true) %}<div class="notice">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
   {% if show_organisme_identity %}
     {% include "manuals/_organisme_identity.html" %}
   {% else %}
