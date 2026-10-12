@@ -76,6 +76,31 @@ def test_failure_saves_original_copy_without_fake_grade_and_retry_can_succeed(wo
         assert submit(service, access)['ok']
 
 
+def test_revised_correction_contract_does_not_reuse_an_uncertain_old_result(work):
+    service, access = work
+    uncertain = {**FEEDBACK, 'needs_human_review': True}
+    with patch('elearning_native.vtc_ai.grade_written_work', side_effect=[uncertain, FEEDBACK]) as api:
+        with patch('elearning_native.vtc_ai.CORRECTION_REVISION', 'legacy-free-quotes'), \
+                patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_000):
+            first = submit(service, access)
+        with patch('elearning_native.vtc_production_work.time.time', return_value=2_000_000_010):
+            refreshed = submit(service, access)
+            repeated = submit(service, access)
+    assert api.call_count == 2
+    assert refreshed['cached'] is False
+    assert refreshed['attempt_id'] != first['attempt_id']
+    assert repeated['cached'] is True
+    assert repeated['attempt_id'] == refreshed['attempt_id']
+    assert refreshed['feedback']['needs_human_review'] is False
+    history = service.history(access, ACTIVITY['id'])
+    assert [row['status'] for row in history] == ['corrected', 'needs_human_review']
+    assert all(row['answers'] == ANSWERS for row in history)
+    progress = current(service, access)
+    assert progress['answers'][ACTIVITY['id']]['production_first_answers'] == ANSWERS
+    assert progress['active_seconds'] == 0
+    assert progress['completed_activity_ids'] == []
+
+
 def test_revised_draft_requires_its_own_correction_and_preserves_first_response(work):
     service, access = work
     with patch('elearning_native.vtc_ai.grade_written_work', return_value=FEEDBACK):

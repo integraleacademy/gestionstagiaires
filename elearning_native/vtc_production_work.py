@@ -29,8 +29,9 @@ def is_vtc_production(course, activity):
 
 
 def submission_hash(assignment, answers):
-    # Include the trusted rubric so a changed assignment never reuses an old score.
-    body = {'assignment': assignment, 'answers': answers}
+    # A revised rubric or correction contract must not reuse an obsolete score.
+    body = {'assignment': assignment, 'answers': answers,
+            'correction_revision': vtc_ai.CORRECTION_REVISION}
     return hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True,
                                      separators=(',', ':')).encode()).hexdigest()
 

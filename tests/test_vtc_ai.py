@@ -45,12 +45,12 @@ class VtcWrittenCorrectionTests(unittest.TestCase):
             # Provider ordering need not match the authored order.
             "criteria": [
                 {"id": "price", "points": 12, "status": "partial", "feedback": "Le calcul est juste, mais la référence manque.",
-                 "evidence": "90 € TTC", "improvement": "Indiquez une référence de devis."},
+                 "evidence_id": "repere-002", "improvement": "Indiquez une référence de devis."},
                 {"id": "client", "points": 5, "status": "met", "feedback": "L'heure et le terminal sont confirmés.",
-                 "evidence": "à 9 h au terminal 2", "improvement": "Conservez cette formulation professionnelle."},
+                 "evidence_id": "repere-001", "improvement": "Conservez cette formulation professionnelle."},
             ],
             "strengths": ["Le calcul de TVA est cohérent."],
-            "errors": [{"criterion_id": "price", "field_id": "quote", "excerpt": "", "explanation": "La référence est absente.",
+            "errors": [{"criterion_id": "price", "field_id": "quote", "excerpt_id": "", "explanation": "La référence est absente.",
                         "correction": "Ajoutez par exemple « Devis D001 »."}],
             "improved_response": {"message": "Bonjour, rendez-vous à 9 h au terminal 2.", "quote": "Devis D001 : 90 € TTC."},
             "next_steps": ["Complétez les mentions de votre devis."], "revision_ids": ["reg-vtc"],
@@ -80,6 +80,9 @@ class VtcWrittenCorrectionTests(unittest.TestCase):
         self.assertEqual([row["id"] for row in result["criteria"]], ["client", "price"])
         self.assertEqual(result["status"], "corrected")
         self.assertFalse(result["needs_human_review"])
+        self.assertEqual(result["criteria"][0]["evidence"], self.answers["message"])
+        self.assertEqual(result["criteria"][1]["evidence"], self.answers["quote"])
+        self.assertNotIn("evidence_id", result["criteria"][0])
         self.assertEqual(result["model_response"], self.assignment["model_response"])
         self.assertNotEqual(result["model_response"], result["improved_response"])
         self.assertNotIn("passed", result)
@@ -105,6 +108,16 @@ class VtcWrittenCorrectionTests(unittest.TestCase):
         self.assertEqual(payload["input"][1]["role"], "user")
         supplied = json.loads(payload["input"][0]["content"][0]["text"])["assignment"]
         self.assertEqual(supplied["response_fields"][0]["instructions"], "Confirmez le lieu et l’heure.")
+        copy_data = json.loads(payload["input"][1]["content"][0]["text"])
+        self.assertEqual(copy_data["learner_answers"], self.answers)
+        self.assertEqual(copy_data["answer_excerpts"], [
+            {"id": "repere-001", "field_id": "message", "text": self.answers["message"]},
+            {"id": "repere-002", "field_id": "quote", "text": self.answers["quote"]},
+        ])
+        schema = payload["text"]["format"]["schema"]
+        evidence = schema["properties"]["criteria"]["items"]["properties"]["evidence_id"]
+        self.assertEqual(evidence["enum"], ["", "repere-001", "repere-002"])
+        self.assertNotIn("evidence", schema["properties"]["criteria"]["items"]["properties"])
 
     def test_prompt_injection_remains_untrusted_copy_and_cannot_change_rubric(self):
         supplied = copy.deepcopy(self.answers)
@@ -149,14 +162,51 @@ class VtcWrittenCorrectionTests(unittest.TestCase):
         self.assertEqual(result["score"], 5)
         self.assertTrue(result["needs_human_review"])
 
-    def test_fabricated_evidence_and_error_quotes_request_review(self):
+    def test_fabricated_evidence_and_error_references_request_review_without_logging_copy(self):
         feedback = copy.deepcopy(self.feedback)
-        feedback["criteria"][1]["evidence"] = "Je suis titulaire de toutes les autorisations."
-        feedback["errors"][0]["excerpt"] = "Le client paie 120 €"
-        result, _ = self.grade(feedback)
+        feedback["criteria"][1]["evidence_id"] = "PRIVATE_FABRICATED_REFERENCE"
+        feedback["errors"][0]["excerpt_id"] = "PRIVATE_FABRICATED_ERROR"
+        with self.assertLogs("elearning_native.vtc_ai", level="WARNING") as logs:
+            result, _ = self.grade(feedback)
         self.assertEqual(result["criteria"][0]["evidence"], "")
         self.assertEqual(result["errors"][0]["excerpt"], "")
         self.assertEqual(result["status"], "needs_human_review")
+        diagnostic = " ".join(logs.output)
+        self.assertIn("unknown_reference=2", diagnostic)
+        for forbidden in (*self.answers.values(), "PRIVATE_FABRICATED", "synthetic-vtc-key"):
+            self.assertNotIn(forbidden, diagnostic)
+
+    def test_reference_from_another_field_cannot_justify_a_criterion_or_error(self):
+        feedback = copy.deepcopy(self.feedback)
+        feedback["criteria"][1]["evidence_id"] = "repere-002"
+        feedback["errors"][0]["excerpt_id"] = "repere-001"
+        with self.assertLogs("elearning_native.vtc_ai", level="WARNING") as logs:
+            result, _ = self.grade(feedback)
+        self.assertTrue(result["needs_human_review"])
+        self.assertEqual(result["criteria"][0]["evidence"], "")
+        self.assertEqual(result["errors"][0]["excerpt"], "")
+        self.assertIn("wrong_field=2", " ".join(logs.output))
+
+    def test_long_copy_quotes_are_rebuilt_exactly_even_when_feedback_uses_other_words(self):
+        answers, feedback = copy.deepcopy(self.answers), copy.deepcopy(self.feedback)
+        answers["message"] = ("Bonjour, je confirme votre prise en charge à 9 h ; le départ aura lieu au terminal 2.\n"
+                              "Je vérifierai l’identité annoncée et la réservation, sans présumer d’un document manquant.\n") * 15
+        excerpts = vtc_ai._answer_excerpts(answers)
+        message_refs = [ref for ref in excerpts.values() if ref["field_id"] == "message"]
+        self.assertGreater(len(message_refs), 1)
+        for excerpt in excerpts.values():
+            self.assertGreater(len(excerpt["text"]), 0)
+            self.assertLessEqual(len(excerpt["text"]), 600)
+            self.assertEqual(answers[excerpt["field_id"]][excerpt["start"]:excerpt["end"]], excerpt["text"])
+        self.assertEqual("".join("".join(row["text"].split()) for row in message_refs), "".join(answers["message"].split()))
+        feedback["criteria"][1].update(evidence_id=message_refs[1]["id"], feedback="Vous confirmez les modalités avec précision.")
+        quote_ref = next(row for row in excerpts.values() if row["field_id"] == "quote")
+        feedback["criteria"][0]["evidence_id"] = quote_ref["id"]
+        feedback["errors"][0]["excerpt_id"] = quote_ref["id"]
+        result, _ = self.grade(feedback, answers=answers)
+        self.assertFalse(result["needs_human_review"])
+        self.assertEqual(result["criteria"][0]["evidence"], message_refs[1]["text"])
+        self.assertEqual(result["errors"][0]["excerpt"], answers["quote"])
 
     def test_ambiguity_off_topic_critical_failure_or_uncertain_criterion_prevent_automatic_validation(self):
         for variant in ("off_topic", "ambiguous", "critical", "uncertain", "unexplained_review"):
@@ -180,7 +230,7 @@ class VtcWrittenCorrectionTests(unittest.TestCase):
         assignment["rubric"][0]["critical"] = True
         feedback.update(assessment="off_topic", strengths=[], errors=[])
         for criterion in feedback["criteria"]:
-            criterion.update(points=0, status="not_met", evidence="", feedback="La réponse est hors sujet et ne contient pas les éléments demandés.")
+            criterion.update(points=0, status="not_met", evidence_id="", feedback="La réponse est hors sujet et ne contient pas les éléments demandés.")
         result, _ = self.grade(feedback, assignment=assignment,
                                answers={"message": "Je parle du temps qu’il fait aujourd’hui.", "quote": "Je décris une recette de cuisine sans lien avec le devis."})
         self.assertEqual(result["score"], 0)
@@ -199,6 +249,7 @@ class VtcWrittenCorrectionTests(unittest.TestCase):
         bad = copy.deepcopy(self.feedback); bad["revision_ids"] = ["https://untrusted.example/"]; variants.append(bad)
         bad = copy.deepcopy(self.feedback); bad["improved_response"]["session_id"] = "forged"; variants.append(bad)
         bad = copy.deepcopy(self.feedback); bad["criteria"][0]["points"] = True; variants.append(bad)
+        bad = copy.deepcopy(self.feedback); bad["criteria"][0]["evidence"] = "A forged literal quote"; variants.append(bad)
         for bad in variants:
             with self.subTest(bad=bad), self.assertRaises(vtc_ai.VtcAIError) as error:
                 self.grade(bad)
@@ -295,7 +346,7 @@ class VtcWrittenCorrectionTests(unittest.TestCase):
         assignment, answers, feedback = copy.deepcopy(self.assignment), copy.deepcopy(self.answers), copy.deepcopy(self.feedback)
         assignment["spelling_review"] = True
         answers["message"] = "Les chauffeur son arrivée. Les chauffeur son arrivée."
-        feedback["criteria"][1]["evidence"] = "Les chauffeur"
+        feedback["criteria"][1]["evidence_id"] = "repere-001"
         feedback["spelling_error_count"] = 6
         feedback["spelling_errors"] = [
             {"field_id": "message", "excerpt": word, "correction": correction, "occurrence": occurrence}
